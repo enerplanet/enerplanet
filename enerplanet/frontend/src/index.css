@@ -1,0 +1,72 @@
+/* Retained custom non-Tailwind rule used by map overlay */
+.fire-risk-overlay { mix-blend-mode: multiply !important; }
+
+/* Joyride tour dark mode styles */
+.dark .react-joyride__tooltip {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .react-joyride__tooltip h3,
+.dark .react-joyride__tooltip p,
+.dark .react-joyride__tooltip span {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .react-joyride__tooltip .text-gray-900 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .react-joyride__tooltip .text-gray-600,
+.dark .react-joyride__tooltip .text-gray-500,
+.dark .react-joyride__tooltip .text-gray-700 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .react-joyride__tooltip .bg-gray-50,
+.dark .react-joyride__tooltip .bg-gray-100 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark .react-joyride__tooltip .border-gray-200 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .react-joyride__tooltip .from-gray-100,
+.dark .react-joyride__tooltip .to-gray-200 {
+  --tw-gradient-from: hsl(var(--muted)) !important;
+  --tw-gradient-to: hsl(var(--muted)) !important;
+}
+
+/* Fix joyride spotlight blinking/white space */
+.react-joyride__spotlight {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.__floater {
+  transition: none !important;
+  filter: none !important;
+}
+
+.__floater__body {
+  transition: none !important;
+}
+
+/* Prevent overlay flickering */
+.react-joyride__overlay {
+  pointer-events: auto;
+  transition: none !important;
+}
+
+/* Stabilize tooltip */
+.react-joyride__tooltip {
+  transition: none !important;
+  will-change: auto !important;
+}
+
+/* Prevent any repaints on hover within tour */
+[data-tour] {
+  contain: layout style;
+}

@@ -1,0 +1,15 @@
+# Local development overrides for Enerplanet
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+services:
+  energy-backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      APP_URL: http://localhost:3000
+      KEYCLOAK_URL: http://keycloak:8080/keycloak
+      KEYCLOAK_REALM: spatialhub
+      AUTH_SERVICE_URL: http://auth-service:8001
+      WEBSERVICE_SERVICE_URL: http://webservice:8082

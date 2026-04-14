@@ -1,0 +1,64 @@
+services:
+  energy-backend-dev:
+    image: ${APP_IMAGE:-enerplanet:latest}
+    container_name: energy-backend-dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.dev
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KEYCLOAK_URL: http://keycloak:8080/keycloak
+      KEYCLOAK_REALM: spatialhub
+      AUTH_SERVICE_URL: http://auth-service:8001
+      WEBSERVICE_SERVICE_URL: http://webservice:8082
+      RATE_LIMIT_PER_MIN: 1000
+    volumes:
+      - backend-storage-dev:/app/storage
+    networks:
+      - spatialhub-net
+
+  energy-backend-prod:
+    image: ${APP_IMAGE:-enerplanet:latest}
+    container_name: energy-backend-prod
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KEYCLOAK_URL: http://keycloak:8080/keycloak
+      KEYCLOAK_REALM: spatialhub
+      AUTH_SERVICE_URL: http://auth-service:8001
+      WEBSERVICE_SERVICE_URL: http://webservice:8082
+      RATE_LIMIT_PER_MIN: 1000
+    volumes:
+      - backend-storage-prod:/app/storage
+    networks:
+      - spatialhub-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../nginx/ssl:/etc/letsencrypt:ro
+      - ../nginx/certbot:/var/www/certbot:ro
+    networks:
+      - spatialhub-net
+
+volumes:
+  backend-storage-dev:
+  backend-storage-prod:
+
+networks:
+  spatialhub-net:
+    external: true

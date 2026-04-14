@@ -1,0 +1,46 @@
+services:
+  energy-backend:
+    image: ${APP_IMAGE:-enerplanet:latest}
+    container_name: energy-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_URL: ${APP_URL:-http://enerplanet-dev.th-deg.de}
+      KEYCLOAK_URL: http://keycloak:8080/keycloak
+      KEYCLOAK_REALM: spatialhub
+      AUTH_SERVICE_URL: http://auth-service:8001
+      WEBSERVICE_SERVICE_URL: http://webservice:8082
+      # PYLOVO_SERVICE_URL comes from ./backend/.env (configured by CI for each environment)
+      RATE_LIMIT_PER_MIN: 1000
+    volumes:
+      - backend-storage:/app/storage
+    networks:
+      - spatialhub-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../nginx/ssl:/etc/letsencrypt:ro
+      - ../nginx/certbot:/var/www/certbot:ro
+    depends_on:
+      - energy-backend
+    networks:
+      - spatialhub-net
+
+volumes:
+  backend-storage:
+
+networks:
+  spatialhub-net:
+    external: true

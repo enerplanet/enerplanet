@@ -1,0 +1,537 @@
+{
+    "Electriawind Garbi 200/28 28m 200kW": {
+        "nominal_power": 200,
+        "hub_height": [35, 40],
+        "rotor_diameter": 28
+    },
+    "Vestas V27-225kW": {
+        "nominal_power": 225,
+        "hub_height": [33],
+        "rotor_diameter": 27
+    },
+    "EWT Directwind 54m 250kW": {
+        "nominal_power": 250,
+        "hub_height": [35, 45, 50],
+        "rotor_diameter": 54
+    },
+    "Wind Energy Solutions WES30 30m 250kW": {
+        "nominal_power": 250,
+        "hub_height": [30, 39, 48],
+        "rotor_diameter": 30
+    },
+    "Vergnet GEV MP C 30m 275kW": {
+        "nominal_power": 275,
+        "hub_height": [55, 60],
+        "rotor_diameter": 30
+    },
+    "Vergnet GEV MP C 32m 275kW": {
+        "nominal_power": 275,
+        "hub_height": [55, 60],
+        "rotor_diameter": 32
+    },
+    "Enercon E33 33.4m 330kW": {
+        "nominal_power": 335,
+        "hub_height": [35, 41, 47],
+        "rotor_diameter": 33
+    },
+    "Enercon E40/5.40 40.3m 550kW": {
+        "nominal_power": 500,
+        "hub_height": [42, 48, 65],
+        "rotor_diameter": 40
+    },
+    "EWT Directwind 52 500kW": {
+        "nominal_power": 500,
+        "hub_height": [35, 40, 50, 75],
+        "rotor_diameter": 52
+    },
+    "EWT Directwind 54 500kW": {
+        "nominal_power": 500,
+        "hub_height": [35, 40, 50, 75],
+        "rotor_diameter": 54
+    },
+    "Vestas V39-500kW": {
+        "nominal_power": 500,
+        "hub_height": [40.5, 53],
+        "rotor_diameter": 39
+    },
+    "Nordex N43-600": {
+        "nominal_power": 600,
+        "hub_height": [40, 50, 60, 78],
+        "rotor_diameter": 43
+    },
+    "Vestas V42-600": {
+        "nominal_power": 600,
+        "hub_height": [40.5, 53],
+        "rotor_diameter": 42
+    },
+    "Vestas V44-600": {
+        "nominal_power": 600,
+        "hub_height": [40.5, 53, 63],
+        "rotor_diameter": 44
+    },
+    "Vestas V47 660kW": {
+        "nominal_power": 600,
+        "hub_height": [40, 45, 50, 55],
+        "rotor_diameter": 47
+    },
+    "Bonus MkIV 44m 600kW": {
+        "nominal_power": 609,
+        "hub_height": [40, 45, 50, 55, 60],
+        "rotor_diameter": 44
+    },
+    "Vestas V47 660": {
+        "nominal_power": 660,
+        "hub_height": [40, 45, 50, 55],
+        "rotor_diameter": 47
+    },
+    "NEG Micon multi-power 44-750": {
+        "nominal_power": 750,
+        "hub_height": [40, 46, 52, 56],
+        "rotor_diameter": 44
+    },
+    "NEG Micon multi-power 48-750": {
+        "nominal_power": 750,
+        "hub_height": [50, 60, 70],
+        "rotor_diameter": 48
+    },
+    "Gamesa G52 800": {
+        "nominal_power": 800,
+        "hub_height": [44, 55, 65],
+        "rotor_diameter": 52
+    },
+    "Enercon E48 48m 800kW": {
+        "nominal_power": 810,
+        "hub_height": [50, 55, 60, 65, 76],
+        "rotor_diameter": 48
+    },
+    "Enercon E53 52.9m 800kW": {
+        "nominal_power": 810,
+        "hub_height": [60, 73],
+        "rotor_diameter": 52
+    },
+    "Gamesa G52 850": {
+        "nominal_power": 850,
+        "hub_height": [44, 55, 65],
+        "rotor_diameter": 52
+    },
+    "Vestas V52-850": {
+        "nominal_power": 850,
+        "hub_height": [36.5, 40, 44, 49, 55, 60, 65, 70, 74, 86],
+        "rotor_diameter": 52
+    },
+    "NEG Micon 52 900": {
+        "nominal_power": 900,
+        "hub_height": [60, 74],
+        "rotor_diameter": 52
+    },
+    "Enercon E44 44m 900kW": {
+        "nominal_power": 900,
+        "hub_height": [45, 55],
+        "rotor_diameter": 44
+    },
+    "Vergnet GEV HP(104.4dba)_62m_1000kW": {
+        "nominal_power": 1000,
+        "hub_height": [70],
+        "rotor_diameter": 62
+    },
+    "Nordic 1000 54m 1000kW": {
+        "nominal_power": 1011.4,
+        "hub_height": [58],
+        "rotor_diameter": 54
+    },
+    "Bonus 1300": {
+        "nominal_power": 1300,
+        "hub_height": [68, 80, 90],
+        "rotor_diameter": 62
+    },
+    "Nordex N60-1300": {
+        "nominal_power": 1300,
+        "hub_height": [60, 65, 69, 85],
+        "rotor_diameter": 60
+    },
+    "Fuhrlander FL 1500_70": {
+        "nominal_power": 1500,
+        "hub_height": [65, 85, 100, 114],
+        "rotor_diameter": 70
+    },
+    "Fuhrlander FL 1500_77": {
+        "nominal_power": 1500,
+        "hub_height": [61.5, 85, 100, 114.5],
+        "rotor_diameter": 77
+    },
+    "Leitwind LTW77m 1.5MW": {
+        "nominal_power": 1500,
+        "hub_height": [61.5, 65, 80],
+        "rotor_diameter": 77
+    },
+    "Leitwind LTW80 1.5MW": {
+        "nominal_power": 1500,
+        "hub_height": [60, 65, 80, 100],
+        "rotor_diameter": 80
+    },
+    "NEG Micon 72C 1500": {
+        "nominal_power": 1500,
+        "hub_height": [64, 80, 98],
+        "rotor_diameter": 72
+    },
+    "Nordex N70 - 1.5MW": {
+        "nominal_power": 1500,
+        "hub_height": [65, 85, 98, 114.5],
+        "rotor_diameter": 70
+    },
+    "Nordex S70 1500kW": {
+        "nominal_power": 1500,
+        "hub_height": [65, 70, 80],
+        "rotor_diameter": 70
+    },
+    "Nordex S77 1500kW": {
+        "nominal_power": 1500,
+        "hub_height": [62, 85, 90, 100, 114.5],
+        "rotor_diameter": 77
+    },
+    "Vensys 70 1.5MW": {
+        "nominal_power": 1500,
+        "hub_height": [65, 85],
+        "rotor_diameter": 70
+    },
+    "Vensys 77m 1500kW": {
+        "nominal_power": 1500,
+        "hub_height": [85],
+        "rotor_diameter": 77
+    },
+    "Vensys 82m 1500kW": {
+        "nominal_power": 1500,
+        "hub_height": [85, 100],
+        "rotor_diameter": 82
+    },
+    "NEG Micon 82 1650": {
+        "nominal_power": 1650,
+        "hub_height": [59, 68.5, 70, 78, 80],
+        "rotor_diameter": 82
+    },
+    "Vestas V66-1650": {
+        "nominal_power": 1650,
+        "hub_height": [60, 78],
+        "rotor_diameter": 66
+    },
+    "Vestas V82-1.65": {
+        "nominal_power": 1650,
+        "hub_height": [108],
+        "rotor_diameter": 82
+    },
+    "Leitwind LTW70 1.7MW": {
+        "nominal_power": 1700,
+        "hub_height": [65],
+        "rotor_diameter": 70
+    },
+    "Leitwind LTW80 1.8MW": {
+        "nominal_power": 1800,
+        "hub_height": [60, 65, 80],
+        "rotor_diameter": 80
+    },
+    "Vestas V100-1.8": {
+        "nominal_power": 1800,
+        "hub_height": [80, 95, 120],
+        "rotor_diameter": 100
+    },
+    "Vestas V80-1.8": {
+        "nominal_power": 1800,
+        "hub_height": [60, 67, 78],
+        "rotor_diameter": 80
+    },
+    "Vestas V90-1.8": {
+        "nominal_power": 1800,
+        "hub_height": [80, 95, 105],
+        "rotor_diameter": 90
+    },
+    "Enercon E66 1870lW": {
+        "nominal_power": 1870,
+        "hub_height": [67, 80, 98],
+        "rotor_diameter": 66
+    },
+    "DeWind D8(8.2)": {
+        "nominal_power": 2000,
+        "hub_height": [80, 100],
+        "rotor_diameter": 80
+    },
+    "EWT Directwind 90m 2MW": {
+        "nominal_power": 2000,
+        "hub_height": [75, 85, 98],
+        "rotor_diameter": 90
+    },
+    "EWT Directwind 96m 2MW Direct Drive": {
+        "nominal_power": 2000,
+        "hub_height": [85],
+        "rotor_diameter": 96
+    },
+    "Gamesa G114 2.0 MW": {
+        "nominal_power": 2000,
+        "hub_height": [93, 120, 140],
+        "rotor_diameter": 114
+    },
+    "Gamesa G80 2.0MW": {
+        "nominal_power": 2000,
+        "hub_height": [60, 67, 78, 100],
+        "rotor_diameter": 80
+    },
+    "Gamesa G83 -2.0MW": {
+        "nominal_power": 2000,
+        "hub_height": [67, 78],
+        "rotor_diameter": 83
+    },
+    "Gamesa G87 2.0 MW": {
+        "nominal_power": 2000,
+        "hub_height": [67, 78, 100],
+        "rotor_diameter": 87
+    },
+    "Gamesa G90 2.0 MW": {
+        "nominal_power": 2000,
+        "hub_height": [67, 78, 90, 100],
+        "rotor_diameter": 90
+    },
+    "Gamesa G97 2.0 MW": {
+        "nominal_power": 2000,
+        "hub_height": [78, 90, 100, 129],
+        "rotor_diameter": 97
+    },
+    "Leitwind LTW70 2MW": {
+        "nominal_power": 2000,
+        "hub_height": [60],
+        "rotor_diameter": 70
+    },
+    "Vestas V100-2.0": {
+        "nominal_power": 2000,
+        "hub_height": [80, 95, 120],
+        "rotor_diameter": 100
+    },
+    "Vestas V110-2.0": {
+        "nominal_power": 2000,
+        "hub_height": [80, 95, 125],
+        "rotor_diameter": 110
+    },
+    "Vestas V80-2.0": {
+        "nominal_power": 2000,
+        "hub_height": [60, 67, 78, 100],
+        "rotor_diameter": 80
+    },
+    "Vestas V90-2.0": {
+        "nominal_power": 2000,
+        "hub_height": [80, 95, 105],
+        "rotor_diameter": 90
+    },
+    "Enercon E66 1.5MW": {
+        "nominal_power": 1500,
+        "hub_height": [60, 67, 86, 98, 103],
+        "rotor_diameter": 66
+    },
+    "Senvion MM100 2MW": {
+        "nominal_power": 2020,
+        "hub_height": [76, 80, 100],
+        "rotor_diameter": 100
+    },
+    "Enercon E82 E2 82m 2000kW": {
+        "nominal_power": 2050,
+        "hub_height": [78, 85, 98, 108, 138],
+        "rotor_diameter": 82
+    },
+    "RePower MM 82": {
+        "nominal_power": 2050,
+        "hub_height": [59, 69, 80, 100],
+        "rotor_diameter": 82
+    },
+    "RePower MM 92": {
+        "nominal_power": 2050,
+        "hub_height": [68, 80, 100],
+        "rotor_diameter": 92
+    },
+    "Nordex N90-2300": {
+        "nominal_power": 2300,
+        "hub_height": [80, 100, 104],
+        "rotor_diameter": 90
+    },
+    "Siemens SWT 2.3 MW-93": {
+        "nominal_power": 2300,
+        "hub_height": [80, 133],
+        "rotor_diameter": 93
+    },
+    "Siemens SWT-2.3MW-101m": {
+        "nominal_power": 2300,
+        "hub_height": [80],
+        "rotor_diameter": 101
+    },
+    "Siemens SWT-2.3MW-108m": {
+        "nominal_power": 2300,
+        "hub_height": [80],
+        "rotor_diameter": 108
+    },
+    "Enercon E70 71m 2300kW": {
+        "nominal_power": 2310,
+        "hub_height": [58, 64, 70, 85, 98, 99, 113],
+        "rotor_diameter": 71
+    },
+    "Bonus 82.4m 2.3MW": {
+        "nominal_power": 2311.11,
+        "hub_height": [80, 90, 100],
+        "rotor_diameter": 82
+    },
+    "Enercon E82 82m 2300kW": {
+        "nominal_power": 2350,
+        "hub_height": [78, 138],
+        "rotor_diameter": 82
+    },
+    "Fuhrlander FL 2500_100": {
+        "nominal_power": 2500,
+        "hub_height": [65, 160],
+        "rotor_diameter": 100
+    },
+    "Fuhrlander FL 2500_80": {
+        "nominal_power": 2500,
+        "hub_height": [65, 160],
+        "rotor_diameter": 80
+    },
+    "Fuhrlander FL 2500_90": {
+        "nominal_power": 2500,
+        "hub_height": [85, 100, 117, 141, 160],
+        "rotor_diameter": 90
+    },
+    "Nordex N100-2500": {
+        "nominal_power": 2500,
+        "hub_height": [75, 100],
+        "rotor_diameter": 100
+    },
+    "Nordex N80-2500": {
+        "nominal_power": 2500,
+        "hub_height": [60, 80, 100, 105],
+        "rotor_diameter": 80
+    },
+    "Nordex N90-2500 HS": {
+        "nominal_power": 2500,
+        "hub_height": [70, 75, 80, 100, 120],
+        "rotor_diameter": 90
+    },
+    "Nordex N90-2500 LS": {
+        "nominal_power": 2500,
+        "hub_height": [70, 75, 80, 100, 120],
+        "rotor_diameter": 90
+    },
+    "Vensys 100m 2500kW": {
+        "nominal_power": 2500,
+        "hub_height": [100],
+        "rotor_diameter": 100
+    },
+    "Vensys 109m 2500kW": {
+        "nominal_power": 2500,
+        "hub_height": [93.5, 143.5],
+        "rotor_diameter": 109
+    },
+    "Vensys 112m 2500kW": {
+        "nominal_power": 2500,
+        "hub_height": [93.5, 143.5],
+        "rotor_diameter": 112
+    },
+    "Leitwind LTW101m 3MW": {
+        "nominal_power": 3000,
+        "hub_height": [80, 93, 100, 120],
+        "rotor_diameter": 100
+    },
+    "Senvion 3MW 122m": {
+        "nominal_power": 3000,
+        "hub_height": [136, 139],
+        "rotor_diameter": 122
+    },
+    "Siemens SWT-3.0MW-101m": {
+        "nominal_power": 3000,
+        "hub_height": [80, 115, 142],
+        "rotor_diameter": 101
+    },
+    "Vestas V112-3.0": {
+        "nominal_power": 3000,
+        "hub_height": [84, 94, 119, 140],
+        "rotor_diameter": 112
+    },
+    "Vestas V90-3.0": {
+        "nominal_power": 3000,
+        "hub_height": [80, 105],
+        "rotor_diameter": 90
+    },
+    "Enercon E82 82m 3000kW": {
+        "nominal_power": 3020,
+        "hub_height": [69, 78, 85, 98, 108, 138],
+        "rotor_diameter": 82
+    },
+    "Enercon E101 101m 3000kW": {
+        "nominal_power": 3050,
+        "hub_height": [99, 124, 135, 149],
+        "rotor_diameter": 101
+    },
+    "Senvion 3.2MW": {
+        "nominal_power": 3200,
+        "hub_height": [93, 119, 123, 143],
+        "rotor_diameter": 114
+    },
+    "RePower 3XM": {
+        "nominal_power": 3300,
+        "hub_height": [80, 100],
+        "rotor_diameter": 104
+    },
+    "Senvion 3.4MW": {
+        "nominal_power": 3400,
+        "hub_height": [93, 119, 123, 143],
+        "rotor_diameter": 114
+    },
+    "Siemens 3.6 MW 120 m": {
+        "nominal_power": 3600,
+        "hub_height": [88, 90],
+        "rotor_diameter": 120
+    },
+    "Siemens SWT-3.6MW-107m": {
+        "nominal_power": 3600,
+        "hub_height": [80],
+        "rotor_diameter": 107
+    },
+    "Gamesa G128 4.5MW": {
+        "nominal_power": 4500,
+        "hub_height": [81, 120, 140],
+        "rotor_diameter": 128
+    },
+    "Areva Multibrid m5000": {
+        "nominal_power": 5000,
+        "hub_height": [90],
+        "rotor_diameter": 116
+    },
+    "BARD 5.0": {
+        "nominal_power": 5000,
+        "hub_height": [90],
+        "rotor_diameter": 122
+    },
+    "RePower 5M": {
+        "nominal_power": 5000,
+        "hub_height": [117],
+        "rotor_diameter": 126
+    },
+    "Senvion 6.2M152 offshore": {
+        "nominal_power": 6150,
+        "hub_height": [95, 110],
+        "rotor_diameter": 152
+    },
+    "Senvion 6.2M126 offshore": {
+        "nominal_power": 6200,
+        "hub_height": [85, 95],
+        "rotor_diameter": 126
+    },
+    "Vestas V-164 7MW offshore": {
+        "nominal_power": 7000,
+        "hub_height": [105],
+        "rotor_diameter": 164
+    },
+    "Enercon E-126 127m 7500kW": {
+        "nominal_power": 7500,
+        "hub_height": [135],
+        "rotor_diameter": 127
+    },
+    "Vestas 164 8MW": {
+        "nominal_power": 8000,
+        "hub_height": [118],
+        "rotor_diameter": 164
+    }
+}

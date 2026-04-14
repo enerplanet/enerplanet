@@ -1,0 +1,9 @@
+go 1.24.0
+
+use (
+	./platform-core/auth-service
+	./platform-core/webservice
+	./enerplanet/backend
+	./infrastructure/common
+	./infrastructure/platform
+)

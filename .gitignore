@@ -1,0 +1,25 @@
+node_modules/
+.env
+.env.production
+.env.docker
+package-lock.json
+*.log
+dist/
+.local
+build/
+sonarqube-25.10.0.114319
+sonar-project.properties
+.scannerwork
+
+# MkDocs build output
+site/
+docs/.venv/
+
+# Auth service (separate repository)
+auth-service/
+
+# Infrastructure (separate repository)
+infrastructure/
+platform-core/
+libs/
+dependencies/

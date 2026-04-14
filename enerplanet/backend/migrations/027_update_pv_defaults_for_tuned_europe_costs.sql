@@ -1,0 +1,4 @@
+-- Migration 027: No-op
+-- PV technology defaults are managed by the JSON seed file (initial-data/techs/default_technologies.json).
+-- This migration previously set incorrect values (system_capacity=1200 instead of 8).
+-- Run `make seed` or POST /technologies/reseed to apply correct defaults.
