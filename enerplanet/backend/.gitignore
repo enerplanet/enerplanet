@@ -1,0 +1,11 @@
+vendor
+.env
+build
+.golangci.yml
+storage
+logs/
+tmp/
+# Binaries
+backend
+main
+seed

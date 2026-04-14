@@ -1,0 +1,348 @@
+{
+    "techs": [
+        {
+            "Name": "Maximum installed energy capacity",
+            "Unit": "kW",
+            "Description": "Maximum energy that can be deployed due to infrastructure, regulations, or space."
+        },
+        {
+            "Name": "System-wide maximum installed energy capacity",
+            "Unit": "kW",
+            "Description": "Maximum energy that can be produced in an energy system without exceeding limits."
+        },
+        {
+            "Name": "Minimum installed energy capacity",
+            "Unit": "kW",
+            "Description": "Minimum energy capacity required to ensure basic energy needs."
+        },
+        {
+            "Name": "Energy capacity scale",
+            "Unit": "%",
+            "Description": "Adjusted energy capacity based on factors like resources or technology."
+        },
+        {
+            "Name": "Energy efficiency, conversion efficiency",
+            "Unit": "%",
+            "Description": "Efficiency in converting energy into usable output."
+        },
+        {
+            "Name": "Export capacity",
+            "Unit": "kW",
+            "Description": "Maximum energy a system can export to other networks."
+        },
+        {
+            "Name": "Technology lifetime",
+            "Unit": "years",
+            "Description": "Operational lifespan of energy technology before replacement."
+        },
+        {
+            "Name": "Plant parasitic efficiency",
+            "Unit": "%",
+            "Description": "Energy used by internal plant systems, reducing usable energy."
+        },
+        {
+            "Name": "Maximum usable resource area",
+            "Unit": "m2",
+            "Description": "Maximum land area available for energy technology installation."
+        },
+        {
+            "Name": "Minimum usable resource area",
+            "Unit": "m2",
+            "Description": "Minimum land area required for effective technology operation."
+        },
+        {
+            "Name": "Maximum installed resource consumption capacity",
+            "Unit": "kW",
+            "Description": "Maximum resources (fuel, water) a system can consume."
+        },
+        {
+            "Name": "Minimum installed resource consumption capacity",
+            "Unit": "kW",
+            "Description": "Minimum resources needed for consistent operation."
+        },
+        {
+            "Name": "Resource efficiency",
+            "Unit": "",
+            "Description": ""
+        },
+        {
+            "Name": "Cost of energy capacity",
+            "Unit": "€/kW",
+            "Description": "Total cost to set up and install energy-generating capacity."
+        },
+        {
+            "Name": "Carrier export cost",
+            "Unit": "€/kWh",
+            "Description": "Cost of transmitting energy through pipelines or grids to other systems."
+        },
+        {
+            "Name": "Interest rate",
+            "Unit": "%",
+            "Description": "The rate that impacts the cost of financing energy projects."
+        },
+        {
+            "Name": "Yearly O&M costs",
+            "Unit": "€/kW",
+            "Description": "Annual costs for maintaining the energy system's functionality."
+        },
+        {
+            "Name": "Fractional yearly O&M costs",
+            "Unit": "%/investmet",
+            "Description": "O&M costs as a percentage of the overall capital cost of the energy system."
+        },
+        {
+            "Name": "Carrier consumption cost",
+            "Unit": "€/kWh",
+            "Description": "Energy consumed for internal operations or by end users within a system."
+        },
+        {
+            "Name": "Carrier production cost",
+            "Unit": "€/kWh",
+            "Description": "Cost of extracting and generating energy from resources."
+        },
+        {
+            "Name": "Purchase cost",
+            "Unit": "€",
+            "Description": "Total cost of purchasing an energy system or resource, including materials and equipment."
+        },
+        {
+            "Name": "Cost of resource area",
+            "Unit": "€/m2",
+            "Description": "Cost of purchasing or using land for energy production."
+        },
+        {
+            "Name": "Cost of resource consumption capacity",
+            "Unit": "€/kW",
+            "Description": "Cost of using resources like water or fuel for energy production."
+        },
+        {
+            "Name": "Cost of storage capacity",
+            "Unit": "€/kWh",
+            "Description": "Cost of energy storage systems, including installation and maintenance."
+        },
+        {
+            "Name": "Pv Panel peak capacity",
+            "Unit": "kW",
+            "Description": "Maximum power output a solar panel can produce under ideal conditions."
+        },
+        {
+            "Name": "PV Panel orientation",
+            "Unit": "°",
+            "Description": "Position of PV panels relative to the sun to maximize exposure."
+        },
+        {
+            "Name": "PV Panel Tilt / Slope",
+            "Unit": "°",
+            "Description": "Angle of PV panels relative to the horizontal plane to optimize sunlight capture."
+        },
+        {
+            "Name": "Inverter Efficiency",
+            "Unit": "%",
+            "Description": "Efficiency of a solar inverter converting DC to AC."
+        },
+        {
+            "Name": "PV system loss",
+            "Unit": "%",
+            "Description": "Energy lost due to factors like shading, dirt, and system inefficiencies."
+        },
+        {
+            "Name": "DC/AC Ratio",
+            "Unit": "ratio",
+            "Description": "Ratio between total DC power from panels and inverter's AC capacity."
+        },
+        {
+            "Name": "Wind turbine hub height",
+            "Unit": "m",
+            "Description": "Height of the hub where the rotor and blades are connected."
+        },
+        {
+            "Name": "Wind turbine rotor diameter",
+            "Unit": "m",
+            "Description": "Length of the circle formed by the rotating blades."
+        },
+        {
+            "Name": "Total feedstock",
+            "Unit": "tons/year",
+            "Description": "Refers to the total quantity of biomass material (e.g., wood chips, agricultural waste) used for energy generation."
+        },
+        {
+            "Name": "Plant rated efficiency",
+            "Unit": "%",
+            "Description": "Measures how efficiently the plant converts biomass into usable energy."
+        },
+        {
+            "Name": "Total HHV (Higher Heating Value)",
+            "Unit": "MJ/kg",
+            "Description": "Total heat energy obtained from biomass combustion, including condensation of water vapor."
+        },
+        {
+            "Name": "Steam grade (psig)",
+            "Unit": "psig",
+            "Description": "Indicates the temperature and pressure of the steam produced, affecting plant efficiency."
+        },
+        {
+            "Name": "Number of boilers",
+            "Unit": "units",
+            "Description": "The number of boilers used to generate steam from biomass."
+        },
+        {
+            "Name": "Flue gas temperature",
+            "Unit": "°C",
+            "Description": "Temperature of gases emitted after combustion, reflecting heat recovery efficiency."
+        },
+        {
+            "Name": "Parasitic load",
+            "Unit": "%",
+            "Description": "The energy used by the plant for internal functions, affecting overall efficiency."
+        },
+        {
+            "Name": "Combustor type",
+            "Unit": "-",
+            "Description": "How the biomass feedstock is burned to generate heat in a biomass plant depends on the type of combustor used. The type of fuel and the required performance determine which combustors are used. In order to minimize emissions and maximize energy output, efficient combustion is essential."
+        },
+        {
+            "Name": "Grate Stoker Furnace",
+            "Unit": "-",
+            "Description": "Burns biomass using a moving grate to enhance combustion with air circulation, commonly used for solid fuels like wood chips."
+        },
+        {
+            "Name": "Fluidized Bed Combustor",
+            "Unit": "-",
+            "Description": "Burns biomass in a bed of hot, fluidized material (sand or ash), improving efficiency and reducing emissions, suitable for various fuels."
+        },
+        {
+            "Name": "Cyclone Furnace",
+            "Unit": "-",
+            "Description": "Uses centrifugal forces to burn biomass in a cylindrical chamber, improving combustion and energy efficiency, often for pulverized fuels."
+        },
+        {
+            "Name": "Number of Wells",
+            "Unit": "units",
+            "Description": "The total number of geothermal wells drilled to access subterranean heat reservoirs. The number of wells affects the plant's capacity and resource flow."
+        },
+        {
+            "Name": "Plant efficiency",
+            "Unit": "%",
+            "Description": "The efficiency with which a geothermal plant converts heat energy from geothermal fluids into usable power. A higher efficiency means more energy production."
+        },
+        {
+            "Name": "Geothermal Resource Depth",
+            "Unit": "m",
+            "Description": "The depth at which geothermal resources (steam or hot water) are located. Deeper resources tend to have higher temperatures but are more expensive to drill."
+        },
+        {
+            "Name": "Well Flow Rate",
+            "Unit": "kg/s",
+            "Description": "The rate at which geothermal fluid is drawn from the wells, usually expressed in liters or kilograms per second. A higher flow rate improves plant capacity."
+        },
+        {
+            "Name": "Pump Efficiency",
+            "Unit": "%",
+            "Description": "The effectiveness of pumps in transferring geothermal fluid from the wells around the plant. Higher efficiency pumps reduce energy consumption and improve plant output."
+        }
+    ],
+    "energy classes": [
+        {
+            "Energy class": "SFH",
+            "Name": "Single Family House",
+            "Description": "Residential properties for one family with energy use based on family routines."
+        },
+        {
+            "Energy class": "TH",
+            "Name": "Townhouse",
+            "Description": "Row houses or terraced houses with shared walls, moderate energy consumption."
+        },
+        {
+            "Energy class": "MFH",
+            "Name": "Multi Family House",
+            "Description": "Buildings with multiple units, leading to higher and varied energy use."
+        },
+        {
+            "Energy class": "AB",
+            "Name": "Apartment Block",
+            "Description": "Large residential buildings with many apartments, high aggregate energy demand."
+        },
+        {
+            "Energy class": "Commercial",
+            "Name": "Commercial",
+            "Description": "General commercial spaces with energy use dependent on activity and hours."
+        },
+        {
+            "Energy class": "Public",
+            "Name": "Public Building",
+            "Description": "Public buildings like schools, offices, civic centers with weekday-focused energy use."
+        },
+        {
+            "Energy class": "Industrial",
+            "Name": "Industrial",
+            "Description": "Industrial facilities with continuous or long-cycle operations and high energy demand."
+        },
+        {
+            "Energy class": "Agricultural",
+            "Name": "Agricultural",
+            "Description": "Agricultural businesses with varying energy use depending on operations."
+        }
+    ],
+    "transformer": [
+        {
+            "Transformer": "Tr_250",
+            "Size_kVA": 250,
+            "Voltage": "20/0.4 kV",
+            "Description": "250 kVA distribution transformer, steps down voltage from 20 kV to 0.4 kV. Used for small commercial or residential areas."
+        },
+        {
+            "Transformer": "Tr_400",
+            "Size_kVA": 400,
+            "Voltage": "20/0.4 kV",
+            "Description": "400 kVA distribution transformer, steps down voltage from 20 kV to 0.4 kV. Used in medium-sized commercial or industrial applications."
+        },
+        {
+            "Transformer": "Tr_630",
+            "Size_kVA": 630,
+            "Voltage": "20/0.4 kV",
+            "Description": "630 kVA distribution transformer, steps down voltage from 20 kV to 0.4 kV. Used for large commercial or industrial complexes."
+        }
+    ],
+    "power lines": [
+        {
+            "Voltage": "Low",
+            "Power lines": "NYY_4_16",
+            "Descriptions": "PVC-insulated copper cable with 4 conductors (16 mm²), used for small residential connections. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Low",
+            "Power lines": "NYY_4_35",
+            "Descriptions": "PVC-insulated copper cable with 4 conductors (35 mm²), used for medium residential connections. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Low",
+            "Power lines": "NYY_4_70",
+            "Descriptions": "PVC-insulated copper cable with 4 conductors (70 mm²), used for larger residential or small commercial connections. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Low",
+            "Power lines": "NAYY_4_50",
+            "Descriptions": "PVC-insulated aluminum cable with 4 conductors (50 mm²), used in residential areas or connecting buildings to local networks. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Low",
+            "Power lines": "NAYY_4_120",
+            "Descriptions": "PVC-insulated aluminum cable with 4 conductors (120 mm²), used in systems with higher power needs like industrial or commercial buildings. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Low",
+            "Power lines": "NAYY_4_185",
+            "Descriptions": "PVC-insulated aluminum cable with 4 conductors (185 mm²), for larger commercial or industrial installations requiring higher current capacity. IEC 60502 compliant."
+        },
+        {
+            "Voltage": "Medium",
+            "Power lines": "NA2XS(F)2Y_1x150RM_12_20kV",
+            "Descriptions": "Medium-voltage XLPE cable (12-20 kV) with 1 conductor (150 mm²), used in medium-voltage networks for substation connections."
+        },
+        {
+            "Voltage": "Medium",
+            "Power lines": "NA2XS(F)2Y_1x240RM_12_20kV",
+            "Descriptions": "Medium-voltage XLPE cable (12-20 kV) with 1 conductor (240 mm²), used for high-demand commercial or industrial applications."
+        }
+    ]
+}

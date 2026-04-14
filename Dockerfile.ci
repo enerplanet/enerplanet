@@ -1,0 +1,122 @@
+# =============================================================================
+# CI/CD Dockerfile - Enerplanet (Frontend + Backend)
+# Build context: repository root
+# =============================================================================
+
+# Multi-stage build for Go backend
+FROM golang:1.24-alpine AS gobuilder
+
+WORKDIR /app
+ENV GOTOOLCHAIN=auto
+
+# Install build deps
+RUN apk add --no-cache build-base ca-certificates git
+
+# Copy shared modules first (required by go.mod replace directives)
+# go.mod uses: replace platform.local/common => ../../infrastructure/common
+# From WORKDIR /app, ../../infrastructure/common = /infrastructure/common
+COPY infrastructure/common /infrastructure/common
+COPY infrastructure/platform /infrastructure/platform
+
+# Cache modules
+COPY enerplanet/backend/go.mod enerplanet/backend/go.sum ./
+RUN go mod download
+
+# Copy source
+COPY enerplanet/backend/. .
+
+# Build binaries (server + migration tool)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/server ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/migrate ./cmd/migrate/migration.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/seed ./cmd/seed/*.go || true
+
+# Build frontend (React + Vite)
+FROM node:20-alpine AS febuilder
+WORKDIR /build
+
+# Copy and build shared libs first (frontend depends on these)
+COPY libs/ui ./libs/ui
+COPY libs/forms ./libs/forms
+COPY libs/auth ./libs/auth
+COPY libs/i18n ./libs/i18n
+
+# Build libs in dependency order: ui -> i18n -> forms -> auth
+WORKDIR /build/libs/ui
+RUN npm install && npm run build
+
+WORKDIR /build/libs/i18n
+RUN npm install && npm run build
+
+WORKDIR /build/libs/forms
+RUN npm install && npm run build
+
+WORKDIR /build/libs/auth
+RUN npm install && npm run build
+
+# Now build frontend
+WORKDIR /build/frontend
+COPY enerplanet/frontend/package*.json ./
+
+# Fix lib paths for Docker build context (libs are at /build/libs, not ../../libs)
+RUN sed -i 's|file:../../libs/|file:../libs/|g' package.json
+
+RUN npm install --legacy-peer-deps
+COPY enerplanet/frontend .
+
+# Fix vite.config.ts alias paths for Docker build context
+RUN sed -i 's|../../libs/|../libs/|g' vite.config.ts
+
+# Fix Tailwind @source paths in global.css (../../../../libs/ -> ../../../libs/)
+RUN sed -i 's|../../../../libs/|../../../libs/|g' src/styles/global.css
+
+RUN npm run build
+
+# Runtime image
+FROM ubuntu:22.04
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy binaries (server + migrate + seed)
+COPY --from=gobuilder /app/bin/server /app/server
+COPY --from=gobuilder /app/bin/migrate /app/migrate
+COPY --from=gobuilder /app/bin/seed /app/seed
+
+# Copy frontend dist
+COPY --from=febuilder /build/frontend/dist /app/www
+
+# Copy migrations
+COPY --from=gobuilder /app/migrations /app/migrations
+
+# Copy .env fallback (overridden at runtime by docker-compose env_file)
+COPY enerplanet/backend/.env.example /app/.env
+
+# Copy initial-data for seeding (technologies, etc.)
+COPY initial-data /initial-data
+
+# Create non-root user and set up storage
+RUN useradd -r -s /bin/false appuser && \
+    mkdir -p /app/storage/data && \
+    chmod +x /app/server /app/migrate /app/seed || true && \
+    chown -R appuser:appuser /app /initial-data
+
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Environment
+ENV APP_HOST=0.0.0.0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/app/server", "--health-check"]
+
+# Run
+ENTRYPOINT ["/app/server"]

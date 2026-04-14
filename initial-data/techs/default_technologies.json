@@ -1,0 +1,850 @@
+{
+    "technologies": [
+        {
+            "key": "battery_storage",
+            "alias": "Battery Storage",
+            "icon": "battery",
+            "description": "Energy storage system using batteries for load balancing and backup power",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 8715,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_max_systemwide",
+                    "alias": "System-wide maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_scale",
+                    "alias": "Energy capacity scale",
+                    "default_value": 1.0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency, conversion efficiency",
+                    "default_value": 0.97,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_export_cap",
+                    "alias": "Export capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 11,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_storage_cap_max",
+                    "alias": "Maximum storage capacity",
+                    "default_value": 8889.3,
+                    "unit": "kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_storage_cap_min",
+                    "alias": "Minimum storage capacity",
+                    "default_value": 0,
+                    "unit": "kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_storage_discharge_depth",
+                    "alias": "Storage depth of discharge",
+                    "default_value": 0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_storage_initial",
+                    "alias": "Initial storage level",
+                    "default_value": 0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_storage_loss",
+                    "alias": "Rate of storage loss per hour",
+                    "default_value": 0,
+                    "unit": "%/hour",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 1028,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_export",
+                    "alias": "Carrier export cost",
+                    "default_value": 0,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.02,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 25.19,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual_investment_fraction",
+                    "alias": "Fractional yearly O&M costs",
+                    "default_value": 0,
+                    "unit": "% / inv.",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_purchase",
+                    "alias": "Purchase cost",
+                    "default_value": 0,
+                    "unit": "EUR",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_storage_cap",
+                    "alias": "Cost of storage capacity",
+                    "default_value": 1007.93,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "pv_supply",
+            "alias": "Photovoltaic Supply",
+            "icon": "solar-panel",
+            "description": "Solar photovoltaic energy generation system",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 8,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_max_systemwide",
+                    "alias": "System-wide maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_scale",
+                    "alias": "Energy capacity scale",
+                    "default_value": 1.0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency, conversion efficiency",
+                    "default_value": 0.9,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_export_cap",
+                    "alias": "Export capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 25,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_parasitic_eff",
+                    "alias": "Plant parasitic efficiency",
+                    "default_value": 1.0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "system_capacity",
+                    "alias": "PV Panel Peak Capacity",
+                    "default_value": 8,
+                    "unit": "kWdc",
+                    "min": 0.1,
+                    "max": 100000
+                },
+                {
+                    "key": "module_type",
+                    "alias": "PV Module Type",
+                    "description": "Solar cell technology: Standard (mono/polycrystalline, best price-performance), Premium (high-efficiency monocrystalline IBC/HJT, best for limited space), Thin Film (CdTe/CIGS, lighter weight, better in low-light and high temperatures)",
+                    "default_value": 0,
+                    "unit": null,
+                    "min": 0,
+                    "max": 2,
+                    "options": [
+                        "Standard Crystalline Silicon (19%)",
+                        "Premium Crystalline Silicon (21%)",
+                        "Thin Film (18%)"
+                    ]
+                },
+                {
+                    "key": "inverter_type",
+                    "alias": "Inverter Type",
+                    "description": "PV inverter technology: String (standard, cost-effective for uniform conditions), Microinverter (panel-level optimization, ideal for shading), Central (large-scale commercial/utility), Power Optimizer (DC-DC optimizers with central inverter, best panel-level monitoring)",
+                    "default_value": 0,
+                    "unit": null,
+                    "min": 0,
+                    "max": 2,
+                    "options": [
+                        "String Inverter (96%)",
+                        "Microinverter (96.5%)",
+                        "Central Inverter (97%)"
+                    ]
+                },
+                {
+                    "key": "optimize_orientation",
+                    "alias": "Auto-Optimize Tilt & Azimuth",
+                    "default_value": 0,
+                    "unit": null,
+                    "min": 0,
+                    "max": 1,
+                    "options": [
+                        "Off (use manual values)",
+                        "On (calculate optimal for location)"
+                    ]
+                },
+                {
+                    "key": "azimuth",
+                    "alias": "PV Panel Orientation",
+                    "default_value": 180,
+                    "unit": "deg",
+                    "min": 0,
+                    "max": 360
+                },
+                {
+                    "key": "tilt",
+                    "alias": "PV Panel Tilt / Slope",
+                    "default_value": 35,
+                    "unit": "deg",
+                    "min": 0,
+                    "max": 90
+                },
+                {
+                    "key": "inv_eff",
+                    "alias": "Inverter Efficiency",
+                    "default_value": 0.96,
+                    "unit": "fraction",
+                    "min": 0.9,
+                    "max": 0.995
+                },
+                {
+                    "key": "losses",
+                    "alias": "PV System Loss",
+                    "default_value": 0.14,
+                    "unit": "fraction",
+                    "min": 0,
+                    "max": 0.99
+                },
+                {
+                    "key": "dc_ac_ratio",
+                    "alias": "DC/AC Ratio",
+                    "default_value": 1.1,
+                    "unit": "ratio",
+                    "min": 1,
+                    "max": 2
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 575,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.02,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 8.0,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "wind_onshore",
+            "alias": "Wind Turbine Supply",
+            "icon": "wind-turbine",
+            "description": "Onshore wind turbine energy generation system",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 12000,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null,
+                    "required": false
+                },
+                {
+                    "key": "cont_energy_cap_max_systemwide",
+                    "alias": "System-wide maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency, conversion efficiency",
+                    "default_value": 0.9,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 25,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "turbine_id",
+                    "alias": "Wind Turbine Type",
+                    "default_value": 61,
+                    "unit": null,
+                    "min": 1,
+                    "max": 107,
+                    "relationData": "windturbine_data.json"
+                },
+                {
+                    "key": "nominal_power",
+                    "alias": "Nominal Power",
+                    "default_value": 2000,
+                    "unit": "kW",
+                    "min": 200,
+                    "max": 8000
+                },
+                {
+                    "key": "hub_height",
+                    "alias": "Wind Turbine Hub Height",
+                    "default_value": 80,
+                    "unit": "m",
+                    "min": 30,
+                    "max": 200
+                },
+                {
+                    "key": "rotor_diameter",
+                    "alias": "Wind Turbine Rotor Diameter",
+                    "default_value": 100,
+                    "unit": "m",
+                    "min": 20,
+                    "max": 180
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 1600,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.05,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 35,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "biomass_supply",
+            "alias": "Biomass Supply",
+            "icon": "leaf",
+            "description": "Biomass power plant for renewable energy generation from organic materials",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 5000,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_max_systemwide",
+                    "alias": "System-wide maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": 1,
+                    "max": "INF"
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": 0,
+                    "max": "INF"
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency, conversion efficiency",
+                    "default_value": 0.25,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 20,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "feedstock_per_year",
+                    "alias": "Total feedstock",
+                    "default_value": 30000,
+                    "unit": "tons/year",
+                    "min": 9000,
+                    "max": "INF"
+                },
+                {
+                    "key": "boiler_efficiency",
+                    "alias": "Plant rated efficiency",
+                    "default_value": 0.34,
+                    "unit": "fraction",
+                    "min": 0.1,
+                    "max": 0.5
+                },
+                {
+                    "key": "total_hhv",
+                    "alias": "Total HHV (Higher Heating Value)",
+                    "default_value": 7740,
+                    "unit": "Btu/lb",
+                    "min": 3000,
+                    "max": 10000
+                },
+                {
+                    "key": "steam_grade_psig",
+                    "alias": "Steam grade (psig)",
+                    "default_value": 900,
+                    "unit": "psig",
+                    "min": 600,
+                    "max": 1500
+                },
+                {
+                    "key": "boiler_numbers",
+                    "alias": "Number of boilers",
+                    "default_value": 2,
+                    "unit": "count",
+                    "min": 1,
+                    "max": 10
+                },
+                {
+                    "key": "flue_gas_temperature",
+                    "alias": "Flue gas temperature",
+                    "default_value": 300,
+                    "unit": "°F",
+                    "min": 200,
+                    "max": 600
+                },
+                {
+                    "key": "parasitic_load",
+                    "alias": "Parasitic load",
+                    "default_value": 7,
+                    "unit": "%",
+                    "min": 1,
+                    "max": 30
+                },
+                {
+                    "key": "combustor_type",
+                    "alias": "Combustor Type",
+                    "default_value": 0,
+                    "unit": "select",
+                    "min": 0,
+                    "max": 2,
+                    "options": [
+                        "Grate Stoker Furnace",
+                        "Fluidized Bed Combustor",
+                        "Cyclone Furnace"
+                    ]
+                },
+                {
+                    "key": "feedstock_type",
+                    "alias": "Feedstock Type",
+                    "default_value": "forest",
+                    "unit": "select",
+                    "min": null,
+                    "max": null,
+                    "options": [
+                        "forest",
+                        "woody",
+                        "mill",
+                        "urban",
+                        "stover",
+                        "wheat",
+                        "barley",
+                        "rice",
+                        "bagasse",
+                        "herb"
+                    ]
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 6500,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.07,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 80,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Variable O&M Cost",
+                    "default_value": 0.096,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "geothermal_supply",
+            "alias": "Geothermal Supply",
+            "icon": "flame",
+            "description": "Geothermal power plant harnessing earth's heat for energy generation",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 30000,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null,
+                    "required": false
+                },
+                {
+                    "key": "cont_energy_cap_max_systemwide",
+                    "alias": "System-wide maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency, conversion efficiency",
+                    "default_value": 0.9,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 50,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "num_wells",
+                    "alias": "Number of Wells",
+                    "default_value": 2,
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "plant_efficiency_input",
+                    "alias": "Plant Thermal-to-Electric Efficiency",
+                    "default_value": 0.15,
+                    "unit": "fraction",
+                    "min": 0.05,
+                    "max": 0.3
+                },
+                {
+                    "key": "resource_depth",
+                    "alias": "Geothermal Resource Depth",
+                    "default_value": 3500,
+                    "unit": "m",
+                    "min": 500,
+                    "max": 6000
+                },
+                {
+                    "key": "specified_pump_work_amount",
+                    "alias": "Pump Work",
+                    "default_value": 0.3,
+                    "unit": "MW",
+                    "min": 0.05,
+                    "max": 2.0
+                },
+                {
+                    "key": "well_flow_rate",
+                    "alias": "Well Flow Rate",
+                    "default_value": 80,
+                    "unit": "kg/s",
+                    "min": 10,
+                    "max": 200
+                },
+                {
+                    "key": "pump_efficiency",
+                    "alias": "Pump Efficiency",
+                    "default_value": 0.65,
+                    "unit": "fraction",
+                    "min": 0.3,
+                    "max": 0.95
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 5000,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.08,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 100,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "water_supply",
+            "alias": "Hydropower Supply",
+            "icon": "droplets",
+            "description": "Hydropower plant for renewable energy generation from water flow",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": 4700,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 52.5,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Variable O&M Cost",
+                    "default_value": -0.0616,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "households_supply",
+            "alias": "Households consumers supply",
+            "icon": "home",
+            "description": "Residential household energy consumption profile",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null,
+                    "required": false
+                },
+                {
+                    "key": "cont_resource_eff",
+                    "alias": "Resource Efficiency",
+                    "default_value": 1.0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.02,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_con",
+                    "alias": "Carrier consumption cost",
+                    "default_value": 0.3943,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        },
+        {
+            "key": "non_households_supply",
+            "alias": "Non-Households consumers supply",
+            "icon": "building-2",
+            "description": "Commercial and industrial energy consumption profile",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null,
+                    "required": false
+                },
+                {
+                    "key": "cont_resource_eff",
+                    "alias": "Resource Efficiency",
+                    "default_value": 1.0,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.02,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "cost_om_con",
+                    "alias": "Carrier consumption cost",
+                    "default_value": 0.2359,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
+        }
+    ]
+}

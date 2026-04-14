@@ -1,0 +1,222 @@
+basePath: /api
+definitions:
+  spatialhub_backend_internal_api_contracts.BoundaryData:
+    properties:
+      boundary:
+        description: GeoJSON Feature
+      message:
+        example: ""
+        type: string
+      region:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BoundaryRegion'
+      status:
+        example: success
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.BoundaryRegion:
+    properties:
+      admin_level:
+        example: 4
+        type: integer
+      country:
+        example: Germany
+        type: string
+      country_code:
+        example: DE
+        type: string
+      name:
+        example: Bayern
+        type: string
+      osm_id:
+        example: 2145268
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.ErrorResponse:
+    properties:
+      error:
+        example: Unauthorized
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.GetBoundaryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BoundaryData'
+      success:
+        example: true
+        type: boolean
+    type: object
+  spatialhub_backend_internal_api_contracts.GetModelsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelSummary'
+        type: array
+      limit:
+        example: 100
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      server_time:
+        example: "2025-06-15T10:30:00Z"
+        type: string
+      success:
+        example: true
+        type: boolean
+      total:
+        example: 25
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.ModelSummary:
+    properties:
+      country:
+        example: DE
+        type: string
+      created_at:
+        example: "2025-06-15T10:30:00Z"
+        type: string
+      description:
+        example: Heating model for Munich south
+        type: string
+      from_date:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 42
+        type: integer
+      is_active:
+        example: false
+        type: boolean
+      is_copy:
+        example: false
+        type: boolean
+      region:
+        example: Bavaria
+        type: string
+      resolution:
+        example: 8
+        type: integer
+      status:
+        example: draft
+        type: string
+      title:
+        example: Munich District Heating
+        type: string
+      to_date:
+        example: "2025-12-31T00:00:00Z"
+        type: string
+      updated_at:
+        example: "2025-06-15T10:30:00Z"
+        type: string
+      user_email:
+        example: user@example.com
+        type: string
+      user_id:
+        example: f47ac10b-58cc-4372-a567-0e02b2c3d479
+        type: string
+      workspace_id:
+        example: 1
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: |-
+    Unified API for the EnerPlanET energy planning platform.
+    Includes native backend endpoints and proxied Pylovo (grid/boundary) services.
+  title: EnerPlanET API
+  version: "1.0"
+paths:
+  /models:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Returns a paginated list of energy planning models the user has access to,
+        filtered by workspace and search query. Includes shared and workspace-scoped models.
+      parameters:
+      - default: 100
+        description: Max results per page
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      - description: Search models by title (case-insensitive)
+        in: query
+        name: search
+        type: string
+      - description: Filter by workspace ID
+        in: query
+        name: workspace_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetModelsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: List models for the authenticated user
+      tags:
+      - EnerPlanET
+  /v2/pylovo/boundary:
+    get:
+      description: |-
+        Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.
+        This is a public endpoint — no authentication required.
+      parameters:
+      - description: Latitude
+        example: 48.137
+        in: query
+        name: lat
+        required: true
+        type: number
+      - description: Longitude
+        example: 11.575
+        in: query
+        name: lon
+        required: true
+        type: number
+      - default: 4
+        description: OSM admin level (default 4)
+        in: query
+        name: admin_level
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetBoundaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      summary: Get administrative boundary by coordinates
+      tags:
+      - EnerPlanET
+securityDefinitions:
+  SessionAuth:
+    description: Session cookie obtained via POST /api/login
+    in: cookie
+    name: session_id
+    type: apiKey
+swagger: "2.0"

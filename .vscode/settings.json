@@ -1,0 +1,15 @@
+{
+  // Enable format on save and prefer Prettier as the formatter
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Let ESLint fix issues (including some formatting) on save
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+
+  // File handling
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}
