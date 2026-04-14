@@ -118,11 +118,9 @@ git-credential-cache:
 .PHONY: setup-repos
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
-	@[ -d platform-core ] && (cd platform-core && git pull) || git clone $(PLATFORM_CORE_REPO)
-	@[ -d libs ] && (cd libs && git pull) || git clone $(LIBS_REPO) libs
-	@[ -d infrastructure ] && (cd infrastructure && git pull) || git clone $(INFRASTRUCTURE_REPO) infrastructure
-	@[ -d dependencies/webservice ] && (cd dependencies/webservice && git pull) || git clone -b $(WEBSERVICE_BRANCH) $(WEBSERVICE_REPO) dependencies/webservice
-	@[ -d dependencies/pylovo ] && (cd dependencies/pylovo && git pull) || git clone $(PYLOVO_REPO) dependencies/pylovo
+	git submodules update --init
+	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine
+	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet
 
 .PHONY: env-setup
 env-setup:
@@ -174,8 +172,8 @@ up-services:
 
 .PHONY: webservice
 webservice:
-	@cd dependencies/webservice && make build && make up-min
+	@cd dependencies/simulation-engine && make build && make up-min
 
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/pylovo && make dev
+	@cd dependencies/pylovo2enerplanet && make dev

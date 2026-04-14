@@ -19,7 +19,4 @@ docs/.venv/
 auth-service/
 
 # Infrastructure (separate repository)
-infrastructure/
-platform-core/
-libs/
 dependencies/

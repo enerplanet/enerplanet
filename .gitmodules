@@ -1,0 +1,9 @@
+[submodule "libs"]
+	path = libs
+	url = https://github.com/enerplanet/libs.git
+[submodule "platform-core"]
+	path = platform-core
+	url = https://github.com/enerplanet/platform-core.git
+[submodule "infrastructure"]
+	path = infrastructure
+	url = https://github.com/enerplanet/infrastructure-utilities.git
