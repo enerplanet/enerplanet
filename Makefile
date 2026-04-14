@@ -113,12 +113,15 @@ sonar:
 
 .PHONY: git-credential-cache
 git-credential-cache:
-	@git config --global credential.helper 'cache --timeout=120'
+	@if [ -z "$$(git config credential.helper)" ]; then \
+		echo "Setting local git credential cache (timeout=120s)..."; \
+		git config credential.helper 'cache --timeout=120'; \
+	fi
 
 .PHONY: setup-repos
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
-	git submodules update --init
+	git submodule update --init
 	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine
 	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet
 
