@@ -64,7 +64,7 @@ Bug reports, feature requests, and pull requests are welcome. Please read [CONTR
 
 ## License
 
-MIT License — Copyright (C) 2023–2026 Technische Hochschule Deggendorf (THD-Spatial-AI). See [LICENSE](LICENSE) for the full text.
+MIT License — Copyright (C) 2023–2026 Technische Hochschule Deggendorf (BigGeoData & Spatial AI). See [LICENSE](LICENSE) for the full text.
 
 ---
 
@@ -90,6 +90,11 @@ If you use the PyLovo grid engine specifically:
 
 ## Acknowledgments
 
-Developed by the **THD-Spatial-AI** at Technische Hochschule Deggendorf.
+Developed by the **BigGeoData & Spatial AI** research group at Technische Hochschule Deggendorf.
 
 Open data: OpenStreetMap, NASA MERRA-2, Open Meteo, CBS, EP-Online, GADM, 3D BAG, OpenGeoData NRW, ČÚZK LiDAR, GeoSN Sachsen, GAIA Thüringen, Geofabrik — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+
+This project is being developed in the context of the research project RENvolveIT (<https://projekte.ffg.at/projekt/5127011>).
+This research was funded by CETPartnership, the Clean Energy Transition Partnership under the 2023 joint call for research proposals, co-funded by the European Commission (GA N°101069750) and with the funding organizations detailed on <https://cetpartnership.eu/funding-agencies-and-call-modules>.​
+
+<img src="docs/assets/sponsors/CETP-logo.svg" alt="CETPartnership" width="144" height="72">  <img src="docs/assets/sponsors/EN_Co-fundedbytheEU_RGB_POS.png" alt="EU" width="180" height="40">
