@@ -4,11 +4,10 @@ site_author: THD-Spatial-AI
 site_description: >-
   Community energy grid planning & simulation platform — documentation for EnerPlanET,
   PyLovo, and the simulation webservice.
-site_url: https://THD-Spatial.github.io/enerplanet
-
+site_url: https://enerplanet.github.io/enerplanet
 # Repository
-repo_name: THD-Spatial/enerplanet
-repo_url: https://github.com/THD-Spatial/enerplanet
+repo_name: enerplanet/enerplanet
+repo_url: https://github.com/enerplanet/enerplanet
 edit_uri: edit/main/docs/
 
 # Theme configuration
@@ -113,26 +112,26 @@ markdown_extensions:
 nav:
   - Home: index.md
   - EnerPlanET Platform:
-    - Overview: enerplanet/index.md
-    - Installation: enerplanet/installation.md
-    - Architecture: enerplanet/architecture.md
-    - Deployment: enerplanet/deployment.md
-    - Authentication (Keycloak): enerplanet/keycloak.md
-    - Identity Brokering: enerplanet/keycloak-identity-brokering.md
+      - Overview: enerplanet/index.md
+      - Installation: enerplanet/installation.md
+      - Architecture: enerplanet/architecture.md
+      - Deployment: enerplanet/deployment.md
+      - Authentication (Keycloak): enerplanet/keycloak.md
+      - Identity Brokering: enerplanet/keycloak-identity-brokering.md
   - PyLovo Grid Engine:
-    - Overview: pylovo/index.md
-    - Quickstart: pylovo/quickstart.md
-    - Architecture: pylovo/architecture.md
-    - Configuration: pylovo/configuration.md
-    - Building Types: pylovo/building-types.md
-    - AI Energy Estimation: pylovo/ai-estimation.md
-    - REST API: pylovo/api.md
+      - Overview: pylovo/index.md
+      - Quickstart: pylovo/quickstart.md
+      - Architecture: pylovo/architecture.md
+      - Configuration: pylovo/configuration.md
+      - Building Types: pylovo/building-types.md
+      - AI Energy Estimation: pylovo/ai-estimation.md
+      - REST API: pylovo/api.md
   - Simulation Webservice:
-    - Overview: webservice/index.md
-    - Energy Technologies: webservice/technologies.md
+      - Overview: webservice/index.md
+      - Energy Technologies: webservice/technologies.md
   - Open Source:
-    - Checklist: getting-started/open-source-checklist.md
+      - Checklist: getting-started/open-source-checklist.md
 
 # Copyright
 copyright: |
-  &copy; 2023–2026 <a href="https://github.com/THD-Spatial" target="_blank" rel="noopener">BigGeoData & Spatial AI, Technische Hochschule Deggendorf</a> — MIT License
+  &copy; 2026 <a href="https://github.com/THD-Spatial-AI" target="_blank" rel="noopener">Big Geodata & Spatial AI, Technische Hochschule Deggendorf</a>

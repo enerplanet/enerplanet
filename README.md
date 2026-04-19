@@ -32,7 +32,8 @@ git lfs pull
 make setup
 ```
 
-`make setup` creates the database, builds images, and starts all services.
+> [!NOTE]
+> `make setup` creates the database, builds images, and starts all services. *(This might take a while)*
 
 Default development credentials (change before any non-local deployment):
 
@@ -41,18 +42,18 @@ Email:    admin@spatialai.de
 Password: 12345678
 ```
 
-See the [Installation Guide](https://enerplanet.github.io/enerplanet/enerplanet/installation/) for full prerequisites, environment variables, and Keycloak configuration.
+See the [Installation Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/installation/) for full prerequisites, environment variables, and Keycloak configuration.
 
 ---
 
 ## Key Links
 
-- [System Architecture](https://enerplanet.github.io/enerplanet/enerplanet/architecture/)
-- [Deployment Guide](https://enerplanet.github.io/enerplanet/enerplanet/deployment/)
-- [Authentication / Keycloak Setup](https://enerplanet.github.io/enerplanet/enerplanet/keycloak/)
-- [PyLovo Quickstart](https://enerplanet.github.io/enerplanet/pylovo/quickstart/)
-- [AI Energy Estimation](https://enerplanet.github.io/enerplanet/pylovo/ai-estimation/)
-- [REST API Reference](https://enerplanet.github.io/enerplanet/pylovo/api/)
+- [System Architecture](https://enerplanet.github.io/enerplanet/docs/enerplanet/architecture/)
+- [Deployment Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/deployment/)
+- [Authentication / Keycloak Setup](https://enerplanet.github.io/enerplanet/docs/enerplanet/keycloak/)
+- [PyLovo Quickstart](https://enerplanet.github.io/enerplanet/docs/pylovo/quickstart/)
+- [AI Energy Estimation](https://enerplanet.github.io/enerplanet/docs/pylovo/ai-estimation/)
+- [REST API Reference](https://enerplanet.github.io/enerplanet/docs/pylovo/api/)
 
 ---
 
