@@ -4,11 +4,11 @@ site_author: THD-Spatial-AI
 site_description: >-
   Community energy grid planning & simulation platform — documentation for EnerPlanET,
   PyLovo, and the simulation webservice.
-site_url: https://THD-Spatial.github.io/enerplanet
+site_url: https://enerplanet.github.io/enerplanet
 
 # Repository
-repo_name: THD-Spatial/enerplanet
-repo_url: https://github.com/THD-Spatial/enerplanet
+repo_name: enerplanet/enerplanet
+repo_url: https://github.com/enerplanet/enerplanet
 edit_uri: edit/main/docs/
 
 # Theme configuration
@@ -135,4 +135,4 @@ nav:
 
 # Copyright
 copyright: |
-  &copy; 2023–2026 <a href="https://github.com/THD-Spatial" target="_blank" rel="noopener">BigGeoData & Spatial AI, Technische Hochschule Deggendorf</a> — MIT License
+  &copy; 2026 <a href="https://github.com/THD-Spatial-AI" target="_blank" rel="noopener">Big Geodata & Spatial AI, Technische Hochschule Deggendorf</a>
