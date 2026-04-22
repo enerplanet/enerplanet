@@ -31,6 +31,7 @@
 		"@tanstack/react-query": "^5.81.5",
 		"@tanstack/react-virtual": "^3.13.21",
 		"@turf/area": "^7.3.1",
+		"@turf/boolean-point-in-polygon": "^7.3.5",
 		"@turf/buffer": "^7.2.0",
 		"@turf/helpers": "^7.3.1",
 		"@turf/length": "^7.3.1",

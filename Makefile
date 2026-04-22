@@ -122,8 +122,8 @@ git-credential-cache:
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
 	git submodule update --init
-	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine
-	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet
+	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
+	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet && cd dependencies/pylovo2enerplanet && git lfs pull
 
 .PHONY: env-setup
 env-setup:
