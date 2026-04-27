@@ -10,9 +10,9 @@ graph TD
     B --> C[PostgreSQL 17<br/>+ PostGIS + pgRouting]
     B --> D[Redis 7<br/>Sessions / Queue]
     B --> E[PyLovo<br/>Grid Generation]
-    B --> F[Simulation Engine<br/>Calliope / PyPSA]
+    B --> F[Simulation Engine<br/>Tech Microservices<br/>PV / Wind / Biomass]
     G[Keycloak 26<br/>OIDC / OAuth2] --> B
-    F --> H[Tech Microservices<br/>PV / Wind / Biomass]
+    F --> H[Optimization Engine<br/>Calliope / PyPSA]
 ```
 
 ## Key Capabilities
