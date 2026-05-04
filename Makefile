@@ -10,6 +10,10 @@ YELLOW := \033[1;33m
 CYAN   := \033[0;36m
 NC     := \033[0m
 
+FRONT_DIR = enerplanet/frontend
+BACK_DIR = enerplanet/backend
+SESSION_NAME = enerplanet
+
 # Docker Compose files
 PLATFORM_COMPOSE   := -f platform-core/docker-compose.yml -f platform-core/docker-compose.dev.yml
 ENERPLANET_COMPOSE := -f enerplanet/docker-compose.yml -f enerplanet/docker-compose.dev.yml
@@ -38,8 +42,44 @@ help:
 # ==============================================================================
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo dev-bg list-bg
+
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
+
+
+.PHONY: dev-bg list-bg clean-bg clean-docker
+
+# 1. Start both in the background
+dev-bg:
+	@echo "Starting Enerplanet Services in the background..."
+	@tmux has-session -t $(SESSION_NAME) 2>/dev/null && \
+		(echo "Error: Session '$(SESSION_NAME)' is already running. Run 'make clean-bg' first.") || \
+		(tmux new-session -d -s $(SESSION_NAME) -n frontend "cd $(FRONT_DIR) && npm run dev" && \
+		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && go run cmd/main.go" && \
+		 echo "Services started successfully!" && \
+		 echo "-------------------------------------------------------" && \
+		 echo "Access Frontend:  http://localhost:3000" && \
+		 echo "User:             admin@example.de" && \
+		 echo "Password:         12345678" && \
+		 echo "-------------------------------------------------------" && \
+		 echo "Run 'make list-bg' to see status or 'make clean-bg' to stop.")
+
+# 2. Show active background sessions
+list-bg:
+	@echo "Checking active Enerplanet sessions..."
+	@tmux list-windows -t $(SESSION_NAME) 2>/dev/null || echo "No active sessions found."
+
+# 3. Clear/Kill the background sessions
+clean-bg:
+	@echo "Stopping all Enerplanet background services..."
+	@tmux kill-session -t $(SESSION_NAME) 2>/dev/null && echo "Sessions cleared." || echo "Nothing to stop."
+
+# 4. Total Docker Wipe
+clean-docker:
+	@echo "Warning: This will delete ALL Docker data (images, volumes, cache)..."
+	docker system prune -af --volumes
+	@echo "Docker system cleaned."
+
 
 .PHONY: update
 update: git-credential-cache setup-repos install migrate webservice pylovo
