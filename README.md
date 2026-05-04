@@ -65,27 +65,7 @@ Bug reports, feature requests, and pull requests are welcome. Please read [CONTR
 
 ## License
 
-MIT License — Copyright (C) 2023–2026 Technische Hochschule Deggendorf (BigGeoData & Spatial AI). See [LICENSE](LICENSE) for the full text.
-
----
-
-## Citation
-
-If you use EnerPlanET in a scientific publication, please cite:
-
-```bibtex
-@software{enerplanet2026,
-  title   = {EnerPlanET},
-  author  = {BigGeoData & Spatial AI, Technische Hochschule Deggendorf},
-  year    = {2026},
-  url     = {https://github.com/enerplanet/enerplanet},
-  license = {MIT}
-}
-```
-
-If you use the PyLovo grid engine specifically:
-
-> Reveron Baecker et al. (2025). _Generation of low-voltage synthetic grid data for energy system modeling with the pylovo tool_. Sustainable Energy, Grids and Networks. [doi:10.1016/j.segan.2024.101617](https://doi.org/10.1016/j.segan.2024.101617)
+MIT License — Copyright (C) 2019–2026 Technische Hochschule Deggendorf (BigGeoData & Spatial AI). See [LICENSE](LICENSE) for the full text.
 
 ---
 
