@@ -5,7 +5,16 @@
       "type": "shell",
       "problemMatcher": [],
       "label": "Frontend",
-      "command": "make dev-bg",
+      "command": "cd enerplanet/frontend; npm run dev",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "type": "shell",
+      "problemMatcher": [],
+      "label": "Backend",
+      "command": "cd enerplanet/backend; go run cmd/main.go",
       "runOptions": {
         "runOn": "folderOpen"
       }
