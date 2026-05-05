@@ -68,7 +68,7 @@ This project uses the following third-party open-source components and data sour
 
 The PyLovo grid generation algorithm is described in:
 
-> Reveron Baecker, B., Candas, S., Tepe, D., & Mohapatra, A. (2025): *Generation of low-voltage synthetic grid data for energy system modeling with the pylovo tool*. Sustainable Energy, Grids and Networks, 41, 101617. ISSN 2352-4677. [doi:10.1016/j.segan.2024.101617](https://doi.org/10.1016/j.segan.2024.101617)
+> Beneharo Reveron Baecker, Soner Candas, Deniz Tepe, Anurag Mohapatra, Generation of low-voltage synthetic grid data for energy system modeling with the pylovo tool, Sustainable Energy, Grids and Networks, Volume 41, 2025, 101617, ISSN 2352-4677, https://doi.org/10.1016/j.segan.2024.101617.
 
 ## Standards & Technical References
 
