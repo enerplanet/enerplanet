@@ -4,17 +4,17 @@ import { modelService } from '@/features/model-dashboard/services/modelService';
 import { useCreateModelMutation, useUpdateModelMutation2 } from '@/features/model-dashboard/hooks/useModelsQuery';
 import axios from '@/lib/axios';
 import type {
-	AreaData,
-	UseAreaSelectProps,
-	AreaSelectState,
-	AreaSelectActions,
-	PylovoGridData,
+    AreaData,
+    UseAreaSelectProps,
+    AreaSelectState,
+    AreaSelectActions,
+    PylovoGridData,
 } from '@/features/configurator/types/area-select';
 import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { useMapProvider } from '@/providers/map-context';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
 import { pylovoService } from '@/features/configurator/services/pylovoService';
-import { geocodingService } from '@/features/interactive-map/services/geocoding';
+
 import { getDefaultAdvancedParameters } from '@/features/configurator/constants/area-select-params';
 import { useWorkspaceStore } from '@/components/workspace/store/workspace-store';
 import { useAuthStore } from '@/store/auth-store';
@@ -127,7 +127,7 @@ const checkBboxIntersection = (
     const locMaxLat = Math.max(...locCoords.map(c => c[1]));
 
     return drawnMaxLon >= locMinLon && drawnMinLon <= locMaxLon &&
-           drawnMaxLat >= locMinLat && drawnMinLat <= locMaxLat;
+        drawnMaxLat >= locMinLat && drawnMinLat <= locMaxLat;
 };
 
 // Helper to check if location intersects any polygon
@@ -461,7 +461,7 @@ const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | null, e
             const uniqueGridIds = Array.from(gridResultIds);
 
             // Run power flow for each grid
-	            const nonConvergedGrids: { id: number; ratio: number }[] = [];
+            const nonConvergedGrids: { id: number; ratio: number }[] = [];
             for (const gridResultId of uniqueGridIds) {
                 try {
                     // Pass only the building OSM IDs that are in the current polygon
@@ -513,9 +513,9 @@ const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | null, e
 
                         const lineResult = pfResult.results?.lines?.find(
                             (l: any) => l.line_id === lineId ||
-                                        l.lines_result_id === lineId ||
-                                        l.name === lineName ||
-                                        l.line_name === lineName
+                                l.lines_result_id === lineId ||
+                                l.name === lineName ||
+                                l.line_name === lineName
                         );
                         if (lineResult) {
                             matchedLines++;
@@ -1044,7 +1044,7 @@ const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | null, e
     };
 };
 
-const useTechOperations = ({ map, mapRef, pylovoLayersRef, showSuccess, showError, t }: any) => {
+const useTechOperations = ({ map, mapRef, pylovoLayersRef, showSuccess, showError, t, setIsModified }: any) => {
     const [showTechDrawer, setShowTechDrawer] = useState(false);
     const [draggingTech, setDraggingTech] = useState<Technology | null>(null);
     const [highlightedBuilding, setHighlightedBuilding] = useState<Feature<Geometry> | null>(null);
@@ -1152,7 +1152,8 @@ const useTechOperations = ({ map, mapRef, pylovoLayersRef, showSuccess, showErro
         setTechDialogOpen(false);
         setSelectedTechForDialog(null);
         setSelectedBuildingForTech(null);
-    }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t]);
+        setIsModified(true);
+    }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified]);
 
     const handleAddTechToAll = useCallback((tech: Technology) => {
         setSelectedTechForDialog(tech);
@@ -1199,7 +1200,8 @@ const useTechOperations = ({ map, mapRef, pylovoLayersRef, showSuccess, showErro
         });
         setAppliedTechKeys(prev => prev.filter(key => key !== tech.key));
         showSuccess(t("gridNotifications.techRemovedFromAll", { tech: tech.alias, count }));
-    }, [showSuccess, pylovoLayersRef, t]);
+        setIsModified(true);
+    }, [showSuccess, pylovoLayersRef, t, setIsModified]);
 
     const getAppliedTechKeys = useCallback((): string[] => {
         const techCounts: Record<string, number> = {};
@@ -1247,8 +1249,9 @@ const useTechOperations = ({ map, mapRef, pylovoLayersRef, showSuccess, showErro
         buildingFeature.set("techs", existingTechs);
         buildingFeature.setStyle(createBuildingStyleFunction(true, false));
         showSuccess(t("gridNotifications.techRemovedFromBuilding", { tech: techAlias }));
+        setIsModified(true);
         return existingTechs;
-    }, [showSuccess, t]);
+    }, [showSuccess, t, setIsModified]);
 
     return {
         showTechDrawer, setShowTechDrawer, draggingTech, handleTechDragStart, handleTechDragEnd,
@@ -1492,34 +1495,100 @@ const useMapInteractions = ({
 };
 
 export const useAreaSelect = ({
-	onAreaSelected,
-	onCancel,
-	editMode = false,
-	existingModelId,
-	buildingLimit = 0,
-	suppressDialogOnClick = false,
-	draftId,
+    onAreaSelected,
+    onCancel,
+    editMode = false,
+    existingModelId,
+    buildingLimit = 0,
+    suppressDialogOnClick = false,
+    draftId,
 }: UseAreaSelectProps & { buildingLimit?: number }) => {
-	const { t } = useTranslation();
-	const navigate = useNavigate();
-	const params = useParams();
-	const modelId = editMode ? (existingModelId || Number.parseInt(params.id || '0', 10)) : undefined;
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const params = useParams();
+    const modelId = editMode ? (existingModelId || Number.parseInt(params.id || '0', 10)) : undefined;
 
-	const createModelMutation = useCreateModelMutation();
-	const updateModelMutation = useUpdateModelMutation2();
+    const createModelMutation = useCreateModelMutation();
+    const updateModelMutation = useUpdateModelMutation2();
     const { notification, showSuccess, showError, hide } = useNotification();
     const currentWorkspace = useWorkspaceStore(state => state.currentWorkspace);
 
-	const [modelName, setModelName] = useState<string>("");
-	const [fromDate, setFromDate] = useState<string>("");
-	const [toDate, setToDate] = useState<string>("");
-	const [resolution, setResolution] = useState<number>(DEFAULT_RESOLUTION);
-	const [isSaving, setIsSaving] = useState(false);
-	const [isLoadingModel, setIsLoadingModel] = useState(false);
+    const [modelName, setModelName] = useState<string>("");
+    const [fromDate, setFromDate] = useState<string>("");
+    const [toDate, setToDate] = useState<string>("");
+    const [resolution, setResolution] = useState<number>(DEFAULT_RESOLUTION);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingModel, setIsLoadingModel] = useState(false);
     const [isGeneratingGrid, setIsGeneratingGrid] = useState(false);
-	const [showAreaSelectTour, setShowAreaSelectTour] = useState(false);
-	const [loadedCoordinates, setLoadedCoordinates] = useState<[number, number][][]>();
-	const [loadedConfig, setLoadedConfig] = useState<PylovoGridData | undefined>();
+    const [showAreaSelectTour, setShowAreaSelectTour] = useState(false);
+    const [loadedCoordinates, setLoadedCoordinates] = useState<[number, number][][]>();
+    const [loadedConfig, setLoadedConfig] = useState<PylovoGridData | undefined>();
+    const [isModified, setIsModified] = useState<boolean>(false);
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState<boolean>(false);
+    const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+    const isInternalNavRef = useRef(false);
+
+    // Browser back/forward navigation interceptor via popstate
+    useEffect(() => {
+        if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return;
+
+        // Push a dummy state so we can intercept the pop
+        window.history.pushState(null, '', window.location.href);
+
+        const handlePopState = () => {
+            setShowUnsavedDialog(true);
+            // Push state back to stay on page
+            window.history.pushState(null, '', window.location.href);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [editMode, isModified]);
+
+    // Intercept window.history.pushState to catch React Router's programmatic
+    // navigate() calls (sidebar buttons, navbar links, etc.).
+    useEffect(() => {
+        if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return;
+
+        const originalPushState = window.history.pushState.bind(window.history);
+
+        const patchedPushState: typeof window.history.pushState = (data, unused, url) => {
+            // Allow internal navigation (from useAreaSelect's own handlers)
+            if (isInternalNavRef.current) {
+                isInternalNavRef.current = false;
+                originalPushState(data, unused, url);
+                return;
+            }
+
+            // Determine the target pathname
+            let targetPath: string | null = null;
+            if (typeof url === 'string') {
+                try {
+                    targetPath = new URL(url, window.location.origin).pathname;
+                } catch {
+                    targetPath = url;
+                }
+            }
+
+            const currentPath = window.location.pathname;
+
+            // Only intercept if navigating to a different path
+            if (targetPath && targetPath !== currentPath) {
+                setPendingNavigationUrl(targetPath);
+                setShowUnsavedDialog(true);
+                // Don't call original — block the navigation
+                return;
+            }
+
+            originalPushState(data, unused, url);
+        };
+
+        window.history.pushState = patchedPushState;
+
+        return () => {
+            window.history.pushState = originalPushState;
+        };
+    }, [editMode, isModified]);
 
     const { map } = useMapStore();
     const { mapRef } = useMapProvider();
@@ -1547,7 +1616,7 @@ export const useAreaSelect = ({
     const pylovoLayersData = usePylovoLayers({ map, editMode, loadedConfig });
     const techOperationsData = useTechOperations({
         map, mapRef, pylovoLayersRef: pylovoLayersData.pylovoLayersRef,
-        showSuccess, showError, t
+        showSuccess, showError, t, setIsModified
     });
     const mapInteractionsData = useMapInteractions({
         map,
@@ -1557,16 +1626,16 @@ export const useAreaSelect = ({
         suppressMapInteractions: isMapLibre3D,
     });
 
-	useEffect(() => {
-		loadExistingModelData({
-			editMode, modelId,
-			setters: {
-				setModelName, setResolution, setFromDate, setToDate,
-				setLoadedCoordinates, setIsLoadingModel, setLoadedConfig
-			},
-			originalModelRef
-		});
-	}, [editMode, modelId]);
+    useEffect(() => {
+        loadExistingModelData({
+            editMode, modelId,
+            setters: {
+                setModelName, setResolution, setFromDate, setToDate,
+                setLoadedCoordinates, setIsLoadingModel, setLoadedConfig
+            },
+            originalModelRef
+        });
+    }, [editMode, modelId]);
 
     useEffect(() => {
         if (editMode && loadedCoordinates && loadedCoordinates.length > 0) {
@@ -1574,34 +1643,63 @@ export const useAreaSelect = ({
         }
     }, [editMode, loadedCoordinates]);
 
-	useEffect(() => {
-		checkAndShowAreaSelectTour(editMode, setShowAreaSelectTour);
-	}, [editMode]);
+    useEffect(() => {
+        checkAndShowAreaSelectTour(editMode, setShowAreaSelectTour);
+    }, [editMode]);
 
-	useEffect(() => {
-		const handleRestartTour = () => setShowAreaSelectTour(true);
-		globalThis.addEventListener('restart-area-select-tour', handleRestartTour);
-		return () => globalThis.removeEventListener('restart-area-select-tour', handleRestartTour);
-	}, []);
+    useEffect(() => {
+        const handleRestartTour = () => setShowAreaSelectTour(true);
+        globalThis.addEventListener('restart-area-select-tour', handleRestartTour);
+        return () => globalThis.removeEventListener('restart-area-select-tour', handleRestartTour);
+    }, []);
 
-	const handleUpdateRange = useCallback((e: any) => {
-		updateDateRange(e, setFromDate, setToDate);
-	}, []);
+    const handleUpdateRange = useCallback((e: any) => {
+        updateDateRange(e, setFromDate, setToDate);
+    }, []);
 
-	const handleTourComplete = useCallback(() => {
-		setShowAreaSelectTour(false);
-		void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => {});
-	}, []);
+    const handleTourComplete = useCallback(() => {
+        setShowAreaSelectTour(false);
+        void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { });
+    }, []);
 
-	const handleTourSkip = useCallback(() => {
-		setShowAreaSelectTour(false);
-		void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => {});
-	}, []);
+    const handleTourSkip = useCallback(() => {
+        setShowAreaSelectTour(false);
+        void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { });
+    }, []);
 
-	const handleCancel = useCallback((): void => {
-		if (onCancel) { onCancel(); return; }
-		navigate(DASHBOARD_ROUTE);
-	}, [onCancel, navigate]);
+    // Track if there's been at least one polygon/grid load in edit mode so
+    // we don't flag isModified=true while the initial model data is being set.
+    const editModeInitializedRef = useRef(false);
+    useEffect(() => {
+        if (editMode && !editModeInitializedRef.current && !isLoadingModel && originalModelRef.current) {
+            editModeInitializedRef.current = true;
+        }
+    }, [editMode, isLoadingModel]);
+
+    const handleCancel = useCallback((): void => {
+        if (onCancel) { onCancel(); return; }
+        if (isModified && editMode) {
+            setShowUnsavedDialog(true);
+            return;
+        }
+        isInternalNavRef.current = true;
+        navigate(DASHBOARD_ROUTE);
+    }, [onCancel, navigate, isModified, editMode]);
+
+    // Detect metadata changes in edit mode (modelName, fromDate, toDate, resolution)
+    useEffect(() => {
+        if (!editMode || !editModeInitializedRef.current) return;
+        const orig = originalModelRef.current;
+        if (!orig) return;
+        if (
+            modelName !== orig.title ||
+            fromDate !== orig.from_date ||
+            toDate !== orig.to_date ||
+            resolution !== orig.resolution
+        ) {
+            setIsModified(true);
+        }
+    }, [editMode, modelName, fromDate, toDate, resolution]);
 
     const getUpdatedPylovoData = useCallback(() => {
         const baseData = pylovoLayersData.pylovoGridData || {};
@@ -1622,29 +1720,56 @@ export const useAreaSelect = ({
             const type = firstFeature.get('feature_type');
 
             if (type === 'building') {
-                 const geojson = format.writeFeaturesObject(features, {
+                const geojson = format.writeFeaturesObject(features, {
                     dataProjection: 'EPSG:4326',
                     featureProjection: map.getView().getProjection()
-                 });
-                 updatedData.buildings = geojson;
+                });
+                updatedData.buildings = geojson;
             }
         });
 
         return updatedData;
     }, [pylovoLayersData, map]);
 
-	const handleSave = useCallback(async (): Promise<void> => {
+    const handleQuickSave = useCallback(async (): Promise<void> => {
         const currentPylovoData = getUpdatedPylovoData();
         const user = useAuthStore.getState().user;
         const userId = user?.id ? String(user.id) : undefined;
-		await saveAreaData({
-			fromDate, toDate, modelName, resolution, editMode, modelId,
-			onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id,
-			updateModelMutation, createModelMutation, navigate, setIsSaving,
-			pylovoData: currentPylovoData, advancedParams,
-			draftId, userId, originalModel: originalModelRef.current
-		});
-	}, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, navigate, allPolygons, currentWorkspace?.id, updateModelMutation, createModelMutation, getUpdatedPylovoData, advancedParams, draftId]);
+        await saveAreaData({
+            fromDate, toDate, modelName, resolution, editMode, modelId,
+            onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id,
+            updateModelMutation, createModelMutation, setIsSaving,
+            navigate: () => { }, // quick save: no navigation needed
+            pylovoData: currentPylovoData, advancedParams,
+            draftId, userId, originalModel: originalModelRef.current
+        });
+        setIsModified(false);
+    }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, navigate, allPolygons, currentWorkspace?.id, updateModelMutation, createModelMutation, getUpdatedPylovoData, advancedParams, draftId]);
+
+    const handleSave = useCallback(async (): Promise<void> => {
+        await handleQuickSave();
+        isInternalNavRef.current = true;
+        navigate(DASHBOARD_ROUTE);
+    }, [handleQuickSave, navigate]);
+
+    const handleUnsavedDiscard = useCallback((): void => {
+        setShowUnsavedDialog(false);
+        setIsModified(false);
+
+        const url = pendingNavigationUrl;
+        setPendingNavigationUrl(null);
+
+        if (url) {
+            isInternalNavRef.current = true;
+            navigate(url);
+        } else if (onCancel) {
+            onCancel();
+        } else {
+            isInternalNavRef.current = true;
+            navigate(DASHBOARD_ROUTE);
+        }
+    }, [navigate, onCancel, pendingNavigationUrl]);
+
 
     const handleResetAdvancedParameters = useCallback(() => {
         setAdvancedParams(getDefaultAdvancedParameters());
@@ -1667,7 +1792,7 @@ export const useAreaSelect = ({
         return availableRegions.some(r => {
             if (!r.bbox) return false;
             return centerLat >= r.bbox.south && centerLat <= r.bbox.north &&
-                   centerLon >= r.bbox.west && centerLon <= r.bbox.east;
+                centerLon >= r.bbox.west && centerLon <= r.bbox.east;
         });
     }, [pylovoLayersData]);
 
@@ -1716,13 +1841,14 @@ export const useAreaSelect = ({
             if (buildingsCount > 0) showSuccess(t("gridNotifications.gridGenerated", { count: buildingsCount }));
             else showSuccess(t("gridNotifications.gridCompleteNoBuildings"));
             pylovoLayersData.processPylovoData(response as PylovoGridData);
+            setIsModified(true);
         } catch {
             if (genId !== gridGenIdRef.current) return;
             showError(t("gridNotifications.gridGenerationFailed"));
         } finally {
             if (genId === gridGenIdRef.current) setIsGeneratingGrid(false);
         }
-    }, [pylovoLayersData, showSuccess, showError, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, isPolygonInEnabledRegion]);
+    }, [pylovoLayersData, showSuccess, showError, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, isPolygonInEnabledRegion, setIsModified]);
 
     const handleClearAllPolygons = useCallback(() => {
         // Invalidate any in-flight grid generation requests
@@ -1733,7 +1859,8 @@ export const useAreaSelect = ({
         mapInteractionsData.handleCloseTransformerDialog();
         mapInteractionsData.handleCloseBuildingDialog();
         setExcludedBuildingIds(new Set()); // Clear excluded buildings when clearing polygons
-    }, [pylovoLayersData, mapInteractionsData]);
+        setIsModified(true);
+    }, [pylovoLayersData, mapInteractionsData, setIsModified]);
 
     // Handle polygon modification (vertex dragging, adding/removing points)
     const handlePolygonModified = useCallback(async (updatedPolygons: [number, number][][]) => {
@@ -1777,7 +1904,8 @@ export const useAreaSelect = ({
         } finally {
             if (genId === gridGenIdRef.current) setIsGeneratingGrid(false);
         }
-    }, [pylovoLayersData, showSuccess, showError, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, isPolygonInEnabledRegion]);
+        setIsModified(true);
+    }, [pylovoLayersData, showSuccess, showError, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, isPolygonInEnabledRegion, setIsModified]);
 
     // Toggle individual building exclusion
     const toggleBuildingExclusion = useCallback((buildingId: number) => {
@@ -1892,274 +2020,252 @@ export const useAreaSelect = ({
         }
     }, [includePublicBuildings, includePrivateBuildings, excludedBuildingIds.size, allPolygons.length, regenerateGridWithFilters]);
 
-	const state: AreaSelectState = {
-		modelName, fromDate, toDate, resolution, isSaving, isLoadingModel,
-		showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons,
-		advancedParams, showAdvancedParams, isDrawing, allowMultiplePolygons,
-		clearTrigger, cursorPos, isGeneratingGrid,
+    const state: AreaSelectState = {
+        modelName, fromDate, toDate, resolution, isSaving, isLoadingModel,
+        showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons,
+        advancedParams, showAdvancedParams, isDrawing, allowMultiplePolygons,
+        clearTrigger, cursorPos, isGeneratingGrid,
         includePublicBuildings, includePrivateBuildings, excludedBuildingIds,
-	};
+        isModified, showUnsavedDialog,
+    };
 
-	const actions: AreaSelectActions = {
-		setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour,
-		handleTourComplete, handleTourSkip, handleSave, handleCancel,
+    const actions: AreaSelectActions = {
+        setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour,
+        handleTourComplete, handleTourSkip, handleSave, handleCancel,
         setAllPolygons, setAdvancedParams, setShowAdvancedParams,
         handleResetAdvancedParams: handleResetAdvancedParameters,
         handlePolygonDrawn, handlePolygonModified, handleClearAllPolygons, setAllowMultiplePolygons,
         setIsDrawing, setIncludePublicBuildings, setIncludePrivateBuildings,
         toggleBuildingExclusion, clearExcludedBuildings,
-	};
+        handleQuickSave,
+    };
 
-	return {
+    return {
         state, actions, customLocations: customLocationsData,
         pylovoLayers: pylovoLayersData, techOperations: techOperationsData,
         mapInteractions: mapInteractionsData,
         notification: { data: notification, showSuccess, showError, hide },
         setCursorPos,
         map,
-        mapRef
+        mapRef,
+        handleQuickSave,
+        unsavedDialog: {
+            showUnsavedDialog,
+            setShowUnsavedDialog,
+            handleUnsavedDiscard,
+        },
+        setIsModified,
     };
 };
 
 // Helper functions
 function updateDateRange(e: any, setFromDate: (date: string) => void, setToDate: (date: string) => void) {
-	const formatDate = ({ year, month, day }: { year: number; month: number; day: number }) =>
-		`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-	setFromDate(formatDate(e.start));
-	setToDate(formatDate(e.end));
+    const formatDate = ({ year, month, day }: { year: number; month: number; day: number }) =>
+        `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    setFromDate(formatDate(e.start));
+    setToDate(formatDate(e.end));
 }
 
 interface ModelDataSetters {
-	setModelName: (name: string) => void;
-	setResolution: (resolution: number) => void;
-	setFromDate: (date: string) => void;
-	setToDate: (date: string) => void;
-	setLoadedCoordinates: (coords: [number, number][][]) => void;
-	setIsLoadingModel: (loading: boolean) => void;
-	setLoadedConfig?: (config: PylovoGridData | undefined) => void;
+    setModelName: (name: string) => void;
+    setResolution: (resolution: number) => void;
+    setFromDate: (date: string) => void;
+    setToDate: (date: string) => void;
+    setLoadedCoordinates: (coords: [number, number][][]) => void;
+    setIsLoadingModel: (loading: boolean) => void;
+    setLoadedConfig?: (config: PylovoGridData | undefined) => void;
 }
 
 // Helper to parse MultiPolygon coordinates from model
 function parseModelCoordinates(coordinates: any): [number, number][][] | null {
-	if (coordinates?.type !== 'MultiPolygon' || !Array.isArray(coordinates.coordinates)) {
-		return null;
-	}
-	const polygons = coordinates.coordinates
-		.map((poly: any) => poly[0])
-		.filter((poly: any) => poly?.length > 0);
-	return polygons.length > 0 ? polygons : null;
+    if (coordinates?.type !== 'MultiPolygon' || !Array.isArray(coordinates.coordinates)) {
+        return null;
+    }
+    const polygons = coordinates.coordinates
+        .map((poly: any) => poly[0])
+        .filter((poly: any) => poly?.length > 0);
+    return polygons.length > 0 ? polygons : null;
 }
 
 // Helper to extract PylovoGridData from model config
 function extractPylovoConfig(config: any): PylovoGridData | null {
-	if (!config) return null;
-	const pylovoData: PylovoGridData = {};
-	if (config.buildings) pylovoData.buildings = config.buildings;
-	if (config.lines) pylovoData.lines = config.lines;
-	if (config.mv_lines) pylovoData.mv_lines = config.mv_lines;
-	if (config.transformers) pylovoData.transformers = config.transformers;
-	if (config.grids) pylovoData.grids = config.grids;
-	return Object.keys(pylovoData).length > 0 ? pylovoData : null;
+    if (!config) return null;
+    const pylovoData: PylovoGridData = {};
+    if (config.buildings) pylovoData.buildings = config.buildings;
+    if (config.lines) pylovoData.lines = config.lines;
+    if (config.mv_lines) pylovoData.mv_lines = config.mv_lines;
+    if (config.transformers) pylovoData.transformers = config.transformers;
+    if (config.grids) pylovoData.grids = config.grids;
+    return Object.keys(pylovoData).length > 0 ? pylovoData : null;
 }
 
 // Helper to apply model data to setters
 function applyModelToSetters(model: any, setters: ModelDataSetters): void {
-	if (model.title) setters.setModelName(model.title);
-	if (model.resolution !== undefined) setters.setResolution(model.resolution);
-	if (model.from_date) setters.setFromDate(new Date(model.from_date).toISOString().split('T')[0]);
-	if (model.to_date) setters.setToDate(new Date(model.to_date).toISOString().split('T')[0]);
+    if (model.title) setters.setModelName(model.title);
+    if (model.resolution !== undefined) setters.setResolution(model.resolution);
+    if (model.from_date) setters.setFromDate(new Date(model.from_date).toISOString().split('T')[0]);
+    if (model.to_date) setters.setToDate(new Date(model.to_date).toISOString().split('T')[0]);
 
-	const polygons = parseModelCoordinates(model.coordinates);
-	if (polygons) setters.setLoadedCoordinates(polygons);
+    const polygons = parseModelCoordinates(model.coordinates);
+    if (polygons) setters.setLoadedCoordinates(polygons);
 
-	const pylovoConfig = extractPylovoConfig(model.config);
-	if (pylovoConfig) setters.setLoadedConfig?.(pylovoConfig);
+    const pylovoConfig = extractPylovoConfig(model.config);
+    if (pylovoConfig) setters.setLoadedConfig?.(pylovoConfig);
 }
 
 async function loadExistingModelData(params: { editMode: boolean; modelId: number | undefined; setters: ModelDataSetters; originalModelRef?: React.MutableRefObject<{ title: string; from_date: string; to_date: string; resolution: number; config: any; status: string } | null>; }) {
-	const { editMode, modelId, setters, originalModelRef } = params;
-	if (!editMode || !modelId) return;
+    const { editMode, modelId, setters, originalModelRef } = params;
+    if (!editMode || !modelId) return;
 
-	setters.setIsLoadingModel(true);
-	try {
-		const response = await modelService.getModelById(modelId);
-		if (response.success && response.data) {
-			applyModelToSetters(response.data, setters);
-			if (originalModelRef) {
-				const m = response.data;
-				originalModelRef.current = {
-					title: m.title || '',
-					from_date: m.from_date ? new Date(m.from_date).toISOString().split('T')[0] : '',
-					to_date: m.to_date ? new Date(m.to_date).toISOString().split('T')[0] : '',
-					resolution: m.resolution ?? 0,
-					config: m.config || null,
-					status: m.status || 'draft',
-				};
-			}
-		}
-	} catch {
-		/* ignore load errors */
-	} finally {
-		setters.setIsLoadingModel(false);
-	}
+    setters.setIsLoadingModel(true);
+    try {
+        const response = await modelService.getModelById(modelId);
+        if (response.success && response.data) {
+            applyModelToSetters(response.data, setters);
+            if (originalModelRef) {
+                const m = response.data;
+                originalModelRef.current = {
+                    title: m.title || '',
+                    from_date: m.from_date ? new Date(m.from_date).toISOString().split('T')[0] : '',
+                    to_date: m.to_date ? new Date(m.to_date).toISOString().split('T')[0] : '',
+                    resolution: m.resolution ?? 0,
+                    config: m.config || null,
+                    status: m.status || 'draft',
+                };
+            }
+        }
+    } catch {
+        /* ignore load errors */
+    } finally {
+        setters.setIsLoadingModel(false);
+    }
 }
 
 async function checkAndShowAreaSelectTour(editMode: boolean, setShowAreaSelectTour: (show: boolean) => void) {
-	if (editMode) return;
-	try {
-		const { data } = await axios.get('/settings');
-		if (data.success && data.data && !data.data.area_select_tour_completed) {
-			const timer = setTimeout(() => setShowAreaSelectTour(true), 1000);
-			return () => clearTimeout(timer);
-		}
-	} catch { /* ignore */ }
-}
-
-// Calculate the center point of polygon coordinates
-function calculatePolygonCenter(polygonCoordinates: number[][][]): { lat: number; lon: number } {
-	let totalLat = 0;
-	let totalLon = 0;
-	let pointCount = 0;
-
-	for (const polygon of polygonCoordinates) {
-		for (const coord of polygon) {
-			totalLon += coord[0];
-			totalLat += coord[1];
-			pointCount++;
-		}
-	}
-
-	return {
-		lat: pointCount > 0 ? totalLat / pointCount : 0,
-		lon: pointCount > 0 ? totalLon / pointCount : 0,
-	};
+    if (editMode) return;
+    try {
+        const { data } = await axios.get('/settings');
+        if (data.success && data.data && !data.data.area_select_tour_completed) {
+            const timer = setTimeout(() => setShowAreaSelectTour(true), 1000);
+            return () => clearTimeout(timer);
+        }
+    } catch { /* ignore */ }
 }
 
 // Helper to build config object for saving
 function buildSaveConfig(pylovoData: any, advancedParams: any): any {
-	if (!pylovoData) return undefined;
+    if (!pylovoData) return undefined;
 
-	const config: any = {};
-	if (pylovoData.buildings) config.buildings = pylovoData.buildings;
-	if (pylovoData.lines) config.lines = pylovoData.lines;
-	if (pylovoData.mv_lines) config.mv_lines = pylovoData.mv_lines;
-	if (pylovoData.transformers) config.transformers = pylovoData.transformers;
-	if (pylovoData.grids) config.grids = pylovoData.grids;
+    const config: any = {};
+    if (pylovoData.buildings) config.buildings = pylovoData.buildings;
+    if (pylovoData.lines) config.lines = pylovoData.lines;
+    if (pylovoData.mv_lines) config.mv_lines = pylovoData.mv_lines;
+    if (pylovoData.transformers) config.transformers = pylovoData.transformers;
+    if (pylovoData.grids) config.grids = pylovoData.grids;
 
-	// Check if PyPSA is enabled
-	const pypsaEnabled = advancedParams?.pypsa_enabled !== false;
+    // Check if PyPSA is enabled
+    const pypsaEnabled = advancedParams?.pypsa_enabled !== false;
 
-	if (pypsaEnabled) {
-		config.pypsa = {
-			trafo_mv_lv_used: true,
-			trafo_mv_lv_type: advancedParams?.trafo_mv_lv_type || "0.4 MVA 20/0.4 kV",
-			line_type_mv: advancedParams?.line_type_mv || "NA2XS2Y 1x185 RM/25 12/20 kV",
-			line_type_lv: advancedParams?.line_type_lv || "NAYY 4x150 SE"
-		};
-	} else {
-		config.pypsa = false;
-	}
+    if (pypsaEnabled) {
+        config.pypsa = {
+            trafo_mv_lv_used: true,
+            trafo_mv_lv_type: advancedParams?.trafo_mv_lv_type || "0.4 MVA 20/0.4 kV",
+            line_type_mv: advancedParams?.line_type_mv || "NA2XS2Y 1x185 RM/25 12/20 kV",
+            line_type_lv: advancedParams?.line_type_lv || "NAYY 4x150 SE"
+        };
+    } else {
+        config.pypsa = false;
+    }
 
-	return Object.keys(config).length > 0 ? config : undefined;
-}
-
-// Helper to get region info from geocoding
-async function getRegionFromPolygon(polygonCoordinates: number[][][]): Promise<{ region: string; country: string }> {
-	try {
-		const center = calculatePolygonCenter(polygonCoordinates);
-		const locationInfo = await geocodingService.reverseRegion(center.lat, center.lon);
-		return locationInfo ? { region: locationInfo.region, country: locationInfo.country } : { region: '', country: '' };
-	} catch {
-		return { region: '', country: '' };
-	}
+    return Object.keys(config).length > 0 ? config : undefined;
 }
 
 // Fingerprint a config by counting features and tech assignments — robust to
 // floating-point / key-ordering differences that break JSON.stringify equality.
 function configFingerprint(cfg: any): string {
-	if (!cfg) return '';
-	const fc = (g: any) => g?.features?.length ?? 0;
-	const techCount = (cfg.buildings?.features || []).reduce(
-		(s: number, f: any) => s + (f.properties?.technologies?.length || 0), 0
-	);
-	// Sort pypsa keys so DB key-order vs code key-order doesn't cause a mismatch
-	const pypsaStr = cfg.pypsa && typeof cfg.pypsa === 'object'
-		? JSON.stringify(cfg.pypsa, Object.keys(cfg.pypsa).sort())
-		: JSON.stringify(cfg.pypsa ?? null);
-	return [
-		fc(cfg.buildings), fc(cfg.transformers), fc(cfg.lines),
-		fc(cfg.mv_lines), fc(cfg.grids), techCount, pypsaStr,
-	].join('|');
+    if (!cfg) return '';
+    const fc = (g: any) => g?.features?.length ?? 0;
+    const techCount = (cfg.buildings?.features || []).reduce(
+        (s: number, f: any) => s + (f.properties?.technologies?.length || 0), 0
+    );
+    // Sort pypsa keys so DB key-order vs code key-order doesn't cause a mismatch
+    const pypsaStr = cfg.pypsa && typeof cfg.pypsa === 'object'
+        ? JSON.stringify(cfg.pypsa, Object.keys(cfg.pypsa).sort())
+        : JSON.stringify(cfg.pypsa ?? null);
+    return [
+        fc(cfg.buildings), fc(cfg.transformers), fc(cfg.lines),
+        fc(cfg.mv_lines), fc(cfg.grids), techCount, pypsaStr,
+    ].join('|');
 }
 
 // Helper to validate save data
 function isValidSaveData(fromDate: string, toDate: string, modelName: string, polygonCoordinates: any): boolean {
-	return Boolean(fromDate && toDate && modelName?.trim() && polygonCoordinates?.length > 0);
+    return Boolean(fromDate && toDate && modelName?.trim() && polygonCoordinates?.length > 0);
 }
 
 async function saveAreaData(params: any) {
-	const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, navigate, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel } = params;
+    const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, navigate, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel } = params;
 
-	if (!isValidSaveData(fromDate, toDate, modelName, polygonCoordinates)) return;
+    if (!isValidSaveData(fromDate, toDate, modelName, polygonCoordinates)) return;
 
-	setIsSaving(true);
-	try {
-		await new Promise(resolve => setTimeout(resolve, SAVE_DELAY_MS));
-		const areaData: AreaData = { fromDate, toDate, resolution, modelName: modelName.trim(), timestamp: new Date().toISOString() };
+    setIsSaving(true);
+    try {
+        await new Promise(resolve => setTimeout(resolve, SAVE_DELAY_MS));
+        const areaData: AreaData = { fromDate, toDate, resolution, modelName: modelName.trim(), timestamp: new Date().toISOString() };
 
-		if (onAreaSelected) {
-			onAreaSelected(areaData);
-			return;
-		}
+        if (onAreaSelected) {
+            onAreaSelected(areaData);
+            return;
+        }
 
-		const coordinatesGeoJSON = { type: "MultiPolygon", coordinates: polygonCoordinates.map((polygon: number[][]) => [polygon]) };
-		const config = buildSaveConfig(pylovoData, advancedParams);
-		const { region, country } = await getRegionFromPolygon(polygonCoordinates);
+        const coordinatesGeoJSON = { type: "MultiPolygon", coordinates: polygonCoordinates.map((polygon: number[][]) => [polygon]) };
+        const config = buildSaveConfig(pylovoData, advancedParams);
 
-		const modelData = {
-			title: areaData.modelName,
-			from_date: areaData.fromDate,
-			to_date: areaData.toDate,
-			resolution: areaData.resolution,
-			workspace_id: workspaceId,
-			coordinates: coordinatesGeoJSON,
-			config
-		};
+        const modelData = {
+            title: areaData.modelName,
+            from_date: areaData.fromDate,
+            to_date: areaData.toDate,
+            resolution: areaData.resolution,
+            workspace_id: workspaceId,
+            coordinates: coordinatesGeoJSON,
+            config
+        };
 
-		if (editMode && modelId) {
-			// Detect whether the user actually changed anything
-			let hasChanges = !originalModel;
-			if (originalModel) {
-				hasChanges =
-					originalModel.title !== areaData.modelName ||
-					originalModel.from_date !== areaData.fromDate ||
-					originalModel.to_date !== areaData.toDate ||
-					originalModel.resolution !== areaData.resolution ||
-					configFingerprint(originalModel.config) !== configFingerprint(config);
-			}
-			const updatePayload = hasChanges
-				? { ...modelData, status: 'modified' as const }
-				: modelData;
-			await updateModelMutation.mutateAsync({ id: modelId, data: updatePayload });
-		} else {
-			// Create new model and get the new model ID
-			const newModel = await createModelMutation.mutateAsync({ ...modelData, region, country });
+        if (editMode && modelId) {
+            // Detect whether the user actually changed anything
+            let hasChanges = !originalModel;
+            if (originalModel) {
+                hasChanges =
+                    originalModel.title !== areaData.modelName ||
+                    originalModel.from_date !== areaData.fromDate ||
+                    originalModel.to_date !== areaData.toDate ||
+                    originalModel.resolution !== areaData.resolution ||
+                    configFingerprint(originalModel.config) !== configFingerprint(config);
+            }
+            const updatePayload = hasChanges
+                ? { ...modelData, status: 'modified' as const }
+                : modelData;
+            await updateModelMutation.mutateAsync({ id: modelId, data: updatePayload });
+        } else {
+            // Create new model and get the new model ID.
+            // Backend derives region/country from coordinates — no client geocoding needed.
+            const newModel = await createModelMutation.mutateAsync(modelData);
 
-			// Finalize user-placed transformers: convert draft_id to model_id
-			if (draftId && newModel?.data?.id) {
-				try {
-					await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId);
-				} catch (err) {
-					// Log but don't fail the save - transformers are nice-to-have
-					console.error('Failed to finalize transformers:', err);
-				}
-			}
-		}
+            // Finalize user-placed transformers: convert draft_id to model_id
+            if (draftId && newModel?.data?.id) {
+                try {
+                    await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId);
+                } catch (err) {
+                    // Log but don't fail the save - transformers are nice-to-have
+                    console.error('Failed to finalize transformers:', err);
+                }
+            }
+        }
 
-		navigate(DASHBOARD_ROUTE, { state: { workspaceId } });
-	} catch {
-		/* ignore save errors */
-	} finally {
-		setIsSaving(false);
-	}
+        navigate(DASHBOARD_ROUTE, { state: { workspaceId } });
+    } catch {
+        /* ignore save errors */
+    } finally {
+        setIsSaving(false);
+    }
 }

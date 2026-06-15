@@ -126,11 +126,14 @@ export interface AreaSelectState {
 	allowMultiplePolygons: boolean;
 	clearTrigger: number;
 	cursorPos: { x: number; y: number } | null;
-    isGeneratingGrid: boolean;
+	isGeneratingGrid: boolean;
 	// Custom building filters
 	includePublicBuildings: boolean;
 	includePrivateBuildings: boolean;
 	excludedBuildingIds: Set<number>;
+	// Unsaved changes tracking
+	isModified: boolean;
+	showUnsavedDialog: boolean;
 }
 
 export interface AreaSelectActions {
@@ -156,4 +159,5 @@ export interface AreaSelectActions {
 	setIncludePrivateBuildings: (include: boolean) => void;
 	toggleBuildingExclusion: (buildingId: number) => void;
 	clearExcludedBuildings: () => void;
+	handleQuickSave: () => Promise<void>;
 }

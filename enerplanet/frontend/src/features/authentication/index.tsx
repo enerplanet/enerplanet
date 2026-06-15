@@ -12,7 +12,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { ensureCSRFToken } from "@/utils/csrf";
 import { config } from "@/configuration/app";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Zap } from "lucide-react";
 
 const EnerPlanETLogo = (
 	<div className="flex items-center justify-center mb-1">
@@ -24,6 +24,43 @@ const EnerPlanETLogo = (
 				height: '36px'
 			}}
 		/>
+	</div>
+);
+
+// Left-hand imagery panel shown beside the login form on the split layout.
+const EnerPlanETSidePanel = (
+	<div className="absolute inset-0">
+		<img
+			src="/images/login-bg.png"
+			alt=""
+			aria-hidden
+			className="absolute inset-0 h-full w-full object-cover"
+		/>
+		<div className="absolute inset-0 bg-gradient-to-br from-slate-900/92 via-slate-900/82 to-slate-800/70" />
+		<div className="relative flex h-full flex-col justify-between p-10 xl:p-14 text-white">
+			<img
+				src="/images/logo/enerplanet-logo.png"
+				alt="EnerPlanET"
+				className="h-8 w-auto self-start shrink-0 brightness-0 invert"
+			/>
+
+			<div className="max-w-lg">
+				<span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-400/30">
+					<Zap className="h-3.5 w-3.5" /> Energy system planning
+				</span>
+				<h2 className="mt-6 text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight">
+					Plan smarter, more resilient energy grids
+				</h2>
+				<p className="mt-4 text-base text-white/80 leading-relaxed">
+					Model capacity, costs and renewable integration across your network — from a single
+					connected workspace.
+				</p>
+			</div>
+
+			<p className="text-[11px] text-white/55">
+				EnerPlanET · Integrated energy planning platform
+			</p>
+		</div>
 	</div>
 );
 
@@ -58,6 +95,9 @@ export const LoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
 				apiBaseUrl={config.api.baseUrl || "/api"}
 				appName={EnerPlanETLogo}
 				backgroundImageUrl="/images/login-bg.svg"
+				storageNamespace="enerplanet"
+				layout="split"
+				sideContent={EnerPlanETSidePanel}
 				{...props}
 			/>
 		</>
@@ -74,6 +114,8 @@ export const RegisterForm: React.FC<Partial<RegisterFormProps>> = (props) => {
 			apiBaseUrl={config.api.baseUrl || "/api"}
 			appName={EnerPlanETLogo}
 			backgroundImageUrl="/images/login-bg.svg"
+			layout="split"
+			sideContent={EnerPlanETSidePanel}
 			{...props}
 		/>
 	);
@@ -89,6 +131,8 @@ export const ForgotPasswordForm: React.FC<Partial<ForgotPasswordFormProps>> = (p
 			apiBaseUrl={config.api.baseUrl || "/api"}
 			appName={EnerPlanETLogo}
 			backgroundImageUrl="/images/login-bg.svg"
+			layout="split"
+			sideContent={EnerPlanETSidePanel}
 			{...props}
 		/>
 	);

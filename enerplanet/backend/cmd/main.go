@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -316,6 +317,8 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 	}
 	configureProtectedAPI(r, routeDeps)
 
+	r.Use(frontendCacheHeaders())
+
 	protected := r.Group("/")
 	{
 		protected.GET("/success-login", renderHandler.SuccessLogin)
@@ -331,8 +334,45 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 			c.JSON(404, gin.H{"error": "API endpoint not found"})
 			return
 		}
+		if isFrontendAssetRequest(path) {
+			c.Header("Cache-Control", "no-store")
+			c.String(http.StatusNotFound, "frontend asset not found")
+			return
+		}
+		c.Header("Cache-Control", "no-cache, must-revalidate")
 		c.File("./www/index.html")
 	})
+}
+
+func frontendCacheHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if path == "/" || path == "/index.html" {
+			c.Header("Cache-Control", "no-cache, must-revalidate")
+		} else if isFrontendAssetRequest(path) {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		c.Next()
+	}
+}
+
+func isFrontendAssetRequest(path string) bool {
+	if strings.HasPrefix(path, "/assets/") ||
+		strings.HasPrefix(path, "/images/") ||
+		path == "/vite.svg" ||
+		path == "/favicon.ico" ||
+		path == "/manifest.webmanifest" {
+		return true
+	}
+
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".avif", ".css", ".gif", ".ico", ".jpeg", ".jpg", ".js", ".json",
+		".map", ".mjs", ".png", ".svg", ".ttf", ".wasm", ".webmanifest",
+		".webp", ".woff", ".woff2":
+		return true
+	default:
+		return false
+	}
 }
 
 func makeWebserviceProxyHandler(client *webservice.Client) gin.HandlerFunc {
@@ -518,7 +558,12 @@ type RouteDeps struct {
 // configureProtectedAPI registers protected API routes that require a valid session.
 func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	protectedAPI := r.Group("/api")
-	protectedAPI.Use(middleware.AuthServiceMiddleware())
+	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
+		AuthServiceURL:             deps.Cfg.AuthServiceURL,
+		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
+		CookieDomain:               deps.Cfg.CookieDomain,
+		IsProduction:               deps.Cfg.AppEnv == "production",
+	}))
 
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)

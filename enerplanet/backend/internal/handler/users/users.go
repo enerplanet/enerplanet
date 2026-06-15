@@ -974,27 +974,43 @@ func shouldCountUserForManager(userID, managerID, groupID, defaultGroupID string
 }
 
 // countManagerUsers counts users accessible to a manager
-func (h *Handler) countManagerUsers(ctx context.Context, authToken, managerID string) (int, error) {
+func (h *Handler) countManagerUsers(ctx context.Context, authToken, managerID string) (int, []string, error) {
 	mgrSet, err := h.kc.GetManagerGroupSet(ctx, managerID)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	defaultID, _ := h.kc.EnsureGroupByName(ctx, "Default")
 
 	kcUsers, err := h.userStore.ListUsers(authToken, usersstore.ListUsersParams{First: 0, Max: 10000})
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	count := 0
+	userIDs := make([]string, 0, len(kcUsers))
 	for _, u := range kcUsers {
 		gid := h.getUserFirstGroup(ctx, u.ID)
 		if shouldCountUserForManager(u.ID, managerID, gid, defaultID, mgrSet) {
 			count++
+			userIDs = append(userIDs, u.ID)
 		}
 	}
-	return count, nil
+	return count, userIDs, nil
+}
+
+func (h *Handler) countOnlineUsers(ctx context.Context, userIDs ...string) int64 {
+	if h.sessionStore == nil {
+		return 0
+	}
+
+	online, err := h.sessionStore.CountActiveUsers(ctx, userIDs...)
+	if err != nil {
+		applogger.ForComponent("users").Warnf("count online users failed: %v", err)
+		return 0
+	}
+
+	return online
 }
 
 func (h *Handler) CountUsers(c *gin.Context) {
@@ -1010,7 +1026,7 @@ func (h *Handler) CountUsers(c *gin.Context) {
 	authToken := h.getAuthTokenWithRetry(sessionData)
 
 	if sessionData.AccessLevel == constants.AccessLevelManager {
-		count, err := h.countManagerUsers(c.Request.Context(), authToken, sessionData.UserID)
+		count, userIDs, err := h.countManagerUsers(c.Request.Context(), authToken, sessionData.UserID)
 		if err != nil {
 			if err.Error() == "failed to fetch manager groups" {
 				httputil.InternalError(c, "failed to fetch manager groups")
@@ -1021,8 +1037,8 @@ func (h *Handler) CountUsers(c *gin.Context) {
 			return
 		}
 		var online int64
-		if h.sessionStore != nil {
-			online, _ = h.sessionStore.CountActiveSessions(c.Request.Context())
+		if len(userIDs) > 0 {
+			online = h.countOnlineUsers(c.Request.Context(), userIDs...)
 		}
 		httputil.SuccessResponse(c, gin.H{"total": count, "online": online})
 		return
@@ -1043,12 +1059,9 @@ func (h *Handler) CountUsers(c *gin.Context) {
 		}
 	}
 
-	var activeSessions int64
-	if h.sessionStore != nil {
-		activeSessions, _ = h.sessionStore.CountActiveSessions(c.Request.Context())
-	}
+	online := h.countOnlineUsers(c.Request.Context())
 
-	httputil.SuccessResponse(c, gin.H{"total": total, "online": activeSessions})
+	httputil.SuccessResponse(c, gin.H{"total": total, "online": online})
 }
 
 func (h *Handler) BulkDeleteUsers(c *gin.Context) {

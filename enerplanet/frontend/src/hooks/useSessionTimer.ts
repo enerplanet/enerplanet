@@ -8,6 +8,20 @@ interface UseSessionTimerOptions {
   warningThreshold?: number; // Minutes before showing warning (default: 5)
 }
 
+type HttpErrorLike = {
+  response?: {
+    status?: number;
+  };
+};
+
+const getHttpStatus = (err: unknown): number | undefined => {
+  if (typeof err !== "object" || err === null || !("response" in err)) {
+    return undefined;
+  }
+
+  return (err as HttpErrorLike).response?.status;
+};
+
 /**
  * useSessionTimer manages the global session expiration logic.
  */
@@ -19,6 +33,7 @@ export const useSessionTimer = ({ warningThreshold = 5 }: UseSessionTimerOptions
   // when the timer naturally counts down.
   const expiresAtRef = useRef<number | null>(null);
   const lastRefreshRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
   const [isWarning, setIsWarning] = useState(false);
 
   const handleTimeout = useCallback(() => {
@@ -40,8 +55,8 @@ export const useSessionTimer = ({ warningThreshold = 5 }: UseSessionTimerOptions
       const now = Date.now();
       if (now - lastRefreshRef.current > 5 * 60 * 1000) {
         lastRefreshRef.current = now;
-        void keepSessionAlive().catch((err: any) => {
-          const status = err?.response?.status;
+        void keepSessionAlive().catch((err: unknown) => {
+          const status = getHttpStatus(err);
           if (status === 401 || status === 403) {
             handleTimeout();
           }
@@ -101,16 +116,24 @@ export const useSessionTimer = ({ warningThreshold = 5 }: UseSessionTimerOptions
   useEffect(() => {
     if (!user) return;
 
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    const handleActivity = () => resetTimer();
+    const ACTIVITY_THROTTLE_MS = 15 * 1000;
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'pointerdown', 'wheel', 'input', 'focus'];
+    const listenerOptions = { passive: true, capture: true };
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityRef.current < ACTIVITY_THROTTLE_MS) return;
+
+      lastActivityRef.current = now;
+      resetTimer();
+    };
 
     for (const event of events) {
-      globalThis.addEventListener(event, handleActivity, { passive: true });
+      globalThis.addEventListener(event, handleActivity, listenerOptions);
     }
 
     return () => {
       for (const event of events) {
-        globalThis.removeEventListener(event, handleActivity);
+        globalThis.removeEventListener(event, handleActivity, listenerOptions);
       }
     };
   }, [user, resetTimer]);
@@ -141,10 +164,8 @@ export const useSessionTimer = ({ warningThreshold = 5 }: UseSessionTimerOptions
     if (!user || !sessionTimeout) return;
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        if (expiresAtRef.current && expiresAtRef.current - Date.now() > 0) {
-          resetTimer();
-        }
+      if (document.visibilityState === 'visible' && expiresAtRef.current && expiresAtRef.current - Date.now() > 0) {
+        resetTimer();
       }
     };
 
@@ -171,4 +192,3 @@ export const useSessionTimer = ({ warningThreshold = 5 }: UseSessionTimerOptions
     isActive: !!user && !!sessionTimeout,
   };
 };
-

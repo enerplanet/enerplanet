@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -14,10 +15,11 @@ import (
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/models"
 	platformlogger "platform.local/platform/logger"
+	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/payload"
 )
 
-func (s *ModelService) BuildCalculationPayload(model *models.Model) interface{} {
+func (s *ModelService) BuildCalculationPayload(model *models.Model) (interface{}, error) {
 	return payload.BuildCalculationPayload(model)
 }
 
@@ -59,6 +61,30 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 		return nil, fmt.Errorf("model calculation already in progress")
 	}
 
+	// Ensure country is resolved BEFORE any status mutation so a stuck
+	// model cannot be left in the "queue" state when resolution fails.
+	if model.Country == nil || strings.TrimSpace(*model.Country) == "" {
+		if len(model.Coordinates) == 0 {
+			return nil, fmt.Errorf("country is required but model has no coordinates to resolve it")
+		}
+		resolver := geo.NewNominatimResolver(s.db)
+		resolved, rerr := resolver.Resolve(ctx, json.RawMessage(model.Coordinates))
+		if rerr != nil {
+			return nil, fmt.Errorf("country resolution failed: %w", rerr)
+		}
+		if err := s.store.Update(model, map[string]interface{}{"country": resolved}); err != nil {
+			return nil, fmt.Errorf("failed to persist resolved country: %w", err)
+		}
+		model.Country = &resolved
+	}
+
+	// Build payload up-front; if it fails (e.g. country still missing) we
+	// surface the error before mutating model state.
+	calcPayload, err := s.BuildCalculationPayload(model)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now().UTC()
 	if err := s.store.Update(model, map[string]interface{}{
 		"status":                   models.ModelStatusQueue,
@@ -76,7 +102,6 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 		Payload interface{} `json:"payload"`
 	}
 
-	calcPayload := s.BuildCalculationPayload(model)
 	// s.LogCalculationPayload(model, calcPayload)
 
 	payloadBytes, err := json.Marshal(taskPayload{

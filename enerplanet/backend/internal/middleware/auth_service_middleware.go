@@ -15,6 +15,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type AuthServiceOptions struct {
+	AuthServiceURL             string
+	SessionCookieMaxAgeSeconds int
+	CookieDomain               string
+	IsProduction               bool
+}
+
 // Backend specific public paths
 var backendPublicPaths = []string{
 	"/api/health",
@@ -24,11 +31,8 @@ var backendPublicPaths = []string{
 }
 
 // AuthServiceMiddleware validates sessions via auth-service
-func AuthServiceMiddleware() gin.HandlerFunc {
-	authServiceURL := os.Getenv("AUTH_SERVICE_URL")
-	if authServiceURL == "" {
-		authServiceURL = "http://localhost:8001"
-	}
+func AuthServiceMiddleware(options ...AuthServiceOptions) gin.HandlerFunc {
+	opts := resolveAuthServiceOptions(options...)
 
 	return func(c *gin.Context) {
 		if httputil.IsPublicPath(c.Request.URL.Path, backendPublicPaths) {
@@ -38,12 +42,13 @@ func AuthServiceMiddleware() gin.HandlerFunc {
 
 		sessionID := httputil.GetSessionCookieOrEmpty(c)
 		if sessionID == "" {
+			clearAuthCookies(c, opts)
 			httputil.Unauthorized(c, "Session not found")
 			c.Abort()
 			return
 		}
 
-		validateURL := fmt.Sprintf("%s/internal/validate-session", authServiceURL)
+		validateURL := fmt.Sprintf("%s/internal/validate-session", opts.AuthServiceURL)
 		req, _ := http.NewRequest("GET", validateURL, nil)
 		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
 
@@ -61,6 +66,7 @@ func AuthServiceMiddleware() gin.HandlerFunc {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			clearAuthCookies(c, opts)
 			httputil.Unauthorized(c, "Invalid session")
 			c.Abort()
 			return
@@ -98,7 +104,43 @@ func AuthServiceMiddleware() gin.HandlerFunc {
 			},
 		}
 		httputil.SetSessionContext(c, sessionData)
+		refreshSessionCookie(c, sessionID, opts)
 
 		c.Next()
+	}
+}
+
+func resolveAuthServiceOptions(options ...AuthServiceOptions) AuthServiceOptions {
+	opts := AuthServiceOptions{}
+	if len(options) > 0 {
+		opts = options[0]
+	}
+
+	if opts.AuthServiceURL == "" {
+		opts.AuthServiceURL = os.Getenv("AUTH_SERVICE_URL")
+	}
+	if opts.AuthServiceURL == "" {
+		opts.AuthServiceURL = "http://localhost:8001"
+	}
+
+	return opts
+}
+
+func refreshSessionCookie(c *gin.Context, sessionID string, opts AuthServiceOptions) {
+	if opts.SessionCookieMaxAgeSeconds <= 0 {
+		return
+	}
+
+	httputil.SetAuthCookie(c, cookieOptions(opts), "session_id", sessionID, opts.SessionCookieMaxAgeSeconds, true)
+}
+
+func clearAuthCookies(c *gin.Context, opts AuthServiceOptions) {
+	httputil.ClearAuthCookies(c, cookieOptions(opts))
+}
+
+func cookieOptions(opts AuthServiceOptions) httputil.CookieOptions {
+	return httputil.CookieOptions{
+		Domain:       opts.CookieDomain,
+		IsProduction: opts.IsProduction,
 	}
 }

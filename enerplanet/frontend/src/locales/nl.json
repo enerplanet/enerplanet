@@ -1,0 +1,2735 @@
+{
+  "parameters": {
+    "names": {
+      "cont_energy_cap_max": "Maximaal geïnstalleerde energiecapaciteit",
+      "cont_energy_cap_max_systemwide": "Systeembrede maximale energiecapaciteit",
+      "cont_energy_cap_min": "Minimaal geïnstalleerde energiecapaciteit",
+      "cont_energy_cap_scale": "Schalingsfactor energiecapaciteit",
+      "cont_energy_eff": "Energie-efficiëntie, conversie-efficiëntie",
+      "cont_export_cap": "Maximale exportcapaciteit",
+      "cont_lifetime": "Technologie-levensduur",
+      "cont_parasitic_eff": "Parasitaire efficiëntie van de installatie",
+      "cont_resource_eff": "Bronefficiëntie",
+      "cont_storage_cap_max": "Maximale opslagcapaciteit",
+      "cont_storage_cap_min": "Minimale opslagcapaciteit",
+      "cont_storage_discharge_depth": "Ontlaaddiepte opslag",
+      "cont_storage_initial": "Initieel opslagpeil",
+      "cont_storage_loss": "Opslagverliespercentage",
+      "cost_energy_cap": "Kosten energiecapaciteit",
+      "cost_export": "Exportkosten",
+      "cost_interest_rate": "Rentepercentage",
+      "cost_om_annual": "Jaarlijkse O&M-kosten",
+      "cost_om_annual_investment_fraction": "Jaarlijkse O&M als investeringsfractie",
+      "cost_om_con": "Dragerverbruikskosten",
+      "cost_om_prod": "Productiekosten",
+      "cost_purchase": "Aanschafkosten",
+      "cost_storage_cap": "Opslagcapaciteitskosten",
+      "system_capacity": "PV-paneel piekcapaciteit",
+      "azimuth": "Azimuthoek",
+      "tilt": "Hellingshoek",
+      "inv_eff": "Omvormer-efficiëntie",
+      "losses": "Systeemverliezen",
+      "dc_ac_ratio": "DC/AC-verhouding",
+      "feedstock_per_year": "Totale grondstof",
+      "boiler_efficiency": "Nominaal rendement installatie",
+      "total_hhv": "Totaal HHV (Hogere Verbrandingswaarde)",
+      "steam_grade_psig": "Stoomgraad (psig)",
+      "boiler_numbers": "Aantal ketels",
+      "flue_gas_temperature": "Rookgastemperatuur",
+      "parasitic_load": "Parasitaire belasting",
+      "combustor_type": "Verbrandingstype",
+      "well_depth": "Putdiepte",
+      "ground_temperature": "Bodemtemperatuur",
+      "thermal_conductivity": "Thermische geleidbaarheid",
+      "head": "Valhoogte",
+      "flow_rate": "Debiet",
+      "turbine_efficiency": "Turbine-efficiëntie",
+      "turbine_id": "Windturbinemodel",
+      "hub_height": "Ashoogte",
+      "rotor_diameter": "Rotordiameter",
+      "annual_demand": "Jaarlijkse vraag",
+      "peak_demand": "Piekvraag"
+    },
+    "cont_energy_cap_max": "De maximale energiecapaciteit die voor deze technologie kan worden geïnstalleerd.",
+    "cont_energy_cap_max_systemwide": "De maximale energiecapaciteit toegestaan in het hele systeem voor dit technologietype.",
+    "cont_energy_cap_min": "De minimale energiecapaciteit vereist voor de werking van deze technologie.",
+    "cont_energy_cap_scale": "Een schaalfactor toegepast op energiecapaciteitsberekeningen.",
+    "cont_energy_eff": "De energie-conversie-efficiëntie, die aangeeft hoeveel invoerenergie wordt omgezet in bruikbare output.",
+    "cont_export_cap": "De maximale capaciteit voor energie-export van deze technologie.",
+    "cont_lifetime": "De verwachte operationele levensduur van de technologie voordat vervanging nodig is.",
+    "cont_storage_cap_max": "De maximaal beschikbare energieopslagcapaciteit.",
+    "cont_storage_cap_min": "De minimaal vereiste energieopslagcapaciteit.",
+    "cont_storage_discharge_depth": "De ontladingsdiepte - hoeveel van de batterij kan worden gebruikt.",
+    "cont_storage_initial": "Het initiële laadniveau van het opslagsysteem.",
+    "cont_storage_loss": "De snelheid waarmee opgeslagen energie in de loop van de tijd verloren gaat.",
+    "cont_storage_loss_rate": "De snelheid waarmee opgeslagen energie in de loop van de tijd verloren gaat.",
+    "cont_om_annual": "Jaarlijkse bedrijfs- en onderhoudskosten.",
+    "cont_om_annual_fixed": "Vaste jaarlijkse bedrijfs- en onderhoudskosten.",
+    "cont_om_prod": "Bedrijfs- en onderhoudskosten gebaseerd op productie.",
+    "cost_energy_cap": "Kosten per eenheid geïnstalleerde energiecapaciteit.",
+    "cost_export": "Kosten verbonden aan energie-export.",
+    "cost_interest_rate": "De rentevoet gebruikt voor financiële berekeningen.",
+    "cost_om_annual": "Jaarlijkse bedrijfs- en onderhoudskosten.",
+    "cost_om_annual_investment_fraction": "O&M-kosten als fractie van de investering.",
+    "cost_purchase": "Initiële aanschafkosten van de technologie.",
+    "cost_storage_cap": "Kosten per eenheid opslagcapaciteit.",
+    "system_capacity": "De piekcapaciteit van het systeem.",
+    "azimuth": "Paneel-oriëntatiehoek (0=Noord, 90=Oost, 180=Zuid, 270=West).",
+    "tilt": "Paneel-kantelhoek ten opzichte van horizontaal.",
+    "inv_eff": "Omvormer-efficiëntie - omzetting van DC naar AC.",
+    "losses": "Systeemverliezen door bedrading, vervuiling, etc.",
+    "dc_ac_ratio": "Verhouding DC-capaciteit tot AC-omvormer-capaciteit.",
+    "feedstock_per_year": "Totale grondstof beschikbaar per jaar voor biomassaconversie.",
+    "boiler_efficiency": "Nominale installatie-efficiëntie - efficiëntie van de ketel.",
+    "total_hhv": "Totale HHV (Hogere Stookwaarde) - totale warmte-energie uit biomassaverbranding.",
+    "steam_grade_psig": "Stoomdruk in pounds per vierkante inch manometrisch.",
+    "monetary_depreciation_rate": "De snelheid waarmee de waarde van de technologie afneemt.",
+    "monetary_discount_rate": "De discontovoet gebruikt voor financiële berekeningen.",
+    "monetary_interest_rate": "De rentevoet toegepast op financieringskosten.",
+    "monetary_inv_cost_energy_cap": "Investeringskosten per eenheid energiecapaciteit.",
+    "monetary_inv_cost_storage_cap": "Investeringskosten per eenheid opslagcapaciteit.",
+    "monetary_purchase_cost_sum": "Totale aanschafkosten inclusief alle componenten.",
+    "monetary_sale_cost_sum": "Totale opbrengsten uit verkoop van energie of diensten.",
+    "defaultDescription": "{{alias}} - Configureer deze parameter op basis van uw eisen."
+  },
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "loading": "Laden...",
+    "error": "Fout",
+    "success": "Succes",
+    "warning": "Waarschuwing",
+    "info": "Info",
+    "yes": "Ja",
+    "no": "Nee",
+    "ok": "OK",
+    "back": "Terug",
+    "next": "Volgende",
+    "submit": "Verzenden",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "reset": "Resetten",
+    "clear": "Wissen",
+    "clearAll": "Alles wissen",
+    "selectAll": "Alles selecteren",
+    "noResults": "Geen resultaten gevonden",
+    "actions": "Acties",
+    "settings": "Instellingen",
+    "logout": "Uitloggen",
+    "login": "Inloggen",
+    "register": "Registreren",
+    "unknown": "Onbekend",
+    "more": "meer",
+    "add": "Toevoegen",
+    "refresh": "Vernieuwen",
+    "healthCheck": "Statuscontrole",
+    "na": "N/B",
+    "from": "Van",
+    "to": "Tot",
+    "duration": "Duur",
+    "days": "dagen",
+    "country": "Land",
+    "region": "Regio",
+    "status": "Status",
+    "createdAt": "Aangemaakt",
+    "updatedAt": "Laatst bijgewerkt",
+    "workspace": "Werkruimte",
+    "results": "Resultaten",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "id": "ID",
+    "current": "Huidig",
+    "max": "Max",
+    "tooltips": {
+      "viewOnMap": "Bekijk op Kaart",
+      "editLocation": "Locatie Bewerken",
+      "editName": "Naam bewerken",
+      "duplicate": "Dupliceren",
+      "view": "Bekijken",
+      "share": "Delen",
+      "moveToWorkspace": "Verplaatsen naar Werkruimte",
+      "profile": "Profiel",
+      "documentation": "Documentatie",
+      "restartTour": "Tour herstarten",
+      "feedback": "Feedback",
+      "theme": "Thema",
+      "searchLocation": "Zoek locatie"
+    },
+    "sidebar": {
+      "energySimulations": "Energiesimulaties",
+      "map": "Kaart",
+      "locations": "Locaties",
+      "simulationReports": "Modelvergelijking",
+      "technologies": "Technologieën"
+    },
+    "menu": {
+      "profile": "Profiel",
+      "settings": "Instellingen",
+      "logout": "Uitloggen"
+    },
+    "modelActions": {
+      "viewResults": "Resultaten Bekijken",
+      "downloadResults": "Resultaten Downloaden",
+      "copyConfiguration": "Configuratie Kopiëren",
+      "editConfiguration": "Configuratie Bewerken",
+      "cannotEditCompleted": "Kan voltooid model niet bewerken",
+      "moveToWorkspace": "Verplaatsen naar Werkruimte",
+      "shareModel": "Model Delen",
+      "delete": "Verwijderen",
+      "cannotDelete": "Kan niet verwijderen - alleen de eigenaar of een expert kan verwijderen",
+      "retryCalculation": "Berekening Opnieuw",
+      "startCalculation": "Berekening Starten",
+      "engineNotAvailable": "Simulatiemotor is niet beschikbaar"
+    },
+    "pagination": {
+      "showing": "Weergave",
+      "to": "tot",
+      "of": "van",
+      "results": "resultaten",
+      "noResults": "Geen resultaten",
+      "loading": "Laden...",
+      "perPage": "per pagina",
+      "previousPage": "Vorige pagina",
+      "nextPage": "Volgende pagina"
+    }
+  },
+  "dashboard": {
+    "stats": {
+      "totalModels": "Totaal Modellen",
+      "draft": "Concept",
+      "inProgress": "In Uitvoering",
+      "completed": "Voltooid",
+      "published": "Gepubliceerd",
+      "modelLimit": "Modellimiet",
+      "unlimited": "Onbeperkt"
+    }
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "noNotifications": "Geen meldingen",
+    "allCaughtUp": "Je bent helemaal bij!",
+    "markAllRead": "Alles als gelezen markeren",
+    "clearAll": "Alles wissen",
+    "viewAll": "Alle meldingen bekijken",
+    "moreNotification": "+{{count}} melding meer",
+    "moreNotifications": "+{{count}} meldingen meer",
+    "details": "Details",
+    "close": "Sluiten",
+    "scheduledFor": "Gepland voor:",
+    "service": "Service",
+    "last30Days": "Laatste 30 dagen",
+    "unread": "{{count}} ongelezen",
+    "loading": "Meldingen laden...",
+    "confirmClearTitle": "Alle meldingen wissen?",
+    "confirmClearDescription": "Weet u zeker dat u alle meldingen wilt wissen? Deze actie kan niet ongedaan worden gemaakt.",
+    "confirmClearButton": "Alles wissen",
+    "dismiss": "Negeren",
+    "types": {
+      "success": "Succes",
+      "error": "Fout",
+      "warning": "Waarschuwing",
+      "info": "Info",
+      "maintenance": "Onderhoud"
+    },
+    "totalExecutionTime": "Totale Uitvoeringstijd",
+    "completedIn": "Succesvol voltooid in {{time}}",
+    "failedAfter": "Mislukt na {{time}}",
+    "cancelledAfter": "Geannuleerd na {{time}}",
+    "messages": {
+      "modelCalculationComplete": "Modelberekening voltooid",
+      "modelCalculationCompleteMessage": "Uw model '{{modelName}}' is succesvol berekend en is klaar om te bekijken.",
+      "modelCalculationFailed": "Modelberekening mislukt",
+      "modelCalculationFailedMessage": "De berekening van uw model '{{modelName}}' is mislukt. Probeer het opnieuw.",
+      "modelCalculationStarted": "Modelberekening gestart",
+      "modelCalculationStartedMessage": "De berekening van uw model '{{modelName}}' is gestart."
+    }
+  },
+  "modelStatus": {
+    "draft": "Concept",
+    "queue": "In Wachtrij",
+    "calculating": "Berekenen",
+    "running": "Actief",
+    "processing": "Verwerking",
+    "completed": "Voltooid",
+    "published": "Gepubliceerd",
+    "failed": "Mislukt",
+    "cancelled": "Geannuleerd",
+    "modified": "Gewijzigd"
+  },
+  "results": {
+    "title": "Simulatieresultaten",
+    "unableToLoad": "Kan resultaten niet laden",
+    "modelNotFound": "Model niet gevonden",
+    "backToDashboard": "Terug naar Dashboard",
+    "selectModel": "Selecteer Model",
+    "completedSimulations": "Voltooide Simulaties",
+    "loadingModels": "Modellen laden...",
+    "noCompletedSimulations": "Geen voltooide simulaties in deze werkruimte",
+    "noCompletedModels": "Geen voltooide modellen",
+    "resolution": "resolutie",
+    "loadingResults": "Simulatieresultaten laden...",
+    "noResultsYet": "Nog geen resultaten beschikbaar voor deze beoordeling.",
+    "noResultsYetDescription": "Resultaten verschijnen hier zodra de berekening is voltooid en verwerkt.",
+    "initializingMap": "Kaart initialiseren...",
+    "loadingWorkspace": "Werkruimte laden...",
+    "assessmentDetails": "Beoordelingsdetails",
+    "modelInfo": "Modelinfo",
+    "location": "Locatie",
+    "period": "Periode",
+    "configuration": "Configuratie",
+    "layerStatus": "Laagstatus",
+    "availableResults": "Beschikbare resultaten",
+    "mapControls": "Kaartbediening",
+    "mapControlsDescription": "Gebruik de zoomknoppen (rechtsboven) om in/uit te zoomen, de kaart te centreren en de energie-beoordelingslaag te verkennen.",
+    "opacity": "Dekking",
+    "layerHidden": "Laag verborgen",
+    "showLayer": "Laag tonen",
+    "hideLayer": "Laag verbergen",
+    "noModelIdProvided": "Geen model-ID opgegeven",
+    "failedToLoadResults": "Kan beoordelingsresultaten niet laden",
+    "failedToLoadTiles": "Kan tegels niet laden van GeoServer",
+    "failedToGetLayerInfo": "Kan laaginformatie niet ophalen van backend",
+    "layerConfigIncomplete": "Laagconfiguratie onvolledig",
+    "failedToLoadLayerConfig": "Kan laagconfiguratie niet laden",
+    "transformer": "Transformator",
+    "building": "Gebouw",
+    "connectedBuilding": "verbonden gebouw",
+    "connectedBuildings": "verbonden gebouwen",
+    "clickForDetails": "Klik voor details",
+    "tabs": {
+      "overview": "Overzicht",
+      "energy": "Energie",
+      "grid": "Net",
+      "system": "Systeem",
+      "cost": "Kosten"
+    },
+    "metrics": {
+      "totalDemand": "Totale Vraag",
+      "renewableGen": "Hernieuwbare Opwek.",
+      "gridImport": "Netimport",
+      "selfSufficiency": "Zelfvoorziening",
+      "selfSufficiencyDesc": "% van de vraag gedekt door hernieuwbare energie",
+      "peakDemand": "Piekvraag",
+      "totalCost": "Totale Kosten",
+      "over": "over",
+      "from": "van",
+      "installed": "geïnstalleerd",
+      "equipmentAndRunning": "Apparatuur + Lopende kosten"
+    },
+    "techNames": {
+      "solarPv": "Zonne-PV",
+      "wind": "Wind",
+      "windOnshore": "Wind (Onshore)",
+      "windOffshore": "Wind (Offshore)",
+      "biomass": "Biomassa",
+      "batteryStorage": "Batterijopslag",
+      "geothermal": "Geothermisch",
+      "hydroPower": "Waterkracht",
+      "gridImport": "Netimport",
+      "powerTransmission": "Energietransmissie",
+      "householdH1": "Huishouden H1",
+      "householdH2": "Huishouden H2",
+      "industryG0": "Industrie G0",
+      "industryG1": "Industrie G1",
+      "industryG2": "Industrie G2",
+      "g3Demand": "G3 Vraag",
+      "gridConnection": "Netaansluiting",
+      "windTurbine": "Windturbine",
+      "powerLines": "Elektriciteitsleidingen",
+      "sfhDemand": "Vraag vrijstaand huis",
+      "thDemand": "Vraag rijtjeshuis",
+      "mfhDemand": "Vraag meergezinswoning",
+      "abDemand": "Vraag appartement",
+      "commercialDemand": "Commerciële vraag",
+      "publicDemand": "Vraag openbaar gebouw",
+      "industrialDemand": "Industriële vraag",
+      "agriculturalDemand": "Agrarische vraag"
+    },
+    "charts": {
+      "systemPerformance": "Systeemprestaties",
+      "systemPerformanceDesc": "Belangrijke prestatie-indicatoren die laten zien hoe efficiënt het energiesysteem werkt.",
+      "selfSufficiencyDesc": "% van vraag gedekt door lokale opwekking",
+      "gridDependency": "Netafhankelijkheid",
+      "gridDependencyDesc": "% van vraag geïmporteerd uit het net",
+      "capacityUtilization": "Capaciteitsbenutting",
+      "capacityUtilizationDesc": "Gemiddelde capaciteitsfactor van geïnstalleerde assets",
+      "technologyCapacity": "Technologiecapaciteit",
+      "technologyCapacityDesc": "Geïnstalleerde capaciteit van elke technologie in het geoptimaliseerde energiesysteem, gemeten in kW of kWh voor opslag.",
+      "generation": "Opwekking",
+      "generationDesc": "Zonne-PV, windturbines en andere generatoren",
+      "storage": "Opslag",
+      "storageDesc": "Batterijsystemen en andere opslagtechnologieën",
+      "costDistribution": "Kostenverdeling",
+      "costDistributionDesc": "Uitsplitsing van totale systeemkosten per technologieën en categorieën.",
+      "capitalCosts": "Kapitaalkosten",
+      "capitalCostsDesc": "Investeringskosten voor apparatuur en installatie",
+      "lcoe": "LCOE",
+      "lcoeDesc": "Levelized Cost of Energy in €/kWh",
+      "energyFlow": "Energiestroom",
+      "energyFlowAggregated": "Energiestroom (Geaggregeerd)",
+      "energyFlowDesc": "Sankey-diagram dat de totale geaggregeerde energiecapaciteit toont van opwekkingsbronnen naar vraagknooppunten.",
+      "sources": "Bronnen (Links)",
+      "sourcesDesc": "Totale geïnstalleerde capaciteit van Zonne-PV, Wind, Netimport geaggregeerd over alle gebouwen",
+      "energySystem": "Energiesysteem (Midden)",
+      "energySystemDesc": "Centrale hub die het gecombineerde energiesysteem vertegenwoordigt",
+      "demand": "Vraag (Rechts)",
+      "demandDesc": "Energie gedistribueerd naar huishoudens en industriële verbruikers",
+      "energyFlowNote": "Stroombreedte vertegenwoordigt relatieve energiecapaciteit (kW). Waarden zijn geaggregeerde totalen over alle locaties in het model.",
+      "lcoeComparison": "LCOE Vergelijking",
+      "investmentVsOperating": "Investering vs. Exploitatiekosten",
+      "systemCostSummary": "Systeemkostenoverzicht"
+    },
+    "energy": {
+      "noData": "Geen energiegegevens beschikbaar",
+      "dailyEnergyBalance": "Dagelijkse Energiebalans",
+      "dailyEnergyBalanceDesc": "Toont de dagelijkse balans tussen energieproductie en -verbruik voor alle technologieën in het systeem.",
+      "production": "Productie",
+      "productionDesc": "Energie opgewekt door zon, wind en andere bronnen",
+      "consumption": "Verbruik",
+      "consumptionDesc": "Energie gebruikt door belastingen, opslaglading en netexport",
+      "renewableProduction": "Hernieuwbare Productie",
+      "totalRenewable": "Totaal Hernieuwbaar",
+      "gridImport": "Netimport",
+      "fromGrid": "Van Net",
+      "totalDemand": "Totale Vraag",
+      "selfSufficiency": "Zelfvoorziening",
+      "netBalance": "Nettobalans",
+      "energyKwh": "Energie (kWh)",
+      "netKwh": "Netto (kWh)",
+      "noEnergyBalanceData": "Geen energiebalansgegevens beschikbaar",
+      "dailyLoadProfile": "Dagelijks Belastingprofiel",
+      "dailyLoadProfileDesc": "Toont elektriciteitsverbruikspatronen over een periode van 24 uur met automatische detectie van piekperiodes.",
+      "peakPeriods": "Piekperiodes",
+      "peakPeriodsDesc": "Ochtend (07:00-10:00) en avond (17:00-21:00) periodes van hoge vraag",
+      "offPeak": "Daluren",
+      "offPeakDesc": "Periodes van lagere vraag ideaal voor EV-laden of batterijopslag",
+      "averageLine": "Gemiddelde Lijn",
+      "averageLineDesc": "Stippellijn toont gemiddeld dagelijks stroomverbruik",
+      "hourlyGenerationProfile": "Uurlijks Opwekkingsprofiel",
+      "hourlyGenerationProfileDesc": "Toont uurlijkse energieopwekkingspatronen en hoe productie varieert gedurende de dag en seizoenen.",
+      "peakHours": "Piekuren",
+      "peakHoursDesc": "Maximale opwekking typisch rond het middaguur voor zonne-energie",
+      "loadDuration": "Belastingduur",
+      "loadDurationDesc": "Gesorteerd profiel toont capaciteitsgebruiksverdeling",
+      "peak": "Piek",
+      "min": "Min",
+      "average": "Gemiddelde",
+      "avg": "Gem.",
+      "at": "om",
+      "all": "Alle",
+      "solarPv": "Zonne-PV",
+      "wind": "Wind",
+      "biomass": "Biomassa",
+      "geothermal": "Geothermisch",
+      "power": "Vermogen",
+      "timeOfDay": "Tijd van de Dag",
+      "hour": "Uur",
+      "morningPeak": "Ochtendpiek",
+      "eveningPeak": "Avondpiek",
+      "peakPeriod": "Piekperiode",
+      "noDataLoadProfile": "Geen gegevens beschikbaar voor dagelijks belastingprofiel",
+      "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve"
+    },
+    "grid": {
+      "noData": "Geen PyPSA-netwerkgegevens beschikbaar",
+      "noNetworkData": "Geen netwerkgegevens beschikbaar",
+      "networkTopology": "Netwerktopologie",
+      "transformer": "Transformator",
+      "building": "Gebouw",
+      "normal": "Normaal",
+      "warning": "Waarschuwing",
+      "critical": "Kritiek",
+      "voltage": "Spanning",
+      "power": "Vermogen",
+      "status": "Status",
+      "connected": "Verbonden",
+      "buildings": "gebouwen",
+      "voltageStatusInfo": "Spanningsstatus informatie",
+      "voltageStatusIndicators": "Spanningsstatus Indicatoren",
+      "voltageStatusDesc": "Bus spanningsstatus gebaseerd op EN 50160 netwerkstandaarden:",
+      "normalVoltageDesc": "Netwerk opereert binnen optimaal spanningsbereik",
+      "warningVoltageDesc": "Nadert limieten, monitoring aanbevolen",
+      "criticalVoltageDesc": "Buiten limieten, netversterkingnodig",
+      "example": "Voorbeeld",
+      "belowThreshold": "onder de 0,95 drempel",
+      "busLoadingStatus": "Busbelastingsstatus",
+      "busLoadingDesc": "Toont het belastingspercentage van elke transformator/bus gebaseerd op spanningsafwijking van nominaal (1.0 p.u.).",
+      "normalOperation": "Normale werking, voldoende capaciteit",
+      "highUtilization": "Hoge benutting, plan upgrades",
+      "nearCapacity": "Nabij capaciteit, versterking nodig",
+      "busDetails": "Busdetails",
+      "busDetailsDesc": "Elektrische kenmerken van de geselecteerde bus/transformator in het elektriciteitsnet.",
+      "totalBuses": "Totaal Bussen",
+      "totalBusesDesc": "Aantal knooppunten in het net",
+      "selected": "Geselecteerd",
+      "avgVoltage": "Gem. Spanning",
+      "avgVoltageDesc": "Gemiddelde spanning in per-unit (p.u.)",
+      "avgPower": "Gem. Vermogen",
+      "avgPowerDesc": "Gemiddelde vermogenstroom in kW",
+      "voltageProfile": "Spanningsprofiel",
+      "voltageProfileDesc": "Toont spanningsgrootte over tijd bij de geselecteerde bus in per-unit (p.u.) waarden. Nominale spanning is 1.0 p.u.",
+      "perUnit": "Per-Unit (p.u.)",
+      "perUnitDesc": "Genormaliseerde spanning waarbij 1.0 = nominaal spanningsniveau",
+      "normalRange": "Normaal Bereik",
+      "normalRangeDesc": "0.95 - 1.05 p.u. volgens EN 50160 standaard",
+      "powerFlow": "Vermogensstroom",
+      "powerFlowDesc": "Toont actief en reactief vermogen over tijd bij de geselecteerde bus. Positieve waarden duiden op verbruik, negatieve op opwekking.",
+      "activePower": "Actief Vermogen (P)",
+      "activePowerDesc": "Werkelijk vermogen in kW dat effectief werk verricht",
+      "reactivePower": "Reactief Vermogen (Q)",
+      "reactivePowerDesc": "Vermogen in kVAR voor magnetische velden in motoren/transformatoren",
+      "noVoltageData": "Geen spanningsgegevens",
+      "noPowerData": "Geen vermogensgegevens",
+      "min": "Min",
+      "max": "Max",
+      "avg": "Gem",
+      "loading": "Belasting",
+      "noLoadingData": "Geen belastingsgegevens beschikbaar"
+    },
+    "system": {
+      "noData": "Geen systeemgegevens beschikbaar",
+      "noAnalysisData": "Geen systeemanalysegegevens beschikbaar voor dit model",
+      "noAnalysisDataDesc": "Systeembalans, onvervulde vraag en vermogenstroomgegevens verschijnen hier wanneer beschikbaar.",
+      "dailySystemBalance": "Dagelijkse Systeembalans",
+      "systemBalance": "Systeembalans",
+      "systemBalanceDesc": "Toont de balans tussen energieaanbod en -vraag. Positieve waarden (blauw) duiden op overschot, negatieve (rood) op tekort.",
+      "surplus": "Overschot",
+      "surplusDesc": "Opwekking overtreft vraag",
+      "deficit": "Tekort",
+      "deficitDesc": "Vraag overtreft opwekking",
+      "balance": "Balans",
+      "balanceKw": "Balans (kW)",
+      "dailyUnmetDemand": "Dagelijkse Onvervulde Vraag",
+      "unmetDemand": "Onvervulde Vraag",
+      "unmetDemandDesc": "Energievraag die niet kon worden vervuld door het beschikbare aanbod. Lagere waarden duiden op betere betrouwbaarheid.",
+      "unmetEnergy": "Onvervulde Energie",
+      "unmetEnergyDesc": "Vraag die beschikbaar aanbod overschrijdt",
+      "unmetKwh": "Onvervuld (kWh)",
+      "powerFlowAnalysis": "Vermogenstroomanalyse",
+      "powerFlow": "Vermogensstroom",
+      "powerFlowDesc": "Vermogen door transmissielijnen en transformatoren. Vergelijk verzend- en ontvangstvermogen om transmissieverliezen te identificeren.",
+      "p0Sending": "P0 (Verzendend)",
+      "p0SendingDesc": "Vermogen aan broneinde van de lijn",
+      "p1Receiving": "P1 (Ontvangend)",
+      "p1ReceivingDesc": "Vermogen aan bestemmingseinde",
+      "loss": "Verlies",
+      "lossDesc": "Transmissieverliezen (P0 - P1)",
+      "select": "Selecteer",
+      "selectLineOrTransformer": "Selecteer Lijn of Transformator",
+      "transmissionLines": "Transmissielijnen",
+      "transformers": "Transformatoren",
+      "lines": "Lijnen",
+      "powerW": "Vermogen (W)",
+      "selectLinePrompt": "Selecteer een lijn of transformator",
+      "selectLinePromptDesc": "om vermogenstroomgegevens te bekijken",
+      "resourceConsumption": "Resourceverbruik per Technologie",
+      "resourceConsumptionDesc": "Totale energie verbruikt door elk technologietype gedurende de simulatieperiode.",
+      "primary": "Primair",
+      "primaryDesc": "Technologieën met hoogste verbruik",
+      "secondary": "Secundair",
+      "secondaryDesc": "Ondersteunende technologieën",
+      "totalConsumption": "Totaal Verbruik",
+      "investmentCosts": "Investeringskosten per Technologie",
+      "investmentCostsDesc": "Kapitaaluitgaven vereist voor de inzet van elke technologie.",
+      "capex": "CAPEX",
+      "capexDesc": "Initiële kapitaalinvestering",
+      "totalInvestment": "Totale Investering"
+    },
+    "chartLabels": {
+      "amount": "Bedrag",
+      "share": "Aandeel",
+      "totalCost": "Totale Kosten",
+      "noCostData": "Geen kostengegevens beschikbaar",
+      "installed": "Geïnstalleerd",
+      "avgUtilized": "Gem. Gebruikt",
+      "capacityFactor": "Capaciteitsfactor",
+      "capacityKw": "Capaciteit (kW)",
+      "installedCapacity": "Geïnstalleerde Capaciteit",
+      "utilizedCapacity": "Gebruikte Capaciteit",
+      "noCapacityData": "Geen capaciteitsgegevens beschikbaar",
+      "value": "Waarde",
+      "noEnergyFlowData": "Geen energiestroomgegevens beschikbaar",
+      "gridImport": "Netimport",
+      "gridExport": "Netexport",
+      "energySystem": "Energiesysteem",
+      "household": "Huishouden",
+      "industry": "Industrie",
+      "transmission": "Transmissie",
+      "investmentCost": "Investering (CAPEX)",
+      "operatingCost": "Exploitatie (OPEX)",
+      "systemLCOE": "Systeem LCOE"
+    },
+    "buildingDetail": {
+      "building": "Gebouw",
+      "production": "Productie",
+      "demand": "Vraag",
+      "balance": "Balans",
+      "energyProfile": "Energieprofiel",
+      "costs": "Kosten",
+      "noEnergyData": "Geen uurlijkse energiegegevens beschikbaar",
+      "noSimulationLinked": "Geen simulatiegegevens gekoppeld",
+      "household": "Huishouden",
+      "householdLow": "Huishouden (Laag)",
+      "householdHigh": "Huishouden (Hoog)",
+      "commercial": "Commercieel",
+      "commercialWeekday": "Commercieel (Werkdag)",
+      "commercialEvening": "Commercieel (Avond)",
+      "commercial247": "Commercieel (24/7)",
+      "warehouse": "Magazijn",
+      "industrial": "Industrieel",
+      "retail": "Detailhandel",
+      "office": "Kantoor",
+      "residential": "Residentieel",
+      "h1Demand": "H1 Vraag",
+      "powerTransmission": "Energietransmissie",
+      "sources": "Bronnen"
+    },
+    "gauges": {
+      "selfConsumption": "Eigen Verbruik",
+      "gridIndependence": "Netonafhankelijkheid",
+      "capacityFactor": "Capaciteitsfactor",
+      "co2Reduction": "CO₂-Reductie"
+    },
+    "powerFlow": {
+      "converged": "Geconvergeerd",
+      "notConverged": "Niet geconvergeerd",
+      "convergedTitle": "Vermogensstroom geconvergeerd",
+      "notConvergedTitle": "Vermogensstroom niet geconvergeerd",
+      "convergedDescription": "De berekening van de elektrische vermogensstroom heeft succesvol een stabiele oplossing gevonden. Spanning- en vermogenswaarden over het netwerk zijn fysiek geldig.",
+      "notConvergedDescription": "De vermogensstroomberekening kon geen stabiele oplossing vinden binnen de iteratielimiet. Resultaten kunnen onnauwkeurig of onvolledig zijn."
+    }
+  },
+  "auth": {
+    "signIn": "Inloggen",
+    "signUp": "Registreren",
+    "signOut": "Uitloggen",
+    "signingIn": "Inloggen...",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "confirmPassword": "Bevestig wachtwoord",
+    "enterYourEmail": "Voer uw e-mail in",
+    "enterYourPassword": "Voer uw wachtwoord in",
+    "welcomeBack": "Welkom terug",
+    "signInToContinue": "Log in om door te gaan",
+    "or": "of",
+    "dontHaveAccount": "Heeft u geen account?",
+    "alreadyHaveAccount": "Heeft u al een account?",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "rememberMe": "Onthoud mij",
+    "loginFailed": "Inloggen mislukt",
+    "verificationEmailSent": "Verificatie-e-mail verzonden",
+    "checkInboxVerify": "Controleer uw inbox en klik op de verificatielink.",
+    "emailVerificationRequired": "E-mailverificatie vereist",
+    "sending": "Verzenden...",
+    "resendVerificationEmail": "Verificatie-e-mail opnieuw verzenden",
+    "protectedByEncryption": "Beveiligd met industriestandaard versleuteling",
+    "createAccount": "Account Aanmaken",
+    "joinUsAccess": "Sluit u aan om toegang te krijgen tot het energiesimulatieplatform",
+    "personalInformation": "Persoonlijke Informatie",
+    "fullName": "Volledige Naam",
+    "enterFullName": "Voer uw volledige naam in",
+    "emailAddress": "E-mailadres",
+    "enterEmailAddress": "Voer uw e-mailadres in",
+    "security": "Beveiliging",
+    "confirmYourPassword": "Bevestig uw wachtwoord",
+    "passwordRequirements": {
+      "title": "Wachtwoordvereisten",
+      "minChars": "Minimaal 8 tekens",
+      "uppercase": "Eén hoofdletter",
+      "lowercase": "Eén kleine letter",
+      "number": "Eén cijfer",
+      "specialChar": "Eén speciaal teken",
+      "hasSpaces": "Wachtwoord bevat spaties aan het begin of einde"
+    },
+    "organizationDetails": "Organisatiegegevens",
+    "organization": "Organisatie",
+    "enterOrganization": "Voer uw organisatie in",
+    "position": "Functie",
+    "enterPosition": "Voer uw functie in",
+    "phoneNumber": "Telefoonnummer",
+    "enterPhoneNumber": "Voer uw telefoonnummer in",
+    "accessLevel": "Toegangsniveau",
+    "veryLow": "Zeer Laag",
+    "low": "Laag",
+    "intermediate": "Gemiddeld",
+    "manager": "Manager",
+    "expert": "Expert",
+    "forgotPasswordTitle": "Wachtwoord Vergeten",
+    "forgotPasswordDescription": "Voer uw e-mailadres in en we sturen u instructies om uw wachtwoord te resetten.",
+    "secureResetProcess": "Veilig wachtwoord reset proces",
+    "sendResetInstructions": "Instructies Versturen",
+    "backToLogin": "Terug naar Inloggen",
+    "cancel": "Annuleren",
+    "checkSpamFolder": "Als je de e-mail niet ziet, controleer dan je spam- of ongewenste e-mailmap.",
+    "checkYourEmail": "Controleer je e-mail",
+    "note": "Opmerking",
+    "sentResetInstructions": "We hebben instructies voor het opnieuw instellen van het wachtwoord naar je e-mailadres gestuurd.",
+    "signUpNow": "Meld je nu aan",
+    "createPassword": "Maak een wachtwoord aan",
+    "creating": "Aanmaken...",
+    "agreeToTerms": "Door een account aan te maken, gaat u akkoord met onze Servicevoorwaarden"
+  },
+  "workspace": {
+    "workspace": "Werkruimte",
+    "workspaces": "Werkruimtes",
+    "selectWorkspace": "Werkruimte selecteren",
+    "defaultWorkspace": "Standaard werkruimte",
+    "default": "Standaard",
+    "shared": "Gedeeld",
+    "searchWorkspaces": "Werkruimtes zoeken...",
+    "noWorkspacesMatch": "Geen werkruimtes komen overeen met je zoekopdracht",
+    "noWorkspacesFound": "Geen werkruimtes gevonden",
+    "createNewWorkspace": "Nieuwe werkruimte maken",
+    "createDescription": "Maak een nieuwe werkruimte om je modellen te organiseren en samen te werken met anderen",
+    "createWorkspace": "Werkruimte maken",
+    "renameWorkspace": "Werkruimte hernoemen",
+    "renameDescription": "Voer een nieuwe naam in voor je werkruimte",
+    "copyWorkspaceTitle": "Werkruimte kopiëren",
+    "copyDescription": "Maak een kopie van deze werkruimte met een nieuwe naam",
+    "saveChanges": "Wijzigingen opslaan",
+    "copyWorkspace": "Werkruimte kopiëren",
+    "sharedWithYouBy": "Gedeeld met jou door {{user}}",
+    "sharedWithUsers": "Gedeeld met gebruikers",
+    "sharedWithGroups": "Gedeeld met groepen",
+    "anotherUser": "een andere gebruiker",
+    "noMembersYet": "Nog geen leden. Deel met iemand om samen te werken!",
+    "noGroupsYet": "Nog geen groepen hebben toegang. Deel met een groep om alle leden toegang te geven!",
+    "removeMember": "Lid verwijderen",
+    "removeGroup": "Groep verwijderen"
+  },
+  "model": {
+    "title": "Model",
+    "models": "Modellen",
+    "newModel": "Nieuw model",
+    "editModel": "Model bewerken",
+    "deleteModel": "Model verwijderen",
+    "modelName": "Modelnaam",
+    "description": "Beschrijving",
+    "status": "Status",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt",
+    "running": "Actief",
+    "completed": "Voltooid",
+    "failed": "Mislukt",
+    "pending": "In afwachting",
+    "queued": "In wachtrij",
+    "runSimulation": "Simulatie starten",
+    "viewResults": "Resultaten bekijken",
+    "duplicate": "Dupliceren",
+    "export": "Exporteren",
+    "compare": "Vergelijken",
+    "dashboard": "Model Dashboard",
+    "manageConfigurations": "Beheer je energie-evaluatieconfiguraties",
+    "searchModels": "Modellen zoeken...",
+    "allModels": "Alle modellen",
+    "modelGroups": "Modelgroepen",
+    "loadingWorkspace": "Werkruimte laden...",
+    "loadingModels": "Modellen laden...",
+    "loadingWorkspaceDescription": "Even geduld terwijl we je werkruimtevoorkeuren initialiseren.",
+    "loadingModelsDescription": "Even geduld terwijl we je energie-evaluatiemodellen ophalen.",
+    "selectWorkspace": "Selecteer of maak een werkruimte",
+    "refreshModels": "Modellenlijst vernieuwen",
+    "share": "Delen",
+    "shareDescription": "\"{{title}}\" delen met een andere gebruiker",
+    "copy": "Kopiëren",
+    "rename": "Hernoemen",
+    "delete": "Verwijderen",
+    "move": "Verplaatsen",
+    "shareWorkspace": "Deze werkruimte delen",
+    "copyWorkspace": "Een kopie van deze werkruimte maken",
+    "renameWorkspace": "Deze werkruimte hernoemen",
+    "deleteWorkspace": "Deze werkruimte verwijderen",
+    "moveToWorkspace": "Naar werkruimte verplaatsen",
+    "noModelsFound": "Geen modellen gevonden",
+    "noModelsMatch": "Geen modellen komen overeen met \"{{search}}\". Probeer je zoekopdracht aan te passen.",
+    "noModelsYet": "Je hebt nog geen energie-evaluatiemodellen gemaakt. Begin met het maken van je eerste model!",
+    "createFirstModel": "Maak je eerste model",
+    "selected": "geselecteerd",
+    "deleteSelected": "Geselecteerde verwijderen",
+    "moveSelected": "Geselecteerde verplaatsen",
+    "cannotDelete": "Kan niet verwijderen - modellen zijn uitgeschakeld of zijn niet van jou",
+    "cannotMove": "Kan niet verplaatsen - modellen zijn niet van jou",
+    "sharedCannotDelete": "Gedeelde modellen kunnen niet worden verwijderd. Kopieer het eerst",
+    "sharedCannotMove": "Gedeelde modellen kunnen niet worden verplaatst. Kopieer het eerst",
+    "sharedCannotShare": "Gedeelde modellen kunnen niet opnieuw worden gedeeld. Kopieer het eerst",
+    "limitReached": "U heeft uw limiet voor het maken van modellen bereikt",
+    "selectAll": "Alles selecteren",
+    "deselectAll": "Alles deselecteren",
+    "actions": "Acties",
+    "name": "Modelnaam",
+    "owner": "Eigenaar",
+    "workspace": "Werkruimte",
+    "draft": "Concept",
+    "published": "Gepubliceerd",
+    "total": "Totaal",
+    "queue": "Wachtrij",
+    "copyOf": "Kopie van \"{{name}}\"",
+    "ownedBy": "Eigendom van",
+    "parentModel": "Bovenliggend model",
+    "parent": "Bovenliggend",
+    "anotherModel": "een ander model",
+    "failedDefaultMessage": "Berekening mislukt - webservice niet beschikbaar of time-out",
+    "waiting": "Wachtend",
+    "queuedTooltip": "Uw model staat in de wachtrij - de simulatie-engine verwerkt andere berekeningen",
+    "compareRequires2Completed": "Selecteer precies 2 voltooide modellen om te vergelijken",
+    "bulkCopy": "Modellen kopiëren",
+    "bulkCopyDescription": "Kopieën maken van {{count}} geselecteerd(e) model(len)",
+    "bulkCopyFailed": "Sommige modellen konden niet worden gekopieerd. Probeer het opnieuw.",
+    "bulkCopySubmit": "Kopieën maken",
+    "calculate": "Berekenen",
+    "cannotCalculate": "Kan niet berekenen – geen geschikte modellen geselecteerd",
+    "noWebserviceAvailable": "Geen simulatie-engine beschikbaar",
+    "cancelled": "Geannuleerd",
+    "modified": "Gewijzigd"
+  },
+  "polygon": {
+    "drawRegion": "Teken je regio",
+    "clickToStart": "Klik om te beginnen",
+    "clickAnywhere": "Klik ergens op de kaart om je eerste punt te plaatsen",
+    "addMorePoints": "Meer punten toevoegen",
+    "continueClicking": "Blijf klikken om je gebied te omlijnen",
+    "closePolygon": "Sluit de polygoon",
+    "doubleClickOrClick": "Dubbelklik of klik op het startpunt om te voltooien",
+    "startEnd": "Start/Einde",
+    "clickHereToClose": "Klik hier om te sluiten",
+    "escToCancel": "om tekenen te annuleren",
+    "pointsAdded": "{{count}} toegevoegd",
+    "editPolygon": "Polygoon bewerken",
+    "moveVertex": "Hoeken verplaatsen",
+    "moveVertexHint": "Sleep een hoekpunt om aan te passen",
+    "addVertex": "Punt toevoegen",
+    "addVertexHint": "Klik op een rand",
+    "removeVertex": "Punt verwijderen",
+    "removeVertexHint": "klik op een hoekpunt",
+    "escToClear": "om polygoon te wissen"
+  },
+  "workflow": {
+    "title": "Werkstroom",
+    "gridGeneration": "Netwerk genereren",
+    "gridGenerationHint": "Gebouwen analyseren & netwerk aanmaken",
+    "addTransformer": "Transformator toevoegen",
+    "addTransformerHint": "Transformatoren op de kaart plaatsen",
+    "addTransformerInstruction": "Schakelaar in werkbalk activeren, dan op kaart klikken",
+    "assignBuildings": "Gebouwen toewijzen",
+    "assignBuildingsHint": "Gebouwen aan transformatoren koppelen",
+    "assignBuildingsInstruction": "Gebouwen selecteren → doeltransformator aanklikken",
+    "powerFlow": "Vermogensstroom berekenen",
+    "powerFlowHint": "Netwerkbelasting & benutting analyseren",
+    "illustrationStep": "Stap {{step}}",
+    "clickToSelect": "klik om te selecteren",
+    "clickTransformer": "klik op transformator",
+    "then": "dan",
+    "toCancel": "om te annuleren",
+    "addTransformerAction": "Trafo toevoegen",
+    "assignBuildingsAction": "Gebouwen toewijzen",
+    "runPowerFlowAction": "Vermogensanalyse",
+    "rerunPowerFlowAction": "Opnieuw berekenen"
+  },
+  "time": {
+    "justNow": "Zojuist",
+    "minutesAgo": "{{count}} minuut geleden",
+    "minutesAgo_plural": "{{count}} minuten geleden",
+    "hoursAgo": "{{count}} uur geleden",
+    "hoursAgo_plural": "{{count}} uur geleden",
+    "daysAgo": "{{count}} dag geleden",
+    "daysAgo_plural": "{{count}} dagen geleden",
+    "weeksAgo": "{{count}} week geleden",
+    "weeksAgo_plural": "{{count}} weken geleden"
+  },
+  "adminDashboard": {
+    "welcome": "Welkom terug",
+    "subtitle": "Uw commandocentrum voor risicobeoordeling",
+    "navigation": "Navigatie",
+    "overview": "Overzicht",
+    "profile": "Profiel",
+    "settings": "Instellingen",
+    "logout": "Uitloggen",
+    "tabs": {
+      "overview": "Overzicht",
+      "allSimulationModels": "Alle Simulatiemodellen",
+      "simulationEngine": "Simulatie-Engine",
+      "feedback": "Feedback",
+      "userManagement": "Gebruikersbeheer",
+      "gridEngine": "Compute Engine"
+    },
+    "stats": {
+      "accessLevel": "Toegangsniveau",
+      "availableLayers": "Beschikbare Lagen",
+      "status": "Status",
+      "totalUsers": "Totaal Gebruikers",
+      "lastLogin": "Laatste Aanmelding",
+      "active": "Actief",
+      "online": "Online",
+      "live": "Live",
+      "updating": "Bijwerken",
+      "recent": "Recent",
+      "allMapLayers": "Alle Lagen",
+      "mapLayers": "{{count}} Lagen",
+      "mapLayer": "{{count}} Laag"
+    },
+    "accessLevels": {
+      "expert": "Expert Toegang",
+      "manager": "Manager Toegang",
+      "intermediate": "Gemiddelde Toegang",
+      "veryLow": "Zeer Lage Toegang",
+      "unknown": "Onbekend"
+    },
+    "accessTrends": {
+      "maximum": "Maximum",
+      "management": "Beheer",
+      "upgradable": "Upgradebaar",
+      "basic": "Basis"
+    },
+    "userProfile": {
+      "title": "Gebruikersprofiel",
+      "subtitle": "Uw accountinformatie",
+      "email": "E-mail",
+      "organization": "Organisatie",
+      "position": "Functie",
+      "phone": "Telefoon"
+    },
+    "accessPermissions": {
+      "title": "Toegang & Machtigingen",
+      "subtitle": "Systeemmogelijkheden",
+      "active": "Actief",
+      "currentLevel": "Huidig Niveau",
+      "workspaces": "Werkruimtes",
+      "unlimited": "Onbeperkt",
+      "activeWorkspaces": "{{count}} Actief",
+      "teamSharing": "Team Delen",
+      "enabled": "Ingeschakeld",
+      "disabled": "Uitgeschakeld",
+      "modelQuota": "Model Quotum",
+      "standardLimit": "Standaard Limiet",
+      "computePower": "Rekenkracht",
+      "highPerformance": "Hoge Prestaties",
+      "standard": "Standaard",
+      "availableFeatures": "Beschikbare Functies",
+      "allLayersAvailable": "Alle Lagen Beschikbaar",
+      "fullSystemAccess": "Volledige Systeemtoegang",
+      "energyRiskFinal": "Energie Risico Finaal",
+      "vegetationRisk": "Vegetatie Risico",
+      "topographyRisk": "Topografie Risico",
+      "upgradeMessage": "Ontgrendel meer functies door een upgrade aan te vragen bij uw beheerder."
+    },
+    "quickActions": {
+      "title": "Snelle Acties",
+      "subtitle": "Navigeer naar belangrijke functies",
+      "interactiveMap": "Interactieve Kaart",
+      "viewRiskMap": "Bekijk risicobeoordelingskaart",
+      "riskModels": "Risicomodellen",
+      "manageRiskModels": "Beheer risicomodellen",
+      "settings": "Instellingen",
+      "configurePreferences": "Configureer voorkeuren"
+    },
+    "title": "Beheerdersdashboard",
+    "welcomeBack": "Welkom terug, {{name}}!",
+    "managePlatform": "Beheer uw energiesimulatieplatform",
+    "administrator": "Beheerder",
+    "loadingContent": "Inhoud laden..."
+  },
+  "userManagement": {
+    "title": "Gebruikersbeheer",
+    "subtitle": "Beheer gebruikers, groepen en machtigingen",
+    "searchPlaceholder": "Zoek naam, e-mail, organisatie...",
+    "refresh": "Vernieuwen",
+    "addNewUser": "Nieuwe gebruiker toevoegen",
+    "add": "Toevoegen",
+    "editUser": "Gebruiker bewerken",
+    "createUser": "Gebruiker aanmaken",
+    "updateUser": "Gebruiker bijwerken",
+    "loadingUsers": "Gebruikers laden...",
+    "noUsersFound": "Geen gebruikers gevonden",
+    "noUsersInGroup": "Geen gebruikers gevonden in uw groep. Neem contact op met een beheerder om gebruikers aan uw groep toe te wijzen.",
+    "noUsersMatch": "Geen gebruikers komen overeen met \"{{search}}\"",
+    "noUsersMatchSearch": "Geen gebruikers komen overeen met \"{{search}}\"",
+    "addFirstUser": "Voeg de eerste gebruiker toe om te beginnen.",
+    "dialog": {
+      "editTitle": "Gebruiker bewerken",
+      "addTitle": "Nieuwe gebruiker toevoegen",
+      "updateUser": "Gebruiker bijwerken",
+      "createUser": "Gebruiker aanmaken"
+    },
+    "table": {
+      "user": "Gebruiker",
+      "organization": "Organisatie",
+      "position": "Functie",
+      "accessLevel": "Toegangsniveau",
+      "group": "Groep",
+      "emailVerified": "E-mail geverifieerd",
+      "phone": "Telefoon",
+      "actions": "Acties"
+    },
+    "emailStatus": {
+      "verified": "Geverifieerd",
+      "unverified": "Niet geverifieerd"
+    },
+    "actions": {
+      "changeGroup": "Groep wijzigen",
+      "enableUser": "Gebruiker is uitgeschakeld — klik om in te schakelen",
+      "disableUser": "Gebruiker is ingeschakeld — klik om uit te schakelen",
+      "editUser": "Gebruiker bewerken",
+      "deleteUser": "Gebruiker verwijderen",
+      "copyEmail": "E-mail kopiëren",
+      "copied": "Gekopieerd!",
+      "bulkDelete": "Geselecteerde verwijderen",
+      "bulkMoveToGroup": "Naar groep verplaatsen",
+      "deselectAll": "Alles deselecteren",
+      "selectAll": "Alles selecteren",
+      "selected": "{{count}} geselecteerd"
+    },
+    "groups": {
+      "selectOrCreate": "Selecteer of maak een groep aan",
+      "renameGroup": "Groep hernoemen",
+      "enableGroup": "Groep en gebruikers inschakelen",
+      "disableGroup": "Groep en gebruikers uitschakelen",
+      "deleteGroup": "Groep en alle gebruikers verwijderen",
+      "defaultCannotDelete": "Standaardgroep kan niet worden verwijderd",
+      "default": "Standaard",
+      "unknown": "Onbekend",
+      "defaultGroup": "Standaardgroep",
+      "unknownGroup": "Onbekende groep",
+      "changeUserGroup": "Gebruikersgroep wijzigen",
+      "groupAssignment": "Groeptoewijzing",
+      "selectGroup": "Groep selecteren",
+      "changeGroup": "Groep wijzigen",
+      "renameGroupTitle": "Groep hernoemen",
+      "groupName": "Groepsnaam",
+      "newGroupName": "Nieuwe groepsnaam",
+      "enterNewGroupName": "Voer nieuwe groepsnaam in",
+      "rename": "Hernoemen",
+      "createNewGroup": "Nieuwe groep maken",
+      "createGroupDescription": "Maak een nieuwe groep om gebruikers in uw organisatie te organiseren",
+      "createGroup": "Groep maken",
+      "groupNameRequired": "Groepsnaam is verplicht",
+      "groupCreated": "Groep succesvol aangemaakt",
+      "failedToCreateGroup": "Groep aanmaken mislukt",
+      "groupNamePlaceholder": "bijv. Brandweer, Noodhulp",
+      "searchGroups": "Groepen zoeken...",
+      "allGroups": "Alle groepen",
+      "viewUsersFromAllGroups": "Gebruikers van alle groepen bekijken",
+      "noGroups": "Geen groepen",
+      "loading": "Laden...",
+      "noGroupsFound": "Geen groepen gevonden",
+      "noGroupsMatchSearch": "Geen groepen komen overeen met uw zoekopdracht",
+      "bulkChangeGroup": "Gebruikers naar groep verplaatsen",
+      "moveUsers": "Gebruikers verplaatsen"
+    },
+    "notifications": {
+      "userCreated": "Gebruiker succesvol aangemaakt!",
+      "userUpdated": "Gebruiker succesvol bijgewerkt!",
+      "userDeleted": "Gebruiker succesvol verwijderd!",
+      "userDisabled": "Gebruiker succesvol uitgeschakeld!",
+      "userEnabled": "Gebruiker succesvol ingeschakeld!",
+      "groupDisabled": "Groep \"{{name}}\" uitgeschakeld",
+      "groupEnabled": "Groep \"{{name}}\" ingeschakeld",
+      "groupDeleted": "Groep \"{{name}}\" verwijderd",
+      "groupRenamed": "Groep succesvol hernoemd naar \"{{name}}\"",
+      "userMovedToGroup": "Gebruiker verplaatst naar nieuwe groep en uitgelogd. Ze moeten opnieuw inloggen om toegang te krijgen tot hun nieuwe werkruimte.",
+      "failedToCreate": "Gebruiker aanmaken mislukt",
+      "failedToUpdate": "Gebruiker bijwerken mislukt",
+      "failedToDelete": "Gebruiker verwijderen mislukt",
+      "failedToDisable": "Gebruiker uitschakelen mislukt",
+      "failedToEnable": "Gebruiker inschakelen mislukt",
+      "failedToFetch": "Gebruikers ophalen mislukt",
+      "failedToUpdateGroup": "Gebruikersgroep bijwerken mislukt",
+      "failedToRenameGroup": "Groep hernoemen mislukt",
+      "failedToCopyEmail": "E-mail kopiëren mislukt",
+      "pleaseLogIn": "Log in om gebruikers te bekijken",
+      "passwordMismatch": "Wachtwoord en bevestiging moeten overeenkomen",
+      "bulkDeletePartial": "{{succeeded}} van {{total}} gebruikers verwijderd. {{failed}} mislukt.",
+      "bulkDeleted": "{{count}} gebruikers succesvol verwijderd",
+      "bulkGroupChangeFailed": "Gebruikers verplaatsen naar groep mislukt",
+      "bulkGroupChanged": "{{count}} gebruikers succesvol naar nieuwe groep verplaatst"
+    },
+    "confirmations": {
+      "disableUserDescription": "Dit voorkomt dat de gebruiker kan inloggen.",
+      "enableUserDescription": "Dit stelt de gebruiker in staat om opnieuw in te loggen.",
+      "disableGroupDescription": "Het uitschakelen van een groep schakelt al zijn gebruikers uit.",
+      "enableGroupDescription": "Het inschakelen van een groep schakelt al zijn gebruikers in.",
+      "deleteGroupDescription": "Dit verwijdert de groep en al zijn gebruikers. Deze actie kan niet ongedaan worden gemaakt.",
+      "bulkDeleteDescription": "Hiermee worden {{count}} geselecteerde gebruikers permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+    }
+  },
+  "modelsManagement": {
+    "title": "Alle simulatiebeoordelingsmodellen",
+    "subtitle": "Beheer en monitor alle modellen in het systeem",
+    "searchPlaceholder": "Modellen zoeken...",
+    "loadingModels": "Modellen laden...",
+    "noModelsFound": "Geen modellen gevonden",
+    "noModelsDescription": "Begin met het maken van uw eerste simulatiebeoordelingsmodel.",
+    "sharedWorkspace": "Gedeelde werkruimte (Eigenaar: {{owner}})",
+    "table": {
+      "model": "Model",
+      "status": "Status",
+      "created": "Aangemaakt",
+      "lastModified": "Laatst gewijzigd",
+      "actions": "Acties"
+    },
+    "status": {
+      "draft": "Concept",
+      "inQueue": "In wachtrij",
+      "inProgress": "In uitvoering",
+      "completed": "Voltooid",
+      "published": "Gepubliceerd"
+    },
+    "notifications": {
+      "duplicated": "Model \"{{title}}\" is succesvol gedupliceerd",
+      "failedToDuplicate": "Model dupliceren mislukt. Probeer het opnieuw.",
+      "calculationStarted": "Berekening succesvol gestart",
+      "failedToCalculate": "Berekening starten mislukt. Probeer het opnieuw.",
+      "moveComingSoon": "Verplaatsen naar werkruimte functie komt binnenkort voor \"{{title}}\"",
+      "shared": "Model succesvol gedeeld",
+      "deleted": "Model \"{{title}}\" is verwijderd",
+      "failedToDelete": "Model verwijderen mislukt. Probeer het opnieuw."
+    },
+    "refresh": "Vernieuwen"
+  },
+  "profile": {
+    "title": "Profielinstellingen",
+    "subtitle": "Beheer uw persoonlijke gegevens en accountvoorkeuren",
+    "goBack": "Terug",
+    "loadingProfile": "Uw profiel laden...",
+    "defaultUser": "Gebruiker",
+    "accessLevel": "Toegangsniveau",
+    "notSpecified": "Niet gespecificeerd",
+    "personalInfo": "Persoonlijke informatie",
+    "personalInfoDescription": "Werk uw profielgegevens hieronder bij",
+    "readOnly": "alleen-lezen",
+    "saving": "Opslaan...",
+    "saveChanges": "Wijzigingen opslaan",
+    "fields": {
+      "fullName": "Volledige naam",
+      "email": "E-mailadres",
+      "organization": "Organisatie",
+      "position": "Functie",
+      "phone": "Telefoonnummer"
+    },
+    "placeholders": {
+      "fullName": "Voer uw volledige naam in",
+      "organization": "Uw bedrijf of organisatie",
+      "position": "Uw functietitel",
+      "phone": "+31 6 12345678"
+    },
+    "accessLevels": {
+      "basic": "Basis",
+      "basicDescription": "Standaard toegang tot basisfuncties",
+      "intermediate": "Gemiddeld",
+      "intermediateDescription": "Uitgebreide toegang met geavanceerde functies",
+      "expert": "Expert",
+      "expertDescription": "Volledige toegang tot alle functies"
+    },
+    "notifications": {
+      "updated": "Profiel succesvol bijgewerkt!",
+      "failedToLoad": "Profiel laden mislukt. Probeer het opnieuw.",
+      "failedToUpdate": "Profiel bijwerken mislukt. Probeer het opnieuw."
+    }
+  },
+  "webservicesManagement": {
+    "title": "Simulatiemotor beheer",
+    "subtitle": "Beheer berekeningswebservice-instanties",
+    "searchPlaceholder": "Zoeken op naam, IP...",
+    "refresh": "Vernieuwen",
+    "registerNew": "Nieuwe webservice registreren",
+    "loadingWebservices": "Webservices laden...",
+    "noWebservicesFound": "Geen webservices gevonden",
+    "noWebservicesDescription": "Begin met het registreren van uw eerste webservice-instantie.",
+    "summary": {
+      "total": "Totaal",
+      "online": "Online",
+      "available": "Beschikbaar",
+      "busy": "Bezig",
+      "offline": "Offline"
+    },
+    "yourSimulationStatus": "Uw simulatiestatus",
+    "modelsRunningDescription": "{{count}} van uw modellen worden momenteel berekend",
+    "modelsQueuedDescription": "{{count}} van uw modellen wachten - de simulatie-engine verwerkt andere berekeningen",
+    "filters": {
+      "allStatus": "Alle statussen",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud",
+      "error": "Fout",
+      "allAvailability": "Alle beschikbaarheid",
+      "available": "Beschikbaar",
+      "unavailable": "Niet beschikbaar"
+    },
+    "table": {
+      "service": "Service",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "availability": "Beschikbaarheid",
+      "jobs": "Taken",
+      "performance": "Prestaties",
+      "user": "Gebruiker",
+      "ip": "IP-adres",
+      "port": "Poort",
+      "lastCheck": "Laatste controle",
+      "actions": "Acties",
+      "never": "Nooit"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Beschikbaar",
+      "unavailable": "Niet beschikbaar"
+    },
+    "busyStatus": {
+      "calculating": "Berekening ({{current}}/{{max}})",
+      "idle": "Inactief (0/{{max}})"
+    },
+    "actions": {
+      "pingWebservice": "Webservice pingen",
+      "editWebservice": "Webservice bewerken",
+      "deleteWebservice": "Webservice verwijderen"
+    },
+    "dialog": {
+      "editTitle": "Webservice-instantie bewerken",
+      "createTitle": "Nieuwe webservice registreren",
+      "editDescription": "Webserviceconfiguratie bijwerken",
+      "createDescription": "Een nieuwe simulatieberekeningswebservice-instantie configureren",
+      "editButton": "Webservice bijwerken",
+      "createButton": "Webservice registreren"
+    },
+    "notifications": {
+      "created": "Webservice succesvol geregistreerd!",
+      "updated": "Webservice succesvol bijgewerkt!",
+      "deleted": "Webservice succesvol verwijderd!",
+      "statusChanged": "Webservicestatus gewijzigd naar {{status}}",
+      "failedToCreate": "Webservice registreren mislukt",
+      "failedToUpdate": "Webservice bijwerken mislukt",
+      "failedToDelete": "Webservice verwijderen mislukt",
+      "failedToPing": "Webservice pingen mislukt"
+    },
+    "noWebservicesAvailable": "Geen simulatie-engines momenteel geconfigureerd. Neem contact op met een beheerder.",
+    "healthCheck": "Simulatie-engine"
+  },
+  "feedbackManagement": {
+    "title": "Gebruikersfeedback Beheer",
+    "subtitle": "Bekijk en reageer op gebruikersfeedback",
+    "refresh": "Vernieuwen",
+    "noFeedbackFound": "Geen feedback gevonden",
+    "noFeedbackDescription": "Gebruikersfeedback verschijnt hier wanneer het wordt ingediend.",
+    "filters": {
+      "label": "Filters:",
+      "allStatus": "Alle Statussen",
+      "allCategories": "Alle Categorieën",
+      "allPriorities": "Alle Prioriteiten"
+    },
+    "statuses": {
+      "pending": "In Afwachting",
+      "inProgress": "In Behandeling",
+      "resolved": "Opgelost",
+      "closed": "Gesloten"
+    },
+    "categories": {
+      "bug": "Bugrapport",
+      "feature": "Functieverzoek",
+      "improvement": "Verbetering",
+      "general": "Algemeen"
+    },
+    "priorities": {
+      "low": "Laag",
+      "medium": "Gemiddeld",
+      "high": "Hoog",
+      "critical": "Kritiek"
+    },
+    "table": {
+      "subject": "Onderwerp",
+      "category": "Categorie",
+      "priority": "Prioriteit",
+      "status": "Status",
+      "rating": "Beoordeling",
+      "user": "Gebruiker",
+      "created": "Aangemaakt",
+      "actions": "Acties"
+    },
+    "actions": {
+      "viewDetails": "Details Bekijken",
+      "editStatus": "Status Bewerken",
+      "deleteFeedback": "Feedback Verwijderen",
+      "delete": "Verwijderen"
+    },
+    "viewDialog": {
+      "title": "Feedbackdetails",
+      "subtitle": "Bekijk volledige feedbackinformatie",
+      "message": "Bericht:",
+      "rating": "Beoordeling:",
+      "submitted": "Ingediend",
+      "adminResponse": "Admin Reactie:",
+      "respondedOn": "Gereageerd op:",
+      "attachedImage": "Bijgevoegde afbeelding",
+      "feedbackScreenshot": "Feedback screenshot",
+      "clickToEnlarge": "Klik om te vergroten",
+      "imageLoadError": "Afbeelding laden mislukt",
+      "submittedBy": "Ingediend door"
+    },
+    "editDialog": {
+      "title": "Feedback Bijwerken",
+      "description": "Wijzig feedbackstatus, prioriteit en geef een adminreactie",
+      "statusAndPriority": "Feedbackstatus & Prioriteit",
+      "statusAndPriorityDescription": "Werk feedbackstatus en prioriteitsniveau bij",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "adminResponse": "Admin Reactie",
+      "adminResponseDescription": "Geef een reactie aan de gebruiker",
+      "response": "Reactie",
+      "responsePlaceholder": "Voeg uw reactie toe aan de gebruiker...",
+      "saveChanges": "Wijzigingen Opslaan"
+    },
+    "notifications": {
+      "updateSuccess": "Feedback \"{{subject}}\" succesvol bijgewerkt",
+      "updateError": "Feedback bijwerken mislukt. Probeer het opnieuw.",
+      "deleteSuccess": "Feedback \"{{subject}}\" succesvol verwijderd",
+      "deleteError": "Feedback verwijderen mislukt. Probeer het opnieuw."
+    },
+    "hasAttachment": "Heeft bijgevoegde afbeelding"
+  },
+  "simulation": {
+    "title": "Simulatieconfiguratie",
+    "modelName": "Modelnaam",
+    "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
+    "modelNameHint": "Geef uw simulatie een beschrijvende naam",
+    "simulationPeriod": "Simulatieperiode",
+    "duration": "Duur",
+    "days": "dagen",
+    "resolution": "Resolutie (minuten)",
+    "resolutionPlaceholder": "Selecteer resolutie",
+    "resolutionHint": "Tijdsinterval voor berekeningsresolutie",
+    "minutes": "minuten",
+    "technologies": "Technologieën",
+    "parameters": "Parameters",
+    "pypsaSimulation": "PyPSA-simulatie",
+    "summary": {
+      "title": "Simulatieoverzicht",
+      "region": "Regio",
+      "areaDefined": "Gebied gedefinieerd",
+      "drawn": "Getekend",
+      "notDrawn": "Niet getekend",
+      "customLocations": "Aangepaste locaties",
+      "found": "gevonden",
+      "from": "Van",
+      "to": "Tot",
+      "resolution": "Resolutie"
+    },
+    "actions": {
+      "saveAndExit": "Opslaan & Afsluiten",
+      "create": "Energiesimulatie maken",
+      "update": "Energiesimulatie bijwerken",
+      "creating": "Simulatie wordt gemaakt...",
+      "updating": "Simulatie wordt bijgewerkt...",
+      "cancel": "Annuleren"
+    },
+    "tip": "Tip: Klik op de kaart om uw interessegebied te tekenen. Het systeem voert de energiesimulatie uit voor de geselecteerde regio gedurende de opgegeven periode.",
+    "mapHeader": {
+      "public": "Openbaar",
+      "myBuildings": "Mijn gebouwen",
+      "multiplePolygons": "Meerdere polygonen",
+      "clearAll": "Alles wissen",
+      "togglePublicBuildings": "Openbare gebouwen aan/uit",
+      "toggleMyBuildings": "Mijn gebouwen aan/uit",
+      "toggleMultiplePolygons": "Meerdere polygonen aan/uit"
+    },
+    "powerFlow": {
+      "run": "Vermogensstroomanalyse uitvoeren",
+      "rerun": "Vermogensstroom opnieuw uitvoeren",
+      "running": "Analyseren...",
+      "calculating": "Vermogensstroomanalyse berekenen...",
+      "success": "Vermogensstroomanalyse voltooid. Lijnkleuren tonen nu de belastingsbenutting.",
+      "noData": "Geen netwerkgegevens beschikbaar voor vermogensstroomanalyse.",
+      "error": "Vermogensstroomanalyse mislukt. Controleer de console voor details."
+    },
+    "transformer": {
+      "add": "Transformator toevoegen",
+      "addButton": "Transformator toevoegen",
+      "clickToPlace": "Klik op de kaart om te plaatsen",
+      "clickToAdd": "Klik om een transformator aan de kaart toe te voegen",
+      "clickToCancel": "Klik om toevoegen transformator te annuleren",
+      "clickToMove": "Klik om te verplaatsen",
+      "movingSuccess": "Transformator succesvol verplaatst",
+      "movingFailed": "Verplaatsen transformator mislukt"
+    },
+    "building": {
+      "assignSuccess": "Gebouw toegewezen aan transformator",
+      "assignFailed": "Toewijzen gebouw mislukt",
+      "assignToTransformer": "Gebouwen toewijzen",
+      "assignDescription": "Selecteer gebouwen en wijs ze toe aan een transformator",
+      "selectBuildings": "Klik op gebouwen om ze te selecteren",
+      "selectTransformer": "Klik nu op een transformator om toe te wijzen",
+      "selectedCount": "{{count}} gebouw(en) geselecteerd",
+      "assigningBuildings": "Gebouwen toewijzen...",
+      "assignAllSuccess": "Alle gebouwen zijn toegewezen aan de transformator",
+      "assignPartialSuccess": "{{success}} van {{total}} gebouwen toegewezen",
+      "cancelAssign": "Annuleren",
+      "nextStep": "Volgende",
+      "finish": "Voltooien"
+    }
+  },
+  "mapLayers": {
+    "title": "Kaartlagen",
+    "description": "Configureer kaartweergave en datalagen",
+    "baseLayers": {
+      "title": "Basislagen",
+      "description": "Kies de achtergrondkaartstijl",
+      "osmStandard": "Standaard OpenStreetMap-laag",
+      "osmHumanitarian": "Humanitaire stijl OpenStreetMap",
+      "cartoPositron": "Lichte thema basiskaart van CartoDB",
+      "cartoVoyager": "Gedetailleerde basiskaart van CartoDB",
+      "openTopoMap": "Topografische stijlkaart"
+    },
+    "dataLayers": {
+      "title": "Datalagen",
+      "energySimulation": "Eindlaag energiesimulatie"
+    }
+  },
+  "tour": {
+    "product": {
+      "welcome": {
+        "title": "Welkom bij het Energiesimulatieplatform!",
+        "description": "Laten we een snelle rondleiding maken om u te helpen aan de slag te gaan met uw Energiesimulatieplatform.",
+        "tip": "Deze rondleiding wordt slechts één keer getoond. U kunt hem op elk moment overslaan of opnieuw starten vanuit de zijbalk."
+      },
+      "newAssessment": {
+        "title": "Nieuwe Beoordeling Maken",
+        "description": "Klaar om te beginnen? Klik op deze knop om uw eerste energiebeoordeling te maken. Dit opent de wizard voor gebiedsselectie.",
+        "tip": "Wanneer u hier klikt, gaat u naar een speciale rondleiding voor het gebiedsselectieproces!"
+      },
+      "profile": {
+        "title": "Profiel & Instellingen",
+        "description": "Toegang tot uw profiel, accountinstellingen en gebruikersvoorkeuren. Beheer uw account en extra opties."
+      },
+      "navigation": {
+        "title": "Dashboard Navigatie",
+        "description": "Toegang tot uw hoofddashboard om uw projecten, recente beoordelingen en algemene statistieken te bekijken. Dit is uw thuisbasis."
+      },
+      "simulations": {
+        "title": "Energiesimulaties",
+        "description": "Maak en beheer uw energiesimulatiemodellen. Start nieuwe beoordelingen, configureer parameters en bekijk bestaande berekeningen."
+      },
+      "map": {
+        "title": "Interactieve Kaart",
+        "description": "Uw belangrijkste werkruimte voor geografische analyse. Bekijk kaartlagen, selecteer gebieden voor beoordeling en visualiseer energierisicogegevens."
+      },
+      "locations": {
+        "title": "Opgeslagen Locaties",
+        "description": "Beheer uw opgeslagen locaties en interessegebieden. Snelle toegang tot vaak geanalyseerde regio's."
+      },
+      "reports": {
+        "title": "Simulatierapporten",
+        "description": "Bekijk gedetailleerde simulatierapporten, exporteer gegevens en analyseer historische trends en patronen."
+      },
+      "technologies": {
+        "title": "Technologieën",
+        "description": "Beheer energietechnologieën zoals zonnepanelen, batterijen en warmtepompen. Configureer parameters en wijs ze toe aan gebouwen.",
+        "tip": "Technologieën kunnen per gebouw worden aangepast voor nauwkeurige energiesimulaties."
+      },
+      "layers": {
+        "title": "Kaartlagen",
+        "description": "Beheer kaartlagen en overlays. Kies basiskaarten, schakel gegevenslagen in/uit en pas uw kaartweergave aan."
+      },
+      "documentation": {
+        "title": "Documentatie",
+        "description": "Open de platformdocumentatie voor gedetailleerde handleidingen, API-referenties en best practices.",
+        "tip": "Opent in een nieuw tabblad zodat u uw huidige workflow behoudt."
+      },
+      "feedback": {
+        "title": "Feedback",
+        "description": "Deel uw gedachten en suggesties met ons. Uw feedback helpt het platform te verbeteren."
+      },
+      "complete": {
+        "title": "U bent Klaar!",
+        "description": "U heeft de rondleiding voltooid! U bent nu klaar om energiebeoordelingen te maken.",
+        "nextSteps": "Volgende Stappen",
+        "nextStepsDescription": "Probeer uw eerste energiebeoordeling te maken of verken de interactieve kaart.",
+        "restartTour": "Rondleiding Herstarten",
+        "restartTourDescription": "U kunt deze rondleiding op elk moment herstarten vanuit de zijbalk."
+      }
+    },
+    "areaSelect": {
+      "welcome": {
+        "title": "Energiesimulatie Gids",
+        "description": "Welkom! Deze rondleiding begeleidt u bij het maken van een energiesimulatie voor uw gekozen regio.",
+        "tip": "U leert hoe u uw model configureert, gebieden tekent en uw simulatie maakt."
+      },
+      "modelName": {
+        "title": "Modelnaam",
+        "description": "Geef uw energiesimulatiemodel een beschrijvende naam. Dit helpt u het later in uw dashboard te identificeren.",
+        "tip": "Goede namen: \"Hamburg District 2024\" of \"Industriegebied Energieanalyse\""
+      },
+      "dateRange": {
+        "title": "Simulatieperiode",
+        "description": "Kies de tijdsperiode voor uw energieanalyse. Selecteer datums tussen 2019 en 2022 voor uw simulatie.",
+        "tip": "Langere periodes bieden een uitgebreidere energieanalyse"
+      },
+      "resolution": {
+        "title": "Tijdresolutie",
+        "description": "Stel het tijdsinterval in voor berekeningen. Hogere resolutie geeft gedetailleerdere resultaten maar duurt langer om te verwerken.",
+        "tip": "60 minuten wordt aanbevolen voor de meeste simulaties"
+      },
+      "technologies": {
+        "title": "Technologieën & Parameters",
+        "description": "Configureer energietechnologieën (zonne-energie, batterijen, warmtepompen) en verfijn geavanceerde simulatieparameters.",
+        "tip": "Klik om instellingen voor uw simulatie te bekijken en aan te passen"
+      },
+      "mapContainer": {
+        "title": "Interactieve Kaart",
+        "description": "Dit is uw belangrijkste werkruimte. Teken polygonen op de kaart om gebieden te selecteren voor uw energiesimulatie.",
+        "tip": "U kunt zoomen en de kaart verschuiven om verschillende regio's te verkennen"
+      },
+      "search": {
+        "title": "Locatie Zoeken",
+        "description": "Gebruik dit zoekvak om snel specifieke locaties op naam of adres te vinden.",
+        "tip": "Typ een locatienaam om direct resultaten te zien"
+      },
+      "save": {
+        "title": "Simulatie Maken",
+        "description": "Zodra u alles heeft geconfigureerd, klikt u hier om uw energiesimulatiemodel te maken en de analyse te starten.",
+        "tip": "Alle velden moeten zijn ingevuld voordat u kunt opslaan"
+      }
+    },
+    "buttons": {
+      "skip": "Overslaan",
+      "back": "Terug",
+      "next": "Volgende",
+      "finish": "Voltooien",
+      "close": "Sluiten"
+    }
+  },
+  "feedback": {
+    "title": "Feedback verzenden",
+    "subtitle": "Help ons uw ervaring te verbeteren",
+    "category": "Feedback categorie",
+    "categories": {
+      "bug": "Bugmelding",
+      "bugDescription": "Iets werkt niet",
+      "feature": "Functieverzoek",
+      "featureDescription": "Nieuwe functionaliteit voorstellen",
+      "improvement": "Verbetering",
+      "improvementDescription": "Bestaande functies verbeteren",
+      "general": "Algemeen",
+      "generalDescription": "Overige feedback"
+    },
+    "subject": "Onderwerp",
+    "subjectPlaceholder": "bijv. Kaart laadprobleem, Functiesuggestie...",
+    "message": "Uw feedback",
+    "messagePlaceholder": "Beschrijf uw feedback, suggesties of problemen in detail...",
+    "image": "Bijlage (Optioneel)",
+    "imageDropzone": "Klik om te uploaden of sleep en zet neer",
+    "imageFormats": "PNG, JPG, GIF tot 15MB",
+    "imagePreview": "Afbeeldingsvoorbeeld",
+    "removeImage": "Afbeelding verwijderen",
+    "rating": "Algemene beoordeling",
+    "ratingDescription": "Hoe zou u uw ervaring beoordelen?",
+    "submit": "Feedback verzenden",
+    "submitting": "Verzenden...",
+    "submittingMessage": "Uw feedback wordt verzonden...",
+    "gdprNotice": "Uw feedback wordt verwerkt in overeenstemming met de AVG-regelgeving.",
+    "success": {
+      "title": "Feedback verzonden!",
+      "message": "Bedankt voor uw feedback. We zullen het bekijken en indien nodig contact met u opnemen.",
+      "reference": "Referentie"
+    },
+    "errors": {
+      "loginRequired": "Log in om feedback te verzenden",
+      "submitFailed": "Feedback verzenden mislukt. Probeer het later opnieuw.",
+      "invalidImageType": "Selecteer een geldig afbeeldingsbestand (PNG, JPG, GIF)",
+      "imageTooLarge": "Afbeeldingsgrootte moet kleiner zijn dan 15MB"
+    },
+    "myFeedback": {
+      "title": "Mijn feedback",
+      "subtitle": "Volg de status van uw ingediende feedback",
+      "empty": "U heeft nog geen feedback ingediend",
+      "adminResponse": "Beheerderreactie",
+      "submittedOn": "Ingediend op",
+      "autoDeleteNotice": "Dit item wordt automatisch verwijderd over {days} dagen",
+      "autoDeleteSoon": "Dit item wordt binnenkort automatisch verwijderd",
+      "showHistory": "Mijn inzendingen",
+      "hideHistory": "Verbergen",
+      "status": {
+        "pending": "In afwachting",
+        "in_progress": "In behandeling",
+        "resolved": "Opgelost",
+        "closed": "Gesloten"
+      }
+    }
+  },
+  "technologies": {
+    "title": "Technologieën",
+    "subtitle": "Energietechnologieën voor uw simulaties",
+    "loading": "Technologieën laden...",
+    "refresh": "Technologieën vernieuwen",
+    "reseed": "Systeemtechnologieën herladen",
+    "documentation": "Documentatie",
+    "importJson": "JSON importeren",
+    "addTechnology": "Technologie Toevoegen",
+    "addParameter": "Parameter Toevoegen",
+    "parameters": "Parameters",
+    "total": "totaal",
+    "mine": "Mijn",
+    "user": "Gebruiker",
+    "youCreatedThis": "U heeft deze technologie gemaakt",
+    "userDefined": "Door gebruiker gedefinieerde technologie",
+    "viewParameters": "Parameters bekijken",
+    "copyTechnology": "Technologie kopiëren",
+    "deleteTechnology": "Technologie verwijderen",
+    "editParameter": "Parameter bewerken",
+    "deleteParameter": "Parameter verwijderen",
+    "systemTechnologies": "Systeemtechnologieën",
+    "userDefinedTechnologies": "Door Gebruiker Gedefinieerde Technologieën",
+    "dragDropHint": "Sleep technologieën tussen secties om eigenaarschap te wijzigen",
+    "dropToMakeSystem": "Hier neerzetten om systeemtechnologie te maken",
+    "dropToMakeUser": "Hier neerzetten om gebruikerstechnologie te maken",
+    "movedTo": "\"{{name}}\" verplaatst naar {{target}} Technologieën",
+    "failedToMove": "Kan technologie niet verplaatsen",
+    "stats": {
+      "totalTechnologies": "Totaal Technologieën",
+      "systemTechnologies": "Systeem",
+      "userTechnologies": "Door Gebruiker Gedefinieerd",
+      "totalParameters": "Totaal Parameters"
+    },
+    "form": {
+      "key": "Sleutel",
+      "keyRequired": "Sleutel is verplicht",
+      "keyPlaceholder": "bijv., solar_supply",
+      "displayName": "Weergavenaam",
+      "displayNameRequired": "Weergavenaam is verplicht",
+      "displayNamePlaceholder": "bijv., Zonne-energievoorziening",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Korte beschrijving van de technologie...",
+      "icon": "Pictogram",
+      "parametersOptional": "Parameters (Optioneel)",
+      "parameter": "Parameter",
+      "alias": "Alias",
+      "defaultValue": "Standaardwaarde",
+      "unit": "Eenheid",
+      "range": "Bereik",
+      "min": "Min",
+      "max": "Max",
+      "keyFieldPlaceholder": "Sleutel",
+      "aliasFieldPlaceholder": "Alias",
+      "defaultValuePlaceholder": "Standaardwaarde",
+      "unitPlaceholder": "Eenheid (optioneel)",
+      "minPlaceholder": "Min (optioneel)",
+      "maxPlaceholder": "Max (optioneel)"
+    },
+    "addModal": {
+      "title": "Nieuwe Technologie Toevoegen",
+      "description": "Maak een nieuwe technologie met aangepaste parameters"
+    },
+    "copyModal": {
+      "title": "Technologie Kopiëren",
+      "description": "Maak een kopie van {{name}} met een nieuwe naam",
+      "uniqueIdentifier": "Unieke identificatie (kleine letters, geen spaties)",
+      "name": "Naam",
+      "copyAllParameters": "Dit kopieert alle {{count}} parameters van \"{{name}}\""
+    },
+    "importModal": {
+      "title": "Technologieën Importeren",
+      "description": "Kies hoe de {{count}} technologieën geïmporteerd moeten worden",
+      "found": "{{count}} technologieën gevonden in bestand",
+      "existingSkipped": "Bestaande technologieën met dezelfde sleutel worden overgeslagen.",
+      "importAsSystem": "Importeren als Systeemtechnologieën",
+      "systemDescription": "Systeemtechnologieën zijn zichtbaar voor alle gebruikers en kunnen niet worden bewerkt door niet-experts."
+    },
+    "paramModal": {
+      "title": "Nieuwe Parameter Toevoegen",
+      "description": "Voeg een nieuwe parameter toe aan {{name}}",
+      "keyPlaceholder": "bijv., cont_efficiency",
+      "aliasPlaceholder": "bijv., Efficiëntiegraad",
+      "descriptionPlaceholder": "Korte beschrijving van wat deze parameter bestuurt...",
+      "unitPlaceholder": "kW, %, enz."
+    },
+    "detailsModal": {
+      "viewAndEdit": "Technologieparameters bekijken en bewerken",
+      "selectFromOptions": "Selecteer uit {{count}} opties",
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "saveChanges": "Wijzigingen Opslaan"
+    },
+    "confirm": {
+      "deleteTitle": "Technologie Verwijderen",
+      "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteParamTitle": "Parameter Verwijderen",
+      "deleteParamMessage": "Weet u zeker dat u de parameter \"{{name}}\" wilt verwijderen?"
+    },
+    "success": {
+      "added": "Technologie \"{{name}}\" succesvol aangemaakt",
+      "copied": "Technologie gekopieerd als \"{{name}}\"",
+      "deleted": "Technologie \"{{name}}\" verwijderd",
+      "imported": "{{count}} technologieën succesvol geïmporteerd",
+      "paramAdded": "Parameter \"{{name}}\" toegevoegd",
+      "paramDeleted": "Parameter \"{{name}}\" verwijderd",
+      "saved": "Wijzigingen succesvol opgeslagen",
+      "reseeded": "Systeemtechnologieën succesvol herladen"
+    },
+    "error": {
+      "loadFailed": "Kan technologieën niet laden",
+      "addFailed": "Kan technologie niet toevoegen",
+      "copyFailed": "Kan technologie niet kopiëren",
+      "deleteFailed": "Kan technologie niet verwijderen",
+      "importFailed": "Kan technologieën niet importeren",
+      "paramAddFailed": "Kan parameter niet toevoegen",
+      "paramDeleteFailed": "Kan parameter niet verwijderen",
+      "saveFailed": "Kan wijzigingen niet opslaan",
+      "reseedFailed": "Kan technologieën niet herladen",
+      "invalidFile": "Ongeldig bestandsformaat"
+    },
+    "items": {
+      "battery_storage": {
+        "name": "Batterijopslag",
+        "description": "Energieopslagsysteem met batterijen voor lastbalancering en noodstroom"
+      },
+      "pv_supply": {
+        "name": "Fotovoltaïsche Voorziening",
+        "description": "Zonne-energie fotovoltaïsch opwekkingssysteem"
+      },
+      "wind_onshore": {
+        "name": "Windturbine Voorziening",
+        "description": "Onshore windturbine energieopwekkingssysteem"
+      },
+      "biomass_supply": {
+        "name": "Biomassa Voorziening",
+        "description": "Biomassacentrale voor duurzame energieopwekking uit organisch materiaal"
+      },
+      "geothermal_supply": {
+        "name": "Geothermische Voorziening",
+        "description": "Geothermische centrale die aardwarmte benut voor energieopwekking"
+      },
+      "water_supply": {
+        "name": "Waterkracht Voorziening",
+        "description": "Waterkrachtcentrale voor duurzame energieopwekking uit waterstroming"
+      },
+      "households_supply": {
+        "name": "Huishoudelijke verbruikers voorziening",
+        "description": "Energieverbruiksprofiel voor woningen"
+      },
+      "non_households_supply": {
+        "name": "Niet-huishoudelijke verbruikers voorziening",
+        "description": "Energieverbruiksprofiel voor commerciële en industriële gebouwen"
+      }
+    },
+    "dragInstruction": "Sleep technologieën hierheen om ze aan uw model toe te voegen",
+    "noTechnologies": "Geen technologieën toegevoegd",
+    "categories": {
+      "supply": "Productie",
+      "storage": "Opslag",
+      "other": "Overig"
+    }
+  },
+  "locations": {
+    "title": "Aangepaste Locaties",
+    "subtitle": "Maak en beheer locaties met gebouwclassificaties",
+    "refresh": "Locaties vernieuwen",
+    "newLocation": "Nieuwe Locatie",
+    "newLocationTooltip": "Maak een nieuwe aangepaste locatie",
+    "searchPlaceholder": "Zoek locaties...",
+    "tabs": {
+      "my": "Mijn Locaties",
+      "public": "Openbaar"
+    },
+    "stats": {
+      "total": "Totaal",
+      "totalArea": "Totale Oppervlakte",
+      "totalDemand": "Totale Vraag",
+      "public": "Openbaar",
+      "private": "Privé"
+    },
+    "empty": {
+      "title": "Geen locaties gevonden",
+      "description": "Maak uw eerste aangepaste locatie om te beginnen",
+      "publicTitle": "Geen openbare locaties",
+      "publicDescription": "Openbare locaties gedeeld door andere gebruikers verschijnen hier. Zet een locatie op openbaar om te delen."
+    },
+    "toggle": {
+      "makePublic": "Privé - Klik om openbaar te maken",
+      "makePrivate": "Openbaar - Klik om privé te maken",
+      "nowPublic": "Locatie is nu openbaar",
+      "nowPrivate": "Locatie is nu privé"
+    },
+    "share": {
+      "title": "Locatie delen",
+      "description": "\"{{name}}\" delen met gebruikers, werkruimtes of groepen",
+      "tabs": {
+        "users": "Gebruikers",
+        "workspaces": "Werkruimtes",
+        "groups": "Groepen"
+      },
+      "userEmail": "E-mail gebruiker",
+      "selectWorkspace": "Werkruimte selecteren",
+      "selectGroup": "Groep selecteren",
+      "addUser": "Delen met gebruiker",
+      "addWorkspace": "Delen met werkruimte",
+      "addGroup": "Delen met groep",
+      "sharedWithUsers": "Gedeeld met gebruikers",
+      "sharedWithWorkspaces": "Gedeeld met werkruimtes",
+      "sharedWithGroups": "Gedeeld met groepen",
+      "noUsersYet": "Nog niet gedeeld met gebruikers",
+      "noWorkspacesYet": "Nog niet gedeeld met werkruimtes",
+      "noGroupsYet": "Nog niet gedeeld met groepen",
+      "removeAccess": "Toegang verwijderen",
+      "totalShares": "{{count}} deling(en) in totaal",
+      "alreadySharedWithUser": "Deze locatie is al gedeeld met deze gebruiker",
+      "alreadySharedWithWorkspace": "Deze locatie is al gedeeld met deze werkruimte",
+      "alreadySharedWithGroup": "Deze locatie is al gedeeld met deze groep",
+      "failedToShare": "Delen mislukt. Probeer het opnieuw."
+    }
+  },
+  "weather": {
+    "temperature": "Temp.",
+    "windSpeed": "Wind",
+    "humidity": "Vocht.",
+    "uvIndex": "UV",
+    "clickToRefresh": "Klik om te vernieuwen",
+    "clickToRetry": "Klik om opnieuw te proberen",
+    "retry": "Opnieuw",
+    "loadWeather": "Weer laden",
+    "clickToLoad": "Klik om weer te laden voor {{location}}",
+    "current": "Huidig",
+    "searchLocation": "Zoek locatie...",
+    "yourLocations": "Uw Locaties",
+    "syncing": "Synchroniseren...",
+    "temperatureTooltip": "Huidige temperatuur in Celsius en Fahrenheit",
+    "humidityTooltip": "Relatieve luchtvochtigheid percentage",
+    "uvLevels": {
+      "low": "Laag",
+      "moderate": "Matig",
+      "high": "Hoog",
+      "veryHigh": "Zeer Hoog",
+      "extreme": "Extreem"
+    },
+    "uvDescriptions": {
+      "low": "Geen bescherming nodig",
+      "moderate": "Gebruik zonnebrandcrème",
+      "high": "Bescherming essentieel",
+      "veryHigh": "Extra bescherming nodig",
+      "extreme": "Vermijd blootstelling aan de zon"
+    },
+    "dataBy": "Weerdata door"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "subtitle": "Pas uw ervaring en voorkeuren aan",
+    "configuration": "Configuratie",
+    "goBack": "Terug",
+    "tabs": {
+      "general": "Algemeen",
+      "display": "Weergave",
+      "notifications": "Meldingen",
+      "advanced": "Geavanceerd"
+    },
+    "stats": {
+      "language": "Taal",
+      "theme": "Thema",
+      "notifications": "Meldingen",
+      "accessLevel": "Toegangsniveau",
+      "enabled": "Ingeschakeld",
+      "disabled": "Uitgeschakeld",
+      "system": "Systeem",
+      "user": "Gebruiker"
+    },
+    "language": {
+      "title": "Taal",
+      "subtitle": "Interfacetaal"
+    },
+    "weatherLocation": {
+      "title": "Weerlocatie",
+      "subtitle": "Standaard weer"
+    },
+    "mapLocation": {
+      "title": "Kaartlocatie",
+      "subtitle": "Opgeslagen posities",
+      "syncing": "Synchroniseren...",
+      "searchPlaceholder": "Zoek locatie...",
+      "current": "Huidig",
+      "noLocation": "Geen locatie ingesteld",
+      "savedLocations": "Opgeslagen Locaties",
+      "clearAll": "Alles wissen",
+      "syncNote": "Locaties worden gesynchroniseerd met uw account"
+    },
+    "locationSearch": {
+      "placeholder": "Zoek locatie...",
+      "searching": "Zoeken...",
+      "noResults": "Geen locaties gevonden",
+      "searchFailed": "Zoeken mislukt"
+    },
+    "dataDisplay": {
+      "title": "Data en Weergave",
+      "subtitle": "Eenheden en opmaak",
+      "temperature": "Temperatuur",
+      "celsius": "Celsius",
+      "fahrenheit": "Fahrenheit",
+      "distance": "Afstand",
+      "kilometers": "Kilometers",
+      "miles": "Mijlen",
+      "windSpeed": "Windsnelheid",
+      "knots": "knopen",
+      "dataRefresh": "Data Verversing",
+      "min": "min"
+    },
+    "notifications": {
+      "title": "Meldingen",
+      "subtitle": "Alertvoorkeuren",
+      "email": "E-mail",
+      "notifyWhenComplete": "Melden bij voltooiing",
+      "browser": "Browser",
+      "enabled": "Ingeschakeld",
+      "blocked": "Geblokkeerd",
+      "systemAlerts": "Systeemwaarschuwingen"
+    },
+    "sendNotification": {
+      "title": "Melding Verzenden",
+      "subtitle": "Systeemmeldingen",
+      "selectService": "Selecteer dienst...",
+      "services": {
+        "webService": "Webdienst",
+        "geoServer": "GeoServer",
+        "database": "Database",
+        "api": "API",
+        "mapService": "Kaartdienst"
+      },
+      "messagePlaceholder": "Voer meldingsbericht in...",
+      "sending": "Verzenden...",
+      "sendNotification": "Melding Verzenden",
+      "sent": "Melding verzonden!",
+      "failedToSend": "Verzenden mislukt"
+    },
+    "pylovo": {
+      "title": "Pylovo Pipeline",
+      "subtitle": "Data- en netgeneratie",
+      "dataPipeline": "Datapipeline",
+      "dataPipelineDesc": "OSM-data downloaden en verwerken",
+      "databaseConstructor": "Database Constructor",
+      "databaseConstructorDesc": "Pylovo databasetabellen maken",
+      "gridGeneration": "Netgeneratie",
+      "gridGenerationDesc": "Synthetisch elektriciteitsnet genereren",
+      "fullPipeline": "Volledige Pipeline",
+      "fullPipelineDesc": "Alle stappen achtereenvolgens uitvoeren",
+      "selectCountry": "Selecteer land",
+      "selectState": "Selecteer provincie",
+      "run": "Uitvoeren",
+      "running": "Actief",
+      "viewLogs": "Logs bekijken",
+      "hideLogs": "Logs verbergen",
+      "pending": "In afwachting",
+      "completed": "Voltooid",
+      "failed": "Mislukt",
+      "recentJobs": "Recente Taken",
+      "noRecentJobs": "Geen recente taken"
+    },
+    "polygonLimits": {
+      "title": "Polygoon Limieten",
+      "subtitle": "Gebouwen selectie",
+      "yourLimit": "Uw limiet",
+      "unlimited": "Onbeperkt",
+      "byRole": "Per Rol",
+      "reset": "Herstellen",
+      "resetSuccess": "Alle limieten hersteld naar standaardwaarden",
+      "resetFailed": "Limieten herstellen mislukt",
+      "limitUpdated": "{{label}} limiet bijgewerkt naar {{value}}",
+      "failedToUpdate": "{{label}} limiet bijwerken mislukt",
+      "contactAdmin": "Neem contact op met admin voor hogere limieten.",
+      "levels": {
+        "basic": "Basis",
+        "intermediate": "Gemiddeld",
+        "manager": "Manager",
+        "expert": "Expert"
+      }
+    }
+  },
+  "simulationComparison": {
+    "title": "Simulatie Vergelijking",
+    "subtitle": "Vergelijk resultaten van meerdere simulatieruns",
+    "baseline": "Basislijn",
+    "comparison": "Vergelijking",
+    "workspace": "Werkruimte",
+    "model": "Model",
+    "selectBaselineModel": "Selecteer basismodel",
+    "selectComparisonModel": "Selecteer vergelijkingsmodel",
+    "noCompletedModels": "Geen voltooide modellen gevonden",
+    "noRegion": "Geen regio",
+    "hideMaps": "Verberg kaarten",
+    "showMaps": "Toon kaarten",
+    "exportPdf": "Exporteer PDF",
+    "locationMaps": "Locatiekaarten",
+    "performanceComparison": "Prestatievergelijking",
+    "loading": "Simulatiegegevens laden...",
+    "selectModels": "Selecteer modellen om te vergelijken",
+    "selectModelsDescription": "Kies hierboven twee voltooide simulatiemodellen om hun verschillen in energieopwekking, kosten en belangrijke prestatie-indicatoren te analyseren.",
+    "startBySelectingBaseline": "Begin met het selecteren van een basismodel",
+    "nowSelectComparison": "Selecteer nu een vergelijkingsmodel",
+    "unableToLoadResults": "Kan resultaten niet laden",
+    "errors": {
+      "baseline": "Basislijn",
+      "comparison": "Vergelijking"
+    },
+    "metrics": {
+      "demandBaseline": "Vraag (Basislijn)",
+      "renewableGen": "Hernieuwbare opwekking",
+      "gridImport": "Netimport",
+      "selfSufficiency": "Zelfvoorziening",
+      "peakDemand": "Piekvraag",
+      "totalCost": "Totale kosten",
+      "totalDemand": "Totale vraag",
+      "co2Savings": "CO₂-besparing"
+    },
+    "summary": {
+      "baseline": "Basislijn"
+    },
+    "charts": {
+      "generationByTechnology": "Opwekking per technologie",
+      "sideBySideComparison": "Zij-aan-zij vergelijking (kWh)",
+      "costDifferenceByCategory": "Kostenverschil per categorie",
+      "comparisonVsBaseline": "Vergelijking vs Basislijn (EUR)",
+      "keyPerformanceIndicators": "Belangrijke prestatie-indicatoren",
+      "selfSufficiencyBaseline": "Zelfvoorziening\n(Basislijn)",
+      "selfSufficiencyComparison": "Zelfvoorziening\n(Vergelijking)",
+      "avgLcoe": "Gem. LCOE",
+      "installedCapacityComparison": "Vergelijking geïnstalleerde capaciteit",
+      "technologyCapacity": "Technologiecapaciteit (kW)",
+      "overallPerformance": "Algehele prestaties",
+      "multiDimensionalComparison": "Multidimensionale vergelijking",
+      "totalCostBreakdown": "Totale kostenopsplitsing",
+      "stackedByTechnology": "Gestapeld per technologie (EUR)",
+      "total": "Totaal",
+      "difference": "Verschil",
+      "renewableProduction": "Hernieuwbare\nproductie",
+      "gridIndependence": "Net-\nonafhankelijkheid",
+      "costEfficiency": "Kosten-\nefficiëntie",
+      "demandCoverage": "Vraag-\ndekking"
+    },
+    "technologies": {
+      "solar": "Zon",
+      "wind": "Wind",
+      "biomass": "Biomassa",
+      "geothermal": "Geothermie",
+      "storageDischarge": "Opslagontlading",
+      "storage": "Opslag",
+      "gridConnection": "Netaansluiting",
+      "transformer": "Transformator",
+      "grid": "Net",
+      "other": "Overig"
+    },
+    "pdfTitle": "Simulatievergelijkingsrapport"
+  },
+  "map": {
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen",
+    "centerMap": "Kaart centreren",
+    "fitToExtent": "Aanpassen aan bereik",
+    "resetTopDown": "Terug naar bovenaanzicht",
+    "rightClickRotate": "Rechtsklik + slepen om te draaien",
+    "regions": "regio's",
+    "myModels": "mijn modellen",
+    "grids": "rasters",
+    "countries": "landen"
+  },
+  "privacy": {
+    "dataAndPrivacy": "Gegevens & Privacy",
+    "acceptTerms": "Privacyvoorwaarden accepteren",
+    "openSettings": "Gegevens- en privacy-instellingen openen",
+    "dialogTitle": "Gegevensverwerking & Privacy",
+    "cartoDescription": "Om u onze diensten te kunnen leveren, maken we gebruik van CARTO en OSMF als externe kaartproviders.",
+    "sharedWithCarto": "Door te accepteren worden de volgende gegevens gedeeld met CARTO en OSMF:",
+    "ipAddress": "IP-adres",
+    "browserDeviceType": "Browser + apparaattype",
+    "timeOfRequest": "Tijdstip van verzoek",
+    "localStorageDescription": "Daarnaast gebruiken we lokale opslag om uw voorkeuren te onthouden en bij te houden of u de introductie-inhoud op dit apparaat hebt gezien.",
+    "reviewPolicies": "Raadpleeg voor meer informatie het respectievelijke privacybeleid:",
+    "cartoPolicy": "Carto Privacybeleid",
+    "osmfPolicy": "OSMF Privacybeleid",
+    "firePolicy": "EnerPlanET Privacybeleid",
+    "deny": "Weigeren",
+    "accept": "Accepteren"
+  },
+  "areaStats": {
+    "title": "Gebiedsoverzicht",
+    "area": "Oppervlakte",
+    "perimeter": "Omtrek",
+    "solarPotential": "Zonnepotentieel",
+    "estGeneration": "Geschatte Opwekking",
+    "co2Offset": "CO₂ Compensatie",
+    "regions": "Regio's"
+  },
+  "drawing": {
+    "clickToDraw": "Klik om te tekenen",
+    "clickToClose": "Klik om te sluiten",
+    "start": "Start"
+  },
+  "forms": {
+    "user": {
+      "personalInfo": {
+        "title": "Persoonlijke Informatie",
+        "description": "Basisgegevens en contactinformatie van gebruiker"
+      },
+      "security": {
+        "title": "Beveiliging",
+        "description": "Beveiligingsgegevens van account"
+      },
+      "fields": {
+        "fullName": "Volledige Naam",
+        "email": "E-mailadres",
+        "organization": "Organisatie",
+        "position": "Functie",
+        "phone": "Telefoonnummer",
+        "accessLevel": "Toegangsniveau",
+        "emailVerified": "E-mail Geverifieerd",
+        "password": "Wachtwoord",
+        "confirmPassword": "Bevestig Wachtwoord",
+        "modelLimit": "Modellimiet"
+      },
+      "placeholders": {
+        "fullName": "Voer volledige naam in",
+        "email": "Voer e-mailadres in",
+        "organization": "Voer organisatienaam in",
+        "position": "Voer functie in",
+        "password": "Voer wachtwoord in",
+        "confirmPassword": "Bevestig wachtwoord",
+        "modelLimit": "Laat leeg voor standaardwaarde"
+      },
+      "descriptions": {
+        "emailVerified": "Markeer e-mail als geverifieerd",
+        "modelLimit": "Aangepaste limiet voor het maken van modellen (0 = onbeperkt, leeg = standaard)"
+      },
+      "accessLevels": {
+        "veryLow": "Zeer Lage Toegang",
+        "intermediate": "Tussenliggende Toegang",
+        "manager": "Manager (Groepstoegang)",
+        "expert": "Expert (Volledige Toegang)"
+      },
+      "validation": {
+        "phoneInvalid": "Telefoonnummer mag alleen cijfers, spaties, streepjes, plustekens en haakjes bevatten",
+        "passwordLength": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "nameRequired": "Naam is verplicht",
+        "emailRequired": "E-mail is verplicht",
+        "emailInvalid": "Voer een geldig e-mailadres in",
+        "accessLevelRequired": "Toegangsniveau is verplicht",
+        "passwordRequired": "Wachtwoord is verplicht",
+        "confirmPasswordRequired": "Wachtwoordbevestiging is verplicht",
+        "passwordsMismatch": "Wachtwoorden komen niet overeen"
+      }
+    },
+    "webservice": {
+      "serviceInfo": {
+        "title": "Service Informatie",
+        "description": "Basisidentificatie en metadata van webservice"
+      },
+      "connectionDetails": {
+        "title": "Verbindingsdetails",
+        "description": "Netwerk- en endpoint-configuratie"
+      },
+      "performanceSettings": {
+        "title": "Prestatie-instellingen",
+        "description": "Capaciteits- en prestatieconfiguratie van service"
+      },
+      "fields": {
+        "serviceName": "Servicenaam",
+        "protocol": "Protocol",
+        "ipAddress": "IP-adres",
+        "port": "Poort",
+        "endpoint": "Endpoint Pad",
+        "autoScaling": "Auto Schalen",
+        "maxConcurrency": "Max Gelijktijdige Verzoeken",
+        "initialStatus": "Initiële Status"
+      },
+      "placeholders": {
+        "serviceName": "Voer servicenaam in",
+        "ipAddress": "bijv., 192.168.1.100"
+      },
+      "descriptions": {
+        "serviceName": "Leesbare naam voor de webservice",
+        "autoScaling": "Schakel automatisch schalen in op basis van belasting",
+        "maxConcurrency": "Maximum aantal gelijktijdige verzoeken (1-100)"
+      },
+      "statusOptions": {
+        "active": "Actief",
+        "inactive": "Inactief",
+        "maintenance": "Onderhoud"
+      },
+      "validation": {
+        "ipInvalid": "Voer een geldig IP-adres in",
+        "portRange": "Poort moet tussen 1 en 65535 liggen",
+        "concurrencyRange": "Max gelijktijdigheid moet tussen 1 en 100 liggen",
+        "nameRequired": "Servicenaam is verplicht",
+        "ipRequired": "IP-adres is verplicht",
+        "portRequired": "Poort is verplicht"
+      }
+    },
+    "workspace": {
+      "details": {
+        "title": "Details",
+        "description": "Voer de werkruimtenaam en optionele beschrijving in"
+      },
+      "fields": {
+        "name": "Werkruimte Naam",
+        "description": "Beschrijving"
+      },
+      "placeholders": {
+        "name": "Voer werkruimtenaam in",
+        "description": "Voer werkruimtebeschrijving in (optioneel)"
+      },
+      "descriptions": {
+        "name": "Een unieke naam voor uw werkruimte",
+        "description": "Optionele beschrijving van het doel van de werkruimte"
+      },
+      "validation": {
+        "nameRequired": "Werkruimtenaam is verplicht"
+      }
+    },
+    "moveModel": {
+      "destination": {
+        "title": "Bestemming",
+        "description": "Selecteer de doelwerkruimte voor het model"
+      },
+      "fields": {
+        "targetWorkspace": "Doelwerkruimte"
+      },
+      "placeholders": {
+        "selectWorkspace": "Selecteer een werkruimte"
+      },
+      "descriptions": {
+        "targetWorkspace": "Kies de werkruimte waarnaar het model wordt verplaatst"
+      },
+      "defaultWorkspace": "Standaard Werkruimte"
+    },
+    "shareModel": {
+      "title": "Deel met een Individuele Gebruiker",
+      "description": "Voer het e-mailadres in van de gebruiker om mee te delen",
+      "emailDescription": "De gebruiker krijgt toegang tot dit model"
+    },
+    "bulkCopy": {
+      "title": "Aantal kopieën",
+      "description": "Geef aan hoeveel kopieën er voor elk geselecteerd model moeten worden gemaakt",
+      "fields": {
+        "copyCount": "Aantal kopieën",
+        "copyCountDescription": "Elk geselecteerd model wordt zo vaak gedupliceerd"
+      },
+      "validation": {
+        "min": "Minimaal 1 kopie is vereist",
+        "max": "Maximaal 10 kopieën toegestaan",
+        "integer": "Moet een geheel getal zijn"
+      }
+    },
+    "pylovo": {
+      "serviceInfo": {
+        "title": "Service-informatie",
+        "description": "Basis Compute Engine instantie-identificatie"
+      },
+      "connectionDetails": {
+        "title": "Verbindingsgegevens",
+        "description": "Netwerkverbinding en eindpuntconfiguratie"
+      },
+      "statusSettings": {
+        "title": "Status",
+        "description": "Initiële status van de Compute Engine instantie"
+      },
+      "fields": {
+        "serviceName": "Servicenaam",
+        "protocol": "Protocol",
+        "ipAddress": "IP-adres / Hostnaam",
+        "port": "Poort",
+        "endpoint": "Eindpuntpad",
+        "initialStatus": "Initiële status"
+      },
+      "placeholders": {
+        "serviceName": "Voer servicenaam in",
+        "ipAddress": "bijv. compute-engine of 10.1.66.41"
+      },
+      "descriptions": {
+        "serviceName": "Leesbare naam voor de Compute Engine instantie"
+      },
+      "statusOptions": {
+        "active": "Actief",
+        "inactive": "Inactief",
+        "maintenance": "Onderhoud"
+      },
+      "validation": {
+        "ipInvalid": "Voer een geldig IP-adres of hostnaam in",
+        "portRange": "Poort moet tussen 1 en 65535 liggen",
+        "nameRequired": "Servicenaam is verplicht",
+        "ipRequired": "IP-adres of hostnaam is verplicht",
+        "portRequired": "Poort is verplicht"
+      }
+    }
+  },
+  "gridNotifications": {
+    "gridGenerated": "Netwerk gegenereerd: {{count}} gebouwen gevonden",
+    "gridCompleteNoBuildings": "Netwerkgeneratie voltooid (geen gebouwen gevonden in dit gebied)",
+    "gridGenerationFailed": "Netwerkgeneratieverzoek verzenden mislukt",
+    "gridUpdated": "Netwerk bijgewerkt: {{count}} gebouwen",
+    "gridRegenerationFailed": "Netwerk regenereren mislukt",
+    "buildingLimitExceeded": "Gebied bevat {{count}} gebouwen, wat uw limiet van {{limit}} overschrijdt. Teken een kleinere polygoon of pas uw limiet aan in Instellingen.",
+    "noBuildingsFound": "Geen gebouwen gevonden in de polygoon",
+    "dropOnBuilding": "Sleep de technologie naar een gebouw",
+    "techAddedToAll": "{{tech}} toegevoegd aan {{count}} gebouwen",
+    "techAddedToBuilding": "{{tech}} toegevoegd aan gebouw",
+    "techRemovedFromAll": "{{tech}} verwijderd van {{count}} gebouwen",
+    "techRemovedFromBuilding": "{{tech}} verwijderd van gebouw",
+    "techNotFound": "Technologie {{tech}} niet gevonden",
+    "techLoadFailed": "Technologie laden voor bewerking mislukt"
+  },
+  "gridStats": {
+    "title": "Netwerkanalyse",
+    "analyzing": "Netwerk analyseren...",
+    "clusters": "cluster",
+    "clusters_plural": "clusters",
+    "buildings": "Gebouwen",
+    "trafos": "Transformatoren",
+    "cables": "Kabels",
+    "peakLoad": "Piekbelasting",
+    "capacity": "Capaciteit",
+    "utilization": "Benutting",
+    "estCost": "Geschatte Kosten",
+    "cablesLabel": "Kabels",
+    "trafosLabel": "Transformatoren",
+    "costDescription": "Infrastructuurkosten incl. kabels & transformatoren"
+  },
+  "tooltips": {
+    "multiplePolygons": {
+      "title": "Meerdere Polygonen",
+      "description": "Schakel deze optie in om meerdere aparte gebieden op de kaart te tekenen voor uw energiebeoordeling. Indien uitgeschakeld, zal het tekenen van een nieuwe polygoon de vorige vervangen. Indien ingeschakeld, kunt u meerdere afzonderlijke gebieden definiëren die allemaal in de analyse worden opgenomen.",
+      "example": "Gebruik dit om energiesimulaties over meerdere niet-aaneengesloten gebieden tegelijkertijd te analyseren."
+    },
+    "publicBuildings": {
+      "title": "Openbare Aangepaste Gebouwen",
+      "description": "Neem gebouwen op die door andere gebruikers zijn gedeeld in de netwerkberekening. Dit zijn aangepaste gebouwen die andere gebruikers openbaar beschikbaar hebben gemaakt.",
+      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
+    },
+    "privateBuildings": {
+      "title": "Mijn Aangepaste Gebouwen",
+      "description": "Neem uw privé aangepaste gebouwen op in de netwerkberekening. Dit zijn gebouwen die u hebt gemaakt en opgeslagen in uw account.",
+      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
+    },
+    "simulateEV": {
+      "title": "Simuleer EV Hosting Capaciteit",
+      "description": "Bereken de hostingcapaciteit voor elektrische voertuigen voor elke transformator in het geselecteerde gebied. Dit bepaalt hoeveel EV-laders (11 kW Niveau 2) kunnen worden aangesloten voordat netwerkbeperkingen worden bereikt.",
+      "example": "Een 'Netwerk Beperkt' status betekent dat de transformator al op capaciteit is en geen extra EV-laders kan ondersteunen zonder upgrades."
+    },
+    "gridConstrained": {
+      "title": "Netwerk Beperkt",
+      "description": "Deze status geeft aan dat de transformator de hostingcapaciteitslimiet heeft bereikt en geen extra EV-laders kan ondersteunen.",
+      "example": "Upgrade de lokale transformator of verdeel EV-laden over meerdere aansluitpunten om netwerkbeperkingen op te lossen."
+    },
+    "scenario": {
+      "title": "Scenario Jaar",
+      "description": "Het doeljaar voor de optimalisatie van het energiesysteem. Dit bepaalt de kostenaannames en vraagprojecties die in het model worden gebruikt.",
+      "example": "2030 vertegenwoordigt een middellange termijn planningshorizon."
+    },
+    "co2_limit": {
+      "title": "CO2 Limiet",
+      "description": "De maximaal toegestane CO2-uitstoot voor het geoptimaliseerde systeem in tonnen.",
+      "example": "Lagere waarden dwingen het model om meer hernieuwbare energiebronnen te gebruiken."
+    },
+    "max_hours": {
+      "title": "Max Batterij Uren",
+      "description": "De maximale duur dat batterijopslag op vol vermogen kan ontladen.",
+      "example": "72 uur maakt meerdaagse opslagcapaciteit mogelijk."
+    },
+    "solver": {
+      "title": "Optimalisatie Solver",
+      "description": "De wiskundige solver die wordt gebruikt om de optimale energiesysteemconfiguratie te vinden.",
+      "example": "GLPK is een gratis solver, terwijl Gurobi een commerciële high-performance solver is."
+    },
+    "autarky": {
+      "title": "Autarkieniveau",
+      "description": "De mate van zelfvoorziening vereist voor de regio, van 0 (geen vereiste) tot 1 (100% zelfvoorzienend).",
+      "example": "0.8 betekent dat 80% van de energie lokaal moet worden geproduceerd."
+    },
+    "solarPotential": {
+      "title": "Zonnepotentieel Schatting",
+      "description": "Geschatte maximale PV-capaciteit (kWp) op basis van het totale geselecteerde oppervlak.",
+      "example": "Een oppervlak van 1000m² resulteert in ongeveer 30 kWp aan potentiële capaciteit."
+    },
+    "area": {
+      "title": "Totaal Geselecteerd Oppervlak",
+      "description": "Het gecombineerde oppervlak van alle geselecteerde polygonen op de kaart.",
+      "example": "1 hectare (ha) = 10.000 m²."
+    },
+    "perimeter": {
+      "title": "Totale Omtrek",
+      "description": "De totale lengte van de grenslijnen van alle geselecteerde polygonen.",
+      "example": "Nuttig voor het schatten van omheining of kabelrouteringsvereisten rond de locatie."
+    },
+    "estGeneration": {
+      "title": "Geschatte Jaarlijkse Opwekking",
+      "description": "Voorspelde jaarlijkse energieproductie op basis van het zonnepotentieel.",
+      "example": "Een 30 kWp systeem produceert ongeveer 33 MWh/jaar in deze regio."
+    },
+    "co2Offset": {
+      "title": "Geschatte CO₂ Compensatie",
+      "description": "Potentiële vermeden kooldioxide-uitstoot door het gebruik van deze zonne-energie in plaats van netstroom.",
+      "example": "Het opwekken van 100 MWh schone energie bespaart ongeveer 40 ton CO₂."
+    },
+    "voltageStatus": {
+      "title": "Spanningsstatus Indicatoren",
+      "description": "De busspanningsstatus wordt bepaald op basis van de per-unit (p.u.) spanningsmagnitude volgens EN 50160 netwerkstandaarden.",
+      "example": "Een spanning van 0.92 p.u. toont Waarschuwingsstatus omdat deze onder de optimale 0.95 drempel ligt."
+    },
+    "pypsaSimulation": {
+      "title": "PyPSA Simulatie",
+      "description": "Schakel PyPSA (Python for Power System Analysis) in om geavanceerde optimalisatie van het energiesysteem uit te voeren. Indien ingeschakeld, optimaliseert het model energiestromen, opslagdispatch en technologiedimensionering om kosten te minimaliseren terwijl wordt voldaan aan vraag en netwerkbeperkingen.",
+      "example": "Schakel uit voor snelle netwerk-alleen analyse. Schakel in voor volledige energiesysteemoptimalisatie met gedetailleerde resultaten."
+    },
+    "assignBuildings": {
+      "title": "Gebouwen toewijzen aan transformator",
+      "description": "Wijs gebouwen opnieuw toe aan een andere transformator. Selecteer eerst de gebouwen die u wilt verplaatsen en klik vervolgens op de bestemmingstransformator. Nuttig voor belastingsverdeling of het corrigeren van overbelaste transformatoren.",
+      "example": "Selecteer overbelaste gebouwen (rode kabels) en wijs ze toe aan een nabijgelegen transformator met beschikbare capaciteit."
+    },
+    "buildingType": {
+      "title": "Gebouwtype",
+      "description": "De gebouwclassificatie uit OpenStreetMap (OSM). Dit bepaalt het standaard energieprofiel en de standaard belastingprofiel (SLP) klasse.",
+      "example": "Veelvoorkomende typen: \"huis\", \"appartementen\", \"commercieel\", \"industrieel\"."
+    },
+    "constructionYear": {
+      "title": "Bouwjaar",
+      "description": "Het bouwjaar van het gebouw uit OpenStreetMap. Wordt gebruikt om leeftijdsafhankelijke energiecorrectiefactoren toe te passen.",
+      "example": "Gebouwen vóór 1978 gebruiken factor 1,40×, moderne gebouwen (2016+) gebruiken 0,55×."
+    },
+    "floorArea": {
+      "title": "Vloeroppervlak",
+      "description": "Het grondoppervlak van het gebouwpolygoon berekend uit de kaartgeometrie. Dit is de primaire invoer voor AI-energieschatting.",
+      "example": "Een woongebouw van 100 m² verbruikt doorgaans ~3.500 kWh/jaar."
+    },
+    "buildingHeight": {
+      "title": "Gebouwhoogte",
+      "description": "Maximale gebouwhoogte uit OpenStreetMap-geometriegegevens. Van maaiveld tot het hoogste punt inclusief dak.",
+      "example": "Een typisch 2-laags woongebouw heeft een hoogte van ~8–10 m."
+    },
+    "peakLoad": {
+      "title": "Piekvermogen",
+      "description": "Maximaal momentaan elektrisch vermogen. Berekend uit jaarlijks verbruik gedeeld door vollasturen (VLU): Woningen 1800u, Commercieel 2000u, Industrieel 2500u.",
+      "example": "Een gebouw dat 3.500 kWh/jaar verbruikt met 1800 VLU heeft een piekvermogen van ~1,94 kW."
+    },
+    "energyDemandProfile": {
+      "title": "Energievraagprofiel",
+      "description": "Jaarlijks energieverbruik van dit gebouw. Waarden kunnen handmatig worden aangepast. Voor gebouwen met meerdere klassen wordt elke klasse apart getoond.",
+      "example": "Waarden in kWh/jaar. AI-schatting biedt initiële waarden."
+    },
+    "buildingUsageType": {
+      "title": "Gebruikstype gebouw",
+      "description": "Functionele classificatie uit OpenStreetMap-tags. Bepaalt de standaard belastingprofiel (SLP) klasse.",
+      "example": "Woningtypen gebruiken SLP H0. Commercieel gebruikt G0-G6. Industrieel gebruikt G3."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welkom!",
+      "description": "Laten we je voorkeuren instellen om te beginnen",
+      "greeting": "Welkom bij het energiesimulatieplatform!",
+      "intro": "Laten we even de tijd nemen om je voorkeuren in te stellen. Dit helpt ons je ervaring te personaliseren en je de meest relevante informatie te geven.",
+      "step1": "Kies je voorkeurstaal",
+      "step2": "Stel je weer- en kaartvoorkeuren in",
+      "step3": "Configureer meldingsinstellingen",
+      "timeNote": "Dit duurt maar een minuut"
+    },
+    "language": {
+      "title": "Taalvoorkeur",
+      "description": "Selecteer je voorkeurstaal voor de applicatie"
+    },
+    "weather": {
+      "title": "Weervoorkeuren",
+      "description": "Stel je voorkeurslocatie in voor weerinformatie"
+    },
+    "map": {
+      "title": "Kaartvoorkeuren",
+      "description": "Configureer je standaard kaartlocatie"
+    },
+    "notifications": {
+      "title": "Meldingsvoorkeuren",
+      "description": "Kies hoe je waarschuwingen en updates wilt ontvangen"
+    },
+    "navigation": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "complete": "Voltooien",
+      "completing": "Voltooien...",
+      "skip": "Overslaan"
+    }
+  },
+  "newsFeed": {
+    "title": "Nieuws",
+    "readMore": "Lees meer",
+    "noNews": "Geen nieuws beschikbaar",
+    "loading": "Nieuws laden..."
+  },
+  "pylovoManagement": {
+    "title": "Compute Engine Beheer",
+    "subtitle": "Beheer Compute Engine instanties",
+    "searchPlaceholder": "Zoeken op naam, IP...",
+    "refresh": "Vernieuwen",
+    "registerNew": "Nieuwe instantie registreren",
+    "loadingInstances": "Instanties laden...",
+    "noInstancesFound": "Geen compute engine instanties gevonden",
+    "noInstancesDescription": "Begin met het registreren van uw eerste Compute Engine instantie.",
+    "noInstancesAvailable": "Er zijn momenteel geen compute engine instanties geconfigureerd. Neem contact op met een beheerder.",
+    "healthCheck": "Compute Engine",
+    "summary": {
+      "total": "Totaal",
+      "online": "Online",
+      "available": "Beschikbaar",
+      "offline": "Offline"
+    },
+    "filters": {
+      "allStatus": "Alle statussen",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "maintenance": "Onderhoud",
+      "allAvailability": "Alle beschikbaarheid",
+      "available": "Beschikbaar",
+      "unavailable": "Niet beschikbaar"
+    },
+    "table": {
+      "service": "Service",
+      "endpoint": "Eindpunt",
+      "status": "Status",
+      "availability": "Beschikbaarheid",
+      "primary": "Primair",
+      "lastCheck": "Laatste controle",
+      "actions": "Acties",
+      "never": "Nooit"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Beschikbaar",
+      "unavailable": "Niet beschikbaar"
+    },
+    "actions": {
+      "pingInstance": "Ping instantie",
+      "editInstance": "Instantie bewerken",
+      "deleteInstance": "Instantie verwijderen",
+      "setPrimary": "Instellen als primair",
+      "currentPrimary": "Huidige primaire instantie"
+    },
+    "dialog": {
+      "editTitle": "Compute Engine instantie bewerken",
+      "createTitle": "Nieuwe Compute Engine registreren",
+      "editDescription": "Grid engine configuratie bijwerken",
+      "createDescription": "Een nieuwe Compute Engine instantie configureren",
+      "editButton": "Instantie bijwerken",
+      "createButton": "Instantie registreren"
+    },
+    "notifications": {
+      "created": "Grid engine instantie succesvol geregistreerd!",
+      "updated": "Grid engine instantie succesvol bijgewerkt!",
+      "deleted": "Grid engine instantie succesvol verwijderd!",
+      "primarySet": "Primaire instantie succesvol bijgewerkt!",
+      "statusChanged": "Instantiestatus gewijzigd naar {{status}}",
+      "failedToCreate": "Registratie van instantie mislukt",
+      "failedToUpdate": "Bijwerken van instantie mislukt",
+      "failedToDelete": "Verwijderen van instantie mislukt",
+      "failedToPing": "Ping van instantie mislukt"
+    }
+  },
+  "regionSelector": {
+    "goToRegion": "Ga naar regio",
+    "jumpToRegion": "Ga naar een regio met beschikbare rastergegevens",
+    "searchPlaceholder": "Regio's zoeken...",
+    "sortByGridCount": "Sorteren op rasteraantal",
+    "sortByName": "Sorteren op naam",
+    "setAsDefault": "Instellen als standaardregio",
+    "removeAsDefault": "Verwijderen als standaardregio",
+    "favorite": "Favorieten",
+    "recent": "Recent",
+    "noRegionsFound": "Geen regio's gevonden",
+    "coverageHigh": "Hoge gegevensdekking",
+    "coverageMedium": "Gemiddelde gegevensdekking",
+    "coverageLow": "Lage gegevensdekking",
+    "summaryFooter": "{{countries}} landen · {{regions}} regio's · {{grids}} rasters"
+  }
+,
+  "landing": {
+    "nav": {
+      "features": "Functies",
+      "energy": "Energie",
+      "howItWorks": "Hoe het werkt",
+      "about": "Over ons",
+      "contact": "Contact",
+      "signIn": "Inloggen",
+      "tryItNow": "Probeer nu"
+    },
+    "hero": {
+      "badge": "Door de EU gefinancierd onderzoeksproject",
+      "title1": "Intelligente energieplanning",
+      "titleFor": "voor een",
+      "titleHighlight": "Duurzame toekomst",
+      "description": "Modelleer, simuleer en optimaliseer hernieuwbare energiesystemen op gebouw- en wijkniveau. EnerPlanET helpt gemeenten, onderzoekers en energieplanners om de energietransitie te versnellen.",
+      "getStarted": "Gratis aan de slag",
+      "seeHow": "Bekijk hoe het werkt",
+      "countries": "Landen",
+      "regions": "Regio's",
+      "hourlyResolution": "Uurresolutie",
+      "yearsData": "Gegevens 2015–2025",
+      "technologies": "Technologieën",
+      "germany": "Duitsland",
+      "netherlands": "Nederland",
+      "austria": "Oostenrijk",
+      "czechRepublic": "Tsjechië",
+      "deRegions": "16 deelstaten",
+      "nlRegions": "12 provincies",
+      "atRegions": "9 deelstaten",
+      "czRegions": "13 regio's"
+    },
+    "features": {
+      "label": "Platformfuncties",
+      "title": "Alles wat je nodig hebt voor energieplanning",
+      "description": "Een uitgebreide toolkit voor het modelleren, simuleren en optimaliseren van decentrale energiesystemen.",
+      "map": "Interactieve 3D-kaart",
+      "mapDesc": "Visualiseer gebouwen, energie-infrastructuur en netwerktopologie in een interactieve 3D-omgeving met satellietbeelden.",
+      "multiTech": "Multi-technologie modellering",
+      "multiTechDesc": "Configureer PV, wind, biomassa, geothermie, batterijopslag en netaansluitingen voor elk gebouw of elke wijk.",
+      "simulation": "Geavanceerde simulatie",
+      "simulationDesc": "Voer uuroptimalisatie uit met de solvers Calliope, PyPSA en PyLoVo om kostenoptimale en koolstofarme energiesystemen te vinden.",
+      "grid": "Slimme netanalyse",
+      "gridDesc": "Analyseer vermogensstromen, spanningsprofielen, transformatorbelasting en lijncapaciteit met geïntegreerde PyPSA- en PyLoVo-netwerksimulatie.",
+      "reports": "Uitgebreide rapporten",
+      "reportsDesc": "Genereer energiebalansgrafieken, belastingsduurkrommen, dagprofielen, kostenuitsplitsingen en Sankey-stroomdiagrammen.",
+      "workspace": "Samenwerkingsruimte",
+      "workspaceDesc": "Deel modellen met je team, vergelijk simulatiescenario's en werk samen aan de planning van de energietransitie."
+    },
+    "energy": {
+      "label": "Energietechnologieën",
+      "title": "Geïntegreerde modellering van hernieuwbare energie",
+      "description": "EnerPlanET ondersteunt gedetailleerde modellering en optimalisatie van vijf kernenergietechnologieën, aangedreven door PySAM, pvlib en Calliope.",
+      "pv": {
+        "title": "Zonne-energie (PV)",
+        "subtitle": "PV-systemen",
+        "description": "Modelleer dak- en grondgebonden PV-systemen met nauwkeurige uursimulaties met PySAM en pvlib. Houdt rekening met paneeloriëntatie, hellingshoek, schaduw, omvormerrendement en degradatie.",
+        "spec1": "Dak- en grondgebonden",
+        "spec2": "Uurmodellering van instraling",
+        "spec3": "PySAM- en pvlib-engines",
+        "spec4": "Automatische dakdetectie"
+      },
+      "wind": {
+        "title": "Windenergie",
+        "subtitle": "Windturbines",
+        "description": "Simuleer windturbines op land met PySAM-windmodellen en MERRA-2- en Open-Meteo-heranalysegegevens. Ondersteunt meerdere turbinetypes, ashoogtes en vermogenscurvemodellering.",
+        "spec1": "Modellen voor turbines op land",
+        "spec2": "MERRA-2-windprofielen",
+        "spec3": "Vermogenscurvemodellering",
+        "spec4": "Optimalisatie van ashoogte"
+      },
+      "biomass": {
+        "title": "Biomassa-energie",
+        "subtitle": "Biomassa-WKK en verwarming",
+        "description": "Configureer biomassaverwarming en warmtekrachtkoppeling (WKK). Ondersteunt houtsnippers, biogas en organisch afval met flexibele inzetplanning.",
+        "spec1": "WKK- en verwarmingsmodi",
+        "spec2": "Houtsnippers en biogas",
+        "spec3": "Flexibele inzet",
+        "spec4": "CO₂-neutrale werking"
+      },
+      "geothermal": {
+        "title": "Geothermische energie",
+        "subtitle": "Bodemwarmte",
+        "description": "Modelleer ondiepe en diepe geothermische systemen, waaronder bodemwarmtepompen en bodemwarmtewisselaars. Seizoensgebonden thermische opslag met uurprofielen van de bodemtemperatuur.",
+        "spec1": "Ondiepe en diepe systemen",
+        "spec2": "Bodemwarmtewisselaars",
+        "spec3": "Seizoensgebonden thermische opslag",
+        "spec4": "Bodemtemperatuurprofielen"
+      },
+      "battery": {
+        "title": "Batterijopslag",
+        "subtitle": "Energieopslagsystemen",
+        "description": "Optimaliseer lithium-ion- en andere batterijopslagsystemen voor piekafvlakking, maximalisatie van zelfverbruik en netdiensten. Ondersteunt capaciteitsdimensionering en degradatiemodellering.",
+        "spec1": "Li-ion en andere chemieën",
+        "spec2": "Optimalisatie van piekafvlakking",
+        "spec3": "Capaciteitsdimensionering",
+        "spec4": "Degradatiemodellering"
+      }
+    },
+    "howItWorks": {
+      "label": "Aan de slag",
+      "title": "Hoe het werkt",
+      "description": "Van regioselectie tot bruikbare inzichten in vier eenvoudige stappen.",
+      "step1Title": "Selecteer je regio",
+      "step1Desc": "Teken of selecteer een geografisch gebied op de interactieve kaart. Gebouwen en infrastructuur worden automatisch geladen.",
+      "step2Title": "Configureer energiesystemen",
+      "step2Desc": "Voeg technologieën zoals PV-panelen, windturbines, batterijopslag en biomassa toe aan gebouwen. Stel randvoorwaarden en doelen in.",
+      "step3Title": "Voer de optimalisatie uit",
+      "step3Desc": "Start de solvers Calliope, PyPSA en PyLoVo om het optimale ontwerp van het energiesysteem te vinden met uurresolutie.",
+      "step4Title": "Analyseer de resultaten",
+      "step4Desc": "Verken interactieve grafieken, energiestromen, netwerktopologie en kostenuitsplitsingen en exporteer uitgebreide rapporten."
+    },
+    "showcase": {
+      "label": "Zie het in actie",
+      "title": "Krachtige tools, een prachtige interface",
+      "description": "Ontworpen voor duidelijkheid en efficiëntie maakt EnerPlanET complexe energieanalyse toegankelijk voor iedereen.",
+      "mapTitle": "Interactieve 3D-kaart",
+      "mapDesc": "Verken gebouwen, energiesystemen en netinfrastructuur in een rijke 3D-omgeving met satellietbeelden en realtime data-overlays.",
+      "mapBadge": "Kernfunctie",
+      "chartsTitle": "Simulatieresultaten",
+      "chartsDesc": "Analyseer de energiebalans, productiecurven, kostenuitsplitsingen en Sankey-stroomdiagrammen met interactieve grafieken en gegevensexport.",
+      "chartsBadge": "Analyse",
+      "gridTitle": "Nettopologie",
+      "gridDesc": "Visualiseer vermogensstromen, spanningsprofielen, transformatorbelasting en nettopologie met geïntegreerde PyPSA- en PyLoVo-simulatieresultaten.",
+      "gridBadge": "Slim net"
+    },
+    "trust": {
+      "euTitle": "Gefinancierd door de Europese Unie",
+      "euDescription": "EnerPlanET is een onderzoeksproject gefinancierd door de Europese Unie, ontwikkeld aan de Technische Hochschule Deggendorf in samenwerking met vooraanstaande Europese universiteiten en onderzoeksinstellingen. Het platform ondersteunt de missie van de EU voor klimaatneutraliteit tegen 2050.",
+      "availableAcross": "Beschikbaar in heel Europa",
+      "countriesComingSoon": "30+ landen",
+      "comingSoon": "binnenkort beschikbaar",
+      "hourlyResolution": "Uurresolutie",
+      "hourlyResolutionDesc": "Simulatie van een heel jaar",
+      "energyTechnologies": "Energietechnologieën",
+      "energyTechnologiesDesc": "PV, wind, opslag en meer",
+      "integratedDataSources": "Geïntegreerde gegevensbronnen",
+      "poweredByOpenSource": "Aangedreven door opensourcetechnologie"
+    },
+    "contact": {
+      "label": "Neem contact op",
+      "title": "We horen graag van je",
+      "description": "Heb je een vraag, suggestie of wil je samenwerken? Stuur ons een bericht en ons team neemt contact met je op.",
+      "name": "Naam",
+      "namePlaceholder": "Je naam",
+      "email": "E-mail",
+      "emailPlaceholder": "jij@voorbeeld.com",
+      "category": "Categorie",
+      "subject": "Onderwerp",
+      "subjectPlaceholder": "Waar gaat het over?",
+      "message": "Bericht",
+      "messagePlaceholder": "Vertel ons meer...",
+      "send": "Bericht verzenden",
+      "sending": "Verzenden...",
+      "successTitle": "Bericht verzonden!",
+      "successMessage": "Bedankt voor je bericht. We nemen zo snel mogelijk contact met je op.",
+      "sendAnother": "Nog een bericht verzenden",
+      "error": "Er is iets misgegaan. Probeer het opnieuw.",
+      "categories": {
+        "general": "Algemene vraag",
+        "feature": "Functieverzoek",
+        "bug": "Bugmelding",
+        "improvement": "Suggestie"
+      }
+    },
+    "cta": {
+      "title": "Begin met het plannen van je energietransitie",
+      "description": "Sluit je aan bij onderzoekers en energieplanners in heel Europa. Ontwerp duurzame energiesystemen met EnerPlanET.",
+      "button": "Probeer nu — het is gratis",
+      "noCreditCard": "Geen creditcard vereist",
+      "gdpr": "AVG-conform"
+    },
+    "footer": {
+      "brandDescription": "Geavanceerd energieplanningsplatform voor een duurzame toekomst. Gefinancierd door de Europese Unie.",
+      "product": "Product",
+      "features": "Functies",
+      "howItWorks": "Hoe het werkt",
+      "documentation": "Documentatie",
+      "legal": "Juridisch",
+      "privacyPolicy": "Privacybeleid",
+      "termsConditions": "Algemene voorwaarden",
+      "impressum": "Impressum",
+      "disclaimer": "Disclaimer",
+      "project": "Project",
+      "about": "Over ons",
+      "acknowledgements": "Dankbetuigingen",
+      "thirdPartyLicenses": "Licenties van derden",
+      "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. Dit project heeft financiering ontvangen van de Europese Unie. De geuite standpunten en meningen zijn echter uitsluitend die van de auteur(s) en komen niet noodzakelijk overeen met die van de Europese Unie."
+    }
+  }
+}

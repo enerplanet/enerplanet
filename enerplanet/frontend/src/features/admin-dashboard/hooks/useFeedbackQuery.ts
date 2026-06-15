@@ -83,7 +83,7 @@ export const useFeedbackList = (filters: FeedbackFilters = {}) => {
 		queryKey: feedbackKeys.list(filters),
 		queryFn: async () => {
 			const queryParams = new URLSearchParams();
-			
+
 			if (filters.page !== undefined) queryParams.append('page', String(filters.page + 1));
 			if (filters.per_page) queryParams.append('per_page', String(filters.per_page));
 			if (filters.status && filters.status !== 'all') queryParams.append('status', filters.status);
@@ -92,6 +92,20 @@ export const useFeedbackList = (filters: FeedbackFilters = {}) => {
 
 			const { data } = await axios.get<FeedbackListResponse>(`/feedback?${queryParams.toString()}`);
 			return data.data;
+		},
+		staleTime: 30000, // 30 seconds
+	});
+};
+
+/**
+ * Fetch all feedback without pagination for status counts (Admin)
+ */
+export const useAllFeedback = () => {
+	return useQuery({
+		queryKey: [...feedbackKeys.all, 'all-feedback'],
+		queryFn: async () => {
+			const { data } = await axios.get<FeedbackListResponse>(`/feedback?per_page=10000`);
+			return data.data.data;
 		},
 		staleTime: 30000, // 30 seconds
 	});

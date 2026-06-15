@@ -16,8 +16,8 @@ type CalculationPayload struct {
 	UserID                 string                 `json:"user_id"`
 	ModelID                string                 `json:"model_id"`
 	SessionID              string                 `json:"session_id"`
-	Country                *string                `json:"country,omitempty"`
-	Lkr                    *string                `json:"lkr,omitempty"`
+	Country                string                 `json:"country"`
+	Lkr                    string                 `json:"lkr"`
 	CallbackURL            string                 `json:"callback_url"`
 	StartDate              string                 `json:"start_date"`
 	EndDate                string                 `json:"end_date"`
@@ -28,8 +28,17 @@ type CalculationPayload struct {
 	Parameters             map[string]interface{} `json:"parameters,omitempty"`
 }
 
+// ErrMissingCountry is returned by BuildCalculationPayload when the model
+// has no resolved country. Callers should surface this as a 400.
+var ErrMissingCountry = fmt.Errorf("model country is not set; cannot build calculation payload")
+
 // BuildCalculationPayload constructs the payload for the Calliope webservice.
-func BuildCalculationPayload(model *models.Model) interface{} {
+// Returns an error if mandatory derived fields (currently: country) are missing.
+func BuildCalculationPayload(model *models.Model) (interface{}, error) {
+	if model.Country == nil || strings.TrimSpace(*model.Country) == "" {
+		return nil, ErrMissingCountry
+	}
+
 	callbackURL := buildCallbackURL(model.ID)
 	// Use timestamp to make model_id unique per run (allows re-runs)
 	runTimestamp := time.Now().Unix()
@@ -45,19 +54,19 @@ func BuildCalculationPayload(model *models.Model) interface{} {
 		StartDate:   model.FromDate.Format("2006-01-02T15:04:05.000Z"),
 		EndDate:     model.ToDate.Format("2006-01-02T15:04:05.000Z"),
 		Resolution:  resolution,
-		Country:     model.Country,
-		Lkr:         model.Region,
+		Country:     *model.Country,
+		Lkr:         derefOrEmpty(model.Region),
 	}
 
 	// Parse config
 	var configMap map[string]interface{}
 	if len(model.Config) > 0 && json.Unmarshal(model.Config, &configMap) == nil {
 		if isPylovoConfig(configMap) {
-			return buildPylovoPayload(payload, configMap, sessionID)
+			return buildPylovoPayload(payload, configMap, sessionID), nil
 		}
 	}
 
-	return buildLegacyPayload(model, payload, configMap)
+	return buildLegacyPayload(model, payload, configMap), nil
 }
 
 func buildCallbackURL(modelID uint) string {
@@ -84,6 +93,13 @@ func getResolution(model *models.Model) int {
 		return *model.Resolution
 	}
 	return 60
+}
+
+func derefOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func isPylovoConfig(cfg map[string]interface{}) bool {
