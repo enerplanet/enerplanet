@@ -309,6 +309,12 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
+        "APITokenAuth": {
+            "description": "API token obtained via POST /api/users/{userId}/tokens. Format: Bearer whf_xxx",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
         "SessionAuth": {
             "description": "Session cookie obtained via POST /api/login",
             "type": "apiKey",

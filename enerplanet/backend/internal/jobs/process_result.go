@@ -12,6 +12,7 @@ import (
 
 	commonModels "platform.local/common/pkg/models"
 	"platform.local/platform/logger"
+	"spatialhub_backend/internal/events"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/webservice"
@@ -91,10 +92,11 @@ func HandleProcessResult(ctx context.Context, t *asynq.Task, db *gorm.DB, notifi
 		return fmt.Errorf("process result returned nil for model_id=%d", payload.ModelID)
 	}
 
-	// 3. Final Success Update (Model status + results metadata)
+	// 3. Final success update + model.completed event (same tx).
 	now := time.Now().UTC()
+	completedEvent, _ := events.NewModelEvent(events.ModelCompleted, payload.ModelID, payload.UserID, nil)
 	err = db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&commonModels.Model{}).Where("id = ?", payload.ModelID).Updates(map[string]interface{}{
+		if uerr := tx.Model(&commonModels.Model{}).Where("id = ?", payload.ModelID).Updates(map[string]interface{}{
 			"status": commonModels.ModelStatusCompleted,
 			"results": map[string]interface{}{
 				"file_path":  res.ZipPath,
@@ -103,7 +105,10 @@ func HandleProcessResult(ctx context.Context, t *asynq.Task, db *gorm.DB, notifi
 			"webservice_id":            nil,
 			"calculation_completed_at": now,
 			"updated_at":               now,
-		}).Error
+		}).Error; uerr != nil {
+			return uerr
+		}
+		return events.EnqueueTx(tx, completedEvent)
 	})
 
 	if err != nil {

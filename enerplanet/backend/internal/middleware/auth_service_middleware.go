@@ -40,6 +40,12 @@ func AuthServiceMiddleware(options ...AuthServiceOptions) gin.HandlerFunc {
 			return
 		}
 
+		// Already authenticated by APITokenAuth — no session required.
+		if c.GetBool(ctxAPITokenAuthenticated) {
+			c.Next()
+			return
+		}
+
 		sessionID := httputil.GetSessionCookieOrEmpty(c)
 		if sessionID == "" {
 			clearAuthCookies(c, opts)

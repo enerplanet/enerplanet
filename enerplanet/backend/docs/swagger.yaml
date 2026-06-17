@@ -214,6 +214,12 @@ paths:
       tags:
       - EnerPlanET
 securityDefinitions:
+  APITokenAuth:
+    description: 'API token obtained via POST /api/users/{userId}/tokens. Format:
+      Bearer whf_xxx'
+    in: header
+    name: Authorization
+    type: apiKey
   SessionAuth:
     description: Session cookie obtained via POST /api/login
     in: cookie

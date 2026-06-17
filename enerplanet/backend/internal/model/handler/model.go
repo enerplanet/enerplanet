@@ -272,6 +272,8 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	modelsList = h.includeParentModels(modelsList)
 	modelsList = h.postProcessModelWorkspacesBatch(ctx, userCtx, modelsList)
 	modelsList = h.applyPrivacyFilters(*userCtx, modelsList)
+	h.populateChildModelIDs(modelsList)
+	h.populateParentModelTitles(modelsList)
 
 	c.JSON(200, gin.H{
 		"success":     true,
@@ -317,6 +319,8 @@ func (h *ModelHandler) GetModel(c *gin.Context) {
 	h.handleSharedModelWorkspace(userCtx.UserID, &model)
 	h.filterModelShares(&model, userCtx.UserID, userCtx.Email)
 	h.filterWorkspaceData(&model, userCtx.UserID, userCtx.Email)
+	h.populateChildModelIDsForModel(&model)
+	h.populateParentModelTitleForModel(&model)
 
 	httputil.SuccessResponse(c, model)
 }
