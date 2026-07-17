@@ -1,5 +1,7 @@
 # EnerPlanET
 
+[![MkDocs](https://github.com/enerplanet/enerplanet/actions/workflows/docs.yml/badge.svg)](https://github.com/enerplanet/enerplanet/actions/workflows/docs.yml)
+
 Community energy grid planning and simulation platform.
 
 EnerPlanET lets planners and engineers design, simulate, and optimise local low-voltage distribution networks, from drawing a polygon on a map to a full Calliope/PyPSA energy optimisation result. It covers synthetic grid generation from OpenStreetMap building data, multi-technology energy modelling (PV, wind, battery, biomass, geothermal), and interactive 2D/3D geospatial visualisation.
