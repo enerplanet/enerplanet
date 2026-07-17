@@ -37,12 +37,15 @@ make setup
 > [!NOTE]
 > `make setup` creates the database, builds images, and starts all services. _(This might take a while)_
 
-Default development credentials (change before any non-local deployment):
 
-```bash
-Email:    admin@example.de
-Password: 12345678
-```
+
+> [!CAUTION]
+> Default development credentials (change before any non-local deployment):
+>
+> ```bash
+> Email:    admin@example.de
+> Password: 12345678
+> ```
 
 See the [Installation Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/installation/) for full prerequisites, environment variables, and Keycloak configuration.
 
