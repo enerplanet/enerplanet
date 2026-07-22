@@ -28,6 +28,7 @@ type Config struct {
 	AuthServiceURL       string // URL of the auth-service
 	WebserviceServiceURL string // URL of the webservice microservice
 	PylovoServiceURL     string // URL of the pylovo microservice
+	IgnisServiceURL      string // URL of the ignis heat-demand microservice
 	CallbackSecret       string // Shared secret for webservice callback authentication
 }
 
@@ -63,7 +64,10 @@ func LoadFromEnv() (*Config, error) {
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
-		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
+		// 8090 matches the simulation-engine's existing IGNIS_SERVICE_PORT convention
+		// (environment/docker-compose.unltd.yaml) and avoids clashing with Keycloak/GeoServer on 8080.
+		IgnisServiceURL: platformconfig.GetEnv("IGNIS_SERVICE_URL", "http://localhost:8090"),
+		CallbackSecret:  os.Getenv("CALLBACK_SECRET"),
 	}
 	return cfg, nil
 }

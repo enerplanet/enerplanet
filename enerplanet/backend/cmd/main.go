@@ -16,6 +16,7 @@ import (
 	"spatialhub_backend/internal/config"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
+	"spatialhub_backend/internal/handler/ignis"
 	locationhandler "spatialhub_backend/internal/handler/location"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
 	"spatialhub_backend/internal/handler/pylovo"
@@ -557,6 +558,9 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
 
+	ignisHandler := ignis.NewIgnisHandler(deps.Cfg.IgnisServiceURL)
+	registerIgnisRoutes(protectedAPI, ignisHandler)
+
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
@@ -767,6 +771,13 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	api.PATCH("/v2/pylovo/regions/cached/:id", handler.ToggleCachedRegion)
 	api.DELETE("/v2/pylovo/regions/cached/:id", handler.DeleteCachedRegion)
 	// Boundary routes are registered in configurePublicAPI (no auth required)
+}
+
+// registerIgnisRoutes registers proxy routes for the ignis heat-demand microservice.
+func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
+	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
+	api.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
+	api.POST("/v2/ignis/calculate/:code", handler.CalculateHeatDemand)
 }
 
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {
