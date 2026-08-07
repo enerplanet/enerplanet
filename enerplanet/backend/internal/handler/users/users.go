@@ -7,6 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"spatialhub_backend/internal/config"
+	apitokenstore "spatialhub_backend/internal/store/apitoken"
+	usersstore "spatialhub_backend/internal/store/users"
+
 	"github.com/sirupsen/logrus"
 	"platform.local/common/pkg/authclient"
 	"platform.local/common/pkg/constants"
@@ -16,8 +20,6 @@ import (
 	platformkeycloak "platform.local/platform/keycloak"
 	applogger "platform.local/platform/logger"
 	platformsession "platform.local/platform/session"
-	"spatialhub_backend/internal/config"
-	usersstore "spatialhub_backend/internal/store/users"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -37,6 +39,7 @@ type Handler struct {
 	authClient         *authclient.Client
 	kc                 *platformkeycloak.Client
 	sessionStore       platformsession.SessionStore
+	apiTokens          *apitokenstore.Store
 }
 
 func New(cfg *config.Config, db *gorm.DB, sessionStore platformsession.SessionStore, adminTokenProvider *authplatform.AdminTokenProvider) *Handler {
@@ -48,6 +51,7 @@ func New(cfg *config.Config, db *gorm.DB, sessionStore platformsession.SessionSt
 		authClient:         authclient.NewClient(),
 		kc:                 platformkeycloak.NewClient(cfg.Auth.BaseURL, cfg.Auth.Realm, adminTokenProvider),
 		sessionStore:       sessionStore,
+		apiTokens:          apitokenstore.NewStore(db),
 	}
 }
 
@@ -210,6 +214,24 @@ type UserDTO struct {
 	GroupID       string `json:"group_id,omitempty"`
 	ModelLimit    *int   `json:"model_limit,omitempty"`
 	CreatedAt     *int64 `json:"created_at,omitempty"`
+	// HasAPIAccess: user has an active API token.
+	HasAPIAccess bool `json:"has_api_access"`
+}
+
+// markAPIAccess flags users with an active API token.
+func (h *Handler) markAPIAccess(users []UserDTO) {
+	ids := make([]string, 0, len(users))
+	for i := range users {
+		ids = append(ids, users[i].ID)
+	}
+	active, err := h.apiTokens.ActiveUserIDs(ids)
+	if err != nil {
+		applogger.ForComponent("api_token").Errorf("failed to check active tokens: %v", err)
+		return
+	}
+	for i := range users {
+		users[i].HasAPIAccess = active[users[i].ID]
+	}
 }
 
 // fetchUsersFromKeycloak retrieves users based on access level
@@ -372,6 +394,8 @@ func (h *Handler) ListUsers(c *gin.Context) {
 
 	total := h.getTotalCount(authToken, rawSearch, totalBeforePagination, isManager)
 
+	h.markAPIAccess(users)
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
@@ -422,25 +446,40 @@ func (h *Handler) getDefaultGroupIDForCreation(ctx context.Context, sessionData 
 func (h *Handler) assignUserToGroup(ctx context.Context, userID, groupID string, sessionData *platformsession.SessionData) {
 	log := applogger.ForComponent("users")
 
-	if groupID != "" {
-		if err := h.kc.AddUserToGroup(ctx, userID, groupID); err != nil {
-			log.Warnf("Failed to add user to group: userID=%s groupID=%s err=%v", userID, groupID, err)
+	// Resolve the group the user
+	targetGroupID := groupID
+	if targetGroupID == "" {
+		defID, defErr := h.getDefaultGroupIDForCreation(ctx, sessionData)
+		if defErr != nil {
+			log.Warnf("Failed to ensure default group: %v", defErr)
+			return
 		}
+		targetGroupID = defID
+	}
+
+	if targetGroupID == "" {
 		return
 	}
 
-	defID, defErr := h.getDefaultGroupIDForCreation(ctx, sessionData)
-	if defErr != nil {
-		log.Warnf("Failed to ensure default group: %v", defErr)
-		return
+	if err := h.kc.AddUserToGroup(ctx, userID, targetGroupID); err != nil {
+		log.Warnf("Failed to add user to group: userID=%s groupID=%s err=%v", userID, targetGroupID, err)
 	}
 
-	if defID == "" {
+	// a user created by a manager must live only inside the manager's group.
+	if sessionData.AccessLevel == constants.AccessLevelManager {
+		h.removeFromSharedDefaultGroup(ctx, userID, targetGroupID)
+	}
+}
+
+// removeFromSharedDefaultGroup removes the user from the shared Default group if they were added to a manager-specific group, ensuring they only belong to their manager's group(s)
+func (h *Handler) removeFromSharedDefaultGroup(ctx context.Context, userID, keepGroupID string) {
+	log := applogger.ForComponent("users")
+	sharedDefaultID, err := h.kc.EnsureGroupByName(ctx, "Default")
+	if err != nil || sharedDefaultID == "" || sharedDefaultID == keepGroupID {
 		return
 	}
-
-	if err := h.kc.AddUserToGroup(ctx, userID, defID); err != nil {
-		log.Warnf("Failed to add user to default group: userID=%s groupID=%s err=%v", userID, defID, err)
+	if err := h.kc.RemoveUserFromGroup(ctx, userID, sharedDefaultID); err != nil {
+		log.Warnf("Failed to remove manager-created user from shared default group: userID=%s err=%v", userID, err)
 	}
 }
 
@@ -622,24 +661,53 @@ func (h *Handler) assignManagerGroups(ctx context.Context, authToken, userID str
 func (h *Handler) assignStandardGroups(ctx context.Context, userID string) {
 	log := applogger.ForComponent("users")
 	defID, _ := h.kc.EnsureGroupByName(ctx, "Default")
-	if defID == "" {
+
+	groups, err := h.kc.GetUserGroups(ctx, userID)
+	if err != nil {
+		log.Warnf("Failed to fetch user groups before reset userID=%s err=%v", userID, err)
+		// Best effort: fall back to the shared Default group as a home.
+		h.addToGroupIfSet(ctx, userID, defID)
 		return
 	}
 
-	if groups, err := h.kc.GetUserGroups(ctx, userID); err == nil {
-		for _, g := range groups {
-			if strings.HasPrefix(g.Name, "Default_") || (!strings.EqualFold(g.Name, "Default") && g.ID != defID) {
-				if err := h.kc.RemoveUserFromGroup(ctx, userID, g.ID); err != nil {
-					log.Warnf("Failed to remove user from group userID=%s groupID=%s err=%v", userID, g.ID, err)
-				}
+	// A user's own manager group is "Default_<theirOwnID>" (created when they
+	// were a manager). On demotion to a standard level it must be dropped.
+	// Membership in *another* manager's group ("Default_<managerID>") is the
+	// user's home — preserve it so manager-created users stay put.
+	ownManagerGroup := "Default_" + userID
+	inManagerGroup := false
+	for _, g := range groups {
+		switch {
+		case strings.EqualFold(g.Name, ownManagerGroup):
+			if err := h.kc.RemoveUserFromGroup(ctx, userID, g.ID); err != nil {
+				log.Warnf("Failed to remove own manager group userID=%s groupID=%s err=%v", userID, g.ID, err)
 			}
+		case strings.HasPrefix(g.Name, "Default_"):
+			inManagerGroup = true
 		}
-	} else {
-		log.Warnf("Failed to fetch user groups before reset userID=%s err=%v", userID, err)
 	}
 
-	if err := h.kc.AddUserToGroup(ctx, userID, defID); err != nil {
-		log.Warnf("Failed to add user to shared default group userID=%s groupID=%s err=%v", userID, defID, err)
+	if inManagerGroup {
+		// Belongs to a manager's group: keep them only there, not in shared Default.
+		if defID != "" {
+			if err := h.kc.RemoveUserFromGroup(ctx, userID, defID); err != nil {
+				log.Warnf("Failed to remove user from shared default group userID=%s groupID=%s err=%v", userID, defID, err)
+			}
+		}
+		return
+	}
+
+	// No manager group: the shared Default group is the home.
+	h.addToGroupIfSet(ctx, userID, defID)
+}
+
+// addToGroupIfSet adds the user to groupID when it is non-empty, logging failures.
+func (h *Handler) addToGroupIfSet(ctx context.Context, userID, groupID string) {
+	if groupID == "" {
+		return
+	}
+	if err := h.kc.AddUserToGroup(ctx, userID, groupID); err != nil {
+		applogger.ForComponent("users").Warnf("Failed to add user to shared default group userID=%s groupID=%s err=%v", userID, groupID, err)
 	}
 }
 
@@ -666,6 +734,17 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// Capture the access level before the update to tell whether it actually
+	// changes. Unrelated edits (e.g. marking email verified) resubmit the
+	// unchanged access_level; re-syncing groups then would strip a
+	// manager-assigned group and move the user into the shared Default group.
+	previousLevel := ""
+	if req.AccessLevel != nil {
+		if current, err := h.userStore.GetUser(authToken, id); err == nil {
+			previousLevel = strings.ToLower(getAttributeValue(current.Attributes, "access_level"))
+		}
+	}
+
 	updateReq := usersstore.UpdateUserRequest{
 		Email:         req.Email,
 		Name:          req.Name,
@@ -682,10 +761,12 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Sync group membership when access level changes
+	// Sync group membership only when the access level actually changes.
 	if req.AccessLevel != nil {
 		level := strings.ToLower(*req.AccessLevel)
-		h.syncUserGroupsForAccessLevel(c.Request.Context(), authToken, id, level)
+		if level != previousLevel {
+			h.syncUserGroupsForAccessLevel(c.Request.Context(), authToken, id, level)
+		}
 	}
 
 	h.updatePasswordIfProvided(authToken, id, req.Password)
@@ -974,27 +1055,43 @@ func shouldCountUserForManager(userID, managerID, groupID, defaultGroupID string
 }
 
 // countManagerUsers counts users accessible to a manager
-func (h *Handler) countManagerUsers(ctx context.Context, authToken, managerID string) (int, error) {
+func (h *Handler) countManagerUsers(ctx context.Context, authToken, managerID string) (int, []string, error) {
 	mgrSet, err := h.kc.GetManagerGroupSet(ctx, managerID)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	defaultID, _ := h.kc.EnsureGroupByName(ctx, "Default")
 
 	kcUsers, err := h.userStore.ListUsers(authToken, usersstore.ListUsersParams{First: 0, Max: 10000})
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	count := 0
+	userIDs := make([]string, 0, len(kcUsers))
 	for _, u := range kcUsers {
 		gid := h.getUserFirstGroup(ctx, u.ID)
 		if shouldCountUserForManager(u.ID, managerID, gid, defaultID, mgrSet) {
 			count++
+			userIDs = append(userIDs, u.ID)
 		}
 	}
-	return count, nil
+	return count, userIDs, nil
+}
+
+func (h *Handler) countOnlineUsers(ctx context.Context, userIDs ...string) int64 {
+	if h.sessionStore == nil {
+		return 0
+	}
+
+	online, err := h.sessionStore.CountActiveUsers(ctx, userIDs...)
+	if err != nil {
+		applogger.ForComponent("users").Warnf("count online users failed: %v", err)
+		return 0
+	}
+
+	return online
 }
 
 func (h *Handler) CountUsers(c *gin.Context) {
@@ -1010,7 +1107,7 @@ func (h *Handler) CountUsers(c *gin.Context) {
 	authToken := h.getAuthTokenWithRetry(sessionData)
 
 	if sessionData.AccessLevel == constants.AccessLevelManager {
-		count, err := h.countManagerUsers(c.Request.Context(), authToken, sessionData.UserID)
+		count, userIDs, err := h.countManagerUsers(c.Request.Context(), authToken, sessionData.UserID)
 		if err != nil {
 			if err.Error() == "failed to fetch manager groups" {
 				httputil.InternalError(c, "failed to fetch manager groups")
@@ -1021,8 +1118,8 @@ func (h *Handler) CountUsers(c *gin.Context) {
 			return
 		}
 		var online int64
-		if h.sessionStore != nil {
-			online, _ = h.sessionStore.CountActiveSessions(c.Request.Context())
+		if len(userIDs) > 0 {
+			online = h.countOnlineUsers(c.Request.Context(), userIDs...)
 		}
 		httputil.SuccessResponse(c, gin.H{"total": count, "online": online})
 		return
@@ -1043,12 +1140,9 @@ func (h *Handler) CountUsers(c *gin.Context) {
 		}
 	}
 
-	var activeSessions int64
-	if h.sessionStore != nil {
-		activeSessions, _ = h.sessionStore.CountActiveSessions(c.Request.Context())
-	}
+	online := h.countOnlineUsers(c.Request.Context())
 
-	httputil.SuccessResponse(c, gin.H{"total": total, "online": activeSessions})
+	httputil.SuccessResponse(c, gin.H{"total": total, "online": online})
 }
 
 func (h *Handler) BulkDeleteUsers(c *gin.Context) {

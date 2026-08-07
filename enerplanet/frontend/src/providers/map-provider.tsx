@@ -59,6 +59,16 @@ const createMapControlsComponent = (
 	return MapControlsComponent;
 };
 
+function runWhenMapAttached(map: OlMap, action: () => void) {
+	if (!map.getTargetElement()) return;
+
+	try {
+		action();
+	} catch (err) {
+		if (import.meta.env.DEV) console.warn("Skipped map render after detach", err);
+	}
+}
+
 export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 	const mapRef = useRef<HTMLDivElement | null>(null);
 	const { map, zoom, position, layers, baseLayer, selectedBaseLayerId, setMap, setBaseLayer, setZoom, setPosition } = useMapStore();
@@ -71,7 +81,9 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 			if (map.getTarget() !== mapRef.current) {
 				map.setTarget(mapRef.current);
 				requestAnimationFrame(() => {
-					map.updateSize();
+					runWhenMapAttached(map, () => {
+						map.updateSize();
+					});
 				});
 			}
 			return;
@@ -100,7 +112,9 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 		setBaseLayer(initialBaseLayer);
 
 		requestAnimationFrame(() => {
-			olMap.updateSize();
+			runWhenMapAttached(olMap, () => {
+				olMap.updateSize();
+			});
 		});
 	}, [map, layers, selectedBaseLayerId, position, zoom, setMap, setBaseLayer]);
 
@@ -116,11 +130,13 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 				// Force all layers to re-render after switching back from 3D
 				if (map) {
 					requestAnimationFrame(() => {
-						map.getLayers().forEach((layer: any) => {
-							layer.changed?.();
+						runWhenMapAttached(map, () => {
+							map.getLayers().forEach((layer: any) => {
+								layer.changed?.();
+							});
+							map.updateSize();
+							map.renderSync();
 						});
-						map.updateSize();
-						map.renderSync();
 					});
 				}
 			}

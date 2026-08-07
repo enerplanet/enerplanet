@@ -167,6 +167,14 @@
             "description": "Solar photovoltaic energy generation system",
             "constraints": [
                 {
+                    "key": "cont_resource_unit",
+                    "alias": "Resource unit",
+                    "default_value": "energy_per_cap",
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
+                {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",
                     "default_value": 8,
@@ -351,6 +359,14 @@
             "description": "Onshore wind turbine energy generation system",
             "constraints": [
                 {
+                    "key": "cont_resource_unit",
+                    "alias": "Resource unit",
+                    "default_value": "energy_per_cap",
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
+                {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",
                     "default_value": 12000,
@@ -456,6 +472,14 @@
             "icon": "leaf",
             "description": "Biomass power plant for renewable energy generation from organic materials",
             "constraints": [
+                {
+                    "key": "cont_resource_unit",
+                    "alias": "Resource unit",
+                    "default_value": "energy_per_cap",
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
                 {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",
@@ -626,6 +650,14 @@
             "description": "Geothermal power plant harnessing earth's heat for energy generation",
             "constraints": [
                 {
+                    "key": "cont_resource_unit",
+                    "alias": "Resource unit",
+                    "default_value": "energy_per_cap",
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
+                {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",
                     "default_value": 30000,
@@ -738,6 +770,14 @@
             "icon": "droplets",
             "description": "Hydropower plant for renewable energy generation from water flow",
             "constraints": [
+                {
+                    "key": "cont_resource_unit",
+                    "alias": "Resource unit",
+                    "default_value": "energy_per_cap",
+                    "unit": "",
+                    "min": null,
+                    "max": null
+                },
                 {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",

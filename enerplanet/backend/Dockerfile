@@ -18,9 +18,10 @@ RUN go mod download
 # Copy source
 COPY backend/. .
 
-# Build binaries (server + migration tool)
+# Build binaries (server + migration tool + backfill tools)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/server ./cmd/main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/migrate ./cmd/migrate/migration.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/backfill_country ./cmd/backfill_country
 
 # Build frontend (React + Vite)
 FROM node:20-alpine AS febuilder
@@ -43,9 +44,10 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy binaries (server + migrate)
+# Copy binaries (server + migrate + backfill_country)
 COPY --from=gobuilder /app/bin/server /app/server
 COPY --from=gobuilder /app/bin/migrate /app/migrate
+COPY --from=gobuilder /app/bin/backfill_country /app/backfill_country
 
 # Copy frontend dist
 COPY --from=febuilder /src/dist /app/www
@@ -62,7 +64,7 @@ COPY backend/entrypoint.sh /app/entrypoint.sh
 # Create non-root user and set up storage
 RUN useradd -r -s /bin/sh appuser && \
     mkdir -p /app/storage/data && \
-    chmod +x /app/server /app/migrate /app/entrypoint.sh && \
+    chmod +x /app/server /app/migrate /app/backfill_country /app/entrypoint.sh && \
     chown -R appuser:appuser /app
 
 # Expose port

@@ -37,6 +37,8 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		return jobs.HandleBroadcastNotification(ctx, t, p.db, p.redis)
 	case jobs.TypeProcessResult:
 		return jobs.HandleProcessResult(ctx, t, p.db, p.notificationService, p.wsClient)
+	case jobs.TypeDomainEvent:
+		return jobs.HandleDomainEvent(ctx, t)
 	default:
 		log.Errorf("unknown task type=%s", t.Type())
 		return nil

@@ -314,6 +314,120 @@ func (h *ModelHandler) prependMissingParents(modelsList, missingParents []models
 	return modelsList
 }
 
+// populateChildModelIDs fills ChildModelIDs for each model
+func (h *ModelHandler) populateChildModelIDs(modelsList []models.Model) {
+	if len(modelsList) == 0 {
+		return
+	}
+
+	parentIDs := make([]uint, len(modelsList))
+	for i := range modelsList {
+		parentIDs[i] = modelsList[i].ID
+	}
+
+	type childRow struct {
+		ID            uint
+		ParentModelID uint
+	}
+	var rows []childRow
+	if err := h.store.DB().
+		Model(&models.Model{}).
+		Where("parent_model_id IN ? AND deleted_at IS NULL", parentIDs).
+		Order("id asc").
+		Select("id, parent_model_id").
+		Scan(&rows).Error; err != nil {
+		return
+	}
+
+	childMap := make(map[uint][]uint, len(rows))
+	for _, r := range rows {
+		childMap[r.ParentModelID] = append(childMap[r.ParentModelID], r.ID)
+	}
+	for i := range modelsList {
+		if children, ok := childMap[modelsList[i].ID]; ok {
+			modelsList[i].ChildModelIDs = children
+		}
+	}
+}
+
+// populateChildModelIDsForModel fills ChildModelIDs for a single model.
+func (h *ModelHandler) populateChildModelIDsForModel(model *models.Model) {
+	var ids []uint
+	if err := h.store.DB().
+		Model(&models.Model{}).
+		Where("parent_model_id = ? AND deleted_at IS NULL", model.ID).
+		Order("id asc").
+		Pluck("id", &ids).Error; err != nil {
+		return
+	}
+	model.ChildModelIDs = ids
+}
+
+// populateParentModelTitles fills ParentModelTitle for children (one query).
+func (h *ModelHandler) populateParentModelTitles(modelsList []models.Model) {
+	parentIDSet := make(map[uint]struct{})
+	for i := range modelsList {
+		if modelsList[i].ParentModelID != nil && *modelsList[i].ParentModelID > 0 {
+			parentIDSet[*modelsList[i].ParentModelID] = struct{}{}
+		}
+	}
+	if len(parentIDSet) == 0 {
+		return
+	}
+
+	parentIDs := make([]uint, 0, len(parentIDSet))
+	for id := range parentIDSet {
+		parentIDs = append(parentIDs, id)
+	}
+
+	type titleRow struct {
+		ID    uint
+		Title string
+	}
+	var rows []titleRow
+	if err := h.store.DB().
+		Model(&models.Model{}).
+		Where("id IN ?", parentIDs).
+		Select("id, title").
+		Scan(&rows).Error; err != nil {
+		return
+	}
+
+	titleByID := make(map[uint]string, len(rows))
+	for _, r := range rows {
+		titleByID[r.ID] = r.Title
+	}
+	for i := range modelsList {
+		if modelsList[i].ParentModelID == nil {
+			continue
+		}
+		if title, ok := titleByID[*modelsList[i].ParentModelID]; ok {
+			t := title
+			modelsList[i].ParentModelTitle = &t
+		}
+	}
+}
+
+// populateParentModelTitleForModel fills ParentModelTitle for a single child model.
+func (h *ModelHandler) populateParentModelTitleForModel(model *models.Model) {
+	if model.ParentModelID == nil || *model.ParentModelID == 0 {
+		return
+	}
+	if model.ParentModel != nil && model.ParentModel.Title != "" {
+		t := model.ParentModel.Title
+		model.ParentModelTitle = &t
+		return
+	}
+	var titles []string
+	if err := h.store.DB().
+		Model(&models.Model{}).
+		Where("id = ?", *model.ParentModelID).
+		Pluck("title", &titles).Error; err != nil || len(titles) == 0 {
+		return
+	}
+	model.ParentModelTitle = &titles[0]
+}
+
 func (h *ModelHandler) filterModelShares(model *models.Model, userID, email string) {
 	if model.UserID == userID {
 		return

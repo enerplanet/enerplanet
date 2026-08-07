@@ -11,20 +11,18 @@ export const useModelSelection = () => {
 	}, [selectedModels]);
 
 	const handleSelectModel = useCallback((model: Model): void => {
-		if (isSelected(model)) {
-			setSelectedModels(selectedModels.filter((selected) => selected.id !== model.id));
-		} else {
-			setSelectedModels([...selectedModels, model]);
-		}
-	}, [selectedModels, isSelected]);
+		setSelectedModels((prev) =>
+			prev.some((selected) => selected.id === model.id)
+				? prev.filter((selected) => selected.id !== model.id)
+				: [...prev, model]
+		);
+	}, []);
 
 	const handleSelectAll = useCallback((filteredModels: Model[]): void => {
-		if (selectedModels.length === filteredModels.length) {
-			setSelectedModels([]);
-		} else {
-			setSelectedModels([...filteredModels]);
-		}
-	}, [selectedModels]);
+		setSelectedModels((prev) =>
+			prev.length === filteredModels.length ? [] : [...filteredModels]
+		);
+	}, []);
 
 	const startTitleEdit = useCallback((model: Model): void => {
 		setEditingModel(model);

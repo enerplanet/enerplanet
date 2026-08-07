@@ -7,13 +7,16 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"go.uber.org/automaxprocs/maxprocs"
 
+	"spatialhub_backend/internal/apitoken"
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/config"
+	"spatialhub_backend/internal/events"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
 	locationhandler "spatialhub_backend/internal/handler/location"
@@ -24,10 +27,12 @@ import (
 	technologyhandler "spatialhub_backend/internal/handler/technology"
 	usershandler "spatialhub_backend/internal/handler/users"
 	"spatialhub_backend/internal/handler/weather"
+	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
 	resulthandler "spatialhub_backend/internal/result/handler"
 	"spatialhub_backend/internal/services"
+	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
@@ -97,6 +102,11 @@ const (
 // @in   cookie
 // @name session_id
 // @description Session cookie obtained via POST /api/login
+
+// @securityDefinitions.apikey APITokenAuth
+// @in                         header
+// @name                       Authorization
+// @description API token obtained via POST /api/users/{userId}/tokens. Format: Bearer whf_xxx
 
 func main() {
 	// Set GIN to release mode to disable debug messages
@@ -231,12 +241,19 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
 			log.Fatalf("Failed to run Asynq server: %v", err)
 		}
 	}()
+
+	// Start outbox relay.
+	events.NewRelay(
+		events.NewOutboxStore(db),
+		jobs.NewAsynqEventPublisher(asynqClient),
+	).Start(5 * time.Second)
 
 	keycloakCache := cache.NewKeycloakCacheService(redisClient)
 	syncCache := cache.NewSyncCacheService(redisClient)
@@ -316,6 +333,8 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 	}
 	configureProtectedAPI(r, routeDeps)
 
+	r.Use(frontendCacheHeaders())
+
 	protected := r.Group("/")
 	{
 		protected.GET("/success-login", renderHandler.SuccessLogin)
@@ -331,8 +350,45 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 			c.JSON(404, gin.H{"error": "API endpoint not found"})
 			return
 		}
+		if isFrontendAssetRequest(path) {
+			c.Header("Cache-Control", "no-store")
+			c.String(http.StatusNotFound, "frontend asset not found")
+			return
+		}
+		c.Header("Cache-Control", "no-cache, must-revalidate")
 		c.File("./www/index.html")
 	})
+}
+
+func frontendCacheHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if path == "/" || path == "/index.html" {
+			c.Header("Cache-Control", "no-cache, must-revalidate")
+		} else if isFrontendAssetRequest(path) {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		c.Next()
+	}
+}
+
+func isFrontendAssetRequest(path string) bool {
+	if strings.HasPrefix(path, "/assets/") ||
+		strings.HasPrefix(path, "/images/") ||
+		path == "/vite.svg" ||
+		path == "/favicon.ico" ||
+		path == "/manifest.webmanifest" {
+		return true
+	}
+
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".avif", ".css", ".gif", ".ico", ".jpeg", ".jpg", ".js", ".json",
+		".map", ".mjs", ".png", ".svg", ".ttf", ".wasm", ".webmanifest",
+		".webp", ".woff", ".woff2":
+		return true
+	default:
+		return false
+	}
 }
 
 func makeWebserviceProxyHandler(client *webservice.Client) gin.HandlerFunc {
@@ -518,7 +574,14 @@ type RouteDeps struct {
 // configureProtectedAPI registers protected API routes that require a valid session.
 func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	protectedAPI := r.Group("/api")
-	protectedAPI.Use(middleware.AuthServiceMiddleware())
+	// API tokens authenticate before session auth.
+	protectedAPI.Use(middleware.APITokenAuth(apitoken.NewService(apitokenstore.NewStore(deps.DB))))
+	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
+		AuthServiceURL:             deps.Cfg.AuthServiceURL,
+		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
+		CookieDomain:               deps.Cfg.CookieDomain,
+		IsProduction:               deps.Cfg.AppEnv == "production",
+	}))
 
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -635,6 +698,11 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.PUT(routeUsersByID+"/disable", handler.DisableUser)
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
+
+	// Per-user API tokens (managed by experts, or managers for their own users).
+	api.POST(routeUsersByID+"/tokens", handler.CreateUserToken)
+	api.GET(routeUsersByID+"/tokens", handler.ListUserTokens)
+	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
 }
 
 func registerWebserviceProxyRoutes(api *gin.RouterGroup, client *webservice.Client) {

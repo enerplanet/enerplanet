@@ -1,34 +1,43 @@
-import { useState, useCallback } from 'react'
-import { IconMap, IconChartBar, IconTopologyStarRing3, IconBuilding, IconSolarPanel, IconChartAreaLine, IconBolt, IconArrowsExchange } from '@tabler/icons-react'
-import { useTranslation } from '@spatialhub/i18n'
-import { useInView } from '../hooks/useInView'
+import { useState, useCallback, JSX } from "react";
+import {
+  IconMap,
+  IconChartBar,
+  IconTopologyStarRing3,
+  IconBuilding,
+  IconSolarPanel,
+  IconChartAreaLine,
+  IconBolt,
+  IconArrowsExchange,
+} from "@tabler/icons-react";
+import { useTranslation } from "@spatialhub/i18n";
+import { useInView } from "../hooks/useInView";
 
 const showcaseKeys = [
   {
-    key: 'map',
+    key: "map",
     icon: IconMap,
-    gradient: 'from-emerald-600/20 via-emerald-900/30 to-slate-900/40',
-    iconColor: 'text-emerald-400',
-    illustration: 'map',
-    screenshot: '/images/landing/screenshot-map.png',
+    gradient: "from-emerald-600/20 via-emerald-900/30 to-slate-900/40",
+    iconColor: "text-emerald-400",
+    illustration: "map",
+    screenshot: "/images/landing/screenshot-map.png",
   },
   {
-    key: 'charts',
+    key: "charts",
     icon: IconChartBar,
-    gradient: 'from-blue-600/20 via-blue-900/30 to-slate-900/40',
-    iconColor: 'text-blue-400',
-    illustration: 'charts',
-    screenshot: '/images/landing/screenshot-results.png',
+    gradient: "from-blue-600/20 via-blue-900/30 to-slate-900/40",
+    iconColor: "text-blue-400",
+    illustration: "charts",
+    screenshot: "/images/landing/screenshot-results.png",
   },
   {
-    key: 'grid',
+    key: "grid",
     icon: IconTopologyStarRing3,
-    gradient: 'from-violet-600/20 via-violet-900/30 to-slate-900/40',
-    iconColor: 'text-violet-400',
-    illustration: 'grid',
-    screenshot: '/images/landing/screenshot-grid.png',
+    gradient: "from-violet-600/20 via-violet-900/30 to-slate-900/40",
+    iconColor: "text-violet-400",
+    illustration: "grid",
+    screenshot: "/images/landing/screenshot-grid.png",
   },
-]
+];
 
 function MapIllustration() {
   return (
@@ -50,7 +59,7 @@ function MapIllustration() {
         <div className="absolute bottom-1 left-0 right-0 h-px bg-emerald-400/20" />
       </div>
     </div>
-  )
+  );
 }
 
 function ChartsIllustration() {
@@ -68,7 +77,13 @@ function ChartsIllustration() {
         </div>
         {/* Line overlay */}
         <svg className="absolute inset-0" viewBox="0 0 192 144" fill="none">
-          <polyline points="20,80 45,50 70,65 95,30 120,45 145,55" stroke="rgba(96,165,250,0.5)" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <polyline
+            points="20,80 45,50 70,65 95,30 120,45 145,55"
+            stroke="rgba(96,165,250,0.5)"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+          />
         </svg>
         {/* Chart area icon */}
         <IconChartAreaLine size={18} className="absolute top-4 right-6 text-blue-400/50" />
@@ -77,7 +92,7 @@ function ChartsIllustration() {
         <div className="absolute bottom-5 left-3 top-4 w-px bg-blue-400/20" />
       </div>
     </div>
-  )
+  );
 }
 
 function GridIllustration() {
@@ -96,60 +111,94 @@ function GridIllustration() {
         <svg className="absolute inset-0" viewBox="0 0 192 144" fill="none">
           <line x1="96" y1="36" x2="30" y2="80" stroke="rgba(167,139,250,0.3)" strokeWidth="1.5" />
           <line x1="96" y1="36" x2="162" y2="80" stroke="rgba(167,139,250,0.3)" strokeWidth="1.5" />
-          <line x1="30" y1="80" x2="55" y2="120" stroke="rgba(167,139,250,0.25)" strokeWidth="1.5" />
-          <line x1="162" y1="80" x2="137" y2="120" stroke="rgba(167,139,250,0.25)" strokeWidth="1.5" />
-          <line x1="55" y1="120" x2="137" y2="120" stroke="rgba(167,139,250,0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
+          <line
+            x1="30"
+            y1="80"
+            x2="55"
+            y2="120"
+            stroke="rgba(167,139,250,0.25)"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="162"
+            y1="80"
+            x2="137"
+            y2="120"
+            stroke="rgba(167,139,250,0.25)"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="55"
+            y1="120"
+            x2="137"
+            y2="120"
+            stroke="rgba(167,139,250,0.2)"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
         </svg>
         {/* Flow icon */}
-        <IconArrowsExchange size={14} className="absolute top-[4.5rem] left-1/2 -translate-x-1/2 text-violet-400/50" />
+        <IconArrowsExchange
+          size={14}
+          className="absolute top-[4.5rem] left-1/2 -translate-x-1/2 text-violet-400/50"
+        />
       </div>
     </div>
-  )
+  );
 }
 
 const illustrations: Record<string, () => JSX.Element> = {
   map: MapIllustration,
   charts: ChartsIllustration,
   grid: GridIllustration,
-}
+};
 
 function ShowcaseCard({
   item,
   idx,
   inView,
 }: {
-  item: (typeof showcaseKeys)[number]
-  idx: number
-  inView: boolean
+  item: (typeof showcaseKeys)[number];
+  idx: number;
+  inView: boolean;
 }) {
-  const { t } = useTranslation()
-  const Illustration = illustrations[item.illustration]
-  const titleKey = `landing.showcase.${item.key}Title`
-  const descKey = `landing.showcase.${item.key}Desc`
-  const badgeKey = `landing.showcase.${item.key}Badge`
-  const [imgFailed, setImgFailed] = useState(false)
+  const { t } = useTranslation();
+  const Illustration = illustrations[item.illustration];
+  const titleKey = `landing.showcase.${item.key}Title`;
+  const descKey = `landing.showcase.${item.key}Desc`;
+  const badgeKey = `landing.showcase.${item.key}Badge`;
+  const [imgFailed, setImgFailed] = useState(false);
 
-  const handleImgError = useCallback(() => setImgFailed(true), [])
+  const handleImgError = useCallback(() => setImgFailed(true), []);
 
-  const showScreenshot = item.screenshot && !imgFailed
+  const showScreenshot = item.screenshot && !imgFailed;
 
   return (
     <div
       key={item.key}
-      className={`group overflow-hidden rounded-2xl border border-border bg-card transition-all duration-700 hover:-translate-y-1 hover:shadow-xl ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-      style={{ transitionDelay: inView ? `${idx * 120}ms` : '0ms' }}
+      className={`group overflow-hidden rounded-2xl border border-border bg-card transition-all duration-700 hover:-translate-y-1 hover:shadow-xl ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      style={{ transitionDelay: inView ? `${idx * 120}ms` : "0ms" }}
     >
       <div
         className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${item.gradient} overflow-hidden`}
       >
         {showScreenshot ? (
-          <img src={item.screenshot} alt={t(titleKey)} className="w-full h-full object-cover" onError={handleImgError} />
+          <img
+            src={item.screenshot}
+            alt={t(titleKey)}
+            className="w-full h-full object-cover"
+            onError={handleImgError}
+          />
         ) : (
           <>
-            <div className="absolute inset-0 opacity-[0.06]" style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)',
-              backgroundSize: '32px 32px',
-            }} />
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)",
+                backgroundSize: "32px 32px",
+              }}
+            />
             <div className="relative z-10 w-full h-full">
               <Illustration />
             </div>
@@ -169,26 +218,24 @@ function ShowcaseCard({
         <p className="text-sm leading-relaxed text-muted-foreground">{t(descKey)}</p>
       </div>
     </div>
-  )
+  );
 }
 
 export function LandingShowcase() {
-  const { t } = useTranslation()
-  const { ref, inView } = useInView(0.1)
+  const { t } = useTranslation();
+  const { ref, inView } = useInView(0.1);
 
   return (
     <section className="bg-background py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">
-            {t('landing.showcase.label')}
+            {t("landing.showcase.label")}
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {t('landing.showcase.title')}
+            {t("landing.showcase.title")}
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            {t('landing.showcase.description')}
-          </p>
+          <p className="mt-4 text-lg text-muted-foreground">{t("landing.showcase.description")}</p>
         </div>
 
         <div ref={ref} className="mx-auto mt-16 grid max-w-6xl gap-8 lg:grid-cols-3">
@@ -198,5 +245,5 @@ export function LandingShowcase() {
         </div>
       </div>
     </section>
-  )
+  );
 }

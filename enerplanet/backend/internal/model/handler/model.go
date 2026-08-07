@@ -8,6 +8,7 @@ import (
 
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
 	"spatialhub_backend/internal/cache"
+	"spatialhub_backend/internal/geo"
 	resultservice "spatialhub_backend/internal/result/service"
 	modelstore "spatialhub_backend/internal/store/model"
 	"spatialhub_backend/internal/webservice"
@@ -142,6 +143,21 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		isActive = *req.IsActive
 	}
 
+	// Backend is authoritative for country: ignore any client-supplied value
+	// and resolve it from the coordinates. No coordinates => cannot resolve
+	// => 400. This closes the class of bugs where a flaky client-side
+	// geocode left `country` empty.
+	if len(req.Coordinates) == 0 {
+		httputil.BadRequest(c, "coordinates are required to resolve country")
+		return
+	}
+	resolver := geo.NewNominatimResolver(h.store.DB())
+	resolvedCountry, rerr := resolver.Resolve(c.Request.Context(), json.RawMessage(req.Coordinates))
+	if rerr != nil {
+		httputil.BadRequest(c, "could not determine country from coordinates: "+rerr.Error())
+		return
+	}
+
 	model := models.Model{
 		UserID:        userCtx.UserID,
 		UserEmail:     userCtx.Email,
@@ -150,7 +166,7 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		Description:   req.Description,
 		Status:        models.ModelStatusDraft,
 		Region:        req.Region,
-		Country:       req.Country,
+		Country:       &resolvedCountry,
 		Resolution:    req.Resolution,
 		FromDate:      fromDate,
 		ToDate:        toDate,
@@ -256,6 +272,8 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	modelsList = h.includeParentModels(modelsList)
 	modelsList = h.postProcessModelWorkspacesBatch(ctx, userCtx, modelsList)
 	modelsList = h.applyPrivacyFilters(*userCtx, modelsList)
+	h.populateChildModelIDs(modelsList)
+	h.populateParentModelTitles(modelsList)
 
 	c.JSON(200, gin.H{
 		"success":     true,
@@ -301,6 +319,8 @@ func (h *ModelHandler) GetModel(c *gin.Context) {
 	h.handleSharedModelWorkspace(userCtx.UserID, &model)
 	h.filterModelShares(&model, userCtx.UserID, userCtx.Email)
 	h.filterWorkspaceData(&model, userCtx.UserID, userCtx.Email)
+	h.populateChildModelIDsForModel(&model)
+	h.populateParentModelTitleForModel(&model)
 
 	httputil.SuccessResponse(c, model)
 }
@@ -320,6 +340,19 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 	applySimpleStringUpdates(&req, updates)
 	applyNumericUpdates(&req, updates)
 	applyJSONUpdates(&req, updates)
+
+	// Backend is authoritative for country. Never accept a client-supplied
+	// country value; if coordinates changed, re-resolve.
+	delete(updates, "country")
+	if len(req.Coordinates) > 0 {
+		resolver := geo.NewNominatimResolver(h.store.DB())
+		resolved, rerr := resolver.Resolve(c.Request.Context(), json.RawMessage(req.Coordinates))
+		if rerr != nil {
+			httputil.BadRequest(c, "could not determine country from coordinates: "+rerr.Error())
+			return
+		}
+		updates["country"] = resolved
+	}
 
 	if !applyDateUpdates(c, &req, updates) {
 		return
@@ -662,6 +695,8 @@ func (h *ModelHandler) StartCalculation(c *gin.Context) {
 			httputil.Forbidden(c, "Access denied")
 		case strings.Contains(msg, "already in progress"):
 			httputil.Conflict(c, "Model calculation already in progress")
+		case strings.Contains(msg, "country"):
+			httputil.BadRequest(c, msg)
 		case strings.Contains(msg, "webservice"):
 			httputil.BadGateway(c, "Calculation webservice error")
 		default:

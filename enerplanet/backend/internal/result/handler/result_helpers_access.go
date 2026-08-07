@@ -39,7 +39,8 @@ func (h *ResultHandler) fetchResultWithAccess(c *gin.Context, userID string, use
 	}
 
 	if result.UserID != userID {
-		hasAccess := h.hasWorkspaceAccess(userID, userEmail, result.ModelID)
+		hasAccess := h.hasWorkspaceAccess(userID, userEmail, result.ModelID) ||
+			h.hasDirectShareAccess(userID, userEmail, result.ModelID)
 		if !hasAccess {
 			httputil.Forbidden(c, errAccessDenied)
 			return nil, false
@@ -65,6 +66,12 @@ func (h *ResultHandler) hasWorkspaceAccess(userID string, userEmail string, mode
 	}
 
 	return h.isInWorkspaceGroup(model, userID)
+}
+
+// hasDirectShareAccess checks if a model was shared with the user directly via the
+// model_shares table (independent of any workspace membership).
+func (h *ResultHandler) hasDirectShareAccess(userID, userEmail string, modelID uint) bool {
+	return h.store.CountModelSharesByModelAndUserOrEmail(modelID, userID, userEmail) > 0
 }
 
 func (h *ResultHandler) isWorkspaceMember(model *commonModels.Model, userID, userEmail string) bool {

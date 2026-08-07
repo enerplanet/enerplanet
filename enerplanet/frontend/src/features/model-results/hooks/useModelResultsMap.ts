@@ -126,7 +126,7 @@ const collectTechData = (
       const absValue = Math.abs(cap.value);
       techs.push({ tech: cap.tech, capacity: absValue });
       if (isDemandTech(cap.tech)) totalDemand += absValue;
-      else totalProduction += absValue;
+      else if (!cap.tech.includes('transmission')) totalProduction += absValue;
     }
   }
   return { techs, totalDemand, totalProduction };
