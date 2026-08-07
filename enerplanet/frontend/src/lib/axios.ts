@@ -23,7 +23,6 @@ let failedQueue: Array<{
 	reject: (reason?: unknown) => void;
 }> = [];
 
-/** Reset module-level session state. Call on successful login. */
 export function resetAxiosSessionState() {
 	isSessionExpired = false;
 	isRefreshing = false;
@@ -33,18 +32,17 @@ export function resetAxiosSessionState() {
 const AUTH_REFRESH_ENDPOINT = '/auth/refresh-token';
 
 const processQueue = (error: Error | null) => {
-	for (const prom of failedQueue) {
+	for (const promise of failedQueue) {
 		if (error) {
-			prom.reject(error);
+			promise.reject(error);
 		} else {
-			prom.resolve();
+			promise.resolve();
 		}
 	}
 	failedQueue = [];
 };
 
 const clearCookiesAndRedirect = (redirect: boolean) => {
-	// Set session-expired flag so beforeunload handlers can skip the browser prompt
 	useAuthStore.setState({ isSessionExpired: true });
 	resetAuthState();
 	clearAllCookies();
@@ -53,18 +51,20 @@ const clearCookiesAndRedirect = (redirect: boolean) => {
 	}
 };
 
+// Authentication is carried entirely by the session_id cookie (both password
+// and SSO logins produce one), so requests only need CSRF on writes.
 axios.interceptors.request.use(
-	(config) => {
-		const method = config.method?.toLowerCase();
-		
+	(requestConfig) => {
+		const method = requestConfig.method?.toLowerCase();
+
 		if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
 			const csrfToken = getCSRFToken();
 			if (csrfToken) {
-				config.headers['X-CSRF-Token'] = csrfToken;
+				requestConfig.headers['X-CSRF-Token'] = csrfToken;
 			}
 		}
-		
-		return config;
+
+		return requestConfig;
 	},
 	(error) => {
 		throw error instanceof Error ? error : new Error(String(error));
@@ -73,7 +73,6 @@ axios.interceptors.request.use(
 
 axios.interceptors.response.use(
 	(response) => {
-		// CSRF token rotation
 		return response;
 	},
 	async (error: AxiosError) => {
@@ -81,38 +80,31 @@ axios.interceptors.response.use(
 		const status = error.response?.status;
 		const errorData = error.response?.data as { code?: string } | undefined;
 
-		// Handle CSRF token errors
 		if (shouldRetryWithCSRF(status, errorData, originalRequest)) {
 			return retryWithNewCSRFToken(originalRequest, error);
 		}
 
-		// Handle session expired
 		if (isSessionExpiredError(status, errorData)) {
 			handleSessionExpired();
 			throw error;
 		}
 
-		// Handle auth endpoints differently
 		if (isAuthEndpoint(originalRequest.url)) {
 			return handleAuthEndpointError(originalRequest, error);
 		}
 
-		// Handle 401 with token refresh
 		if (shouldAttemptTokenRefresh(status, originalRequest)) {
 			return handleTokenRefresh(originalRequest);
 		}
 
-		// Final 401 handling - only redirect if user was logged in
 		const user = useAuthStore.getState().user;
-		if (status === 401 && !isSessionExpired && user) {
+		if (status === 401 && !isSessionExpired && !!user) {
 			handleSessionExpired();
 		}
 
 		throw error;
 	}
 );
-
-// Helper functions for response interceptor
 
 function shouldRetryWithCSRF(
 	status: number | undefined,
@@ -180,12 +172,7 @@ function shouldAttemptTokenRefresh(
 	status: number | undefined,
 	request: InternalAxiosRequestConfig & { _retry?: boolean }
 ): boolean {
-	// Don't attempt refresh if user is not logged in (already logged out)
-	const user = useAuthStore.getState().user;
-	if (!user) {
-		return false;
-	}
-	return status === 401 && !request._retry;
+	return status === 401 && !!useAuthStore.getState().user && !request._retry;
 }
 
 async function handleTokenRefresh(
@@ -216,8 +203,8 @@ function queueRequest(originalRequest: InternalAxiosRequestConfig) {
 		failedQueue.push({ resolve, reject });
 	})
 		.then(() => axios(originalRequest))
-		.catch((err) => {
-			throw err;
+		.catch((error) => {
+			throw error;
 		});
 }
 

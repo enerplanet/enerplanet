@@ -2,6 +2,7 @@ package modelservice
 
 import (
 	"context"
+	"strings"
 
 	"platform.local/common/pkg/models"
 )
@@ -165,7 +166,8 @@ func (s *ModelService) UserHasModelAccess(userID string, model *models.Model) bo
 }
 
 func (s *ModelService) UserHasModelAccessByEmail(userID, email string, model *models.Model) bool {
-	if model.IsOwner(userID) {
+	if model.IsOwner(userID) ||
+		(email != "" && model.UserEmail != "" && strings.EqualFold(model.UserEmail, email)) {
 		return true
 	}
 	if model.WorkspaceID != nil {

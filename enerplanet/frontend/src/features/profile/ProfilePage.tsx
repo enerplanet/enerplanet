@@ -6,10 +6,7 @@ import {
 	CheckCircle, 
 	Loader2, 
 	AlertCircle, 
-	Mail, 
-	Building2, 
-	Briefcase, 
-	Phone,
+	Mail,
 	Save,
 	Camera,
 	ArrowLeft
@@ -23,9 +20,6 @@ import { useTranslation } from "@spatialhub/i18n";
 interface ProfileData {
 	name: string;
 	email: string;
-	organization: string;
-	position: string;
-	phone: string;
 	access_level: string;
 }
 
@@ -49,9 +43,6 @@ const ProfilePage: React.FC = () => {
 	const [formData, setFormData] = useState<ProfileData>({
 		name: "",
 		email: "",
-		organization: "",
-		position: "",
-		phone: "",
 		access_level: "",
 	});
 	const [isLoading, setIsLoading] = useState(true);
@@ -96,9 +87,6 @@ const ProfilePage: React.FC = () => {
 		try {
 			const payload = {
 				name: formData.name,
-				organization: formData.organization,
-				position: formData.position,
-				phone: formData.phone,
 			};
 
 			const response = await axios.put("/users/profile", payload);
@@ -241,30 +229,6 @@ const ProfilePage: React.FC = () => {
 							<p className="text-xs text-muted-foreground mt-2">{accessConfig.description}</p>
 						</div>
 
-						<div className="p-4 space-y-3">
-							<div className="flex items-center gap-3 text-sm">
-								<div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-									<Building2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-xs text-muted-foreground">{t('profile.fields.organization')}</p>
-									<p className="text-foreground truncate font-medium">
-										{formData.organization || t('profile.notSpecified')}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center gap-3 text-sm">
-								<div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-									<Briefcase className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-xs text-muted-foreground">{t('profile.fields.position')}</p>
-									<p className="text-foreground truncate font-medium">
-										{formData.position || t('profile.notSpecified')}
-									</p>
-								</div>
-							</div>
-						</div>
 					</div>
 				</div>
 
@@ -307,53 +271,6 @@ const ProfilePage: React.FC = () => {
 								/>
 							</div>
 
-							{/* Two Column Layout */}
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-								{/* Organization Field */}
-								<div>
-									<label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-										<Building2 className="w-4 h-4 text-muted-foreground" />
-										{t('profile.fields.organization')}
-									</label>
-									<input
-										type="text"
-										value={formData.organization}
-										onChange={(e) => handleChange('organization', e.target.value)}
-										placeholder={t('profile.placeholders.organization')}
-										className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
-									/>
-								</div>
-
-								{/* Position Field */}
-								<div>
-									<label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-										<Briefcase className="w-4 h-4 text-muted-foreground" />
-										{t('profile.fields.position')}
-									</label>
-									<input
-										type="text"
-										value={formData.position}
-										onChange={(e) => handleChange('position', e.target.value)}
-										placeholder={t('profile.placeholders.position')}
-										className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
-									/>
-								</div>
-							</div>
-
-							{/* Phone Field */}
-							<div>
-								<label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-									<Phone className="w-4 h-4 text-muted-foreground" />
-									{t('profile.fields.phone')}
-								</label>
-								<input
-									type="tel"
-									value={formData.phone}
-									onChange={(e) => handleChange('phone', e.target.value)}
-									placeholder={t('profile.placeholders.phone')}
-									className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
-								/>
-							</div>
 						</div>
 
 						{/* Form Footer */}

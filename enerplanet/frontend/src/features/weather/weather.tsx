@@ -170,7 +170,7 @@ const WeatherDropdown: React.FC<WeatherDropdownProps> = ({ showSettingsIcon = tr
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border shadow-sm">
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-card border border-border shadow-sm">
         <div className="w-4 h-4 rounded-full border-2 border-muted-foreground border-t-foreground animate-spin" />
         <span className="text-xs text-muted-foreground">Loading...</span>
       </div>
@@ -184,7 +184,7 @@ const WeatherDropdown: React.FC<WeatherDropdownProps> = ({ showSettingsIcon = tr
         <TooltipTrigger asChild>
           <button
             onClick={fetchCurrentWeather}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-destructive/30 shadow-sm hover:border-destructive/50 transition-all duration-200 cursor-pointer"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-card border border-destructive/30 shadow-sm hover:border-destructive/50 transition-all duration-200 cursor-pointer"
           >
             <AlertTriangle className="w-4 h-4 text-destructive" />
             <span className="text-xs text-destructive">{t('weather.retry')}</span>
@@ -218,7 +218,7 @@ const WeatherDropdown: React.FC<WeatherDropdownProps> = ({ showSettingsIcon = tr
                 onClick={handleClick}
                 aria-label="Weather information - click to refresh"
                 className={cn(
-                  'relative flex items-center gap-2.5 px-3 py-1.5 rounded-md',
+                  'relative flex items-center gap-2 px-2 py-1 rounded-md',
                   'bg-card',
                   'border border-border shadow-sm',
                   'hover:bg-muted hover:shadow-md',
@@ -228,16 +228,16 @@ const WeatherDropdown: React.FC<WeatherDropdownProps> = ({ showSettingsIcon = tr
               >
                 {/* Weather icon */}
                 <div className="relative z-10">
-                  {getWeatherIcon(currentWeather.weather_code, 'w-5 h-5')}
+                  {getWeatherIcon(currentWeather.weather_code, 'w-4 h-4')}
                 </div>
                 
                 {/* Temperature */}
-                <span className="relative z-10 text-base font-semibold text-foreground tracking-tight">
+                <span className="relative z-10 text-sm font-semibold text-foreground tracking-tight">
                   {formatTemperature(currentWeather.temperature)}
                 </span>
                 
                 {/* Divider */}
-                <div className="hidden sm:block w-px h-4 bg-border" />
+                <div className="hidden sm:block w-px h-3 bg-border" />
                 
                 {/* Location */}
                 <div className="hidden sm:flex items-center gap-1 relative z-10">
@@ -441,7 +441,7 @@ const WeatherDropdown: React.FC<WeatherDropdownProps> = ({ showSettingsIcon = tr
       <TooltipTrigger asChild>
         <button
           onClick={fetchCurrentWeather}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border shadow-sm hover:bg-muted transition-all duration-200 cursor-pointer"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-card border border-border shadow-sm hover:bg-muted transition-all duration-200 cursor-pointer"
         >
           <Cloud className="w-4 h-4 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">{t('weather.loadWeather')}</span>

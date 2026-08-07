@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -677,6 +678,48 @@ func (h *ModelHandler) ShareModel(c *gin.Context) {
 	}).Info("Model shared successfully")
 
 	httputil.Created(c, share)
+}
+
+func (h *ModelHandler) RevokeModelShare(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+
+	model, _, ok := h.getOwnedModelFromParam(c, userCtx.UserID)
+	if !ok {
+		return
+	}
+
+	shareID, err := strconv.ParseUint(c.Param("shareId"), 10, 64)
+	if err != nil || shareID == 0 {
+		httputil.BadRequest(c, "Invalid model share id")
+		return
+	}
+
+	revoked, err := h.store.DeleteModelShare(model.ID, uint(shareID))
+	if err != nil {
+		logger.WithFields(map[string]interface{}{
+			"component": "revoke_model_share",
+			"model_id":  model.ID,
+			"share_id":  shareID,
+			"error":     err.Error(),
+		}).Error("Failed to revoke model share")
+		httputil.InternalError(c, "Failed to revoke model access")
+		return
+	}
+	if !revoked {
+		httputil.NotFound(c, "Model share not found")
+		return
+	}
+
+	logger.WithFields(map[string]interface{}{
+		"component":  "revoke_model_share",
+		"model_id":   model.ID,
+		"share_id":   shareID,
+		"revoked_by": userCtx.UserID,
+	}).Info("Model share revoked")
+	httputil.SuccessMessage(c, "Model access revoked")
 }
 
 func (h *ModelHandler) StartCalculation(c *gin.Context) {

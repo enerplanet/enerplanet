@@ -1,9 +1,6 @@
 import {
 	User,
 	Mail,
-	Building,
-	Briefcase,
-	Phone,
 	Shield,
 	Lock,
 	Cloud,
@@ -46,37 +43,6 @@ export const getUserFormSections = (isEdit: boolean = false, t?: TranslateFuncti
 				placeholder: t?.("forms.user.placeholders.email") ?? "Enter email address",
 				required: true,
 				icon: Mail as any,
-			},
-			{
-				key: "organization",
-				label: t?.("forms.user.fields.organization") ?? "Organization",
-				type: "text",
-				value: "",
-				placeholder: t?.("forms.user.placeholders.organization") ?? "Enter organization name",
-				icon: Building as any,
-			},
-			{
-				key: "position",
-				label: t?.("forms.user.fields.position") ?? "Position",
-				type: "text",
-				value: "",
-				placeholder: t?.("forms.user.placeholders.position") ?? "Enter job position",
-				icon: Briefcase as any,
-			},
-			{
-				key: "phone",
-				label: t?.("forms.user.fields.phone") ?? "Phone Number",
-				type: "tel",
-				value: "",
-				placeholder: "+49 123 456 789",
-				icon: Phone as any,
-				validation: (value: FormValue) => {
-					const v = typeof value === 'string' ? value : '';
-					if (v && !/^[\d\s\-+()]+$/.test(v)) {
-						return t?.("forms.user.validation.phoneInvalid") ?? "Phone number can only contain digits, spaces, dashes, plus signs, and parentheses";
-					}
-					return null;
-				},
 			},
 			{
 				key: "access_level",

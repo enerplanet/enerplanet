@@ -1,10 +1,12 @@
 package settings
 
 import (
-	"platform.local/common/pkg/httputil"
-	"platform.local/common/pkg/models"
 	backendModels "spatialhub_backend/internal/models"
 	settingsStore "spatialhub_backend/internal/store/settings"
+
+	"platform.local/common/pkg/httputil"
+	"platform.local/common/pkg/models"
+	applogger "platform.local/platform/logger"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/text/cases"
@@ -24,15 +26,24 @@ func NewSettingsHandler(db *gorm.DB) *SettingsHandler {
 	return &SettingsHandler{store: settingsStore.NewStore(db)}
 }
 
+func (h *SettingsHandler) loadSettings(c *gin.Context, userCtx *httputil.UserContext) (*models.UserSetting, bool) {
+	settings, err := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	if err != nil {
+		applogger.ForComponent("settings").Errorf("Failed to get or create settings for user %s: %v", userCtx.UserID, err)
+		httputil.InternalError(c, "Failed to fetch settings")
+		return nil, false
+	}
+	return settings, true
+}
+
 func (h *SettingsHandler) GetUserSettings(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
 		return
 	}
 
-	settings, err := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
-	if err != nil {
-		httputil.InternalError(c, "Failed to fetch settings")
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
 		return
 	}
 
@@ -53,7 +64,10 @@ func (h *SettingsHandler) UpdatePrivacyAccepted(c *gin.Context) {
 		return
 	}
 
-	settings, _ := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
+		return
+	}
 	settings.PrivacyAccepted = req.Accepted
 	if err := h.store.SaveUserSettings(settings); err != nil {
 		httputil.InternalError(c, "Failed to save settings")
@@ -77,7 +91,10 @@ func (h *SettingsHandler) UpdateProductTourCompleted(c *gin.Context) {
 		return
 	}
 
-	settings, _ := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
+		return
+	}
 	settings.ProductTourCompleted = req.Completed
 	if err := h.store.SaveUserSettings(settings); err != nil {
 		httputil.InternalError(c, "Failed to save settings")
@@ -100,7 +117,10 @@ func (h *SettingsHandler) updateLocationSetting(c *gin.Context, jsonKey, success
 		return
 	}
 
-	settings, _ := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
+		return
+	}
 
 	location := req[jsonKey]
 	if location == "" {
@@ -140,7 +160,10 @@ func (h *SettingsHandler) UpdateTheme(c *gin.Context) {
 		return
 	}
 
-	settings, _ := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
+		return
+	}
 	settings.Theme = req.Theme
 	if err := h.store.SaveUserSettings(settings); err != nil {
 		httputil.InternalError(c, "Failed to save settings")
@@ -164,7 +187,10 @@ func (h *SettingsHandler) UpdateLanguage(c *gin.Context) {
 		return
 	}
 
-	settings, _ := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
+		return
+	}
 	settings.Language = req.Language
 	if err := h.store.SaveUserSettings(settings); err != nil {
 		httputil.InternalError(c, "Failed to save settings")
@@ -186,9 +212,8 @@ func (h *SettingsHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.store.GetOrCreateUserSettings(userCtx.UserID, userCtx.Email)
-	if err != nil {
-		httputil.InternalError(c, "Failed to get settings")
+	settings, ok := h.loadSettings(c, userCtx)
+	if !ok {
 		return
 	}
 

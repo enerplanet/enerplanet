@@ -62,7 +62,7 @@ COPY backend/.env.example /app/.env
 COPY backend/entrypoint.sh /app/entrypoint.sh
 
 # Create non-root user and set up storage
-RUN useradd -r -s /bin/sh appuser && \
+RUN useradd -r -m -d /home/appuser -s /bin/sh appuser && \
     mkdir -p /app/storage/data && \
     chmod +x /app/server /app/migrate /app/backfill_country /app/entrypoint.sh && \
     chown -R appuser:appuser /app

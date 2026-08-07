@@ -61,11 +61,37 @@ func (h *ResultHandler) hasWorkspaceAccess(userID string, userEmail string, mode
 		return false
 	}
 
+	if isWorkspaceOwner(model, userID, userEmail) {
+		return true
+	}
+
 	if h.isWorkspaceMember(model, userID, userEmail) {
 		return true
 	}
 
 	return h.isInWorkspaceGroup(model, userID)
+}
+
+func isModelOwner(model *commonModels.Model, userID, userEmail string) bool {
+	if model == nil {
+		return false
+	}
+	if model.UserID == userID {
+		return true
+	}
+	return userEmail != "" && model.UserEmail != "" && strings.EqualFold(model.UserEmail, userEmail)
+}
+
+func isWorkspaceOwner(model *commonModels.Model, userID, userEmail string) bool {
+	if model == nil || model.Workspace == nil {
+		return false
+	}
+	if model.Workspace.UserID == userID {
+		return true
+	}
+	return userEmail != "" &&
+		model.Workspace.UserEmail != "" &&
+		strings.EqualFold(model.Workspace.UserEmail, userEmail)
 }
 
 // hasDirectShareAccess checks if a model was shared with the user directly via the
@@ -120,7 +146,7 @@ func (h *ResultHandler) userHasModelAccess(c *gin.Context, model *commonModels.M
 		return true
 	}
 
-	isOwner := model.UserID == userCtx.UserID
+	isOwner := isModelOwner(model, userCtx.UserID, userCtx.Email)
 	hasWorkspaceAccess := h.hasWorkspaceAccess(userCtx.UserID, userCtx.Email, model.ID)
 	hasModelShare := h.store.CountModelSharesByModelAndUserOrEmail(model.ID, userCtx.UserID, userCtx.Email) > 0
 

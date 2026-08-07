@@ -7,9 +7,6 @@ import {
   RefreshCw,
   Shield,
   Mail,
-  Building,
-  Briefcase,
-  Phone,
   UserCheck,
   UserX,
   Copy,
@@ -43,7 +40,6 @@ import { useNotification } from "@/features/notifications/hooks/useNotification"
 import { useDebounce } from "@/hooks/useDebounce";
 import { useDialog } from "@/hooks/useDialog";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { TableIconCell } from "@/components/table/TableIconCell";
 import {
   getAccessLevelColor,
   getAccessLevelName,
@@ -77,9 +73,6 @@ interface User {
   email: string;
   email_verified?: boolean;
   enabled?: boolean;
-  organization?: string;
-  position?: string;
-  phone?: string;
   access_level: "very_low" | "intermediate" | "manager" | "expert";
   group_id?: string;
   model_limit?: number;
@@ -90,9 +83,6 @@ interface User {
 interface UserFormData {
   name: string;
   email: string;
-  organization: string;
-  position: string;
-  phone: string;
   access_level: "very_low" | "intermediate" | "manager" | "expert";
   email_verified?: boolean;
   password?: string;
@@ -119,9 +109,6 @@ type CreateUserPayload = {
   name: string;
   password?: string;
   access_level: User["access_level"];
-  organization: string;
-  position: string;
-  phone: string;
   group_id?: Group["id"];
 };
 
@@ -166,9 +153,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
   const [formData, setFormData] = useState<UserFormData>({
     name: "",
     email: "",
-    organization: "",
-    position: "",
-    phone: "",
     access_level: "very_low",
     email_verified: false,
     password: "",
@@ -239,9 +223,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
         name: userData.name,
         password: userData.password || undefined,
         access_level: userData.access_level,
-        organization: userData.organization,
-        position: userData.position,
-        phone: userData.phone,
       };
 
       if ((isManager(user) || isExpert(user)) && selectedGroup) {
@@ -513,9 +494,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     setFormData({
       name: user.name,
       email: user.email,
-      organization: user.organization || "",
-      position: user.position || "",
-      phone: user.phone || "",
       access_level: user.access_level,
       email_verified: user.email_verified ?? false,
       model_limit: user.model_limit,
@@ -790,9 +768,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     setFormData({
       name: "",
       email: "",
-      organization: "",
-      position: "",
-      phone: "",
       access_level: "very_low",
       email_verified: false,
       password: "",
@@ -1048,12 +1023,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                   {t("userManagement.table.user")}
                 </th>
                 <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t("userManagement.table.organization")}
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t("userManagement.table.position")}
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   {t("userManagement.table.accessLevel")}
                 </th>
                 <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1061,9 +1030,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                 </th>
                 <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   {t("userManagement.table.emailVerified")}
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t("userManagement.table.phone")}
                 </th>
                 <th className="px-3 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   {t("userManagement.table.actions")}
@@ -1073,7 +1039,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={isExpertOrManager(user) ? 9 : 8} className="px-6 py-16 text-center">
+                  <td colSpan={isExpertOrManager(user) ? 6 : 5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="relative">
                         <div className="w-10 h-10 rounded-full border-4 border-muted"></div>
@@ -1090,7 +1056,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                   {users.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={isExpertOrManager(user) ? 9 : 8}
+                        colSpan={isExpertOrManager(user) ? 6 : 5}
                         className="px-6 py-16 text-center"
                       >
                         <div className="flex flex-col items-center justify-center gap-3">
@@ -1169,18 +1135,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                           </div>
                         </td>
                         <td className="px-3 py-2">
-                          <TableIconCell
-                            icon={<Building className="w-3 h-3 text-muted-foreground" />}
-                            text={tableUser.organization}
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <TableIconCell
-                            icon={<Briefcase className="w-3 h-3 text-muted-foreground" />}
-                            text={tableUser.position}
-                          />
-                        </td>
-                        <td className="px-3 py-2">
                           <StatusBadge
                             icon={getAccessLevelIcon(tableUser.access_level)}
                             text={getAccessLevelName(tableUser.access_level)}
@@ -1238,12 +1192,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                             }
                             variant={tableUser.email_verified ? "success" : "default"}
                             size="small"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <TableIconCell
-                            icon={<Phone className="w-3 h-3 text-muted-foreground" />}
-                            text={tableUser.phone}
                           />
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -1309,6 +1257,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                             ]}
                             layout="horizontal"
                             size="small"
+                            className="justify-end"
                           />
                         </td>
                       </tr>

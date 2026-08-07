@@ -97,18 +97,18 @@ export const NotificationDropdown: React.FC = () => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="relative px-3 py-2 rounded-lg transition-colors group bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
+              className="relative p-1.5 rounded-md transition-colors group bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
             >
               <Bell className={cn(
-                "w-5 h-5 transition-transform duration-200",
+                "w-4 h-4 transition-transform duration-200",
                 unreadCount > 0 && "group-hover:rotate-12"
               )} />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center">
                   {showPulse && (
-                    <span className="absolute inline-flex h-5 w-5 rounded-full bg-foreground/40 animate-ping"></span>
+                    <span className="absolute inline-flex h-4 w-4 rounded-full bg-foreground/40 animate-ping"></span>
                   )}
-                  <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-foreground text-[10px] font-semibold text-background shadow-sm">
+                  <span className="relative inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-foreground text-[9px] font-semibold text-background shadow-sm">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 </span>

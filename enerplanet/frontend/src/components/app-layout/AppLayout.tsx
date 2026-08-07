@@ -18,6 +18,8 @@ import {
   HousePlug,
   MapPinHouse,
   GitCompareArrows,
+  HelpCircle,
+  LayoutGrid,
   LucideIcon,
   Globe2,
   Cpu,
@@ -63,8 +65,8 @@ interface AppLayoutProps {
 }
 
 // Constants
-const SIDEBAR_WIDTH = "56px";
-const TOPBAR_HEIGHT = "4rem";
+const SIDEBAR_WIDTH = "40px";
+const TOPBAR_HEIGHT = "2.75rem";
 const DOCUMENTATION_URL = "https://docs.spatialhub.io";
 
 // Types
@@ -270,8 +272,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <img
                   src="/images/logo/enerplanet-logo.png"
                   alt="EnerPlanET"
-                  className="h-6 dark:brightness-0 dark:invert"
-                  style={{ height: "24px", width: "auto" }}
+                  className="h-5 w-auto object-contain dark:brightness-0 dark:invert"
                 />
               </a>
             </div>
@@ -279,90 +280,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex-1" />
 
             <div className="flex items-center gap-1 mr-4" data-tour="navigation">
+              {/* Dashboard moved to the left sidebar bottom; weather stays here as a global tool. */}
               <Authorized>
                 <NotificationDropdown />
               </Authorized>
               <Authorized>
                 <WeatherDropdown showSettingsIcon={false} />
               </Authorized>
-              <Authorized>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      onClick={navigationHandlers.dashboard}
-                      className="relative group cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-md bg-card hover:bg-muted border border-border"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <div className="p-1.5 rounded-lg bg-foreground shadow-sm">
-                          <svg
-                            className="w-4 h-4 text-background"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <rect x="3" y="3" width="7" height="7" rx="1" />
-                            <rect x="14" y="3" width="7" height="7" rx="1" />
-                            <rect x="3" y="14" width="7" height="7" rx="1" />
-                            <rect x="14" y="14" width="7" height="7" rx="1" />
-                          </svg>
-                        </div>
-                        <span className="text-xs font-medium text-foreground hidden sm:inline">
-                          Dashboard
-                        </span>
-                      </div>
-                      {isActive(ADMIN_PATH) && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/5 h-0.5 rounded-full bg-foreground" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Dashboard</TooltipContent>
-                </Tooltip>
-              </Authorized>
             </div>
 
             <div className="flex items-center gap-2">
-              <Authorized>
-                <div className="relative" data-tour="profile">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="cursor-pointer rounded-full size-9 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md group"
-                        title={t("common.tooltips.profile")}
-                      >
-                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:scale-105 transition-transform">
-                          {getUserInitial()}
-                        </div>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-52 z-[52]" align="end">
-                      {/* Session Timer at top of dropdown */}
-                      <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700">
-                        <SessionTimer warningThreshold={5} compact />
-                      </div>
-                      {/* Theme Toggle */}
-                      <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="text-sm text-foreground">{t("common.tooltips.theme")}</span>
-                        <ThemeToggle />
-                      </div>
-                      {userMenuItems.map((item) => (
-                        <DropdownMenuItem
-                          key={item.label}
-                          className="cursor-pointer"
-                          onClick={item.onClick}
-                        >
-                          <item.icon className="w-4 h-4" />
-                          {item.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </Authorized>
+              {/* Profile moved to the bottom of the left sidebar (see ProfileMenu). */}
 
               {!user && (
                 <>
@@ -372,10 +300,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       <Button
                         variant="secondary"
                         onClick={navigationHandlers.login}
-                        className="cursor-pointer rounded-full size-9 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md group"
+                        className="cursor-pointer rounded-full size-7 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md group"
                       >
                         <svg
-                          className="w-4 h-4 text-gray-700 dark:text-gray-300 group-hover:scale-110 transition-transform"
+                          className="w-3.5 h-3.5 text-gray-700 dark:text-gray-300 group-hover:scale-110 transition-transform"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -419,32 +347,94 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             />
           </div>
 
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 space-y-3 text-center">
-            <SidebarButton
-              icon={BookOpen}
-              tooltip={t("common.tooltips.documentation")}
-              onClick={navigationHandlers.documentation}
-              isActive={false}
-              dataTour="documentation"
-            />
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 text-center">
+            {/* Consolidates the low-frequency help actions (docs, guided tour,
+                feedback) into one "?" popover, keeping the rail uncluttered. */}
+            <Tooltip>
+              <DropdownMenu>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={t("common.tooltips.help", "Help")}
+                      className="cursor-pointer w-7 h-7 rounded-md flex items-center justify-center transition-all duration-200 hover:bg-muted group"
+                      data-tour="help"
+                    >
+                      <HelpCircle className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-52 z-[60]">
+                  <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.documentation}>
+                    <BookOpen className="w-4 h-4" />
+                    {t("common.tooltips.documentation")}
+                  </DropdownMenuItem>
+                  <Authorized>
+                    <DropdownMenuItem className="cursor-pointer" onClick={handleSmartRestartTour}>
+                      <GraduationCap className="w-4 h-4" />
+                      {t("common.tooltips.restartTour")}
+                    </DropdownMenuItem>
+                  </Authorized>
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigationHandlers.feedback()}>
+                    <MessageSquareText className="w-4 h-4" />
+                    {t("common.tooltips.feedback")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <TooltipContent side="right">{t("common.tooltips.help", "Help")}</TooltipContent>
+            </Tooltip>
 
             <Authorized>
               <SidebarButton
-                icon={GraduationCap}
-                tooltip={t("common.tooltips.restartTour")}
-                onClick={handleSmartRestartTour}
-                isActive={false}
-                dataTour="restart-tour"
+                icon={LayoutGrid}
+                tooltip="Dashboard"
+                onClick={navigationHandlers.dashboard}
+                isActive={isActive(ADMIN_PATH)}
+                dataTour="dashboard"
               />
             </Authorized>
 
-            <SidebarButton
-              icon={MessageSquareText}
-              tooltip={t("common.tooltips.feedback")}
-              onClick={() => navigationHandlers.feedback()}
-              isActive={isActive("/app/feedback")}
-              dataTour="feedback"
-            />
+            {/* Profile avatar + dropdown (session timer, theme, menu). Lives at
+                the bottom of the left rail; the menu opens to the right of it. */}
+            <Authorized>
+              <div className="relative" data-tour="profile">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-full size-7 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md group"
+                      title={t("common.tooltips.profile")}
+                    >
+                      <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 group-hover:scale-105 transition-transform">
+                        {getUserInitial()}
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={8}>
+                    {/* Session Timer at top of dropdown */}
+                    <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <SessionTimer warningThreshold={5} compact />
+                    </div>
+                    {/* Theme Toggle */}
+                    <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                      <span className="text-sm text-foreground">{t("common.tooltips.theme")}</span>
+                      <ThemeToggle />
+                    </div>
+                    {userMenuItems.map((item) => (
+                      <DropdownMenuItem
+                        key={item.label}
+                        className="cursor-pointer"
+                        onClick={item.onClick}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </Authorized>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 font-medium select-none cursor-default">

@@ -159,6 +159,13 @@ func (s *Store) CreateModelShare(share *commonModels.ModelShare) error {
 	return s.db.Create(share).Error
 }
 
+func (s *Store) DeleteModelShare(modelID, shareID uint) (bool, error) {
+	result := s.db.
+		Where("id = ? AND model_id = ?", shareID, modelID).
+		Delete(&commonModels.ModelShare{})
+	return result.RowsAffected > 0, result.Error
+}
+
 // FindModelShareByModelAndEmail looks up an existing share.
 func (s *Store) FindModelShareByModelAndEmail(modelID uint, email string) (*commonModels.ModelShare, error) {
 	var share commonModels.ModelShare

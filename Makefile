@@ -13,10 +13,15 @@ NC     := \033[0m
 FRONT_DIR = enerplanet/frontend
 BACK_DIR = enerplanet/backend
 SESSION_NAME = enerplanet
+# Docker Compose files.
+ENV_FILE           := --env-file .env
 
-# Docker Compose files
-PLATFORM_COMPOSE   := -f platform-core/docker-compose.yml -f platform-core/docker-compose.dev.yml
-ENERPLANET_COMPOSE := -f enerplanet/docker-compose.yml -f enerplanet/docker-compose.dev.yml
+PLATFORM_COMPOSE   := $(ENV_FILE) -f platform-core/docker-compose.yml -f platform-core/docker-compose.dev.yml
+ENERPLANET_COMPOSE := $(ENV_FILE) -f enerplanet/docker-compose.yml -f enerplanet/docker-compose.dev.yml
+
+.env:
+	@cp .env.example .env
+	@echo "$(GREEN)Created .env from .env.example$(NC)"
 
 .PHONY: help
 help:
@@ -43,7 +48,6 @@ help:
 
 .PHONY: setup
 setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo dev-bg list-bg
-
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 
@@ -91,20 +95,20 @@ update: git-credential-cache setup-repos install migrate webservice pylovo
 # ==============================================================================
 
 .PHONY: up
-up:
+up: .env
 	@docker network create spatialhub-net 2>/dev/null || true
 	@docker compose $(PLATFORM_COMPOSE) up -d
 	@docker compose $(ENERPLANET_COMPOSE) up -d --build
 	@echo "$(GREEN)All services started.$(NC)"
 
 .PHONY: down
-down:
+down: .env
 	@docker compose $(ENERPLANET_COMPOSE) down
 	@docker compose $(PLATFORM_COMPOSE) down
 	@echo "$(GREEN)All services stopped.$(NC)"
 
 .PHONY: logs
-logs:
+logs: .env
 	@docker compose $(PLATFORM_COMPOSE) logs -f
 
 .PHONY: migrate
@@ -118,12 +122,12 @@ seed:
 	@cd enerplanet/backend && go run cmd/seed/*.go
 
 .PHONY: init-keycloak
-init-keycloak:
+init-keycloak: .env
 	@docker compose $(PLATFORM_COMPOSE) up keycloak-init
 
 
 .PHONY: up-keycloak
-up-keycloak:
+up-keycloak: .env
 	@echo "$(CYAN)Starting Keycloak...$(NC)"
 	@docker compose $(PLATFORM_COMPOSE) up -d keycloak
 	@echo "Waiting for Keycloak to be healthy..."
@@ -132,7 +136,7 @@ up-keycloak:
 	@echo ""
 
 .PHONY: reset-db
-reset-db:
+reset-db: .env
 	@docker compose $(PLATFORM_COMPOSE) stop postgres
 	@docker compose $(PLATFORM_COMPOSE) rm -f -v postgres
 	@$(MAKE) start-postgres
@@ -167,6 +171,9 @@ setup-repos:
 
 .PHONY: env-setup
 env-setup:
+	@# Root .env: supplies REDIS_PASSWORD and the other variables the compose
+	@# files interpolate. Must exist before any docker compose target runs.
+	@[ -f .env ] || cp .env.example .env
 	@[ -f platform-core/auth-service/.env ] || cp platform-core/auth-service/.env.example platform-core/auth-service/.env
 	@[ -f platform-core/webservice/.env ] || cp platform-core/webservice/.env.example platform-core/webservice/.env
 	@[ -f enerplanet/backend/.env ] || cp enerplanet/backend/.env.example enerplanet/backend/.env
@@ -187,19 +194,19 @@ install:
 	@cd platform-core/webservice && go mod tidy
 
 .PHONY: pull-images
-pull-images:
+pull-images: .env
 	@docker pull postgres:15-alpine
 	@docker pull redis:7-alpine
 	@docker compose $(PLATFORM_COMPOSE) pull --ignore-buildable postgres redis keycloak
 
 .PHONY: up-db
-up-db:
+up-db: .env
 	@docker network create spatialhub-net 2>/dev/null || true
 	@docker compose $(PLATFORM_COMPOSE) up -d postgres redis
 	@sleep 5
 
 .PHONY: start-postgres
-start-postgres:
+start-postgres: .env
 	@docker network create spatialhub-net 2>/dev/null || true
 	@docker compose $(PLATFORM_COMPOSE) up -d postgres
 	@sleep 5
@@ -210,7 +217,7 @@ db-create:
 		docker exec postgres psql -U postgres -c "CREATE DATABASE spatialai"
 
 .PHONY: up-services
-up-services:
+up-services: .env
 	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service webservice
 
 .PHONY: webservice

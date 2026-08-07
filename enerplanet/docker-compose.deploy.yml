@@ -10,6 +10,7 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       KEYCLOAK_URL: http://keycloak:8080/keycloak
       KEYCLOAK_REALM: spatialhub
       AUTH_SERVICE_URL: http://auth-service:8001
@@ -31,6 +32,7 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       KEYCLOAK_URL: http://keycloak:8080/keycloak
       KEYCLOAK_REALM: spatialhub
       AUTH_SERVICE_URL: http://auth-service:8001
