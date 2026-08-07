@@ -148,9 +148,6 @@ type CreateUserRequest struct {
 	Name         string
 	Password     string
 	AccessLevel  string
-	Organization string
-	Position     string
-	Phone        string
 }
 
 // UpdateUserRequest represents data needed to update a user
@@ -158,9 +155,6 @@ type UpdateUserRequest struct {
 	Email         *string
 	Name          *string
 	AccessLevel   *string
-	Organization  *string
-	Position      *string
-	Phone         *string
 	EmailVerified *bool
 	Password      *string
 	ModelLimit    *int
@@ -221,17 +215,6 @@ func (s *Store) CreateUser(authToken string, req CreateUserRequest) (string, err
 		},
 	}
 
-	attr := payload["attributes"].(map[string][]string)
-	if req.Organization != "" {
-		attr["organization"] = []string{req.Organization}
-	}
-	if req.Position != "" {
-		attr["position"] = []string{req.Position}
-	}
-	if req.Phone != "" {
-		attr["phone"] = []string{req.Phone}
-	}
-
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return "", fmt.Errorf(errMarshalPayload, err)
@@ -286,15 +269,6 @@ func applyUserUpdates(user *User, req UpdateUserRequest) {
 		if req.ModelLimit == nil {
 			user.Attributes["model_limit"] = []string{fmt.Sprintf("%d", getDefaultModelLimit(newAccessLevel))}
 		}
-	}
-	if req.Organization != nil {
-		user.Attributes["organization"] = []string{*req.Organization}
-	}
-	if req.Position != nil {
-		user.Attributes["position"] = []string{*req.Position}
-	}
-	if req.Phone != nil {
-		user.Attributes["phone"] = []string{*req.Phone}
 	}
 	if req.EmailVerified != nil && *req.EmailVerified {
 		user.EmailVerified = true

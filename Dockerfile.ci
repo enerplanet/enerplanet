@@ -70,6 +70,23 @@ RUN sed -i 's|../../libs/|../libs/|g' vite.config.ts
 # Fix Tailwind @source paths in global.css (../../../../libs/ -> ../../../libs/)
 RUN sed -i 's|../../../../libs/|../../../libs/|g' src/styles/global.css
 
+
+# Passed via --build-arg from CI; sourced from GitLab CI/CD variables.
+ARG VITE_SSO_ENABLED
+ARG VITE_KEYCLOAK_URL
+ARG VITE_KEYCLOAK_REALM
+ARG VITE_KEYCLOAK_CLIENT_ID
+ARG VITE_KEYCLOAK_IDP_HINT
+ARG VITE_KEYCLOAK_REDIRECT_URI
+ARG VITE_API_BASE_URL
+ENV VITE_SSO_ENABLED=$VITE_SSO_ENABLED \
+    VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL \
+    VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM \
+    VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID \
+    VITE_KEYCLOAK_IDP_HINT=$VITE_KEYCLOAK_IDP_HINT \
+    VITE_KEYCLOAK_REDIRECT_URI=$VITE_KEYCLOAK_REDIRECT_URI \
+    VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
 # Runtime image
@@ -103,7 +120,7 @@ COPY enerplanet/backend/.env.example /app/.env
 COPY initial-data /initial-data
 
 # Create non-root user and set up storage
-RUN useradd -r -s /bin/false appuser && \
+RUN useradd -r -m -d /home/appuser -s /bin/false appuser && \
     mkdir -p /app/storage/data && \
     chmod +x /app/server /app/migrate /app/seed /app/backfill_country || true && \
     chown -R appuser:appuser /app /initial-data

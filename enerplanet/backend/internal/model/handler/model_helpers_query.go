@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	modelservice "spatialhub_backend/internal/model/service"
 
@@ -57,14 +58,12 @@ func (h *ModelHandler) buildWorkspaceFilteredQuery(c *gin.Context, userCtx *http
 		return nil, false
 	}
 
-	// Check if this is the user's default workspace
-	modelSvc := h.newModelService()
-	defaultWs, err := modelSvc.GetDefaultWorkspace(userCtx.UserID)
-	isDefault := err == nil && defaultWs.ID == workspaceID
+	return h.buildWorkspaceQuery(userCtx, workspaceID), true
+}
 
-	if isDefault {
-		// For the default workspace, also include directly shared models
-		// but only if the user doesn't have access to the model's original workspace
+func (h *ModelHandler) buildWorkspaceQuery(userCtx *httputil.UserContext, workspaceID uint) *gorm.DB {
+	defaultWs, err := h.newModelService().GetDefaultWorkspace(userCtx.UserID)
+	if err == nil && defaultWs.ID == workspaceID {
 		return h.store.DB().Where(
 			`workspace_id = ? OR (
 				id IN (SELECT model_id FROM model_shares WHERE user_id = ? OR LOWER(email) = LOWER(?))
@@ -75,11 +74,10 @@ func (h *ModelHandler) buildWorkspaceFilteredQuery(c *gin.Context, userCtx *http
 				)
 			)`,
 			workspaceID, userCtx.UserID, userCtx.Email, userCtx.UserID, userCtx.UserID,
-		), true
+		)
 	}
 
-	// For non-default workspaces, only show models belonging to this workspace
-	return h.store.DB().Where("workspace_id = ?", workspaceID), true
+	return h.store.DB().Where("workspace_id = ?", workspaceID)
 }
 
 func (h *ModelHandler) buildUserAccessQuery(c *gin.Context, userCtx *httputil.UserContext) *gorm.DB {
@@ -100,7 +98,7 @@ func (h *ModelHandler) buildUserAccessQuery(c *gin.Context, userCtx *httputil.Us
 func (h *ModelHandler) buildBaseAccessConditions(userCtx *httputil.UserContext) []interface{} {
 	db := h.store.DB()
 	conditions := []interface{}{
-		db.Where("user_id = ?", userCtx.UserID),
+		db.Where("user_id = ? OR LOWER(user_email) = LOWER(?)", userCtx.UserID, userCtx.Email),
 	}
 
 	conditions = append(conditions, db.Where(
@@ -213,9 +211,8 @@ func (h *ModelHandler) buildQueryWithWorkspaceFilter(c *gin.Context, userCtx *ht
 			return nil, false
 		}
 
-		// Expert users can access any workspace - only show models from this workspace
 		if userCtx.AccessLevel == constants.AccessLevelExpert {
-			return h.store.DB().Where("workspace_id = ?", workspaceID), true
+			return h.buildWorkspaceQuery(userCtx, workspaceID), true
 		}
 
 		query, ok := h.buildWorkspaceFilteredQuery(c, userCtx, workspaceID)
@@ -429,7 +426,8 @@ func (h *ModelHandler) populateParentModelTitleForModel(model *models.Model) {
 }
 
 func (h *ModelHandler) filterModelShares(model *models.Model, userID, email string) {
-	if model.UserID == userID {
+	if model.UserID == userID ||
+		(email != "" && model.UserEmail != "" && strings.EqualFold(model.UserEmail, email)) {
 		return
 	}
 	filteredShares := []models.ModelShare{}

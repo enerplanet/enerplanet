@@ -1,9 +1,6 @@
 import React, { useState, lazy, Suspense } from "react";
 import {
 	User,
-	Building,
-	Briefcase,
-	Phone,
 	Mail,
 	Shield,
 	LogOut,
@@ -273,9 +270,6 @@ export const Dashboard: React.FC = () => {
 									<div className="space-y-2">
 										{[
 											{ icon: Mail, label: t('adminDashboard.userProfile.email'), value: user?.email },
-											{ icon: Building, label: t('adminDashboard.userProfile.organization'), value: user?.organization },
-											{ icon: Briefcase, label: t('adminDashboard.userProfile.position'), value: user?.position },
-											{ icon: Phone, label: t('adminDashboard.userProfile.phone'), value: user?.phone },
 										].filter(item => item.value).map((item) => (
 											<div key={item.label} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
 												<item.icon className="w-3.5 h-3.5 text-muted-foreground" />

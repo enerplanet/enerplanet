@@ -544,6 +544,9 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	resultHandler := resulthandler.NewResultHandler(db, deps.NotificationService, deps.WebserviceClient, cfg.CallbackSecret, deps.AsynqClient)
 	api.POST("/v1/calculation/callback/:id", middleware.CallbackAuthMiddleware(), resultHandler.CallbackUpload)
 
+	lifecycleHandler := modelhandler.NewLifecycleHandler(db)
+	registerInternalModelLifecycleRoutes(api, lifecycleHandler)
+
 	// Public Pylovo routes (no authentication required)
 	regionStore := region.NewStore(db)
 	pylovoInstanceStore := pylovoinstance.NewStore(db)
@@ -767,6 +770,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.PUT(routeModelByID+"/activation", modelHandler.UpdateModelActivation)
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
+	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
@@ -780,11 +784,21 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
 }
 
+func registerInternalModelLifecycleRoutes(api *gin.RouterGroup, handler *modelhandler.LifecycleHandler) {
+	models := api.Group("/internal/models")
+	models.Use(middleware.CallbackAuthMiddleware())
+	models.GET("/active", handler.ActiveModels)
+	models.POST("/:id/mark-running", handler.MarkRunning)
+	models.POST("/:id/mark-failed", handler.MarkFailed)
+	models.PATCH("/:id/run-session", handler.SetRunSession)
+}
+
 func registerAuthRoutes(api *gin.RouterGroup, handler gin.HandlerFunc) {
 	api.POST("/login", handler)
 	api.POST("/register", handler)
 	api.POST("/logout", handler)
 	api.GET("/callback-auth", handler)
+	api.GET("/auth/sso/login", handler)
 	api.GET("/csrf-token", handler)
 	api.POST("/auth/refresh", handler)
 	api.POST("/auth/resend-verification", handler)

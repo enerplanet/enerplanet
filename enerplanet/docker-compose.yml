@@ -10,6 +10,7 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       APP_URL: ${APP_URL:-http://enerplanet-dev.th-deg.de}
       KEYCLOAK_URL: http://keycloak:8080/keycloak
       KEYCLOAK_REALM: spatialhub

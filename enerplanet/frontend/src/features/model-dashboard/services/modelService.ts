@@ -115,10 +115,15 @@ export interface Model {
   deleted_at?: string;
 }
 
-interface ModelShare {
+export interface ModelShare {
+  id: number;
+  model_id: number;
   user_id: number | string;
   email: string;
-  [key: string]: unknown;
+  permission: 'view' | 'edit';
+  shared_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CreateModelRequest {
@@ -351,10 +356,15 @@ class ModelService {
     return response.data;
   }
 
-  async shareModel(id: number, email: string): Promise<{ success: boolean; message: string }> {
+  async shareModel(id: number, email: string): Promise<{ success: boolean; data: ModelShare }> {
     const response = await axios.post(`${this.baseURL}/${id}/share`, {
       email: email,
     });
+    return response.data;
+  }
+
+  async revokeModelShare(id: number, shareId: number): Promise<{ success: boolean; message: string }> {
+    const response = await axios.delete(`${this.baseURL}/${id}/shares/${shareId}`);
     return response.data;
   }
 }

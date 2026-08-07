@@ -1,5 +1,4 @@
-// Wrapper components that integrate @spatialhub/auth with our app's stores
-import React from "react";
+import React, { useEffect } from "react";
 import {
 	LoginForm as LibLoginForm,
 	RegisterForm as LibRegisterForm,
@@ -8,11 +7,32 @@ import {
 	type RegisterFormProps,
 	type ForgotPasswordFormProps,
 } from "@spatialhub/auth";
+import { config } from "@/configuration/app";
+import { auth } from "@/configuration/auth";
 import { useAuthStore } from "@/store/auth-store";
 import { ensureCSRFToken } from "@/utils/csrf";
-import { config } from "@/configuration/app";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle, Zap } from "lucide-react";
+import { CheckCircle, Loader2, Zap } from "lucide-react";
+
+const SSO_QUERY_PARAMETER = "sso";
+
+// Builds the auth-service SSO entrypoint (server-side OIDC → session cookie).
+// The RENvolveIT toolbox links here; the callback lands the user on return_to.
+function ssoLoginUrl(): string {
+	const base = config.api.baseUrl || "/api";
+	let returnTo = "/app/map";
+	try {
+		if (auth.sso.redirectUri) {
+			returnTo = new URL(auth.sso.redirectUri).pathname || returnTo;
+		}
+	} catch {
+		// keep default
+	}
+	const params = new URLSearchParams();
+	if (auth.sso.idpHint) params.set("idp_hint", auth.sso.idpHint);
+	params.set("return_to", returnTo);
+	return `${base}/auth/sso/login?${params.toString()}`;
+}
 
 const EnerPlanETLogo = (
 	<div className="flex items-center justify-center mb-1">
@@ -27,7 +47,6 @@ const EnerPlanETLogo = (
 	</div>
 );
 
-// Left-hand imagery panel shown beside the login form on the split layout.
 const EnerPlanETSidePanel = (
 	<div className="absolute inset-0">
 		<img
@@ -64,8 +83,25 @@ const EnerPlanETSidePanel = (
 	</div>
 );
 
-// LoginForm wrapper that connects to auth store
-export const LoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
+const SsoLoginForm: React.FC = () => {
+	useEffect(() => {
+		document.title = "Sign in";
+		globalThis.location.replace(ssoLoginUrl());
+	}, []);
+
+	return (
+		<div className="flex min-h-screen items-center justify-center bg-background px-6">
+			<div className="flex max-w-md flex-col items-center gap-4 text-center">
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<p className="text-sm text-muted-foreground">
+					Redirecting to single sign-on…
+				</p>
+			</div>
+		</div>
+	);
+};
+
+const PasswordLoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
 	const { init } = useAuthStore();
 	const [searchParams] = useSearchParams();
 	const isVerified = searchParams.get("verified") === "true";
@@ -81,17 +117,18 @@ export const LoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
 				</div>
 			)}
 			<LibLoginForm
-				onDocumentTitle={(title) => {
+				onDocumentTitle={(title: string) => {
 					document.title = title;
 				}}
 				onAuthInit={async (data) => {
 					await init({
 						user: data.user as Parameters<typeof init>[0]["user"],
-						token: data.token,
 						sessionTimeout: data.sessionTimeout,
 					});
 				}}
-				onEnsureCSRF={async () => { await ensureCSRFToken(); }}
+				onEnsureCSRF={async () => {
+					await ensureCSRFToken();
+				}}
 				apiBaseUrl={config.api.baseUrl || "/api"}
 				appName={EnerPlanETLogo}
 				backgroundImageUrl="/images/login-bg.svg"
@@ -104,11 +141,22 @@ export const LoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
 	);
 };
 
-// RegisterForm wrapper that connects to auth store
+export const LoginForm: React.FC<Partial<LoginFormProps>> = (props) => {
+	return <LoginFormRouter {...props} />;
+};
+
+// SSO only when explicitly requested via ?sso=renvolveit (the toolbox link);
+// direct visitors get EnerPlanET's own email/password login.
+const LoginFormRouter: React.FC<Partial<LoginFormProps>> = (props) => {
+	const [searchParams] = useSearchParams();
+	const ssoRequested = auth.sso.enabled && searchParams.has(SSO_QUERY_PARAMETER);
+	return ssoRequested ? <SsoLoginForm /> : <PasswordLoginForm {...props} />;
+};
+
 export const RegisterForm: React.FC<Partial<RegisterFormProps>> = (props) => {
 	return (
 		<LibRegisterForm
-			onDocumentTitle={(title) => {
+			onDocumentTitle={(title: string) => {
 				document.title = title;
 			}}
 			apiBaseUrl={config.api.baseUrl || "/api"}
@@ -121,11 +169,10 @@ export const RegisterForm: React.FC<Partial<RegisterFormProps>> = (props) => {
 	);
 };
 
-// ForgotPasswordForm wrapper
 export const ForgotPasswordForm: React.FC<Partial<ForgotPasswordFormProps>> = (props) => {
 	return (
 		<LibForgotPasswordForm
-			onDocumentTitle={(title) => {
+			onDocumentTitle={(title: string) => {
 				document.title = title;
 			}}
 			apiBaseUrl={config.api.baseUrl || "/api"}

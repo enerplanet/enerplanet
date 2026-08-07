@@ -207,9 +207,6 @@ type UserDTO struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
 	Enabled       bool   `json:"enabled"`
-	Organization  string `json:"organization,omitempty"`
-	Position      string `json:"position,omitempty"`
-	Phone         string `json:"phone,omitempty"`
 	AccessLevel   string `json:"access_level"`
 	GroupID       string `json:"group_id,omitempty"`
 	ModelLimit    *int   `json:"model_limit,omitempty"`
@@ -264,9 +261,6 @@ func (h *Handler) convertToUserDTOs(ctx context.Context, authToken string, kcUse
 			Email:         u.Email,
 			EmailVerified: u.EmailVerified,
 			Enabled:       u.Enabled,
-			Organization:  getAttributeValue(u.Attributes, "organization"),
-			Position:      getAttributeValue(u.Attributes, "position"),
-			Phone:         getAttributeValue(u.Attributes, "phone"),
 			AccessLevel:   accessLevel,
 			GroupID:       groupID,
 			CreatedAt:     u.CreatedTimestamp,
@@ -412,9 +406,6 @@ type createUserRequest struct {
 	Name         string `json:"name" binding:"required"`
 	Password     string `json:"password"`
 	AccessLevel  string `json:"access_level"`
-	Organization string `json:"organization"`
-	Position     string `json:"position"`
-	Phone        string `json:"phone"`
 	GroupID      string `json:"group_id"`
 }
 
@@ -525,9 +516,6 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Name:         req.Name,
 		Password:     req.Password,
 		AccessLevel:  req.AccessLevel,
-		Organization: req.Organization,
-		Position:     req.Position,
-		Phone:        req.Phone,
 	}
 
 	userID, err := h.userStore.CreateUser(authToken, createReq)
@@ -547,9 +535,6 @@ type updateUserRequest struct {
 	Email         *string `json:"email"`
 	Name          *string `json:"name"`
 	AccessLevel   *string `json:"access_level"`
-	Organization  *string `json:"organization"`
-	Position      *string `json:"position"`
-	Phone         *string `json:"phone"`
 	EmailVerified *bool   `json:"email_verified"`
 	Password      *string `json:"password"`
 	ModelLimit    *int    `json:"model_limit"`
@@ -749,9 +734,6 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Email:         req.Email,
 		Name:          req.Name,
 		AccessLevel:   req.AccessLevel,
-		Organization:  req.Organization,
-		Position:      req.Position,
-		Phone:         req.Phone,
 		EmailVerified: req.EmailVerified,
 		ModelLimit:    req.ModelLimit,
 	}
@@ -991,9 +973,6 @@ func (h *Handler) GetUser(c *gin.Context) {
 		"email":          user.Email,
 		"email_verified": user.EmailVerified,
 		"enabled":        user.Enabled,
-		"organization":   getAttributeValue(user.Attributes, "organization"),
-		"position":       getAttributeValue(user.Attributes, "position"),
-		"phone":          getAttributeValue(user.Attributes, "phone"),
 		"access_level":   accessLevel,
 	}
 
@@ -1033,9 +1012,6 @@ func (h *Handler) GetProfile(c *gin.Context) {
 		"id":           kcUser.ID,
 		"name":         name,
 		"email":        kcUser.Email,
-		"organization": getAttributeValue(kcUser.Attributes, "organization"),
-		"position":     getAttributeValue(kcUser.Attributes, "position"),
-		"phone":        getAttributeValue(kcUser.Attributes, "phone"),
 		"access_level": accessLevel,
 	}})
 }
@@ -1215,9 +1191,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	var req struct {
 		Name         *string `json:"name"`
-		Organization *string `json:"organization"`
-		Position     *string `json:"position"`
-		Phone        *string `json:"phone"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httputil.BadRequest(c, "Invalid request body")
@@ -1235,15 +1208,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	if req.Name != nil {
 		attributes["fullName"] = []string{*req.Name}
 	}
-	if req.Organization != nil {
-		attributes["organization"] = []string{*req.Organization}
-	}
-	if req.Position != nil {
-		attributes["position"] = []string{*req.Position}
-	}
-	if req.Phone != nil {
-		attributes["phone"] = []string{*req.Phone}
-	}
 
 	if len(attributes) > 0 {
 		if err := h.userStore.UpdateUserAttributes(adminToken, userID, attributes); err != nil {
@@ -1258,9 +1222,6 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 		"message": "Profile updated successfully",
 		"data": gin.H{
 			"name":         req.Name,
-			"organization": req.Organization,
-			"position":     req.Position,
-			"phone":        req.Phone,
 		},
 	})
 }

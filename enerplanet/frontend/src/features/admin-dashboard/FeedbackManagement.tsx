@@ -861,6 +861,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                           ]}
                           layout="horizontal"
                           size="small"
+                          className="justify-end"
                         />
                       </td>
                     </tr>
