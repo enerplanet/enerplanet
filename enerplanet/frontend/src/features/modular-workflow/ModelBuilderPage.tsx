@@ -1,14 +1,25 @@
+import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@spatialhub/ui";
 import { MODELBUILDER_ENABLED } from "./flags";
 import { ModelBuilderConfigurator } from "./ModelBuilderConfigurator";
+import { WorkflowBuilder } from "./workflow/WorkflowBuilder";
+import { defaultWorkflowRegistry } from "./workflow/WorkflowRegistry";
 import { defaultWorkflow } from "./workflows/defaultWorkflow";
+import type { WorkflowDefinition } from "./types/workflow";
 
 /**
  * Route page for the ModelBuilder feature.
  *
- * Renders the playback shell with the default workflow. If the feature flag is
- * disabled, shows a placeholder instead of mounting the shell.
+ * Offers two views behind a simple tab toggle:
+ * - **Configurator** — the playback shell for a workflow
+ * - **Builder** — the admin UI to compose/validate/import/export workflows
+ *
+ * If the feature flag is disabled, shows a placeholder instead of mounting
+ * either view.
  */
 export default function ModelBuilderPage() {
+  const [activeWorkflow, setActiveWorkflow] = useState<WorkflowDefinition>(defaultWorkflow);
+
   if (!MODELBUILDER_ENABLED) {
     return (
       <div className="mx-auto max-w-3xl p-6">
@@ -26,5 +37,26 @@ export default function ModelBuilderPage() {
     );
   }
 
-  return <ModelBuilderConfigurator workflow={defaultWorkflow} />;
+  return (
+    <Tabs defaultValue="configurator" className="mx-auto max-w-6xl p-6">
+      <TabsList>
+        <TabsTrigger value="configurator">Configurator</TabsTrigger>
+        <TabsTrigger value="builder">Workflow Builder</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="configurator">
+        <ModelBuilderConfigurator
+          workflow={activeWorkflow}
+          onStartWorkflow={(next) => setActiveWorkflow(next)}
+        />
+      </TabsContent>
+
+      <TabsContent value="builder">
+        <WorkflowBuilder
+          registry={defaultWorkflowRegistry}
+          onRegistered={(workflow) => setActiveWorkflow(workflow)}
+        />
+      </TabsContent>
+    </Tabs>
+  );
 }

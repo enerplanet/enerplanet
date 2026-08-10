@@ -1,10 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Badge, Separator } from "@spatialhub/ui";
-import { ChevronLeft, ChevronRight, RotateCcw, CheckCircle2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  CheckCircle2,
+  LayoutDashboard,
+  List,
+  Play,
+} from "lucide-react";
 import type { ConfiguratorContext } from "./types/context";
 import type { ModuleComplexity, ModuleProps } from "./types/module";
 import type { WorkflowDefinition } from "./types/workflow";
 import { WorkflowEngine } from "./workflow/WorkflowEngine";
+import { defaultWorkflowRecommender } from "./workflow/WorkflowRecommender";
+import { defaultWorkflowRegistry } from "./workflow/WorkflowRegistry";
 import { ModelBuilderContextProvider } from "./context/ModelBuilderContext";
 import { useModelBuilderContext } from "./context/useModelBuilderContext";
 import { ModelDiffViewer } from "./modules/model-diff/ModelDiffViewer";
@@ -17,6 +27,12 @@ export interface ModelBuilderConfiguratorProps {
   initialContext?: ConfiguratorContext;
   /** Optional module inventory override (defaults to the shared singleton). */
   inventory?: import("./modules/ModuleInventory").ModuleInventory;
+  /** Called when the user chooses "Stop — go to dashboard". */
+  onStop?: () => void;
+  /** Called when the user chooses "Browse all workflows". */
+  onBrowseAll?: () => void;
+  /** Called when the user starts a recommended workflow. */
+  onStartWorkflow?: (workflow: WorkflowDefinition) => void;
 }
 
 /**
@@ -30,10 +46,19 @@ export function ModelBuilderConfigurator({
   workflow,
   initialContext,
   inventory,
+  onStop,
+  onBrowseAll,
+  onStartWorkflow,
 }: ModelBuilderConfiguratorProps) {
   return (
     <ModelBuilderContextProvider initialContext={initialContext}>
-      <ModelBuilderConfiguratorInner workflow={workflow} inventory={inventory} />
+      <ModelBuilderConfiguratorInner
+        workflow={workflow}
+        inventory={inventory}
+        onStop={onStop}
+        onBrowseAll={onBrowseAll}
+        onStartWorkflow={onStartWorkflow}
+      />
     </ModelBuilderContextProvider>
   );
 }
@@ -41,9 +66,15 @@ export function ModelBuilderConfigurator({
 function ModelBuilderConfiguratorInner({
   workflow,
   inventory,
+  onStop,
+  onBrowseAll,
+  onStartWorkflow,
 }: {
   workflow: WorkflowDefinition;
   inventory?: import("./modules/ModuleInventory").ModuleInventory;
+  onStop?: () => void;
+  onBrowseAll?: () => void;
+  onStartWorkflow?: (workflow: WorkflowDefinition) => void;
 }) {
   const { context, onUpdate, setUiMode, snapshot, reset } = useModelBuilderContext();
   // The engine owns the working context for navigation. We keep it in a ref
@@ -159,13 +190,139 @@ function ModelBuilderConfiguratorInner({
     onComplexityChange: handleComplexityChange,
   };
 
+  // Recommended follow-up workflows for the completion screen. Resolved against
+  // the default registry so follow-up IDs become real workflow definitions.
+  const recommendations = useMemo(
+    () =>
+      defaultWorkflowRecommender.getRecommendations(
+        context,
+        workflow.id,
+        defaultWorkflowRegistry.getAll()
+      ),
+    [context, workflow.id]
+  );
+
+  const handleStartWorkflow = useCallback(
+    (next: WorkflowDefinition) => {
+      if (onStartWorkflow) {
+        onStartWorkflow(next);
+        return;
+      }
+      // Fallback: restart the engine with the selected workflow in place.
+      reset();
+      setCompleted(false);
+      setError(null);
+      setStepIndex(0);
+      engineRef.current = new WorkflowEngine(next, context, {
+        inventory,
+        onContextChange: (engineContext) => onUpdate(engineContext),
+      });
+      setStepIndex(0);
+    },
+    [onStartWorkflow, reset, context, inventory, onUpdate]
+  );
+
   if (completed) {
+    const stepsCompleted = workflow.steps.length;
+    const { gridStatistics, powerFlowResult, costBreakdown } = context;
     return (
       <div className="mx-auto max-w-3xl p-6">
         <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card p-10 text-center">
           <CheckCircle2 className="h-12 w-12 text-green-600" />
           <h2 className="text-xl font-semibold">Workflow complete</h2>
           <p className="text-sm text-muted-foreground">"{workflow.name}" finished successfully.</p>
+
+          {/* Summary of what was done */}
+          <div className="w-full rounded-lg border border-border bg-muted/30 p-4 text-left">
+            <h3 className="text-sm font-semibold">Summary</h3>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <li>
+                <span className="font-medium text-foreground">{workflow.name}</span> —{" "}
+                {stepsCompleted} step{stepsCompleted === 1 ? "" : "s"} completed
+              </li>
+              {workflow.tags && workflow.tags.length > 0 && (
+                <li>
+                  Tags:{" "}
+                  {workflow.tags.map((t) => (
+                    <Badge key={t} variant="secondary" className="mr-1">
+                      {t}
+                    </Badge>
+                  ))}
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* Key results / metrics */}
+          {(gridStatistics || powerFlowResult || costBreakdown) && (
+            <div className="w-full rounded-lg border border-border bg-muted/30 p-4 text-left">
+              <h3 className="text-sm font-semibold">Key results</h3>
+              <dl className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                {gridStatistics && (
+                  <>
+                    <div>
+                      <dt className="text-muted-foreground">Buildings</dt>
+                      <dd className="font-medium">{gridStatistics.buildings.count}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Transformers</dt>
+                      <dd className="font-medium">{gridStatistics.transformers.count}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Cable length</dt>
+                      <dd className="font-medium">
+                        {gridStatistics.cables.total_length_km.toFixed(2)} km
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Est. cost</dt>
+                      <dd className="font-medium">
+                        {gridStatistics.costs.total_estimated_cost_eur.toLocaleString()} €
+                      </dd>
+                    </div>
+                  </>
+                )}
+                {powerFlowResult && (
+                  <div>
+                    <dt className="text-muted-foreground">Power flow</dt>
+                    <dd className="font-medium">
+                      {powerFlowResult.converged ? "Converged" : "Not converged"}
+                      {powerFlowResult.summary
+                        ? ` · ${powerFlowResult.summary.max_line_loading_percent.toFixed(1)}% max line load`
+                        : ""}
+                    </dd>
+                  </div>
+                )}
+                {costBreakdown && costBreakdown.length > 0 && (
+                  <div>
+                    <dt className="text-muted-foreground">Cost breakdown</dt>
+                    <dd className="font-medium">
+                      {costBreakdown.length} categor{costBreakdown.length === 1 ? "y" : "ies"}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {/* What would you like to do? */}
+          <div className="w-full rounded-lg border border-border p-4 text-left">
+            <h3 className="text-sm font-semibold">What would you like to do?</h3>
+            <div className="mt-3 flex flex-col gap-2">
+              <Button variant="outline" onClick={onStop}>
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Stop — go to dashboard
+              </Button>
+              {recommendations.map((rec) => (
+                <Button key={rec.id} variant="default" onClick={() => handleStartWorkflow(rec)}>
+                  <Play className="mr-2 h-4 w-4" /> {rec.name}
+                </Button>
+              ))}
+              <Button variant="ghost" onClick={onBrowseAll}>
+                <List className="mr-2 h-4 w-4" /> Browse all workflows
+              </Button>
+            </div>
+          </div>
+
           <div className="mt-2 flex gap-2">
             <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="mr-2 h-4 w-4" /> Start over

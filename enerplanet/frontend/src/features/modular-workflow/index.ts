@@ -48,6 +48,21 @@ export {
   type WorkflowEngineOptions,
 } from "./workflow/WorkflowEngine";
 
+// Workflow registry
+export {
+  WorkflowRegistry,
+  defaultWorkflowRegistry,
+} from "./workflow/WorkflowRegistry";
+
+// Workflow recommender
+export {
+  WorkflowRecommender,
+  defaultWorkflowRecommender,
+} from "./workflow/WorkflowRecommender";
+
+// Workflow builder (admin UI)
+export { WorkflowBuilder, type WorkflowBuilderProps } from "./workflow/WorkflowBuilder";
+
 // Playback shell
 export {
   ModelBuilderConfigurator,
