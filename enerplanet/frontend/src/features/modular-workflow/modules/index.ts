@@ -19,6 +19,7 @@ export { ModuleInventory, defaultModuleInventory } from "./ModuleInventory";
 // Example modules
 export { regionSelectModule, RegionSelectModule } from "./region-select/RegionSelectModule";
 export { gridGenerationModule, GridGenerationModule } from "./grid-generation/GridGenerationModule";
+export { modelDiffModule, ModelDiffModule, ModelDiffViewer } from "./model-diff";
 
 // ---------------------------------------------------------------------------
 // Pre-register example modules into the default inventory
@@ -26,8 +27,9 @@ export { gridGenerationModule, GridGenerationModule } from "./grid-generation/Gr
 import { defaultModuleInventory } from "./ModuleInventory";
 import { regionSelectModule } from "./region-select/RegionSelectModule";
 import { gridGenerationModule } from "./grid-generation/GridGenerationModule";
+import { modelDiffModule } from "./model-diff";
 
-defaultModuleInventory.registerAll([regionSelectModule, gridGenerationModule]);
+defaultModuleInventory.registerAll([regionSelectModule, gridGenerationModule, modelDiffModule]);
 
 // Re-export the populated inventory as the default
 export default defaultModuleInventory;
