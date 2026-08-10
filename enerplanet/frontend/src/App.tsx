@@ -56,7 +56,7 @@ const SimulationCharts = lazy(() =>
 );
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
 const LandingPage = lazy(() => import("./features/landing"));
-const ModelBuilderPage = lazy(() => import("@/features/modular-workflow/ModelBuilderPage"));
+const ModelBuilderPage = lazy(() => import("./features/modular-workflow/ModelBuilderPage"));
 
 import { ProductTour } from "@/features/guided-tour/ProductTour";
 import NotificationProvider from "@/features/notifications/components/NotificationProvider";
