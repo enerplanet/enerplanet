@@ -1,10 +1,10 @@
 import type { ModuleDefinition } from "../types/module";
 import type { ConfiguratorContext } from "../types/context";
 import type { WorkflowDefinition } from "../types/workflow";
-import {
-  ModuleInventory,
-  defaultModuleInventory,
-} from "../modules/ModuleInventory";
+import { ModuleInventory } from "../modules/ModuleInventory";
+// Import the module barrel so its `registerAll()` side-effect populates the
+// default inventory singleton before the engine resolves any step moduleId.
+import { defaultModuleInventory } from "../modules";
 
 export interface WorkflowProgress {
   current: number;

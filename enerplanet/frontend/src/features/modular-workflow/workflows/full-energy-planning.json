@@ -14,14 +14,14 @@
   ],
   "steps": [
     {
+      "moduleId": "simulation-settings",
+      "label": "Simulation Settings",
+      "skippable": true
+    },
+    {
       "moduleId": "region-select",
       "label": "Select Region",
       "skippable": false
-    },
-    {
-      "moduleId": "advanced-params",
-      "label": "Advanced Parameters",
-      "skippable": true
     },
     {
       "moduleId": "grid-generation",
@@ -29,13 +29,13 @@
       "auto": true
     },
     {
-      "moduleId": "building-demand",
-      "label": "Building Demand",
-      "skippable": false
+      "moduleId": "area-edit",
+      "label": "Area Edit",
+      "skippable": true
     },
     {
-      "moduleId": "transformer-topology",
-      "label": "Transformer Topology",
+      "moduleId": "building-demand",
+      "label": "Building Demand",
       "skippable": false
     },
     {

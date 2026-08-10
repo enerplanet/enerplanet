@@ -50,12 +50,17 @@ function ModelSaveComponent({ context, onUpdate }: ModuleProps) {
         type: "MultiPolygon",
         coordinates: (context.polygons ?? []).map((polygon: number[][]) => [polygon]),
       };
+      // The simulation period is derived from the scenario in the simulation
+      // settings module. Fall back to a full reference year if not present.
+      const advancedParams = (context.advancedParams ?? {}) as Record<string, unknown>;
+      const fromDate = (advancedParams.fromDate as string) ?? "2024-01-01";
+      const toDate = (advancedParams.toDate as string) ?? "2024-12-31";
       const response = await modelService.createModel({
         title: context.modelName ?? "Untitled Model",
         workspace_id: context.workspaceId,
         coordinates: coordinatesGeoJSON as never,
-        from_date: "2024-01-01",
-        to_date: "2024-12-31",
+        from_date: fromDate,
+        to_date: toDate,
         config: {
           advancedParams: context.advancedParams,
         },

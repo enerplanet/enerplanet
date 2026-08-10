@@ -11,8 +11,8 @@
   "followUpWorkflows": [],
   "steps": [
     {
-      "moduleId": "advanced-params",
-      "label": "Advanced Parameters",
+      "moduleId": "simulation-settings",
+      "label": "Simulation Settings",
       "skippable": true
     },
     {

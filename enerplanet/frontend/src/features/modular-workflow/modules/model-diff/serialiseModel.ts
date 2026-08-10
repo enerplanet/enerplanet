@@ -114,11 +114,21 @@ function serialiseValue(value: unknown, depth: number): string[] {
 /**
  * Serialise the full model context into a YAML string.
  *
- * The `previousContext` snapshot is excluded to keep the document focused on
- * the current model state (it is only used for diffing, not as model data).
+ * Derived/transient fields are excluded to keep the document focused on the
+ * actual model state:
+ * - `previousContext` — only used for diffing, not model data.
+ * - `modelYaml` / `previousModelYaml` — the serialised YAML itself; including
+ *   them would recursively nest the previous document inside the new one.
+ * - `modelYamlEditMode` — transient UI state.
  */
 export function serialiseModel(context: ConfiguratorContext): string {
-  const { previousContext: _previousContext, ...model } = context;
+  const {
+    previousContext: _previousContext,
+    modelYaml: _modelYaml,
+    previousModelYaml: _previousModelYaml,
+    modelYamlEditMode: _modelYamlEditMode,
+    ...model
+  } = context;
   const lines = serialiseValue(model, 0);
   return lines.join("\n");
 }

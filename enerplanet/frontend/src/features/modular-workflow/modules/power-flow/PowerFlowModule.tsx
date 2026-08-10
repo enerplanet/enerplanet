@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { BaseModule } from "../base/BaseModule";
 import type { ModuleProps } from "../../types/module";
 import { pylovoService } from "../../../configurator/services/pylovoService";
@@ -6,8 +6,10 @@ import { pylovoService } from "../../../configurator/services/pylovoService";
 /**
  * Power Flow module.
  *
- * Auto-step: on mount, calls `pylovoService.runPowerFlow(gridResultIds, advancedParams)`.
- * Writes `powerFlowResult` to context on success.
+ * Runs `pylovoService.runPowerFlow` for each grid result. Only runs if pypsa is
+ * enabled (`advancedParams.pypsa_enabled`). Re-runs automatically whenever the
+ * grid changes (i.e. `gridResultIds` changes). Writes `powerFlowResult` to
+ * context on success.
  */
 export class PowerFlowModule extends BaseModule {
   readonly meta = {
@@ -31,35 +33,69 @@ export class PowerFlowModule extends BaseModule {
 function PowerFlowComponent({ context, onUpdate }: ModuleProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [converged, setConverged] = useState<boolean | null>(null);
+  const runIdRef = useRef(0);
 
+  const pypsaEnabled = (context.advancedParams as { pypsa_enabled?: boolean } | undefined)
+    ?.pypsa_enabled;
+
+  const run = useCallback(async () => {
+    const gridResultIds = context.gridResultIds ?? [];
+    if (!gridResultIds.length) {
+      setConverged(null);
+      return;
+    }
+
+    const runId = ++runIdRef.current;
+    setLoading(true);
+    setError(null);
+    setConverged(null);
+    try {
+      // Run power flow for the first grid result (the primary grid).
+      const result = await pylovoService.runPowerFlow(gridResultIds[0]);
+      if (runId !== runIdRef.current) return;
+      setConverged(result.converged);
+      onUpdate({ powerFlowResult: result });
+    } catch (err: unknown) {
+      if (runId !== runIdRef.current) return;
+      setError(err instanceof Error ? err.message : "Power flow failed");
+    } finally {
+      if (runId === runIdRef.current) setLoading(false);
+    }
+  }, [context.gridResultIds, onUpdate]);
+
+  // Run whenever the grid changes, but only if pypsa is enabled.
   useEffect(() => {
-    if (context.powerFlowResult) return;
-
-    let cancelled = false;
-    const run = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const gridResultId = context.gridResultIds![0];
-        const result = await pylovoService.runPowerFlow(gridResultId);
-        if (cancelled) return;
-        onUpdate({ powerFlowResult: result });
-      } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Power flow failed");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+    if (!pypsaEnabled) {
+      setConverged(null);
+      return;
+    }
     run();
     return () => {
-      cancelled = true;
+      runIdRef.current++;
     };
-  }, []);
+  }, [run, pypsaEnabled]);
+
+  if (!pypsaEnabled) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Power flow is disabled. Enable pypsa in the simulation settings to run it.
+      </div>
+    );
+  }
 
   if (loading) return <div className="p-4 text-muted-foreground">Running power flow...</div>;
   if (error) return <div className="p-4 text-destructive">Error: {error}</div>;
-  if (context.powerFlowResult)
-    return <div className="p-4 text-green-600">Power flow completed</div>;
+  if (converged !== null)
+    return (
+      <div className="p-4 text-sm">
+        {converged ? (
+          <span className="text-green-600">Power flow converged.</span>
+        ) : (
+          <span className="text-amber-600">Power flow did not converge.</span>
+        )}
+      </div>
+    );
   return null;
 }
 
