@@ -1,0 +1,49 @@
+{
+  "id": "cost-optimization",
+  "name": "Cost Optimization",
+  "description": "Optimize costs for an existing model.",
+  "version": "1.0.0",
+  "startType": "from-existing-model",
+  "tags": [
+    "cost",
+    "optimization"
+  ],
+  "followUpWorkflows": [],
+  "steps": [
+    {
+      "moduleId": "advanced-params",
+      "label": "Advanced Parameters",
+      "skippable": true
+    },
+    {
+      "moduleId": "technology-selection",
+      "label": "Technology Selection",
+      "skippable": false
+    },
+    {
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "auto": true
+    },
+    {
+      "moduleId": "power-flow",
+      "label": "Power Flow",
+      "auto": true
+    },
+    {
+      "moduleId": "grid-statistics",
+      "label": "Grid Statistics",
+      "auto": true
+    },
+    {
+      "moduleId": "cost-breakdown",
+      "label": "Cost Breakdown",
+      "auto": true
+    },
+    {
+      "moduleId": "model-save",
+      "label": "Save Model",
+      "skippable": false
+    }
+  ]
+}

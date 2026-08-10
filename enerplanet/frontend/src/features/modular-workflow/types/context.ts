@@ -167,6 +167,9 @@ export interface ConfiguratorContext {
   powerFlowResult?: PowerFlowResponse;
   hostingCapacity?: HostingCapacityResult;
 
+  // Pipeline
+  pipelineJob?: { job_id: string; status: string; message: string };
+
   // Cost & Optimization
   costBreakdown?: CostBreakdownItem[];
 

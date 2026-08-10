@@ -1,0 +1,67 @@
+{
+  "id": "full-energy-planning",
+  "name": "Full Energy Planning",
+  "description": "Complete energy planning workflow from region selection to cost breakdown.",
+  "version": "1.0.0",
+  "startType": "from-scratch",
+  "tags": [
+    "full",
+    "energy",
+    "planning"
+  ],
+  "followUpWorkflows": [
+    "cost-optimization"
+  ],
+  "steps": [
+    {
+      "moduleId": "region-select",
+      "label": "Select Region",
+      "skippable": false
+    },
+    {
+      "moduleId": "advanced-params",
+      "label": "Advanced Parameters",
+      "skippable": true
+    },
+    {
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "auto": true
+    },
+    {
+      "moduleId": "building-demand",
+      "label": "Building Demand",
+      "skippable": false
+    },
+    {
+      "moduleId": "transformer-topology",
+      "label": "Transformer Topology",
+      "skippable": false
+    },
+    {
+      "moduleId": "technology-selection",
+      "label": "Technology Selection",
+      "skippable": false
+    },
+    {
+      "moduleId": "power-flow",
+      "label": "Power Flow",
+      "auto": true
+    },
+    {
+      "moduleId": "grid-statistics",
+      "label": "Grid Statistics",
+      "auto": true
+    },
+    {
+      "moduleId": "cost-breakdown",
+      "label": "Cost Breakdown",
+      "auto": true
+    },
+    {
+      "moduleId": "model-save",
+      "label": "Save Model",
+      "skippable": false
+    }
+  ]
+}

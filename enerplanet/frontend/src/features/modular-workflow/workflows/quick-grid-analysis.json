@@ -1,0 +1,41 @@
+{
+  "id": "quick-grid-analysis",
+  "name": "Quick Grid Analysis",
+  "description": "Select a region, generate a grid, and inspect the statistics.",
+  "version": "1.0.0",
+  "startType": "from-scratch",
+  "tags": [
+    "quick",
+    "grid"
+  ],
+  "followUpWorkflows": [
+    "full-energy-planning"
+  ],
+  "steps": [
+    {
+      "moduleId": "region-select",
+      "label": "Select Region",
+      "skippable": false
+    },
+    {
+      "moduleId": "advanced-params",
+      "label": "Advanced Parameters",
+      "skippable": true
+    },
+    {
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "auto": true
+    },
+    {
+      "moduleId": "grid-statistics",
+      "label": "Grid Statistics",
+      "auto": true
+    },
+    {
+      "moduleId": "model-save",
+      "label": "Save Model",
+      "skippable": true
+    }
+  ]
+}
