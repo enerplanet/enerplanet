@@ -13,5 +13,5 @@ const DEFAULT_ENABLED = false;
 export const MODELBUILDER_ENABLED: boolean =
   ENV_FLAG === undefined ? DEFAULT_ENABLED : ENV_FLAG === "true";
 
-/** The route path the ModelBuilder is mounted on. */
-export const MODELBUILDER_ROUTE = "/modelbuilder";
+/** The route path the ModelBuilder is mounted on (under the /app context). */
+export const MODELBUILDER_ROUTE = "/app/modelbuilder";

@@ -23,6 +23,7 @@ import {
   LucideIcon,
   Globe2,
   Cpu,
+  Workflow,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -217,6 +218,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         bgColor: "#fef3c7",
         dataTour: "technologies",
       },
+      {
+        path: "/app/modelbuilder",
+        icon: Workflow,
+        title: t("common.sidebar.modelBuilder", "Model Builder"),
+        color: "#06b6d4",
+        bgColor: "#cffafe",
+        dataTour: "modelbuilder",
+      },
     ],
     [t]
   );
@@ -266,7 +275,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex items-center gap-3">
               <a
                 href="/"
-                onClick={(e) => { if (!e.ctrlKey && !e.metaKey && e.button === 0) { e.preventDefault(); navigate("/"); } }}
+                onClick={(e) => {
+                  if (!e.ctrlKey && !e.metaKey && e.button === 0) {
+                    e.preventDefault();
+                    navigate("/");
+                  }
+                }}
                 className="cursor-pointer hover:opacity-80 transition-opacity"
               >
                 <img
@@ -364,8 +378,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     </button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-52 z-[60]">
-                  <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.documentation}>
+                <DropdownMenuContent
+                  side="right"
+                  align="end"
+                  sideOffset={8}
+                  className="w-52 z-[60]"
+                >
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={navigationHandlers.documentation}
+                  >
                     <BookOpen className="w-4 h-4" />
                     {t("common.tooltips.documentation")}
                   </DropdownMenuItem>
@@ -375,7 +397,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       {t("common.tooltips.restartTour")}
                     </DropdownMenuItem>
                   </Authorized>
-                  <DropdownMenuItem className="cursor-pointer" onClick={() => navigationHandlers.feedback()}>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => navigationHandlers.feedback()}
+                  >
                     <MessageSquareText className="w-4 h-4" />
                     {t("common.tooltips.feedback")}
                   </DropdownMenuItem>
@@ -410,7 +435,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={8}>
+                  <DropdownMenuContent
+                    className="w-52 z-[60]"
+                    side="right"
+                    align="end"
+                    sideOffset={8}
+                  >
                     {/* Session Timer at top of dropdown */}
                     <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700">
                       <SessionTimer warningThreshold={5} compact />
@@ -548,11 +578,9 @@ const LayersSheet: React.FC<LayersSheetProps> = ({
             <div className="p-1.5 rounded-lg bg-foreground">
               <Layers className="size-4 text-background" />
             </div>
-            {t('mapLayers.title')}
+            {t("mapLayers.title")}
           </SheetTitle>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            {t('mapLayers.description')}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1.5">{t("mapLayers.description")}</p>
         </div>
 
         <div className="relative overflow-y-auto no-scrollbar h-[calc(100%-80px)] px-4 py-4">
@@ -565,22 +593,23 @@ const LayersSheet: React.FC<LayersSheetProps> = ({
                     <div className="p-1 rounded bg-muted">
                       <MapIcon className="size-3.5 text-muted-foreground" />
                     </div>
-                    {t('mapLayers.baseLayers.title')}
+                    {t("mapLayers.baseLayers.title")}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-0">
                   <p className="text-xs text-muted-foreground px-1 mb-3">
-                    {t('mapLayers.baseLayers.description')}
+                    {t("mapLayers.baseLayers.description")}
                   </p>
-                  <RadioGroup className="gap-2" value={selectedBaseLayerId} onValueChange={(val) => {
-                    const idx = baseLayers.findIndex((l) => l.id === val);
-                    if (idx >= 0) changeBaseLayer(idx);
-                  }}>
+                  <RadioGroup
+                    className="gap-2"
+                    value={selectedBaseLayerId}
+                    onValueChange={(val) => {
+                      const idx = baseLayers.findIndex((l) => l.id === val);
+                      if (idx >= 0) changeBaseLayer(idx);
+                    }}
+                  >
                     {baseLayers.map((layer) => (
-                      <BaseLayerOption
-                        key={layer.id}
-                        layer={layer}
-                      />
+                      <BaseLayerOption key={layer.id} layer={layer} />
                     ))}
                   </RadioGroup>
                 </AccordionContent>
@@ -596,7 +625,9 @@ const LayersSheet: React.FC<LayersSheetProps> = ({
               <div className="p-1 rounded bg-muted">
                 <Layers className="size-3.5 text-muted-foreground" />
               </div>
-              <span className="text-sm font-medium text-foreground">{t('mapLayers.dataLayers.title')}</span>
+              <span className="text-sm font-medium text-foreground">
+                {t("mapLayers.dataLayers.title")}
+              </span>
             </div>
             <div className="space-y-2">
               {layers.map((layer) => (
@@ -620,13 +651,13 @@ const BaseLayerOption: React.FC<BaseLayerOptionProps> = ({ layer }) => {
   // Map layer ID to translation key
   const getLayerDescription = (layerId: string) => {
     const descriptionMap: Record<string, string> = {
-      'osm_standard': t('mapLayers.baseLayers.osmStandard'),
-      'osm_humanitarian': t('mapLayers.baseLayers.osmHumanitarian'),
-      'carto_positron': t('mapLayers.baseLayers.cartoPositron'),
-      'carto_dark': t('mapLayers.baseLayers.cartoDark'),
-      'carto_voyager': t('mapLayers.baseLayers.cartoVoyager'),
-      'opentopomap': t('mapLayers.baseLayers.openTopoMap'),
-      'maplibre_3d': t('mapLayers.baseLayers.maplibre3d', '3D buildings on satellite imagery'),
+      osm_standard: t("mapLayers.baseLayers.osmStandard"),
+      osm_humanitarian: t("mapLayers.baseLayers.osmHumanitarian"),
+      carto_positron: t("mapLayers.baseLayers.cartoPositron"),
+      carto_dark: t("mapLayers.baseLayers.cartoDark"),
+      carto_voyager: t("mapLayers.baseLayers.cartoVoyager"),
+      opentopomap: t("mapLayers.baseLayers.openTopoMap"),
+      maplibre_3d: t("mapLayers.baseLayers.maplibre3d", "3D buildings on satellite imagery"),
     };
     return descriptionMap[layerId] || layer.description;
   };
@@ -666,7 +697,7 @@ const LayerOption: React.FC<LayerOptionProps> = ({ layer, hasAccess }) => {
   // Map layer ID to translation key
   const getLayerDescription = (layerId: string) => {
     const descriptionMap: Record<string, string> = {
-      'enerplanet_simulation_final': t('mapLayers.dataLayers.energySimulation'),
+      enerplanet_simulation_final: t("mapLayers.dataLayers.energySimulation"),
     };
     return descriptionMap[layerId] || layer.description;
   };
