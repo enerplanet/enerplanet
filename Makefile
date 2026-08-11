@@ -167,7 +167,7 @@ setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
 	git submodule update --init
 	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
-	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet && cd dependencies/pylovo2enerplanet && git lfs pull
+	@[ -d dependencies/enerplanet-pylovo ] && (cd dependencies/enerplanet-pylovo && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git lfs pull
 
 .PHONY: env-setup
 env-setup:
@@ -226,4 +226,4 @@ webservice:
 
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/pylovo2enerplanet && make dev
+	@cd dependencies/enerplanet-pylovo && make dev
