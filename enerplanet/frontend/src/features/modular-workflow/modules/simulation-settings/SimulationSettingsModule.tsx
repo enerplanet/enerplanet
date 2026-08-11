@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { BaseModule } from "../base/BaseModule";
 import type { ModuleProps } from "../../types/module";
-import type { ConfiguratorContext } from "../../types/context";
+import type { ConfiguratorContext, SimulationSettings, ScenarioType } from "../../types/context";
 import {
   Input,
   Label,
@@ -19,38 +19,20 @@ import {
  * Fully self-contained — does not reuse any configurator component or constant.
  * Lets the user configure the simulation/optimisation parameters (scenario,
  * cable types, transformer, solver, CO2 limit, battery hours, autarky, PyPSA)
- * and writes them to the shared context under `advancedParams`.
- *
- * The context key is kept as `advancedParams` so downstream modules
- * (`grid-generation`, `model-save`, ...) continue to read the same value.
+ * and writes them to the shared context under `simulationSettings`.
  */
 
 // ---------------------------------------------------------------------------
-// Types (module-local, detached from the configurator)
+// Types (re-exported from context.ts to avoid circular dependency)
 // ---------------------------------------------------------------------------
 
-export type ScenarioType = "season" | "duration" | "calliope";
+export type { ScenarioType, SimulationSettings } from "../../types/context";
 
 export interface SimulationScenario {
   /** Category of the scenario. */
   type: ScenarioType;
   /** Machine-readable value within the category. */
   value: string;
-}
-
-export interface SimulationSettings {
-  /** Name of the model to be created. */
-  modelName: string;
-  scenario: SimulationScenario;
-  /** Date range derived from the scenario (all years use the same dataset). */
-  fromDate: string;
-  toDate: string;
-  line_type_lv: string;
-  line_type_mv: string;
-  co2_limit: number;
-  max_hours: number;
-  autarky: number;
-  pypsa_enabled: boolean;
 }
 
 interface SelectOption {
@@ -262,14 +244,14 @@ export class SimulationSettingsModule extends BaseModule {
 
   readonly io = {
     inputs: [],
-    outputs: ["advancedParams"],
+    outputs: ["simulationSettings"],
     required: [],
   };
 
   readonly component = SimulationSettingsComponent;
 
   override validate(context: ConfiguratorContext) {
-    if (!context.advancedParams) {
+    if (!context.simulationSettings) {
       return { valid: false, errors: ["Simulation settings not configured."] };
     }
     return { valid: true };
@@ -281,31 +263,21 @@ export class SimulationSettingsModule extends BaseModule {
 // ---------------------------------------------------------------------------
 
 function SimulationSettingsComponent({ context, onUpdate }: ModuleProps) {
-  const settings: SimulationSettings =
-    (context.advancedParams as SimulationSettings | undefined) ?? getDefaultSimulationSettings();
+  const settings: SimulationSettings = context.simulationSettings ?? getDefaultSimulationSettings();
 
   // Seed the defaults into the shared context on mount so validation passes
   // even if the user advances without changing anything.
   useEffect(() => {
-    if (!context.advancedParams) {
-      onUpdate({
-        advancedParams:
-          getDefaultSimulationSettings() as unknown as ConfiguratorContext["advancedParams"],
-      });
+    if (!context.simulationSettings) {
+      onUpdate({ simulationSettings: getDefaultSimulationSettings() });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = useCallback(
     (patch: Partial<SimulationSettings>) => {
-      // The context's `advancedParams` is typed as the configurator's
-      // `AdvancedParametersState`; our structured `scenario` is a superset, so
-      // cast through `unknown` to keep the module detached from that type.
       onUpdate({
-        advancedParams: {
-          ...settings,
-          ...patch,
-        } as unknown as ConfiguratorContext["advancedParams"],
+        simulationSettings: { ...settings, ...patch },
       });
     },
     [onUpdate, settings]

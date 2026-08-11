@@ -2,12 +2,18 @@ import { useState, useCallback } from "react";
 import { BaseModule } from "../base/BaseModule";
 import type { ModuleProps } from "../../types/module";
 import type { ConfiguratorContext } from "../../types/context";
-import { modelService } from "../../../model-dashboard/services/modelService";
+import {
+  saveAreaData,
+  mapSimulationSettingsToAdvancedParams,
+} from "../../../configurator/services/saveService";
 
 /**
  * Model Save module.
  *
- * Reads the full context and persists the model via `modelService.createModel`.
+ * Reads the full context and persists the model via the shared `saveAreaData`
+ * pipeline, which reproduces the exact save payload shape from the legacy
+ * configurator (see `configuratorflow.md` §5).
+ *
  * Writes `modelId` to context on success.
  */
 export class ModelSaveModule extends BaseModule {
@@ -21,9 +27,9 @@ export class ModelSaveModule extends BaseModule {
   };
 
   readonly io = {
-    inputs: ["region", "polygons", "gridData", "advancedParams", "modelName", "workspaceId"],
+    inputs: ["region", "polygons", "gridData", "simulationSettings", "modelName", "workspaceId"],
     outputs: ["modelId"],
-    required: ["polygons"],
+    required: ["polygons", "simulationSettings"],
   };
 
   readonly component = ModelSaveComponent;
@@ -31,6 +37,12 @@ export class ModelSaveModule extends BaseModule {
   override validate(context: ConfiguratorContext) {
     if (!context.polygons?.length) {
       return { valid: false, errors: ["No polygons to save."] };
+    }
+    if (!context.simulationSettings) {
+      return {
+        valid: false,
+        errors: ["Simulation settings not configured."],
+      };
     }
     return { valid: true };
   }
@@ -45,32 +57,40 @@ function ModelSaveComponent({ context, onUpdate }: ModuleProps) {
     if (saving || saved) return;
     setSaving(true);
     setError(null);
+
     try {
-      const coordinatesGeoJSON = {
-        type: "MultiPolygon",
-        coordinates: (context.polygons ?? []).map((polygon: number[][]) => [polygon]),
-      };
-      // The simulation period is derived from the scenario in the simulation
-      // settings module. Fall back to a full reference year if not present.
-      const advancedParams = (context.advancedParams ?? {}) as Record<string, unknown>;
-      const fromDate = (advancedParams.fromDate as string) ?? "2024-01-01";
-      const toDate = (advancedParams.toDate as string) ?? "2024-12-31";
-      const response = await modelService.createModel({
-        title: context.modelName ?? "Untitled Model",
-        workspace_id: context.workspaceId,
-        coordinates: coordinatesGeoJSON as never,
-        from_date: fromDate,
-        to_date: toDate,
-        config: {
-          advancedParams: context.advancedParams,
-        },
+      const sim = context.simulationSettings;
+      if (!sim) {
+        setError("Simulation settings are missing.");
+        return;
+      }
+
+      // Map modular simulation settings to the shape buildSaveConfig expects
+      const advancedParams = mapSimulationSettingsToAdvancedParams(sim);
+
+      const result = await saveAreaData({
+        fromDate: sim.fromDate,
+        toDate: sim.toDate,
+        modelName: sim.modelName,
+        resolution: 60, // default; could be added to SimulationSettings later
+        editMode: !!context.modelId,
+        modelId: context.modelId,
+        polygonCoordinates: context.polygons ?? [],
+        workspaceId: context.workspaceId,
+        pylovoData: context.gridData,
+        advancedParams,
+        draftId: context.draftId,
+        userId: undefined, // caller should provide via auth store if needed
+        originalModel: context.originalModel ?? null,
+        onSaveStart: () => setSaving(true),
+        onSaveEnd: () => setSaving(false),
       });
-      const modelId = response.data?.id;
-      if (modelId) {
-        onUpdate({ modelId });
+
+      if (result) {
+        onUpdate({ modelId: result.modelId });
         setSaved(true);
       } else {
-        setError("Save succeeded but no model ID was returned.");
+        setError("Validation failed — check that all required fields are filled.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save model");
@@ -79,7 +99,9 @@ function ModelSaveComponent({ context, onUpdate }: ModuleProps) {
     }
   }, [context, onUpdate, saving, saved]);
 
-  if (saved) return <div className="p-4 text-green-600">Model saved (ID: {context.modelId})</div>;
+  if (saved) {
+    return <div className="p-4 text-green-600">Model saved (ID: {context.modelId})</div>;
+  }
 
   return (
     <div className="p-4 space-y-3">

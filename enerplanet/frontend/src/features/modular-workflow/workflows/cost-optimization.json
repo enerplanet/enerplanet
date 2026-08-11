@@ -45,5 +45,65 @@
       "label": "Save Model",
       "skippable": false
     }
+  ],
+  "nodes": [
+    {
+      "id": "simulation-settings",
+      "moduleId": "simulation-settings",
+      "label": "Simulation Settings",
+      "skippable": true
+    },
+    {
+      "id": "grid-generation",
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "auto": true
+    },
+    {
+      "id": "technology-selection",
+      "moduleId": "technology-selection",
+      "label": "Technology Selection",
+      "dependsOn": [
+        "grid-generation"
+      ],
+      "skippable": true
+    },
+    {
+      "id": "power-flow",
+      "moduleId": "power-flow",
+      "label": "Power Flow",
+      "dependsOn": [
+        "grid-generation"
+      ],
+      "auto": true
+    },
+    {
+      "id": "grid-statistics",
+      "moduleId": "grid-statistics",
+      "label": "Grid Statistics",
+      "dependsOn": [
+        "grid-generation"
+      ],
+      "auto": true
+    },
+    {
+      "id": "cost-breakdown",
+      "moduleId": "cost-breakdown",
+      "label": "Cost Breakdown",
+      "dependsOn": [
+        "grid-statistics"
+      ],
+      "auto": true
+    },
+    {
+      "id": "model-save",
+      "moduleId": "model-save",
+      "label": "Save Model",
+      "dependsOn": [
+        "simulation-settings",
+        "grid-generation"
+      ],
+      "skippable": false
+    }
   ]
 }

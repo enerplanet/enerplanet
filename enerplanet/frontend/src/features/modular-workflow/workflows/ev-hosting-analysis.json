@@ -43,5 +43,57 @@
       "label": "Save Model",
       "skippable": true
     }
+  ],
+  "nodes": [
+    {
+      "id": "region-select",
+      "moduleId": "region-select",
+      "label": "Select Region",
+      "skippable": false
+    },
+    {
+      "id": "simulation-settings",
+      "moduleId": "simulation-settings",
+      "label": "Simulation Settings",
+      "skippable": true
+    },
+    {
+      "id": "grid-generation",
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "dependsOn": [
+        "region-select"
+      ],
+      "auto": true
+    },
+    {
+      "id": "grid-statistics",
+      "moduleId": "grid-statistics",
+      "label": "Grid Statistics",
+      "dependsOn": [
+        "grid-generation"
+      ],
+      "auto": true
+    },
+    {
+      "id": "hosting-capacity",
+      "moduleId": "hosting-capacity",
+      "label": "Hosting Capacity",
+      "dependsOn": [
+        "grid-statistics"
+      ],
+      "auto": true
+    },
+    {
+      "id": "model-save",
+      "moduleId": "model-save",
+      "label": "Save Model",
+      "dependsOn": [
+        "simulation-settings",
+        "region-select",
+        "grid-generation"
+      ],
+      "skippable": true
+    }
   ]
 }

@@ -20,4 +20,19 @@ export const defaultWorkflow: WorkflowDefinition = {
     { moduleId: "region-select", label: "Select Region", skippable: false },
     { moduleId: "grid-generation", label: "Generate Grid", auto: true },
   ],
+  nodes: [
+    {
+      id: "region-select",
+      moduleId: "region-select",
+      label: "Select Region",
+      skippable: false,
+    },
+    {
+      id: "grid-generation",
+      moduleId: "grid-generation",
+      label: "Generate Grid",
+      dependsOn: ["region-select"],
+      auto: true,
+    },
+  ],
 };

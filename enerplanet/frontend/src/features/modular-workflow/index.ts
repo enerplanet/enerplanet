@@ -48,6 +48,9 @@ export {
   type WorkflowEngineOptions,
 } from "./workflow/WorkflowEngine";
 
+// Node-network engine (Phase 3)
+export { NodeEngine, type NodeEngineOptions } from "./workflow/NodeEngine";
+
 // Workflow registry
 export {
   WorkflowRegistry,

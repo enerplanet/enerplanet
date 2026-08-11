@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Badge, Separator } from "@spatialhub/ui";
 import {
-  ChevronLeft,
-  ChevronRight,
   RotateCcw,
   CheckCircle2,
   LayoutDashboard,
   List,
   Play,
+  SkipForward,
+  Check,
+  Circle,
+  CircleDot,
+  CircleCheck,
+  CircleSlash,
+  CircleAlert,
 } from "lucide-react";
 import type { ConfiguratorContext } from "./types/context";
 import type { ModuleComplexity, ModuleProps } from "./types/module";
-import type { WorkflowDefinition } from "./types/workflow";
-import { WorkflowEngine } from "./workflow/WorkflowEngine";
+import type { NodeStatus, WorkflowDefinition } from "./types/workflow";
+import { NodeEngine } from "./workflow/NodeEngine";
 import { defaultWorkflowRecommender } from "./workflow/WorkflowRecommender";
 import { defaultWorkflowRegistry } from "./workflow/WorkflowRegistry";
+import { saveFlowSnapshot, clearFlowSnapshot } from "./workflow/FlowPersistence";
 import { ModelBuilderContextProvider } from "./context/ModelBuilderContext";
 import { useModelBuilderContext } from "./context/useModelBuilderContext";
 import { ModelDiffViewer } from "./modules/model-diff/ModelDiffViewer";
@@ -38,8 +44,10 @@ export interface ModelBuilderConfiguratorProps {
 /**
  * Top-level playback shell for a workflow.
  *
- * Renders the active module's component inside a consistent shell with a step
- * progress bar, a global Basic/Expert toggle, Back/Next navigation, a
+ * Drives the graph-aware `NodeEngine` instead of the linear `WorkflowEngine`.
+ * Renders the active node's module inside a consistent shell with a node
+ * progress bar, a node palette (all nodes + their status), an "Available next"
+ * mix-and-match list, Complete/Skip actions, a global Basic/Expert toggle, a
  * collapsible context summary, and a collapsible YAML diff panel at the bottom.
  */
 export function ModelBuilderConfigurator({
@@ -79,9 +87,9 @@ function ModelBuilderConfiguratorInner({
   const { context, onUpdate, setUiMode, snapshot, reset } = useModelBuilderContext();
   // The engine owns the working context for navigation. We keep it in a ref
   // so it survives re-renders without being recreated.
-  const engineRef = useRef<WorkflowEngine | null>(null);
+  const engineRef = useRef<NodeEngine | null>(null);
   if (!engineRef.current) {
-    engineRef.current = new WorkflowEngine(workflow, context, {
+    engineRef.current = new NodeEngine(workflow, context, {
       inventory,
       onContextChange: (engineContext) => {
         // Sync engine context back into the React provider.
@@ -91,24 +99,23 @@ function ModelBuilderConfiguratorInner({
   }
   const engine = engineRef.current;
 
-  // Force a re-render when the engine advances so the shell reflects the new
-  // current step. We track the current index in local state.
-  const [stepIndex, setStepIndex] = useState(engine.getCurrentIndex());
+  // Force a re-render whenever the engine advances so the shell reflects the
+  // new active node / node states. We bump a tick counter after each mutation.
+  const [, setTick] = useState(0);
+  const bump = useCallback(() => setTick((t) => t + 1), []);
+
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showContextSummary, setShowContextSummary] = useState(false);
 
-  // Recompute on every render — the component re-renders when `stepIndex`
-  // changes, so this always reflects the engine's current step.
-  let currentModule: import("./types/module").ModuleDefinition | null = null;
-  try {
-    currentModule = engine.getCurrentModule();
-  } catch {
-    currentModule = null;
-  }
-
-  const currentStep = engine.getCurrentStep();
+  // Recompute on every render — the component re-renders when `tick` changes,
+  // so these always reflect the engine's current state.
+  const activeNode = engine.getActiveNode();
+  const activeModule = engine.getActiveModule();
+  const nodeStates = engine.getNodeStates();
+  const graph = engine.getGraph();
+  const validNext = engine.getValidNextModules();
   const progress = engine.getProgress();
   const complexity: ModuleComplexity = context.uiMode ?? "basic";
 
@@ -123,13 +130,37 @@ function ModelBuilderConfiguratorInner({
   // Sync the engine's context whenever the React context changes (e.g. a
   // module called onUpdate). This keeps the engine's working copy in sync.
   useEffect(() => {
-    engine.updateContext(context);
+    void engine.updateContext(context);
   }, [context, engine]);
+
+  // Persist the flow state to localStorage on every context change so it is
+  // not discarded if the user leaves, loses connection, or exits while waiting
+  // on a long model run. Lightly debounced to avoid excessive writes.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      saveFlowSnapshot({
+        workflowId: workflow.id,
+        workflowVersion: workflow.version ? Number(workflow.version) : undefined,
+        context,
+        nodeStates,
+        savedAt: new Date().toISOString(),
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [context, nodeStates, workflow.id, workflow.version]);
+
+  // Once the flow is complete, the state is no longer needed — clear the
+  // persisted snapshot so a stale flow is not offered for resume later.
+  useEffect(() => {
+    if (completed) {
+      clearFlowSnapshot();
+    }
+  }, [completed]);
 
   const handleModuleUpdate = useCallback(
     (updates: Partial<ConfiguratorContext>) => {
       onUpdate(updates);
-      engine.updateContext(updates);
+      void engine.updateContext(updates);
     },
     [onUpdate, engine]
   );
@@ -141,47 +172,77 @@ function ModelBuilderConfiguratorInner({
     [setUiMode]
   );
 
-  const handleNext = useCallback(async () => {
+  const handleActivateNode = useCallback(
+    async (nodeId: string) => {
+      setError(null);
+      setBusy(true);
+      try {
+        await engine.activateNode(nodeId);
+        bump();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [engine, bump]
+  );
+
+  const handleComplete = useCallback(async () => {
+    const node = engine.getActiveNode();
+    if (!node) return;
     setError(null);
     setBusy(true);
     try {
-      await engine.next();
-      setStepIndex(engine.getCurrentIndex());
-      if (engine.isComplete()) {
-        setCompleted(true);
-      }
+      await engine.completeNode(node.id);
       // Regenerate the model YAML after the step and preserve the previous.
       onUpdate({
         previousModelYaml: context.modelYaml,
         modelYaml: serialiseModel(engine.getContext()),
       });
+      if (engine.isComplete()) {
+        setCompleted(true);
+      }
+      bump();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
-  }, [engine, onUpdate, context.modelYaml]);
+  }, [engine, onUpdate, context.modelYaml, bump]);
 
-  const handlePrevious = useCallback(async () => {
+  const handleSkip = useCallback(async () => {
+    const node = engine.getActiveNode();
+    if (!node) return;
     setError(null);
     setBusy(true);
     try {
-      await engine.previous();
-      setStepIndex(engine.getCurrentIndex());
-      setCompleted(false);
+      await engine.skipNode(node.id);
+      if (engine.isComplete()) {
+        setCompleted(true);
+      }
+      bump();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
-  }, [engine]);
+  }, [engine, bump]);
 
   const handleReset = useCallback(() => {
     reset();
     setCompleted(false);
     setError(null);
-    setStepIndex(0);
-  }, [reset]);
+    engineRef.current = new NodeEngine(
+      workflow,
+      {},
+      {
+        inventory,
+        onContextChange: (engineContext) => onUpdate(engineContext),
+      }
+    );
+    bump();
+  }, [reset, workflow, inventory, onUpdate, bump]);
 
   const moduleProps: ModuleProps = {
     context,
@@ -212,18 +273,17 @@ function ModelBuilderConfiguratorInner({
       reset();
       setCompleted(false);
       setError(null);
-      setStepIndex(0);
-      engineRef.current = new WorkflowEngine(next, context, {
+      engineRef.current = new NodeEngine(next, context, {
         inventory,
         onContextChange: (engineContext) => onUpdate(engineContext),
       });
-      setStepIndex(0);
+      bump();
     },
-    [onStartWorkflow, reset, context, inventory, onUpdate]
+    [onStartWorkflow, reset, context, inventory, onUpdate, bump]
   );
 
   if (completed) {
-    const stepsCompleted = workflow.steps.length;
+    const nodesCompleted = graph.nodes.length;
     const { gridStatistics, powerFlowResult, costBreakdown } = context;
     return (
       <div className="mx-auto max-w-3xl p-6">
@@ -238,7 +298,7 @@ function ModelBuilderConfiguratorInner({
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               <li>
                 <span className="font-medium text-foreground">{workflow.name}</span> —{" "}
-                {stepsCompleted} step{stepsCompleted === 1 ? "" : "s"} completed
+                {nodesCompleted} node{nodesCompleted === 1 ? "" : "s"} completed
               </li>
               {workflow.tags && workflow.tags.length > 0 && (
                 <li>
@@ -341,7 +401,7 @@ function ModelBuilderConfiguratorInner({
           <div className="mb-1 flex items-center justify-between text-sm">
             <span className="font-medium">{workflow.name}</span>
             <span className="text-muted-foreground">
-              Step {progress.current} / {progress.total}
+              {progress.current} / {progress.total} nodes
             </span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -369,25 +429,27 @@ function ModelBuilderConfiguratorInner({
         </div>
       </div>
 
-      {/* Step label */}
+      {/* Active node label */}
       <div className="mb-4">
-        <h1 className="text-lg font-semibold">{currentStep?.label}</h1>
-        {currentStep?.description && (
-          <p className="text-sm text-muted-foreground">{currentStep.description}</p>
+        <h1 className="text-lg font-semibold">{activeNode?.label ?? "No active node"}</h1>
+        {activeNode?.description && (
+          <p className="text-sm text-muted-foreground">{activeNode.description}</p>
         )}
-        {currentModule && (
+        {activeModule && (
           <Badge variant="secondary" className="mt-1">
-            {currentModule.meta.name}
+            {activeModule.meta.name}
           </Badge>
         )}
       </div>
 
-      {/* Module component */}
+      {/* Active module component */}
       <div className="rounded-lg border border-border bg-card p-4">
-        {currentModule ? (
-          <currentModule.component {...moduleProps} />
+        {activeModule ? (
+          <activeModule.component {...moduleProps} />
         ) : (
-          <p className="text-sm text-muted-foreground">Module not found for this step.</p>
+          <p className="text-sm text-muted-foreground">
+            No module is active. Choose a node from "Available next" below.
+          </p>
         )}
       </div>
 
@@ -398,14 +460,72 @@ function ModelBuilderConfiguratorInner({
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="mt-4 flex items-center justify-between">
-        <Button variant="outline" onClick={handlePrevious} disabled={stepIndex === 0 || busy}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <Button onClick={handleNext} disabled={busy}>
-          {busy ? "Working…" : "Next"} <ChevronRight className="ml-2 h-4 w-4" />
-        </Button>
+      {/* Complete / Skip actions */}
+      {activeNode && (
+        <div className="mt-4 flex items-center gap-2">
+          <Button onClick={handleComplete} disabled={busy}>
+            <Check className="mr-2 h-4 w-4" /> {busy ? "Working…" : "Complete step"}
+          </Button>
+          {activeNode.skippable === true && (
+            <Button variant="outline" onClick={handleSkip} disabled={busy}>
+              <SkipForward className="mr-2 h-4 w-4" /> Skip
+            </Button>
+          )}
+        </div>
+      )}
+
+      <Separator className="my-4" />
+
+      {/* Node palette: all nodes + their status */}
+      <div className="mb-4">
+        <h2 className="mb-2 text-sm font-semibold">Node palette</h2>
+        <div className="flex flex-wrap gap-2">
+          {graph.nodes.map((node) => {
+            const status = nodeStates[node.id] ?? "pending";
+            return (
+              <button
+                key={node.id}
+                type="button"
+                disabled={busy}
+                onClick={() => handleActivateNode(node.id)}
+                title={`${node.label} — ${status}`}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  status === "active"
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted/40"
+                }`}
+              >
+                <NodeStatusIcon status={status} />
+                <span>{node.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Available next: interactive ready nodes the user may choose */}
+      <div className="mb-4">
+        <h2 className="mb-2 text-sm font-semibold">Available next</h2>
+        {validNext.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {validNext.map((node) => (
+              <button
+                key={node.id}
+                type="button"
+                disabled={busy}
+                onClick={() => handleActivateNode(node.id)}
+                className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-2 text-left text-sm transition-colors hover:bg-muted/40"
+              >
+                <span className="font-medium">{node.label}</span>
+                <span className="text-muted-foreground">Activate</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No further nodes are ready. Complete the active step to continue.
+          </p>
+        )}
       </div>
 
       <Separator className="my-4" />
@@ -436,4 +556,22 @@ function ModelBuilderConfiguratorInner({
       />
     </div>
   );
+}
+
+/** Small icon for a node's lifecycle status in the palette. */
+function NodeStatusIcon({ status }: { status: NodeStatus }) {
+  switch (status) {
+    case "done":
+      return <CircleCheck className="h-4 w-4 text-green-600" />;
+    case "skipped":
+      return <CircleSlash className="h-4 w-4 text-muted-foreground" />;
+    case "active":
+      return <CircleDot className="h-4 w-4 text-primary" />;
+    case "ready":
+      return <Circle className="h-4 w-4 text-blue-500" />;
+    case "error":
+      return <CircleAlert className="h-4 w-4 text-red-600" />;
+    default:
+      return <Circle className="h-4 w-4 text-muted-foreground" />;
+  }
 }

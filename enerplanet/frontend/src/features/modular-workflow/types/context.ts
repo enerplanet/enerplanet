@@ -1,4 +1,5 @@
-import type { AdvancedParametersState, PylovoGridData } from "../../configurator/types/area-select";
+import type { PylovoGridData } from "../../configurator/types/area-select";
+import type { NodeStatus } from "./workflow";
 
 /**
  * Shared data contract for the modular workflow system.
@@ -126,12 +127,53 @@ export interface BuildingFilters {
   excludedIds: Set<number>;
 }
 
+/**
+ * Scenario type used by the simulation-settings module.
+ *
+ * Defined here alongside `SimulationSettings` to avoid a circular dependency
+ * (the module imports `ConfiguratorContext`).
+ */
+export type ScenarioType = "season" | "duration" | "calliope";
+
+/**
+ * Simulation settings produced by the `simulation-settings` module.
+ *
+ * Defined here (rather than imported from the module) to avoid a circular
+ * dependency: the module imports `ConfiguratorContext`.
+ */
+export interface SimulationSettings {
+  modelName: string;
+  scenario: { type: ScenarioType; value: string };
+  fromDate: string;
+  toDate: string;
+  line_type_lv: string;
+  line_type_mv: string;
+  co2_limit: number;
+  max_hours: number;
+  autarky: number;
+  pypsa_enabled: boolean;
+}
+
 export interface ConfiguratorContext {
   // Workflow metadata
   workflowId?: string;
   workflowVersion?: number;
   startType?: "from-scratch" | "from-existing-model";
   sourceModelId?: number;
+
+  // Node-network state (Phase 2)
+  /** Per-node completion/readiness state, keyed by node id. */
+  nodeStates?: Record<string, NodeStatus>;
+  /** The currently active node id. */
+  activeNodeId?: string;
+  /** Serializable snapshot for persistence (a later phase serializes this). */
+  flowSnapshot?: {
+    workflowId: string;
+    workflowVersion?: number;
+    context: Partial<ConfiguratorContext>;
+    nodeStates: Record<string, NodeStatus>;
+    savedAt: string;
+  };
 
   // Data source flags — every data field can be "estimated" or "uploaded"
   dataSources?: DataSources;
@@ -159,9 +201,13 @@ export interface ConfiguratorContext {
   // Technologies
   technologies?: Technology[];
   techParameters?: Record<string, unknown>;
+  // Advanced Parameters (legacy — kept for backward compat with modules that
+  // still write to it; new code should use `simulationSettings` instead)
+  advancedParams?: Record<string, unknown>;
 
-  // Advanced Parameters
-  advancedParams?: AdvancedParametersState;
+  // Simulation Settings (modular replacement for advancedParams)
+  simulationSettings?: SimulationSettings;
+
 
   // Simulation Results
   powerFlowResult?: PowerFlowResponse;
@@ -186,4 +232,13 @@ export interface ConfiguratorContext {
   modelId?: number;
   workspaceId?: number;
   draftId?: string;
+
+  /** The original model fetched at load time — used for change detection in edit mode. */
+  originalModel?: {
+    title?: string;
+    from_date?: string;
+    to_date?: string;
+    resolution?: number;
+    config?: Record<string, unknown>;
+  } | null;
 }

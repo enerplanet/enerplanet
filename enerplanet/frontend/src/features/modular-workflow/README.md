@@ -7,12 +7,13 @@ feature is for beta testing until migration is complete.
 The goal is to rebuild the model-builder flow as a set of small, composable **modules**,
 each responsible for one logical step (model settings, region select, grid generation,
 area edit, power flow, technology assignment, …). Modules are wired together by
-**workflows** (JSON definitions) and played back by a **WorkflowEngine**.
+**workflows** (JSON definitions) and played back by a graph-based **NodeEngine** (the
+legacy linear **WorkflowEngine** is kept for backward compatibility).
 
 > **Companion docs**
 >
-> - [`FLOW.md`](FLOW.md) — the step-by-step flow of the legacy builder, with the API
->   contract for each step. Read this first to understand _what_ each module should do.
+> - [`FLOW.md`](FLOW.md) — the node-network flow of the model builder, with the API
+>   contract for each module. Read this first to understand _what_ each module should do.
 > - [`STATUS.md`](STATUS.md) — current state of each module (done / stub / broken).
 
 ---
@@ -34,9 +35,15 @@ area edit, power flow, technology assignment, …). Modules are wired together b
               │            ModelBuilderContextProvider        │
               │            (useReducer — shared state)        │
               │                       │                       │
-              └───────────────► WorkflowEngine ◄──────────────┘
-                                (step playback, validation,
-                                 data handoff)
+              └───────────────► NodeEngine ◄─────────────────┘
+                                (graph-based playback,
+                                 context-validity gating,
+                                 auto-run, persistence)
+                                      │
+                                      ▼
+                              WorkflowGraph
+                        (buildGraph, getReadyNodes,
+                         getValidNextModules, validateGraph)
                                       │
                                       ▼
                               ModuleInventory
@@ -48,6 +55,13 @@ area edit, power flow, technology assignment, …). Modules are wired together b
                     │  read from / write to ConfiguratorContext│
                     └─────────────────────────────────────────┘
 ```
+
+The legacy linear **`WorkflowEngine`** still exists in
+[`workflow/WorkflowEngine.ts`](workflow/WorkflowEngine.ts) and is exported from
+[`index.ts`](index.ts), but the playback shell now drives the graph-based
+**`NodeEngine`**. Workflows keep their `steps[]` array so the legacy engine can
+still play them back, but the graph helpers and `NodeEngine` prefer the `nodes[]`
+form when present.
 
 ### The data contract: `ConfiguratorContext`
 
@@ -63,20 +77,58 @@ The context type lives in [`types/context.ts`](types/context.ts). It holds every
 region, polygons, grid data, transformers, technologies, simulation results, costs, the
 serialised model YAML, and model metadata (`modelId`, `draftId`, `workspaceId`).
 
-### The engine: `WorkflowEngine`
+### The engine: `NodeEngine` (graph-based)
 
-[`workflow/WorkflowEngine.ts`](workflow/WorkflowEngine.ts) is a framework-agnostic
-controller that:
+[`workflow/NodeEngine.ts`](workflow/NodeEngine.ts) is the current playback controller.
+It is a framework-agnostic, **graph-based** engine that replaces the linear
+index-cursor `WorkflowEngine`:
 
-1. Owns the workflow definition, the current step index, and a working copy of the context.
-2. Resolves each step's `moduleId` to a `ModuleDefinition` via the `ModuleInventory`.
-3. Validates `io.required` keys before advancing.
-4. Calls lifecycle hooks (`onEnter` / `onLeave`).
-5. Merges module output back into the context.
+1. Builds the graph via `buildGraph(workflow)` (from `WorkflowGraph.ts`).
+2. Tracks per-node lifecycle state (`pending | ready | active | done | skipped | error`).
+3. **Context-validity gates** every node: a node loads only when all its `dependsOn`
+   are `done` **and** its module's `io.required` keys exist in the context.
+4. **Auto-runs** `auto` nodes as soon as they become ready, recursively in dependency
+   order (`runAutoNodes`).
+5. Exposes `getValidNextModules()` — the interactive (non-auto) ready nodes the user
+   may choose next (the "mix and match" palette).
 
 The React playback shell ([`ModelBuilderConfigurator.tsx`](ModelBuilderConfigurator.tsx))
 drives the engine and syncs the resulting context into the
 `ModelBuilderContextProvider` via `onContextChange`.
+
+### The graph helpers: `WorkflowGraph`
+
+[`workflow/WorkflowGraph.ts`](workflow/WorkflowGraph.ts) provides the pure, framework-
+agnostic node-network helpers:
+
+- `buildGraph(workflow)` — derive `{ nodes, edges }` from a workflow's `nodes[]`
+  (or from `steps[]` when `nodes` is absent). Edges come from each node's explicit
+  `dependsOn` plus its module's `io.required` / `io.inputs` contract.
+- `getReadyNodes(graph, context, nodeStates)` — nodes whose dependencies are all
+  `done` AND whose module `io.required` keys exist in context (the "if the context
+  is valid the node can load" logic).
+- `getValidNextModules(graph, context, nodeStates)` — the interactive (non-auto)
+  ready nodes a user may choose next.
+- `isComplete(graph, nodeStates)` — all nodes `done` or `skipped`.
+- `validateGraph(workflow, seed?)` — checks the dependency chain is acyclic and every
+  node's `io.required` keys are satisfiable by a dependency or a seeded context key.
+
+### The legacy engine: `WorkflowEngine`
+
+[`workflow/WorkflowEngine.ts`](workflow/WorkflowEngine.ts) is the original linear
+controller (step index + `io.required` validation + lifecycle hooks). It is kept for
+backward compatibility and still exported from [`index.ts`](index.ts), but the playback
+shell now drives `NodeEngine`. Workflows keep their `steps[]` array so the legacy
+engine can still play them back.
+
+### Persistence / resume: `FlowPersistence`
+
+[`workflow/FlowPersistence.ts`](workflow/FlowPersistence.ts) persists a serializable
+`flowSnapshot` (`{ workflowId, workflowVersion, context, nodeStates, savedAt }`) to
+`localStorage` under the key `"modular-workflow:flow"`. Maps/Sets are round-tripped via
+a JSON replacer/reviver. The shell saves a debounced snapshot on every context change
+and clears it on completion; [`ModelBuilderPage.tsx`](ModelBuilderPage.tsx) offers a
+"Resume previous flow?" banner on mount when a snapshot exists.
 
 ### The registry: `ModuleInventory`
 
@@ -232,8 +284,9 @@ defaultModuleInventory.registerAll([, /* ... */ myModule]);
 
 ## How to Add a New Workflow
 
-Workflows are JSON files in [`workflows/`](workflows/). Each step references a module by
-`moduleId`:
+Workflows are JSON files in [`workflows/`](workflows/). The **primary** form is the
+node-network `nodes` array (played back by `NodeEngine`). Each node references a module
+by `moduleId` and declares its dependencies via `dependsOn`:
 
 ```json
 {
@@ -244,32 +297,97 @@ Workflows are JSON files in [`workflows/`](workflows/). Each step references a m
   "startType": "from-scratch",
   "tags": ["my", "workflow"],
   "followUpWorkflows": [],
-  "steps": [
-    { "moduleId": "simulation-settings", "label": "Simulation Settings", "skippable": true },
-    { "moduleId": "region-select", "label": "Select Region", "skippable": false },
-    { "moduleId": "grid-generation", "label": "Generate Grid", "auto": true }
+  "nodes": [
+    {
+      "id": "simulation-settings",
+      "moduleId": "simulation-settings",
+      "label": "Simulation Settings",
+      "skippable": true
+    },
+    {
+      "id": "region-select",
+      "moduleId": "region-select",
+      "label": "Select Region",
+      "skippable": false
+    },
+    {
+      "id": "grid-generation",
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "dependsOn": ["region-select"],
+      "auto": true
+    }
   ]
 }
 ```
 
-Step flags:
+Node flags:
 
-- `skippable` — user can skip this step
+- `dependsOn` — node ids that must complete before this node can run
+- `skippable` — user can skip this node (uses defaults)
 - `auto` — runs automatically without user interaction (e.g. grid generation, power flow)
 
 Register the workflow in [`workflows/index.ts`](workflows/index.ts) so it's available in
 the `defaultWorkflowRegistry`.
 
+### Legacy `steps` form
+
+Workflows also keep a `steps` array for backward compatibility with the legacy
+`WorkflowEngine`. The graph helpers and `NodeEngine` prefer `nodes` when present; when
+`nodes` is absent, `buildGraph` derives nodes from `steps` automatically.
+
+```json
+{
+  "id": "my-workflow",
+  "steps": [
+    { "moduleId": "region-select", "label": "Select Region" },
+    { "moduleId": "grid-generation", "label": "Generate Grid", "auto": true }
+  ],
+  "nodes": [
+    { "id": "region-select", "moduleId": "region-select", "label": "Select Region" },
+    {
+      "id": "grid-generation",
+      "moduleId": "grid-generation",
+      "label": "Generate Grid",
+      "dependsOn": ["region-select"],
+      "auto": true
+    }
+  ]
+}
+```
+
+### Validating the graph
+
+Every workflow's `nodes`/`dependsOn` chain is checked by
+[`workflows/graph-validate.test.ts`](workflows/graph-validate.test.ts), which runs
+`validateGraph` from [`workflow/WorkflowGraph.ts`](workflow/WorkflowGraph.ts) against
+each registered workflow (and the `defaultWorkflow`). It asserts the dependency chain
+is acyclic and every node's `io.required` keys are satisfiable by a dependency or a
+seeded context key. Run it with:
+
+```sh
+npx vitest run src/features/modular-workflow/workflows/graph-validate.test.ts
+```
+
+> **Note:** `from-existing-model` workflows (e.g. `cost-optimization`) seed context
+> keys such as `polygons` / `region` / `gridData` / `gridResultIds` from the loaded
+> model, so their entry nodes (e.g. `grid-generation`) declare no `dependsOn`.
+
 ---
 
-## Lifecycle of a Workflow Step
+## Lifecycle of a Workflow Node
 
-1. **onEnter** → module fetches/initialises data (optional)
-2. **Render** → the module's React component receives `context` + `onUpdate`
-3. **User interacts** → component calls `onUpdate({ outputKey: value })`
-4. **validate** → checks `io.required` keys exist (or custom logic)
-5. **onLeave** → module transforms/persists data before stepping forward (optional)
-6. **Advance** → WorkflowEngine moves to the next step
+1. **Ready** → the `NodeEngine` marks a node `ready` when all its `dependsOn` are
+   `done` and its module's `io.required` keys exist in the context.
+2. **Activate** → `activateNode(nodeId)` sets it `active` and calls the module's
+   `onEnter` (optional).
+3. **Render** → the module's React component receives `context` + `onUpdate`.
+4. **User interacts** → component calls `onUpdate({ outputKey: value })`, which the
+   shell syncs back into the engine via `updateContext`.
+5. **Complete** → `completeNode(nodeId)` calls `onLeave`, merges the module's declared
+   `io.outputs` into the context, marks it `done`, auto-runs any newly-ready `auto`
+   nodes, and sets the active node to the next ready interactive node.
+6. **Skip** → `skipNode(nodeId)` marks a `skippable` node `skipped` and advances.
 
 ---
 
@@ -279,10 +397,10 @@ the `defaultWorkflowRegistry`.
 src/features/modular-workflow/
 ├── flags.ts                        ← feature flag + route constant
 ├── index.ts                        ← public API exports
-├── ModelBuilderPage.tsx            ← route page (3 tabs)
+├── ModelBuilderPage.tsx            ← route page (3 tabs) + resume banner
 ├── ModelBuilderLanding.tsx         ← workflow picker (model-aware)
-├── ModelBuilderConfigurator.tsx    ← playback shell
-├── FLOW.md                         ← legacy flow + API contracts
+├── ModelBuilderConfigurator.tsx    ← playback shell (drives NodeEngine)
+├── FLOW.md                         ← node-network flow + API contracts
 ├── STATUS.md                       ← module status tracker
 ├── context/
 │   ├── ModelBuilderContext.tsx     ← useReducer context provider
@@ -290,7 +408,7 @@ src/features/modular-workflow/
 ├── types/
 │   ├── context.ts                  ← ConfiguratorContext (data contract)
 │   ├── module.ts                   ← ModuleDefinition, ModuleMeta, ModuleIO, ModuleProps
-│   └── workflow.ts                 ← WorkflowDefinition, WorkflowStep
+│   └── workflow.ts                 ← WorkflowDefinition, WorkflowNode, NodeStatus, WorkflowGraph
 ├── modules/
 │   ├── base/BaseModule.ts          ← base class + defineModule factory
 │   ├── ModuleInventory.ts          ← registry + workflow-requirement functions
@@ -300,7 +418,7 @@ src/features/modular-workflow/
 │   ├── grid-generation/            ← pylovo grid generation + map render
 │   ├── area-edit/                  ← network adjustment (transformers/buildings)
 │   ├── model-load/                 ← load existing model
-│   ├── model-save/                 ← save model
+│   ├── model-save/                 ← save model (reproduces legacy payload)
 │   ├── technology-selection/       ← tech picker + config
 │   ├── power-flow/                 ← pypsa/pylovo validation
 │   ├── building-demand/            ← (stub)
@@ -311,13 +429,17 @@ src/features/modular-workflow/
 │   ├── pipeline/                   ← (stub)
 │   └── model-diff/                 ← YAML serialise/diff/viewer
 ├── workflow/
-│   ├── WorkflowEngine.ts           ← step playback controller
+│   ├── NodeEngine.ts               ← graph-based playback controller
+│   ├── WorkflowGraph.ts            ← buildGraph, getReadyNodes, validateGraph, …
+│   ├── FlowPersistence.ts          ← save/load/clear/has flow snapshot (localStorage)
+│   ├── WorkflowEngine.ts           ← legacy linear step playback controller
 │   ├── WorkflowRegistry.ts         ← workflow CRUD + import/export
 │   ├── WorkflowRecommender.ts      ← follow-up workflow recommendations
 │   └── WorkflowBuilder.tsx         ← admin compose/validate/import/export UI
 └── workflows/
     ├── index.ts                    ← registers all workflows
     ├── defaultWorkflow.ts
+    ├── graph-validate.test.ts      ← validates each workflow's nodes/dependsOn
     ├── quick-grid-analysis.json
     ├── full-energy-planning.json
     ├── ev-hosting-analysis.json
@@ -344,9 +466,22 @@ src/features/modular-workflow/
 
 ## Known Issues / Next Steps
 
+**Done (Phases 1–6):**
+
+- **Save parity** — `ModelSaveModule` reproduces the exact legacy save payload via the
+  shared `configurator/services/saveService.ts` (`buildSaveConfig`, `configFingerprint`,
+  `isValidSaveData`, `saveAreaData`, `getUpdatedPylovoData`,
+  `mapSimulationSettingsToAdvancedParams`).
+- **Node-network** — `NodeEngine` (graph-based) + `WorkflowGraph` helpers + `nodes[]` /
+  `dependsOn` in all workflows + `graph-validate.test.ts`.
+- **Persistence / resume** — `FlowPersistence` saves a debounced snapshot to
+  `localStorage`; `ModelBuilderPage` offers a "Resume previous flow?" banner.
+- **`modelYaml` recursive nesting** — fixed: `serialiseModel` excludes
+  `modelYaml` / `previousModelYaml` / `modelYamlEditMode`.
+
+**Remaining:**
+
 - **Area Edit coordinates** — `addTransformer` / `moveTransformer` currently use
   placeholder `[0,0]` coordinates. They need wiring to the map click position.
 - **Stub modules** — `building-demand`, `grid-statistics`, `cost-breakdown`,
   `hosting-capacity`, `pipeline` still need re-checking against the legacy flow.
-- **`modelYaml` recursive nesting** — fixed: `serialiseModel` excludes
-  `modelYaml` / `previousModelYaml` / `modelYamlEditMode`.
