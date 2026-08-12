@@ -496,7 +496,7 @@ This section maps each piece of saved data back to the **TSX component** that pr
 | hosting-capacity               | ⚠️ Stub       | Needs re-checking against the legacy flow                                   |
 | pipeline                       | ⚠️ Stub       | Needs re-checking against the legacy flow                                   |
 | model-save                     | ✅ Done       | Reproduces the legacy save payload via `saveAreaData`                       |
-| model-load                     | ✅ Done       |                                                                             |
+| model-load                     | ✅ Done       | Entry prompt: asks whether to import an existing model into the context     |
 | model-diff                     | ✅ Done       |                                                                             |
 
 ---

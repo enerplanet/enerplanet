@@ -133,8 +133,8 @@ context, nodeStates, savedAt }` and calls `saveFlowSnapshot`. When the flow
 - **`ev-hosting-analysis`** — entry `region-select` + `simulation-settings` →
   `grid-generation` (auto) → `grid-statistics` (auto) → `hosting-capacity` (auto,
   depends on `grid-statistics`) → `model-save`.
-- **`cost-optimization`** (`from-existing-model`) — entry `simulation-settings` +
-  `grid-generation` (auto, polygons seeded from the loaded model) →
+- **`cost-optimization`** — entry `model-load` (import prompt) → `simulation-settings` +
+  `grid-generation` (auto, polygons seeded from the loaded model if imported) →
   `technology-selection` (skippable) / `power-flow` (auto) / `grid-statistics` (auto)
   → `cost-breakdown` (auto) → `model-save`.
 - **`defaultWorkflow.ts`** — also declares `nodes` (`region-select` →

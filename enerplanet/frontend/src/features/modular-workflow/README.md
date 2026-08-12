@@ -176,11 +176,11 @@ It's registered in [`App.tsx`](../../App.tsx) and linked from the sidebar in
 
 [`ModelBuilderPage.tsx`](ModelBuilderPage.tsx) hosts three tabs:
 
-| Tab                  | Component                                                      | Purpose                                                                                                                                                                                   |
-| -------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Workflows**        | [`ModelBuilderLanding.tsx`](ModelBuilderLanding.tsx)           | Model-aware workflow picker. Lists all runnable workflows, gated on whether an existing model is available. Starting a `from-existing-model` workflow loads the model into context first. |
-| **Configurator**     | [`ModelBuilderConfigurator.tsx`](ModelBuilderConfigurator.tsx) | The playback shell for the active workflow. Renders the current step's module, handles next/previous, shows recommendations and the model diff.                                           |
-| **Workflow Builder** | [`workflow/WorkflowBuilder.tsx`](workflow/WorkflowBuilder.tsx) | Admin UI to compose, validate, import, and export workflows.                                                                                                                              |
+| Tab                  | Component                                                      | Purpose                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Workflows**        | [`ModelBuilderLanding.tsx`](ModelBuilderLanding.tsx)           | Workflow picker. Lists all runnable workflows. Each workflow starts with a model-import module that asks whether to load an existing model into the context. |
+| **Configurator**     | [`ModelBuilderConfigurator.tsx`](ModelBuilderConfigurator.tsx) | The playback shell for the active workflow. Renders the current step's module, handles next/previous, shows recommendations and the model diff.              |
+| **Workflow Builder** | [`workflow/WorkflowBuilder.tsx`](workflow/WorkflowBuilder.tsx) | Admin UI to compose, validate, import, and export workflows.                                                                                                 |
 
 ---
 
@@ -286,7 +286,9 @@ defaultModuleInventory.registerAll([, /* ... */ myModule]);
 
 Workflows are JSON files in [`workflows/`](workflows/). The **primary** form is the
 node-network `nodes` array (played back by `NodeEngine`). Each node references a module
-by `moduleId` and declares its dependencies via `dependsOn`:
+by `moduleId` and declares its dependencies via `dependsOn`. Every workflow starts
+with a `model-load` entry node that asks whether to import an existing model into
+the context:
 
 ```json
 {
@@ -294,10 +296,15 @@ by `moduleId` and declares its dependencies via `dependsOn`:
   "name": "My Workflow",
   "description": "What it does.",
   "version": "1.0.0",
-  "startType": "from-scratch",
   "tags": ["my", "workflow"],
   "followUpWorkflows": [],
   "nodes": [
+    {
+      "id": "model-load",
+      "moduleId": "model-load",
+      "label": "Import Model",
+      "skippable": true
+    },
     {
       "id": "simulation-settings",
       "moduleId": "simulation-settings",
@@ -369,9 +376,10 @@ seeded context key. Run it with:
 npx vitest run src/features/modular-workflow/workflows/graph-validate.test.ts
 ```
 
-> **Note:** `from-existing-model` workflows (e.g. `cost-optimization`) seed context
-> keys such as `polygons` / `region` / `gridData` / `gridResultIds` from the loaded
-> model, so their entry nodes (e.g. `grid-generation`) declare no `dependsOn`.
+> **Note:** Every workflow starts with a `model-load` entry node that asks the
+> user whether to import an existing model into the context. If yes, context keys
+> such as `polygons` / `region` / `gridData` / `gridResultIds` are seeded from
+> the loaded model. If no, the workflow proceeds with an empty context.
 
 ---
 
