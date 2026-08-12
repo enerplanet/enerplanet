@@ -13,9 +13,9 @@ import type { ConfiguratorContext } from "./types/context";
  * Route page for the ModelBuilder feature.
  *
  * Three views behind a tab toggle:
- * - **Landing** — the model-aware workflow picker (default). Shows all runnable
- *   workflows, gated on whether an existing model is available. Starting a
- *   `from-existing-model` workflow loads the selected model into context first.
+ * - **Landing** — the workflow picker (default). Lists all runnable workflows.
+ *   Each workflow starts with a model-import module that asks whether to load
+ *   an existing model into the context.
  * - **Configurator** — the playback shell for the active workflow.
  * - **Builder** — the admin UI to compose/validate/import/export workflows.
  *

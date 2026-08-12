@@ -1,4 +1,3 @@
-export type WorkflowStartType = "from-scratch" | "from-existing-model";
 
 export interface WorkflowStep {
   /** Module ID from the catalog */
@@ -78,8 +77,6 @@ export interface WorkflowDefinition {
   name: string;
   /** Description of what this workflow does */
   description: string;
-  /** What kind of start this workflow supports */
-  startType: WorkflowStartType;
   /** Ordered list of steps (legacy linear model — kept for the legacy shell) */
   steps: WorkflowStep[];
   /**

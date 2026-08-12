@@ -347,11 +347,13 @@ export class NodeEngine {
 
   /** Shallow equality check used to avoid redundant context notifications. */
   private shallowEqual(a: ConfiguratorContext, b: ConfiguratorContext): boolean {
-    const aKeys = Object.keys(a);
-    const bKeys = Object.keys(b);
+    const aRecord = a as Record<string, unknown>;
+    const bRecord = b as Record<string, unknown>;
+    const aKeys = Object.keys(aRecord);
+    const bKeys = Object.keys(bRecord);
     if (aKeys.length !== bKeys.length) return false;
     for (const key of aKeys) {
-      if (a[key] !== b[key]) return false;
+      if (aRecord[key] !== bRecord[key]) return false;
     }
     return true;
   }

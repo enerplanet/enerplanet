@@ -8,7 +8,6 @@ import type { WorkflowDefinition } from "../types/workflow";
  *
  * 1. `followUpWorkflows` from the just-completed workflow
  * 2. Workflows matching the current model state (has grid? has results?)
- * 3. All workflows matching the current `startType`
  *
  * Results are de-duplicated by workflow ID and returned in priority order.
  */
@@ -50,14 +49,6 @@ export class WorkflowRecommender {
     );
     for (const workflow of allWorkflows) {
       if (this.matchesState(workflow, hasGrid, hasResults)) {
-        push(workflow);
-      }
-    }
-
-    // 3. All workflows matching the current startType.
-    const startType = context.startType ?? "from-scratch";
-    for (const workflow of allWorkflows) {
-      if (workflow.startType === startType) {
         push(workflow);
       }
     }

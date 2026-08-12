@@ -26,7 +26,6 @@ export type {
   ModuleDefinition,
 } from "./types/module";
 export type {
-  WorkflowStartType,
   WorkflowStep,
   WorkflowDefinition,
 } from "./types/workflow";

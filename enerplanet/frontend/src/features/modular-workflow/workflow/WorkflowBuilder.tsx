@@ -27,7 +27,7 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import type { WorkflowDefinition, WorkflowStartType, WorkflowStep } from "../types/workflow";
+import type { WorkflowDefinition, WorkflowStep } from "../types/workflow";
 import { defaultModuleInventory } from "../modules/ModuleInventory";
 import { WorkflowRegistry, defaultWorkflowRegistry } from "./WorkflowRegistry";
 
@@ -55,7 +55,6 @@ export function WorkflowBuilder({ registry, onRegistered }: WorkflowBuilderProps
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [version, setVersion] = useState("1.0.0");
-  const [startType, setStartType] = useState<WorkflowStartType>("from-scratch");
   const [tags, setTags] = useState("");
   const [followUps, setFollowUps] = useState("");
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
@@ -68,7 +67,6 @@ export function WorkflowBuilder({ registry, onRegistered }: WorkflowBuilderProps
     name: name.trim() || "Untitled Workflow",
     description: description.trim(),
     version: version.trim() || "1.0.0",
-    startType,
     tags: tags
       .split(",")
       .map((t) => t.trim())
@@ -122,7 +120,6 @@ export function WorkflowBuilder({ registry, onRegistered }: WorkflowBuilderProps
         setName(workflow.name);
         setDescription(workflow.description);
         setVersion(workflow.version);
-        setStartType(workflow.startType);
         setTags((workflow.tags ?? []).join(", "));
         setFollowUps((workflow.followUpWorkflows ?? []).join(", "));
         setSteps(workflow.steps);
@@ -239,18 +236,6 @@ export function WorkflowBuilder({ registry, onRegistered }: WorkflowBuilderProps
             <div className="space-y-1.5">
               <Label htmlFor="wf-version">Version</Label>
               <Input id="wf-version" value={version} onChange={(e) => setVersion(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Start type</Label>
-              <Select value={startType} onValueChange={(v) => setStartType(v as WorkflowStartType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="from-scratch">From scratch</SelectItem>
-                  <SelectItem value="from-existing-model">From existing model</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wf-tags">Tags (comma-separated)</Label>

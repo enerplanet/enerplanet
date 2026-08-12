@@ -245,15 +245,15 @@ function RegionSelectWrapper({ context, onUpdate }: ModuleProps) {
       {/* Map with polygon drawing */}
       <div className="h-[480px] overflow-hidden rounded-lg border border-border">
         <MapContainer
+          key={"region-select"}
           modal={false}
-          topBar={
-            <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
-              <span className="text-sm font-medium">Draw the model area</span>
-              <span className="text-xs text-muted-foreground">
-                Click to add points, double-click to close the polygon
-              </span>
-            </div>
-          }
+          topBar={null}
+          sidebar={null}
+          onDrop={undefined}
+          onDragOver={undefined}
+          mapOverlays={null}
+          mapHeader={null}
+          showSidebar={false}
         />
       </div>
 

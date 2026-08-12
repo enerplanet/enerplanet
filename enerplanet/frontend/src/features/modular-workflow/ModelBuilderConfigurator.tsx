@@ -477,36 +477,38 @@ function ModelBuilderConfiguratorInner({
       <Separator className="my-4" />
 
       {/* Node palette: all nodes + their status */}
-      <div className="mb-4">
-        <h2 className="mb-2 text-sm font-semibold">Node palette</h2>
-        <div className="flex flex-wrap gap-2">
-          {graph.nodes.map((node) => {
-            const status = nodeStates[node.id] ?? "pending";
-            return (
-              <button
-                key={node.id}
-                type="button"
-                disabled={busy}
-                onClick={() => handleActivateNode(node.id)}
-                title={`${node.label} — ${status}`}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                  status === "active"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-card text-muted-foreground hover:bg-muted/40"
-                }`}
-              >
-                <NodeStatusIcon status={status} />
-                <span>{node.label}</span>
-              </button>
-            );
-          })}
+      {activeNode?.id == "done" && (
+        <div className="mb-4">
+          <h2 className="mb-2 text-sm font-semibold">Node palette</h2>
+          <div className="flex flex-wrap gap-2">
+            {graph.nodes.map((node) => {
+              const status = nodeStates[node.id] ?? "pending";
+              return (
+                <button
+                  key={node.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleActivateNode(node.id)}
+                  title={`${node.label} — ${status}`}
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                    status === "active"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted/40"
+                  }`}
+                >
+                  <NodeStatusIcon status={status} />
+                  <span>{node.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Available next: interactive ready nodes the user may choose */}
       <div className="mb-4">
         <h2 className="mb-2 text-sm font-semibold">Available next</h2>
-        {validNext.length > 0 ? (
+        {validNext.length > 0 && (
           <div className="flex flex-col gap-2">
             {validNext.map((node) => (
               <button
@@ -521,10 +523,6 @@ function ModelBuilderConfiguratorInner({
               </button>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            No further nodes are ready. Complete the active step to continue.
-          </p>
         )}
       </div>
 

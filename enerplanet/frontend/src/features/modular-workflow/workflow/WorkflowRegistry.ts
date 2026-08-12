@@ -148,11 +148,6 @@ export class WorkflowRegistry {
     if (typeof w.version !== "string") {
       throw new Error(`[WorkflowRegistry] Workflow "${w.id}" is missing a string \`version\``);
     }
-    if (w.startType !== "from-scratch" && w.startType !== "from-existing-model") {
-      throw new Error(
-        `[WorkflowRegistry] Workflow "${w.id}" has an invalid \`startType\``,
-      );
-    }
     if (!Array.isArray(w.steps)) {
       throw new Error(`[WorkflowRegistry] Workflow "${w.id}" is missing a \`steps\` array`);
     }

@@ -168,29 +168,6 @@ function AreaEditComponent({ context, onUpdate }: ModuleProps) {
     [getUserId, context.modelId, context.draftId]
   );
 
-  const handleAssignBuilding = useCallback(
-    async (buildingOsmId: string, targetGridId: number) => {
-      setBusy(true);
-      setError(null);
-      setMessage(null);
-      try {
-        const result = await pylovoService.assignBuilding(
-          buildingOsmId,
-          targetGridId,
-          getUserId(),
-          context.modelId,
-          context.draftId
-        );
-        setMessage(`Building assigned to transformer ${result.new_grid_id}.`);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to assign building");
-      } finally {
-        setBusy(false);
-      }
-    },
-    [getUserId, context.modelId, context.draftId]
-  );
-
   if (!gridData) {
     return (
       <div className="p-4 text-sm text-muted-foreground">

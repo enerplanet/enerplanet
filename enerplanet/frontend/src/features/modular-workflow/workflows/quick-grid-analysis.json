@@ -3,7 +3,6 @@
   "name": "Quick Grid Analysis",
   "description": "Select a region, generate a grid, and inspect the statistics.",
   "version": "1.0.0",
-  "startType": "from-scratch",
   "tags": [
     "quick",
     "grid"
@@ -12,6 +11,11 @@
     "full-energy-planning"
   ],
   "steps": [
+    {
+      "moduleId": "model-load",
+      "label": "Import Model",
+      "skippable": true
+    },
     {
       "moduleId": "region-select",
       "label": "Select Region",
@@ -39,6 +43,12 @@
     }
   ],
   "nodes": [
+    {
+      "id": "model-load",
+      "moduleId": "model-load",
+      "label": "Import Model",
+      "skippable": true
+    },
     {
       "id": "region-select",
       "moduleId": "region-select",

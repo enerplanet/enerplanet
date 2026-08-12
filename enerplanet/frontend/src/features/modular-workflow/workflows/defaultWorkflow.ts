@@ -13,14 +13,20 @@ export const defaultWorkflow: WorkflowDefinition = {
   name: "Quick Grid Analysis",
   description: "Select a region, generate a grid, and inspect the model YAML.",
   version: "1.0.0",
-  startType: "from-scratch",
   tags: ["quick", "grid"],
   followUpWorkflows: ["full-energy-planning"],
   steps: [
+    { moduleId: "model-load", label: "Import Model", skippable: true },
     { moduleId: "region-select", label: "Select Region", skippable: false },
     { moduleId: "grid-generation", label: "Generate Grid", auto: true },
   ],
   nodes: [
+    {
+      id: "model-load",
+      moduleId: "model-load",
+      label: "Import Model",
+      skippable: true,
+    },
     {
       id: "region-select",
       moduleId: "region-select",

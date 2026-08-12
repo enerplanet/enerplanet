@@ -158,7 +158,6 @@ export interface ConfiguratorContext {
   // Workflow metadata
   workflowId?: string;
   workflowVersion?: number;
-  startType?: "from-scratch" | "from-existing-model";
   sourceModelId?: number;
 
   // Node-network state (Phase 2)

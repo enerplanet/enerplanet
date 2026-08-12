@@ -3,13 +3,17 @@
   "name": "Cost Optimization",
   "description": "Optimize costs for an existing model.",
   "version": "1.0.0",
-  "startType": "from-existing-model",
   "tags": [
     "cost",
     "optimization"
   ],
   "followUpWorkflows": [],
   "steps": [
+    {
+      "moduleId": "model-load",
+      "label": "Import Model",
+      "skippable": true
+    },
     {
       "moduleId": "simulation-settings",
       "label": "Simulation Settings",
@@ -47,6 +51,12 @@
     }
   ],
   "nodes": [
+    {
+      "id": "model-load",
+      "moduleId": "model-load",
+      "label": "Import Model",
+      "skippable": true
+    },
     {
       "id": "simulation-settings",
       "moduleId": "simulation-settings",
