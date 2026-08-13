@@ -46,7 +46,6 @@ import {
     extractBuildingEnrichmentFromProps,
     extractPeakLoadFromProps,
     extractSelectedFClassFromProps,
-    extractYearlyDemandFromProps,
     normalizeFClassToken,
 } from '@/features/configurator/utils/buildingFeatureExtraction';
 import { buildFClassDetails, type FClassDetail } from '@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand';
@@ -64,6 +63,7 @@ import {
 } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
 import { customLocationService, type CustomLocation } from "@/features/locations/services/customLocationService";
 import type { Technology } from "@/features/technologies/services/technologyService";
+import { toFiniteNumber, extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
@@ -71,46 +71,11 @@ const DEFAULT_RESOLUTION = 60;
 const SAVE_DELAY_MS = 1200;
 const DASHBOARD_ROUTE = "/app/model-dashboard";
 
-const parseFlexibleNumberString = (input: string): number | null => {
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    // Remove common whitespace separators (normal + non-breaking spaces)
-    const compact = trimmed.replace(/[\s\u00A0\u202F]/g, '');
-
-    // 1,234.56
-    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(compact)) {
-        const parsed = Number(compact.replace(/,/g, ''));
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    // 1.234,56
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(compact)) {
-        const parsed = Number(compact.replace(/\./g, '').replace(',', '.'));
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    // Decimal comma fallback
-    const normalized = compact.includes(',') && !compact.includes('.')
-        ? compact.replace(',', '.')
-        : compact;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-};
-
-const toFiniteNumber = (value: unknown): number | null => {
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-    if (typeof value === 'string') {
-        return parseFlexibleNumberString(value);
-    }
-    return null;
-};
-
 const extractBuildingEnrichment = extractBuildingEnrichmentFromProps;
 const extractPeakLoadKw = extractPeakLoadFromProps;
 const extractSelectedFClass = extractSelectedFClassFromProps;
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number =>
-    extractYearlyDemandFromProps(props, { demandEnergyFallback: 'all' });
+    extractYearlyDemandAll(props);
 
 const checkBboxIntersection = (
     polygon: [number, number][],
@@ -1323,13 +1288,13 @@ const useMapInteractions = ({
     map,
     isDrawing,
     pylovoLayersRef,
-    suppressDialogOnClick = false,
+    suppressDialogOnClickRef,
     suppressMapInteractions = false
 }: {
     map: OLMap | null;
     isDrawing: boolean;
     pylovoLayersRef: React.RefObject<VectorLayer<VectorSource>[]>;
-    suppressDialogOnClick?: boolean;
+    suppressDialogOnClickRef?: React.RefObject<boolean>;
     suppressMapInteractions?: boolean;
 }) => {
     const [transformerDialogOpen, setTransformerDialogOpen] = useState(false);
@@ -1376,7 +1341,7 @@ const useMapInteractions = ({
             return;
         }
         const handleClick = (evt: any) => {
-            if (isDrawing || suppressDialogOnClick) return;
+            if (isDrawing || suppressDialogOnClickRef?.current) return;
             const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => {
                 const type = f.get('feature_type');
                 if (type === 'transformer' || type === 'building') return f;
@@ -1472,7 +1437,7 @@ const useMapInteractions = ({
             map.un('click', handleClick);
             map.un('pointermove', handlePointerMove);
         };
-    }, [map, isDrawing, suppressDialogOnClick, suppressMapInteractions]);
+    }, [map, isDrawing, suppressMapInteractions]);
 
     const handleCloseTransformerDialog = useCallback(() => {
         setTransformerDialogOpen(false);
@@ -1500,7 +1465,7 @@ export const useAreaSelect = ({
     editMode = false,
     existingModelId,
     buildingLimit = 0,
-    suppressDialogOnClick = false,
+    suppressDialogOnClickRef,
     draftId,
 }: UseAreaSelectProps & { buildingLimit?: number }) => {
     const { t } = useTranslation();
@@ -1622,7 +1587,7 @@ export const useAreaSelect = ({
         map,
         isDrawing,
         pylovoLayersRef: pylovoLayersData.pylovoLayersRef,
-        suppressDialogOnClick,
+        suppressDialogOnClickRef,
         suppressMapInteractions: isMapLibre3D,
     });
 
