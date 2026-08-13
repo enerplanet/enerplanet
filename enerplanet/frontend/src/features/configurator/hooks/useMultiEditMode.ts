@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 export interface MultiEditModeState {
   isMultiEdit: boolean;
@@ -9,9 +10,12 @@ export interface MultiEditModeState {
 }
 
 export const useMultiEditMode = (): MultiEditModeState => {
-  const [isMultiEdit, setIsMultiEdit] = useState(false);
+  const activeMode = useModelStore((s) => s.activeMode);
+  const setActiveMode = useModelStore((s) => s.setActiveMode);
   const [multiEditSelectedIds, setMultiEditSelectedIds] = useState<Set<string>>(new Set());
   const multiEditFeaturesRef = useRef<Map<string, any>>(new Map());
+
+  const isMultiEdit = activeMode === "multi-edit";
 
   const clearMultiEditSelection = useCallback(() => {
     multiEditFeaturesRef.current.forEach((f) => f.setStyle(undefined));
@@ -21,12 +25,12 @@ export const useMultiEditMode = (): MultiEditModeState => {
 
   const toggleMultiEdit = useCallback(
     (v: boolean) => {
-      setIsMultiEdit(v);
+      setActiveMode(v ? "multi-edit" : null);
       if (!v) {
         clearMultiEditSelection();
       }
     },
-    [clearMultiEditSelection]
+    [setActiveMode, clearMultiEditSelection]
   );
 
   return {

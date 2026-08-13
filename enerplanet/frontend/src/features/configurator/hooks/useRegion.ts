@@ -3,6 +3,7 @@ import { transformExtent } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { generateUUID } from "@/utils/uuid";
 import { highlightSelectedRegionBoundary } from "@/features/configurator/utils/gridLayerUtils";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 // ──────────────────────────────────────────────
 // useRegionName
@@ -60,7 +61,6 @@ interface RegionSelectionOptions {
   resetAddTransformerMode: () => void;
   clearBuildingAssignMode: () => void;
   setDraftId: (id: string) => void;
-  availableRegions: Array<{ name: string }>;
 }
 
 export const useRegionSelection = ({
@@ -70,8 +70,8 @@ export const useRegionSelection = ({
   resetAddTransformerMode,
   clearBuildingAssignMode,
   setDraftId,
-  availableRegions,
 }: RegionSelectionOptions) => {
+  const availableRegions = useModelStore((s) => s.availableRegions);
   const handleClearAllWithModes = useCallback(() => {
     handleClearAllPolygons();
     resetAddTransformerMode();

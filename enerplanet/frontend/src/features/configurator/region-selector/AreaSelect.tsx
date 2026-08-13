@@ -40,6 +40,7 @@ import { useRegionName, useRegionSelection } from "@/features/configurator/hooks
 import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 // Extracted selectors
 import {
@@ -253,8 +254,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const multiEdit = useMultiEditMode();
 
   const buildingDemand = useBuildingDemandRecalculation({
-    selectedBuilding: mapInteractions.selectedBuilding,
-    setSelectedBuilding: mapInteractions.setSelectedBuilding,
     pylovoLayers,
     notification,
   });
@@ -270,10 +269,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
-  suppressDialogOnClickRef.current =
-    addTransformer.isAddTransformerMode ||
-    moveTransformer.isMoveTransformerMode ||
-    buildingAssign.isBuildingAssignMode;
+  const activeMode = useModelStore((s) => s.activeMode);
+  suppressDialogOnClickRef.current = activeMode !== null;
 
   // ── Available transformer sizes from API ─────────────────────────
   const [transformerSizes, setTransformerSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
@@ -295,13 +292,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     resetAddTransformerMode: addTransformer.resetAddTransformerMode,
     clearBuildingAssignMode: buildingAssign.clearBuildingAssignMode,
     setDraftId: (id: string) => setDraftId(id),
-    availableRegions: pylovoLayers.availableRegions ?? [],
   });
 
   // ── Transformer CRUD actions ─────────────────────────────────────
   const transformerActions = useTransformerActions({
-    selectedTransformer: mapInteractions.selectedTransformer,
-    setSelectedTransformer: mapInteractions.setSelectedTransformer,
     updateTransformerKva: pylovoLayers.updateTransformerKva,
     notification,
     userId: user?.id ? String(user.id) : undefined,
@@ -313,17 +307,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
   // ── Tech dialog flow ─────────────────────────────────────────────
   const techDialogFlow = useTechDialogFlow({
-    mapInteractions,
-    techOperations,
     multiEditSelectedIds: multiEdit.multiEditSelectedIds,
   });
 
   // ── 3D MapLibre handlers ─────────────────────────────────────────
   const ml3d = useMapLibre3DHandlers({
-    addTransformer,
-    moveTransformer,
-    buildingAssign,
     mapInteractions,
+    buildingAssign,
     gridIdToConnectedBuildings,
     notification,
     t,
@@ -354,11 +344,12 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, []);
 
   // ── Reassignment line (visual dashed line from building to cursor) ──
+  const assignStep = useModelStore((s) => s.assignStep);
+  const reassignmentLineAnchor = useModelStore((s) => s.reassignmentLineAnchor);
   useReassignmentLine({
     map,
-    active:
-      buildingAssign.isBuildingAssignMode && buildingAssign.assignStep === "select-transformer",
-    buildingCoords: buildingAssign.reassignmentLineAnchor,
+    active: activeMode === "assign-buildings" && assignStep === "select-transformer",
+    buildingCoords: reassignmentLineAnchor,
   });
 
   // ── Handle run power flow ────────────────────────────────────────

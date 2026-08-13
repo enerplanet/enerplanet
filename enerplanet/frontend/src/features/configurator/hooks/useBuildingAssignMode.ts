@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Style, Fill, Stroke } from "ol/style";
 import { getCenter } from "ol/extent";
 import type { Map as OLMap } from "ol";
@@ -6,6 +6,7 @@ import { pylovoService } from "@/features/configurator/services/pylovoService";
 import { useAuthStore } from "@/store/auth-store";
 import { useTranslation } from "@spatialhub/i18n";
 import { getMapProjectedCenterFromAnyCoordinates } from "@/features/configurator/utils/geometryUtils";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface BuildingAssignOptions {
   map: OLMap | null;
@@ -47,51 +48,70 @@ export const useBuildingAssignMode = ({
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
 
-  const [isBuildingAssignMode, setIsBuildingAssignMode] = useState(false);
-  const [selectedBuildingsForAssign, setSelectedBuildingsForAssign] = useState<string[]>([]);
-  const [assignStep, setAssignStep] = useState<"select-buildings" | "select-transformer">(
-    "select-buildings"
-  );
   const [isAssigning, setIsAssigning] = useState(false);
   const selectedBuildingFeaturesRef = useRef<Map<string, any>>(new Map());
 
+  // Read/write from unified store
+  const activeMode = useModelStore((s) => s.activeMode);
+  const setActiveMode = useModelStore((s) => s.setActiveMode);
+  const selectedBuildingsForAssign = useModelStore((s) => s.selectedBuildingsForAssign);
+  const setSelectedBuildingsForAssign = useModelStore((s) => s.setSelectedBuildingsForAssign);
+  const assignStep = useModelStore((s) => s.assignStep);
+  const setAssignStep = useModelStore((s) => s.setAssignStep);
+  const reassignmentLineAnchor = useModelStore((s) => s.reassignmentLineAnchor);
+  const setReassignmentLineAnchor = useModelStore((s) => s.setReassignmentLineAnchor);
+
+  const isBuildingAssignMode = activeMode === "assign-buildings";
+
+  const setIsBuildingAssignMode = useCallback(
+    (active: boolean) => {
+      setActiveMode(active ? "assign-buildings" : null);
+    },
+    [setActiveMode]
+  );
+
   const clearBuildingAssignMode = useCallback(() => {
-    // Clear highlight styles from all selected buildings
     selectedBuildingFeaturesRef.current.forEach((feature) => {
       feature.setStyle(undefined);
     });
     selectedBuildingFeaturesRef.current.clear();
-    setIsBuildingAssignMode(false);
+    setActiveMode(null);
     setSelectedBuildingsForAssign([]);
     setAssignStep("select-buildings");
-  }, []);
+    setReassignmentLineAnchor(null);
+  }, [setActiveMode, setSelectedBuildingsForAssign, setAssignStep, setReassignmentLineAnchor]);
 
-  const toggleBuildingSelection = useCallback((rawOsmId: unknown, feature?: any) => {
-    if (rawOsmId === undefined || rawOsmId === null) return;
-    const osmId = String(rawOsmId).trim();
-    if (!osmId) return;
+  const toggleBuildingSelection = useCallback(
+    (rawOsmId: unknown, feature?: any) => {
+      if (rawOsmId === undefined || rawOsmId === null) return;
+      const osmId = String(rawOsmId).trim();
+      if (!osmId) return;
 
-    setSelectedBuildingsForAssign((prev) => {
-      if (prev.includes(osmId)) {
-        if (feature) {
-          feature.setStyle(undefined);
+      setSelectedBuildingsForAssign((prev) => {
+        if (prev.includes(osmId)) {
+          if (feature) {
+            feature.setStyle(undefined);
+          }
+          selectedBuildingFeaturesRef.current.delete(osmId);
+          return prev.filter((id) => id !== osmId);
         }
-        selectedBuildingFeaturesRef.current.delete(osmId);
-        return prev.filter((id) => id !== osmId);
-      }
 
-      if (feature) {
-        feature.setStyle(
-          new Style({
-            fill: new Fill({ color: "rgba(59, 130, 246, 0.5)" }),
-            stroke: new Stroke({ color: "#2563eb", width: 3 }),
-          })
-        );
-        selectedBuildingFeaturesRef.current.set(osmId, feature);
-      }
-      return [...prev, osmId];
-    });
-  }, []);
+        if (feature) {
+          feature.setStyle(
+            new Style({
+              fill: new Fill({ color: "rgba(59, 130, 246, 0.5)" }),
+              stroke: new Stroke({ color: "#2563eb", width: 3 }),
+            })
+          );
+          selectedBuildingFeaturesRef.current.set(osmId, feature);
+        }
+        // Note: setSelectedBuildingsForAssign expects a Setter function, but the store
+        // only accepts a string[]. We use the array directly.
+        return [...prev, osmId];
+      });
+    },
+    [setSelectedBuildingsForAssign]
+  );
 
   const assignSelectedBuildingsToTransformer = useCallback(
     async (rawGridId: unknown) => {
@@ -114,13 +134,7 @@ export const useBuildingAssignMode = ({
         let successCount = 0;
         for (const osmId of selectedBuildingsForAssign) {
           try {
-            await pylovoService.assignBuilding(
-              osmId,
-              targetGridId,
-              userId,
-              existingModelId,
-              draftId
-            );
+            await pylovoService.assignBuilding(osmId, targetGridId, userId, existingModelId, draftId);
             successCount++;
           } catch (e) {
             console.error(`Failed to assign building ${osmId}:`, e);
@@ -166,23 +180,23 @@ export const useBuildingAssignMode = ({
   );
 
   const startBuildingAssignMode = useCallback(() => {
-    setIsBuildingAssignMode(true);
+    setActiveMode("assign-buildings");
     setSelectedBuildingsForAssign([]);
     setAssignStep("select-buildings");
-  }, []);
+  }, [setActiveMode, setSelectedBuildingsForAssign, setAssignStep]);
 
-  // Reassignment line anchor (visual dashed line from building to cursor)
-  const reassignmentLineAnchor = useMemo<[number, number] | null>(() => {
-    if (
-      !isBuildingAssignMode ||
-      assignStep !== "select-transformer" ||
-      selectedBuildingsForAssign.length === 0
-    ) {
-      return null;
+  // Reassignment line anchor
+  useEffect(() => {
+    if (!isBuildingAssignMode || assignStep !== "select-transformer" || selectedBuildingsForAssign.length === 0) {
+      setReassignmentLineAnchor(null);
+      return;
     }
 
     const selectedOsmId = selectedBuildingsForAssign[selectedBuildingsForAssign.length - 1];
-    if (!selectedOsmId) return null;
+    if (!selectedOsmId) {
+      setReassignmentLineAnchor(null);
+      return;
+    }
 
     const selectedFeature = selectedBuildingFeaturesRef.current.get(selectedOsmId);
     if (selectedFeature) {
@@ -191,7 +205,8 @@ export const useBuildingAssignMode = ({
         const extent = geometry.getExtent();
         if (extent) {
           const center = getCenter(extent);
-          return [center[0], center[1]];
+          setReassignmentLineAnchor([center[0], center[1]]);
+          return;
         }
       }
     }
@@ -201,20 +216,16 @@ export const useBuildingAssignMode = ({
       return osmId !== undefined && osmId !== null && String(osmId).trim() === selectedOsmId;
     });
 
-    if (!buildingFeature?.geometry?.coordinates) return null;
-    return getMapProjectedCenterFromAnyCoordinates(buildingFeature.geometry.coordinates);
-  }, [
-    isBuildingAssignMode,
-    assignStep,
-    selectedBuildingsForAssign,
-    pylovoGridData,
-  ]);
+    if (!buildingFeature?.geometry?.coordinates) {
+      setReassignmentLineAnchor(null);
+      return;
+    }
+    setReassignmentLineAnchor(getMapProjectedCenterFromAnyCoordinates(buildingFeature.geometry.coordinates));
+  }, [isBuildingAssignMode, assignStep, selectedBuildingsForAssign, pylovoGridData, setReassignmentLineAnchor]);
 
   // Map click handler for multi-building assignment mode
   useEffect(() => {
-    if (!map || !isBuildingAssignMode) {
-      return;
-    }
+    if (!map || !isBuildingAssignMode) return;
 
     const handleMapClick = async (evt: any) => {
       if (isAssigning) return;
@@ -230,12 +241,10 @@ export const useBuildingAssignMode = ({
       const featureType = feature.get("feature_type");
 
       if (assignStep === "select-buildings") {
-        // In building selection step - toggle building selection
         if (featureType === "building") {
           toggleBuildingSelection(feature.get("osm_id"), feature);
         }
       } else if (assignStep === "select-transformer") {
-        // In transformer selection step
         if (featureType === "transformer") {
           await assignSelectedBuildingsToTransformer(
             feature.get("grid_result_id") ??
@@ -249,7 +258,6 @@ export const useBuildingAssignMode = ({
       }
     };
 
-    // Escape key to cancel
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         clearBuildingAssignMode();

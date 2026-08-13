@@ -1,9 +1,8 @@
 import { useCallback } from "react";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface TransformerActionsOptions {
-  selectedTransformer: { gridResultId: number; ratedPowerKva: number } | null;
-  setSelectedTransformer: (updater: (prev: any) => any) => void;
   updateTransformerKva: (gridResultId: number, newKva: number) => void;
   notification: {
     showSuccess: (message: string) => void;
@@ -17,8 +16,6 @@ interface TransformerActionsOptions {
 }
 
 export const useTransformerActions = ({
-  selectedTransformer,
-  setSelectedTransformer,
   updateTransformerKva,
   notification,
   userId,
@@ -27,6 +24,9 @@ export const useTransformerActions = ({
   allPolygons,
   handlePolygonModified,
 }: TransformerActionsOptions) => {
+  const selectedTransformer = useModelStore((s) => s.selectedTransformer);
+  const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
+
   const handleTransformerKvaChange = useCallback(
     (newKva: number) => {
       if (selectedTransformer) {

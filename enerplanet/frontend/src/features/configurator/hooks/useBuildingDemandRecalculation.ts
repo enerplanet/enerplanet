@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { normalizeFClass, isResidentialFClass } from "@/features/configurator/utils/fClassUtils";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface SelectedBuilding {
   osmId: string;
@@ -22,8 +23,6 @@ interface SelectedBuilding {
 }
 
 interface BuildingDemandOptions {
-  selectedBuilding: SelectedBuilding | null;
-  setSelectedBuilding: (updater: (prev: any) => any) => void;
   pylovoLayers: {
     updateBuildingProperty: (osmId: string, key: string, value: unknown) => void;
     updateBuildingFClassDemand: (osmId: string, fClass: string, newDemand: number) => void;
@@ -51,11 +50,11 @@ export interface BuildingDemandHandlers {
 }
 
 export const useBuildingDemandRecalculation = ({
-  selectedBuilding,
-  setSelectedBuilding,
   pylovoLayers,
   notification,
 }: BuildingDemandOptions): BuildingDemandHandlers => {
+  const selectedBuilding = useModelStore((s) => s.selectedBuilding);
+  const setSelectedBuilding = useModelStore((s) => s.setSelectedBuilding);
   // Handle per-f_class demand change via dialog
   const handleFClassDemandChange = useCallback(
     (fClass: string, newDemand: number) => {

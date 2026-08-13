@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toLonLat } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { useTranslation } from "@spatialhub/i18n";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 // ──────────────────────────────────────────────
 // useAddTransformerMode
@@ -45,26 +46,39 @@ export const useAddTransformerMode = ({
   existingModelId,
   draftId,
 }: AddTransformerOptions): AddTransformerModeState => {
-  const [isAddTransformerMode, setIsAddTransformerMode] = useState(false);
-  const [newTransformerCoords, setNewTransformerCoords] = useState<[number, number] | null>(null);
-  const [addTransformerDialogOpen, setAddTransformerDialogOpen] = useState(false);
-  const [transformerCursorPos, setTransformerCursorPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
-  const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
   const allPolygonsRef = useRef(allPolygons);
   allPolygonsRef.current = allPolygons;
 
+  // Read/write mode + state from the unified store
+  const activeMode = useModelStore((s) => s.activeMode);
+  const setActiveMode = useModelStore((s) => s.setActiveMode);
+  const newTransformerCoords = useModelStore((s) => s.newTransformerCoords);
+  const setNewTransformerCoords = useModelStore((s) => s.setNewTransformerCoords);
+  const addTransformerDialogOpen = useModelStore((s) => s.addTransformerDialogOpen);
+  const setAddTransformerDialogOpen = useModelStore((s) => s.setAddTransformerDialogOpen);
+  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
+  const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
+
+  const isAddTransformerMode = activeMode === "add-transformer";
+
+  const setIsAddTransformerMode = useCallback(
+    (active: boolean) => {
+      setActiveMode(active ? "add-transformer" : null);
+    },
+    [setActiveMode]
+  );
+
   const toggleAddTransformerMode = useCallback(() => {
-    setIsAddTransformerMode((prev) => !prev);
-  }, []);
+    setActiveMode(activeMode === "add-transformer" ? null : "add-transformer");
+  }, [activeMode, setActiveMode]);
 
   const resetAddTransformerMode = useCallback(() => {
     setNewTransformerCoords(null);
     setAddTransformerDialogOpen(false);
-    setIsAddTransformerMode(false);
-  }, []);
+    setActiveMode(null);
+  }, [setNewTransformerCoords, setAddTransformerDialogOpen, setActiveMode]);
 
   const handleAddTransformer = useCallback(
     async (kva: number) => {
@@ -122,9 +136,7 @@ export const useAddTransformerMode = ({
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
-      if (
-        !isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)
-      ) {
+      if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
         notification.showError(
           t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
         );
@@ -221,19 +233,34 @@ export const useMoveTransformerMode = ({
   draftId,
 }: MoveTransformerOptions): MoveTransformerModeState => {
   const { t } = useTranslation();
-  const [isMoveTransformerMode, setIsMoveTransformerMode] = useState(false);
-  const [transformerToMove, setTransformerToMove] = useState<number | null>(null);
-  const [transformerCursorPos, setTransformerCursorPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
   const user = useAuthStore((state) => state.user);
   const allPolygonsRef = useRef(allPolygons);
   allPolygonsRef.current = allPolygons;
 
-  const startMoveTransformer = useCallback((gridResultId: number) => {
-    setTransformerToMove(gridResultId);
-    setIsMoveTransformerMode(true);
-  }, []);
+  // Read/write mode + state from the unified store
+  const activeMode = useModelStore((s) => s.activeMode);
+  const setActiveMode = useModelStore((s) => s.setActiveMode);
+  const transformerToMove = useModelStore((s) => s.transformerToMove);
+  const setTransformerToMove = useModelStore((s) => s.setTransformerToMove);
+  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
+  const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
+
+  const isMoveTransformerMode = activeMode === "move-transformer";
+
+  const setIsMoveTransformerMode = useCallback(
+    (active: boolean) => {
+      setActiveMode(active ? "move-transformer" : null);
+    },
+    [setActiveMode]
+  );
+
+  const startMoveTransformer = useCallback(
+    (gridResultId: number) => {
+      setTransformerToMove(gridResultId);
+      setActiveMode("move-transformer");
+    },
+    [setTransformerToMove, setActiveMode]
+  );
 
   // Map click handler for move transformer mode
   useEffect(() => {
@@ -271,7 +298,7 @@ export const useMoveTransformerMode = ({
         console.error("Failed to move transformer:", error);
         notification.showError(t("transformer.movingFailed"));
       } finally {
-        setIsMoveTransformerMode(false);
+        setActiveMode(null);
         setTransformerToMove(null);
       }
     };
@@ -320,6 +347,9 @@ export const useMoveTransformerMode = ({
     user?.id,
     existingModelId,
     draftId,
+    setActiveMode,
+    setTransformerToMove,
+    setTransformerCursorPos,
   ]);
 
   return {

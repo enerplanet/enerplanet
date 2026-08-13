@@ -14,8 +14,7 @@ import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/ut
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { parseTechs, extractYearlyDemandCustomOnly } from "@/features/configurator/utils/parsing";
 import { getClusterKeyFromProps } from "@/features/configurator/utils/geometryUtils";
-import type { AddTransformerModeState, MoveTransformerModeState } from "@/features/configurator/hooks/useTransformerMode";
-import type { BuildingAssignModeState } from "@/features/configurator/hooks/useBuildingAssignMode";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 // ──────────────────────────────────────────────
 // useMapResize
@@ -166,29 +165,36 @@ interface MapInteractionsLike {
 }
 
 interface Ml3dHandlersOptions {
-  addTransformer: AddTransformerModeState;
-  moveTransformer: MoveTransformerModeState;
-  buildingAssign: BuildingAssignModeState;
   mapInteractions: MapInteractionsLike;
+  buildingAssign: {
+    toggleBuildingSelection: (rawOsmId: unknown, feature?: any) => void;
+    assignSelectedBuildingsToTransformer: (rawGridId: unknown) => Promise<void>;
+  };
   gridIdToConnectedBuildings: Record<string, { count: number; types: string[] }>;
   notification: { showError: (message: string) => void };
   t: (key: string) => string;
 }
 
 export const useMapLibre3DHandlers = ({
-  addTransformer,
-  moveTransformer,
-  buildingAssign,
   mapInteractions,
+  buildingAssign,
   gridIdToConnectedBuildings,
   notification,
   t,
 }: Ml3dHandlersOptions) => {
+  const activeMode = useModelStore((s) => s.activeMode);
+  const assignStep = useModelStore((s) => s.assignStep);
+  const setNewTransformerCoords = useModelStore((s) => s.setNewTransformerCoords);
+  const setAddTransformerDialogOpen = useModelStore((s) => s.setAddTransformerDialogOpen);
+
+  const isAddTransformerMode = activeMode === "add-transformer";
+  const isMoveTransformerMode = activeMode === "move-transformer";
+  const isBuildingAssignMode = activeMode === "assign-buildings";
   const handleMl3dBuildingClick = useCallback(
     (props: Record<string, any>) => {
-      if (addTransformer.isAddTransformerMode || moveTransformer.isMoveTransformerMode) return;
-      if (buildingAssign.isBuildingAssignMode) {
-        if (buildingAssign.assignStep === "select-buildings") {
+      if (isAddTransformerMode || isMoveTransformerMode) return;
+      if (isBuildingAssignMode) {
+        if (assignStep === "select-buildings") {
           buildingAssign.toggleBuildingSelection(props.osm_id);
         } else {
           notification.showError(t("simulation.building.selectTransformer"));
@@ -229,9 +235,11 @@ export const useMapLibre3DHandlers = ({
       mapInteractions.setBuildingDialogOpen(true);
     },
     [
+      isBuildingAssignMode,
+      isAddTransformerMode,
+      isMoveTransformerMode,
+      assignStep,
       buildingAssign,
-      addTransformer.isAddTransformerMode,
-      moveTransformer.isMoveTransformerMode,
       notification,
       t,
       mapInteractions,
@@ -240,9 +248,9 @@ export const useMapLibre3DHandlers = ({
 
   const handleMl3dTransformerClick = useCallback(
     (props: Record<string, any>) => {
-      if (addTransformer.isAddTransformerMode || moveTransformer.isMoveTransformerMode) return;
-      if (buildingAssign.isBuildingAssignMode) {
-        if (buildingAssign.assignStep === "select-transformer") {
+      if (isAddTransformerMode || isMoveTransformerMode) return;
+      if (isBuildingAssignMode) {
+        if (assignStep === "select-transformer") {
           void buildingAssign.assignSelectedBuildingsToTransformer(
             props.grid_result_id ?? props.transformer_id ?? props.trafo_id ?? props.id
           );
@@ -259,9 +267,11 @@ export const useMapLibre3DHandlers = ({
       mapInteractions.setTransformerDialogOpen(true);
     },
     [
+      isBuildingAssignMode,
+      isAddTransformerMode,
+      isMoveTransformerMode,
+      assignStep,
       buildingAssign,
-      addTransformer.isAddTransformerMode,
-      moveTransformer.isMoveTransformerMode,
       notification,
       t,
       mapInteractions,
@@ -343,15 +353,15 @@ export const useMapLibre3DHandlers = ({
 
   const handleMl3dMapClick = useCallback(
     (lngLat: [number, number]) => {
-      if (addTransformer.isAddTransformerMode) {
-        addTransformer.setNewTransformerCoords(lngLat);
-        addTransformer.setAddTransformerDialogOpen(true);
+      if (isAddTransformerMode) {
+        setNewTransformerCoords(lngLat);
+        setAddTransformerDialogOpen(true);
       }
     },
     [
-      addTransformer.isAddTransformerMode,
-      addTransformer.setNewTransformerCoords,
-      addTransformer.setAddTransformerDialogOpen,
+      isAddTransformerMode,
+      setNewTransformerCoords,
+      setAddTransformerDialogOpen,
     ]
   );
 
