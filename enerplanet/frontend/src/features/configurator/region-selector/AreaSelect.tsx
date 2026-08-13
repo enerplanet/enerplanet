@@ -20,7 +20,6 @@ import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
-import { MapLegend } from "@/components/map-controls/MapLegend";
 import { GridActionBar } from "@/components/map-controls/GridActionBar";
 import { parseDate } from "@internationalized/date";
 import {
@@ -1943,8 +1942,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
-            {/* Map legend */}
-            <MapLegend />
           </>
         }
         mapHeader={
