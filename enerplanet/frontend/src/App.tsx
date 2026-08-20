@@ -14,7 +14,6 @@ const EnergyRiskDashboard = lazy(() => import("@/features/model-dashboard/compon
 const Dashboard = lazy(() => import("@/features/admin-dashboard").then(module => ({ default: module.Dashboard })));
 const FeedbackComponent = lazy(() => import("@/features/user-feedback").then(module => ({ default: module.FeedbackComponent })));
 const SettingsPage = lazy(() => import("@/features/settings/SettingsPage"));
-const WeatherSettings = lazy(() => import("@/features/weather/WeatherSettings"));
 const ProfilePage = lazy(() => import("@/features/profile").then(module => ({ default: module.ProfilePage })));
 const NotificationsPage = lazy(() => import("@/features/notifications/NotificationsPage"));
 const AreaSelect = lazy(() => import("@/features/configurator/region-selector/AreaSelect").then(module => ({ default: module.AreaSelect })));
@@ -99,7 +98,6 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/profile" element={<ProfilePage />} />
                   <Route path="/app/admin-dashboard" element={<Dashboard />} />
                   <Route path="/app/settings" element={<SettingsPage />} />
-                  <Route path="/app/settings/weather" element={<WeatherSettings />} />
                   <Route path="/app/notifications" element={<NotificationsPage />} />
                 </Route>
               </Routes>

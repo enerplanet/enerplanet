@@ -34,7 +34,6 @@ export const resetAuthState = () => {
  */
 const clearLocationStoreUserData = () => {
 	const stores = [
-		{ key: 'weather-location-store', field: 'customLocations' },
 		{ key: 'map-location-store', field: 'savedLocations' }
 	];
 
