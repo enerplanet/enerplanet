@@ -49,10 +49,13 @@ func (c *Client) headers() http.Header {
 // exactly the shape buem-gateway's buem.weather block expects (see
 // internal/buem/weather_validate.go in buem-gateway), so callers can embed it
 // directly without re-parsing it into a typed struct first. provider selects
-// which weather archive to query (e.g. "era5_land"); year selects which
-// archive file weather-serve reads.
+// which weather archive to query (e.g. "era5-land"); year selects which
+// archive file weather-serve reads. use_case=solar is fixed, not a parameter:
+// weather-serve requires one of variables/use_case, and solar (T, GHI, DHI,
+// DNI) is exactly buem-gateway's own requirement — this client has no other
+// caller that would want a different set.
 func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, year int, provider string) (json.RawMessage, error) {
-	path := fmt.Sprintf("/v1/weather/point?lat=%g&lon=%g&year=%d&provider=%s&format=json",
+	path := fmt.Sprintf("/v1/weather/point?lat=%g&lon=%g&year=%d&provider=%s&use_case=solar&format=json",
 		lat, lon, year, url.QueryEscape(provider))
 
 	resp, err := c.http.Do(ctx, http.MethodGet, path, nil, c.headers())

@@ -30,6 +30,7 @@ func TestGetPointWeather_ReturnsRawBody(t *testing.T) {
 	assert.Contains(t, gotPath, "lon=8.8")
 	assert.Contains(t, gotPath, "year=2026")
 	assert.Contains(t, gotPath, "provider=era5_land")
+	assert.Contains(t, gotPath, "use_case=solar")
 	assert.Contains(t, gotPath, "format=json")
 	assert.Equal(t, "test-key", gotAPIKey)
 }
