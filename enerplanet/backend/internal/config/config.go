@@ -31,6 +31,7 @@ type Config struct {
 	City2TabulaServiceURL string // URL of City2TABULA's on-request 3D-data server
 	WeatherServiceURL     string // URL of weather-serve
 	WeatherAPIKey         string // X-API-Key for weather-serve — required, checked by weather-serve itself
+	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
 	CallbackSecret        string // Shared secret for webservice callback authentication
@@ -73,6 +74,7 @@ func LoadFromEnv() (*Config, error) {
 		// 8090 matches weather-serve's own WEATHER_API_PORT default (docker-compose.serve.yml).
 		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
 		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
+		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
 		// No default: buem-gateway's real deployment URL/port is unconfirmed (see the
 		// on-request-3d-pipeline plan's risk #6) — empty fails loudly instead of guessing.
 		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),

@@ -93,3 +93,35 @@ func TestGetBuildingsByBBox_ParsesBuildings(t *testing.T) {
 	require.Len(t, buildings[0].Surfaces, 1)
 	assert.Equal(t, "WallSurface", buildings[0].Surfaces[0].Type)
 }
+
+func TestGetBuildingsByOSMIDs_ParsesBuildingsAndQuery(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.RequestURI()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"object_id":"DE123","osm_id":"789012","match_type":1,"footprint_area":100.5}]`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	buildings, err := client.GetBuildingsByOSMIDs(context.Background(), "germany", []string{"123456", "789012"})
+
+	require.NoError(t, err)
+	assert.Contains(t, gotPath, "osm_ids=123456%2C789012")
+	require.Len(t, buildings, 1)
+	assert.Equal(t, "789012", buildings[0].OSMID)
+	assert.Equal(t, int16(1), buildings[0].MatchType)
+}
+
+func TestGetBuildingsByOSMIDs_EmptyInputSkipsRequest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("no request should be made for an empty osm_ids list")
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	buildings, err := client.GetBuildingsByOSMIDs(context.Background(), "germany", nil)
+
+	require.NoError(t, err)
+	assert.Nil(t, buildings)
+}

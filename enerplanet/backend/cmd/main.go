@@ -14,7 +14,9 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"spatialhub_backend/internal/apitoken"
+	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/cache"
+	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
 	feedback "spatialhub_backend/internal/handler/feedback"
@@ -36,6 +38,7 @@ import (
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
+	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
 	"spatialhub_backend/internal/worker"
 	workspacehandler "spatialhub_backend/internal/workspace/handler"
@@ -214,6 +217,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 		Queues: map[string]int{
 			"notifications": 5,
 			"results":       3,
+			"buem":          3,
 		},
 	})
 
@@ -236,11 +240,15 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 
 	notificationService := services.NewNotificationService(db, emailService, redisClient, nil)
 	webserviceClient := webservice.NewClient(cfg.WebserviceServiceURL)
+	city2tabulaClient := city2tabula.NewClient(cfg.City2TabulaServiceURL)
+	weatherClient := weatherclient.NewClient(cfg.WeatherServiceURL, cfg.WeatherAPIKey)
+	buemClient := buem.NewClient(cfg.BuemServiceURL, cfg.BuemAPIKey)
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {

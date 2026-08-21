@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	httpclient "platform.local/common/pkg/httpclient"
@@ -161,6 +162,33 @@ func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
 // whose footprint intersects bbox, independent of any PyLovo link.
 func (c *Client) GetBuildingsByBBox(ctx context.Context, country string, bbox Bbox) ([]Building, error) {
 	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/buildings?"+bboxQuery(country, bbox), nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("city2tabula buildings: unexpected status %d", resp.StatusCode)
+	}
+
+	var buildings []Building
+	if err := json.NewDecoder(resp.Body).Decode(&buildings); err != nil {
+		return nil, fmt.Errorf("failed to decode buildings response: %w", err)
+	}
+	return buildings, nil
+}
+
+// GetBuildingsByOSMIDs returns 3D attributes for buildings already matched to
+// a PyLovo building via building_link — unlike GetBuildingsByBBox, OSMID and
+// MatchType are populated on every result, so callers can join the response
+// back to their own topology nodes by osm_id.
+func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) ([]Building, error) {
+	if len(osmIDs) == 0 {
+		return nil, nil
+	}
+	query := fmt.Sprintf("country=%s&osm_ids=%s",
+		url.QueryEscape(normalizeCountry(country)), url.QueryEscape(strings.Join(osmIDs, ",")))
+
+	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/buildings?"+query, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
 	}

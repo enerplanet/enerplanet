@@ -16,6 +16,7 @@ import (
 	"platform.local/common/pkg/models"
 	platformlogger "platform.local/platform/logger"
 	"spatialhub_backend/internal/geo"
+	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/payload"
 )
 
@@ -114,9 +115,12 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 		return nil, fmt.Errorf("failed to marshal task payload: %w", err)
 	}
 
-	task := asynq.NewTask("dispatch_model_calculation", payloadBytes)
+	// run_buem resolves 3D envelope + weather data and calls buem-gateway
+	// before enqueueing "dispatch_model_calculation" itself — see
+	// internal/jobs/run_buem.go.
+	task := asynq.NewTask(jobs.TypeRunBuem, payloadBytes)
 	_, err = asynqClient.Enqueue(task,
-		asynq.Queue("spatialAI_public"),
+		asynq.Queue("buem"),
 		asynq.MaxRetry(100),
 		asynq.Timeout(24*time.Hour), // long timeout; stuck-model scheduler is the real safety net
 		asynq.Retention(24*time.Hour),
