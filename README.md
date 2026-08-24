@@ -32,12 +32,13 @@ git clone https://github.com/enerplanet/enerplanet.git
 cd enerplanet
 git lfs pull
 make setup
+
+// requires tmux starts frontend and backend in case vscode tasks aren't used.
+make dev-bg
 ```
 
 > [!NOTE]
 > `make setup` creates the database, builds images, and starts all services. _(This might take a while)_
-
-
 
 > [!CAUTION]
 > Default development credentials (change before any non-local deployment):
