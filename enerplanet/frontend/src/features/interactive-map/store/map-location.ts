@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { settingsService } from '@/features/settings/services/settings';
-import { 
-  BaseLocation, 
-  isAuthenticated, 
-  addLocationToList, 
-  removeLocationFromList 
+import {
+  BaseLocation,
+  isAuthenticated,
+  addLocationToList,
+  removeLocationFromList
 } from '@/features/locations/store/location-store-factory';
 
 // Map location extends base with zoom
@@ -25,13 +25,13 @@ interface MapLocationState {
   syncFromBackend: () => Promise<void>;
 }
 
-// Default map location (Deggendorf, Germany)
+// Default map location (Weidedamm, Germany)
 const DEFAULT_LOCATION: MapLocation = {
-  id: 'default-deggendorf',
-  name: 'Deggendorf, Germany',
-  latitude: 48.83,
-  longitude: 12.96,
-  zoom: 12,
+  id: 'default-weidedamm',
+  name: 'Weidedamm, Germany',
+  latitude: 53.09516,
+  longitude: 8.8185,
+  zoom: 17,
   source: 'preset'
 };
 
