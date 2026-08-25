@@ -262,12 +262,12 @@ export const pylovoService = {
         if (payload.user_id) {
             requestPayload.user_id = payload.user_id;
         }
-        
+
         // Include model_id for user-placed transformers filtering (existing models)
         if (payload.model_id) {
             requestPayload.model_id = payload.model_id;
         }
-        
+
         // Include draft_id for user-placed transformers (new models before saving)
         if (payload.draft_id) {
             requestPayload.draft_id = payload.draft_id;
@@ -293,7 +293,11 @@ export const pylovoService = {
 
     getTransformerSizes: async (): Promise<TransformerSize[]> => {
         const response = await axios.get<{ data: { sizes: TransformerSize[]; count: number } }>("/v2/pylovo/transformer-sizes");
-        return response.data?.data?.sizes || [];
+        const sizes = response.data?.data?.sizes;
+        if (!sizes || sizes.length === 0) {
+            throw new Error("Failed to load transformer sizes from Pylovo");
+        }
+        return sizes;
     },
 
     getConsumerCategories: async (): Promise<ConsumerCategory[]> => {
@@ -326,10 +330,10 @@ export const pylovoService = {
     runPowerFlow: async (gridResultId: number, loadScaling: number = 1, buildingOsmIds?: string[]): Promise<PowerFlowResponse> => {
         const response = await axios.post<{ data: PowerFlowResponse }>(
             "/v2/pylovo/power-flow",
-            { 
-                grid_result_id: gridResultId, 
+            {
+                grid_result_id: gridResultId,
                 load_scaling: loadScaling,
-                building_osm_ids: buildingOsmIds 
+                building_osm_ids: buildingOsmIds
             },
             { timeout: 0 } // no timeout; large models need unlimited time
         );
@@ -673,7 +677,7 @@ export const pylovoService = {
             grid_result_id: number;
             buildings_count: number;
             message: string;
-        } }>("/v2/pylovo/move-transformer", { 
+        } }>("/v2/pylovo/move-transformer", {
             grid_result_id: gridResultId,
             coordinates,
             user_id: userId,
@@ -684,7 +688,7 @@ export const pylovoService = {
     },
 
     assignBuilding: async (
-        buildingOsmId: string, 
+        buildingOsmId: string,
         targetGridId: number,
         userId?: string,
         modelId?: number,
@@ -702,7 +706,7 @@ export const pylovoService = {
             old_grid_id: number;
             new_grid_id: number;
             message: string;
-        } }>("/v2/pylovo/assign-building", { 
+        } }>("/v2/pylovo/assign-building", {
             building_osm_id: buildingOsmId,
             target_grid_id: targetGridId,
             user_id: userId,
@@ -718,12 +722,12 @@ export const pylovoService = {
         updated_grid_ids: number[];
         message: string;
     }> => {
-        const response = await axios.post<{ 
+        const response = await axios.post<{
             status: string;
             updated_count: number;
             updated_grid_ids: number[];
             message: string;
-        }>("/v2/pylovo/finalize-transformers", { 
+        }>("/v2/pylovo/finalize-transformers", {
             draft_id: draftId,
             model_id: modelId,
             user_id: userId

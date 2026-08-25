@@ -270,7 +270,12 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Available transformer sizes from API ─────────────────────────
   const [transformerSizes, setTransformerSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
   useEffect(() => {
-    pylovoService.getTransformerSizes().then(setTransformerSizes);
+    pylovoService
+      .getTransformerSizes()
+      .then(setTransformerSizes)
+      .catch((err) => {
+        console.error("Failed to load transformer sizes:", err);
+      });
   }, []);
 
   // ── Reverse geocode polygon centroid to get region name ──────────
