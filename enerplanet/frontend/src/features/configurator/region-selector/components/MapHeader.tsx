@@ -27,7 +27,7 @@ const ModernToggle: FC<ModernToggleProps> = ({
             onClick={() => onCheckedChange(!checked)}
             className={`
                 relative inline-flex h-5 w-10 items-center rounded-full
-                transition-colors duration-300 ease-in-out cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary
+                transition-all duration-300 ease-in-out cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary
                 ${checked ? "bg-slate-700" : "bg-gray-300 dark:bg-gray-600"}
             `}
             aria-label={ariaLabel}
@@ -95,7 +95,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
 }) => {
     const { t } = useTranslation();
     return (
-        <div className="bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
+        <div className="md-fade-in bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
                 {!isLoadingPreference && (
                     <Tooltip>
@@ -122,7 +122,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
                     />
                 )}
                 {isLoadingPreference && (
-                    <div className="flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">
+                    <div className="md-fade-in flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">
                         <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                         <span className="font-medium text-foreground">Loading workspace...</span>
                     </div>
@@ -131,7 +131,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
 
             <div className="flex items-center gap-2">
                 {allPolygonsCount > 0 && (
-                    <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
+                    <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
                         <button
                             onClick={onClearAllPolygons}
                             className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"

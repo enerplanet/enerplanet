@@ -73,9 +73,6 @@ const iconMap: Record<string, LucideIcon> = {
   "wind-turbine": Fan,
 };
 
-// TODO: Replace these maps with a key registry file (src/locales/i18n-keys.ts)
-// that lists all dynamic keys as literal t() calls so i18next-parser can detect them.
-// Then simplify usage to: t(`parameters.${paramKey}`) / t(`parameters.names.${paramKey}`)
 // Parameter description keys for i18n - these map to translation keys
 const parameterDescriptionKeys: Record<string, string> = {
   cont_energy_cap_max: "parameters.cont_energy_cap_max",

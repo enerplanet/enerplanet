@@ -810,15 +810,15 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
   const noResults = !loading && users.length === 0 && !!debouncedSearch;
 
   return (
-    <div className="space-y-6 overflow-visible">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-muted rounded-lg">
+    <div className="md-scope space-y-6 overflow-visible">
+      <div className="md-rise flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
             <Users className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground">{t("userManagement.title")}</h2>
-            <p className="text-xs text-muted-foreground">{t("userManagement.subtitle")}</p>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("userManagement.title")}</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t("userManagement.subtitle")}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -828,10 +828,10 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t("userManagement.searchPlaceholder")}
-              className="pl-9 pr-8 py-2.5 border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent w-full sm:w-72 bg-background text-foreground"
+              className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-8 text-sm text-foreground shadow-sm transition-colors duration-150 placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring sm:w-72"
               aria-label="Search users"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-4 w-4"
@@ -867,7 +867,8 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                   setTimeout(() => setIsRefreshing(false), 1000);
                 }}
                 disabled={loading}
-                className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t("userManagement.refresh")}
               >
                 <RefreshCw
                   className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`}
@@ -901,7 +902,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                     <TooltipTrigger asChild>
                       <button
                         onClick={handleRenameGroup}
-                        className="p-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground"
                         aria-label="Rename group"
                       >
                         <Edit className="w-4 h-4 text-muted-foreground" />
@@ -915,7 +916,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                         onClick={() =>
                           selectedGroupDisabled ? handleEnableGroup() : handleDisableGroup()
                         }
-                        className="p-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground"
                         aria-label={selectedGroupDisabled ? "Enable group" : "Disable group"}
                       >
                         {selectedGroupDisabled ? (
@@ -937,7 +938,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                 <TooltipTrigger asChild>
                   <button
                     onClick={handleDeleteGroup}
-                    className="p-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-card text-red-600 shadow-sm transition-colors duration-150 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                     aria-label="Delete group"
                     disabled={selectedGroup.name?.toLowerCase() === "default"}
                   >
@@ -953,16 +954,16 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
             </div>
           )}
           {selectedUsers.length > 0 && isExpertOrManager(user) && (
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l-2 border-foreground/30">
+            <div className="md-fade-in flex items-center gap-2 ml-2 pl-2 border-l-2 border-foreground/30">
               <span className="text-xs font-medium text-muted-foreground">
                 {t("userManagement.actions.selected", { count: selectedUsers.length })}
               </span>
-              <div className="flex items-center gap-1 px-2 py-1 border border-border rounded-md bg-muted/50">
+              <div className="flex items-center gap-1.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       onClick={handleBulkMoveToGroup}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted transition-colors cursor-pointer"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground cursor-pointer"
                     >
                       <FolderInput className="w-4 h-4" />
                     </button>
@@ -975,7 +976,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                       onClick={() => {
                         void handleBulkDelete();
                       }}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-destructive shadow-sm transition-colors duration-150 hover:bg-destructive/10 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -987,7 +988,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
           )}
           <button
             onClick={handleAddUser}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
           >
             <UserPlus className="w-4 h-4" />
             <span className="hidden sm:inline">{t("userManagement.addNewUser")}</span>
@@ -995,11 +996,11 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
           </button>
         </div>
       </div>
-      <div className="bg-card rounded-xl border border-border overflow-visible shadow-sm">
-        <div className="overflow-x-auto overflow-y-visible">
+      <div className="md-rise bg-card rounded-xl border border-border overflow-visible shadow-sm" style={{ animationDelay: "60ms" }}>
+        <div className="md-fade-in overflow-x-auto overflow-y-visible">
           <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/50">
-              <tr>
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
                 {isExpertOrManager(user) && (
                   <th className="px-3 py-2 w-10">
                     <Tooltip>
@@ -1019,48 +1020,58 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                     </Tooltip>
                   </th>
                 )}
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("userManagement.table.user")}
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("userManagement.table.accessLevel")}
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("userManagement.table.group")}
                 </th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("userManagement.table.emailVerified")}
                 </th>
-                <th className="px-3 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("userManagement.table.actions")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr>
-                  <td colSpan={isExpertOrManager(user) ? 6 : 5} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-full border-4 border-muted"></div>
-                        <div className="absolute top-0 left-0 w-10 h-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin"></div>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {t("userManagement.loadingUsers")}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  <tr>
+                    <td colSpan={isExpertOrManager(user) ? 6 : 5} className="px-4 pt-4">
+                      <span className="text-sm text-muted-foreground">{t("userManagement.loadingUsers")}</span>
+                    </td>
+                  </tr>
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <tr key={i}>
+                      <td colSpan={isExpertOrManager(user) ? 6 : 5} className="px-4 py-3.5">
+                        <div className="flex items-center gap-4">
+                          <div className="md-skeleton h-4 w-4 shrink-0 rounded bg-muted" />
+                          <div
+                            className="md-skeleton h-3.5 w-full max-w-[220px] rounded-md bg-muted"
+                            style={{ animationDelay: `${i * 90}ms` }}
+                          />
+                          <div className="md-skeleton hidden h-5 w-20 shrink-0 rounded-full bg-muted sm:block" />
+                          <div className="md-skeleton hidden h-3.5 w-24 shrink-0 rounded-md bg-muted md:block" />
+                          <div className="md-skeleton ml-auto h-6 w-24 shrink-0 rounded-md bg-muted" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : (
                 <>
                   {users.length === 0 ? (
                     <tr>
                       <td
                         colSpan={isExpertOrManager(user) ? 6 : 5}
-                        className="px-6 py-16 text-center"
+                        className="px-4 py-6"
                       >
-                        <div className="flex flex-col items-center justify-center gap-3">
-                          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center">
+                        <div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
+                          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
                             <Users className="w-8 h-8 text-muted-foreground" />
                           </div>
                           <div>
@@ -1078,7 +1089,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                     users.map((tableUser) => (
                       <tr
                         key={tableUser.id}
-                        className={`hover:bg-muted/50 transition-colors duration-150 ${isExpertOrManager(user) && isSelected(tableUser) ? "bg-muted" : ""}`}
+                        className={`transition-colors duration-150 hover:bg-muted/40 ${isExpertOrManager(user) && isSelected(tableUser) ? "bg-muted" : ""}`}
                       >
                         {isExpertOrManager(user) && (
                           <td className="px-3 py-2 w-10">

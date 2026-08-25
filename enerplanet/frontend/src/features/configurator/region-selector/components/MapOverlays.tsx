@@ -150,7 +150,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
             {/* Grid Generation Loader - minimal floating pill at top center */}
             {isGeneratingGrid && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                    <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
+                    <div className="md-rise flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
                         {/* Spinning icon */}
                         <div className="relative w-5 h-5">
                             <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
@@ -175,7 +175,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     className="absolute pointer-events-none z-20"
                     style={{ left: cursorPos.x, top: cursorPos.y }}
                 >
-                    <div className="bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
+                    <div className="md-fade-in bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
                         {t("drawing.clickToDraw")}
                     </div>
                 </div>
@@ -190,7 +190,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         top: 16
                     }}
                 >
-                    <div className="bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
+                    <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <img src="/images/transformer-icon-dark.svg" alt="" className="w-4 h-4 dark:invert" />{" "}
                             Transformer
@@ -230,7 +230,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         top: buildingTooltip.y - 10
                     }}
                 >
-                    <div className="bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
+                    <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5" />
                             Building

@@ -9,15 +9,12 @@ import {
   Droplets,
   Home,
   Building2,
-  Settings2,
   LucideIcon,
   Microchip,
-  Loader2,
   Upload,
   Plus,
   FileText,
   User,
-  MemoryStick,
   CircuitBoard,
   RefreshCw,
   GripVertical,
@@ -42,7 +39,16 @@ import { useForm, type FormDataConvertible, type FormDataType } from "@/hooks/us
 import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { useAuthStore } from "@/store/auth-store";
 import { isExpert } from "@/features/admin-dashboard/utils/accessLevelUtils";
-import StatCard from "@/components/ui/cards/StatCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatsStrip } from "@/components/ui/StatsStrip";
+import { CardGridSkeleton } from "@/components/ui/Skeletons";
+import {
+  CARD_CLASS,
+  PAGE_SHELL_CLASS,
+  PRIMARY_BUTTON_CLASS,
+  TOOLBAR_BUTTON_CLASS,
+  TOOLBAR_ICON_BUTTON_CLASS,
+} from "@/components/ui/toolbar";
 import Notification from "@/components/ui/Notification";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import AddParameterModal from "./components/AddParameterModal";
@@ -660,48 +666,31 @@ export default function TechnologiesPage() {
     setDragOverSection(null);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('technologies.loading')}</p>
-        </div>
-      </div>
-    );
-  }
-
   const systemTechnologies = technologies.filter((t) => !t.user_id);
   const userTechnologies = technologies.filter((t) => !!t.user_id);
+  const totalParameters = technologies.reduce((sum, t) => sum + (t.constraints?.length ?? 0), 0);
 
   return (
-    <div className="relative w-full p-4 space-y-4 bg-background overflow-x-hidden">
+    <div className={PAGE_SHELL_CLASS}>
         <Notification isOpen={notification.open} message={notification.message} severity={notification.severity} onClose={hideNotification} />
 
-        <div className="relative bg-card py-4 border border-border rounded-lg px-5 shadow-sm mb-4">
-          <div className="w-full flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-muted rounded-lg">
-                <Microchip className="w-5 h-5 text-black dark:text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">{t('technologies.title')}</h1>
-                <p className="text-xs text-muted-foreground">{t('technologies.subtitle')}</p>
-              </div>
-            </div>
+        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
 
-            <div className="flex items-center gap-2">
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
-
+        <PageHeader
+          icon={Microchip}
+          title={t('technologies.title')}
+          subtitle={t('technologies.subtitle')}
+          actions={
+            <>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={handleRefresh}
                     disabled={isRefreshing || loading}
-                    className="p-2.5 border border-border rounded-xl hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card"
-                    aria-label="Refresh technologies"
+                    className={TOOLBAR_ICON_BUTTON_CLASS}
+                    aria-label={t('technologies.refresh')}
                   >
-                    <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing || loading ? "animate-spin" : ""}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>{t('technologies.refresh')}</TooltipContent>
@@ -713,10 +702,10 @@ export default function TechnologiesPage() {
                     <button
                       onClick={handleReseed}
                       disabled={reseeding}
-                      className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
-                      aria-label="Reseed system technologies"
+                      className={TOOLBAR_ICON_BUTTON_CLASS}
+                      aria-label={t('technologies.reseed')}
                     >
-                      <DatabaseBackup className={`w-4 h-4 ${reseeding ? "animate-pulse" : ""}`} />
+                      <DatabaseBackup className={`h-4 w-4 ${reseeding ? "animate-pulse" : ""}`} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>{t('technologies.reseed')}</TooltipContent>
@@ -727,106 +716,126 @@ export default function TechnologiesPage() {
                 href="/docs/technology-reference-guide.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-all"
+                className={TOOLBAR_BUTTON_CLASS}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 <span className="hidden sm:inline">{t('technologies.documentation')}</span>
               </a>
 
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-all"
-              >
-                <Upload className="w-4 h-4" />
+              <button onClick={() => fileInputRef.current?.click()} className={TOOLBAR_BUTTON_CLASS}>
+                <Upload className="h-4 w-4 text-muted-foreground" />
                 <span className="hidden sm:inline">{t('technologies.importJson')}</span>
               </button>
 
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
-              >
-                <Plus className="w-4 h-4" />
+              <button onClick={() => setShowAddModal(true)} className={PRIMARY_BUTTON_CLASS}>
+                <Plus className="h-4 w-4" />
                 {t('technologies.addTechnology')}
               </button>
-            </div>
+            </>
+          }
+        />
+
+        {/* Main Content Card */}
+        <div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: "60ms" }}>
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 p-4 sm:px-5">
+            {isExpert(user) && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <GripVertical className="h-3 w-3" />
+                {t('technologies.dragDropHint')}
+              </p>
+            )}
+
+            {!loading && (
+              <StatsStrip
+                className="max-sm:w-full sm:ml-auto"
+                items={[
+                  { label: t('technologies.stats.totalTechnologies'), value: technologies.length },
+                  { label: t('technologies.stats.systemTechnologies'), value: systemTechnologies.length },
+                  { label: t('technologies.stats.userTechnologies'), value: userTechnologies.length },
+                  { label: t('technologies.stats.totalParameters'), value: totalParameters },
+                ]}
+              />
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="border-t border-border p-4 sm:px-5 sm:pb-5">
+            {loading ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>{t('technologies.loading')}</span>
+                </div>
+                <CardGridSkeleton cards={8} />
+              </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={pointerWithin}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <div className="md-fade-in space-y-6">
+                  <TechnologiesSection
+                    title={t('technologies.systemTechnologies')}
+                    sectionKey="system"
+                    technologies={systemTechnologies}
+                    icon={<CircuitBoard className="w-4 h-4" />}
+                    isExpert={isExpert(user)}
+                    draggedTech={draggedTech}
+                    dragOverSection={dragOverSection}
+                    iconMap={iconMap}
+                    canCopyTech={canCopyTech}
+                    canDeleteTech={canDeleteTech}
+                    isOwnTechnology={isOwnTechnology}
+                    openTechDetails={openTechDetails}
+                    openCopyModal={openCopyModal}
+                    handleDeleteTechnology={handleDeleteTechnology}
+                  />
+
+                  <TechnologiesSection
+                    title={t('technologies.userDefinedTechnologies')}
+                    sectionKey="user"
+                    technologies={userTechnologies}
+                    icon={<User className="w-4 h-4" />}
+                    isExpert={isExpert(user)}
+                    draggedTech={draggedTech}
+                    dragOverSection={dragOverSection}
+                    iconMap={iconMap}
+                    canCopyTech={canCopyTech}
+                    canDeleteTech={canDeleteTech}
+                    isOwnTechnology={isOwnTechnology}
+                    openTechDetails={openTechDetails}
+                    openCopyModal={openCopyModal}
+                    handleDeleteTechnology={handleDeleteTechnology}
+                  />
+                </div>
+
+                <DragOverlay>
+                  {draggedTech ? (
+                    <div className="rounded-xl border-2 border-primary bg-card p-4 opacity-90 shadow-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                          {(() => {
+                            const IconComponent = iconMap[draggedTech.icon] || CircuitBoard;
+                            return <IconComponent className="h-5 w-5 text-muted-foreground" />;
+                          })()}
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">{draggedTech.alias}</h3>
+                          <p className="text-xs text-muted-foreground">{draggedTech.constraints.length} {t('technologies.parameters')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            )}
           </div>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <StatCard title={t('technologies.stats.totalTechnologies')} value={technologies?.length ?? 0} icon={<MemoryStick className="w-4 h-4 text-muted-foreground" />} />
-          <StatCard title={t('technologies.stats.systemTechnologies')} value={systemTechnologies?.length ?? 0} icon={<Sun className="w-4 h-4 text-muted-foreground" />} />
-          <StatCard title={t('technologies.stats.userTechnologies')} value={userTechnologies?.length ?? 0} icon={<Battery className="w-4 h-4 text-muted-foreground" />} />
-          <StatCard title={t('technologies.stats.totalParameters')} value={technologies?.reduce((sum, t) => sum + (t.constraints?.length ?? 0), 0) ?? 0} icon={<Settings2 className="w-4 h-4 text-muted-foreground" />} />
-        </div>
-
-        {isExpert(user) && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <GripVertical className="w-3 h-3" />
-            {t('technologies.dragDropHint')}
-          </p>
-        )}
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-          onDragCancel={handleDragCancel}
-        >
-          <TechnologiesSection
-            title={t('technologies.systemTechnologies')}
-            sectionKey="system"
-          technologies={systemTechnologies}
-          icon={<CircuitBoard className="w-4 h-4" />}
-          isExpert={isExpert(user)}
-          draggedTech={draggedTech}
-          dragOverSection={dragOverSection}
-          iconMap={iconMap}
-          canCopyTech={canCopyTech}
-          canDeleteTech={canDeleteTech}
-          isOwnTechnology={isOwnTechnology}
-          openTechDetails={openTechDetails}
-          openCopyModal={openCopyModal}
-          handleDeleteTechnology={handleDeleteTechnology}
-        />
-
-          <TechnologiesSection
-            title={t('technologies.userDefinedTechnologies')}
-            sectionKey="user"
-          technologies={userTechnologies}
-          icon={<User className="w-4 h-4" />}
-          isExpert={isExpert(user)}
-          draggedTech={draggedTech}
-          dragOverSection={dragOverSection}
-          iconMap={iconMap}
-          canCopyTech={canCopyTech}
-          canDeleteTech={canDeleteTech}
-          isOwnTechnology={isOwnTechnology}
-          openTechDetails={openTechDetails}
-          openCopyModal={openCopyModal}
-          handleDeleteTechnology={handleDeleteTechnology}
-        />
-
-          <DragOverlay>
-            {draggedTech ? (
-              <div className="bg-card rounded-xl border-2 border-primary p-4 shadow-xl opacity-90">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    {(() => {
-                      const IconComponent = iconMap[draggedTech.icon] || CircuitBoard;
-                      return <IconComponent className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
-                    })()}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-foreground">{draggedTech.alias}</h3>
-                    <p className="text-xs text-muted-foreground">{draggedTech.constraints.length} {t('technologies.parameters')}</p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
 
         <TechnologyDetailsModal
           open={!!selectedTech}

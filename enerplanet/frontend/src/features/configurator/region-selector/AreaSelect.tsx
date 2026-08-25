@@ -1730,8 +1730,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onClose={notification.hide}
       />
       {editMode && state.isLoadingModel && (
-        <div className="fixed inset-0 bg-background/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md mx-4 border border-border">
+        <div className="md-fade-in fixed inset-0 bg-background/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="md-rise bg-background dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md mx-4 border border-border">
             <div className="flex flex-col items-center space-y-4">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               <div className="text-lg font-medium text-foreground">Loading Simulation Data</div>
@@ -1846,7 +1846,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             />
             {/* Show hint when in add transformer mode */}
             {isAddTransformerMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              <div className="md-rise absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
                 {t(
                   "simulation.transformer.clickToPlace",
                   "Click inside the polygon to place a transformer"
@@ -1855,7 +1855,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             )}
             {/* Show banner when in multi-building assignment mode */}
             {isBuildingAssignMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              <div className="md-rise absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
                 {!isAssigning && assignStep === "select-buildings" ? (
                   <>
                     <span>
@@ -1905,7 +1905,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             {/* Power flow calculating banner */}
             {pylovoLayers.isRunningPowerFlow && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
+                <div className="md-rise flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
                   <div className="relative w-5 h-5">
                     <div className="absolute inset-0 rounded-full border-2 border-amber-500/20" />
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-amber-500 animate-spin" />
@@ -2118,7 +2118,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       {/* Transformer cursor overlay */}
       {(isAddTransformerMode || isMoveTransformerMode) && transformerCursorPos && (
         <div
-          className="fixed pointer-events-none z-[9999] flex flex-col items-center"
+          className="md-fade-in fixed pointer-events-none z-[9999] flex flex-col items-center"
           style={{
             left: transformerCursorPos.x,
             top: transformerCursorPos.y,

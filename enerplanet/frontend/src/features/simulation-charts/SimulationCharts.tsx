@@ -7,12 +7,6 @@ import {
   Loader2,
   BarChart3,
   ArrowLeft,
-  Zap,
-  TrendingUp,
-  DollarSign,
-  Sun,
-  Network,
-  Gauge,
   AlertCircle,
   Download,
   Map as MapIcon
@@ -21,7 +15,14 @@ import { modelService, Model } from '@/features/model-dashboard/services/modelSe
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { useWorkspaceStore } from '@/components/workspace/store/workspace-store';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from '@spatialhub/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@spatialhub/ui';
+import { StatsStrip } from '@/components/ui/StatsStrip';
+import { CardGridSkeleton, PanelSkeleton } from '@/components/ui/Skeletons';
+import {
+  PRIMARY_BUTTON_CLASS,
+  TOOLBAR_BUTTON_CLASS,
+  TOOLBAR_ICON_BUTTON_CLASS,
+} from '@/components/ui/toolbar';
 import { useDocumentTitle } from '@/hooks/use-document-title';
 import { fetchStructuredResults } from '@/features/model-results/api';
 import { StructuredModelResults } from '@/features/model-results/types';
@@ -128,28 +129,6 @@ function calculateSummary(structured: StructuredModelResults) {
     co2_savings_kg: co2Savings,
   };
 }
-
-// Metric Card Component
-const MetricCard: FC<{
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  subtitle?: string;
-  colorKey: string;
-}> = ({ icon: Icon, label, value, subtitle }) => {
-  return (
-    <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 hover:shadow-sm transition-shadow">
-      <div className="p-2 bg-muted rounded-lg">
-        <Icon className="w-4 h-4 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground font-medium truncate">{label}</p>
-        <p className="text-base font-bold text-foreground truncate">{value}</p>
-        {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
-      </div>
-    </div>
-  );
-};
 
 export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModelId }) => {
   const { modelId: paramModelId } = useParams<{ modelId: string }>();
@@ -374,29 +353,27 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
   const hasComparison = model1 && model2 && structuredResults1 && structuredResults2;
 
   return (
-    <div className="h-full bg-background flex flex-col overflow-hidden">
+    <div className="md-scope flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border flex-shrink-0">
-        {/* Accent strip */}
-        <div className="h-[3px] bg-muted" />
-
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <header className="flex-shrink-0 border-b border-border bg-card">
+        <div className="px-4 py-4 sm:px-6">
+          <div className="md-rise flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/app/model-dashboard')}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className={TOOLBAR_ICON_BUTTON_CLASS}
+                aria-label={t('common.back')}
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
 
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-muted rounded-lg">
-                  <GitCompare className="w-5 h-5 text-foreground" />
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
+                  <GitCompare className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground tracking-tight">{t('simulationComparison.title')}</h1>
-                  <p className="text-xs text-muted-foreground">
+                  <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t('simulationComparison.title')}</h1>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {t('simulationComparison.subtitle')}
                   </p>
                 </div>
@@ -405,41 +382,37 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
 
             {/* Action buttons */}
             {hasComparison && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+              <div className="md-fade-in flex items-center gap-2">
+                <button
                   onClick={() => setShowMaps(!showMaps)}
-                  className="flex items-center gap-2"
+                  className={TOOLBAR_BUTTON_CLASS}
                 >
-                  <MapIcon className="w-4 h-4" />
+                  <MapIcon className="h-4 w-4 text-muted-foreground" />
                   {showMaps ? t('simulationComparison.hideMaps') : t('simulationComparison.showMaps')}
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
+                </button>
+                <button
                   onClick={handleExportPDF}
                   disabled={isExporting}
-                  className="flex items-center gap-2"
+                  className={PRIMARY_BUTTON_CLASS}
                 >
                   {isExporting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Download className="w-4 h-4" />
+                    <Download className="h-4 w-4" />
                   )}
                   {t('simulationComparison.exportPdf')}
-                </Button>
+                </button>
               </div>
             )}
           </div>
         </div>
 
         {/* Comparison Controls */}
-        <div className="px-6 pb-3">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-center">
+        <div className="px-4 pb-3 sm:px-6">
+          <div className="md-rise grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-center" style={{ animationDelay: '60ms' }}>
 
             {/* Side 1 - Baseline */}
-            <div className="bg-card border border-border rounded-lg px-3 py-2">
+            <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm transition-colors duration-150 hover:border-muted-foreground/30">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0">{t('simulationComparison.baseline')}</span>
                 {model1 && (
@@ -469,7 +442,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
             </div>
 
             {/* Side 2 - Comparison */}
-            <div className="bg-card border border-border rounded-lg px-3 py-2">
+            <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm transition-colors duration-150 hover:border-muted-foreground/30">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground shrink-0">{t('simulationComparison.comparison')}</span>
                 {model2 && (
@@ -489,14 +462,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <div className="flex gap-1">
                     {renderModelSelect(availableModels2, selectedModelId2, setSelectedModelId2, t('simulationComparison.selectComparisonModel'), selectedModelId1)}
                     {selectedModelId2 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <button
                         onClick={() => setSelectedModelId2(undefined)}
-                        className="shrink-0 h-8 w-8"
+                        aria-label={t('common.clear')}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -508,116 +480,85 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
 
         {/* Summary Metrics Bar - Only show when we have comparison */}
         {hasComparison && summary1 && summary2 && (
-          <div className="px-6 pb-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <MetricCard
-                icon={Zap}
-                label={t('simulationComparison.metrics.demandBaseline')}
-                value={formatEnergy(summary1.total_demand_kwh)}
-                colorKey="demand"
-              />
-              <MetricCard
-                icon={Sun}
-                label={t('simulationComparison.metrics.renewableGen')}
-                value={formatEnergy(summary1.renewable_production_kwh)}
-                colorKey="renewable"
-              />
-              <MetricCard
-                icon={Network}
-                label={t('simulationComparison.metrics.gridImport')}
-                value={formatEnergy(summary1.grid_import_kwh)}
-                colorKey="grid"
-              />
-              <MetricCard
-                icon={TrendingUp}
-                label={t('simulationComparison.metrics.selfSufficiency')}
-                value={formatPercent(summary1.self_sufficiency_rate * 100)}
-                colorKey="sufficiency"
-              />
-              <MetricCard
-                icon={Gauge}
-                label={t('simulationComparison.metrics.peakDemand')}
-                value={formatPower(summary1.peak_demand_kw)}
-                colorKey="peak"
-              />
-              <MetricCard
-                icon={DollarSign}
-                label={t('simulationComparison.metrics.totalCost')}
-                value={`€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
-                colorKey="cost"
-              />
-            </div>
+          <div className="px-4 pb-4 sm:px-6">
+            <StatsStrip
+              className="md-fade-in"
+              items={[
+                { label: t('simulationComparison.metrics.demandBaseline'), value: formatEnergy(summary1.total_demand_kwh) },
+                { label: t('simulationComparison.metrics.renewableGen'), value: formatEnergy(summary1.renewable_production_kwh) },
+                { label: t('simulationComparison.metrics.gridImport'), value: formatEnergy(summary1.grid_import_kwh) },
+                { label: t('simulationComparison.metrics.selfSufficiency'), value: formatPercent(summary1.self_sufficiency_rate * 100) },
+                { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw) },
+                {
+                  label: t('simulationComparison.metrics.totalCost'),
+                  value: `€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                },
+              ]}
+            />
           </div>
         )}
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto bg-muted/30 p-6">
+      <div className="flex-1 overflow-y-auto bg-muted/30 p-4 sm:p-6">
         {(() => {
           if (isLoading) {
             return (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <div className="relative mx-auto mb-6 w-16 h-16">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/20 to-violet-500/20 animate-pulse" />
-                    <div className="absolute inset-2 rounded-full bg-card flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground font-medium">{t('simulationComparison.loading')}</p>
+              <div className="space-y-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t('simulationComparison.loading')}</span>
+                </div>
+                <PanelSkeleton height="h-56" />
+                <CardGridSkeleton cards={4} />
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                  <PanelSkeleton />
+                  <PanelSkeleton />
                 </div>
               </div>
             );
           }
           if (!model1 || !model2) {
             return (
-              <div className="bg-card rounded-xl border border-border border-dashed">
-                <div className="flex flex-col items-center justify-center text-center py-16">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-violet-500/20 blur-sm scale-110" />
-                    <div className="relative p-5 bg-muted rounded-full">
-                      <BarChart3 className="w-12 h-12 text-muted-foreground/60" />
-                    </div>
-                  </div>
-                  <h2 className="text-lg font-bold text-foreground mb-2">{t('simulationComparison.selectModels')}</h2>
-                  <p className="text-muted-foreground max-w-md">
-                    {t('simulationComparison.selectModelsDescription')}
-                  </p>
-                  {!selectedModelId1 && (
-                    <div className="mt-5 px-4 py-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        {t('simulationComparison.startBySelectingBaseline')}
-                      </p>
-                    </div>
-                  )}
-                  {selectedModelId1 && !selectedModelId2 && (
-                    <div className="mt-5 px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
-                        {t('simulationComparison.nowSelectComparison')}
-                      </p>
-                    </div>
-                  )}
+              <div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+                  <BarChart3 className="h-7 w-7 text-muted-foreground" />
                 </div>
+                <h2 className="text-base font-semibold tracking-tight text-foreground">{t('simulationComparison.selectModels')}</h2>
+                <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
+                  {t('simulationComparison.selectModelsDescription')}
+                </p>
+                {!selectedModelId1 && (
+                  <div className="mt-6 rounded-lg border border-border bg-muted/40 px-4 py-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t('simulationComparison.startBySelectingBaseline')}
+                    </p>
+                  </div>
+                )}
+                {selectedModelId1 && !selectedModelId2 && (
+                  <div className="mt-6 rounded-lg border border-border bg-muted/40 px-4 py-2">
+                    <p className="text-sm text-muted-foreground">
+                      {t('simulationComparison.nowSelectComparison')}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           }
           if (error1 || error2) {
             return (
-              <div className="bg-card rounded-xl border border-destructive/30 overflow-hidden">
-                <div className="h-1 bg-gradient-to-r from-red-500 to-rose-500" />
-                <div className="flex flex-col items-center justify-center text-center py-10 px-8">
-                  <div className="p-4 bg-destructive/10 rounded-full mb-4">
-                    <AlertCircle className="w-10 h-10 text-destructive" />
-                  </div>
-                  <h2 className="text-lg font-bold text-foreground mb-2">{t('simulationComparison.unableToLoadResults')}</h2>
-                  <div className="text-sm text-muted-foreground max-w-md space-y-1">
-                    {error1 && <p>{t('simulationComparison.errors.baseline')}: {error1}</p>}
-                    {error2 && <p>{t('simulationComparison.errors.comparison')}: {error2}</p>}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Try selecting different models or check that the simulations completed successfully.
-                  </p>
+              <div className="md-fade-in flex flex-col items-center rounded-xl border border-destructive/30 bg-card px-6 py-12 text-center shadow-sm">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+                  <AlertCircle className="h-7 w-7 text-destructive" />
                 </div>
+                <h2 className="text-base font-semibold tracking-tight text-foreground">{t('simulationComparison.unableToLoadResults')}</h2>
+                <div className="mt-1.5 max-w-md space-y-1 text-sm text-muted-foreground">
+                  {error1 && <p>{t('simulationComparison.errors.baseline')}: {error1}</p>}
+                  {error2 && <p>{t('simulationComparison.errors.comparison')}: {error2}</p>}
+                </div>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Try selecting different models or check that the simulations completed successfully.
+                </p>
               </div>
             );
           }
@@ -626,20 +567,26 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
               <div ref={contentRef} className="space-y-6">
                 {/* Side-by-side Maps */}
                 {showMaps && (
-                  <ComparisonMapPanel model1={model1} model2={model2} />
+                  <div className="md-rise">
+                    <ComparisonMapPanel model1={model1} model2={model2} />
+                  </div>
                 )}
 
                 {/* Summary Cards */}
-                <ComparisonSummary
-                  data1={summary1}
-                  data2={summary2}
-                />
+                <div className="md-rise" style={{ animationDelay: '60ms' }}>
+                  <ComparisonSummary
+                    data1={summary1}
+                    data2={summary2}
+                  />
+                </div>
 
                 {/* Charts */}
-                <ComparisonCharts
-                  results1={structuredResults1}
-                  results2={structuredResults2}
-                />
+                <div className="md-rise" style={{ animationDelay: '120ms' }}>
+                  <ComparisonCharts
+                    results1={structuredResults1}
+                    results2={structuredResults2}
+                  />
+                </div>
               </div>
             );
           }
