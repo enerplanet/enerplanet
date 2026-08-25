@@ -195,17 +195,19 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
   // Unsaved changes guard — skip when navigating due to session expiry
   const isDirty = state.allPolygons.length > 0;
-  const isSessionExpired = useAuthStore((state) => state.isSessionExpired);
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || typeof window === "undefined") return;
+
     const handler = (e: BeforeUnloadEvent) => {
       if (useAuthStore.getState().isSessionExpired) return;
       e.preventDefault();
+      e.returnValue = "";
     };
+
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty, isSessionExpired]);
+  }, [isDirty]);
 
   // ── Extracted hooks ──────────────────────────────────────────────
 
