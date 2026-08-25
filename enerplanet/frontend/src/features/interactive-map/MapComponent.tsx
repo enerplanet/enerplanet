@@ -262,7 +262,7 @@ export const MapComponent: React.FC = () => {
 
 					{/* Map info panel — regions + user models (visible on all base layers) */}
 					{map && (mapPageLayers.regionCount > 0 || mapPageLayers.modelCount > 0) && (
-						<div className="absolute bottom-[4.5rem] left-4 z-30 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-lg px-1 py-1 flex items-center gap-0.5 text-xs">
+						<div className="md-fade-in absolute bottom-[4.5rem] left-4 z-30 bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-lg px-1 py-1 flex items-center gap-0.5 text-xs">
 							{mapPageLayers.regionCount > 0 && (
 								<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/8 dark:bg-indigo-400/10">
 									<div className="w-5 h-5 rounded-md bg-indigo-500/15 flex items-center justify-center">

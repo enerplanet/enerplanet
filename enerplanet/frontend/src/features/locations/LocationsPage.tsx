@@ -13,22 +13,27 @@ import {
   Edit,
   Eye,
   RefreshCw,
-  Building2,
-  Zap,
   MapPinned,
-  Loader2,
   Share2
 } from 'lucide-react';
 import { useCustomLocationStore } from '@/features/locations/store/custom-location-store';
 import type { CustomLocation } from '@/features/locations/services/customLocationService';
-import StatCard from '@/components/ui/cards/StatCard';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatsStrip } from '@/components/ui/StatsStrip';
+import { ListSkeleton } from '@/components/ui/Skeletons';
+import {
+  CARD_CLASS,
+  PAGE_SHELL_CLASS,
+  PRIMARY_BUTTON_CLASS,
+  SEARCH_INPUT_CLASS,
+  TOOLBAR_ICON_BUTTON_CLASS,
+} from '@/components/ui/toolbar';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
 import Notification from '@/components/ui/Notification';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 import ModelActionGroup from '@/components/shared/ModelActionGroup';
 import { LocationShareDialog } from './LocationShareDialog';
 import {
-  Button,
   Switch,
   Tabs,
   TabsList,
@@ -38,8 +43,12 @@ import {
   TooltipTrigger,
 } from '@spatialhub/ui';
 
-const LocationCard: FC<{
+const formatArea = (area: number) =>
+  area > 10000 ? `${(area / 1000000).toFixed(1)} km²` : `${(area / 1000).toFixed(1)} k m²`;
+
+const LocationRow: FC<{
   location: CustomLocation;
+  index: number;
   onView: (id: number) => void;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
@@ -48,39 +57,40 @@ const LocationCard: FC<{
   onTogglePublic: (id: number, isPublic: boolean) => void;
   showPublicToggle?: boolean;
   isOwner?: boolean;
-}> = ({ location, onView, onEdit, onDelete, onCopy, onShare, onTogglePublic, showPublicToggle = true, isOwner = true }) => {
+}> = ({ location, index, onView, onEdit, onDelete, onCopy, onShare, onTogglePublic, showPublicToggle = true, isOwner = true }) => {
   const { t } = useTranslation();
   return (
-    <div className="group flex items-center gap-2 bg-card rounded border border-border px-2.5 py-1.5 hover:bg-muted/30 transition-colors">
+    <div
+      className="md-row-in group flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-muted/40"
+      style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}
+    >
       {/* Icon */}
-      <div className="p-1 bg-muted rounded flex-shrink-0">
-        <MapPin className="w-3 h-3 text-muted-foreground" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <MapPin className="h-4 w-4 text-muted-foreground" />
       </div>
-      
+
       {/* Content */}
-      <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="text-xs font-medium text-foreground truncate max-w-[140px]" title={location.title}>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="truncate text-sm font-medium text-foreground" title={location.title}>
           {location.title}
         </span>
-        <span className="px-1 py-0.5 rounded text-[9px] font-medium bg-muted text-muted-foreground capitalize flex-shrink-0">
+        <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium capitalize text-muted-foreground">
           {location.f_class}
         </span>
       </div>
 
       {/* Stats */}
-      <div className="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground flex-shrink-0">
-        <span className="font-medium text-foreground">
-          {location.area > 10000 ? `${(location.area / 1000000).toFixed(1)}km²` : `${(location.area / 1000).toFixed(1)}k m²`}
-        </span>
-        <span>•</span>
-        <span className="font-medium text-foreground">{(location.demand_energy / 1000).toFixed(0)}MWh</span>
+      <div className="hidden shrink-0 items-center gap-2 text-xs text-muted-foreground sm:flex">
+        <span className="tabular-nums">{formatArea(location.area)}</span>
+        <span aria-hidden="true">•</span>
+        <span className="tabular-nums">{(location.demand_energy / 1000).toFixed(0)} MWh</span>
       </div>
 
       {/* Public/Private Switch */}
       {showPublicToggle && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center flex-shrink-0 scale-[0.55] origin-center">
+            <div className="flex shrink-0 origin-center scale-[0.65] items-center">
               <Switch
                 checked={location.is_public}
                 onCheckedChange={(checked) => onTogglePublic(location.id, checked)}
@@ -95,16 +105,18 @@ const LocationCard: FC<{
       )}
 
       {/* Action Icons */}
-      <ModelActionGroup
-        actions={[
-          { key: 'view', icon: Eye, tooltip: t('common.tooltips.viewOnMap'), variant: 'info', onClick: () => onView(location.id) },
-          { key: 'edit', icon: Edit, tooltip: t('common.tooltips.editLocation'), variant: 'default', onClick: () => onEdit(location.id), show: isOwner },
-          { key: 'share', icon: Share2, tooltip: t('locations.share.title'), variant: 'purple', onClick: () => onShare(location), show: isOwner },
-          { key: 'copy', icon: Copy, tooltip: t('common.tooltips.duplicate'), variant: 'default', onClick: () => onCopy(location.id) },
-          { key: 'delete', icon: Trash2, tooltip: t('common.delete'), variant: 'danger', onClick: () => onDelete(location.id), show: isOwner },
-        ]}
-        size="small"
-      />
+      <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
+        <ModelActionGroup
+          actions={[
+            { key: 'view', icon: Eye, tooltip: t('common.tooltips.viewOnMap'), variant: 'info', onClick: () => onView(location.id) },
+            { key: 'edit', icon: Edit, tooltip: t('common.tooltips.editLocation'), variant: 'default', onClick: () => onEdit(location.id), show: isOwner },
+            { key: 'share', icon: Share2, tooltip: t('locations.share.title'), variant: 'purple', onClick: () => onShare(location), show: isOwner },
+            { key: 'copy', icon: Copy, tooltip: t('common.tooltips.duplicate'), variant: 'default', onClick: () => onCopy(location.id) },
+            { key: 'delete', icon: Trash2, tooltip: t('common.delete'), variant: 'danger', onClick: () => onDelete(location.id), show: isOwner },
+          ]}
+          size="small"
+        />
+      </div>
     </div>
   );
 };
@@ -220,212 +232,170 @@ const LocationsPage: FC = () => {
   const totalDemand = locations.reduce((sum, loc) => sum + loc.demand_energy, 0);
   const publicCount = locations.filter(l => l.is_public).length;
 
+  const renderEmptyState = (isPublicTab: boolean) => (
+    <div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+        {isPublicTab ? (
+          <Globe className="h-7 w-7 text-muted-foreground" />
+        ) : (
+          <MapPin className="h-7 w-7 text-muted-foreground" />
+        )}
+      </div>
+      <h3 className="text-base font-semibold tracking-tight text-foreground">
+        {isPublicTab ? t('locations.empty.publicTitle') : t('locations.empty.title')}
+      </h3>
+      <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+        {isPublicTab ? t('locations.empty.publicDescription') : t('locations.empty.description')}
+      </p>
+      {!isPublicTab && (
+        <button onClick={handleCreateNew} className={`mt-6 ${PRIMARY_BUTTON_CLASS}`}>
+          <Plus className="h-4 w-4" />
+          {t('locations.newLocation')}
+        </button>
+      )}
+    </div>
+  );
+
+  const renderLocationList = (items: CustomLocation[], isPublicTab: boolean) => {
+    if (items.length === 0) return renderEmptyState(isPublicTab);
+
+    return (
+      <div className="md-fade-in overflow-hidden rounded-xl border border-border">
+        <div className="divide-y divide-border bg-card">
+          {items.map((location, index) => (
+            <LocationRow
+              key={location.id}
+              location={location}
+              index={index}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onCopy={handleCopy}
+              onShare={handleShare}
+              onTogglePublic={handleTogglePublic}
+              showPublicToggle={!isPublicTab}
+              isOwner={!isPublicTab}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-      <div className="relative p-4 w-full space-y-4 bg-background overflow-x-hidden">
-          <Notification 
-            isOpen={notification.open} 
-            message={notification.message} 
-            severity={notification.severity} 
-            onClose={hideNotification} 
-          />
+    <div className={PAGE_SHELL_CLASS}>
+      <Notification
+        isOpen={notification.open}
+        message={notification.message}
+        severity={notification.severity}
+        onClose={hideNotification}
+      />
 
-          {/* Header Section */}
-          <div className="relative bg-card py-4 border border-border rounded-lg px-5 shadow-sm">
-            <div className="w-full flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-muted rounded-lg">
-                  <MapPinned className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-foreground">{t('locations.title')}</h1>
-                  <p className="text-xs text-muted-foreground">{t('locations.subtitle')}</p>
-                </div>
-              </div>
+      <PageHeader
+        icon={MapPinned}
+        title={t('locations.title')}
+        subtitle={t('locations.subtitle')}
+        actions={
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing || isLoading}
+                  className={TOOLBAR_ICON_BUTTON_CLASS}
+                  aria-label={t('locations.refresh')}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('locations.refresh')}</TooltipContent>
+            </Tooltip>
 
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleRefresh}
-                      disabled={isRefreshing || isLoading}
-                      className="p-2.5 border border-border rounded-xl hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card"
-                      aria-label={t('locations.refresh')}
-                    >
-                      <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('locations.refresh')}</TooltipContent>
-                </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleCreateNew}
+                  data-tour="new-location"
+                  className={PRIMARY_BUTTON_CLASS}
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('locations.newLocation')}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('locations.newLocationTooltip')}</TooltipContent>
+            </Tooltip>
+          </>
+        }
+      />
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={handleCreateNew}
-                      data-tour="new-location"
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {t('locations.newLocation')}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('locations.newLocationTooltip')}</TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard
-              key="total-locations"
-              title={t('locations.stats.total')}
-              value={locations.length}
-              icon={<MapPin className="w-4 h-4 text-muted-foreground" />}
-            />
-            <StatCard
-              key="total-area"
-              title={t('locations.stats.totalArea')}
-              value={totalArea > 1000000 ? `${(totalArea / 1000000).toFixed(1)} km²` : `${(totalArea / 1000).toFixed(1)} k m²`}
-              icon={<Building2 className="w-4 h-4 text-muted-foreground" />}
-            />
-            <StatCard
-              key="total-demand"
-              title={t('locations.stats.totalDemand')}
-              value={`${(totalDemand / 1000).toFixed(0)} MWh`}
-              icon={<Zap className="w-4 h-4 text-muted-foreground" />}
-            />
-            <StatCard
-              key="public-count"
-              title={t('locations.stats.public')}
-              value={publicCount}
-              icon={<Globe className="w-4 h-4 text-muted-foreground" />}
+      {/* Main Content Card */}
+      <div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: '60ms' }}>
+        {/* Filter toolbar */}
+        <div className="flex flex-wrap items-center gap-2 p-4 sm:px-5">
+          {/* Search */}
+          <div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={t('locations.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={SEARCH_INPUT_CLASS}
             />
           </div>
 
-          {/* Main Content Card */}
-          <div className="bg-card rounded-lg shadow-sm border border-border">
-            <div className="p-4">
-              {/* Toolbar */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                {/* Search */}
-                <div className="flex-1 min-w-[200px] max-w-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder={t('locations.searchPlaceholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background hover:bg-accent focus:bg-background transition-colors text-sm text-foreground placeholder-muted-foreground"
-                    />
-                  </div>
-                </div>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
+            <TabsList className="h-9">
+              <TabsTrigger key="my" value="my" className="text-xs px-3">
+                <Lock className="w-3.5 h-3.5 mr-1.5" />
+                {t('locations.tabs.my')} ({filteredLocations.length})
+              </TabsTrigger>
+              <TabsTrigger key="public" value="public" className="text-xs px-3">
+                <Globe className="w-3.5 h-3.5 mr-1.5" />
+                {t('locations.tabs.public')} ({filteredPublicLocations.length})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-                {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
-                  <TabsList className="h-9">
-                    <TabsTrigger key="my" value="my" className="text-xs px-3">
-                      <Lock className="w-3.5 h-3.5 mr-1.5" />
-                      {t('locations.tabs.my')} ({filteredLocations.length})
-                    </TabsTrigger>
-                    <TabsTrigger key="public" value="public" className="text-xs px-3">
-                      <Globe className="w-3.5 h-3.5 mr-1.5" />
-                      {t('locations.tabs.public')} ({filteredPublicLocations.length})
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {/* Content */}
-              {(() => {
-                if (isLoading) {
-                  return (
-                    <div className="flex items-center justify-center py-16">
-                      <div className="text-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground">Loading locations...</p>
-                      </div>
-                    </div>
-                  );
-                }
-                if (activeTab === 'my') {
-                  if (filteredLocations.length === 0) {
-                    return (
-                      <div className="text-center py-16">
-                        <div className="p-4 bg-muted rounded-full w-fit mx-auto mb-4">
-                          <MapPin className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-medium text-foreground mb-2">No locations yet</h3>
-                        <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
-                          Create your first custom location to define areas with building classifications for energy simulations.
-                        </p>
-                        <Button onClick={handleCreateNew} className="gap-2">
-                          <Plus className="w-4 h-4" />
-                          Create Location
-                        </Button>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="space-y-1.5">
-                      {filteredLocations.map((location) => (
-                        <LocationCard
-                          key={location.id}
-                          location={location}
-                          onView={handleView}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                          onCopy={handleCopy}
-                          onShare={handleShare}
-                          onTogglePublic={handleTogglePublic}
-                        />
-                      ))}
-                    </div>
-                  );
-                }
-                // Public tab
-                if (filteredPublicLocations.length === 0) {
-                  return (
-                    <div className="text-center py-16">
-                      <div className="p-4 bg-muted rounded-full w-fit mx-auto mb-4">
-                        <Globe className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">{t('locations.empty.publicTitle')}</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                        {t('locations.empty.publicDescription')}
-                      </p>
-                    </div>
-                  );
-                }
-                return (
-                  <div className="space-y-1.5">
-                    {filteredPublicLocations.map((location) => (
-                      <LocationCard
-                        key={location.id}
-                        location={location}
-                        onView={handleView}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onCopy={handleCopy}
-                        onShare={handleShare}
-                        onTogglePublic={handleTogglePublic}
-                        showPublicToggle={false}
-                        isOwner={false}
-                      />
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Share Dialog */}
-          <LocationShareDialog
-            isOpen={shareDialogOpen}
-            location={selectedLocationForShare}
-            onClose={handleCloseShareDialog}
+          {/* Compact stats summary, in the toolbar */}
+          <StatsStrip
+            className="max-sm:w-full sm:ml-auto"
+            items={[
+              { label: t('locations.stats.total'), value: locations.length },
+              { label: t('locations.stats.totalArea'), value: formatArea(totalArea) },
+              { label: t('locations.stats.totalDemand'), value: `${(totalDemand / 1000).toFixed(0)} MWh` },
+              { label: t('locations.stats.public'), value: publicCount },
+            ]}
           />
         </div>
+
+        {/* Content */}
+        <div className="border-t border-border p-4 sm:px-5 sm:pb-5">
+          {isLoading ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>{t('common.loading')}</span>
+              </div>
+              <ListSkeleton />
+            </div>
+          ) : (
+            renderLocationList(
+              activeTab === 'my' ? filteredLocations : filteredPublicLocations,
+              activeTab !== 'my'
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Share Dialog */}
+      <LocationShareDialog
+        isOpen={shareDialogOpen}
+        location={selectedLocationForShare}
+        onClose={handleCloseShareDialog}
+      />
+    </div>
   );
 };
 

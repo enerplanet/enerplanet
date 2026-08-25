@@ -146,8 +146,12 @@
 
 	body {
 		@apply bg-background text-foreground;
-		font-family: "Inter", system-ui, sans-serif;
+		font-family: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 		font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+		font-optical-sizing: auto;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
 	}
 
 	/* Custom selection styles */
@@ -247,3 +251,67 @@
 	transform-origin: center center;
 }
 
+/* --- Shared entrance motion & micro-interactions --- */
+@keyframes md-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes md-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes md-row-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes md-skeleton {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.45; }
+}
+
+.md-fade-in {
+	animation: md-fade-in 0.35s ease-out both;
+}
+
+.md-rise {
+	animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.md-row-in {
+	animation: md-row-in 0.3s ease-out both;
+}
+
+.md-skeleton {
+	animation: md-skeleton 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.md-fade-in,
+	.md-rise,
+	.md-row-in,
+	.md-skeleton {
+		animation: none;
+	}
+}
+
+/* The global *:focus rule strips focus outlines; restore an accessible,
+   palette-based focus ring inside motion-enabled application surfaces. */
+.md-scope :focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}

@@ -9,6 +9,8 @@ import { Technology } from "@/features/technologies/services/technologyService";
 interface TechnologyCardProps {
   tech: Technology;
   Icon: ReactElement;
+  /** Position in the grid, used to stagger the entrance animation. */
+  index?: number;
   isOwnTechnology?: boolean;
   canCopy: boolean;
   canDelete: boolean;
@@ -21,6 +23,7 @@ interface TechnologyCardProps {
 function TechnologyCard({
   tech,
   Icon,
+  index = 0,
   isOwnTechnology,
   canCopy,
   canDelete,
@@ -37,12 +40,13 @@ function TechnologyCard({
   
   return (
     <div
-      className={`group bg-card rounded-xl border border-border p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 ${
+      className={`md-rise group rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-muted-foreground/30 hover:shadow-md ${
         dragged ? "opacity-50 shadow-lg ring-2 ring-primary" : ""
       }`}
+      style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
     >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
           {Icon}
         </div>
         <div className="flex-1 min-w-0">
@@ -73,14 +77,17 @@ function TechnologyCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">
+        <span className="rounded-md bg-muted px-2 py-1 text-xs tabular-nums text-muted-foreground">
           {tech.constraints.length} {t('technologies.parameters')}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={() => onView(tech)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-                <Eye className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <button
+                onClick={() => onView(tech)}
+                className="rounded-lg p-1.5 transition-all duration-150 hover:bg-muted active:scale-95"
+              >
+                <Eye className="h-4 w-4 text-muted-foreground" />
               </button>
             </TooltipTrigger>
             <TooltipContent>{t('technologies.viewParameters')}</TooltipContent>
@@ -90,9 +97,9 @@ function TechnologyCard({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onCopy?.(tech)}
-                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                  className="rounded-lg p-1.5 transition-all duration-150 hover:bg-muted active:scale-95"
                 >
-                  <Copy className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <Copy className="h-4 w-4 text-muted-foreground" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t('technologies.copyTechnology')}</TooltipContent>
@@ -103,9 +110,9 @@ function TechnologyCard({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onDelete?.(tech)}
-                  className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                  className="group/delete rounded-lg p-1.5 transition-all duration-150 hover:bg-destructive/10 active:scale-95"
                 >
-                  <Trash2 className="w-4 h-4 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" />
+                  <Trash2 className="h-4 w-4 text-muted-foreground transition-colors group-hover/delete:text-destructive" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{t('technologies.deleteTechnology')}</TooltipContent>

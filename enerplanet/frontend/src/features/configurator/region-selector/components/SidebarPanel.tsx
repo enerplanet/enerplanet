@@ -162,13 +162,13 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   }, [polygonCoordinates]);
 
   return (
-    <div className="relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
+    <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
       <div className="flex items-center px-3 pt-4">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
       </div>
 
       {isModified && state.fromDate && state.toDate && state.modelName.trim() && (
-        <div className="mx-3 mb-2 rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-2">
+        <div className="md-fade-in mx-3 mb-2 rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-2">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
             <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
@@ -232,16 +232,18 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
       <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
         {/* Grid Statistics - compact badge shown when grid data is available */}
         {gridResultIds.length > 0 && (
-          <GridStatsBadge
-            gridResultIds={gridResultIds}
-            buildingsCount={buildingsCount}
-            peakLoadKw={peakLoadKw}
-          />
+          <div className="md-fade-in">
+            <GridStatsBadge
+              gridResultIds={gridResultIds}
+              buildingsCount={buildingsCount}
+              peakLoadKw={peakLoadKw}
+            />
+          </div>
         )}
 
         {/* Area Statistics */}
         {areaStats && (
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="md-row-in rounded-lg border border-border bg-card overflow-hidden transition-shadow duration-200 hover:shadow-sm">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
               <MapPin className="w-3.5 h-3.5 text-foreground" />
               <span className="text-xs font-semibold text-foreground">{t("areaStats.title")}</span>
@@ -304,7 +306,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             value={state.modelName}
             onChange={handleModelNameChange}
             placeholder={t("simulation.modelNamePlaceholder")}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors"
+            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
           />
           <div className="text-xs text-muted-foreground mt-1">{t("simulation.modelNameHint")}</div>
         </div>

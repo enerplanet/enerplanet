@@ -29,6 +29,7 @@ type CompletionInfo = { startTime: string; endTime: string; totalSeconds: number
 
 interface ModelTableRowProps {
   model: Model & { level: number };
+  index: number;
   modelTitle: string;
   parentModelTitle?: string;
   hasChildren: boolean;
@@ -115,7 +116,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
         >
           {level > 0 && (
             <div className="flex items-center mr-0.5">
-              <div className="w-3 h-3 border-l border-b border-muted-foreground rounded-bl-sm"></div>
+              <div className="w-3 h-3 border-l border-b border-muted-foreground/40 rounded-bl-md"></div>
             </div>
           )}
 
@@ -123,7 +124,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             {model.is_copy && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded">
+                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md">
                     <Copy className="w-3 h-3 text-muted-foreground" />
                   </span>
                 </TooltipTrigger>
@@ -135,7 +136,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             {isNotModelOwner && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded">
+                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md">
                     <Users className="w-3 h-3 text-muted-foreground" />
                   </span>
                 </TooltipTrigger>
@@ -147,7 +148,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             {isParent && hasChildren && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded text-xs font-semibold text-foreground">
+                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md text-xs font-semibold text-foreground">
                     P
                   </span>
                 </TooltipTrigger>
@@ -168,6 +169,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
 
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
+  index,
   modelTitle,
   parentModelTitle,
   hasChildren,
@@ -206,19 +208,19 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
-  const rowClassName = `group hover:bg-muted/50 transition-all duration-150 ${
-    level > 0 ? "border-l-2 border-border bg-muted/30" : ""
-  } ${isSelected ? "bg-muted" : ""}`;
+  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${
+    level > 0 ? "border-l-2 border-border bg-muted/20" : ""
+  } ${isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""}`;
 
   return (
-    <tr className={rowClassName}>
-      <td className={`pl-4 pr-2 py-3 ${indentClass}`}>
+    <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
+      <td className={`pl-4 pr-2 py-2.5 ${indentClass}`}>
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={() => onSelect(model)}
-            className="w-4 h-4 text-foreground rounded border-input focus:ring-ring focus:ring-offset-0 cursor-pointer"
+            className="h-4 w-4 cursor-pointer rounded border-input accent-primary focus:ring-ring focus:ring-offset-0"
           />
           <button
             type="button"
@@ -226,17 +228,17 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               e.stopPropagation();
               toggleFavorite(model.id);
             }}
-            className="p-0.5 rounded hover:bg-muted transition-colors"
+            className="rounded-md p-1 transition-all duration-150 hover:bg-muted hover:scale-110 active:scale-95"
             aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
           >
             <Star
-              className={`w-3.5 h-3.5 ${favorited ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+              className={`h-3.5 w-3.5 transition-colors ${favorited ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
             />
           </button>
         </div>
       </td>
 
-      <td className={`pl-2 pr-4 py-3 ${indentClass}`}>
+      <td className={`pl-2 pr-4 py-2.5 ${indentClass}`}>
         <div className="flex items-center gap-2">
           <ModelNameCell
             isEditing={isEditing}
@@ -256,7 +258,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="px-4 py-3">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           {model.status === "failed" ? (
             <Tooltip>
@@ -318,15 +320,12 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Clock className="w-3.5 h-3.5" />
-          <span className="text-xs font-medium">{formatDateTime(model.created_at)}</span>
-        </div>
+      <td className="hidden px-4 py-2.5 md:table-cell">
+        <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1">
+      <td className="px-4 py-2.5">
+        <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
           <ModelActions
             model={model}
             currentUserId={currentUserId}

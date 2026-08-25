@@ -19,12 +19,13 @@ const LanguageSettings: React.FC = () => {
 
   return (
     <div className="space-y-1.5">
-      {languages.map((language) => (
+      {languages.map((language, index) => (
         <button
           key={language.code}
           onClick={() => handleLanguageChange(language.code)}
+          style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}
           className={`
-            w-full px-2.5 py-1.5 rounded-md border transition-all duration-200 flex items-center justify-between text-foreground
+            md-row-in w-full px-2.5 py-1.5 rounded-md border transition-all duration-200 flex items-center justify-between text-foreground active:scale-[0.98]
             ${getLanguageButtonClass(currentLang === language.code)}
           `}
         >
