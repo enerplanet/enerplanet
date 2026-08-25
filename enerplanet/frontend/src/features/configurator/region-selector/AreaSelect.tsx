@@ -111,7 +111,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const initializeWorkspace = useWorkspaceStore((state) => state.initializeWorkspace);
 
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
-  const [wsReloadKey, setWsReloadKey] = useState(0);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
 
@@ -141,12 +140,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   useEffect(() => {
     initializeWorkspace();
   }, [initializeWorkspace]);
-
-  useEffect(() => {
-    if (!isLoadingPreference) {
-      setTimeout(() => setWsReloadKey((prev: number) => prev + 1), 0);
-    }
-  }, [isLoadingPreference, preferredWorkspaceId]);
 
   const handleWorkspaceChange = useCallback(
     (workspace: Workspace | null) => {
@@ -376,6 +369,336 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
+  // ── Drawing helpers ──────────────────────────────────────────────
+  const showDrawHint =
+    state.cursorPos &&
+    !state.isDrawing &&
+    (state.allowMultiplePolygons || state.allPolygons.length === 0);
+
+  const handlePolygonDrawnWithLimit = async (
+    coordinates: [number, number][],
+    allPolygons: [number, number][][]
+  ) => {
+    await actions.handlePolygonDrawn(coordinates, allPolygons);
+  };
+
+  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
+
+  // ── Render ───────────────────────────────────────────────────────
+  return (
+    <Fragment>
+      <Notification
+        isOpen={notification.data.open}
+        message={notification.data.message}
+        severity={notification.data.severity}
+        onClose={notification.hide}
+      />
+      <LoadingOverlay isOpen={editMode && state.isLoadingModel} />
+
+      <MapContainer
+        key={editMode ? `edit-${existingModelId}` : "create"}
+        modal={false}
+        topBar={null}
+        sidebar={
+          <SidebarPanel
+            state={state}
+            actions={actions}
+            allPolygonsCount={state.allPolygons.length}
+            showAdvancedParams={state.showAdvancedParams}
+            onOpenAdvancedParams={() => actions.setShowAdvancedParams(true)}
+            onCloseAdvancedParams={() => actions.setShowAdvancedParams(false)}
+            advancedParams={state.advancedParams}
+            onAdvancedParamsChange={actions.setAdvancedParams}
+            onResetAdvancedParams={actions.handleResetAdvancedParams}
+            handleModelNameChange={(e) => actions.setModelName(e.target.value)}
+            getDateBounds={getDateBounds}
+            editMode={editMode}
+            showTechDrawer={techOperations.showTechDrawer}
+            onOpenTechDrawer={() => techOperations.setShowTechDrawer(true)}
+            onCloseTechDrawer={() => techOperations.setShowTechDrawer(false)}
+            onTechDragStart={techOperations.handleTechDragStart}
+            onTechDragEnd={techOperations.handleTechDragEnd}
+            onAddTechToAll={techOperations.handleAddTechToAll}
+            onRemoveTechFromAll={techOperations.handleRemoveTechFromAll}
+            appliedTechKeys={techOperations.appliedTechKeys}
+            gridResultIds={gridResultIds}
+            buildingsCount={buildingsInPolygonCount}
+            peakLoadKw={peakLoadInPolygonKw}
+            regionName={regionName}
+            polygonCoordinates={state.allPolygons}
+            isModified={state.isModified}
+          />
+        }
+        onDrop={techOperations.handleMapDrop}
+        onDragOver={techOperations.handleMapDragOver}
+        mapOverlays={
+          <>
+            {map && isMapLibre3D && (
+              <MapLibre3DOverlay
+                olMap={map}
+                buildingsGeoJSON={pylovoLayers.pylovoGridData?.buildings}
+                linesGeoJSON={pylovoLayers.pylovoGridData?.lines}
+                mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
+                transformersGeoJSON={pylovoLayers.pylovoGridData?.transformers}
+                availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
+                selectedBoundaryFeature={pylovoLayers.regionBoundary?.boundary}
+                showBoundary={pylovoLayers.showBoundary}
+                polygonCoordinates={state.allPolygons}
+                selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
+                isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
+                visible={isMapLibre3D}
+                isDrawing={state.isDrawing}
+                onBuildingClick={ml3d.handleMl3dBuildingClick}
+                onTransformerClick={ml3d.handleMl3dTransformerClick}
+                onBuildingHover={ml3d.handleMl3dBuildingHover}
+                onTransformerHover={ml3d.handleMl3dTransformerHover}
+                onMvLineHover={ml3d.handleMl3dMvLineHover}
+                onMapClick={ml3d.handleMl3dMapClick}
+                onBoundaryRegionClick={regionSelection.handleBoundaryRegionClick}
+              />
+            )}
+            <MapOverlays
+              showDrawHint={Boolean(showDrawHint)}
+              cursorPos={state.cursorPos}
+              transformerTooltip={mapInteractions.transformerTooltip}
+              buildingTooltip={mapInteractions.buildingTooltip}
+              mvLineTooltip={mapInteractions.mvLineTooltip}
+              isDraggingTech={!!techOperations.draggingTech}
+              isGeneratingGrid={state.isGeneratingGrid}
+              simulateEV={simulateEV}
+              gridIdToTrafoCapacity={gridIdToTrafoCapacity}
+              gridIdToPeakLoad={gridIdToPeakLoad}
+            />
+            {!editMode && (
+              <PolygonDrawingGuide
+                canDraw={state.allowMultiplePolygons || state.allPolygons.length === 0}
+                isDrawing={state.isDrawing}
+                polygonCount={state.allPolygons.length}
+                currentPointCount={currentPointCount}
+                enableEditing={true}
+                isGeneratingGrid={state.isGeneratingGrid}
+                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
+                hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+              />
+            )}
+            <GridActionBar
+              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+              isAddTransformerMode={addTransformer.isAddTransformerMode}
+              onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
+              isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
+              onStartBuildingAssignMode={buildingAssign.startBuildingAssignMode}
+              onRunPowerFlow={handleRunPowerFlow}
+              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
+              hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+            />
+            <MapInteractionBanners
+              isAddTransformerMode={addTransformer.isAddTransformerMode}
+              isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
+              isAssigning={buildingAssign.isAssigning}
+              assignStep={buildingAssign.assignStep}
+              selectedBuildingsForAssign={buildingAssign.selectedBuildingsForAssign}
+              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
+              onNextStep={() => buildingAssign.setAssignStep("select-transformer")}
+              onBackStep={() => buildingAssign.setAssignStep("select-buildings")}
+              onCancelAssign={buildingAssign.clearBuildingAssignMode}
+            />
+            <PowerFlowLegend
+              visible={pylovoLayers.powerFlowResults.size > 0}
+              customTransformers={customTransformers}
+            />
+          </>
+        }
+        mapHeader={
+          <MapHeader
+            allPolygonsCount={state.allPolygons.length}
+            allowMultiplePolygons={state.allowMultiplePolygons}
+            onToggleAllowMultiplePolygons={actions.setAllowMultiplePolygons}
+            onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            isLoadingPreference={isLoadingPreference}
+            currentWorkspace={currentWorkspace}
+            preferredWorkspaceId={preferredWorkspaceId ?? undefined}
+            normalizedWorkspaceId={normalizedWorkspaceId}
+            onWorkspaceChange={handleWorkspaceChange}
+            onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
+            includePublicBuildings={state.includePublicBuildings}
+            includePrivateBuildings={state.includePrivateBuildings}
+            onTogglePublicBuildings={actions.setIncludePublicBuildings}
+            onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
+            simulateEV={simulateEV}
+            onToggleSimulateEV={setSimulateEV}
+            availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
+            onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
+          />
+        }
+        showSidebar={true}
+      />
+
+      <AreaSelectTour
+        isOpen={state.showAreaSelectTour}
+        onComplete={actions.handleTourComplete}
+        onSkip={actions.handleTourSkip}
+      />
+
+      <PolygonDrawer
+        map={map}
+        onPolygonDrawn={handlePolygonDrawnWithLimit}
+        onPolygonModified={actions.handlePolygonModified}
+        onDrawingChange={actions.setIsDrawing}
+        onPointCountChange={setCurrentPointCount}
+        onClearAll={regionSelection.handleClearAllWithModes}
+        allowMultiple={state.allowMultiplePolygons}
+        clearTrigger={state.clearTrigger}
+        initialPolygons={editMode ? state.loadedCoordinates : undefined}
+        disableAfterDraw={!state.allowMultiplePolygons}
+        enableEditing={true}
+        labels={{
+          clickToClose: t("drawing.clickToClose"),
+          start: t("drawing.start"),
+        }}
+      />
+
+      <TransformerDialog
+        open={mapInteractions.transformerDialogOpen}
+        selectedTransformer={mapInteractions.selectedTransformer}
+        transformerSizes={transformerSizes}
+        onClose={mapInteractions.handleCloseTransformerDialog}
+        onChangeKva={transformerActions.handleTransformerKvaChange}
+        onOpenChange={mapInteractions.setTransformerDialogOpen}
+        onDeleteTransformer={transformerActions.handleDeleteTransformer}
+        onMoveTransformer={(gridResultId) => {
+          moveTransformer.startMoveTransformer(gridResultId);
+          mapInteractions.setTransformerDialogOpen(false);
+        }}
+        isUserPlaced={mapInteractions.selectedTransformer?.osmId?.startsWith("user/") || false}
+      />
+
+      {/* Add Transformer Dialog */}
+      <TransformerDialog
+        open={addTransformer.addTransformerDialogOpen}
+        selectedTransformer={null}
+        transformerSizes={transformerSizes}
+        onClose={() => {
+          addTransformer.setAddTransformerDialogOpen(false);
+          addTransformer.setNewTransformerCoords(null);
+        }}
+        onChangeKva={() => {}}
+        onOpenChange={addTransformer.setAddTransformerDialogOpen}
+        mode="add"
+        newTransformerCoords={addTransformer.newTransformerCoords}
+        onAddTransformer={addTransformer.handleAddTransformer}
+      />
+
+      <BuildingDialog
+        open={mapInteractions.buildingDialogOpen}
+        selectedBuilding={mapInteractions.selectedBuilding}
+        onClose={mapInteractions.handleCloseBuildingDialog}
+        onFClassDemandChange={buildingDemand.handleFClassDemandChange}
+        onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
+        onOpenChange={mapInteractions.setBuildingDialogOpen}
+        onEditTech={(techKey) => {
+          if (mapInteractions.selectedBuildingFeature) {
+            mapInteractions.setBuildingDialogOpen(false);
+            techOperations.handleEditTechFromDialog(
+              techKey,
+              mapInteractions.selectedBuildingFeature
+            );
+          }
+        }}
+        onRemoveTech={(techKey) => {
+          if (mapInteractions.selectedBuildingFeature) {
+            const updatedTechs = techOperations.handleRemoveTechFromDialog(
+              techKey,
+              mapInteractions.selectedBuildingFeature
+            );
+            mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
+              prev ? { ...prev, techs: updatedTechs } : null
+            );
+          }
+        }}
+        onFloorsChange={buildingDemand.handleFloorsChange}
+        onAreaChange={buildingDemand.handleAreaChange}
+        onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
+        onRecalculateDemand={buildingDemand.handleRecalculateDemand}
+        onAddTech={
+          multiEdit.isMultiEdit
+            ? techDialogFlow.handleApplyTechToSelected
+            : techDialogFlow.handleAddTechFromDialog
+        }
+        isMultiEdit={multiEdit.isMultiEdit}
+        onToggleMultiEdit={multiEdit.toggleMultiEdit}
+        multiEditCount={multiEdit.multiEditSelectedIds.size}
+        onApplyTechToAll={techDialogFlow.handleApplyTechToSelected}
+        isExcluded={(() => {
+          const osmId = mapInteractions.selectedBuilding?.osmId;
+          if (!osmId) return false;
+          const numId = typeof osmId === "number" ? osmId : Number.parseInt(String(osmId), 10);
+          return numId < 0 && state.excludedBuildingIds.has(Math.abs(numId));
+        })()}
+        onToggleExclude={actions.toggleBuildingExclusion}
+        onSave={() => setIsModified(true)}
+        onApplyTemplate={(templateTechs) => {
+          if (mapInteractions.selectedBuildingFeature) {
+            const feature = mapInteractions.selectedBuildingFeature;
+            for (const [techKey, techData] of Object.entries(templateTechs)) {
+              feature.set(`tech_${techKey}`, JSON.stringify(techData));
+            }
+            mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
+              prev ? { ...prev, techs: { ...prev.techs, ...templateTechs } } : null
+            );
+          }
+          setIsModified(true);
+        }}
+      />
+
+      <CreateWorkspaceModal
+        isOpen={isCreateWsOpen}
+        onClose={() => setIsCreateWsOpen(false)}
+        onSuccess={(newWorkspace) => {
+          setIsCreateWsOpen(false);
+          handleWorkspaceChange(newWorkspace);
+        }}
+      />
+
+      <TechParameterDialog
+        open={techOperations.techDialogOpen}
+        onOpenChange={techOperations.setTechDialogOpen}
+        technology={techOperations.selectedTechForDialog}
+        building={techOperations.selectedBuildingForTech}
+        onSave={techOperations.handleSaveTechToBuildingBulk}
+        onClose={() => {
+          techOperations.setTechDialogOpen(false);
+          techOperations.setSelectedTechForDialog(null);
+          techOperations.setSelectedBuildingForTech(null);
+          techOperations.setIsAddingTechToAll(false);
+          if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
+            techDialogFlow.techAddedFromBuildingDialogRef.current = false;
+            const feat = mapInteractions.selectedBuildingFeature;
+            if (feat) {
+              const updatedTechs = feat.get("techs") || {};
+              mapInteractions.setSelectedBuilding(
+                (prev: typeof mapInteractions.selectedBuilding) =>
+                  prev ? { ...prev, techs: { ...updatedTechs } } : null
+              );
+            }
+            mapInteractions.setBuildingDialogOpen(true);
+          }
+        }}
+        showApplyToAll={techOperations.isAddingTechToAll}
+      />
+
+      <TransformerCursorOverlay
+        isAddTransformerMode={addTransformer.isAddTransformerMode}
+        isMoveTransformerMode={moveTransformer.isMoveTransformerMode}
+        cursorPos={
+          addTransformer.isAddTransformerMode
+            ? addTransformer.transformerCursorPos
+            : moveTransformer.transformerCursorPos
+        }
+      />
+
+      <UnsavedChangesDialog
+        open={unsavedDialog.showUnsavedDialog}
         onContinue={() => unsavedDialog.setShowUnsavedDialog(false)}
         onDiscard={unsavedDialog.handleUnsavedDiscard}
         onOpenChange={(open: boolean) => {
