@@ -3,6 +3,8 @@ export interface StatsStripItem {
 	value: string | number;
 	/** Renders the value in the destructive colour (limits reached, errors, …). */
 	highlight?: boolean;
+	/** Extra context shown as the chip's tooltip (period, definition, …). */
+	hint?: string;
 }
 
 interface StatsStripProps {
@@ -17,6 +19,7 @@ export function StatsStrip({ items, className = "" }: StatsStripProps) {
 			{items.map((item) => (
 				<div
 					key={item.label}
+					title={item.hint}
 					className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-3"
 				>
 					<span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

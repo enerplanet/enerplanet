@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle } from 'lucide-react';
+import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   CostAnalysisChart,
@@ -188,18 +189,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
   const hasData = costBreakdown.length > 0 || lcoeData.length > 0 || investmentData.length > 0;
 
   if (!hasData) {
-    return (
-      <div className="p-8 flex items-center justify-center h-full">
-        <div className="text-center text-muted-foreground">
-          <PieChart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{t('results.chartLabels.noCostData')}</p>
-        </div>
-      </div>
-    );
+    return <PanelEmptyState icon={PieChart} title={t('results.chartLabels.noCostData')} />;
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Simulation period info banner */}
       {periodInfo.isPartialYear && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex items-start gap-3">
@@ -222,7 +216,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
       {/* Top row: Cost Distribution + System Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {costBreakdown.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-2">
+          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-primary" />
               {t('results.charts.costDistribution')}
@@ -254,7 +248,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         )}
 
         {systemCostSummary && systemCostSummary.totalCost > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-1">
+          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Gauge className="w-4 h-4 text-primary" />
               {t('results.charts.systemCostSummary')}
@@ -286,7 +280,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
       {/* Bottom row: LCOE Comparison + Investment Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {lcoeData.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4">
+          <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               {t('results.charts.lcoeComparison')}
@@ -302,7 +296,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         )}
 
         {investmentData.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4">
+          <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
               {t('results.charts.investmentVsOperating')}

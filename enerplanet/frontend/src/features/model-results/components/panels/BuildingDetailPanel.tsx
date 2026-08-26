@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { CHART_CARD_CLASS } from '../ui/PanelStates';
 import {
   Activity,
   Battery,
@@ -183,9 +184,9 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
   const yearBuilt = building.constructionYear || building.yearBuilt;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Header */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="p-4">
           <div className="flex items-start gap-3">
             <div className="p-2.5 bg-primary/10 rounded-xl">
@@ -324,7 +325,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       </div>
 
       {/* Energy Metrics */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className={CHART_CARD_CLASS}>
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5" />
           {t("results.buildingDetail.energyOverview", "Energy Overview")}
@@ -403,7 +404,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
 
       {/* Technologies */}
       {building.technologies.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <Sun className="w-3.5 h-3.5" />
             {t("results.buildingDetail.installedTechnologies", "Installed Technologies")}
@@ -442,7 +443,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       )}
 
       {/* Energy / Cost Tabs */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="flex border-b border-border">
           {[
             {
@@ -459,10 +460,10 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-all duration-200 ${
                 activeTab === tab.id
-                  ? "bg-card text-foreground border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground bg-muted/30"
+                  ? "border-b-2 border-primary bg-card text-foreground"
+                  : "border-b-2 border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -471,15 +472,18 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
           ))}
         </div>
 
-        <div className="p-4">
+        <div key={activeTab} className="md-fade-in p-4">
           {(() => {
             if (loading) {
               return (
-                <div className="flex flex-col items-center justify-center h-[300px]">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    {t("results.buildingDetail.loadingTimeSeries", "Loading time series...")}
-                  </p>
+                <div className="space-y-3" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>
+                      {t("results.buildingDetail.loadingTimeSeries", "Loading time series...")}
+                    </span>
+                  </div>
+                  <div className="md-skeleton h-[260px] w-full rounded-lg bg-muted" />
                 </div>
               );
             }
