@@ -16,6 +16,7 @@ import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
 import { TransformerDialog } from "./components/TransformerDialog";
+import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
@@ -1207,17 +1208,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // Handle add transformer mode - click on map to place transformer
   const handleAddTransformer = useCallback(
     async (kva: number) => {
-      console.log("handleAddTransformer called", {
-        kva,
-        newTransformerCoords,
-        existingModelId,
-        draftId,
-        gridResultIds,
-      });
       if (!newTransformerCoords) {
-        console.error("newTransformerCoords is null!");
         notification.showError("Invalid transformer location — please click on the map first");
-        return;
+        throw new Error("Invalid transformer location");
       }
 
       try {
@@ -1239,12 +1232,14 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           await actions.handlePolygonModified(state.allPolygons);
         }
 
+        // Close the dialog but stay in placement mode so more
+        // transformers can be added without re-enabling it
         setNewTransformerCoords(null);
         setAddTransformerDialogOpen(false);
-        setIsAddTransformerMode(false);
       } catch (error: any) {
         console.error("Failed to add transformer:", error);
         notification.showError(error?.message || "Failed to add transformer");
+        throw error; // Let the dialog keep itself open on failure
       }
     },
     [
@@ -1315,8 +1310,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       setTransformerCursorPos(null);
     };
 
+    // Escape key exits placement mode
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsAddTransformerMode(false);
+      }
+    };
+
     map.on("click", handleMapClick);
     map.on("pointermove", handleMouseMove);
+    document.addEventListener("keydown", handleKeyDown);
 
     // Change cursor to none (we'll show custom cursor)
     const mapElement = map.getTargetElement();
@@ -1328,6 +1331,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     return () => {
       map.un("click", handleMapClick);
       map.un("pointermove", handleMouseMove);
+      document.removeEventListener("keydown", handleKeyDown);
       if (mapElement) {
         mapElement.style.cursor = "";
         mapElement.removeEventListener("mouseleave", handleMouseLeave);
@@ -1846,11 +1850,29 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             />
             {/* Show hint when in add transformer mode */}
             {isAddTransformerMode && (
-              <div className="md-rise absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-                {t(
-                  "simulation.transformer.clickToPlace",
-                  "Click inside the polygon to place a transformer"
-                )}
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+                <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-muted">
+                    <img
+                      src="/images/transformer-icon-dark.svg"
+                      alt=""
+                      className="w-4 h-4 dark:invert"
+                    />
+                  </span>
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    {t(
+                      "simulation.transformer.clickToPlace",
+                      "Click on the map to place the transformer"
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddTransformerMode(false)}
+                    className="px-3 py-1 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold transition-colors"
+                  >
+                    {t("simulation.transformer.donePlacing", "Done")} (Esc)
+                  </button>
+                </div>
               </div>
             )}
             {/* Show banner when in multi-building assignment mode */}
@@ -1992,19 +2014,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       />
 
       {/* Add Transformer Dialog */}
-      <TransformerDialog
+      <AddTransformerDialog
         open={addTransformerDialogOpen}
-        selectedTransformer={null}
+        coords={newTransformerCoords}
         transformerSizes={transformerSizes}
+        onAdd={handleAddTransformer}
         onClose={() => {
           setAddTransformerDialogOpen(false);
           setNewTransformerCoords(null);
         }}
-        onChangeKva={() => {}}
-        onOpenChange={setAddTransformerDialogOpen}
-        mode="add"
-        newTransformerCoords={newTransformerCoords}
-        onAddTransformer={handleAddTransformer}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddTransformerDialogOpen(false);
+            setNewTransformerCoords(null);
+          }
+        }}
       />
 
       <BuildingDialog
@@ -2125,12 +2149,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             transform: "translate(-50%, -50%)",
           }}
         >
-          <img src="/images/transformer-icon-black.svg" alt="" className="w-5 h-5 drop-shadow-md" />
-          {isMoveTransformerMode && (
-            <span className="text-[10px] font-medium text-black whitespace-nowrap mt-0.5">
-              {t("transformer.clickToMove")}
+          <div className="relative flex items-center justify-center">
+            <span className="absolute inline-flex w-9 h-9 rounded-full bg-primary/30 animate-ping" />
+            <span className="relative flex items-center justify-center w-8 h-8 rounded-full bg-card border-2 border-primary shadow-lg">
+              <img
+                src="/images/transformer-icon-dark.svg"
+                alt=""
+                className="w-4 h-4 dark:invert"
+              />
             </span>
-          )}
+          </div>
+          <span className="mt-1.5 px-2 py-0.5 rounded-full bg-card/95 border border-border/50 shadow text-[10px] font-medium text-foreground whitespace-nowrap">
+            {isMoveTransformerMode
+              ? t("simulation.transformer.clickToMove", "Click to move")
+              : t("simulation.transformer.clickToPlaceCursor", "Click to place")}
+          </span>
         </div>
       )}
 

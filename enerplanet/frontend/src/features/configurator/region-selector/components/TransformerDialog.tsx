@@ -1,6 +1,6 @@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from "@spatialhub/ui";
 import { useState, type FC } from "react";
-import { Loader2, Plus, Trash2, Move } from "lucide-react";
+import { Loader2, Trash2, Move } from "lucide-react";
 
 interface TransformerDialogProps {
     open: boolean;
@@ -13,10 +13,6 @@ interface TransformerDialogProps {
     onClose: () => void;
     onChangeKva: (kva: number) => void;
     onOpenChange: (open: boolean) => void;
-    // New props for add/delete/move transformer
-    mode?: 'view' | 'add';
-    newTransformerCoords?: [number, number] | null;
-    onAddTransformer?: (kva: number) => Promise<void>;
     onDeleteTransformer?: (gridResultId: number) => Promise<void>;
     onMoveTransformer?: (gridResultId: number) => void;
     isUserPlaced?: boolean;
@@ -29,26 +25,11 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
     onClose,
     onChangeKva,
     onOpenChange,
-    mode = 'view',
-    newTransformerCoords,
-    onAddTransformer,
     onDeleteTransformer,
     onMoveTransformer,
     isUserPlaced = false
 }) => {
-    const [selectedKva, setSelectedKva] = useState<number>(transformerSizes[0]?.kva || 400);
     const [isLoading, setIsLoading] = useState(false);
-
-    const handleAddTransformer = async () => {
-        if (!onAddTransformer) return;
-        setIsLoading(true);
-        try {
-            await onAddTransformer(selectedKva);
-            onClose();
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleDeleteTransformer = async () => {
         if (!onDeleteTransformer || !selectedTransformer) return;
@@ -67,75 +48,6 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
         onClose();
     };
 
-    // Add mode - placing new transformer
-    if (mode === 'add' && newTransformerCoords) {
-        return (
-            <AlertDialog open={open} onOpenChange={onOpenChange}>
-                <AlertDialogContent className="max-w-xs !duration-300 !animate-in !fade-in-0 !zoom-in-100 !slide-in-from-top-0">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <Plus className="w-5 h-5" />
-                            Add New Transformer
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="sr-only">
-                            Place a new transformer at the selected location and choose its capacity.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-
-                    <div className="space-y-3">
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                            <span>
-                                <span className="text-muted-foreground">Location:</span>{" "}
-                                <span className="font-medium">{newTransformerCoords[1].toFixed(6)}, {newTransformerCoords[0].toFixed(6)}</span>
-                            </span>
-                        </div>
-
-                        <div className="pt-2 border-t">
-                            <label className="block text-sm text-muted-foreground mb-1">
-                                Select Capacity
-                            </label>
-                            <Select
-                                value={String(selectedKva)}
-                                onValueChange={(val) => setSelectedKva(Number(val))}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select kVA" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {transformerSizes.map((item) => (
-                                        <SelectItem key={item.kva} value={String(item.kva)}>
-                                            {item.kva} kVA (€{item.cost_eur?.toLocaleString() || 'N/A'})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <AlertDialogFooter className="flex-row gap-2">
-                        <Button variant="outline" size="sm" onClick={handleAddTransformer} disabled={isLoading}>
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                    Adding...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                                    Add Transformer
-                                </>
-                            )}
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
-                            Cancel
-                        </Button>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        );
-    }
-
-    // View/Edit mode - existing transformer
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent className="max-w-xs !duration-300 !animate-in !fade-in-0 !zoom-in-100 !slide-in-from-top-0">

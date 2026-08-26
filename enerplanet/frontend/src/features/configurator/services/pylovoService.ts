@@ -627,7 +627,7 @@ export const pylovoService = {
             lines: GeoJSON.FeatureCollection;
             reassigned_count: number;
             message: string;
-        } }>("/v2/pylovo/add-transformer", payload, { timeout: 0 }); // no timeout
+        } }>("/v2/pylovo/add-transformer", payload, { timeout: 60_000 });
         return response.data?.data;
     },
 

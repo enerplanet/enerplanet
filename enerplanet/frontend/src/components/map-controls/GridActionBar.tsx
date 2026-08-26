@@ -53,12 +53,12 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     className={`
                         flex items-center gap-2 px-4 py-2.5 rounded-l-full transition-colors
                         ${isAddTransformerMode
-                            ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                            ? "bg-primary/10 text-foreground"
                             : "text-foreground hover:bg-muted/80"
                         }
                     `}
                 >
-                    <TransformerIcon className={`w-4 h-4 ${isAddTransformerMode ? "text-green-500" : ""}`} />
+                    <TransformerIcon className={`w-4 h-4 ${isAddTransformerMode ? "text-primary" : ""}`} />
                     <span className="text-xs font-medium whitespace-nowrap">
                         {t("workflow.addTransformerAction")}
                     </span>
