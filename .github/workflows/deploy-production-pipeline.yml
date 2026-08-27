@@ -106,6 +106,13 @@ jobs:
           set_env .env BACKEND_INTERNAL_URL "${BACKEND_INTERNAL_URL}"
           [ -n "${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" ] && \
             set_env .env KEYCLOAK_ADMIN_PASSWORD "${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" || true
+          if ! grep -q '^REDIS_PASSWORD=' .env; then
+            if [ -z "${{ secrets.REDIS_PASSWORD }}" ]; then
+              echo 'ERROR: platform-core/.env has no REDIS_PASSWORD and the REDIS_PASSWORD secret is unset'
+              exit 1
+            fi
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+          fi
           chmod 600 .env
           docker network create spatialhub-net 2>/dev/null || true
           docker compose up -d postgres redis
@@ -296,8 +303,16 @@ jobs:
           [ -n "${{ secrets.CALLBACK_SECRET_PROD }}" ] && \
             set_env "$ENV_PROD" CALLBACK_SECRET "${{ secrets.CALLBACK_SECRET_PROD }}" || \
             echo 'WARNING: CALLBACK_SECRET_PROD not set'
-          [ -n "${{ secrets.REDIS_PASSWORD }}" ] && \
-            set_env "$ENV_PROD" REDIS_PASSWORD "${{ secrets.REDIS_PASSWORD }}" || true
+          # Redis is started by platform-core with --requirepass ${REDIS_PASSWORD}
+          # from platform-core/.env. Take the password from that same file so the
+          # backend can never drift from the running server.
+          if grep -q '^REDIS_PASSWORD=' "$DEPLOY/platform-core/.env" 2>/dev/null; then
+            REDIS_LINE=$(grep '^REDIS_PASSWORD=' "$DEPLOY/platform-core/.env" | head -1)
+            sed -i '/^REDIS_PASSWORD=/d' "$ENV_PROD"
+            echo "$REDIS_LINE" >> "$ENV_PROD"
+          else
+            echo 'WARNING: REDIS_PASSWORD not found in platform-core/.env - backend cannot reach Redis'
+          fi
           [ -n "${{ vars.PYLOVO_SERVICE_URL }}" ] && \
             set_env "$ENV_PROD" PYLOVO_SERVICE_URL "${{ vars.PYLOVO_SERVICE_URL }}" || true
           chmod 600 "$ENV_PROD"
