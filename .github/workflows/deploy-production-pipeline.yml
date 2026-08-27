@@ -254,6 +254,21 @@ jobs:
           # pointer files and the build ships broken assets.
           lfs: true
           token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Materialise Git LFS assets
+        run: |
+          set -e
+          # actions/checkout fetches LFS objects, but turning the pointers into
+          # real files needs the LFS filter in git config. Configure it locally
+          # so the build does not depend on the runner user's global config.
+          git lfs install --local
+          git lfs pull
+          LOGO=enerplanet/frontend/public/images/logo/enerplanet-logo.png
+          if head -c 40 "$LOGO" | grep -q 'git-lfs'; then
+            echo "ERROR: $LOGO is still a Git LFS pointer - refusing to build a broken image"
+            exit 1
+          fi
+          echo "LFS assets OK ($(stat -c%s "$LOGO") bytes)"
+
       - name: Build Enerplanet image
         run: |
           set -e
