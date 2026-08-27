@@ -285,7 +285,7 @@ const MyFeedbackHistory: React.FC<{ userId: string; refreshTrigger: number }> = 
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-6">
+    <div className="md-rise mb-6" style={{ animationDelay: "60ms" }}>
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -296,7 +296,7 @@ const MyFeedbackHistory: React.FC<{ userId: string; refreshTrigger: number }> = 
       </button>
 
       {expanded && (
-        <div className="space-y-2">
+        <div className="md-fade-in space-y-2">
           {items.map(item => {
             const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
             const statusKey = item.status === "in_progress" ? "in_progress" : item.status;
@@ -655,9 +655,9 @@ export const FeedbackComponent: React.FC = () => {
   });
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-background text-foreground">
+    <div className="md-scope max-w-3xl mx-auto p-6 bg-background text-foreground">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black rounded-xl p-6 mb-6 text-white shadow-lg">
+      <div className="md-rise bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black rounded-xl p-6 mb-6 text-white shadow-lg">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
             <MessageSquare className="w-6 h-6" />
@@ -672,7 +672,7 @@ export const FeedbackComponent: React.FC = () => {
       {/* My Feedback History */}
       {user?.id && <MyFeedbackHistory userId={String(user.id)} refreshTrigger={historyRefresh} />}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="md-rise space-y-4" style={{ animationDelay: "120ms" }}>
         {/* Category Selection */}
         <FormSection title={t("feedback.category")} required>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -980,4 +980,3 @@ export const FeedbackComponent: React.FC = () => {
     </div>
   );
 };
-

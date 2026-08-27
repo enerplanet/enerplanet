@@ -465,8 +465,24 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
 
   if (loading && feedbacks.length === 0) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <span className="sr-only">{t("common.loading")}</span>
+        <div className="border-b border-border bg-muted/40 px-4 py-3">
+          <div className="md-skeleton h-3 w-36 rounded-md bg-muted" />
+        </div>
+        <div className="divide-y divide-border">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+              <div
+                className="md-skeleton h-3.5 w-full max-w-[220px] rounded-md bg-muted"
+                style={{ animationDelay: `${i * 90}ms` }}
+              />
+              <div className="md-skeleton hidden h-5 w-20 shrink-0 rounded-full bg-muted sm:block" />
+              <div className="md-skeleton hidden h-3.5 w-24 shrink-0 rounded-md bg-muted md:block" />
+              <div className="md-skeleton ml-auto h-6 w-24 shrink-0 rounded-md bg-muted" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -474,9 +490,9 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="md-rise flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-muted rounded-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
             <MessageSquare className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
@@ -496,7 +512,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   setTimeout(() => setIsRefreshing(false), 1000);
                 }}
                 disabled={loading}
-                className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`}
@@ -540,7 +556,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
       </div>
 
       {/* Filters */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="md-rise bg-card rounded-xl border border-border p-4 shadow-sm" style={{ animationDelay: "60ms" }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
@@ -557,7 +573,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-sm text-foreground shadow-sm transition-colors duration-150 placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <div className="absolute left-3 top-2.5 text-muted-foreground">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,33 +678,33 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
+        <div className="md-fade-in overflow-x-auto">
           <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.subject")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.category")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.priority")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.status")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.rating")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.user")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.created")}
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.actions")}
                 </th>
               </tr>
@@ -697,8 +713,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
               {feedbacks.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+                    <div className="md-fade-in flex flex-col items-center justify-center gap-3">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center border border-border shadow-sm">
                         <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-300" />
                       </div>
                       <div>
@@ -720,7 +736,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   return (
                     <tr
                       key={feedback.id}
-                      className="hover:bg-muted/50 transition-colors duration-150"
+                      className="transition-colors duration-150 hover:bg-muted/40"
                     >
                       <td className="px-6 py-4 max-w-[200px]">
                         <div className="min-w-0">

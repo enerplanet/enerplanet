@@ -14,22 +14,21 @@ import { Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
+import { PanelSkeleton } from '@/components/ui/Skeletons';
+import { StatsStrip } from '@/components/ui/StatsStrip';
+import { PRIMARY_BUTTON_CLASS, TOOLBAR_ICON_BUTTON_CLASS } from '@/components/ui/toolbar';
 import {
   ArrowLeft,
   Loader2,
   MapPin,
   Calendar,
   Clock,
-  Zap,
-  TrendingUp,
   DollarSign,
   BarChart3,
   X,
   Building2,
   Network,
   LineChart,
-  Sun,
-  Gauge,
   ChevronDown,
   Check,
   FileBarChart,
@@ -48,7 +47,6 @@ import {
   WindTurbineInfo,
 } from '@/features/model-results/hooks/useModelResultsData';
 import { BuildingResultData, BusStatusData } from './components/map/ResultsMapTypes';
-import MetricCard from './components/ui/MetricCard';
 import OverviewPanel from './components/panels/OverviewPanel';
 import EnergyPanel from './components/panels/EnergyPanel';
 import GridPanel from './components/panels/GridPanel';
@@ -623,16 +621,16 @@ export const ModelResultsViewer = () => {
 
   if (error || (!model && !loading)) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BarChart3 className="w-8 h-8 text-destructive" />
+      <div className="md-scope flex h-full items-center justify-center bg-background p-6">
+        <div className="md-fade-in flex max-w-md flex-col items-center rounded-xl border border-destructive/30 bg-card px-6 py-12 text-center shadow-sm">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+            <BarChart3 className="h-7 w-7 text-destructive" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">{t('results.unableToLoad')}</h2>
-          <p className="text-muted-foreground mb-6">{error || t('results.modelNotFound')}</p>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{t('results.unableToLoad')}</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">{error || t('results.modelNotFound')}</p>
           <button
             onClick={() => navigate('/app/model-dashboard')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className={`mt-6 ${PRIMARY_BUTTON_CLASS}`}
           >
             {t('results.backToDashboard')}
           </button>
@@ -642,17 +640,18 @@ export const ModelResultsViewer = () => {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col overflow-hidden">
+    <div className="md-scope flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border flex-shrink-0">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="px-4 py-4 sm:px-6">
+          <div className="md-rise flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(isFromAdmin ? '/app/admin-dashboard' : '/app/model-dashboard')}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className={TOOLBAR_ICON_BUTTON_CLASS}
+                aria-label={t('common.back')}
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
 
               {!isFromAdmin && (
@@ -669,10 +668,10 @@ export const ModelResultsViewer = () => {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                          className="flex items-center gap-2.5 px-3 py-2 bg-card border border-border rounded-lg hover:border-muted-foreground/50 hover:shadow-sm transition-all duration-200"
+                          className="flex h-9 items-center gap-2.5 rounded-lg border border-border bg-card px-3 shadow-sm transition-all duration-200 hover:border-muted-foreground/40 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isLoadingModels}
                         >
-                          <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted">
                             <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
                           <span className="font-normal text-foreground max-w-[180px] truncate text-sm">
@@ -810,6 +809,29 @@ export const ModelResultsViewer = () => {
           </div>
         </div>
 
+        {/* Summary Metrics Bar - placeholder while the results load */}
+        {loading && (
+          <div className="px-4 pb-4 sm:px-6" aria-busy="true" aria-live="polite">
+            <div className="flex flex-wrap items-center gap-2">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-3"
+                >
+                  <div
+                    className="md-skeleton h-2.5 w-16 rounded bg-muted"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  />
+                  <div
+                    className="md-skeleton h-3 w-12 rounded bg-muted"
+                    style={{ animationDelay: `${i * 60 + 30}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Summary Metrics Bar */}
         {!loading && summary && (() => {
           const simDays = model ? (() => {
@@ -825,56 +847,46 @@ export const ModelResultsViewer = () => {
             ? formatPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0))
             : undefined;
           return (
-            <div className="px-6 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <MetricCard
-                  icon={Zap}
-                  label={t('results.metrics.totalDemand')}
-                  value={formatEnergy(summary.total_demand_kwh)}
-                  subtitle={periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Sun}
-                  label={t('results.metrics.renewableGen')}
-                  value={formatEnergy(summary.renewable_production_kwh)}
-                  subtitle={installedRenewable ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}` : periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Network}
-                  label={t('results.metrics.gridImport')}
-                  value={formatEnergy(summary.grid_import_kwh)}
-                  subtitle={periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={TrendingUp}
-                  label={t('results.metrics.selfSufficiency')}
-                  value={`${(summary.self_sufficiency_rate * 100).toFixed(1)}%`}
-                  subtitle={t('results.metrics.selfSufficiencyDesc')}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Gauge}
-                  label={t('results.metrics.peakDemand')}
-                  value={formatPower(summary.peak_demand_kw)}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={DollarSign}
-                  label={t('results.metrics.totalCost')}
-                  value={`€${summary.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
-                  subtitle={periodLabel ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}` : t('results.metrics.equipmentAndRunning')}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-              </div>
+            <div className="px-4 pb-4 sm:px-6">
+              <StatsStrip
+                className="md-fade-in"
+                items={[
+                  {
+                    label: t('results.metrics.totalDemand'),
+                    value: formatEnergy(summary.total_demand_kwh),
+                    hint: periodLabel,
+                  },
+                  {
+                    label: t('results.metrics.renewableGen'),
+                    value: formatEnergy(summary.renewable_production_kwh),
+                    hint: installedRenewable
+                      ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
+                      : periodLabel,
+                  },
+                  {
+                    label: t('results.metrics.gridImport'),
+                    value: formatEnergy(summary.grid_import_kwh),
+                    hint: periodLabel,
+                  },
+                  {
+                    label: t('results.metrics.selfSufficiency'),
+                    value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
+                    hint: t('results.metrics.selfSufficiencyDesc'),
+                  },
+                  {
+                    label: t('results.metrics.peakDemand'),
+                    value: formatPower(summary.peak_demand_kw),
+                    hint: periodLabel,
+                  },
+                  {
+                    label: t('results.metrics.totalCost'),
+                    value: `€${summary.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                    hint: periodLabel
+                      ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}`
+                      : t('results.metrics.equipmentAndRunning'),
+                  },
+                ]}
+              />
             </div>
           );
         })()}
@@ -998,10 +1010,29 @@ export const ModelResultsViewer = () => {
         {/* Right Panel - Charts or Building Details */}
         <div className="flex-1 flex flex-col overflow-hidden bg-muted/30">
           {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground font-medium">{t('results.loadingResults')}</p>
+            <div className="flex h-full flex-col overflow-hidden">
+              {/* Tab bar placeholder */}
+              <div className="flex-shrink-0 border-b border-border bg-card px-4 pt-3">
+                <div className="flex gap-1 pb-2.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="md-skeleton h-6 w-24 rounded-md bg-muted"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 space-y-4 overflow-hidden p-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t('results.loadingResults')}</span>
+                </div>
+                <PanelSkeleton height="h-40" />
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <PanelSkeleton className="lg:col-span-2" height="h-56" />
+                  <PanelSkeleton className="lg:col-span-1" height="h-56" />
+                </div>
               </div>
             </div>
           ) : (
@@ -1024,19 +1055,32 @@ export const ModelResultsViewer = () => {
                       setRightPanelView(tab.id);
                       setSelectedBuilding(null);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                    className={`group/tab relative flex items-center gap-1.5 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       rightPanelView === tab.id && !selectedBuilding
-                        ? 'bg-background text-foreground border-t border-x border-border -mb-px'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        ? '-mb-px border-x border-t border-border bg-background text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
+                    <tab.icon
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        rightPanelView === tab.id && !selectedBuilding
+                          ? ''
+                          : 'group-hover/tab:scale-110'
+                      }`}
+                    />
                     {tab.label}
+                    {/* Active indicator that slides in under the label */}
+                    <span
+                      className={`pointer-events-none absolute inset-x-3 bottom-0 h-0.5 origin-center rounded-full bg-primary transition-transform duration-300 ${
+                        rightPanelView === tab.id && !selectedBuilding ? 'scale-x-100' : 'scale-x-0'
+                      }`}
+                      aria-hidden="true"
+                    />
                   </button>
                 ))}
                 {selectedBuilding && (
                   <div
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg bg-background text-foreground border-t border-x border-border -mb-px"
+                    className="md-fade-in -mb-px flex items-center gap-1.5 rounded-t-lg border-x border-t border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground"
                   >
                     <Building2 className="w-4 h-4" />
                     {selectedBuilding.fClass === 'Transformer' ? t('results.transformer') : `${t('results.building')} ${selectedBuilding.osmId || selectedBuilding.buildingId}`}
@@ -1060,14 +1104,13 @@ export const ModelResultsViewer = () => {
 
               {/* Summary Info - Right side */}
               {modelStats && !selectedBuilding && (
-                <div className="flex items-center gap-3 text-sm text-foreground pr-2">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4" />
+                <div className="md-fade-in mb-2 flex items-center gap-2 pr-2">
+                  <span className="flex h-8 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 text-sm font-medium tabular-nums text-foreground">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                     {modelStats.totalBuildings}
                   </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <img src="/images/transformer-icon-black.svg" alt="Transformer" className="w-4 h-4" />
+                  <span className="flex h-8 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 text-sm font-medium tabular-nums text-foreground">
+                    <img src="/images/transformer-icon-black.svg" alt="Transformer" className="h-4 w-4 dark:invert" />
                     {modelStats.transformerCount}
                   </span>
                 </div>
@@ -1076,8 +1119,11 @@ export const ModelResultsViewer = () => {
             </div>
           </div>
 
-          {/* Panel Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Panel Content - keyed so switching tabs cross-fades the new panel in */}
+          <div
+            key={selectedBuilding ? `building-${selectedBuilding.buildingId}` : rightPanelView}
+            className="md-fade-in flex-1 overflow-y-auto"
+          >
             {panelContent}
           </div>
         </>

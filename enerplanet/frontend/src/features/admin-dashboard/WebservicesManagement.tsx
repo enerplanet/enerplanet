@@ -7,6 +7,7 @@ import ModelActionGroup from "@/components/shared/ModelActionGroup";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import Pagination from "@/components/ui/Pagination";
+import { AdminManagementSkeleton } from "./components/AdminManagementSkeleton";
 import { WebserviceFilters, WebserviceFormData, WebserviceInstance } from "@/features/admin-dashboard/types";
 import type { FormDataConvertible } from "@/hooks/useForm";
 import { useWebservices } from "@/features/admin-dashboard/hooks/useWebservices";
@@ -419,16 +420,17 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 
 	if (loading && webservices.length === 0) {
 		return (
-			<div className="flex justify-center items-center min-h-96">
-				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600"></div>
-			</div>
+			<AdminManagementSkeleton
+				label={t("webservicesManagement.loading", "Loading webservices")}
+				summaryCards={5}
+			/>
 		);
 	}
 
 	return (
 		<div className="space-y-6">
 			{/* Summary Cards */}
-			<div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+			<div className="md-rise grid grid-cols-2 md:grid-cols-5 gap-3">
 				{[
 					{ icon: Server, label: t("webservicesManagement.summary.total"), value: summary?.total || 0 },
 					{ icon: Wifi, label: t("webservicesManagement.summary.online"), value: summary?.online || 0 },
@@ -436,7 +438,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 					{ icon: RotateCw, label: t("webservicesManagement.summary.busy"), value: summary?.busy || 0 },
 					{ icon: WifiOff, label: t("webservicesManagement.summary.offline"), value: summary?.offline || 0 },
 				].map((stat) => (
-					<div key={stat.label} className="bg-card rounded-lg p-3 border border-border shadow-sm hover:shadow-md transition-all duration-200">
+					<div key={stat.label} className="bg-card rounded-xl p-3 border border-border shadow-sm hover:shadow-md transition-all duration-200">
 						<div className="flex items-center gap-3">
 							<div className="p-2 rounded-lg bg-muted flex-shrink-0">
 								<stat.icon className="w-4 h-4 text-muted-foreground" />
@@ -452,7 +454,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 
 			{/* User's Queue Status - Show for all users */}
 			{(userQueueCount > 0 || userRunningCount > 0) && (
-				<div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+				<div className="md-rise bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20" style={{ animationDelay: "60ms" }}>
 					<div className="flex items-center gap-4">
 						<div className="p-3 rounded-full bg-primary/10">
 							<Activity className="w-5 h-5 text-primary" />
@@ -481,15 +483,15 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 			)}
 
 			{/* Header with filters */}
-			<div className="space-y-4">
+			<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
 				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-					<div className="flex items-center gap-3">
-						<div className="p-2 bg-muted rounded-lg">
+					<div className="flex items-center gap-3.5">
+						<div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
 							<Cloud className="w-5 h-5 text-muted-foreground" />
 						</div>
 						<div>
-							<h2 className="text-lg font-semibold text-foreground">{t("webservicesManagement.title")}</h2>
-							<p className="text-xs text-muted-foreground">{t("webservicesManagement.subtitle")}</p>
+							<h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("webservicesManagement.title")}</h2>
+							<p className="mt-0.5 text-sm text-muted-foreground">{t("webservicesManagement.subtitle")}</p>
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
@@ -502,7 +504,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 										setTimeout(() => setIsRefreshing(false), 1000);
 									}}
 									disabled={loading}
-									className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
+									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									<RefreshCw className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`} />
 								</button>
@@ -515,7 +517,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 									resetForm();
 									setAddDialogOpen(true);
 								}}
-								className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
+								className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
 							>
 								<Plus className="w-4 h-4" />
 								<span className="hidden sm:inline">{t("webservicesManagement.registerNew")}</span>
@@ -528,13 +530,13 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 				{/* Filters */}
 				<div className="flex flex-col sm:flex-row gap-3">
 					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<input
 							type="text"
 							placeholder={t("webservicesManagement.searchPlaceholder")}
 							value={searchInput}
 							onChange={(e) => setSearchInput(e.target.value)}
-							className="w-full pl-10 pr-4 py-2.5 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-sm text-foreground"
+							className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm text-foreground shadow-sm transition-colors duration-150 placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
 						/>
 					</div>
 					<div className="flex gap-2">
@@ -567,35 +569,35 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 			</div>
 
 			{/* Table */}
-			<div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+			<div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
 				{loading && (
 					<div className="h-1 bg-muted overflow-hidden">
 						<div className="h-full w-1/3 bg-gradient-to-r from-blue-400 to-blue-600 animate-[shimmer_1.5s_infinite]"></div>
 					</div>
 				)}
-				<div className="overflow-x-auto">
+				<div className="md-fade-in overflow-x-auto">
 					<table className="min-w-full divide-y divide-border">
-						<thead className="bg-muted/50">
-							<tr>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.service")}</th>
+						<thead>
+							<tr className="border-b border-border bg-muted/40">
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.service")}</th>
 								{!readOnly && (
-									<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.endpoint")}</th>
+									<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.endpoint")}</th>
 								)}
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.status")}</th>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.availability")}</th>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.jobs")}</th>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.performance")}</th>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.user")}</th>
-								<th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.lastCheck")}</th>
-								<th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("webservicesManagement.table.actions")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.status")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.availability")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.jobs")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.performance")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.user")}</th>
+								<th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.lastCheck")}</th>
+								<th className="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("webservicesManagement.table.actions")}</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-border">
 							{webservices.length === 0 && !loading ? (
 								<tr>
 									<td colSpan={readOnly ? 8 : 9} className="px-6 py-16 text-center">
-										<div className="flex flex-col items-center justify-center gap-3">
-											<div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+										<div className="md-fade-in flex flex-col items-center justify-center gap-3">
+											<div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center border border-border shadow-sm">
 												<Cloud className="w-8 h-8 text-gray-400 dark:text-gray-300" />
 											</div>
 											<div>
@@ -612,7 +614,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 														resetForm();
 														setAddDialogOpen(true);
 													}}
-													className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
+													className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
 												>
 													<Plus className="w-4 h-4" />
 													{t("webservicesManagement.registerNew")}
@@ -625,7 +627,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 								webservices
 									.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
 									.map((service) => (
-									<tr key={service.id} className="hover:bg-muted/50 transition-colors duration-150">
+									<tr key={service.id} className="transition-colors duration-150 hover:bg-muted/40">
 										<td className="px-6 py-4">
 											<div className="flex items-center gap-3">
 												<div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted">

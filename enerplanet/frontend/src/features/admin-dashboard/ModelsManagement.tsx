@@ -199,26 +199,41 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 	const renderTableContent = () => {
 		if (isLoading) {
 			return (
-				<tr>
-					<td colSpan={5} className="px-6 py-16 text-center">
-						<div className="flex flex-col items-center justify-center gap-3">
-							<div className="relative">
-								<div className="w-10 h-10 rounded-full border-4 border-gray-200 dark:border-gray-700"></div>
-								<div className="absolute top-0 left-0 w-10 h-10 rounded-full border-4 border-purple-500 border-t-transparent animate-spin"></div>
+				<>
+					<tr>
+						<td colSpan={5} className="px-4 pt-4">
+							<div className="flex items-center gap-2 text-sm text-muted-foreground">
+								<RefreshCw className="h-4 w-4 animate-spin" />
+								<span>{t("modelsManagement.loadingModels")}</span>
 							</div>
-							<span className="text-sm text-gray-500 dark:text-gray-400">{t("modelsManagement.loadingModels")}</span>
-						</div>
-					</td>
-				</tr>
+						</td>
+					</tr>
+					{Array.from({ length: 5 }, (_, i) => (
+						<tr key={i}>
+							<td colSpan={5} className="px-4 py-3.5">
+								<div className="flex items-center gap-4">
+									<div className="md-skeleton h-4 w-4 shrink-0 rounded bg-muted" />
+									<div
+										className="md-skeleton h-3.5 w-full max-w-[220px] rounded-md bg-muted"
+										style={{ animationDelay: `${i * 90}ms` }}
+									/>
+									<div className="md-skeleton hidden h-5 w-20 shrink-0 rounded-full bg-muted sm:block" />
+									<div className="md-skeleton hidden h-3.5 w-24 shrink-0 rounded-md bg-muted md:block" />
+									<div className="md-skeleton ml-auto h-6 w-24 shrink-0 rounded-md bg-muted" />
+								</div>
+							</td>
+						</tr>
+					))}
+				</>
 			);
 		}
 
 		if (models.length === 0) {
 			return (
 				<tr>
-					<td colSpan={5} className="px-6 py-16 text-center">
-						<div className="flex flex-col items-center justify-center gap-3">
-							<div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+					<td colSpan={5} className="px-4 py-6">
+						<div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
+							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
 								<Brain className="w-8 h-8 text-gray-400 dark:text-gray-300" />
 							</div>
 							<div>
@@ -236,7 +251,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 				String(model.workspace.user_id) !== String(user.id);
 			
 			return (
-				<tr key={model.id} className="hover:bg-muted/50 transition-colors duration-150">
+				<tr key={model.id} className="transition-colors duration-150 hover:bg-muted/40">
 					<td className="px-3 py-2">
 						<div className="flex items-center gap-2.5">
 							<div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
@@ -302,9 +317,9 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+			<div className="md-rise flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 				<div className="flex items-center gap-3">
-					<div className="p-2 bg-muted rounded-lg">
+					<div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
 						<Brain className="w-5 h-5 text-muted-foreground" />
 					</div>
 					<div>
@@ -314,13 +329,13 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 				</div>
 				<div className="flex items-center gap-2">
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<input
 							type="text"
 							placeholder={t("modelsManagement.searchPlaceholder")}
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
-							className="pl-9 pr-4 py-2 w-48 md:w-64 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
+							className="h-9 w-48 md:w-64 rounded-lg border border-input bg-background pl-9 pr-3 text-sm text-foreground shadow-sm transition-colors duration-150 placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
 						/>
 					</div>
 					<Tooltip>
@@ -332,7 +347,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 									setTimeout(() => setIsRefreshing(false), 1000);
 								}}
 								disabled={isLoading}
-								className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
+								className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								<RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isLoading || isRefreshing ? "animate-spin" : ""}`} />
 							</button>
@@ -343,21 +358,23 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 			</div>
 
 			{/* Status Cards */}
-			<ModelStatusCards statusCounts={statusCounts} />
+			<div className="md-rise" style={{ animationDelay: "60ms" }}>
+				<ModelStatusCards statusCounts={statusCounts} />
+			</div>
 
 			{/* Table */}
-			<div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+			<div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
 				{isLoading && (
 					<div className="h-1 bg-muted overflow-hidden">
 						<div className="h-full w-1/3 bg-gradient-to-r from-gray-400 to-gray-600 animate-[shimmer_1.5s_infinite]"></div>
 					</div>
 				)}
-				<div className="overflow-x-auto">
+				<div className="md-fade-in overflow-x-auto">
 					<table className="min-w-full divide-y divide-border">
-						<thead className="bg-muted/50">
-							<tr>
+						<thead>
+							<tr className="border-b border-border bg-muted/40">
 								<th
-									className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+									className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground select-none"
 									onClick={() => handleSort("title")}
 								>
 									<span className="inline-flex items-center gap-1">
@@ -366,7 +383,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 									</span>
 								</th>
 								<th
-									className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+									className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground select-none"
 									onClick={() => handleSort("status")}
 								>
 									<span className="inline-flex items-center gap-1">
@@ -375,7 +392,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 									</span>
 								</th>
 								<th
-									className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+									className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground select-none"
 									onClick={() => handleSort("created_at")}
 								>
 									<span className="inline-flex items-center gap-1">
@@ -384,7 +401,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 									</span>
 								</th>
 								<th
-									className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none"
+									className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground select-none"
 									onClick={() => handleSort("updated_at")}
 								>
 									<span className="inline-flex items-center gap-1">
@@ -392,7 +409,7 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 										{renderSortIcon("updated_at")}
 									</span>
 								</th>
-								<th className="px-3 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("modelsManagement.table.actions")}</th>
+								<th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("modelsManagement.table.actions")}</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-border">
@@ -430,4 +447,3 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 		</div>
 	);
 };
-

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LineChart, TrendingUp, Zap, Sun, Info, Loader2 } from 'lucide-react';
+import { LineChart, TrendingUp, Zap, Sun, Info } from 'lucide-react';
+import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, CarrierProdRecord, CarrierConRecord } from '../../types';
 import { fetchCarrierTimeSeries } from '../../api';
 import {
@@ -299,30 +300,16 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
   }, [modelId, carrierLoaded, structuredResults]);
   
   if (!structuredResults) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <LineChart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">{t('results.energy.noData')}</p>
-        </div>
-      </div>
-    );
+    return <PanelEmptyState icon={LineChart} title={t('results.energy.noData')} />;
   }
 
   if (carrierLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
-          <p className="text-sm text-muted-foreground">{t('results.energy.loadingTimeSeries', 'Loading energy time series...')}</p>
-        </div>
-      </div>
-    );
+    return <PanelLoadingState label={t('results.energy.loadingTimeSeries', 'Loading energy time series...')} />;
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="bg-card rounded-xl border border-border p-4">
+    <div className="md-stagger p-4 space-y-4">
+      <div className={CHART_CARD_CLASS}>
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <LineChart className="w-4 h-4 text-primary" />
           {t('results.energy.dailyEnergyBalance')}
@@ -337,7 +324,7 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
         </ErrorBoundary>
       </div>
 
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className={CHART_CARD_CLASS}>
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Sun className="w-4 h-4 text-primary" />
           {t('results.energy.hourlyRenewableGeneration', 'Hourly renewable generation')}
@@ -353,7 +340,7 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
 
       {/* Two charts side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" />
             {t('results.energy.dailyLoadProfile')}
@@ -368,7 +355,7 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
           </ErrorBoundary>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" />
             {t('results.energy.generationDurationCurve', 'Generation duration curve')}

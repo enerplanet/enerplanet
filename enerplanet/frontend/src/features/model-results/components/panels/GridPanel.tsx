@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Activity, AlertTriangle, Gauge, Network, Info, Zap } from 'lucide-react';
+import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { PyPSAModelResults } from '../../api';
 import {
   PyPSAVoltageChart,
@@ -451,20 +452,13 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
     : pypsaData?.settings?.converged;
 
   if (!pypsaData?.locations?.length) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Network className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">{t('results.grid.noData')}</p>
-        </div>
-      </div>
-    );
+    return <PanelEmptyState icon={Network} title={t('results.grid.noData')} />;
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 bg-card rounded-xl border border-border p-4">
+        <div className={`xl:col-span-2 ${CHART_CARD_CLASS}`}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Network className="w-4 h-4 text-primary" />
             {t('results.grid.networkTopology')}
@@ -484,7 +478,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="bg-card rounded-xl border border-border p-4">
+          <div className={CHART_CARD_CLASS}>
             <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-primary" />
@@ -540,7 +534,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
             )}
           </div>
 
-          <div className="bg-card rounded-xl border border-border p-4 flex-1 flex flex-col">
+          <div className={`flex-1 flex flex-col ${CHART_CARD_CLASS}`}>
             <div className="flex items-center justify-between mb-3 gap-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Activity className="w-4 h-4 text-primary" />
@@ -626,7 +620,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
             {t('results.grid.voltageProfile')} - {selectedBus}
             <VoltageProfileTooltip />
@@ -647,7 +641,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
           </ErrorBoundary>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
             {t('results.grid.powerFlow')} - {selectedBus}
             <PowerFlowTooltip />
@@ -671,12 +665,12 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <ErrorBoundary label="Voltage Violations">
             <PyPSAVoltageViolationChart items={voltageViolationItems} height={240} />
           </ErrorBoundary>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <ErrorBoundary label="Line Loading">
             <PyPSALineLoadingChart items={lineLoadingItems} height={240} />
           </ErrorBoundary>
@@ -684,12 +678,12 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <ErrorBoundary label="Transformer Loading">
             <PyPSATransformerLoadingChart items={transformerLoadingItems} height={240} />
           </ErrorBoundary>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Zap className="w-4 h-4 text-primary" />
             Renewable Curtailment
@@ -708,7 +702,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <ErrorBoundary label="Losses Chart">
             <PyPSALossesChart
               timestamps={lossesTimeline.map(item => item.timestamp)}
@@ -719,7 +713,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
           </ErrorBoundary>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-4">Critical Assets</h4>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="rounded-lg border border-border bg-muted/20 p-3">

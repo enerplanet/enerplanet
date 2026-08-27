@@ -47,7 +47,7 @@ help:
 # ==============================================================================
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo dev-bg list-bg
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 
@@ -226,4 +226,4 @@ webservice:
 
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/enerplanet-pylovo && make dev
+	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev

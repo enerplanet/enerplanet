@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Activity, AlertTriangle, Zap, ArrowLeftRight, Info, Loader2 } from 'lucide-react';
+import { Activity, AlertTriangle, Zap, ArrowLeftRight, Info } from 'lucide-react';
+import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, UnmetDemandRecord, ResourceConRecord, LineFlowRecord, TransformerFlowRecord, CarrierProdRecord, CarrierConRecord } from '../../types';
 import { fetchCarrierTimeSeries, fetchSystemTimeSeries } from '../../api';
 import ReactECharts from 'echarts-for-react';
@@ -448,25 +449,11 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
   );
 
   if (!structuredResults) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">{t('results.system.noData')}</p>
-        </div>
-      </div>
-    );
+    return <PanelEmptyState icon={Activity} title={t('results.system.noData')} />;
   }
 
   if (systemLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
-          <p className="text-sm text-muted-foreground">{t('results.system.loadingTimeSeries', 'Loading system data...')}</p>
-        </div>
-      </div>
-    );
+    return <PanelLoadingState label={t('results.system.loadingTimeSeries', 'Loading system data...')} />;
   }
 
   const hasDailySupplyDemand = dailySupplyDemandData.length > 0;
@@ -478,23 +465,19 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
 
   if (!hasDailySupplyDemand && !hasUnmetDemand && !hasLineFlows && !hasResourceCon && !hasCostInvestment) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">{t('results.system.noAnalysisData')}</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            {t('results.system.noAnalysisDataDesc')}
-          </p>
-        </div>
-      </div>
+      <PanelEmptyState
+        icon={Activity}
+        title={t('results.system.noAnalysisData')}
+        description={t('results.system.noAnalysisDataDesc')}
+      />
     );
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Daily Supply vs Demand */}
       {hasDailySupplyDemand && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
             {t('results.system.dailySupplyDemand', 'Daily Supply vs Demand')}
@@ -598,7 +581,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
       )}
 
       {hasUnmetDemand && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
             {t('results.system.dailyUnmetDemand')}
@@ -767,7 +750,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
       )}
 
       {hasLineFlows && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <ArrowLeftRight className="w-4 h-4 text-primary" />
             {t('results.system.powerFlowAnalysis')}
@@ -931,7 +914,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
       )}
 
       {hasResourceCon && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" />
             {t('results.system.resourceConsumption')}
@@ -1060,7 +1043,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
 
       {/* Cost Investment Summary */}
       {hasCostInvestment && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
             {t('results.system.investmentCosts')}

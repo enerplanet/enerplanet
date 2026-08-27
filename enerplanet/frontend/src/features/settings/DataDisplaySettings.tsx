@@ -12,9 +12,9 @@ const OptionButton: React.FC<{
 	<button
 		onClick={onClick}
 		className={cn(
-			"px-2 py-1 text-[10px] font-medium rounded transition-all duration-200",
+			"px-2 py-1 text-[10px] font-medium rounded transition-all duration-200 active:scale-95",
 			active
-				? "bg-primary text-primary-foreground"
+				? "bg-primary text-primary-foreground shadow-sm"
 				: "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
 		)}
 	>

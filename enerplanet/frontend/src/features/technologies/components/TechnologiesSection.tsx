@@ -81,38 +81,48 @@ function TechnologiesSection({
       draggedTech={draggedTech}
     >
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {icon}
           {title}
-          <span className="text-xs font-normal text-muted-foreground">({technologies.length})</span>
+          <span className="font-normal tabular-nums">({technologies.length})</span>
           {isExpert && draggedTech && (
-            <span className="text-xs text-muted-foreground ml-2">
+            <span className="md-fade-in ml-2 text-xs font-normal normal-case tracking-normal text-muted-foreground">
               {sectionKey === "system" ? t('technologies.dropToMakeSystem') : t('technologies.dropToMakeUser')}
             </span>
           )}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {technologies.map((tech) => {
-            const IconComponent = iconMap[tech.icon] || CircuitBoard;
+        {technologies.length === 0 ? (
+          <div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-10 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+              <CircuitBoard className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">{t('technologies.noTechnologies')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {technologies.map((tech, index) => {
+              const IconComponent = iconMap[tech.icon] || CircuitBoard;
 
-            return (
-              <SortableTechnologyCard
-                key={tech.id?.toString() || tech.key}
-                tech={tech}
-                sectionKey={sectionKey}
-                Icon={<IconComponent className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
-                isExpert={isExpert}
-                isOwnTechnology={sectionKey === "user" ? isOwnTechnology(tech) : undefined}
-                canCopy={canCopyTech(tech)}
-                canDelete={canDeleteTech(tech)}
-                dragged={draggedTech?.id === tech.id}
-                onView={openTechDetails}
-                onCopy={openCopyModal}
-                onDelete={handleDeleteTechnology}
-              />
-            );
-          })}
-        </div>
+              return (
+                <SortableTechnologyCard
+                  key={tech.id?.toString() || tech.key}
+                  tech={tech}
+                  index={index}
+                  sectionKey={sectionKey}
+                  Icon={<IconComponent className="h-5 w-5 text-muted-foreground" />}
+                  isExpert={isExpert}
+                  isOwnTechnology={sectionKey === "user" ? isOwnTechnology(tech) : undefined}
+                  canCopy={canCopyTech(tech)}
+                  canDelete={canDeleteTech(tech)}
+                  dragged={draggedTech?.id === tech.id}
+                  onView={openTechDetails}
+                  onCopy={openCopyModal}
+                  onDelete={handleDeleteTechnology}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </DroppableSection>
   );

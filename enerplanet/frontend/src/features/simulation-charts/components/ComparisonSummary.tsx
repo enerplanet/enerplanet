@@ -75,11 +75,11 @@ const MetricCard: FC<{
   })();
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 hover:shadow-sm transition-shadow">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-muted-foreground/30 hover:shadow-md">
       {/* Header row: icon badge + label + change pill */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-muted rounded-lg">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
             <Icon className="w-4 h-4 text-muted-foreground" />
           </div>
           <p className="text-xs text-muted-foreground font-medium">{label}</p>
@@ -120,7 +120,7 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2 }) 
   return (
     <div className="space-y-3">
       {/* Section header */}
-      <div className="bg-muted rounded-lg px-4 py-2 text-center text-xs font-semibold text-foreground sm:text-sm border border-border">
+      <div className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {t('simulationComparison.performanceComparison')}
       </div>
 

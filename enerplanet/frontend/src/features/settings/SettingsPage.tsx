@@ -89,10 +89,10 @@ const SettingsPage: React.FC = () => {
   ];
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="md-scope min-h-screen bg-background">
       <div className="p-3 md:p-4 lg:p-5 max-w-[1600px] mx-auto space-y-4">
       {/* Header Section - Dark gradient like admin dashboard */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800 via-gray-900 to-black p-4 md:p-5 text-white shadow-xl">
+      <div className="md-rise relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800 via-gray-900 to-black p-4 md:p-5 text-white shadow-xl">
         {/* Background decorations */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-radial from-white/5 to-transparent rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -103,7 +103,7 @@ const SettingsPage: React.FC = () => {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleBack}
-                  className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 transition-all duration-200 hover:scale-105"
+                  className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 transition-all duration-200 hover:scale-105 active:scale-95"
                   aria-label={t('settings.goBack')}
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -136,7 +136,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="md-rise grid grid-cols-2 md:grid-cols-4 gap-3" style={{ animationDelay: "60ms" }}>
         {statsCards.map((stat) => (
           <div
             key={stat.title}
@@ -156,7 +156,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* Main Content Card with Tabs */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border">
+      <div className="md-rise bg-card rounded-2xl shadow-sm border border-border" style={{ animationDelay: "120ms" }}>
         {/* Tab Navigation */}
         <div className="border-b border-border bg-muted/50">
           <nav className="flex overflow-x-auto scrollbar-hide px-2 md:px-4 py-2 gap-1">
@@ -166,7 +166,7 @@ const SettingsPage: React.FC = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as TabKey)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm whitespace-nowrap transition-all duration-200 active:scale-[0.98] ${
                     activeTab === tab.key
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -181,11 +181,11 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="p-3 md:p-4">
+        <div key={activeTab} className="md-fade-in p-3 md:p-4">
           {activeTab === 'general' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {/* Language Settings */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <Globe className="w-3.5 h-3.5 text-foreground" />
@@ -199,7 +199,7 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* Weather Location */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md" style={{ animationDelay: "60ms" }}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <Cloud className="w-3.5 h-3.5 text-foreground" />
@@ -213,7 +213,7 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* Map Location */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md" style={{ animationDelay: "120ms" }}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <MapPin className="w-3.5 h-3.5 text-foreground" />
@@ -231,7 +231,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'display' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Data & Display */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <Sliders className="w-3.5 h-3.5 text-foreground" />
@@ -249,7 +249,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'notifications' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Notification Settings */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <Bell className="w-3.5 h-3.5 text-foreground" />
@@ -264,7 +264,7 @@ const SettingsPage: React.FC = () => {
 
               {/* Notification Management - Expert only */}
               {isExpert && (
-                <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+                <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md" style={{ animationDelay: "60ms" }}>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="p-1.5 bg-muted rounded">
                       <Send className="w-3.5 h-3.5 text-foreground" />
@@ -281,7 +281,7 @@ const SettingsPage: React.FC = () => {
           )}
 
           {activeTab === 'privacyTerms' && (
-            <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+            <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
               <LegalPage />
             </div>
           )}
@@ -289,7 +289,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'advanced' && isExpert && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Polygon Limits */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <Building2 className="w-3.5 h-3.5 text-foreground" />
@@ -303,7 +303,7 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* Region Management */}
-              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+              <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md" style={{ animationDelay: "60ms" }}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-muted rounded">
                     <MapPin className="w-3.5 h-3.5 text-foreground" />
