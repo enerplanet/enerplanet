@@ -11,6 +11,7 @@ import (
 
 const (
 	defaultWebserviceURL = "http://localhost:8082"
+	defaultOpenTechDBURL = "http://localhost:8004"
 )
 
 type Config struct {
@@ -35,6 +36,7 @@ type Config struct {
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
 	IgnisServiceURL       string // URL of the ignis heat-demand microservice
+	OpenTechDBServiceURL  string // URL of the OpenTech-DB service
 	CallbackSecret        string // Shared secret for webservice callback authentication
 }
 
@@ -82,8 +84,9 @@ func LoadFromEnv() (*Config, error) {
 		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
 		// 8091: ignis's own default is APP_PORT 8080 (clashes with Keycloak) and
 		// weather-serve now holds 8090; the real deployment URL is unconfirmed.
-		IgnisServiceURL: platformconfig.GetEnv("IGNIS_SERVICE_URL", "http://localhost:8091"),
-		CallbackSecret:  os.Getenv("CALLBACK_SECRET"),
+		IgnisServiceURL:      platformconfig.GetEnv("IGNIS_SERVICE_URL", "http://localhost:8091"),
+		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
+		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
 	}
 	return cfg, nil
 }

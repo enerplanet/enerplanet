@@ -34,6 +34,7 @@ import (
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
+	opentechdb "spatialhub_backend/internal/opentechdb"
 	resulthandler "spatialhub_backend/internal/result/handler"
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
@@ -541,6 +542,11 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 
 	// Swagger UI
 	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// OpenTech-DB proxy — public read-only access to technology catalogue
+	opentechDBClient := opentechdb.NewClient(cfg.OpenTechDBServiceURL)
+	api.Any("/opentech-db/*proxyPath", opentechdb.ProxyHandler(opentechDBClient))
+	api.Any("/opentech-db", opentechdb.ProxyHandler(opentechDBClient))
 
 	authProxy := platformproxy.MustNewHandler(cfg.AuthServiceURL, platformproxy.HandlerOptions{
 		Component:            "auth_proxy",
