@@ -1,6 +1,10 @@
-// Package buem is a thin HTTP client for buem-gateway's topology endpoint
+// Package buem is a thin HTTP client for buem-gateway's buildings endpoint
 // (enerplanet/buem-gateway), used by run_buem to run BuEM for every building
-// in a model's topology that has both an envelope and weather block.
+// in a model's topology that has both an envelope and weather resolved.
+// buem-gateway has no concept of a grid or topology — the caller (run_buem)
+// resolves the topology down to a flat list of buildings itself before
+// calling this client, and merges each building's result back into the
+// topology afterward.
 package buem
 
 import (
@@ -42,38 +46,52 @@ func (c *Client) headers() http.Header {
 	return h
 }
 
-// RunTopology calls buem-gateway's POST /api/v1/buem/topology: it runs BuEM
-// for every building in topology that carries a complete buem block
-// (properties.buem.building.envelope and properties.buem.weather — see
-// buem-gateway's internal/buem/{envelope_validate,weather_validate}.go),
-// writes each one's load-profile CSVs, and returns the topology with those
-// buildings' buem blocks enriched with the results. Buildings with no buem
-// block, or an incomplete one, come back unchanged rather than causing an
-// error — buem-gateway's own per-building tolerance, not something this
-// client needs to work around.
-func (c *Client) RunTopology(ctx context.Context, topology json.RawMessage, startDate, endDate string, resolution int, modelID string) (json.RawMessage, error) {
+// Building is one building's request data for RunBuildings — geometry and
+// its own building block (envelope etc.), no weather (see RunBuildings).
+type Building struct {
+	ID       string          `json:"id"`
+	Geometry json.RawMessage `json:"geometry"`
+	Building json.RawMessage `json:"building"`
+}
+
+// BuildingResult is one building's outcome from RunBuildings. Exactly one of
+// BUEM/Error is set, never both.
+type BuildingResult struct {
+	ID    string          `json:"id"`
+	BUEM  json.RawMessage `json:"buem,omitempty"`
+	Error string          `json:"error,omitempty"`
+}
+
+// RunBuildings calls buem-gateway's POST /api/v1/buem/buildings: it runs
+// BuEM for every building in buildings concurrently, sharing one weather
+// block across all of them (buem-gateway's internal/buem/weather_validate.go
+// requires it complete for every building), writes each one's load-profile
+// CSVs, and returns one result per building in the same order as buildings.
+// A building's own missing/incomplete envelope, or BuEM rejecting it, is
+// reported in that building's own Error — it never fails the whole call or
+// affects any other building's result.
+func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) ([]BuildingResult, error) {
 	payload := map[string]interface{}{
 		"start_date": startDate,
 		"end_date":   endDate,
 		"resolution": resolution,
 		"model_id":   modelID,
-		"topology":   topology,
+		"weather":    weather,
+		"buildings":  buildings,
 	}
 
-	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/api/v1/buem/topology", payload, c.headers())
+	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/api/v1/buem/buildings", payload, c.headers())
 	if err != nil {
-		return nil, fmt.Errorf("buem-gateway topology request failed: %w", err)
+		return nil, fmt.Errorf("buem-gateway buildings request failed: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("buem-gateway topology: unexpected status %d", resp.StatusCode)
+		return nil, fmt.Errorf("buem-gateway buildings: unexpected status %d", resp.StatusCode)
 	}
 
-	var body struct {
-		Topology json.RawMessage `json:"topology"`
+	var results []BuildingResult
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, fmt.Errorf("failed to decode buem-gateway buildings response: %w", err)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, fmt.Errorf("failed to decode buem-gateway topology response: %w", err)
-	}
-	return body.Topology, nil
+	return results, nil
 }
