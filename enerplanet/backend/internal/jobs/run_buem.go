@@ -92,23 +92,17 @@ func HandleRunBuem(
 	}
 
 	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, wx, weatherProvider, model, rp.Payload)
-	attachBuemData(rp.Payload.Topology, envelopeByOSMID, weatherJSON)
 
-	topologyJSON, err := json.Marshal(rp.Payload.Topology)
-	if err != nil {
-		return fmt.Errorf("failed to marshal topology for buem-gateway: %w", err)
+	buildings := buildingsForBuem(rp.Payload.Topology, envelopeByOSMID)
+	if len(buildings) == 0 || len(weatherJSON) == 0 {
+		log.Warnf("model %d: no buildings with a resolved envelope and weather, skipping buem-gateway call", rp.ModelID)
+	} else {
+		results, err := buemClient.RunBuildings(ctx, buildings, weatherJSON, rp.Payload.StartDate, rp.Payload.EndDate, rp.Payload.Resolution, rp.Payload.ModelID)
+		if err != nil {
+			return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
+		}
+		mergeBuemResults(log, rp.Payload.Topology, results)
 	}
-
-	enriched, err := buemClient.RunTopology(ctx, topologyJSON, rp.Payload.StartDate, rp.Payload.EndDate, rp.Payload.Resolution, rp.Payload.ModelID)
-	if err != nil {
-		return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
-	}
-
-	var enrichedTopology []interface{}
-	if err := json.Unmarshal(enriched, &enrichedTopology); err != nil {
-		return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("failed to decode buem-gateway topology response: %w", err))
-	}
-	rp.Payload.Topology = enrichedTopology
 
 	if err := enqueueDispatchModelCalculation(asynqClient, rp); err != nil {
 		return failRunBuem(ctx, db, log, notificationService, model, rp, err)
@@ -140,47 +134,72 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 }
 
 func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, country string, bbox city2tabula.Bbox, topology []interface{}) map[string]city2tabula.Building {
-	if err := ensureCoverage(ctx, c2t, country, bbox); err != nil {
-		log.Warnf("city2tabula coverage unavailable for bbox, proceeding without envelope data: %v", err)
-		return nil
-	}
-
 	osmIDs := buildingOSMIDs(topology)
 	if len(osmIDs) == 0 {
 		return nil
 	}
 
-	buildings, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
+	byOSMID, err := fetchLinkedBuildings(ctx, c2t, country, osmIDs)
 	if err != nil {
 		log.Warnf("city2tabula building fetch failed, proceeding without envelope data: %v", err)
 		return nil
 	}
 
+	// A bbox-level coverage count can't distinguish "some of this area was
+	// processed before" from "all of it was" — two users' overlapping-but-
+	// different polygons is exactly that case, and would otherwise leave
+	// buildings only in the new sliver unprocessed. Checking against the
+	// topology's own osm_ids is precise: it only re-runs the pipeline when a
+	// building this calculation actually needs is still unlinked.
+	missing := missingOSMIDs(osmIDs, byOSMID)
+	if len(missing) == 0 {
+		return byOSMID
+	}
+
+	run, err := c2t.TriggerRun(ctx, country, bbox)
+	if err != nil {
+		log.Warnf("city2tabula run trigger failed, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
+		return byOSMID
+	}
+	if err := pollRunStatus(ctx, c2t, run.RunID); err != nil {
+		log.Warnf("city2tabula run did not complete, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
+		return byOSMID
+	}
+
+	byOSMID, err = fetchLinkedBuildings(ctx, c2t, country, osmIDs)
+	if err != nil {
+		log.Warnf("city2tabula building re-fetch after run failed, proceeding without envelope data: %v", err)
+		return nil
+	}
+	return byOSMID
+}
+
+// fetchLinkedBuildings fetches osmIDs' 3D attributes and indexes them by
+// osm_id. An osm_id absent from the result has no PyLovo-linked building in
+// City2TABULA yet — see missingOSMIDs.
+func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country string, osmIDs []string) (map[string]city2tabula.Building, error) {
+	buildings, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
+	if err != nil {
+		return nil, err
+	}
 	byOSMID := make(map[string]city2tabula.Building, len(buildings))
 	for _, b := range buildings {
 		if b.OSMID != "" {
 			byOSMID[b.OSMID] = b
 		}
 	}
-	return byOSMID
+	return byOSMID, nil
 }
 
-// ensureCoverage checks City2TABULA already has linked buildings for bbox,
-// triggering and waiting out a pipeline run if not.
-func ensureCoverage(ctx context.Context, c2t *city2tabula.Client, country string, bbox city2tabula.Bbox) error {
-	count, err := c2t.GetCoverage(ctx, country, bbox)
-	if err != nil {
-		return err
+// missingOSMIDs returns the osm_ids in want that have no entry in got.
+func missingOSMIDs(want []string, got map[string]city2tabula.Building) []string {
+	var missing []string
+	for _, id := range want {
+		if _, ok := got[id]; !ok {
+			missing = append(missing, id)
+		}
 	}
-	if count > 0 {
-		return nil
-	}
-
-	run, err := c2t.TriggerRun(ctx, country, bbox)
-	if err != nil {
-		return err
-	}
-	return pollRunStatus(ctx, c2t, run.RunID)
+	return missing
 }
 
 func pollRunStatus(ctx context.Context, c2t *city2tabula.Client, runID string) error {
@@ -261,14 +280,92 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 	return props, osmID, true
 }
 
-// attachBuemData writes properties.buem onto every topology building node
-// that has both an envelope and weather resolved — buem-gateway requires
-// both per building (see resolved risk #7 in the plan) and skips, rather
-// than errors on, buildings missing either.
-func attachBuemData(topology []interface{}, envelopeByOSMID map[string]city2tabula.Building, weatherJSON json.RawMessage) {
-	if len(envelopeByOSMID) == 0 || len(weatherJSON) == 0 {
+// buildingsForBuem collects one buem.Building per topology node with a
+// resolved envelope — buem-gateway has no concept of a topology, so this is
+// where that graph gets resolved down to the flat list its buildings
+// endpoint takes. A node whose osm_id has no entry in envelopeByOSMID (no
+// PyLovo-linked 3D data) is left out rather than sent with an empty
+// envelope, since buem-gateway would just reject it anyway. weather is not
+// attached here — it is sent once, shared across the whole request, by the
+// caller of RunBuildings.
+func buildingsForBuem(topology []interface{}, envelopeByOSMID map[string]city2tabula.Building) []buem.Building {
+	var buildings []buem.Building
+	seen := make(map[string]bool)
+	for _, entry := range topology {
+		e, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		for _, key := range []string{"from", "to"} {
+			b, ok := buildingForBuem(e[key], envelopeByOSMID, seen)
+			if !ok {
+				continue
+			}
+			buildings = append(buildings, b)
+		}
+	}
+	return buildings
+}
+
+// buildingForBuem builds one buem.Building from a single topology node, or
+// reports false if feature isn't a building with a resolved, non-empty
+// envelope, or its osm_id was already collected (a building can appear on
+// both sides of more than one grid edge).
+func buildingForBuem(feature interface{}, envelopeByOSMID map[string]city2tabula.Building, seen map[string]bool) (buem.Building, bool) {
+	node, ok := feature.(map[string]interface{})
+	if !ok {
+		return buem.Building{}, false
+	}
+	_, osmID, ok := buildingProperties(feature)
+	if !ok || seen[osmID] {
+		return buem.Building{}, false
+	}
+	cityBuilding, ok := envelopeByOSMID[osmID]
+	if !ok {
+		return buem.Building{}, false
+	}
+	elements := envelopeElements(cityBuilding)
+	if len(elements) == 0 {
+		return buem.Building{}, false
+	}
+	geometry, err := json.Marshal(node["geometry"])
+	if err != nil {
+		return buem.Building{}, false
+	}
+	buildingBlock, err := json.Marshal(map[string]interface{}{
+		"envelope": map[string]interface{}{"elements": elements},
+	})
+	if err != nil {
+		return buem.Building{}, false
+	}
+
+	seen[osmID] = true
+	return buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}, true
+}
+
+// mergeBuemResults writes each successful result's enriched buem block onto
+// its matching topology node's properties.buem, keyed by osm_id — the same
+// key buildingsForBuem used to build the request. A building with no result,
+// or one whose result carries an Error, keeps no buem block; the
+// calculation dispatch downstream already degrades gracefully for a
+// building missing envelope data.
+func mergeBuemResults(log *logrus.Entry, topology []interface{}, results []buem.BuildingResult) {
+	byID := make(map[string]buem.BuildingResult, len(results))
+	var failed int
+	for _, r := range results {
+		if r.Error != "" || len(r.BUEM) == 0 {
+			failed++
+			continue
+		}
+		byID[r.ID] = r
+	}
+	if failed > 0 {
+		log.Warnf("buem-gateway: %d/%d buildings had no result (missing envelope/weather, or BuEM rejected them)", failed, len(results))
+	}
+	if len(byID) == 0 {
 		return
 	}
+
 	for _, entry := range topology {
 		e, ok := entry.(map[string]interface{})
 		if !ok {
@@ -279,20 +376,15 @@ func attachBuemData(topology []interface{}, envelopeByOSMID map[string]city2tabu
 			if !ok {
 				continue
 			}
-			building, ok := envelopeByOSMID[osmID]
+			result, ok := byID[osmID]
 			if !ok {
 				continue
 			}
-			elements := envelopeElements(building)
-			if len(elements) == 0 {
+			var buemData interface{}
+			if err := json.Unmarshal(result.BUEM, &buemData); err != nil {
 				continue
 			}
-			props["buem"] = map[string]interface{}{
-				"building": map[string]interface{}{
-					"envelope": map[string]interface{}{"elements": elements},
-				},
-				"weather": json.RawMessage(weatherJSON),
-			}
+			props["buem"] = buemData
 		}
 	}
 }
