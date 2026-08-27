@@ -11,6 +11,7 @@ import (
 
 const (
 	defaultWebserviceURL = "http://localhost:8082"
+	defaultOpenTechDBURL = "http://localhost:8004"
 )
 
 type Config struct {
@@ -34,6 +35,7 @@ type Config struct {
 	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
+	OpenTechDBServiceURL  string // URL of the OpenTech-DB service
 	CallbackSecret        string // Shared secret for webservice callback authentication
 }
 
@@ -77,9 +79,10 @@ func LoadFromEnv() (*Config, error) {
 		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
 		// No default: buem-gateway's real deployment URL/port is unconfirmed (see the
 		// on-request-3d-pipeline plan's risk #6) — empty fails loudly instead of guessing.
-		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),
-		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
-		CallbackSecret: os.Getenv("CALLBACK_SECRET"),
+		BuemServiceURL:       os.Getenv("BUEM_SERVICE_URL"),
+		BuemAPIKey:           os.Getenv("BUEM_API_KEY"),
+		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
+		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
 	}
 	return cfg, nil
 }
