@@ -226,4 +226,4 @@ webservice:
 
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/enerplanet-pylovo && cp .env.example .env.docker && make dev
+	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev
