@@ -1,0 +1,349 @@
+name: Production pipeline
+
+on:
+  push:
+    branches: [stable]
+  workflow_dispatch:
+    inputs:
+      step:
+        description: Which job to run
+        required: true
+        default: check-runner
+        type: choice
+        options:
+          - check-runner
+          - infra-postgres-redis
+          - infra-keycloak
+          - infra-keycloak-init
+          - platform-auth-webservice
+          - build-app
+          - deploy-app
+          - migrate
+          - seed
+
+env:
+  SERVER_URL_PROD: https://enerplanet.th-deg.de
+  COOKIE_DOMAIN_PROD: enerplanet.th-deg.de
+  DEPLOY_SUBDIR: deploy
+  ENERPLANET_DEPLOY_COMPOSE: docker-compose.deploy.yml
+  KEYCLOAK_REALM: spatialhub
+  KEYCLOAK_CLIENT_ID: spatialhub
+  BACKEND_INTERNAL_URL: http://energy-backend-prod:8000
+
+jobs:
+  check-runner:
+    if: ${{ github.event_name == 'push' || github.event.inputs.step == 'check-runner' }}
+    runs-on: [self-hosted, enerplanet]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Check runner
+        run: |
+          set -e
+          echo '=== Pipeline Started ==='
+          echo "Runner:  ${RUNNER_NAME:-unknown} (${RUNNER_OS}/${RUNNER_ARCH})"
+          echo "Branch:  ${GITHUB_REF_NAME}"
+          echo "Commit:  ${GITHUB_SHA::8}"
+          echo "Deploy:  $HOME/${DEPLOY_SUBDIR}"
+          docker --version
+          docker compose version
+          echo '=== Submodules ==='
+          for d in platform-core libs infrastructure; do
+            if [ -z "$(ls -A "$d" 2>/dev/null)" ]; then
+              echo "ERROR: submodule '$d' is empty - set SUBMODULE_TOKEN to a PAT with read access"
+              exit 1
+            fi
+            echo "  $d OK"
+          done
+          echo '=== Verification complete ==='
+
+  infra-postgres-redis:
+    if: ${{ github.event.inputs.step == 'infra-postgres-redis' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Set up directories and start Postgres/Redis
+        run: |
+          set -e
+          echo '=== [PROD] Setting up directories and starting Postgres/Redis ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}"
+          mkdir -p \
+            "$DEPLOY/platform-core/auth-service" \
+            "$DEPLOY/platform-core/webservice" \
+            "$DEPLOY/platform-core/geoserver" \
+            "$DEPLOY/infrastructure/common" \
+            "$DEPLOY/infrastructure/platform" \
+            "$DEPLOY/enerplanet/backend" \
+            "$DEPLOY/nginx"
+          cp -r infrastructure/common/. "$DEPLOY/infrastructure/common/"
+          cp -r infrastructure/platform/. "$DEPLOY/infrastructure/platform/"
+          cp platform-core/docker-compose.yml "$DEPLOY/platform-core/"
+          cp -r platform-core/auth-service/. "$DEPLOY/platform-core/auth-service/"
+          cp -r platform-core/webservice/. "$DEPLOY/platform-core/webservice/"
+          # Runtime .env files are not in the repo; seed them from the examples.
+          [ -f "$DEPLOY/platform-core/auth-service/.env" ] || \
+            cp "$DEPLOY/platform-core/auth-service/.env.example" "$DEPLOY/platform-core/auth-service/.env" 2>/dev/null || true
+          [ -f "$DEPLOY/platform-core/webservice/.env" ] || \
+            cp "$DEPLOY/platform-core/webservice/.env.example" "$DEPLOY/platform-core/webservice/.env" 2>/dev/null || true
+          cp enerplanet/backend/.env.example "$DEPLOY/enerplanet/backend/.env.example"
+          [ -f "$DEPLOY/enerplanet/backend/.env" ] || \
+            cp "$DEPLOY/enerplanet/backend/.env.example" "$DEPLOY/enerplanet/backend/.env"
+          cd "$DEPLOY/platform-core"
+          touch .env
+          set_env() { # set_env FILE KEY VALUE
+            if grep -q "^$2=" "$1"; then sed -i "s|^$2=.*|$2=$3|" "$1"; else echo "$2=$3" >> "$1"; fi
+          }
+          set_env .env KC_HOSTNAME "${SERVER_URL_PROD}/keycloak"
+          set_env .env KEYCLOAK_REALM "${KEYCLOAK_REALM}"
+          set_env .env KEYCLOAK_CLIENT_ID "${KEYCLOAK_CLIENT_ID}"
+          set_env .env SERVER_URL "${SERVER_URL_PROD}"
+          set_env .env BACKEND_INTERNAL_URL "${BACKEND_INTERNAL_URL}"
+          [ -n "${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" ] && \
+            set_env .env KEYCLOAK_ADMIN_PASSWORD "${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" || true
+          chmod 600 .env
+          docker network create spatialhub-net 2>/dev/null || true
+          docker compose up -d postgres redis
+          echo 'Waiting for Postgres to be ready...'
+          sleep 10
+          docker compose ps postgres redis
+          echo '=== [PROD] Postgres and Redis started ==='
+
+  infra-keycloak:
+    if: ${{ github.event.inputs.step == 'infra-keycloak' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Start Keycloak
+        run: |
+          set -e
+          echo '=== [PROD] Starting Keycloak ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}"
+          mkdir -p "$DEPLOY/platform-core/auth-service/keycloak"
+          cp platform-core/docker-compose.yml "$DEPLOY/platform-core/"
+          cp -r platform-core/auth-service/keycloak/. "$DEPLOY/platform-core/auth-service/keycloak/"
+          cd "$DEPLOY/platform-core"
+          docker compose up -d --force-recreate keycloak
+          echo 'Waiting for Keycloak to become healthy...'
+          sleep 30
+          docker compose ps keycloak
+          echo '=== [PROD] Keycloak started ==='
+
+  infra-keycloak-init:
+    if: ${{ github.event.inputs.step == 'infra-keycloak-init' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Provision the spatialhub realm
+        run: |
+          set -e
+          echo '=== [PROD] Running Keycloak Init ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}"
+          cd "$DEPLOY/platform-core"
+          # keycloak-init writes KEYCLOAK_CLIENT_SECRET into the mounted
+          # backend/auth-service/webservice configs.
+          SERVER_URL="${SERVER_URL_PROD}" docker compose up keycloak-init
+          echo '=== Checking KEYCLOAK_CLIENT_SECRET ==='
+          grep KEYCLOAK_CLIENT_SECRET "$DEPLOY/enerplanet/backend/.env" || echo 'Not found in enerplanet backend'
+          grep KEYCLOAK_CLIENT_SECRET "$DEPLOY/platform-core/auth-service/.env" || echo 'Not found in auth-service'
+          grep KEYCLOAK_CLIENT_SECRET "$DEPLOY/platform-core/webservice/.env" || echo 'Not found in webservice'
+          echo '=== [PROD] Keycloak Init complete ==='
+
+  platform-auth-webservice:
+    if: ${{ github.event.inputs.step == 'platform-auth-webservice' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Start Auth Service and Webservice
+        run: |
+          set -e
+          echo '=== [PROD] Starting Auth Service and Webservice ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}"
+          # Refresh platform-core and infrastructure together so the rebuild
+          # picks up matching shared modules. cp does not clobber .env files,
+          # which are not in the repo.
+          cp -r infrastructure/common/. "$DEPLOY/infrastructure/common/"
+          cp -r infrastructure/platform/. "$DEPLOY/infrastructure/platform/"
+          cp -r platform-core/auth-service/. "$DEPLOY/platform-core/auth-service/"
+          cp -r platform-core/webservice/. "$DEPLOY/platform-core/webservice/"
+          cd "$DEPLOY/platform-core"
+          [ -f auth-service/.env ] || cp auth-service/.env.example auth-service/.env
+          [ -f webservice/.env ] || cp webservice/.env.example webservice/.env
+          set_env() { # set_env FILE KEY VALUE
+            if grep -q "^$2=" "$1"; then sed -i "s|^$2=.*|$2=$3|" "$1"; else echo "$2=$3" >> "$1"; fi
+          }
+          AUTH_ENV=auth-service/.env
+          WEB_ENV=webservice/.env
+          set_env "$AUTH_ENV" APP_ENV production
+          set_env "$AUTH_ENV" KEYCLOAK_URL "${SERVER_URL_PROD}/keycloak"
+          set_env "$AUTH_ENV" KEYCLOAK_REALM "${KEYCLOAK_REALM}"
+          set_env "$AUTH_ENV" KEYCLOAK_CLIENT_ID "${KEYCLOAK_CLIENT_ID}"
+          set_env "$AUTH_ENV" FRONTEND_URL "${SERVER_URL_PROD}"
+          set_env "$AUTH_ENV" REDIRECT_URL "${SERVER_URL_PROD}/api/callback-auth"
+          set_env "$AUTH_ENV" COOKIE_DOMAIN "${COOKIE_DOMAIN_PROD}"
+          set_env "$WEB_ENV" APP_ENV production
+          set_env "$WEB_ENV" BACKEND_INTERNAL_URL "${BACKEND_INTERNAL_URL}"
+          set_env .env BACKEND_INTERNAL_URL "${BACKEND_INTERNAL_URL}"
+          # The webservice drives model lifecycle over the backend's internal
+          # API and authenticates with the backend's CALLBACK_SECRET. Both must
+          # be set or every mark-running call fails.
+          if [ -n "${{ secrets.CALLBACK_SECRET_PROD }}" ]; then
+            set_env .env CALLBACK_SECRET "${{ secrets.CALLBACK_SECRET_PROD }}"
+            set_env "$WEB_ENV" CALLBACK_SECRET "${{ secrets.CALLBACK_SECRET_PROD }}"
+            echo 'CALLBACK_SECRET configured for webservice'
+          else
+            echo 'WARNING: CALLBACK_SECRET_PROD not set - backend callbacks will be rejected'
+          fi
+          chmod 600 .env "$AUTH_ENV" "$WEB_ENV"
+          docker compose build --no-cache auth-service webservice
+          docker compose up -d --no-deps --force-recreate auth-service webservice
+          sleep 5
+          docker compose ps auth-service webservice
+          # Fail loudly if the container did not actually receive the backend
+          # URL, e.g. because the compose file predates the env passthrough.
+          docker inspect webservice --format '{{range .Config.Env}}{{println .}}{{end}}' \
+            | grep '^BACKEND_INTERNAL_URL=' || {
+              echo 'ERROR: webservice has no BACKEND_INTERNAL_URL - it will fall back to app-backend and fail DNS'
+              exit 1
+            }
+          docker image prune -f
+          echo '=== [PROD] Auth Service and Webservice started ==='
+
+  build-app:
+    if: ${{ github.event.inputs.step == 'build-app' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Build Enerplanet image
+        run: |
+          set -e
+          echo '=== [PROD] Building Enerplanet (Frontend + Backend) ==='
+          # Built straight into the production Docker daemon: the runner is the
+          # deploy server, so there is no registry push and no image transfer.
+          docker build --no-cache --provenance=false --sbom=false \
+            --build-arg VITE_SSO_ENABLED="true" \
+            --build-arg VITE_KEYCLOAK_URL="${SERVER_URL_PROD}/keycloak" \
+            --build-arg VITE_KEYCLOAK_REALM="${KEYCLOAK_REALM}" \
+            --build-arg VITE_KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID}" \
+            --build-arg VITE_KEYCLOAK_IDP_HINT="${{ vars.VITE_KEYCLOAK_IDP_HINT || 'renvolveit' }}" \
+            --build-arg VITE_KEYCLOAK_REDIRECT_URI="${SERVER_URL_PROD}/app/map" \
+            --build-arg VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
+            -t "enerplanet:${GITHUB_SHA::8}" -t "enerplanet:latest" -f Dockerfile.ci .
+          docker image prune -f
+          echo '=== [PROD] Build complete ==='
+
+  deploy-app:
+    if: ${{ github.event.inputs.step == 'deploy-app' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Deploy Enerplanet
+        run: |
+          set -e
+          echo '=== [PROD] Deploying Enerplanet ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}"
+          docker image inspect enerplanet:latest >/dev/null 2>&1 || {
+            echo 'ERROR: enerplanet:latest not found - run the build-app job first'
+            exit 1
+          }
+          mkdir -p "$DEPLOY/enerplanet/backend" "$DEPLOY/nginx/conf.d" "$DEPLOY/nginx/ssl" "$DEPLOY/nginx/certbot"
+          cp "enerplanet/${ENERPLANET_DEPLOY_COMPOSE}" "$DEPLOY/enerplanet/"
+          cp nginx/nginx.conf "$DEPLOY/nginx/"
+          cp nginx/conf.d/enerplanet.th-deg.de.conf "$DEPLOY/nginx/conf.d/"
+          cp enerplanet/backend/.env.example "$DEPLOY/enerplanet/backend/.env.example"
+          [ -f "$DEPLOY/enerplanet/backend/.env.prod" ] || \
+            cp "$DEPLOY/enerplanet/backend/.env.example" "$DEPLOY/enerplanet/backend/.env.prod"
+          # The compose file references both env files; keep the dev one present.
+          touch "$DEPLOY/enerplanet/backend/.env.dev"
+          ENV_PROD="$DEPLOY/enerplanet/backend/.env.prod"
+          set_env() { # set_env FILE KEY VALUE
+            if grep -q "^$2=" "$1"; then sed -i "s|^$2=.*|$2=$3|" "$1"; else echo "$2=$3" >> "$1"; fi
+          }
+          set_env "$ENV_PROD" APP_ENV production
+          set_env "$ENV_PROD" APP_URL "${SERVER_URL_PROD}"
+          set_env "$ENV_PROD" REDIRECT_URL "${SERVER_URL_PROD}/api/callback-auth"
+          set_env "$ENV_PROD" COOKIE_DOMAIN "${COOKIE_DOMAIN_PROD}"
+          set_env "$ENV_PROD" KEYCLOAK_REALM "${KEYCLOAK_REALM}"
+          set_env "$ENV_PROD" KEYCLOAK_CLIENT_ID "${KEYCLOAK_CLIENT_ID}"
+          # keycloak-init wrote the generated client secret into backend/.env.
+          if grep -q '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" 2>/dev/null; then
+            KC_SECRET=$(grep '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" | head -1)
+            sed -i '/^KEYCLOAK_CLIENT_SECRET=/d' "$ENV_PROD"
+            echo "$KC_SECRET" >> "$ENV_PROD"
+          else
+            echo 'WARNING: KEYCLOAK_CLIENT_SECRET not found in backend/.env - run infra-keycloak-init first'
+          fi
+          [ -n "${{ secrets.CALLBACK_SECRET_PROD }}" ] && \
+            set_env "$ENV_PROD" CALLBACK_SECRET "${{ secrets.CALLBACK_SECRET_PROD }}" || \
+            echo 'WARNING: CALLBACK_SECRET_PROD not set'
+          [ -n "${{ secrets.REDIS_PASSWORD }}" ] && \
+            set_env "$ENV_PROD" REDIS_PASSWORD "${{ secrets.REDIS_PASSWORD }}" || true
+          [ -n "${{ vars.PYLOVO_SERVICE_URL }}" ] && \
+            set_env "$ENV_PROD" PYLOVO_SERVICE_URL "${{ vars.PYLOVO_SERVICE_URL }}" || true
+          chmod 600 "$ENV_PROD"
+          docker network create spatialhub-net 2>/dev/null || true
+          # Remove stale containers left by earlier deployments under other names.
+          for c in energy-backend energy-backend-dev; do
+            if docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
+              echo "Stopping and removing stale container: $c"
+              docker stop "$c" 2>/dev/null || true
+              docker rm "$c" 2>/dev/null || true
+            fi
+          done
+          cd "$DEPLOY/enerplanet"
+          docker compose --env-file backend/.env.prod -f "${ENERPLANET_DEPLOY_COMPOSE}" \
+            up -d --force-recreate energy-backend-prod nginx
+          sleep 5
+          docker compose --env-file backend/.env.prod -f "${ENERPLANET_DEPLOY_COMPOSE}" ps
+          docker image prune -f
+          echo '=== [PROD] Enerplanet deployed ==='
+
+  migrate:
+    if: ${{ github.event.inputs.step == 'migrate' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run migrations
+        run: |
+          set -e
+          echo '=== [PROD] Running Migrations ==='
+          cd "$HOME/${DEPLOY_SUBDIR}/enerplanet"
+          docker compose --env-file backend/.env.prod -f "${ENERPLANET_DEPLOY_COMPOSE}" \
+            run --rm --entrypoint /app/backfill_country energy-backend-prod
+          docker compose --env-file backend/.env.prod -f "${ENERPLANET_DEPLOY_COMPOSE}" \
+            run --rm --entrypoint /app/migrate energy-backend-prod
+          echo '=== [PROD] Migrations complete ==='
+
+  seed:
+    if: ${{ github.event.inputs.step == 'seed' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Seed database
+        run: |
+          set -e
+          echo '=== [PROD] Seeding Database ==='
+          cd "$HOME/${DEPLOY_SUBDIR}/enerplanet"
+          docker compose --env-file backend/.env.prod -f "${ENERPLANET_DEPLOY_COMPOSE}" \
+            run --rm --entrypoint /app/seed energy-backend-prod
+          echo '=== [PROD] Seeding complete ==='
