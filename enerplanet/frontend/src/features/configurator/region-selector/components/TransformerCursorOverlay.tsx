@@ -24,12 +24,21 @@ export const TransformerCursorOverlay = ({
         transform: "translate(-50%, -50%)",
       }}
     >
-      <img src="/images/transformer-icon-black.svg" alt="" className="w-5 h-5 drop-shadow-md" />
-      {isMoveTransformerMode && (
-        <span className="text-[10px] font-medium text-black whitespace-nowrap mt-0.5">
-          {t("transformer.clickToMove")}
+      <div className="relative flex items-center justify-center">
+        <span className="absolute inline-flex w-9 h-9 rounded-full bg-primary/30 animate-ping" />
+        <span className="relative flex items-center justify-center w-8 h-8 rounded-full bg-card border-2 border-primary shadow-lg">
+          <img
+            src="/images/transformer-icon-dark.svg"
+            alt=""
+            className="w-4 h-4 dark:invert"
+          />
         </span>
-      )}
+      </div>
+      <span className="mt-1.5 px-2 py-0.5 rounded-full bg-card/95 border border-border/50 shadow text-[10px] font-medium text-foreground whitespace-nowrap">
+        {isMoveTransformerMode
+          ? t("simulation.transformer.clickToMove", "Click to move")
+          : t("simulation.transformer.clickToPlaceCursor", "Click to place")}
+      </span>
     </div>
   );
 };

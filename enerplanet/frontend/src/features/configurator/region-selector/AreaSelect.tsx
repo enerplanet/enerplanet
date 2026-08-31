@@ -509,6 +509,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onNextStep={() => buildingAssign.setAssignStep("select-transformer")}
               onBackStep={() => buildingAssign.setAssignStep("select-buildings")}
               onCancelAssign={buildingAssign.clearBuildingAssignMode}
+              onCancelAddTransformer={addTransformer.resetAddTransformerMode}
             />
             <PowerFlowLegend
               visible={pylovoLayers.powerFlowResults.size > 0}

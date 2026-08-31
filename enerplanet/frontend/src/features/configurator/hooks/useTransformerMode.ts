@@ -162,8 +162,15 @@ export const useAddTransformerMode = ({
       setTransformerCursorPos(null);
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        resetAddTransformerMode();
+      }
+    };
+
     map.on("click", handleMapClick);
     map.on("pointermove", handleMouseMove);
+    document.addEventListener("keydown", handleKeyDown);
 
     const mapElement = map.getTargetElement();
     if (mapElement) {
@@ -174,13 +181,14 @@ export const useAddTransformerMode = ({
     return () => {
       map.un("click", handleMapClick);
       map.un("pointermove", handleMouseMove);
+      document.removeEventListener("keydown", handleKeyDown);
       if (mapElement) {
         mapElement.style.cursor = "";
         mapElement.removeEventListener("mouseleave", handleMouseLeave);
       }
       setTransformerCursorPos(null);
     };
-  }, [map, isAddTransformerMode]);
+  }, [map, isAddTransformerMode, resetAddTransformerMode]);
 
   return {
     isAddTransformerMode,
