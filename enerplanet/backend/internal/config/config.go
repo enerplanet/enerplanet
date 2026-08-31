@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultWebserviceURL = "http://localhost:8082"
-	defaultOpenTechDBURL = "http://localhost:8004"
+	defaultOpenTechDBURL = "https://otdb.th-deg.de"
 )
 
 type Config struct {
