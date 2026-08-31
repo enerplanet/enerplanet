@@ -581,19 +581,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       />
 
       {/* Add Transformer Dialog */}
-      <TransformerDialog
+      <AddTransformerDialog
         open={addTransformer.addTransformerDialogOpen}
-        selectedTransformer={null}
+        coords={addTransformer.newTransformerCoords}
         transformerSizes={transformerSizes}
+        onAdd={addTransformer.handleAddTransformer}
         onClose={() => {
           addTransformer.setAddTransformerDialogOpen(false);
           addTransformer.setNewTransformerCoords(null);
         }}
-        onChangeKva={() => {}}
-        onOpenChange={addTransformer.setAddTransformerDialogOpen}
-        mode="add"
-        newTransformerCoords={addTransformer.newTransformerCoords}
-        onAddTransformer={addTransformer.handleAddTransformer}
+        onOpenChange={(open) => {
+          if (!open) {
+            addTransformer.setAddTransformerDialogOpen(false);
+            addTransformer.setNewTransformerCoords(null);
+          }
+        }}
       />
 
       <BuildingDialog
@@ -717,20 +719,3 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     </Fragment>
   );
 };
-      {/* Add Transformer Dialog */}
-      <AddTransformerDialog
-        open={addTransformer.addTransformerDialogOpen}
-        coords={addTransformer.newTransformerCoords}
-        transformerSizes={transformerSizes}
-        onAdd={addTransformer.handleAddTransformer}
-        onClose={() => {
-          addTransformer.setAddTransformerDialogOpen(false);
-          addTransformer.setNewTransformerCoords(null);
-        }}
-        onOpenChange={(open) => {
-          if (!open) {
-            addTransformer.setAddTransformerDialogOpen(false);
-            addTransformer.setNewTransformerCoords(null);
-          }
-        }}
-      />
