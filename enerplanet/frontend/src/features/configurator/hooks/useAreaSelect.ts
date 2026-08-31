@@ -22,7 +22,6 @@ import { generateUUID } from '@/utils/uuid';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
-const DEFAULT_RESOLUTION = 60;
 const DASHBOARD_ROUTE = "/app/model-dashboard";
 
 export const useAreaSelect = ({
@@ -39,7 +38,7 @@ export const useAreaSelect = ({
     const { mapRef } = useMapProvider();
 
     // ── Local state not in store ──
-    const [draftId, setDraftId] = useState<string | undefined>(draftIdProp || (editMode === false ? generateUUID() : undefined));
+    const [draftId] = useState<string | undefined>(draftIdProp || (editMode === false ? generateUUID() : undefined));
     const [loadedCoordinates, setLoadedCoordinates] = useState<[number, number][][]>();
     const [loadedConfig, setLoadedConfig] = useState<PylovoGridData | undefined>();
     const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);

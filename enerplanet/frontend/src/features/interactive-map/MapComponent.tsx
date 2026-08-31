@@ -15,7 +15,7 @@ import { Plus, Map as MapIcon, Layers } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
-import { toLonLat, fromLonLat } from "ol/proj";
+
 import { useMapPageLayers } from "./useMapPageLayers";
 import { useMapPageOLLayers } from "./useMapPageOLLayers";
 
@@ -57,28 +57,6 @@ export const MapComponent: React.FC = () => {
     userModelGeoJSON: mapPageLayers.userModelGeoJSON,
     onModelClick: handleModelClick,
   });
-
-  const getCurrentView = useCallback(() => {
-    if (!map) return { latitude: 48.83, longitude: 12.96, zoom: 12 };
-    const view = map.getView();
-    const center = view.getCenter();
-    if (!center) return { latitude: 48.83, longitude: 12.96, zoom: 12 };
-    const [lon, lat] = toLonLat(center);
-    return { latitude: lat, longitude: lon, zoom: view.getZoom() ?? 12 };
-  }, [map]);
-
-  const flyTo = useCallback(
-    (latitude: number, longitude: number, zoom: number) => {
-      if (!map) return;
-      const view = map.getView();
-      view.animate({
-        center: fromLonLat([longitude, latitude]),
-        zoom,
-        duration: 800,
-      });
-    },
-    [map]
-  );
 
   useEffect(() => {
     document.body.style.overflow = "hidden";

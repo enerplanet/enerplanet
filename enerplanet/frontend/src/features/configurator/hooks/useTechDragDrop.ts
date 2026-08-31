@@ -60,9 +60,6 @@ export const useTechDragDrop = ({
     if (!map || !draggingTech) return;
     const mapElement = mapRef.current;
     if (!mapElement) return;
-    const rect = mapElement.getBoundingClientRect();
-    const pixel = [e.clientX - rect.left, e.clientY - rect.top];
-    const feature = map.forEachFeatureAtPixel(pixel, (f: any) => f.get('feature_type') === 'building' ? f : null);
     // Highlight is handled inline via the feature's own style
   }, [map, draggingTech, mapRef]);
 

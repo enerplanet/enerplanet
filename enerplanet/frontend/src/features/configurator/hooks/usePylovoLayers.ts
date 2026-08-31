@@ -15,13 +15,12 @@ import {
 import { normalizeFClass, getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { normalizeFClassToken } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers } from "@/features/configurator/utils/gridLayerUtils";
-import { extractBuildingEnrichmentFromProps, extractPeakLoadFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
+import { extractPeakLoadFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 
 // Local aliases matching original useAreaSelect.ts
-const extractBuildingEnrichment = extractBuildingEnrichmentFromProps;
 const extractPeakLoadKw = extractPeakLoadFromProps;
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
 

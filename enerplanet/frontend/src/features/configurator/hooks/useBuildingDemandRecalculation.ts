@@ -4,24 +4,6 @@ import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
-interface SelectedBuilding {
-  osmId: string;
-  selectedFClass?: string;
-  fClass?: string;
-  type?: string;
-  constructionYear?: unknown;
-  yearlyDemandKwh?: number;
-  peakLoadKw?: number;
-  area?: number;
-  floors?: number;
-  floors3dBag?: number;
-  householdSize?: number;
-  estimatedHouseholds?: number;
-  fClassDetails?: Array<{ fClass: string; yearlyDemandKwh: number; peakLoadKw: number }>;
-  fClassDetailsSynthetic?: boolean;
-  techs?: Record<string, unknown>;
-}
-
 interface BuildingDemandOptions {
   pylovoLayers: {
     updateBuildingProperty: (osmId: string, key: string, value: unknown) => void;
