@@ -18,6 +18,9 @@ type Store struct {
 	db *gorm.DB
 }
 
+// defaultCarrier is the carrier value used when no carrier is specified.
+const defaultCarrier = "power"
+
 // NewStore creates a new result Store.
 func NewStore(db *gorm.DB) *Store {
 	return &Store{db: db}
@@ -266,29 +269,48 @@ type TechAggregate struct {
 	Total float64 `gorm:"column:total"`
 }
 
-func (s *Store) GetCarrierProdAggregates(modelID uint) []TechAggregate {
+// resolveCarrier returns the carrier to query, defaulting to "power" if not specified.
+func resolveCarrier(carrier string) string {
+	if carrier == "" {
+		return defaultCarrier
+	}
+	return carrier
+}
+
+// firstOrEmpty returns the first element of a variadic string slice, or "" if empty.
+func firstOrEmpty(s []string) string {
+	if len(s) > 0 {
+		return s[0]
+	}
+	return ""
+}
+
+func (s *Store) GetCarrierProdAggregates(modelID uint, carrier ...string) []TechAggregate {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []TechAggregate
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
 		Select("techs, SUM(ABS(value)) as total").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("techs").
 		Find(&rows)
 	return rows
 }
 
-func (s *Store) GetCarrierConAggregates(modelID uint) []TechAggregate {
+func (s *Store) GetCarrierConAggregates(modelID uint, carrier ...string) []TechAggregate {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []TechAggregate
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
 		Select("techs, SUM(ABS(value)) as total").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("techs").
 		Find(&rows)
 	return rows
 }
 
-func (s *Store) GetCarrierConPeakDemand(modelID uint) float64 {
+func (s *Store) GetCarrierConPeakDemand(modelID uint, carrier ...string) float64 {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var peak float64
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
@@ -297,18 +319,19 @@ func (s *Store) GetCarrierConPeakDemand(modelID uint) float64 {
 			s.db.Model(&backendModels.ResultsCarrierCon{}).
 				Select("timestep, SUM(ABS(value)) as ts_total").
 				Where("model_id = ? AND carrier = ? AND timestep > ? AND LOWER(SPLIT_PART(techs, ':', 1)) LIKE ?",
-					modelID, "power", zeroTime, "%\\_demand").
+					modelID, carrierVal, zeroTime, "%\\_demand").
 				Group("timestep"),
 		).
 		Row().Scan(&peak)
 	return peak
 }
 
-func (s *Store) GetCarrierConTimestepCount(modelID uint) int64 {
+func (s *Store) GetCarrierConTimestepCount(modelID uint, carrier ...string) int64 {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var count int64
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Distinct("timestep").
 		Count(&count)
 	return count
@@ -327,48 +350,52 @@ type CarrierAggRow struct {
 	Value    float64   `json:"value"`
 }
 
-func (s *Store) GetCarrierProdTimeSeries(modelID uint) []CarrierAggRow {
+func (s *Store) GetCarrierProdTimeSeries(modelID uint, carrier ...string) []CarrierAggRow {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
 		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("model_id, carrier, techs, timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
 }
 
-func (s *Store) GetCarrierConTimeSeries(modelID uint) []CarrierAggRow {
+func (s *Store) GetCarrierConTimeSeries(modelID uint, carrier ...string) []CarrierAggRow {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
 		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("model_id, carrier, techs, timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
 }
 
-func (s *Store) GetDailyCarrierProdTimeSeries(modelID uint) []CarrierAggRow {
+func (s *Store) GetDailyCarrierProdTimeSeries(modelID uint, carrier ...string) []CarrierAggRow {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
 		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("model_id, carrier, techs, DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
 }
 
-func (s *Store) GetDailyCarrierConTimeSeries(modelID uint) []CarrierAggRow {
+func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []CarrierAggRow {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
 		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, "power", zeroTime).
+		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
 		Group("model_id, carrier, techs, DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
@@ -483,16 +510,18 @@ type DateRange struct {
 	End   string
 }
 
-func (s *Store) GetLocationCarrierProd(modelID uint, location string, dr DateRange) ([]backendModels.ResultsCarrierProd, error) {
-	q := s.db.Where("model_id = ? AND from_location = ? AND carrier = ? AND timestep > ?", modelID, location, "power", time.Time{})
+func (s *Store) GetLocationCarrierProd(modelID uint, location string, dr DateRange, carrier ...string) ([]backendModels.ResultsCarrierProd, error) {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
+	q := s.db.Where("model_id = ? AND from_location = ? AND carrier = ? AND timestep > ?", modelID, location, carrierVal, time.Time{})
 	q = applyDateRange(q, dr)
 	var items []backendModels.ResultsCarrierProd
 	err := q.Order("timestep ASC").Find(&items).Error
 	return items, err
 }
 
-func (s *Store) GetLocationCarrierCon(modelID uint, location string, dr DateRange) ([]backendModels.ResultsCarrierCon, error) {
-	q := s.db.Where("model_id = ? AND from_location = ? AND carrier = ? AND timestep > ?", modelID, location, "power", time.Time{})
+func (s *Store) GetLocationCarrierCon(modelID uint, location string, dr DateRange, carrier ...string) ([]backendModels.ResultsCarrierCon, error) {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
+	q := s.db.Where("model_id = ? AND from_location = ? AND carrier = ? AND timestep > ?", modelID, location, carrierVal, time.Time{})
 	q = applyDateRange(q, dr)
 	var items []backendModels.ResultsCarrierCon
 	err := q.Order("timestep ASC").Find(&items).Error
@@ -549,8 +578,11 @@ type CarrierSummary struct {
 	ConAggregates       []TechAggregate
 }
 
-func (s *Store) GetCarrierSummary(modelID uint) CarrierSummary {
-	prodAgg := s.GetCarrierProdAggregates(modelID)
+// GetCarrierSummary returns carrier summary for a specific carrier (defaults to "power").
+func (s *Store) GetCarrierSummary(modelID uint, carrier ...string) CarrierSummary {
+	carrierVal := resolveCarrier(firstOrEmpty(carrier))
+
+	prodAgg := s.GetCarrierProdAggregates(modelID, carrierVal)
 
 	var sumProduction, renewableProduction, gridImport float64
 	for _, pa := range prodAgg {
@@ -568,7 +600,7 @@ func (s *Store) GetCarrierSummary(modelID uint) CarrierSummary {
 		}
 	}
 
-	conAgg := s.GetCarrierConAggregates(modelID)
+	conAgg := s.GetCarrierConAggregates(modelID, carrierVal)
 	var sumConsumption float64
 	for _, ca := range conAgg {
 		tech := strings.SplitN(ca.Techs, ":", 2)[0]
@@ -582,11 +614,31 @@ func (s *Store) GetCarrierSummary(modelID uint) CarrierSummary {
 		SumConsumption:      sumConsumption,
 		RenewableProduction: renewableProduction,
 		GridImport:          gridImport,
-		PeakDemand:          s.GetCarrierConPeakDemand(modelID),
-		TimestepCount:       s.GetCarrierConTimestepCount(modelID),
+		PeakDemand:          s.GetCarrierConPeakDemand(modelID, carrierVal),
+		TimestepCount:       s.GetCarrierConTimestepCount(modelID, carrierVal),
 		ProdAggregates:      prodAgg,
 		ConAggregates:       conAgg,
 	}
+}
+
+// GetAllCarrierSummaries returns summaries for all carriers present in the results.
+func (s *Store) GetAllCarrierSummaries(modelID uint) map[string]CarrierSummary {
+	carriers := s.GetDistinctCarriers(modelID)
+	summaries := make(map[string]CarrierSummary, len(carriers))
+	for _, c := range carriers {
+		summaries[c] = s.GetCarrierSummary(modelID, c)
+	}
+	return summaries
+}
+
+// GetDistinctCarriers returns the distinct carrier values from carrier_prod results.
+func (s *Store) GetDistinctCarriers(modelID uint) []string {
+	var carriers []string
+	s.db.Model(&backendModels.ResultsCarrierProd{}).
+		Where("model_id = ?", modelID).
+		Distinct("carrier").
+		Pluck("carrier", &carriers)
+	return carriers
 }
 
 // ---------------------------------------------------------------------------
