@@ -161,13 +161,72 @@ export interface ModelStore {
   // ── Transformer move mode state ──
   transformerToMove: number | null;
   setTransformerToMove: (v: number | null) => void;
+
+  // ── Reset ──
+  reset: () => void;
 }
 
 // ──────────────────────────────────────────────
 // Store
 // ──────────────────────────────────────────────
 
+const getInitialState = () => ({
+  activeMode: null as ActiveMode,
+  assignStep: "select-buildings" as AssignStep,
+  pylovoGridData: undefined as PylovoGridData | undefined,
+  isRunningPowerFlow: false,
+  powerFlowResults: new Map<number, any>(),
+  allPolygons: [] as [number, number][][],
+  isDrawing: false,
+  allowMultiplePolygons: false,
+  clearTrigger: 0,
+  cursorPos: null as { x: number; y: number } | null,
+  modelName: "",
+  fromDate: "",
+  toDate: "",
+  resolution: 60,
+  isSaving: false,
+  isLoadingModel: false,
+  isGeneratingGrid: false,
+  isModified: false,
+  showUnsavedDialog: false,
+  showAreaSelectTour: false,
+  showAdvancedParams: false,
+  advancedParams: getDefaultAdvancedParameters(),
+  includePublicBuildings: true,
+  includePrivateBuildings: true,
+  excludedBuildingIds: new Set<number>(),
+  transformerDialogOpen: false,
+  selectedTransformer: null,
+  transformerTooltip: null,
+  buildingDialogOpen: false,
+  selectedBuilding: null,
+  selectedBuildingFeature: null,
+  buildingTooltip: null,
+  mvLineTooltip: null,
+  showTechDrawer: false,
+  draggingTech: null,
+  techDialogOpen: false,
+  selectedTechForDialog: null,
+  selectedBuildingForTech: null,
+  isAddingTechToAll: false,
+  appliedTechKeys: [] as string[],
+  customLocations: [],
+  customLocationsInPolygon: [],
+  regionBoundary: null as { name: string; boundary: GeoJSON.Feature } | null,
+  availableRegions: [],
+  showBoundary: true,
+  availableBoundaryGeoJSON: undefined as GeoJSON.FeatureCollection | undefined,
+  selectedBuildingsForAssign: [],
+  reassignmentLineAnchor: null as [number, number] | null,
+  newTransformerCoords: null as [number, number] | null,
+  addTransformerDialogOpen: false,
+  transformerCursorPos: null as { x: number; y: number } | null,
+  transformerToMove: null as number | null,
+});
+
 export const useModelStore = create<ModelStore>((set) => ({
+  ...getInitialState(),
   // ── Active mode ──
   activeMode: null,
   setActiveMode: (mode) => set({ activeMode: mode }),
@@ -327,4 +386,7 @@ export const useModelStore = create<ModelStore>((set) => ({
   // ── Transformer move mode state ──
   transformerToMove: null,
   setTransformerToMove: (v) => set({ transformerToMove: v }),
+
+  // ── Reset ──
+  reset: () => set(() => getInitialState()),
 }));

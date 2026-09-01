@@ -127,7 +127,6 @@ export const useAddTransformerMode = ({
   // Map click handler for add transformer mode
   useEffect(() => {
     if (!map || !isAddTransformerMode) {
-      setTransformerCursorPos(null);
       return;
     }
 
@@ -244,6 +243,16 @@ export const useMoveTransformerMode = ({
   const user = useAuthStore((state) => state.user);
   const allPolygonsRef = useRef(allPolygons);
   allPolygonsRef.current = allPolygons;
+  const notificationRef = useRef(notification);
+  notificationRef.current = notification;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const handlePolygonDrawnRef = useRef(handlePolygonDrawn);
+  handlePolygonDrawnRef.current = handlePolygonDrawn;
+  const existingModelIdRef = useRef(existingModelId);
+  existingModelIdRef.current = existingModelId;
+  const draftIdRef = useRef(draftId);
+  draftIdRef.current = draftId;
 
   // Read/write mode + state from the unified store
   const activeMode = useModelStore((s) => s.activeMode);
@@ -270,20 +279,31 @@ export const useMoveTransformerMode = ({
     [setTransformerToMove, setActiveMode]
   );
 
-  // Map click handler for move transformer mode
+  // Map pointermove + pointerup for cursor overlay + placement
   useEffect(() => {
-    if (!map || !isMoveTransformerMode || !transformerToMove) {
-      return;
-    }
+    if (!map || !isMoveTransformerMode || !transformerToMove) return;
 
-    const handleMapClick = async (evt: any) => {
-      const coords = map.getCoordinateFromPixel(evt.pixel);
+    const target = map.getTargetElement();
+    if (!target) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const pixel = map.getEventPixel(e);
+      const rect = target.getBoundingClientRect();
+      setTransformerCursorPos({
+        x: pixel[0] + rect.left,
+        y: pixel[1] + rect.top,
+      });
+    };
+
+    const handlePointerUp = async (e: PointerEvent) => {
+      const pixel = map.getEventPixel(e);
+      const coords = map.getCoordinateFromPixel(pixel);
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
       if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
-        notification.showError(
-          t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
+        notificationRef.current.showError(
+          tRef.current("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
         );
         return;
       }
@@ -294,31 +314,20 @@ export const useMoveTransformerMode = ({
           transformerToMove,
           [lonLat[0], lonLat[1]],
           userId,
-          existingModelId,
-          draftId
+          existingModelIdRef.current,
+          draftIdRef.current
         );
-        notification.showSuccess(t("transformer.movingSuccess"));
-        if (allPolygons.length > 0) {
-          const lastPolygon = allPolygons[allPolygons.length - 1];
-          await handlePolygonDrawn(lastPolygon, allPolygons);
+        notificationRef.current.showSuccess(tRef.current("transformer.movingSuccess"));
+        if (allPolygonsRef.current.length > 0) {
+          const lastPolygon = allPolygonsRef.current[allPolygonsRef.current.length - 1];
+          await handlePolygonDrawnRef.current(lastPolygon, allPolygonsRef.current);
         }
       } catch (error) {
         console.error("Failed to move transformer:", error);
-        notification.showError(t("transformer.movingFailed"));
+        notificationRef.current.showError(tRef.current("transformer.movingFailed"));
       } finally {
         setActiveMode(null);
         setTransformerToMove(null);
-      }
-    };
-
-    const handleMouseMove = (evt: any) => {
-      const mapElement = map.getTargetElement();
-      if (mapElement) {
-        const rect = mapElement.getBoundingClientRect();
-        setTransformerCursorPos({
-          x: evt.pixel[0] + rect.left,
-          y: evt.pixel[1] + rect.top,
-        });
       }
     };
 
@@ -326,38 +335,26 @@ export const useMoveTransformerMode = ({
       setTransformerCursorPos(null);
     };
 
-    map.on("click", handleMapClick);
-    map.on("pointermove", handleMouseMove);
-
-    const mapElement = map.getTargetElement();
-    if (mapElement) {
-      mapElement.style.cursor = "none";
-      mapElement.addEventListener("mouseleave", handleMouseLeave);
-    }
+    target.addEventListener("pointermove", handlePointerMove);
+    target.addEventListener("pointerup", handlePointerUp);
+    target.addEventListener("pointerleave", handleMouseLeave);
+    target.style.cursor = "none";
 
     return () => {
-      map.un("click", handleMapClick);
-      map.un("pointermove", handleMouseMove);
-      if (mapElement) {
-        mapElement.style.cursor = "";
-        mapElement.removeEventListener("mouseleave", handleMouseLeave);
-      }
+      target.removeEventListener("pointermove", handlePointerMove);
+      target.removeEventListener("pointerup", handlePointerUp);
+      target.removeEventListener("pointerleave", handleMouseLeave);
+      target.style.cursor = "";
       setTransformerCursorPos(null);
     };
   }, [
     map,
     isMoveTransformerMode,
     transformerToMove,
-    notification,
-    t,
-    allPolygons,
-    handlePolygonDrawn,
-    user?.id,
-    existingModelId,
-    draftId,
     setActiveMode,
     setTransformerToMove,
     setTransformerCursorPos,
+    user?.id,
   ]);
 
   return {

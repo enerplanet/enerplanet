@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
@@ -31,11 +31,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   const setIsRunningPowerFlow = useModelStore((s) => s.setIsRunningPowerFlow);
   const powerFlowResults = useModelStore((s) => s.powerFlowResults);
   const setPowerFlowResults = useModelStore((s) => s.setPowerFlowResults);
+  const regionBoundary = useModelStore((s) => s.regionBoundary);
   const setRegionBoundary = useModelStore((s) => s.setRegionBoundary);
+  const availableBoundaryGeoJSON = useModelStore((s) => s.availableBoundaryGeoJSON);
+  const setAvailableBoundaryGeoJSON = useModelStore((s) => s.setAvailableBoundaryGeoJSON);
+  const availableRegions = useModelStore((s) => s.availableRegions);
+  const setAvailableRegions = useModelStore((s) => s.setAvailableRegions);
   const showBoundary = useModelStore((s) => s.showBoundary);
   const toggleBoundary = useModelStore((s) => s.toggleBoundary);
-  const setAvailableRegions = useModelStore((s) => s.setAvailableRegions);
-  const setAvailableBoundaryGeoJSON = useModelStore((s) => s.setAvailableBoundaryGeoJSON);
 
   const pylovoLayersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const boundaryLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -207,14 +210,16 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
   }, []);
 
-  return {
+  return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
-    regionBoundary: useModelStore.getState().regionBoundary, availableBoundaryGeoJSON: useModelStore.getState().availableBoundaryGeoJSON,
-    showBoundary, toggleBoundary, availableRegions: useModelStore.getState().availableRegions,
-    // Note: regionBoundary, availableBoundaryGeoJSON, availableRegions are read via getState()
-    // because they're only used for rendering in AreaSelect, not for reactive computation.
-    // If reactivity is needed, add individual selectors above.
-  };
+    regionBoundary, availableBoundaryGeoJSON,
+    showBoundary, toggleBoundary, availableRegions,
+  }), [
+    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
+    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
+    runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
+    regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
+  ]);
 };

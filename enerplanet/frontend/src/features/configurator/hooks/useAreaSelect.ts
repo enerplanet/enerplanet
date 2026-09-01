@@ -47,6 +47,9 @@ export const useAreaSelect = ({
     const originalModelRef = useRef<{ title: string; from_date: string; to_date: string; resolution: number; config: any; status: string } | null>(null);
     const editModeInitializedRef = useRef(false);
 
+    // Reset global store on mount — prevents stale data from a previous model session
+    useEffect(() => { useModelStore.getState().reset(); }, []);
+
     // ── Store-bound state ──
     const modelName = useModelStore((s) => s.modelName); const setModelName = useModelStore((s) => s.setModelName);
     const fromDate = useModelStore((s) => s.fromDate); const setFromDate = useModelStore((s) => s.setFromDate);

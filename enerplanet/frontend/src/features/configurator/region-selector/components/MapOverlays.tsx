@@ -185,9 +185,8 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
-                        // Fixed position at top-left to avoid overlapping map features and bottom controls
-                        left: 16,
-                        top: 16
+                        left: transformerTooltip.x + 15,
+                        top: transformerTooltip.y - 10
                     }}
                 >
                     <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">

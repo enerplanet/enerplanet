@@ -48,13 +48,21 @@ interface MapClickOptions {
 export const useMapClickHandlers = ({
   map, isDrawing, pylovoLayersRef, suppressDialogOnClickRef, suppressMapInteractions = false,
 }: MapClickOptions) => {
+  const transformerDialogOpen = useModelStore((s) => s.transformerDialogOpen);
   const setTransformerDialogOpen = useModelStore((s) => s.setTransformerDialogOpen);
+  const selectedTransformer = useModelStore((s) => s.selectedTransformer);
   const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
+  const transformerTooltip = useModelStore((s) => s.transformerTooltip);
   const setTransformerTooltip = useModelStore((s) => s.setTransformerTooltip);
+  const buildingDialogOpen = useModelStore((s) => s.buildingDialogOpen);
   const setBuildingDialogOpen = useModelStore((s) => s.setBuildingDialogOpen);
+  const selectedBuilding = useModelStore((s) => s.selectedBuilding);
   const setSelectedBuilding = useModelStore((s) => s.setSelectedBuilding);
+  const selectedBuildingFeature = useModelStore((s) => s.selectedBuildingFeature);
   const setSelectedBuildingFeature = useModelStore((s) => s.setSelectedBuildingFeature);
+  const buildingTooltip = useModelStore((s) => s.buildingTooltip);
   const setBuildingTooltip = useModelStore((s) => s.setBuildingTooltip);
+  const mvLineTooltip = useModelStore((s) => s.mvLineTooltip);
   const setMvLineTooltip = useModelStore((s) => s.setMvLineTooltip);
 
   const highlightedBuildingsRef = useRef<Feature<Geometry>[]>([]);
@@ -124,14 +132,14 @@ export const useMapClickHandlers = ({
   const handleCloseBuildingDialog = useCallback(() => { setBuildingDialogOpen(false); setSelectedBuilding(null); setSelectedBuildingFeature(null); }, [setBuildingDialogOpen, setSelectedBuilding, setSelectedBuildingFeature]);
 
   return {
-    transformerDialogOpen: useModelStore.getState().transformerDialogOpen,
-    setTransformerDialogOpen, selectedTransformer: useModelStore.getState().selectedTransformer, setSelectedTransformer,
-    transformerTooltip: useModelStore.getState().transformerTooltip, setTransformerTooltip,
-    buildingDialogOpen: useModelStore.getState().buildingDialogOpen, setBuildingDialogOpen,
-    selectedBuilding: useModelStore.getState().selectedBuilding, setSelectedBuilding,
-    selectedBuildingFeature: useModelStore.getState().selectedBuildingFeature, setSelectedBuildingFeature,
-    buildingTooltip: useModelStore.getState().buildingTooltip, setBuildingTooltip,
-    mvLineTooltip: useModelStore.getState().mvLineTooltip, setMvLineTooltip,
+    transformerDialogOpen, setTransformerDialogOpen,
+    selectedTransformer, setSelectedTransformer,
+    transformerTooltip, setTransformerTooltip,
+    buildingDialogOpen, setBuildingDialogOpen,
+    selectedBuilding, setSelectedBuilding,
+    selectedBuildingFeature, setSelectedBuildingFeature,
+    buildingTooltip, setBuildingTooltip,
+    mvLineTooltip, setMvLineTooltip,
     handleCloseTransformerDialog, handleCloseBuildingDialog,
   };
 };
