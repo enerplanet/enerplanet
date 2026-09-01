@@ -12,7 +12,6 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppStore } from "@/store/app-store";
-import { useWeatherLocationStore } from "@/features/weather/store/weather-location";
 import { useMapLocationStore } from "@/features/interactive-map/store/map-location";
 import { updateMapToSavedLocation } from "@/features/interactive-map/store/map-store";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
@@ -52,7 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { user: storeUser, init, reset } = useAuthStore();
   const location = useLocation();
   const app = useAppStore();
-  const { syncFromBackend: syncWeatherFromBackend } = useWeatherLocationStore();
   const { syncFromBackend: syncMapFromBackend } = useMapLocationStore();
   const isProtectedRoute = location.pathname.startsWith("/app/");
 
@@ -118,12 +116,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (storeUser) {
       applyUser(storeUser);
-      syncWeatherFromBackend();
       syncMapFromBackend().then(() => {
         updateMapToSavedLocation();
       });
     }
-  }, [storeUser, applyUser, syncWeatherFromBackend, syncMapFromBackend]);
+  }, [storeUser, applyUser, syncMapFromBackend]);
 
   // Sync logout across tabs.
   useEffect(() => {

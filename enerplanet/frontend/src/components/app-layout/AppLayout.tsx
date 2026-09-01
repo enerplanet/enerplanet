@@ -53,7 +53,6 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useProductTour } from "@/features/guided-tour/hooks/useProductTour";
 import { Authorized } from "@/middleware/authorized";
 import { useAuthStore } from "@/store/auth-store";
-import WeatherDropdown from "@/features/weather/weather";
 import { SessionTimer } from "@/components/ui/SessionTimer";
 import { SessionExpiryBanner } from "@/components/ui/SessionExpiryBanner";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
@@ -280,12 +279,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex-1" />
 
             <div className="flex items-center gap-1 mr-4" data-tour="navigation">
-              {/* Dashboard moved to the left sidebar bottom; weather stays here as a global tool. */}
               <Authorized>
                 <NotificationDropdown />
-              </Authorized>
-              <Authorized>
-                <WeatherDropdown showSettingsIcon={false} />
               </Authorized>
             </div>
 

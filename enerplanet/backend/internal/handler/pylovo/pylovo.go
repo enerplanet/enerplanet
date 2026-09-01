@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -277,7 +278,15 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 
 	body, status, err := forwardPylovoRequest(ctx, h.resolveBaseURL(), method, path, payload)
 	if err != nil {
-		logger.Logger.Errorf("Error contacting Pylovo (%s %s): %v", method, path, err)
+		msg := fmt.Sprintf("Error contacting Pylovo (%s %s): %v", method, path, err)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+			msg += " — Pylovo service is not responding (stale DB pool / frozen worker). " +
+				"Restart the Pylovo service"
+		} else if strings.Contains(err.Error(), "connection refused") {
+			msg += " — Pylovo service is not running. " +
+				"Run: docker compose up -d pylovo-api"
+		}
+		logger.Logger.Errorf(msg)
 		httputil.InternalError(c, "Internal server error")
 		return
 	}

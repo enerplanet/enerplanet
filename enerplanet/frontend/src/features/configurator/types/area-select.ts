@@ -67,8 +67,10 @@ export interface UseAreaSelectProps {
 	pylovoData?: PylovoGridData;
 	advancedParams?: AdvancedParametersState;
 	buildingLimit?: number;
-	// When true, prevents building/transformer dialogs from opening on click
-	suppressDialogOnClick?: boolean;
+	// Ref read at click-time to prevent building/transformer dialogs from opening
+	// when an interaction mode (add/move transformer, building assign) is active.
+	// A ref is used because the mode states live in hooks called after useAreaSelect.
+	suppressDialogOnClickRef?: React.RefObject<boolean>;
 	// Draft ID for new models (before saving) - used to scope user-placed transformers
 	draftId?: string;
 }

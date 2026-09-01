@@ -1,16 +1,59 @@
-import { useEffect, Fragment, type FC } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, Fragment, useCallback, useMemo, useState, useRef, type FC } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { parseDate } from "@internationalized/date";
+import { transformExtent } from "ol/proj";
+import { useTranslation } from "@spatialhub/i18n";
+
 import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
 import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
-import { useLocation, useParams } from "react-router-dom";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
 import Notification from "@/components/ui/Notification";
+import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
+import { GridActionBar } from "@/components/map-controls/GridActionBar";
+import { useMapProvider } from "@/providers/map-context";
+import { useAuthStore } from "@/store/auth-store";
+import { useMapStore } from "@/features/interactive-map/store/map-store";
+import { useDefaultRegionStore } from "@/features/configurator/region-selector/store/default-region";
+import { useReassignmentLine } from "@/features/configurator/hooks/useMapDisplay";
+import { generateUUID } from "@/utils/uuid";
+import { pylovoService } from "@/features/configurator/services/pylovoService";
+import {
+  usePolygonLimitsStore,
+  type AccessLevel,
+} from "@/features/polygon-drawer/store/polygon-limits-store";
+
+// Extracted hooks
+import {
+  useAddTransformerMode,
+  useMoveTransformerMode,
+} from "@/features/configurator/hooks/useTransformerMode";
+import { useBuildingAssignMode } from "@/features/configurator/hooks/useBuildingAssignMode";
+import { useMultiEditMode } from "@/features/configurator/hooks/useMultiEditMode";
+import { useBuildingDemandRecalculation } from "@/features/configurator/hooks/useBuildingDemandRecalculation";
+import { useRegionName, useRegionSelection } from "@/features/configurator/hooks/useRegion";
+import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
+import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
+import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
+import { useModelStore } from "@/features/configurator/store/modelStore";
+
+// Extracted selectors
+import {
+  useGridResultIds,
+  useGridIdToTrafoCapacity,
+  useGridIdToPeakLoad,
+  useGridIdToConnectedBuildings,
+  useBuildingsInPolygonCount,
+  usePeakLoadInPolygonKw,
+  useCustomTransformers,
+} from "@/features/configurator/region-selector/selectors/gridDataSelectors";
+
+// Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
@@ -20,42 +63,9 @@ import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
-import { MapLegend } from "@/components/map-controls/MapLegend";
-import { GridActionBar } from "@/components/map-controls/GridActionBar";
-import { parseDate } from "@internationalized/date";
-import {
-  usePolygonLimitsStore,
-  type AccessLevel,
-} from "@/features/polygon-drawer/store/polygon-limits-store";
-import { useMemo, useState, useCallback, useRef } from "react";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
-import { useAuthStore } from "@/store/auth-store";
-import { useTranslation } from "@spatialhub/i18n";
-import { useMapProvider } from "@/providers/map-context";
-import { highlightSelectedRegionBoundary } from "@/features/configurator/utils/gridLayerUtils";
-import { useReassignmentLine } from "@/features/configurator/hooks/useReassignmentLine";
-import { generateUUID } from "@/utils/uuid";
-import {
-  getFeatureFClasses,
-  getPrimaryFClass,
-  isResidentialFClass,
-  normalizeFClass,
-} from "@/features/configurator/utils/fClassUtils";
-import {
-  extractBuildingEnrichmentFromProps,
-  extractPeakLoadFromProps,
-  extractSelectedFClassFromProps,
-  extractYearlyDemandFromProps as extractYearlyDemandFromFeatureProps,
-  normalizeFClassToken,
-} from "@/features/configurator/utils/buildingFeatureExtraction";
-import { fromLonLat, toLonLat } from "ol/proj";
-import { transformExtent } from "ol/proj";
-import { getCenter } from "ol/extent";
-import { Style, Fill, Stroke } from "ol/style";
-import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
-import { useMapStore } from "@/features/interactive-map/store/map-store";
-import { useDefaultRegionStore } from "@/features/configurator/region-selector/store/default-region";
-import energyService from "@/features/configurator/services/energyService";
+import { LoadingOverlay } from "./components/LoadingOverlay";
+import { MapInteractionBanners } from "./components/MapInteractionBanners";
+import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 
 const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
 
@@ -72,131 +82,6 @@ interface AreaSelectProps {
   editMode?: boolean;
   existingModelId?: number;
 }
-
-const parseFlexibleNumberString = (input: string): number | undefined => {
-  const trimmed = input.trim();
-  if (!trimmed) return undefined;
-
-  const compact = trimmed.replace(/[\s\u00A0\u202F]/g, "");
-
-  // 1,234.56
-  if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(compact)) {
-    const parsed = Number(compact.replace(/,/g, ""));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  // 1.234,56
-  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(compact)) {
-    const parsed = Number(compact.replace(/\./g, "").replace(",", "."));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  const normalized =
-    compact.includes(",") && !compact.includes(".") ? compact.replace(",", ".") : compact;
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const toFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    return parseFlexibleNumberString(value);
-  }
-  return undefined;
-};
-
-const parseTechs = (value: unknown): Record<string, unknown> => {
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === "object" ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-};
-
-const extractYearlyDemandFromProps = (props: Record<string, unknown>): number =>
-  extractYearlyDemandFromFeatureProps(props, { demandEnergyFallback: "custom_only" });
-
-interface FClassDetail {
-  fClass: string;
-  yearlyDemandKwh: number;
-  peakLoadKw: number;
-}
-
-const parseStoredFClassDetails = (
-  storedDetails: unknown,
-  fallbackClasses: string[]
-): FClassDetail[] | null => {
-  if (!storedDetails) return null;
-
-  let parsed: unknown = storedDetails;
-  if (typeof storedDetails === "string") {
-    try {
-      parsed = JSON.parse(storedDetails);
-    } catch {
-      return null;
-    }
-  }
-
-  if (!Array.isArray(parsed) || parsed.length === 0) return null;
-
-  const classOrder = fallbackClasses.map((value) => normalizeFClassToken(value)).filter(Boolean);
-
-  const byClass = new Map<string, FClassDetail>();
-  parsed.forEach((raw, index) => {
-    if (!raw || typeof raw !== "object") return;
-    const record = raw as Record<string, unknown>;
-    const fallbackClass = classOrder[index] ?? classOrder[0] ?? "unknown";
-    const fClass =
-      normalizeFClassToken(record.fClass ?? record.f_class ?? record.class) || fallbackClass;
-
-    const yearlyDemandKwh =
-      toFiniteNumber(
-        record.yearlyDemandKwh ??
-          record.yearly_demand_kwh ??
-          record.demand_energy ??
-          record.yearly_consumption_kwh
-      ) ?? 0;
-    const peakLoadKw =
-      toFiniteNumber(record.peakLoadKw ?? record.peak_load_kw ?? record.peak_load_in_kw) ?? 0;
-
-    byClass.set(fClass, { fClass, yearlyDemandKwh, peakLoadKw });
-  });
-
-  if (byClass.size === 0) return null;
-  return Array.from(byClass.values());
-};
-
-const buildInitialFClassDetails = (
-  props: Record<string, unknown>,
-  effectiveFClasses: string[],
-  selectedFClass: string,
-  totalDemand: number,
-  totalPeak: number
-): { details: FClassDetail[]; synthetic: boolean } => {
-  const stored = parseStoredFClassDetails(
-    props.f_class_demands ?? props.fclass_details,
-    effectiveFClasses
-  );
-  if (stored && stored.length > 0) {
-    return { details: stored, synthetic: false };
-  }
-
-  const anchorClass = selectedFClass || effectiveFClasses[0] || "unknown";
-  return {
-    details: [
-      {
-        fClass: anchorClass,
-        yearlyDemandKwh: Math.round(totalDemand * 100) / 100,
-        peakLoadKw: Math.round(totalPeak * 100) / 100,
-      },
-    ],
-    synthetic: true,
-  };
-};
 
 export const AreaSelect: FC<AreaSelectProps> = ({
   onAreaSelected,
@@ -226,54 +111,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const initializeWorkspace = useWorkspaceStore((state) => state.initializeWorkspace);
 
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
-  const [wsReloadKey, setWsReloadKey] = useState(0);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
-  const [regionName, setRegionName] = useState<string | undefined>(undefined);
-
-  // Add Transformer Mode state
-  const [isAddTransformerMode, setIsAddTransformerMode] = useState(false);
-  const [newTransformerCoords, setNewTransformerCoords] = useState<[number, number] | null>(null);
-  const [addTransformerDialogOpen, setAddTransformerDialogOpen] = useState(false);
-  const [transformerCursorPos, setTransformerCursorPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
-
-  // Move Transformer Mode state
-  const [isMoveTransformerMode, setIsMoveTransformerMode] = useState(false);
-  const [transformerToMove, setTransformerToMove] = useState<number | null>(null);
-
-  // Multi-Building Assignment Mode state
-  const [isBuildingAssignMode, setIsBuildingAssignMode] = useState(false);
-  const [selectedBuildingsForAssign, setSelectedBuildingsForAssign] = useState<string[]>([]);
-  const [assignStep, setAssignStep] = useState<"select-buildings" | "select-transformer">(
-    "select-buildings"
-  );
-  const [isAssigning, setIsAssigning] = useState(false);
-  const selectedBuildingFeaturesRef = useRef<Map<string, any>>(new Map());
-  const techAddedFromBuildingDialogRef = useRef(false);
-
-  // Multi-edit mode for bulk technology assignment
-  const [isMultiEdit, setIsMultiEdit] = useState(false);
-  const [multiEditSelectedIds, setMultiEditSelectedIds] = useState<Set<string>>(new Set());
-  const multiEditFeaturesRef = useRef<Map<string, any>>(new Map());
 
   // Draft ID for scoping user-placed transformers to this model session
   const [draftId, setDraftId] = useState<string | undefined>(() => {
     return editMode === false ? generateUUID() : undefined;
   });
-
-  // Helper to clear building assignment mode and styles
-  const clearBuildingAssignMode = useCallback(() => {
-    // Clear highlight styles from all selected buildings
-    selectedBuildingFeaturesRef.current.forEach((feature) => {
-      feature.setStyle(undefined);
-    });
-    selectedBuildingFeaturesRef.current.clear();
-    setIsBuildingAssignMode(false);
-    setSelectedBuildingsForAssign([]);
-    setAssignStep("select-buildings");
-  }, []);
 
   // Store ref for cleanup
   const clearDrawingLayersRef = useRef(clearDrawingLayers);
@@ -297,18 +141,17 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     initializeWorkspace();
   }, [initializeWorkspace]);
 
-  useEffect(() => {
-    if (!isLoadingPreference) {
-      setTimeout(() => setWsReloadKey((prev: number) => prev + 1), 0);
-    }
-  }, [isLoadingPreference, preferredWorkspaceId]);
-
   const handleWorkspaceChange = useCallback(
     (workspace: Workspace | null) => {
       setCurrentWorkspace(workspace);
     },
     [setCurrentWorkspace]
   );
+
+  // Ref that the map-interaction layer reads at click time to know whether
+  // a mode (add/move transformer, building assign) is suppressing dialogs.
+  // A ref is used because the mode states live in hooks called after useAreaSelect.
+  const suppressDialogOnClickRef = useRef(false);
 
   const {
     state,
@@ -328,7 +171,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     editMode,
     existingModelId,
     buildingLimit,
-    suppressDialogOnClick: isBuildingAssignMode || isAddTransformerMode || isMoveTransformerMode,
+    suppressDialogOnClickRef,
     draftId,
   });
 
@@ -340,7 +183,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     if (!defaultRegion?.bbox) return;
     hasAppliedDefaultRegion.current = true;
     const view = map.getView();
-    // Cancel any in-flight animation (e.g. mapLocation restore)
     view.cancelAnimations();
     const { west, south, east, north } = defaultRegion.bbox;
     const extent = transformExtent([west, south, east, north], "EPSG:4326", "EPSG:3857");
@@ -353,443 +195,131 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
   // Unsaved changes guard — skip when navigating due to session expiry
   const isDirty = state.allPolygons.length > 0;
-  const isSessionExpired = useAuthStore((state) => state.isSessionExpired);
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || typeof window === "undefined") return;
+
     const handler = (e: BeforeUnloadEvent) => {
       if (useAuthStore.getState().isSessionExpired) return;
       e.preventDefault();
+      e.returnValue = "";
     };
+
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [isDirty, isSessionExpired]);
+  }, [isDirty]);
 
-  const toggleBuildingSelection = useCallback((rawOsmId: unknown, feature?: any) => {
-    if (rawOsmId === undefined || rawOsmId === null) return;
-    const osmId = String(rawOsmId).trim();
-    if (!osmId) return;
+  // ── Extracted hooks ──────────────────────────────────────────────
 
-    setSelectedBuildingsForAssign((prev) => {
-      if (prev.includes(osmId)) {
-        if (feature) {
-          feature.setStyle(undefined);
-        }
-        selectedBuildingFeaturesRef.current.delete(osmId);
-        return prev.filter((id) => id !== osmId);
-      }
-
-      if (feature) {
-        feature.setStyle(
-          new Style({
-            fill: new Fill({ color: "rgba(59, 130, 246, 0.5)" }),
-            stroke: new Stroke({ color: "#2563eb", width: 3 }),
-          })
-        );
-        selectedBuildingFeaturesRef.current.set(osmId, feature);
-      }
-      return [...prev, osmId];
-    });
-  }, []);
-
-  const assignSelectedBuildingsToTransformer = useCallback(
-    async (rawGridId: unknown) => {
-      if (selectedBuildingsForAssign.length === 0) {
-        notification.showError(t("simulation.building.selectBuildings"));
-        return;
-      }
-
-      const parsedGridId =
-        typeof rawGridId === "number" ? rawGridId : Number.parseInt(String(rawGridId), 10);
-      if (!Number.isFinite(parsedGridId)) {
-        notification.showError(t("simulation.building.selectTransformer"));
-        return;
-      }
-      const targetGridId = parsedGridId;
-
-      setIsAssigning(true);
-      try {
-        const userId = user?.id ? String(user.id) : undefined;
-        let successCount = 0;
-        for (const osmId of selectedBuildingsForAssign) {
-          try {
-            await pylovoService.assignBuilding(
-              osmId,
-              targetGridId,
-              userId,
-              existingModelId,
-              draftId
-            );
-            successCount++;
-          } catch (e) {
-            console.error(`Failed to assign building ${osmId}:`, e);
-            notification.showError(`Failed to assign building ${osmId} to transformer`);
-          }
-        }
-
-        if (successCount === selectedBuildingsForAssign.length) {
-          notification.showSuccess(t("simulation.building.assignAllSuccess"));
-        } else if (successCount > 0) {
-          notification.showSuccess(
-            t("simulation.building.assignPartialSuccess", {
-              success: successCount,
-              total: selectedBuildingsForAssign.length,
-            })
-          );
-        } else {
-          notification.showError(t("simulation.building.assignFailed"));
-        }
-
-        if (state.allPolygons.length > 0) {
-          await actions.handlePolygonModified(state.allPolygons);
-        }
-      } catch (error) {
-        console.error("Failed to assign buildings:", error);
-        notification.showError(t("simulation.building.assignFailed"));
-      } finally {
-        setIsAssigning(false);
-        clearBuildingAssignMode();
-      }
-    },
-    [
-      selectedBuildingsForAssign,
-      notification,
-      t,
-      user?.id,
-      existingModelId,
-      draftId,
-      state.allPolygons,
-      actions,
-      clearBuildingAssignMode,
-    ]
-  );
-
-  // Cleanup polygon on unmount - prevents stale polygon when navigating away and back
-  useEffect(() => {
-    return () => {
-      // Clear all drawing layers from the map when component unmounts
-      clearDrawingLayersRef.current();
-    };
-  }, []);
-
-  const { pylovoGridData } = pylovoLayers;
-  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
-  const getClusterKeyFromProps = useCallback(
-    (props: Record<string, any> | null | undefined): string | null => {
-      if (!props) return null;
-      const rawId =
-        props.grid_result_id ??
-        props.transformer_id ??
-        props.trafo_id ??
-        props.cluster_id ??
-        props.id;
-      if (rawId === undefined || rawId === null) return null;
-      if (typeof rawId === "number" && Number.isFinite(rawId)) {
-        return `n:${rawId}`;
-      }
-      const rawText = String(rawId).trim();
-      if (!rawText) return null;
-      const num = Number(rawText);
-      if (Number.isFinite(num)) {
-        return `n:${num}`;
-      }
-      return `s:${rawText}`;
-    },
-    []
-  );
-
-  const getMapProjectedCenterFromAnyCoordinates = useCallback(
-    (coordinates: unknown): [number, number] | null => {
-      let minX = Number.POSITIVE_INFINITY;
-      let minY = Number.POSITIVE_INFINITY;
-      let maxX = Number.NEGATIVE_INFINITY;
-      let maxY = Number.NEGATIVE_INFINITY;
-
-      const visit = (value: unknown) => {
-        if (!Array.isArray(value)) return;
-        if (
-          value.length >= 2 &&
-          typeof value[0] === "number" &&
-          typeof value[1] === "number" &&
-          Number.isFinite(value[0]) &&
-          Number.isFinite(value[1])
-        ) {
-          const x = value[0];
-          const y = value[1];
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-          return;
-        }
-        value.forEach(visit);
-      };
-
-      visit(coordinates);
-      if (
-        !Number.isFinite(minX) ||
-        !Number.isFinite(minY) ||
-        !Number.isFinite(maxX) ||
-        !Number.isFinite(maxY)
-      ) {
-        return null;
-      }
-
-      const centerLonOrX = (minX + maxX) / 2;
-      const centerLatOrY = (minY + maxY) / 2;
-
-      // If coordinate looks like lon/lat, project to map projection.
-      if (Math.abs(centerLonOrX) <= 180 && Math.abs(centerLatOrY) <= 90) {
-        const projected = fromLonLat([centerLonOrX, centerLatOrY]);
-        return [projected[0], projected[1]];
-      }
-      return [centerLonOrX, centerLatOrY];
-    },
-    []
-  );
-
-  const reassignmentLineAnchor = useMemo<[number, number] | null>(() => {
-    if (
-      !isBuildingAssignMode ||
-      assignStep !== "select-transformer" ||
-      selectedBuildingsForAssign.length === 0
-    ) {
-      return null;
+  const refreshGrid = useCallback(async () => {
+    if (state.allPolygons.length > 0) {
+      await actions.handlePolygonModified(state.allPolygons);
     }
+  }, [state.allPolygons, actions]);
 
-    const selectedOsmId = selectedBuildingsForAssign[selectedBuildingsForAssign.length - 1];
-    if (!selectedOsmId) return null;
-
-    const selectedFeature = selectedBuildingFeaturesRef.current.get(selectedOsmId);
-    if (selectedFeature) {
-      const geometry = selectedFeature.getGeometry?.();
-      if (geometry) {
-        const extent = geometry.getExtent();
-        if (extent) {
-          const center = getCenter(extent);
-          return [center[0], center[1]];
-        }
-      }
-    }
-
-    const buildingFeature: any = pylovoGridData?.buildings?.features?.find((f: any) => {
-      const osmId = f?.properties?.osm_id;
-      return osmId !== undefined && osmId !== null && String(osmId).trim() === selectedOsmId;
-    });
-
-    if (!buildingFeature?.geometry?.coordinates) return null;
-    return getMapProjectedCenterFromAnyCoordinates(buildingFeature.geometry.coordinates);
-  }, [
-    isBuildingAssignMode,
-    assignStep,
-    selectedBuildingsForAssign,
-    pylovoGridData,
-    getMapProjectedCenterFromAnyCoordinates,
-  ]);
-
-  // Fly to a region when selected from the region dropdown
-  // Visual dashed line from building to cursor during reassignment
-  useReassignmentLine({
+  const addTransformer = useAddTransformerMode({
     map,
-    active: isBuildingAssignMode && assignStep === "select-transformer",
-    buildingCoords: reassignmentLineAnchor,
+    gridResultIds: useGridResultIds(pylovoLayers.pylovoGridData),
+    notification,
+    allPolygons: state.allPolygons,
+    refreshGrid,
+    existingModelId,
+    draftId,
   });
 
-  // Extract grid result IDs for statistics
-  const gridResultIds = useMemo(() => {
-    const ids = new Set<number>();
-    const addGridId = (raw: unknown) => {
-      const parsed = toFiniteNumber(raw);
-      if (parsed === undefined) return;
-      const id = Math.trunc(parsed);
-      if (id > 0) ids.add(id);
-    };
+  const moveTransformer = useMoveTransformerMode({
+    map,
+    notification,
+    allPolygons: state.allPolygons,
+    handlePolygonDrawn: actions.handlePolygonDrawn,
+    existingModelId,
+    draftId,
+  });
 
-    if (Array.isArray(pylovoGridData?.grids)) {
-      (pylovoGridData.grids as Array<{ grid_result_id?: unknown }>).forEach((g) => {
-        addGridId(g?.grid_result_id);
-      });
-    }
+  const buildingAssign = useBuildingAssignMode({
+    map,
+    notification,
+    allPolygons: state.allPolygons,
+    refreshGrid,
+    pylovoGridData: pylovoLayers.pylovoGridData,
+    existingModelId,
+    draftId,
+  });
 
-    if (Array.isArray(pylovoGridData?.transformers?.features)) {
-      pylovoGridData.transformers.features.forEach((feature: any) => {
-        addGridId(
-          feature?.properties?.grid_result_id ??
-            feature?.properties?.transformer_id ??
-            feature?.properties?.trafo_id
-        );
-      });
-    }
+  const multiEdit = useMultiEditMode();
 
-    if (Array.isArray(pylovoGridData?.buildings?.features)) {
-      pylovoGridData.buildings.features.forEach((feature: any) => {
-        addGridId(
-          feature?.properties?.grid_result_id ??
-            feature?.properties?.transformer_id ??
-            feature?.properties?.trafo_id
-        );
-      });
-    }
+  const buildingDemand = useBuildingDemandRecalculation({
+    pylovoLayers,
+    notification,
+  });
 
-    return Array.from(ids).sort((a, b) => a - b);
-  }, [pylovoGridData]);
+  // ── Derived data (selectors) ─────────────────────────────────────
 
-  // Create lookup for transformer capacity by grid_result_id
-  const gridIdToTrafoCapacity = useMemo(() => {
-    const lookup: Record<number, number> = {};
-    if (pylovoGridData?.transformers?.features) {
-      pylovoGridData.transformers.features.forEach((feature: any) => {
-        const props = feature.properties;
-        if (props?.grid_result_id && props?.rated_power_kva) {
-          lookup[props.grid_result_id] =
-            (lookup[props.grid_result_id] || 0) + props.rated_power_kva;
-        }
-      });
-    }
-    return lookup;
-  }, [pylovoGridData]);
+  const gridResultIds = useGridResultIds(pylovoLayers.pylovoGridData);
+  const gridIdToTrafoCapacity = useGridIdToTrafoCapacity(pylovoLayers.pylovoGridData);
+  const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
+  const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
+  const buildingsInPolygonCount = useBuildingsInPolygonCount(pylovoLayers.pylovoGridData);
+  const peakLoadInPolygonKw = usePeakLoadInPolygonKw(pylovoLayers.pylovoGridData);
+  const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
-  // Create lookup for peak load by grid_result_id
-  // Handles both database buildings (peak_load_in_kw) and AI-estimated buildings (peak_load_kw)
-  const gridIdToPeakLoad = useMemo(() => {
-    const lookup: Record<number, number> = {};
-    if (pylovoGridData?.buildings?.features) {
-      pylovoGridData.buildings.features.forEach((feature: any) => {
-        const props = feature.properties;
-        const gridId = props?.grid_result_id;
-        // Check both property names: database uses peak_load_in_kw, AI estimates use peak_load_kw
-        const peakKw = props?.peak_load_in_kw ?? props?.peak_load_kw;
-        if (gridId !== undefined && peakKw !== undefined && peakKw !== null) {
-          lookup[gridId] = (lookup[gridId] || 0) + Number(peakKw);
-        }
-      });
-    }
+  // ── Update ref so useMapInteractions reads the latest value at click time ──
+  const activeMode = useModelStore((s) => s.activeMode);
+  suppressDialogOnClickRef.current = activeMode !== null;
 
-    return lookup;
-  }, [pylovoGridData]);
-
-  // Polygon-filtered building stats
-  const buildingsInPolygonCount = useMemo(() => {
-    const features = (pylovoGridData as any)?.buildings?.features;
-    return Array.isArray(features) ? features.length : 0;
-  }, [pylovoGridData]);
-
-  const peakLoadInPolygonKw = useMemo(() => {
-    const features = (pylovoGridData as any)?.buildings?.features;
-    if (!Array.isArray(features)) return 0;
-    return features.reduce((sum: number, f: any) => {
-      const props = f?.properties;
-      const peakKw = props?.peak_load_in_kw ?? props?.peak_load_kw ?? 0;
-      return sum + Number(peakKw);
-    }, 0);
-  }, [pylovoGridData]);
-
-  // Connected building stats per transformer (used for 3D hover tooltips)
-  const gridIdToConnectedBuildings = useMemo(() => {
-    const lookup: Record<string, { count: number; types: string[] }> = {};
-    if (pylovoGridData?.buildings?.features) {
-      pylovoGridData.buildings.features.forEach((feature: any) => {
-        const props = feature?.properties ?? {};
-        const clusterKey = getClusterKeyFromProps(props);
-        if (!clusterKey) return;
-
-        if (!lookup[clusterKey]) {
-          lookup[clusterKey] = { count: 0, types: [] };
-        }
-        lookup[clusterKey].count += 1;
-
-        const fClasses = getFeatureFClasses(props);
-        for (const fClass of fClasses) {
-          if (!lookup[clusterKey].types.includes(fClass)) {
-            lookup[clusterKey].types.push(fClass);
-          }
-        }
-      });
-    }
-    return lookup;
-  }, [pylovoGridData, getClusterKeyFromProps]);
-
-  // Compute custom (user-placed) transformers with building counts
-  const customTransformers = useMemo(() => {
-    if (!pylovoGridData?.transformers?.features) return [];
-
-    // Build lookup of building counts per grid_result_id
-    const buildingCounts: Record<number, number> = {};
-    if (pylovoGridData?.buildings?.features) {
-      pylovoGridData.buildings.features.forEach((feature: any) => {
-        const gridId = feature.properties?.grid_result_id;
-        if (gridId !== undefined) {
-          buildingCounts[gridId] = (buildingCounts[gridId] || 0) + 1;
-        }
-      });
-    }
-
-    // Filter for user-placed transformers (osmId starts with 'user/')
-    return pylovoGridData.transformers.features
-      .filter((feature: any) => {
-        const osmId = feature.properties?.osm_id || "";
-        return osmId.startsWith("user/");
-      })
-      .map((feature: any) => {
-        const props = feature.properties;
-        const gridResultId = props?.grid_result_id;
-        return {
-          gridResultId,
-          osmId: props?.osm_id || "",
-          buildingCount: buildingCounts[gridResultId] || 0,
-        };
-      });
-  }, [pylovoGridData]);
-
-  // Available transformer sizes from API
+  // ── Available transformer sizes from API ─────────────────────────
   const [transformerSizes, setTransformerSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
-
   useEffect(() => {
-    pylovoService.getTransformerSizes().then(setTransformerSizes);
+    pylovoService
+      .getTransformerSizes()
+      .then(setTransformerSizes)
+      .catch((err) => {
+        console.error("Failed to load transformer sizes:", err);
+      });
   }, []);
 
-  // Reverse geocode polygon centroid to get region name
-  useEffect(() => {
-    if (state.allPolygons.length === 0) {
-      setRegionName(undefined);
-      return;
-    }
+  // ── Reverse geocode polygon centroid to get region name ──────────
+  const regionName = useRegionName(state.allPolygons);
 
-    // Calculate centroid of all polygons
-    const allCoords = state.allPolygons.flatMap((poly) => poly);
-    if (allCoords.length === 0) return;
+  // ── Map resize handling ──────────────────────────────────────────
+  useMapResize(map, mapRef);
 
-    const sumLon = allCoords.reduce((sum, coord) => sum + coord[0], 0);
-    const sumLat = allCoords.reduce((sum, coord) => sum + coord[1], 0);
-    const centroidLon = sumLon / allCoords.length;
-    const centroidLat = sumLat / allCoords.length;
+  // ── Region selection helpers ─────────────────────────────────────
+  const regionSelection = useRegionSelection({
+    map,
+    editMode,
+    handleClearAllPolygons: actions.handleClearAllPolygons,
+    resetAddTransformerMode: addTransformer.resetAddTransformerMode,
+    clearBuildingAssignMode: buildingAssign.clearBuildingAssignMode,
+    setDraftId: (id: string) => setDraftId(id),
+  });
 
-    // Use Nominatim for reverse geocoding
-    fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centroidLat}&lon=${centroidLon}&zoom=10`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        const address = data.address;
-        const city =
-          address?.city ||
-          address?.town ||
-          address?.village ||
-          address?.municipality ||
-          address?.county;
-        const country = address?.country;
-        if (city && country) {
-          setRegionName(`${city}, ${country}`);
-        } else if (country) {
-          setRegionName(country);
-        }
-      })
-      .catch(() => {
-        // Silently fail - region will just not be shown
-      });
-  }, [state.allPolygons]);
+  // ── Transformer CRUD actions ─────────────────────────────────────
+  const transformerActions = useTransformerActions({
+    updateTransformerKva: pylovoLayers.updateTransformerKva,
+    notification,
+    userId: user?.id ? String(user.id) : undefined,
+    existingModelId,
+    draftId,
+    allPolygons: state.allPolygons,
+    handlePolygonModified: actions.handlePolygonModified,
+  });
 
-  // Mouse tracking for overlays
+  // ── Tech dialog flow ─────────────────────────────────────────────
+  const techDialogFlow = useTechDialogFlow({
+    multiEditSelectedIds: multiEdit.multiEditSelectedIds,
+  });
+
+  // ── 3D MapLibre handlers ─────────────────────────────────────────
+  const ml3d = useMapLibre3DHandlers({
+    mapInteractions,
+    buildingAssign,
+    gridIdToConnectedBuildings,
+    notification,
+    t,
+  });
+
+  // ── Mouse tracking for overlays ──────────────────────────────────
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
     if (!el) return;
@@ -806,382 +336,23 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     };
   }, [mapRef, setCursorPos]);
 
+  // ── Cleanup polygon on unmount ───────────────────────────────────
   useEffect(() => {
-    if (map && mapRef.current) {
-      requestAnimationFrame(() => {
-        if (map && mapRef.current) {
-          map.updateSize();
-        }
-      });
+    return () => {
+      clearDrawingLayersRef.current();
+    };
+  }, []);
 
-      const timers = [
-        setTimeout(() => {
-          if (map && mapRef.current) {
-            map.updateSize();
-          }
-        }, 100),
-        setTimeout(() => {
-          if (map && mapRef.current) {
-            map.updateSize();
-            map.render();
-          }
-        }, 300),
-        setTimeout(() => {
-          if (map && mapRef.current) {
-            map.updateSize();
-            map.render();
-          }
-        }, 500),
-      ];
+  // ── Reassignment line (visual dashed line from building to cursor) ──
+  const assignStep = useModelStore((s) => s.assignStep);
+  const reassignmentLineAnchor = useModelStore((s) => s.reassignmentLineAnchor);
+  useReassignmentLine({
+    map,
+    active: activeMode === "assign-buildings" && assignStep === "select-transformer",
+    buildingCoords: reassignmentLineAnchor,
+  });
 
-      return () => {
-        for (const timer of timers) {
-          clearTimeout(timer);
-        }
-      };
-    }
-  }, [map, mapRef]);
-
-  // Handle transformer kVA change via dialog
-  const handleTransformerKvaChange = useCallback(
-    (newKva: number) => {
-      if (mapInteractions.selectedTransformer) {
-        pylovoLayers.updateTransformerKva(mapInteractions.selectedTransformer.gridResultId, newKva);
-        mapInteractions.setSelectedTransformer(
-          (prev: typeof mapInteractions.selectedTransformer) =>
-            prev ? { ...prev, ratedPowerKva: newKva } : null
-        );
-        notification.showSuccess(`Transformer updated to ${newKva} kVA`);
-      }
-    },
-    [
-      mapInteractions.selectedTransformer,
-      notification,
-      pylovoLayers,
-      mapInteractions.setSelectedTransformer,
-    ]
-  );
-
-  // Handle per-f_class demand change via dialog
-  const handleFClassDemandChange = useCallback(
-    (fClass: string, newDemand: number) => {
-      if (mapInteractions.selectedBuilding) {
-        pylovoLayers.updateBuildingFClassDemand(
-          mapInteractions.selectedBuilding.osmId,
-          fClass,
-          newDemand
-        );
-        mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) => {
-          if (!prev) return null;
-          const existingDetails =
-            prev.fClassDetails && prev.fClassDetails.length > 0
-              ? prev.fClassDetails
-              : [
-                  {
-                    fClass,
-                    yearlyDemandKwh: prev.yearlyDemandKwh ?? 0,
-                    peakLoadKw: prev.peakLoadKw ?? 0,
-                  },
-                ];
-          let updated = false;
-          const updatedDetails = existingDetails.map((d: any) => {
-            if (d.fClass !== fClass) return d;
-            updated = true;
-            return { ...d, yearlyDemandKwh: newDemand };
-          });
-          if (!updated) {
-            updatedDetails.push({ fClass, yearlyDemandKwh: newDemand, peakLoadKw: 0 });
-          }
-          const newTotal = updatedDetails.reduce(
-            (sum: number, d: any) => sum + d.yearlyDemandKwh,
-            0
-          );
-          return { ...prev, fClassDetails: updatedDetails, yearlyDemandKwh: newTotal };
-        });
-      }
-    },
-    [mapInteractions.selectedBuilding, pylovoLayers, mapInteractions.setSelectedBuilding]
-  );
-
-  // Handle floors change from BuildingDialog
-  const handleFloorsChange = useCallback(
-    (floors: number) => {
-      if (!mapInteractions.selectedBuilding) return;
-      pylovoLayers.updateBuildingProperty(mapInteractions.selectedBuilding.osmId, "floors", floors);
-      pylovoLayers.updateBuildingProperty(
-        mapInteractions.selectedBuilding.osmId,
-        "floors_3dbag",
-        floors
-      );
-      mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-        prev ? { ...prev, floors, floors3dBag: floors } : null
-      );
-    },
-    [mapInteractions.selectedBuilding, pylovoLayers, mapInteractions.setSelectedBuilding]
-  );
-
-  // Handle area change from BuildingDialog
-  const handleAreaChange = useCallback(
-    (area: number) => {
-      if (!mapInteractions.selectedBuilding) return;
-      pylovoLayers.updateBuildingProperty(mapInteractions.selectedBuilding.osmId, "area", area);
-      mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-        prev ? { ...prev, area } : null
-      );
-    },
-    [mapInteractions.selectedBuilding, pylovoLayers, mapInteractions.setSelectedBuilding]
-  );
-
-  const handleHouseholdSizeChange = useCallback(
-    (householdSize: number) => {
-      if (!mapInteractions.selectedBuilding) return;
-      const activeClass =
-        normalizeFClass(String(mapInteractions.selectedBuilding.selectedFClass ?? "")) ||
-        normalizeFClass(String(mapInteractions.selectedBuilding.fClass ?? "")) ||
-        normalizeFClass(String(mapInteractions.selectedBuilding.type ?? ""));
-      if (!isResidentialFClass(activeClass)) return;
-      pylovoLayers.updateBuildingProperty(
-        mapInteractions.selectedBuilding.osmId,
-        "household_size",
-        householdSize
-      );
-      mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-        prev ? { ...prev, householdSize } : null
-      );
-    },
-    [mapInteractions.selectedBuilding, pylovoLayers, mapInteractions.setSelectedBuilding]
-  );
-
-  // Handle recalculate demand via energy service
-  const handleRecalculateDemand = useCallback(
-    async (
-      floors: number,
-      area: number,
-      householdSize?: number,
-      _selectedFloor?: "all" | number,
-      energyLabel?: string,
-      hotWaterElectric?: boolean
-    ) => {
-      if (!mapInteractions.selectedBuilding) return;
-
-      const requestedFloors = Math.max(1, Math.round(toFiniteNumber(floors) ?? 1));
-      const requestedArea = Math.max(1, toFiniteNumber(area) ?? 1);
-
-      // Always estimate for the full building to ensure consistent results.
-      // Per-floor display is handled by dividing the total by number of floors.
-      const estimateFloors = requestedFloors;
-      const estimateArea = requestedArea * requestedFloors;
-
-      const buildingType =
-        normalizeFClass(String(mapInteractions.selectedBuilding.selectedFClass ?? "")) ||
-        normalizeFClass(String(mapInteractions.selectedBuilding.fClass ?? "")) ||
-        mapInteractions.selectedBuilding.type;
-      const selectedFClass =
-        normalizeFClass(String(mapInteractions.selectedBuilding.selectedFClass ?? "")) ||
-        normalizeFClass(String(mapInteractions.selectedBuilding.fClass ?? "")) ||
-        normalizeFClass(String(buildingType ?? "")) ||
-        "unknown";
-
-      const shouldUseHouseholdSize = isResidentialFClass(String(buildingType ?? ""));
-      const requestedHousehold = shouldUseHouseholdSize
-        ? Math.max(1, Math.round(toFiniteNumber(householdSize) ?? 1))
-        : undefined;
-
-      const householdForEstimate = requestedHousehold;
-      const yearOfConstruction = toFiniteNumber(mapInteractions.selectedBuilding.constructionYear);
-      try {
-        const estimate = await energyService.estimateBuildingEnergyDemand(
-          buildingType,
-          estimateArea,
-          householdForEstimate,
-          yearOfConstruction,
-          estimateFloors,
-          energyLabel,
-          hotWaterElectric
-        );
-        const osmId = mapInteractions.selectedBuilding.osmId;
-
-        const isSyntheticFClassDetails = Boolean(
-          mapInteractions.selectedBuilding.fClassDetailsSynthetic
-        );
-        const baseDetails = mapInteractions.selectedBuilding.fClassDetails ?? [];
-        let updatedDetails: Array<{ fClass: string; yearlyDemandKwh: number; peakLoadKw: number }> =
-          [];
-
-        if (isSyntheticFClassDetails) {
-          updatedDetails = [
-            {
-              fClass: selectedFClass,
-              yearlyDemandKwh: estimate.yearlyConsumptionKwh,
-              peakLoadKw: estimate.peakLoadKw,
-            },
-          ];
-        } else {
-          updatedDetails = baseDetails.map(
-            (detail: { fClass: string; yearlyDemandKwh: number; peakLoadKw: number }) => ({
-              ...detail,
-              fClass: normalizeFClass(String(detail.fClass ?? "")) || detail.fClass,
-            })
-          );
-          if (updatedDetails.length === 0) {
-            updatedDetails = [
-              {
-                fClass: selectedFClass,
-                yearlyDemandKwh: estimate.yearlyConsumptionKwh,
-                peakLoadKw: estimate.peakLoadKw,
-              },
-            ];
-          } else {
-            let matchedSelectedClass = false;
-            updatedDetails = updatedDetails.map((detail) => {
-              const detailClass = normalizeFClass(String(detail.fClass ?? "")) || detail.fClass;
-              if (detailClass !== selectedFClass) return detail;
-              matchedSelectedClass = true;
-              return {
-                ...detail,
-                fClass: detailClass,
-                yearlyDemandKwh: estimate.yearlyConsumptionKwh,
-                peakLoadKw: estimate.peakLoadKw,
-              };
-            });
-            if (!matchedSelectedClass) {
-              updatedDetails.push({
-                fClass: selectedFClass,
-                yearlyDemandKwh: estimate.yearlyConsumptionKwh,
-                peakLoadKw: estimate.peakLoadKw,
-              });
-            }
-          }
-        }
-
-        const totalYearlyDemand = updatedDetails.reduce(
-          (sum: number, detail: { yearlyDemandKwh: number }) => sum + (detail.yearlyDemandKwh || 0),
-          0
-        );
-        const totalPeakLoad = updatedDetails.reduce(
-          (sum: number, detail: { peakLoadKw: number }) => sum + (detail.peakLoadKw || 0),
-          0
-        );
-
-        // Update OL feature properties
-        pylovoLayers.updateBuildingProperty(osmId, "yearly_demand_kwh", totalYearlyDemand);
-        pylovoLayers.updateBuildingProperty(osmId, "demand_energy", totalYearlyDemand);
-        pylovoLayers.updateBuildingProperty(osmId, "peak_load_kw", totalPeakLoad);
-        pylovoLayers.updateBuildingProperty(osmId, "area", requestedArea);
-        pylovoLayers.updateBuildingProperty(osmId, "floors", requestedFloors);
-        pylovoLayers.updateBuildingProperty(osmId, "floors_3dbag", requestedFloors);
-        if (shouldUseHouseholdSize) {
-          pylovoLayers.updateBuildingProperty(
-            osmId,
-            "household_size",
-            estimate.householdSize ?? requestedHousehold
-          );
-        } else {
-          pylovoLayers.updateBuildingProperty(osmId, "household_size", null);
-        }
-        pylovoLayers.updateBuildingProperty(
-          osmId,
-          "estimated_households",
-          estimate.estimatedHouseholds ?? null
-        );
-        pylovoLayers.updateBuildingProperty(osmId, "selected_f_class", selectedFClass);
-
-        // Update fclass_details on OL feature
-        pylovoLayers.updateBuildingProperty(osmId, "fclass_details", updatedDetails);
-        pylovoLayers.updateBuildingProperty(
-          osmId,
-          "f_class_demands",
-          updatedDetails.map(
-            (detail: { fClass: string; yearlyDemandKwh: number; peakLoadKw: number }) => ({
-              f_class: detail.fClass,
-              demand_energy: detail.yearlyDemandKwh,
-              peak_load_kw: detail.peakLoadKw,
-            })
-          )
-        );
-
-        // Update local dialog state
-        mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-          prev
-            ? {
-                ...prev,
-                yearlyDemandKwh: totalYearlyDemand,
-                peakLoadKw: totalPeakLoad,
-                area: requestedArea,
-                floors: requestedFloors,
-                floors3dBag: requestedFloors,
-                householdSize: shouldUseHouseholdSize
-                  ? (estimate.householdSize ?? requestedHousehold)
-                  : undefined,
-                estimatedHouseholds: estimate.estimatedHouseholds,
-                selectedFClass,
-                fClassDetails: updatedDetails,
-                fClassDetailsSynthetic: isSyntheticFClassDetails,
-              }
-            : null
-        );
-        notification.showSuccess(
-          `Recalculated: ${estimate.yearlyConsumptionKwh.toLocaleString()} kWh/yr (${selectedFClass}), ${estimate.peakLoadKw.toFixed(2)} kW peak`
-        );
-      } catch (error) {
-        console.error("Recalculate demand failed:", error);
-        notification.showError("Failed to recalculate energy demand");
-      }
-    },
-    [
-      mapInteractions.selectedBuilding,
-      pylovoLayers,
-      mapInteractions.setSelectedBuilding,
-      notification,
-    ]
-  );
-
-  const handleSelectedFClassChange = useCallback(
-    (fClass: string) => {
-      if (!mapInteractions.selectedBuilding) return;
-      const normalized = normalizeFClass(String(fClass ?? "")) || fClass.trim().toLowerCase();
-      if (!normalized) return;
-      const osmId = mapInteractions.selectedBuilding.osmId;
-      pylovoLayers.updateBuildingProperty(osmId, "selected_f_class", normalized);
-      mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-        prev ? { ...prev, selectedFClass: normalized } : null
-      );
-    },
-    [mapInteractions.selectedBuilding, pylovoLayers, mapInteractions.setSelectedBuilding]
-  );
-
-  // Handle adding tech from BuildingDialog
-  const handleAddTechFromDialog = useCallback(
-    (tech: import("@/features/technologies/services/technologyService").Technology) => {
-      if (!mapInteractions.selectedBuildingFeature) return;
-      // Close building dialog temporarily, open tech parameter dialog
-      // When tech dialog closes, building dialog will reopen (see onClose below)
-      techAddedFromBuildingDialogRef.current = true;
-      mapInteractions.setBuildingDialogOpen(false);
-      techOperations.setSelectedTechForDialog(tech);
-      techOperations.setSelectedBuildingForTech(mapInteractions.selectedBuildingFeature);
-      techOperations.setTechDialogOpen(true);
-    },
-    [mapInteractions, techOperations]
-  );
-
-  // Handle applying tech to all multi-edit selected buildings
-  const handleApplyTechToSelected = useCallback(
-    (tech: import("@/features/technologies/services/technologyService").Technology) => {
-      if (multiEditSelectedIds.size === 0) return;
-      // For each selected building feature, open the tech parameter dialog
-      // For simplicity, we add the tech to the first selected building via the normal flow
-      // A more complete implementation would iterate all features
-      if (mapInteractions.selectedBuildingFeature) {
-        techAddedFromBuildingDialogRef.current = true;
-        mapInteractions.setBuildingDialogOpen(false);
-        techOperations.setSelectedTechForDialog(tech);
-        techOperations.setSelectedBuildingForTech(mapInteractions.selectedBuildingFeature);
-        techOperations.setTechDialogOpen(true);
-      }
-    },
-    [multiEditSelectedIds, mapInteractions, techOperations]
-  );
+  // ── Handle run power flow ────────────────────────────────────────
   const handleRunPowerFlow = useCallback(async () => {
     try {
       const success = await pylovoLayers.runPowerFlowAnalysis();
@@ -1205,464 +376,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
-  // Handle add transformer mode - click on map to place transformer
-  const handleAddTransformer = useCallback(
-    async (kva: number) => {
-      if (!newTransformerCoords) {
-        notification.showError("Invalid transformer location — please click on the map first");
-        throw new Error("Invalid transformer location");
-      }
-
-      try {
-        const userId = user?.id ? String(user.id) : undefined;
-        const result = await pylovoService.addTransformer({
-          coordinates: newTransformerCoords,
-          kva,
-          grid_result_ids: gridResultIds, // Can be empty - no auto-assign anyway
-          reassign_radius_m: 0, // No auto-assign - buildings assigned manually
-          user_id: userId, // Current user's ID (same format as generateGrid)
-          model_id: existingModelId, // Current model ID (if in edit mode)
-          draft_id: draftId, // Draft ID for new models (scopes transformer to this session)
-        });
-
-        notification.showSuccess(result.message || `Added transformer with ${kva} kVA`);
-
-        // Refresh the grid data by re-running the grid generation
-        if (state.allPolygons.length > 0) {
-          await actions.handlePolygonModified(state.allPolygons);
-        }
-
-        // Close the dialog but stay in placement mode so more
-        // transformers can be added without re-enabling it
-        setNewTransformerCoords(null);
-        setAddTransformerDialogOpen(false);
-      } catch (error: any) {
-        console.error("Failed to add transformer:", error);
-        notification.showError(error?.message || "Failed to add transformer");
-        throw error; // Let the dialog keep itself open on failure
-      }
-    },
-    [
-      newTransformerCoords,
-      gridResultIds,
-      notification,
-      state.allPolygons,
-      actions,
-      user?.id,
-      existingModelId,
-      draftId,
-    ]
-  );
-
-  // Handle delete transformer
-  const handleDeleteTransformer = useCallback(
-    async (gridResultId: number) => {
-      try {
-        const userId = user?.id ? String(user.id) : undefined;
-        const result = await pylovoService.deleteTransformer(
-          gridResultId,
-          userId,
-          existingModelId,
-          draftId
-        );
-        notification.showSuccess(result.message || "Transformer deleted");
-
-        // Refresh the grid data
-        if (state.allPolygons.length > 0) {
-          await actions.handlePolygonModified(state.allPolygons);
-        }
-      } catch (error: any) {
-        console.error("Failed to delete transformer:", error);
-        notification.showError(error?.message || "Failed to delete transformer");
-      }
-    },
-    [notification, state.allPolygons, actions, user?.id, existingModelId, draftId]
-  );
-
-  // Map click handler for add transformer mode
-  useEffect(() => {
-    if (!map || !isAddTransformerMode) {
-      setTransformerCursorPos(null);
-      return;
-    }
-
-    const handleMapClick = (evt: any) => {
-      // Convert pixel to coordinates (lon, lat)
-      const coords = map.getCoordinateFromPixel(evt.pixel);
-      // Transform from map projection (EPSG:3857) to WGS84 (EPSG:4326)
-      const lonLat = toLonLat(coords);
-      setNewTransformerCoords([lonLat[0], lonLat[1]]);
-      setAddTransformerDialogOpen(true);
-    };
-
-    const handleMouseMove = (evt: any) => {
-      const mapElement = map.getTargetElement();
-      if (mapElement) {
-        const rect = mapElement.getBoundingClientRect();
-        setTransformerCursorPos({
-          x: evt.pixel[0] + rect.left,
-          y: evt.pixel[1] + rect.top,
-        });
-      }
-    };
-
-    const handleMouseLeave = () => {
-      setTransformerCursorPos(null);
-    };
-
-    // Escape key exits placement mode
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsAddTransformerMode(false);
-      }
-    };
-
-    map.on("click", handleMapClick);
-    map.on("pointermove", handleMouseMove);
-    document.addEventListener("keydown", handleKeyDown);
-
-    // Change cursor to none (we'll show custom cursor)
-    const mapElement = map.getTargetElement();
-    if (mapElement) {
-      mapElement.style.cursor = "none";
-      mapElement.addEventListener("mouseleave", handleMouseLeave);
-    }
-
-    return () => {
-      map.un("click", handleMapClick);
-      map.un("pointermove", handleMouseMove);
-      document.removeEventListener("keydown", handleKeyDown);
-      if (mapElement) {
-        mapElement.style.cursor = "";
-        mapElement.removeEventListener("mouseleave", handleMouseLeave);
-      }
-      setTransformerCursorPos(null);
-    };
-  }, [map, isAddTransformerMode]);
-
-  // Map click handler for move transformer mode
-  useEffect(() => {
-    if (!map || !isMoveTransformerMode || !transformerToMove) {
-      return;
-    }
-
-    const handleMapClick = async (evt: any) => {
-      const coords = map.getCoordinateFromPixel(evt.pixel);
-      const lonLat = toLonLat(coords);
-
-      try {
-        const userId = user?.id ? String(user.id) : undefined;
-        await pylovoService.moveTransformer(
-          transformerToMove,
-          [lonLat[0], lonLat[1]],
-          userId,
-          existingModelId,
-          draftId
-        );
-        notification.showSuccess(t("transformer.movingSuccess"));
-        // Refresh grid data by re-running polygon drawn with existing polygons
-        if (state.allPolygons.length > 0) {
-          const lastPolygon = state.allPolygons[state.allPolygons.length - 1];
-          await actions.handlePolygonDrawn(lastPolygon, state.allPolygons);
-        }
-      } catch (error) {
-        console.error("Failed to move transformer:", error);
-        notification.showError(t("transformer.movingFailed"));
-      } finally {
-        setIsMoveTransformerMode(false);
-        setTransformerToMove(null);
-      }
-    };
-
-    const handleMouseMove = (evt: any) => {
-      const mapElement = map.getTargetElement();
-      if (mapElement) {
-        const rect = mapElement.getBoundingClientRect();
-        setTransformerCursorPos({
-          x: evt.pixel[0] + rect.left,
-          y: evt.pixel[1] + rect.top,
-        });
-      }
-    };
-
-    const handleMouseLeave = () => {
-      setTransformerCursorPos(null);
-    };
-
-    map.on("click", handleMapClick);
-    map.on("pointermove", handleMouseMove);
-
-    const mapElement = map.getTargetElement();
-    if (mapElement) {
-      mapElement.style.cursor = "none";
-      mapElement.addEventListener("mouseleave", handleMouseLeave);
-    }
-
-    return () => {
-      map.un("click", handleMapClick);
-      map.un("pointermove", handleMouseMove);
-      if (mapElement) {
-        mapElement.style.cursor = "";
-        mapElement.removeEventListener("mouseleave", handleMouseLeave);
-      }
-      setTransformerCursorPos(null);
-    };
-  }, [
-    map,
-    isMoveTransformerMode,
-    transformerToMove,
-    notification,
-    t,
-    state.allPolygons,
-    actions,
-    user?.id,
-    existingModelId,
-    draftId,
-  ]);
-
-  // Map click handler for multi-building assignment mode
-  useEffect(() => {
-    if (!map || !isBuildingAssignMode) {
-      return;
-    }
-
-    const handleMapClick = async (evt: any) => {
-      if (isAssigning) return;
-
-      const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => {
-        const type = f.get("feature_type");
-        if (type === "building" || type === "transformer") return f;
-        return null;
-      });
-
-      if (!feature) return;
-
-      const featureType = feature.get("feature_type");
-
-      if (assignStep === "select-buildings") {
-        // In building selection step - toggle building selection
-        if (featureType === "building") {
-          toggleBuildingSelection(feature.get("osm_id"), feature);
-        }
-      } else if (assignStep === "select-transformer") {
-        // In transformer selection step
-        if (featureType === "transformer") {
-          await assignSelectedBuildingsToTransformer(
-            feature.get("grid_result_id") ??
-              feature.get("transformer_id") ??
-              feature.get("trafo_id") ??
-              feature.get("id")
-          );
-        } else {
-          notification.showError(t("simulation.building.selectTransformer"));
-        }
-      }
-    };
-
-    // Escape key to cancel
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        clearBuildingAssignMode();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    const mapElement = map.getTargetElement();
-    if (mapElement) {
-      mapElement.style.cursor = assignStep === "select-buildings" ? "pointer" : "crosshair";
-    }
-
-    map.on("click", handleMapClick);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      map.un("click", handleMapClick);
-      if (mapElement) {
-        mapElement.style.cursor = "";
-      }
-    };
-  }, [
-    map,
-    isBuildingAssignMode,
-    assignStep,
-    isAssigning,
-    notification,
-    t,
-    clearBuildingAssignMode,
-    toggleBuildingSelection,
-    assignSelectedBuildingsToTransformer,
-  ]);
-
-  const handleMl3dBuildingClick = useCallback(
-    (props: Record<string, any>) => {
-      if (isAddTransformerMode || isMoveTransformerMode) return;
-      if (isBuildingAssignMode) {
-        if (assignStep === "select-buildings") {
-          toggleBuildingSelection(props.osm_id);
-        } else {
-          notification.showError(t("simulation.building.selectTransformer"));
-        }
-        return;
-      }
-      const fClasses = getFeatureFClasses(props);
-      const primaryFClass = getPrimaryFClass(props) || "unknown";
-      const enrichment = extractBuildingEnrichmentFromProps(props);
-      const totalDemand = extractYearlyDemandFromProps(props);
-      const totalPeak = extractPeakLoadFromProps(props);
-      const effectiveFClasses = fClasses.length > 0 ? fClasses : [primaryFClass];
-      const selectedFClass = extractSelectedFClassFromProps(
-        props,
-        effectiveFClasses,
-        primaryFClass
-      );
-      const { details: fClassDetails, synthetic: fClassDetailsSynthetic } =
-        buildInitialFClassDetails(props, effectiveFClasses, selectedFClass, totalDemand, totalPeak);
-      mapInteractions.setSelectedBuilding({
-        osmId: props.osm_id,
-        type: primaryFClass,
-        fClass: primaryFClass,
-        fClasses,
-        selectedFClass,
-        yearlyDemandKwh: totalDemand,
-        peakLoadKw: totalPeak,
-        area: props.area || 0,
-        gridResultId: props.grid_result_id,
-        techs: parseTechs(props.techs),
-        fClassDetails,
-        fClassDetailsSynthetic,
-        ...enrichment,
-      });
-      mapInteractions.setBuildingDialogOpen(true);
-    },
-    [
-      isBuildingAssignMode,
-      isAddTransformerMode,
-      isMoveTransformerMode,
-      assignStep,
-      toggleBuildingSelection,
-      notification,
-      t,
-      mapInteractions,
-    ]
-  );
-
-  const handleMl3dTransformerClick = useCallback(
-    (props: Record<string, any>) => {
-      if (isAddTransformerMode || isMoveTransformerMode) return;
-      if (isBuildingAssignMode) {
-        if (assignStep === "select-transformer") {
-          void assignSelectedBuildingsToTransformer(
-            props.grid_result_id ?? props.transformer_id ?? props.trafo_id ?? props.id
-          );
-        } else {
-          notification.showError(t("simulation.building.selectBuildings"));
-        }
-        return;
-      }
-      mapInteractions.setSelectedTransformer({
-        gridResultId: props.grid_result_id,
-        osmId: props.osm_id || "",
-        ratedPowerKva: props.rated_power_kva || 0,
-      });
-      mapInteractions.setTransformerDialogOpen(true);
-    },
-    [
-      isBuildingAssignMode,
-      isAddTransformerMode,
-      isMoveTransformerMode,
-      assignStep,
-      assignSelectedBuildingsToTransformer,
-      notification,
-      t,
-      mapInteractions,
-    ]
-  );
-
-  const handleMl3dBuildingHover = useCallback(
-    (props: Record<string, any> | null, pixel: [number, number]) => {
-      if (!props) {
-        mapInteractions.setBuildingTooltip(null);
-        return;
-      }
-      const fClasses = getFeatureFClasses(props);
-      const primary = getPrimaryFClass(props) || "unknown";
-      const enrichment = extractBuildingEnrichmentFromProps(props);
-      mapInteractions.setBuildingTooltip({
-        x: pixel[0],
-        y: pixel[1],
-        type: primary,
-        fClass: primary,
-        fClasses,
-        yearlyDemandKwh: extractYearlyDemandFromProps(props),
-        techs: parseTechs(props.techs),
-        gridResultId: props.grid_result_id ?? props.transformer_id,
-        ...enrichment,
-      });
-    },
-    [mapInteractions]
-  );
-
-  const handleMl3dTransformerHover = useCallback(
-    (props: Record<string, any> | null, pixel: [number, number]) => {
-      if (!props) {
-        mapInteractions.setTransformerTooltip(null);
-        return;
-      }
-
-      const clusterKey = getClusterKeyFromProps(props);
-      const rawGridId =
-        props.grid_result_id ??
-        props.transformer_id ??
-        props.trafo_id ??
-        props.cluster_id ??
-        props.id;
-      const gridResultId =
-        typeof rawGridId === "number" ? rawGridId : Number.parseInt(String(rawGridId), 10);
-      const connected = clusterKey ? gridIdToConnectedBuildings[clusterKey] : undefined;
-
-      mapInteractions.setTransformerTooltip({
-        x: pixel[0],
-        y: pixel[1],
-        ratedPowerKva: props.rated_power_kva || 0,
-        gridResultId: Number.isFinite(gridResultId) ? gridResultId : rawGridId,
-        connectedBuildingCount: connected?.count ?? 0,
-        connectedBuildingTypes: connected?.types ?? [],
-      });
-    },
-    [mapInteractions, gridIdToConnectedBuildings, getClusterKeyFromProps]
-  );
-
-  const handleMl3dMvLineHover = useCallback(
-    (props: Record<string, any> | null, pixel: [number, number]) => {
-      if (!props) {
-        mapInteractions.setMvLineTooltip(null);
-        return;
-      }
-      mapInteractions.setMvLineTooltip({
-        x: pixel[0],
-        y: pixel[1],
-        voltage: props.voltage || (props.vn_kv ? `${props.vn_kv} kV` : "20 kV"),
-        lengthM: props.length_m || props.length || 0,
-        cableType: props.cable_type || props.std_type || "",
-        normallyOpen: props.normally_open || false,
-        fromBus: props.from_bus || props.from_node || "",
-        toBus: props.to_bus || props.to_node || "",
-      });
-    },
-    [mapInteractions]
-  );
-
-  const handleMl3dMapClick = useCallback(
-    (lngLat: [number, number]) => {
-      if (isAddTransformerMode) {
-        setNewTransformerCoords(lngLat);
-        setAddTransformerDialogOpen(true);
-      }
-    },
-    [isAddTransformerMode]
-  );
-
+  // ── Drawing helpers ──────────────────────────────────────────────
   const showDrawHint =
     state.cursorPos &&
     !state.isDrawing &&
@@ -1672,59 +386,12 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     coordinates: [number, number][],
     allPolygons: [number, number][][]
   ) => {
-    // Building limit check is now handled inside the hook
     await actions.handlePolygonDrawn(coordinates, allPolygons);
   };
 
-  // Wrapper for clear all that also resets transformer and building assign modes
-  const handleClearAllWithModes = useCallback(() => {
-    actions.handleClearAllPolygons();
-    setIsAddTransformerMode(false);
-    setIsBuildingAssignMode(false);
-    setSelectedBuildingsForAssign([]);
-    setAssignStep("select-buildings");
-    selectedBuildingFeaturesRef.current.clear();
-    // Generate a new draft ID so old user-placed transformers are not reused
-    if (!editMode) {
-      setDraftId(generateUUID());
-    }
-  }, [actions, editMode]);
+  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
-  const handleRegionSelect = useCallback(
-    (region: {
-      name?: string;
-      bbox?: { west: number; south: number; east: number; north: number };
-    }) => {
-      if (!map || !region.bbox) return;
-
-      // Clear existing polygons and reset drawing state for the new region
-      handleClearAllWithModes();
-
-      const { west, south, east, north } = region.bbox;
-      const extent = transformExtent([west, south, east, north], "EPSG:4326", "EPSG:3857");
-      map.getView().fit(extent, {
-        padding: [60, 60, 60, 60],
-        duration: 1500,
-        maxZoom: 14,
-        easing: (t: number) => t * (2 - t),
-      });
-      const selectedName = region.name || null;
-      highlightSelectedRegionBoundary(map, selectedName);
-    },
-    [map, handleClearAllWithModes]
-  );
-
-  // Click a boundary polygon on the map → select that region
-  const handleBoundaryRegionClick = useCallback(
-    (regionName: string) => {
-      const region = pylovoLayers.availableRegions?.find(
-        (r: { name: string }) => r.name.toLowerCase() === regionName.toLowerCase()
-      );
-      if (region) handleRegionSelect(region);
-    },
-    [pylovoLayers.availableRegions, handleRegionSelect]
-  );
-
+  // ── Render ───────────────────────────────────────────────────────
   return (
     <Fragment>
       <Notification
@@ -1733,19 +400,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         severity={notification.data.severity}
         onClose={notification.hide}
       />
-      {editMode && state.isLoadingModel && (
-        <div className="md-fade-in fixed inset-0 bg-background/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="md-rise bg-background dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md mx-4 border border-border">
-            <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              <div className="text-lg font-medium text-foreground">Loading Simulation Data</div>
-              <div className="text-sm text-muted-foreground text-center">
-                Please wait while we load your energy simulation...
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <LoadingOverlay isOpen={editMode && state.isLoadingModel} />
 
       <MapContainer
         key={editMode ? `edit-${existingModelId}` : "create"}
@@ -1788,25 +443,25 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             {map && isMapLibre3D && (
               <MapLibre3DOverlay
                 olMap={map}
-                buildingsGeoJSON={pylovoGridData?.buildings}
-                linesGeoJSON={pylovoGridData?.lines}
-                mvLinesGeoJSON={pylovoGridData?.mv_lines}
-                transformersGeoJSON={pylovoGridData?.transformers}
+                buildingsGeoJSON={pylovoLayers.pylovoGridData?.buildings}
+                linesGeoJSON={pylovoLayers.pylovoGridData?.lines}
+                mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
+                transformersGeoJSON={pylovoLayers.pylovoGridData?.transformers}
                 availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
                 selectedBoundaryFeature={pylovoLayers.regionBoundary?.boundary}
                 showBoundary={pylovoLayers.showBoundary}
                 polygonCoordinates={state.allPolygons}
-                selectedBuildingOsmIds={selectedBuildingsForAssign}
-                isBuildingAssignMode={isBuildingAssignMode}
+                selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
+                isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
                 isDrawing={state.isDrawing}
-                onBuildingClick={handleMl3dBuildingClick}
-                onTransformerClick={handleMl3dTransformerClick}
-                onBuildingHover={handleMl3dBuildingHover}
-                onTransformerHover={handleMl3dTransformerHover}
-                onMvLineHover={handleMl3dMvLineHover}
-                onMapClick={handleMl3dMapClick}
-                onBoundaryRegionClick={handleBoundaryRegionClick}
+                onBuildingClick={ml3d.handleMl3dBuildingClick}
+                onTransformerClick={ml3d.handleMl3dTransformerClick}
+                onBuildingHover={ml3d.handleMl3dBuildingHover}
+                onTransformerHover={ml3d.handleMl3dTransformerHover}
+                onMvLineHover={ml3d.handleMl3dMvLineHover}
+                onMapClick={ml3d.handleMl3dMapClick}
+                onBoundaryRegionClick={regionSelection.handleBoundaryRegionClick}
               />
             )}
             <MapOverlays
@@ -1829,122 +484,37 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 currentPointCount={currentPointCount}
                 enableEditing={true}
                 isGeneratingGrid={state.isGeneratingGrid}
-                hasGridData={(pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
                 isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
                 hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
               />
             )}
             <GridActionBar
-              hasGridData={(pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-              isAddTransformerMode={isAddTransformerMode}
-              onToggleAddTransformerMode={() => setIsAddTransformerMode(!isAddTransformerMode)}
-              isBuildingAssignMode={isBuildingAssignMode}
-              onStartBuildingAssignMode={() => {
-                setIsBuildingAssignMode(true);
-                setSelectedBuildingsForAssign([]);
-                setAssignStep("select-buildings");
-              }}
+              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+              isAddTransformerMode={addTransformer.isAddTransformerMode}
+              onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
+              isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
+              onStartBuildingAssignMode={buildingAssign.startBuildingAssignMode}
               onRunPowerFlow={handleRunPowerFlow}
               isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
               hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
             />
-            {/* Show hint when in add transformer mode */}
-            {isAddTransformerMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
-                <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-muted">
-                    <img
-                      src="/images/transformer-icon-dark.svg"
-                      alt=""
-                      className="w-4 h-4 dark:invert"
-                    />
-                  </span>
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                    {t(
-                      "simulation.transformer.clickToPlace",
-                      "Click on the map to place the transformer"
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddTransformerMode(false)}
-                    className="px-3 py-1 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold transition-colors"
-                  >
-                    {t("simulation.transformer.donePlacing", "Done")} (Esc)
-                  </button>
-                </div>
-              </div>
-            )}
-            {/* Show banner when in multi-building assignment mode */}
-            {isBuildingAssignMode && (
-              <div className="md-rise absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-                {!isAssigning && assignStep === "select-buildings" ? (
-                  <>
-                    <span>
-                      {selectedBuildingsForAssign.length === 0
-                        ? t("simulation.building.selectBuildings")
-                        : t("simulation.building.selectedCount", {
-                            count: selectedBuildingsForAssign.length,
-                          })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAssignStep("select-transformer")}
-                      disabled={selectedBuildingsForAssign.length === 0}
-                      className="px-3 py-1 rounded bg-white text-blue-600 hover:bg-blue-50 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {t("simulation.building.nextStep")}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {isAssigning ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>{t("simulation.building.assigningBuildings")}</span>
-                      </div>
-                    ) : (
-                      <span>{t("simulation.building.selectTransformer")}</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setAssignStep("select-buildings")}
-                      className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-xs transition-colors"
-                    >
-                      ← {t("simulation.building.nextStep").includes("Next") ? "Back" : "Zurück"}
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={clearBuildingAssignMode}
-                  className="px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-xs transition-colors"
-                >
-                  {t("simulation.building.cancelAssign")} (Esc)
-                </button>
-              </div>
-            )}
-            {/* Power flow calculating banner */}
-            {pylovoLayers.isRunningPowerFlow && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                <div className="md-rise flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
-                  <div className="relative w-5 h-5">
-                    <div className="absolute inset-0 rounded-full border-2 border-amber-500/20" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-amber-500 animate-spin" />
-                  </div>
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                    {t("simulation.powerFlow.calculating")}
-                  </span>
-                </div>
-              </div>
-            )}
-            {/* Power flow legend */}
+            <MapInteractionBanners
+              isAddTransformerMode={addTransformer.isAddTransformerMode}
+              isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
+              isAssigning={buildingAssign.isAssigning}
+              assignStep={buildingAssign.assignStep}
+              selectedBuildingsForAssign={buildingAssign.selectedBuildingsForAssign}
+              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
+              onNextStep={() => buildingAssign.setAssignStep("select-transformer")}
+              onBackStep={() => buildingAssign.setAssignStep("select-buildings")}
+              onCancelAssign={buildingAssign.clearBuildingAssignMode}
+              onCancelAddTransformer={addTransformer.resetAddTransformerMode}
+            />
             <PowerFlowLegend
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
-            {/* Map legend */}
-            <MapLegend />
           </>
         }
         mapHeader={
@@ -1952,9 +522,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             allPolygonsCount={state.allPolygons.length}
             allowMultiplePolygons={state.allowMultiplePolygons}
             onToggleAllowMultiplePolygons={actions.setAllowMultiplePolygons}
-            onClearAllPolygons={handleClearAllWithModes}
+            onClearAllPolygons={regionSelection.handleClearAllWithModes}
             isLoadingPreference={isLoadingPreference}
-            wsReloadKey={wsReloadKey}
             currentWorkspace={currentWorkspace}
             preferredWorkspaceId={preferredWorkspaceId ?? undefined}
             normalizedWorkspaceId={normalizedWorkspaceId}
@@ -1967,7 +536,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
             availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
-            onRegionSelect={editMode ? undefined : handleRegionSelect}
+            onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
           />
         }
         showSidebar={true}
@@ -1985,7 +554,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onPolygonModified={actions.handlePolygonModified}
         onDrawingChange={actions.setIsDrawing}
         onPointCountChange={setCurrentPointCount}
-        onClearAll={handleClearAllWithModes}
+        onClearAll={regionSelection.handleClearAllWithModes}
         allowMultiple={state.allowMultiplePolygons}
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}
@@ -2002,12 +571,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         selectedTransformer={mapInteractions.selectedTransformer}
         transformerSizes={transformerSizes}
         onClose={mapInteractions.handleCloseTransformerDialog}
-        onChangeKva={handleTransformerKvaChange}
+        onChangeKva={transformerActions.handleTransformerKvaChange}
         onOpenChange={mapInteractions.setTransformerDialogOpen}
-        onDeleteTransformer={handleDeleteTransformer}
+        onDeleteTransformer={transformerActions.handleDeleteTransformer}
         onMoveTransformer={(gridResultId) => {
-          setTransformerToMove(gridResultId);
-          setIsMoveTransformerMode(true);
+          moveTransformer.startMoveTransformer(gridResultId);
           mapInteractions.setTransformerDialogOpen(false);
         }}
         isUserPlaced={mapInteractions.selectedTransformer?.osmId?.startsWith("user/") || false}
@@ -2015,18 +583,18 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
       {/* Add Transformer Dialog */}
       <AddTransformerDialog
-        open={addTransformerDialogOpen}
-        coords={newTransformerCoords}
+        open={addTransformer.addTransformerDialogOpen}
+        coords={addTransformer.newTransformerCoords}
         transformerSizes={transformerSizes}
-        onAdd={handleAddTransformer}
+        onAdd={addTransformer.handleAddTransformer}
         onClose={() => {
-          setAddTransformerDialogOpen(false);
-          setNewTransformerCoords(null);
+          addTransformer.setAddTransformerDialogOpen(false);
+          addTransformer.setNewTransformerCoords(null);
         }}
         onOpenChange={(open) => {
           if (!open) {
-            setAddTransformerDialogOpen(false);
-            setNewTransformerCoords(null);
+            addTransformer.setAddTransformerDialogOpen(false);
+            addTransformer.setNewTransformerCoords(null);
           }
         }}
       />
@@ -2035,8 +603,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         open={mapInteractions.buildingDialogOpen}
         selectedBuilding={mapInteractions.selectedBuilding}
         onClose={mapInteractions.handleCloseBuildingDialog}
-        onFClassDemandChange={handleFClassDemandChange}
-        onSelectedFClassChange={handleSelectedFClassChange}
+        onFClassDemandChange={buildingDemand.handleFClassDemandChange}
+        onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
         onOpenChange={mapInteractions.setBuildingDialogOpen}
         onEditTech={(techKey) => {
           if (mapInteractions.selectedBuildingFeature) {
@@ -2053,29 +621,24 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               techKey,
               mapInteractions.selectedBuildingFeature
             );
-            // Update local state to reflect removal in dialog immediately
             mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
               prev ? { ...prev, techs: updatedTechs } : null
             );
           }
         }}
-        onFloorsChange={handleFloorsChange}
-        onAreaChange={handleAreaChange}
-        onHouseholdSizeChange={handleHouseholdSizeChange}
-        onRecalculateDemand={handleRecalculateDemand}
-        onAddTech={isMultiEdit ? handleApplyTechToSelected : handleAddTechFromDialog}
-        isMultiEdit={isMultiEdit}
-        onToggleMultiEdit={(v) => {
-          setIsMultiEdit(v);
-          if (!v) {
-            // Clear multi-edit selection
-            multiEditFeaturesRef.current.forEach((f) => f.setStyle(undefined));
-            multiEditFeaturesRef.current.clear();
-            setMultiEditSelectedIds(new Set());
-          }
-        }}
-        multiEditCount={multiEditSelectedIds.size}
-        onApplyTechToAll={handleApplyTechToSelected}
+        onFloorsChange={buildingDemand.handleFloorsChange}
+        onAreaChange={buildingDemand.handleAreaChange}
+        onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
+        onRecalculateDemand={buildingDemand.handleRecalculateDemand}
+        onAddTech={
+          multiEdit.isMultiEdit
+            ? techDialogFlow.handleApplyTechToSelected
+            : techDialogFlow.handleAddTechFromDialog
+        }
+        isMultiEdit={multiEdit.isMultiEdit}
+        onToggleMultiEdit={multiEdit.toggleMultiEdit}
+        multiEditCount={multiEdit.multiEditSelectedIds.size}
+        onApplyTechToAll={techDialogFlow.handleApplyTechToSelected}
         isExcluded={(() => {
           const osmId = mapInteractions.selectedBuilding?.osmId;
           if (!osmId) return false;
@@ -2086,12 +649,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onSave={() => setIsModified(true)}
         onApplyTemplate={(templateTechs) => {
           if (mapInteractions.selectedBuildingFeature) {
-            // Set all template techs on the building feature
             const feature = mapInteractions.selectedBuildingFeature;
             for (const [techKey, techData] of Object.entries(templateTechs)) {
               feature.set(`tech_${techKey}`, JSON.stringify(techData));
             }
-            // Update the dialog view
             mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
               prev ? { ...prev, techs: { ...prev.techs, ...templateTechs } } : null
             );
@@ -2106,7 +667,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onSuccess={(newWorkspace) => {
           setIsCreateWsOpen(false);
           handleWorkspaceChange(newWorkspace);
-          setWsReloadKey((k) => k + 1);
         }}
       />
 
@@ -2121,10 +681,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           techOperations.setSelectedTechForDialog(null);
           techOperations.setSelectedBuildingForTech(null);
           techOperations.setIsAddingTechToAll(false);
-          // Reopen building dialog if tech was added from it
-          if (techAddedFromBuildingDialogRef.current) {
-            techAddedFromBuildingDialogRef.current = false;
-            // Refresh selectedBuilding techs from the OL feature
+          if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
+            techDialogFlow.techAddedFromBuildingDialogRef.current = false;
             const feat = mapInteractions.selectedBuildingFeature;
             if (feat) {
               const updatedTechs = feat.get("techs") || {};
@@ -2139,33 +697,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         showApplyToAll={techOperations.isAddingTechToAll}
       />
 
-      {/* Transformer cursor overlay */}
-      {(isAddTransformerMode || isMoveTransformerMode) && transformerCursorPos && (
-        <div
-          className="md-fade-in fixed pointer-events-none z-[9999] flex flex-col items-center"
-          style={{
-            left: transformerCursorPos.x,
-            top: transformerCursorPos.y,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <div className="relative flex items-center justify-center">
-            <span className="absolute inline-flex w-9 h-9 rounded-full bg-primary/30 animate-ping" />
-            <span className="relative flex items-center justify-center w-8 h-8 rounded-full bg-card border-2 border-primary shadow-lg">
-              <img
-                src="/images/transformer-icon-dark.svg"
-                alt=""
-                className="w-4 h-4 dark:invert"
-              />
-            </span>
-          </div>
-          <span className="mt-1.5 px-2 py-0.5 rounded-full bg-card/95 border border-border/50 shadow text-[10px] font-medium text-foreground whitespace-nowrap">
-            {isMoveTransformerMode
-              ? t("simulation.transformer.clickToMove", "Click to move")
-              : t("simulation.transformer.clickToPlaceCursor", "Click to place")}
-          </span>
-        </div>
-      )}
+      <TransformerCursorOverlay
+        isAddTransformerMode={addTransformer.isAddTransformerMode}
+        isMoveTransformerMode={moveTransformer.isMoveTransformerMode}
+        cursorPos={
+          addTransformer.isAddTransformerMode
+            ? addTransformer.transformerCursorPos
+            : moveTransformer.transformerCursorPos
+        }
+      />
 
       <UnsavedChangesDialog
         open={unsavedDialog.showUnsavedDialog}
