@@ -8,6 +8,7 @@ import { fromLonLat } from "ol/proj";
 import { AlertTriangle } from "lucide-react";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { MAP_ZOOM } from '@/features/interactive-map/utils/mapUtils';
+import { withCartoBasemapKey } from '@/utils/carto-basemap';
 import { useMapLocationStore } from './map-location';
 
 // Type definitions
@@ -83,7 +84,9 @@ const baseLayers: BaseLayerInfo[] = [
 		name: "CartoDB Positron",
 		description: "Light theme base map by CartoDB",
 		source: new XYZ({
-			url: "https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+			url: withCartoBasemapKey(
+				"https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+			),
 			attributions: [
 				OSM_ATTR,
 				CARTO_ATTR,
@@ -96,7 +99,9 @@ const baseLayers: BaseLayerInfo[] = [
 		name: "CartoDB Dark Matter",
 		description: "Dark theme base map by CartoDB",
 		source: new XYZ({
-			url: "https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+			url: withCartoBasemapKey(
+				"https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+			),
 			attributions: [
 				OSM_ATTR,
 				CARTO_ATTR,
@@ -109,7 +114,9 @@ const baseLayers: BaseLayerInfo[] = [
 		name: "CartoDB Voyager",
 		description: "Detailed base map by CartoDB",
 		source: new XYZ({
-			url: "https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+			url: withCartoBasemapKey(
+				"https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+			),
 			attributions: [
 				'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 				'© <a href="https://carto.com/attributions">CARTO</a>',
