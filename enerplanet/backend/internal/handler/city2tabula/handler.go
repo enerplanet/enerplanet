@@ -12,6 +12,7 @@ package city2tabula
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -115,6 +116,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 //	@Param			osm_ids	query		string	false	"Comma-separated osm_ids, required to receive data on completion"
 //	@Success		200		{object}	contracts.EnrichResponse
 //	@Failure		400		{object}	contracts.ErrorResponse
+//	@Failure		404		{object}	contracts.ErrorResponse	"No run with this id (stale or mistyped)"
 //	@Failure		502		{object}	contracts.ErrorResponse
 //	@Security		SessionAuth
 //	@Router			/v1/city2tabula/enrich/{run_id} [get]
@@ -129,6 +131,10 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	log := logger.ForComponent("handler:city2tabula_enrich")
 
 	run, err := h.client.GetRunStatus(ctx, runID)
+	if errors.Is(err, c2t.ErrRunNotFound) {
+		httputil.NotFound(c, "unknown run id: "+runID)
+		return
+	}
 	if err != nil {
 		log.Warnf("city2tabula run status failed for %s: %v", runID, err)
 		httputil.BadGateway(c, "city2tabula unavailable")

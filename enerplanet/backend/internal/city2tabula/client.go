@@ -7,6 +7,7 @@ package city2tabula
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -15,6 +16,11 @@ import (
 
 	httpclient "platform.local/common/pkg/httpclient"
 )
+
+// ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
+// the given id (a stale or mistyped id), so callers can answer 404 rather than
+// treat it as an upstream failure.
+var ErrRunNotFound = errors.New("city2tabula: run not found")
 
 // Bbox is a WGS84 (EPSG:4326) lon/lat bounding box — the CRS a user-drawn
 // area of interest naturally comes in as (see geo.BBoxFromGeoJSON).
@@ -74,9 +80,14 @@ type Surface struct {
 	Azimuth *float64 `json:"azimuth,omitempty"`
 	// Tilt: 0=vertical wall, 90=flat roof — inverted from BuEM's own
 	// convention (0=horizontal roof, 90=vertical wall); invert before mapping.
-	Tilt     *float64 `json:"tilt,omitempty"`
-	IsValid  *bool    `json:"is_valid,omitempty"`
-	IsPlanar *bool    `json:"is_planar,omitempty"`
+	Tilt *float64 `json:"tilt,omitempty"`
+	// IsValid and IsPlanar are City2TABULA extraction diagnostics, not
+	// usability flags. IsValid is a 2D-projection ST_IsValid check that is
+	// structurally false for near-vertical walls; IsPlanar is false for most
+	// LOD2 roof faces. Area and angle are computed regardless, so mapping does
+	// not gate on either.
+	IsValid  *bool `json:"is_valid,omitempty"`
+	IsPlanar *bool `json:"is_planar,omitempty"`
 }
 
 // normalizeCountry adapts the backend's country vocabulary (geo.NormalizeCountry,
@@ -147,6 +158,9 @@ func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
 		return nil, fmt.Errorf("city2tabula run-status request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrRunNotFound
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("city2tabula run-status: unexpected status %d", resp.StatusCode)
 	}
