@@ -19,6 +19,7 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
+	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
 	locationhandler "spatialhub_backend/internal/handler/location"
@@ -165,6 +166,7 @@ type AppDependencies struct {
 	WebserviceClient    *webservice.Client
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
+	City2TabulaClient   *city2tabula.Client
 	Cfg                 *config.Config
 }
 
@@ -277,6 +279,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 		WebserviceClient:    webserviceClient,
 		KeycloakCache:       keycloakCache,
 		SyncCache:           syncCache,
+		City2TabulaClient:   city2tabulaClient,
 		Cfg:                 cfg,
 	}
 }
@@ -338,6 +341,7 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 		WebserviceClient:    deps.WebserviceClient,
 		KeycloakCache:       deps.KeycloakCache,
 		SyncCache:           deps.SyncCache,
+		City2TabulaClient:   deps.City2TabulaClient,
 	}
 	configureProtectedAPI(r, routeDeps)
 
@@ -580,6 +584,7 @@ type RouteDeps struct {
 	WebserviceClient    *webservice.Client
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
+	City2TabulaClient   *city2tabula.Client
 }
 
 // configureProtectedAPI registers protected API routes that require a valid session.
@@ -633,6 +638,9 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
+
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient)
+	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
 	registerLocationRoutes(protectedAPI, locationHandler)
@@ -822,6 +830,14 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 	weatherRoutes := api.Group("/weather")
 	weatherRoutes.GET("", handler.GetWeather)
 	weatherRoutes.GET("/current", handler.GetCurrentWeather)
+}
+
+// registerCity2TabulaRoutes wires the on-request 3D-data enrich endpoint. It
+// resolves City2TABULA envelope data for a drawn area's buildings and is
+// consumed by the Building Configurator; not a proxy for City2TABULA's own API.
+func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler.Handler) {
+	api.POST("/v1/city2tabula/enrich", handler.Enrich)
+	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {

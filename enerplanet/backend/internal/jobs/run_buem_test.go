@@ -19,43 +19,9 @@ import (
 func floatPtr(f float64) *float64 { return &f }
 func boolPtr(b bool) *bool        { return &b }
 
-func TestEnvelopeElements_MapsAndInvertsTilt(t *testing.T) {
-	building := city2tabula.Building{
-		Surfaces: []city2tabula.Surface{
-			{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(30), Azimuth: floatPtr(180), Tilt: floatPtr(0)},
-			{ID: "r1", Type: "RoofSurface", AreaSqm: floatPtr(50), Azimuth: floatPtr(-1), Tilt: floatPtr(90)},
-		},
-	}
-
-	elements := envelopeElements(building)
-	require.Len(t, elements, 2)
-
-	wall := elements[0]
-	assert.Equal(t, "wall", wall["type"])
-	assert.Equal(t, 90.0, wall["tilt"].(map[string]interface{})["value"]) // City2TABULA 0=wall -> BuEM 90=wall
-	assert.Equal(t, 180.0, wall["azimuth"].(map[string]interface{})["value"])
-
-	roof := elements[1]
-	assert.Equal(t, "roof", roof["type"])
-	assert.Equal(t, 0.0, roof["tilt"].(map[string]interface{})["value"]) // City2TABULA 90=roof -> BuEM 0=roof
-	assert.Equal(t, 0.0, roof["azimuth"].(map[string]interface{})["value"], "undefined azimuth (-1) must clamp to 0, not violate the [0,360] schema range")
-}
-
-func TestEnvelopeElements_SkipsUnmappedInvalidAndIncomplete(t *testing.T) {
-	building := city2tabula.Building{
-		Surfaces: []city2tabula.Surface{
-			{ID: "closure", Type: "ClosureSurface", AreaSqm: floatPtr(10), Azimuth: floatPtr(0), Tilt: floatPtr(0)},
-			{ID: "invalid", Type: "WallSurface", AreaSqm: floatPtr(10), Azimuth: floatPtr(0), Tilt: floatPtr(0), IsValid: boolPtr(false)},
-			{ID: "nonplanar", Type: "WallSurface", AreaSqm: floatPtr(10), Azimuth: floatPtr(0), Tilt: floatPtr(0), IsPlanar: boolPtr(false)},
-			{ID: "noarea", Type: "WallSurface", Azimuth: floatPtr(0), Tilt: floatPtr(0)},
-			{ID: "ok", Type: "WallSurface", AreaSqm: floatPtr(10), Azimuth: floatPtr(0), Tilt: floatPtr(0), IsValid: boolPtr(true), IsPlanar: boolPtr(true)},
-		},
-	}
-
-	elements := envelopeElements(building)
-	require.Len(t, elements, 1)
-	assert.Equal(t, "ok", elements[0]["id"])
-}
+// The surface-to-envelope mapping moved to internal/city2tabula
+// (city2tabula.EnvelopeElements); its tests live in
+// internal/city2tabula/envelope_test.go.
 
 func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 	building := func(osmID string) map[string]interface{} {
