@@ -12,13 +12,16 @@ and no single place knows whether a building is ready to simulate.
 
 The native configurator has to support:
 
-- SC-02: the geometry stage loads asynchronously while the user edits other
-  stages; the async fill must not clobber those edits.
-- SC-10: a half-finished configuration survives a page reload; the user resumes
-  across forty buildings.
-- SC-11: a technology-preset library, independent of any model.
-- the stage machine from `design.md` section 2.3 (Loading / Empty / Populated /
-  Editing / Valid / Invalid per stage) and the readiness gate.
+- [SC-02](../scenarios/sc-02-3d-data-not-ready.md): the geometry stage loads
+  asynchronously while the user edits other stages; the async fill must not
+  clobber those edits.
+- [SC-10](../scenarios/sc-10-resume-configuration.md): a half-finished
+  configuration survives a page reload; the user resumes across forty buildings.
+- [SC-11](../scenarios/sc-11-reuse-configuration.md): a technology-preset
+  library, independent of any model.
+- the stage machine from [`design.md` section 2.3](../design.md#23-per-stage-states)
+  (Loading / Empty / Populated / Editing / Valid / Invalid per stage) and the
+  readiness gate.
 
 The frontend already provides both tools: `@tanstack/react-query` (wired in
 `src/lib/react-query.ts`, per-feature `hooks/useXxxQuery.ts`) and Zustand
@@ -46,8 +49,9 @@ store.
 - `mode: 'simple' | 'pro'`
 
 Only `activeStage` and `mode` are persisted to `localStorage`. The draft is
-not persisted client-side: it is saved to the server (SC-10), and localStorage
-is for per-viewer conveniences only.
+not persisted client-side: it is saved to the server
+([SC-10](../scenarios/sc-10-resume-configuration.md)), and localStorage is for
+per-viewer conveniences only.
 
 **Preset state — a separate Zustand store, `useTechPresetStore`**, model
 independent, persisted to `localStorage` and synced to the backend the way
@@ -81,8 +85,9 @@ server already has.
 
 - **Everything in Zustand with `persist`, including the draft.** Rejected:
   localStorage would hold forty building drafts, it does not sync across the
-  user's devices, and it silently diverges from the server copy. SC-10 wants
-  server persistence anyway.
+  user's devices, and it silently diverges from the server copy.
+  [SC-10](../scenarios/sc-10-resume-configuration.md) wants server persistence
+  anyway.
 - **XState for the stage machine.** Rejected: stage status is almost entirely
   derived state (has data, has edits, passes validator); only the async load is
   a real event. A derived selector is smaller and the team uses no XState

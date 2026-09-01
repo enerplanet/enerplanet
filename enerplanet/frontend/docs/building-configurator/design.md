@@ -392,7 +392,7 @@ interface BuildingConfigState {
 server-persisted). `stageStatus` is recomputed from `draft` and each stage
 module's `validate` / `isComplete` on every `updateStage`, never set directly.
 
-### Stage status (see section 2.3)
+### Stage status (see [section 2.3](#23-per-stage-states))
 
 | Status | Derivation |
 |---|---|
@@ -419,7 +419,7 @@ succeeds.
 Model independent. `{ pv: PvPreset[], battery: BatteryPreset[] }`, persisted to
 `localStorage` and synced to the backend like
 `region-selector/store/default-region.ts`. A preset holds only Preset-category
-parameters (section 1.7).
+parameters ([section 1.7](#17-parameter-reuse)).
 
 ## 6. Implementation
 
