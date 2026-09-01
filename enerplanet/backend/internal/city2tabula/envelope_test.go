@@ -14,70 +14,61 @@ func TestEnvelopeElements(t *testing.T) {
 	tests := []struct {
 		name    string
 		surface Surface
-		want    map[string]interface{} // nil = surface expected to be dropped
+		want    *EnvelopeElement // nil = surface expected to be dropped
 	}{
 		{
 			name:    "wall surface maps and inverts tilt",
 			surface: Surface{ID: "w1", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(180), Tilt: ptrF(0)},
-			want: map[string]interface{}{
-				"id":      "w1",
-				"type":    "wall",
-				"area":    map[string]interface{}{"value": 30.0, "unit": "m2"},
-				"azimuth": map[string]interface{}{"value": 180.0, "unit": "deg"},
-				"tilt":    map[string]interface{}{"value": 90.0, "unit": "deg"},
+			want: &EnvelopeElement{
+				ID: "w1", Type: "wall",
+				Area:    Quantity{Value: 30, Unit: "m2"},
+				Azimuth: Quantity{Value: 180, Unit: "deg"},
+				Tilt:    Quantity{Value: 90, Unit: "deg"}, // c2t 0=wall -> BuEM 90=wall
 			},
 		},
 		{
-			name:    "roof surface, flat roof tilt 90 becomes 0",
+			name:    "roof surface, flat roof tilt 90 becomes 0, undefined azimuth clamps to 0",
 			surface: Surface{ID: "r1", Type: "RoofSurface", AreaSqm: ptrF(62), Azimuth: ptrF(-1), Tilt: ptrF(90)},
-			want: map[string]interface{}{
-				"id":      "r1",
-				"type":    "roof",
-				"area":    map[string]interface{}{"value": 62.0, "unit": "m2"},
-				"azimuth": map[string]interface{}{"value": 0.0, "unit": "deg"},
-				"tilt":    map[string]interface{}{"value": 0.0, "unit": "deg"},
+			want: &EnvelopeElement{
+				ID: "r1", Type: "roof",
+				Area:    Quantity{Value: 62, Unit: "m2"},
+				Azimuth: Quantity{Value: 0, Unit: "deg"},
+				Tilt:    Quantity{Value: 0, Unit: "deg"},
 			},
 		},
 		{
 			name:    "ground surface maps to floor",
 			surface: Surface{ID: "g1", Type: "GroundSurface", AreaSqm: ptrF(80), Azimuth: ptrF(-1), Tilt: ptrF(90)},
-			want: map[string]interface{}{
-				"id":      "g1",
-				"type":    "floor",
-				"area":    map[string]interface{}{"value": 80.0, "unit": "m2"},
-				"azimuth": map[string]interface{}{"value": 0.0, "unit": "deg"},
-				"tilt":    map[string]interface{}{"value": 0.0, "unit": "deg"},
+			want: &EnvelopeElement{
+				ID: "g1", Type: "floor",
+				Area:    Quantity{Value: 80, Unit: "m2"},
+				Azimuth: Quantity{Value: 0, Unit: "deg"},
+				Tilt:    Quantity{Value: 0, Unit: "deg"},
 			},
 		},
 		{
 			name:    "unmapped classname is dropped",
 			surface: Surface{ID: "c1", Type: "ClosureSurface", AreaSqm: ptrF(5), Azimuth: ptrF(0), Tilt: ptrF(0)},
-			want:    nil,
 		},
 		{
 			name:    "invalid surface is dropped",
 			surface: Surface{ID: "w2", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(0), Tilt: ptrF(0), IsValid: ptrB(false)},
-			want:    nil,
 		},
 		{
 			name:    "non-planar surface is dropped",
 			surface: Surface{ID: "w3", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(0), Tilt: ptrF(0), IsPlanar: ptrB(false)},
-			want:    nil,
 		},
 		{
 			name:    "missing area is dropped",
 			surface: Surface{ID: "w4", Type: "WallSurface", Azimuth: ptrF(0), Tilt: ptrF(0)},
-			want:    nil,
 		},
 		{
 			name:    "missing azimuth is dropped",
 			surface: Surface{ID: "w5", Type: "WallSurface", AreaSqm: ptrF(30), Tilt: ptrF(0)},
-			want:    nil,
 		},
 		{
 			name:    "missing tilt is dropped",
 			surface: Surface{ID: "w6", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(0)},
-			want:    nil,
 		},
 	}
 
@@ -89,7 +80,7 @@ func TestEnvelopeElements(t *testing.T) {
 				return
 			}
 			require.Len(t, got, 1)
-			assert.Equal(t, tt.want, got[0])
+			assert.Equal(t, *tt.want, got[0])
 		})
 	}
 }
@@ -102,6 +93,6 @@ func TestEnvelopeElements_MultipleSurfaces(t *testing.T) {
 	}}
 	got := EnvelopeElements(b)
 	require.Len(t, got, 2)
-	assert.Equal(t, "w1", got[0]["id"])
-	assert.Equal(t, "r1", got[1]["id"])
+	assert.Equal(t, "w1", got[0].ID)
+	assert.Equal(t, "r1", got[1].ID)
 }

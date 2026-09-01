@@ -31,6 +31,108 @@ definitions:
         example: 2145268
         type: integer
     type: object
+  spatialhub_backend_internal_api_contracts.BuemBuilding:
+    properties:
+      envelope:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemEnvelope'
+      footprint_area:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity'
+      h_room:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity'
+      n_storeys:
+        example: 3
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemEnvelope:
+    properties:
+      elements:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.EnvelopeElement'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemNode:
+    properties:
+      building:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding'
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichBbox:
+    properties:
+      xmax:
+        example: 6.13
+        type: number
+      xmin:
+        example: 6.09
+        type: number
+      ymax:
+        example: 51.93
+        type: number
+      ymin:
+        example: 51.9
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichQuantity:
+    properties:
+      unit:
+        example: m
+        type: string
+      value:
+        example: 2.5
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichRequest:
+    properties:
+      bbox:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox'
+      country:
+        example: germany
+        type: string
+      osm_ids:
+        example:
+        - "240054621"
+        - "240054622"
+        items:
+          type: string
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichResponse:
+    properties:
+      data:
+        additionalProperties:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichedBuilding'
+        type: object
+      missing:
+        example:
+        - "240054999"
+        items:
+          type: string
+        type: array
+      resolved:
+        example: 40
+        type: integer
+      run_id:
+        example: a1b2c3d4
+        type: string
+      status:
+        example: completed
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichedBuilding:
+    properties:
+      buem:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      match_type:
+        example: 1
+        type: integer
+      object_id:
+        example: DEBW_1
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
   spatialhub_backend_internal_api_contracts.ErrorResponse:
     properties:
       error:
@@ -118,6 +220,30 @@ definitions:
         example: 1
         type: integer
     type: object
+  spatialhub_backend_internal_city2tabula.EnvelopeElement:
+    properties:
+      area:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      azimuth:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      id:
+        example: w1
+        type: string
+      tilt:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      type:
+        example: wall
+        type: string
+    type: object
+  spatialhub_backend_internal_city2tabula.Quantity:
+    properties:
+      unit:
+        example: m2
+        type: string
+      value:
+        example: 30
+        type: number
+    type: object
 info:
   contact: {}
   description: |-
@@ -172,6 +298,86 @@ paths:
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
+  /v1/city2tabula/enrich:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id
+        merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
+        linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
+        (the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
+      parameters:
+      - description: Drawn area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Resolve City2TABULA 3D data for a drawn area
+      tags:
+      - City2TABULA
+  /v1/city2tabula/enrich/{run_id}:
+    get:
+      description: |-
+        Proxies the City2TABULA run status. When the run has completed and country and
+        osm_ids are given as query parameters, also returns the merge map for those buildings,
+        so the client polls one endpoint and gets data when ready.
+      parameters:
+      - description: Run id from the 202 enrich response
+        in: path
+        name: run_id
+        required: true
+        type: string
+      - description: Country, required to receive data on completion
+        in: query
+        name: country
+        type: string
+      - description: Comma-separated osm_ids, required to receive data on completion
+        in: query
+        name: osm_ids
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Poll a City2TABULA enrich run
+      tags:
+      - City2TABULA
   /v2/pylovo/boundary:
     get:
       description: |-

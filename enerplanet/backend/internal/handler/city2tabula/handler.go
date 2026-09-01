@@ -20,6 +20,7 @@ import (
 	"platform.local/common/pkg/httputil"
 	"platform.local/platform/logger"
 
+	"spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
 )
 
@@ -33,50 +34,25 @@ func NewHandler(client *c2t.Client) *Handler {
 	return &Handler{client: client}
 }
 
-// enrichRequest is the POST /api/v1/city2tabula/enrich body. bbox is the drawn
-// area, used only to trigger a pipeline run when some buildings are unresolved.
-type enrichRequest struct {
-	Country string    `json:"country"`
-	Bbox    bboxInput `json:"bbox"`
-	OSMIDs  []string  `json:"osm_ids"`
-}
-
-type bboxInput struct {
-	Xmin float64 `json:"xmin"`
-	Ymin float64 `json:"ymin"`
-	Xmax float64 `json:"xmax"`
-	Ymax float64 `json:"ymax"`
-}
-
-// enrichedBuilding is one entry in the merge map. buem is a building node
-// (envelope elements plus the scalar attributes City2TABULA provides) that the
-// configurator merges onto its feature's properties.buem by osm_id.
-type enrichedBuilding struct {
-	ObjectID          string                 `json:"object_id"`
-	MatchType         int16                  `json:"match_type"`
-	TabulaVariantCode *string                `json:"tabula_variant_code,omitempty"`
-	Buem              map[string]interface{} `json:"buem"`
-}
-
-// enrichResponse is returned by both endpoints. status is:
-//   - completed: every requested osm_id resolved
-//   - running:   a pipeline run is in progress; poll the run endpoint
-//   - partial:   some resolved, a run was needed but could not be triggered;
-//     the client proceeds with what it has
+// Enrich godoc
 //
-// plus, on the run endpoint, City2TABULA's own pending / no_data / failed.
-type enrichResponse struct {
-	Status   string                      `json:"status"`
-	RunID    string                      `json:"run_id,omitempty"`
-	Resolved int                         `json:"resolved"`
-	Total    int                         `json:"total"`
-	Missing  []string                    `json:"missing,omitempty"`
-	Data     map[string]enrichedBuilding `json:"data"`
-}
-
-// Enrich handles POST /api/v1/city2tabula/enrich.
+//	@Summary		Resolve City2TABULA 3D data for a drawn area
+//	@Description	Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id
+//	@Description	merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
+//	@Description	linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
+//	@Description	(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
+//	@Tags			City2TABULA
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		contracts.EnrichRequest	true	"Drawn area"
+//	@Success		200		{object}	contracts.EnrichResponse
+//	@Success		202		{object}	contracts.EnrichResponse
+//	@Failure		400		{object}	contracts.ErrorResponse
+//	@Failure		502		{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/v1/city2tabula/enrich [post]
 func (h *Handler) Enrich(c *gin.Context) {
-	var req enrichRequest
+	var req contracts.EnrichRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httputil.BadRequest(c, "invalid request payload")
 		return
@@ -97,7 +73,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 	}
 
 	missing := missingOSMIDs(req.OSMIDs, byOSMID)
-	resp := enrichResponse{
+	resp := contracts.EnrichResponse{
 		Resolved: len(byOSMID),
 		Total:    len(req.OSMIDs),
 		Missing:  missing,
@@ -126,10 +102,22 @@ func (h *Handler) Enrich(c *gin.Context) {
 	c.JSON(http.StatusAccepted, resp)
 }
 
-// EnrichStatus handles GET /api/v1/city2tabula/enrich/:run_id. It proxies the
-// City2TABULA run status. When the run has completed and the request repeats
-// country and osm_ids as query parameters, it also returns the merge map for
-// those buildings, so the client polls one endpoint and gets data when ready.
+// EnrichStatus godoc
+//
+//	@Summary		Poll a City2TABULA enrich run
+//	@Description	Proxies the City2TABULA run status. When the run has completed and country and
+//	@Description	osm_ids are given as query parameters, also returns the merge map for those buildings,
+//	@Description	so the client polls one endpoint and gets data when ready.
+//	@Tags			City2TABULA
+//	@Produce		json
+//	@Param			run_id	path		string	true	"Run id from the 202 enrich response"
+//	@Param			country	query		string	false	"Country, required to receive data on completion"
+//	@Param			osm_ids	query		string	false	"Comma-separated osm_ids, required to receive data on completion"
+//	@Success		200		{object}	contracts.EnrichResponse
+//	@Failure		400		{object}	contracts.ErrorResponse
+//	@Failure		502		{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/v1/city2tabula/enrich/{run_id} [get]
 func (h *Handler) EnrichStatus(c *gin.Context) {
 	runID := c.Param("run_id")
 	if runID == "" {
@@ -147,10 +135,10 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 		return
 	}
 
-	resp := enrichResponse{
+	resp := contracts.EnrichResponse{
 		Status: run.Status,
 		RunID:  run.RunID,
-		Data:   map[string]enrichedBuilding{},
+		Data:   map[string]contracts.EnrichedBuilding{},
 	}
 
 	country := c.Query("country")
@@ -213,33 +201,28 @@ func splitCSV(s string) []string {
 // run_buem job it keeps a building even when no surface qualifies for the
 // envelope: the configurator still shows its scalar attributes and TABULA
 // variant and falls back to an archetype for the geometry (scenario SC-03).
-func mapBuildings(byOSMID map[string]c2t.Building) map[string]enrichedBuilding {
-	out := make(map[string]enrichedBuilding, len(byOSMID))
+func mapBuildings(byOSMID map[string]c2t.Building) map[string]contracts.EnrichedBuilding {
+	out := make(map[string]contracts.EnrichedBuilding, len(byOSMID))
 	for osmID, b := range byOSMID {
-		building := map[string]interface{}{
-			"envelope": map[string]interface{}{
-				"elements": c2t.EnvelopeElements(b),
-			},
+		bb := contracts.BuemBuilding{
+			Envelope: contracts.BuemEnvelope{Elements: c2t.EnvelopeElements(b)},
 		}
 		if b.NumberOfStoreys != nil {
-			building["n_storeys"] = *b.NumberOfStoreys
+			n := *b.NumberOfStoreys
+			bb.NStoreys = &n
 		}
 		if b.RoomHeight != nil {
-			building["h_room"] = quantity(*b.RoomHeight, "m")
+			bb.HRoom = &contracts.EnrichQuantity{Value: *b.RoomHeight, Unit: "m"}
 		}
 		if b.FootprintAreaSqm != nil {
-			building["footprint_area"] = quantity(*b.FootprintAreaSqm, "m2")
+			bb.FootprintArea = &contracts.EnrichQuantity{Value: *b.FootprintAreaSqm, Unit: "m2"}
 		}
-		out[osmID] = enrichedBuilding{
+		out[osmID] = contracts.EnrichedBuilding{
 			ObjectID:          b.ObjectID,
 			MatchType:         b.MatchType,
 			TabulaVariantCode: b.TabulaVariantCode,
-			Buem:              map[string]interface{}{"building": building},
+			Buem:              contracts.BuemNode{Building: bb},
 		}
 	}
 	return out
-}
-
-func quantity(v float64, unit string) map[string]interface{} {
-	return map[string]interface{}{"value": v, "unit": unit}
 }
