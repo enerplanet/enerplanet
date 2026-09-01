@@ -28,15 +28,16 @@ var envelopeTypeByClassname = map[string]string{
 	"GroundSurface": "floor",
 }
 
-// EnvelopeElements maps a building's City2TABULA per-surface geometry onto BuEM's
-// envelope_element schema. Surfaces with an unmapped type, or that City2TABULA
-// flagged invalid or non-planar, or missing area/azimuth/tilt, are left out:
-// BuEM's schema requires area, azimuth and tilt on every element, so a surface
-// missing any of them cannot be modelled.
+// EnvelopeElements builds BuEM's envelope_element list from a building's
+// City2TABULA surface attributes (area, azimuth, tilt per surface). BuEM needs
+// only these attributes, never the surface polygons. Surfaces with an unmapped
+// type, or that City2TABULA flagged invalid or non-planar, or missing
+// area/azimuth/tilt, are left out: BuEM's schema requires area, azimuth and
+// tilt on every element.
 //
-// This is the thermal element list, not render geometry. The 3D surface
-// polygons are served separately and unfiltered by City2TABULA's
-// GET /api/v1/geometry, so a dropped surface still renders; it just has no
+// Filtering here does not affect 3D rendering. The surface polygons for
+// visualisation are a separate, unfiltered City2TABULA response
+// (GET /api/v1/geometry); a surface dropped here still renders, it just has no
 // element to edit. Each element's id is the City2TABULA surface id unchanged,
 // so a caller can match a rendered surface to its element.
 //
