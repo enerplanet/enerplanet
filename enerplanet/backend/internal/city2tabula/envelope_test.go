@@ -51,12 +51,28 @@ func TestEnvelopeElements(t *testing.T) {
 			surface: Surface{ID: "c1", Type: "ClosureSurface", AreaSqm: ptrF(5), Azimuth: ptrF(0), Tilt: ptrF(0)},
 		},
 		{
-			name:    "invalid surface is dropped",
+			// IsValid is structurally false for near-vertical walls (2D
+			// projection check); the surface is still usable.
+			name:    "is_valid false does not drop the surface",
 			surface: Surface{ID: "w2", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(0), Tilt: ptrF(0), IsValid: ptrB(false)},
+			want: &EnvelopeElement{
+				ID: "w2", Type: "wall",
+				Area:    Quantity{Value: 30, Unit: "m2"},
+				Azimuth: Quantity{Value: 0, Unit: "deg"},
+				Tilt:    Quantity{Value: 90, Unit: "deg"},
+			},
 		},
 		{
-			name:    "non-planar surface is dropped",
-			surface: Surface{ID: "w3", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(0), Tilt: ptrF(0), IsPlanar: ptrB(false)},
+			// IsPlanar is false for most LOD2 roof faces; area and angle are
+			// still computed.
+			name:    "is_planar false does not drop the surface",
+			surface: Surface{ID: "r2", Type: "RoofSurface", AreaSqm: ptrF(40), Azimuth: ptrF(120), Tilt: ptrF(60), IsPlanar: ptrB(false)},
+			want: &EnvelopeElement{
+				ID: "r2", Type: "roof",
+				Area:    Quantity{Value: 40, Unit: "m2"},
+				Azimuth: Quantity{Value: 120, Unit: "deg"},
+				Tilt:    Quantity{Value: 30, Unit: "deg"},
+			},
 		},
 		{
 			name:    "missing area is dropped",

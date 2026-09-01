@@ -21,6 +21,7 @@ func init() { gin.SetMode(gin.TestMode) }
 type fakeC2T struct {
 	buildingsJSON string // response body for GET /api/v1/buildings
 	runStatus     string // status returned by GET /api/v1/runs/{id}
+	runNotFound   bool   // GET /api/v1/runs/{id} returns 404
 	triggerFails  bool   // POST /api/v1/runs returns 500
 	triggeredRuns int
 }
@@ -41,6 +42,10 @@ func (f *fakeC2T) server(t *testing.T) *httptest.Server {
 			w.WriteHeader(http.StatusAccepted)
 			_, _ = w.Write([]byte(`{"run_id":"run-1","country":"germany","status":"pending"}`))
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/runs/"):
+			if f.runNotFound {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			_, _ = w.Write([]byte(`{"run_id":"run-1","country":"germany","status":"` + f.runStatus + `"}`))
 		default:
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
@@ -156,6 +161,21 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "running", resp.Status)
 	assert.Empty(t, resp.Data)
+}
+
+func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
+	fake := &fakeC2T{runNotFound: true}
+	srv := fake.server(t)
+	defer srv.Close()
+	h := NewHandler(c2t.NewClient(srv.URL))
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/city2tabula/enrich/stale-id", nil)
+	c.Params = gin.Params{{Key: "run_id", Value: "stale-id"}}
+	h.EnrichStatus(c)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestEnrichStatus_Completed_WithQueryParams_ReturnsData(t *testing.T) {

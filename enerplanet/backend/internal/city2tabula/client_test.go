@@ -61,7 +61,7 @@ func TestGetRunStatus_ReturnsRun(t *testing.T) {
 	assert.Equal(t, "completed", run.Status)
 }
 
-func TestGetRunStatus_UnexpectedStatusIsError(t *testing.T) {
+func TestGetRunStatus_NotFoundIsErrRunNotFound(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -70,7 +70,20 @@ func TestGetRunStatus_UnexpectedStatusIsError(t *testing.T) {
 	client := NewClient(server.URL)
 	_, err := client.GetRunStatus(context.Background(), "does-not-exist")
 
+	assert.ErrorIs(t, err, ErrRunNotFound)
+}
+
+func TestGetRunStatus_UnexpectedStatusIsError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	_, err := client.GetRunStatus(context.Background(), "boom")
+
 	assert.Error(t, err)
+	assert.NotErrorIs(t, err, ErrRunNotFound)
 }
 
 func TestGetBuildingsByBBox_ParsesBuildings(t *testing.T) {
