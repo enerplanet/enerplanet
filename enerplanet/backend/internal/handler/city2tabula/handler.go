@@ -67,6 +67,10 @@ func (h *Handler) Enrich(c *gin.Context) {
 	log := logger.ForComponent("handler:city2tabula_enrich")
 
 	byOSMID, err := h.fetchLinked(ctx, req.Country, req.OSMIDs)
+	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
+		httputil.BadRequest(c, badReq.Message)
+		return
+	}
 	if err != nil {
 		log.Warnf("city2tabula building fetch failed: %v", err)
 		httputil.BadGateway(c, "city2tabula unavailable")
@@ -151,6 +155,10 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	osmIDs := splitCSV(c.Query("osm_ids"))
 	if run.Status == "completed" && country != "" && len(osmIDs) > 0 {
 		byOSMID, ferr := h.fetchLinked(ctx, country, osmIDs)
+		if badReq := new(c2t.BadRequestError); errors.As(ferr, &badReq) {
+			httputil.BadRequest(c, badReq.Message)
+			return
+		}
 		if ferr != nil {
 			log.Warnf("city2tabula building re-fetch after run %s failed: %v", runID, ferr)
 			httputil.BadGateway(c, "city2tabula unavailable")
