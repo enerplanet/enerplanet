@@ -86,6 +86,21 @@ func TestGetRunStatus_UnexpectedStatusIsError(t *testing.T) {
 	assert.NotErrorIs(t, err, ErrRunNotFound)
 }
 
+func TestGetBuildingsByOSMIDs_BadRequestCarriesMessage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"unsupported country \"string\": no TABULA data available"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	_, err := client.GetBuildingsByOSMIDs(context.Background(), "string", []string{"1"})
+
+	var badReq *BadRequestError
+	require.ErrorAs(t, err, &badReq)
+	assert.Contains(t, badReq.Message, "unsupported country")
+}
+
 func TestGetBuildingsByBBox_ParsesBuildings(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/buildings", r.URL.Path)

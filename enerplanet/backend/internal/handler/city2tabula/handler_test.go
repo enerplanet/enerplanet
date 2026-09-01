@@ -19,11 +19,12 @@ func init() { gin.SetMode(gin.TestMode) }
 
 // fakeC2T stands in for the City2TABULA on-request server.
 type fakeC2T struct {
-	buildingsJSON string // response body for GET /api/v1/buildings
-	runStatus     string // status returned by GET /api/v1/runs/{id}
-	runNotFound   bool   // GET /api/v1/runs/{id} returns 404
-	triggerFails  bool   // POST /api/v1/runs returns 500
-	triggeredRuns int
+	buildingsJSON       string // response body for GET /api/v1/buildings
+	buildingsBadRequest bool   // GET /api/v1/buildings returns 400 (e.g. unsupported country)
+	runStatus           string // status returned by GET /api/v1/runs/{id}
+	runNotFound         bool   // GET /api/v1/runs/{id} returns 404
+	triggerFails        bool   // POST /api/v1/runs returns 500
+	triggeredRuns       int
 }
 
 func (f *fakeC2T) server(t *testing.T) *httptest.Server {
@@ -31,6 +32,11 @@ func (f *fakeC2T) server(t *testing.T) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/buildings":
+			if f.buildingsBadRequest {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error":"unsupported country \"string\": no TABULA data available"}`))
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(f.buildingsJSON))
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runs":
@@ -161,6 +167,18 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "running", resp.Status)
 	assert.Empty(t, resp.Data)
+}
+
+func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
+	fake := &fakeC2T{buildingsBadRequest: true}
+	srv := fake.server(t)
+	defer srv.Close()
+	h := NewHandler(c2t.NewClient(srv.URL))
+
+	w, _ := postEnrich(t, h, `{"country":"string","osm_ids":["1"],"bbox":{"xmin":0,"ymin":0,"xmax":0,"ymax":0}}`)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "unsupported country")
 }
 
 func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
