@@ -12,6 +12,16 @@ a user can review and adjust a building before BuEM runs its energy simulation.
 It opens after a building is clicked in the region-selector map flow and
 replaces `region-selector/components/BuildingDialog.tsx`.
 
+## Ground rule
+
+Nothing is implemented without a documented reason. Every feature, control and
+view in the configurator traces to at least one scenario in `scenarios/`, which
+in turn traces to a workshop user story in `user-stories.md` or is a marked new
+scenario added from the integration design. A change that cannot be tied to a
+scenario is not built; the scenario is written and reviewed first, or the
+change is dropped. This is what keeps the surface area tied to real need rather
+than to what looks good in a demo.
+
 This folder:
 
 ```
