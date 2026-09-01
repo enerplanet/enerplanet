@@ -100,6 +100,8 @@ const (
 // @description     Unified API for the EnerPlanET energy planning platform.
 // @description     Includes native backend endpoints and proxied Pylovo (grid/boundary) services.
 
+// @host      localhost:8000
+// @schemes   http
 // @BasePath  /api
 
 // @securityDefinitions.apikey SessionAuth

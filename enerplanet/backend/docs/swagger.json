@@ -1,4 +1,7 @@
 {
+    "schemes": [
+        "http"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "Unified API for the EnerPlanET energy planning platform.\nIncludes native backend endpoints and proxied Pylovo (grid/boundary) services.",
@@ -6,6 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
+    "host": "localhost:8000",
     "basePath": "/api",
     "paths": {
         "/models": {
