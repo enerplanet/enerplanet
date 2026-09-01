@@ -30,8 +30,15 @@ var envelopeTypeByClassname = map[string]string{
 
 // EnvelopeElements maps a building's City2TABULA per-surface geometry onto BuEM's
 // envelope_element schema. Surfaces with an unmapped type, or that City2TABULA
-// flagged invalid or non-planar, or missing area/azimuth/tilt, are left out
-// rather than sent with placeholder geometry.
+// flagged invalid or non-planar, or missing area/azimuth/tilt, are left out:
+// BuEM's schema requires area, azimuth and tilt on every element, so a surface
+// missing any of them cannot be modelled.
+//
+// This is the thermal element list, not render geometry. The 3D surface
+// polygons are served separately and unfiltered by City2TABULA's
+// GET /api/v1/geometry, so a dropped surface still renders; it just has no
+// element to edit. Each element's id is the City2TABULA surface id unchanged,
+// so a caller can match a rendered surface to its element.
 //
 // Shared by the run_buem job and the enrich HTTP handler so the two paths
 // produce identical envelope blocks. Returns nil when no surface qualifies.
