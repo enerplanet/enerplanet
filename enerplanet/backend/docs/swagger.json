@@ -76,6 +76,121 @@
                 }
             }
         },
+        "/v1/city2tabula/enrich": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id\nmerge map of BuEM envelope data. Returns 200 \"completed\" when every osm_id is already\nlinked, or 202 \"running\" with a run_id when a bbox-scoped pipeline run was triggered\n(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Resolve City2TABULA 3D data for a drawn area",
+                "parameters": [
+                    {
+                        "description": "Drawn area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/enrich/{run_id}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Proxies the City2TABULA run status. When the run has completed and country and\nosm_ids are given as query parameters, also returns the merge map for those buildings,\nso the client polls one endpoint and gets data when ready.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Poll a City2TABULA enrich run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run id from the 202 enrich response",
+                        "name": "run_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country, required to receive data on completion",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated osm_ids, required to receive data on completion",
+                        "name": "osm_ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
@@ -176,6 +291,155 @@
                 "osm_id": {
                     "type": "integer",
                     "example": 2145268
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemBuilding": {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemEnvelope"
+                },
+                "footprint_area": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity"
+                },
+                "h_room": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity"
+                },
+                "n_storeys": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemEnvelope": {
+            "type": "object",
+            "properties": {
+                "elements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.EnvelopeElement"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemNode": {
+            "type": "object",
+            "properties": {
+                "building": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichBbox": {
+            "type": "object",
+            "properties": {
+                "xmax": {
+                    "type": "number",
+                    "example": 6.13
+                },
+                "xmin": {
+                    "type": "number",
+                    "example": 6.09
+                },
+                "ymax": {
+                    "type": "number",
+                    "example": 51.93
+                },
+                "ymin": {
+                    "type": "number",
+                    "example": 51.9
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichQuantity": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "type": "string",
+                    "example": "m"
+                },
+                "value": {
+                    "type": "number",
+                    "example": 2.5
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichRequest": {
+            "type": "object",
+            "properties": {
+                "bbox": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "osm_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "240054621",
+                        "240054622"
+                    ]
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichedBuilding"
+                    }
+                },
+                "missing": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "240054999"
+                    ]
+                },
+                "resolved": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "run_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichedBuilding": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "match_type": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "object_id": {
+                    "type": "string",
+                    "example": "DEBW_1"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
                 }
             }
         },
@@ -297,6 +561,41 @@
                 "workspace_id": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.EnvelopeElement": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "azimuth": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "w1"
+                },
+                "tilt": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "wall"
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.Quantity": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "type": "string",
+                    "example": "m2"
+                },
+                "value": {
+                    "type": "number",
+                    "example": 30
                 }
             }
         }

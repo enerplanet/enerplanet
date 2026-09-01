@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
 )
 
@@ -58,14 +59,14 @@ const twoWallBuilding = `[{
   ]
 }]`
 
-func postEnrich(t *testing.T, h *Handler, body string) (*httptest.ResponseRecorder, enrichResponse) {
+func postEnrich(t *testing.T, h *Handler, body string) (*httptest.ResponseRecorder, contracts.EnrichResponse) {
 	t.Helper()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/city2tabula/enrich", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	h.Enrich(c)
-	var resp enrichResponse
+	var resp contracts.EnrichResponse
 	if w.Body.Len() > 0 {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	}
@@ -92,13 +93,13 @@ func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 	require.NotNil(t, b.TabulaVariantCode)
 	assert.Equal(t, "DE.N.SFH.05.Gen", *b.TabulaVariantCode)
 
-	building := b.Buem["building"].(map[string]interface{})
-	assert.EqualValues(t, 3, building["n_storeys"])
-	elements := building["envelope"].(map[string]interface{})["elements"].([]interface{})
+	require.NotNil(t, b.Buem.Building.NStoreys)
+	assert.EqualValues(t, 3, *b.Buem.Building.NStoreys)
+	elements := b.Buem.Building.Envelope.Elements
 	require.Len(t, elements, 2)
-	wall := elements[0].(map[string]interface{})
-	assert.Equal(t, "wall", wall["type"])
-	assert.EqualValues(t, 90, wall["tilt"].(map[string]interface{})["value"]) // c2t 0 -> BuEM 90
+	assert.Equal(t, "wall", elements[0].Type)
+	assert.EqualValues(t, 90, elements[0].Tilt.Value)   // c2t 0 -> BuEM 90
+	assert.EqualValues(t, 0, elements[1].Azimuth.Value) // c2t -1 -> clamped 0
 }
 
 func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {
@@ -151,7 +152,7 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	h.EnrichStatus(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp enrichResponse
+	var resp contracts.EnrichResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "running", resp.Status)
 	assert.Empty(t, resp.Data)
@@ -171,7 +172,7 @@ func TestEnrichStatus_Completed_WithQueryParams_ReturnsData(t *testing.T) {
 	h.EnrichStatus(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp enrichResponse
+	var resp contracts.EnrichResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "completed", resp.Status)
 	assert.Equal(t, 1, resp.Resolved)
