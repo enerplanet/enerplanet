@@ -34,3 +34,4 @@ considered. State is either `accepted` or `superseded by 000N`; there is no
 
 | ID | Title | State |
 |---|---|---|
+| [0001](0001-state-model.md) | State: server state in TanStack Query, UI and draft state in Zustand | accepted |

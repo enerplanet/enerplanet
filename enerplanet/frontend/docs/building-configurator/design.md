@@ -42,7 +42,7 @@ building-configurator/
 | 2. User flow | flow diagram | the sequence of screens and states each scenario passes through | this doc |
 | 3. Wireframes | low-fidelity layouts | where elements sit, wide and narrow viewports | to do |
 | 4. Component breakdown | component tree | reused vs new components, the data each holds | to do |
-| 5. State model | design decision | where building data lives, save triggers, per-stage loading and error states | to do |
+| 5. State model | design decision | where building data lives, save triggers, per-stage loading and error states | this doc + adr/0001 |
 | 6. Implementation | application code | scaffold stage navigation, build one stage as a template, repeat | to do |
 | 7. Visual design pass | styled interface | apply the design system: spacing, typography, colour, themes | to do |
 | 8. Review | checklist | every scenario completable, accessibility, responsive | to do |
@@ -354,11 +354,72 @@ Props and local versus store state per component.
 
 ## 5. State model
 
-To do. Building configuration state in a Zustand store keyed by model and
-`osmId`, matching the existing `src/store/` pattern. The stage machine
-(reducer), what triggers a save, and the loading and error state of each stage.
-Persistence follows SC-10. The preset store from SC-11 (section 1.7) is a
-separate, model-independent Zustand slice.
+Decided in `adr/0001-state-model.md`. State is split by ownership: server state
+in TanStack Query, UI and draft state in Zustand.
+
+### Server state (TanStack Query)
+
+| Data | Query key | Source |
+|---|---|---|
+| enrich merge map | `['enrich', modelId, bbox]` | `POST /api/v1/city2tabula/enrich`, poll `GET .../enrich/{run_id}` |
+| TABULA variant data | `['ignis', 'variant', code]` | ignis `GET /api/v1/data/{code}` |
+| refurbishment levels | `['ignis', 'match', country, type, period]` | ignis `GET /api/v1/variants/{country}/match` |
+| weather series | `['weather', lat, lon, year]` | weather-serve (temporary, config UI) |
+| saved building config | `['building-config', modelId, osmId]` | backend, new endpoint (#36) |
+
+Per-feature hooks in `features/configurator/hooks/`, matching
+`features/notifications/hooks/useNotificationsQuery.ts`.
+
+### UI and draft state (`useBuildingConfigStore`)
+
+```ts
+interface BuildingConfigState {
+  activeBuilding: { modelId: string; osmId: string } | null;
+  activeStage: StageId;
+  mode: 'simple' | 'pro';
+  draft: BuildingDraft | null;                    // working copy of the open building
+  stageStatus: Record<StageId, StageStatus>;
+
+  openBuilding(modelId, osmId, saved: BuildingConfig): void;  // seeds the draft
+  setStage(stage: StageId): void;
+  updateStage(stage: StageId, patch: Partial<StageDraft>): void;  // marks Editing, schedules save
+  flush(): Promise<void>;                          // force-save before switch or close
+  closeBuilding(): void;
+}
+```
+
+`activeStage` and `mode` persist to `localStorage`; `draft` does not (it is
+server-persisted). `stageStatus` is recomputed from `draft` and each stage
+module's `validate` / `isComplete` on every `updateStage`, never set directly.
+
+### Stage status (see section 2.3)
+
+| Status | Derivation |
+|---|---|
+| Loading | the stage's query is fetching (geometry during Preparing) |
+| Empty | no draft data for the stage and none expected |
+| Populated | draft has data, no user edits since open |
+| Editing | at least one field changed since open |
+| Valid | stage module `validate(draft)` passes |
+| Invalid | `validate(draft)` fails |
+
+Readiness = metadata and geometry both Valid. Technologies, costs and equipment
+do not gate a run.
+
+### Save
+
+Debounced about 800 ms after the last `updateStage`. On success React Query
+updates `['building-config', modelId, osmId]`. `openBuilding`, `closeBuilding`,
+and switching to another building all call `flush()` first. A failed save shows
+a non-blocking retry on the stepper; the draft stays in the store until it
+succeeds.
+
+### Presets (`useTechPresetStore`)
+
+Model independent. `{ pv: PvPreset[], battery: BatteryPreset[] }`, persisted to
+`localStorage` and synced to the backend like
+`region-selector/store/default-region.ts`. A preset holds only Preset-category
+parameters (section 1.7).
 
 ## 6. Implementation
 
