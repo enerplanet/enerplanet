@@ -283,6 +283,7 @@ jobs:
             --build-arg VITE_KEYCLOAK_IDP_HINT="${{ vars.VITE_KEYCLOAK_IDP_HINT || 'renvolveit' }}" \
             --build-arg VITE_KEYCLOAK_REDIRECT_URI="${SERVER_URL_PROD}/app/map" \
             --build-arg VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
+            --build-arg VITE_CARTO_BASEMAP_API_KEY="${{ secrets.VITE_CARTO_BASEMAP_API_KEY }}" \
             -t "enerplanet:${GITHUB_SHA::8}" -t "enerplanet:latest" -f Dockerfile.ci .
           docker image prune -f
           echo '=== [PROD] Build complete ==='
