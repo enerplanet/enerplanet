@@ -22,6 +22,7 @@ type CalculationPayload struct {
 	StartDate              string                 `json:"start_date"`
 	EndDate                string                 `json:"end_date"`
 	Resolution             int                    `json:"resolution"`
+	EnergyVectors          []string               `json:"energy_vectors,omitempty"`
 	CustomDemandTimeSeries []interface{}          `json:"custom_demand_time_series,omitempty"`
 	Topology               []interface{}          `json:"topology,omitempty"`
 	Pypsa                  map[string]interface{} `json:"pypsa,omitempty"`
@@ -61,9 +62,25 @@ func BuildCalculationPayload(model *models.Model) (interface{}, error) {
 	// Parse config
 	var configMap map[string]interface{}
 	if len(model.Config) > 0 && json.Unmarshal(model.Config, &configMap) == nil {
+		// Extract energy vectors from config (default: ["electricity"])
+		if vectors, ok := configMap["energyVectors"].([]interface{}); ok {
+			for _, v := range vectors {
+				if s, ok := v.(string); ok {
+					payload.EnergyVectors = append(payload.EnergyVectors, s)
+				}
+			}
+		}
 		if isPylovoConfig(configMap) {
+			if len(payload.EnergyVectors) == 0 {
+				payload.EnergyVectors = []string{"electricity"}
+			}
 			return buildPylovoPayload(payload, configMap, sessionID), nil
 		}
+	}
+
+	// Default to electricity-only if not specified
+	if len(payload.EnergyVectors) == 0 {
+		payload.EnergyVectors = []string{"electricity"}
 	}
 
 	return buildLegacyPayload(model, payload, configMap), nil
