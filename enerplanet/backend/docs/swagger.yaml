@@ -244,6 +244,7 @@ definitions:
         example: 30
         type: number
     type: object
+host: localhost:8000
 info:
   contact: {}
   description: |-
@@ -419,6 +420,8 @@ paths:
       summary: Get administrative boundary by coordinates
       tags:
       - EnerPlanET
+schemes:
+- http
 securityDefinitions:
   APITokenAuth:
     description: 'API token obtained via POST /api/users/{userId}/tokens. Format:
