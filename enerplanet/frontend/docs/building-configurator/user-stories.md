@@ -26,7 +26,7 @@ codes in the tables below (DEV, PLAN, MKT, USER, DSO) are defined in
 | [US-102](#us-102) | Calculate by Year or Season | 3 | metadata |
 | [US-103](#us-103) | Simplified View with Optional Pro Mode | 3 | cross-cutting |
 | [US-104](#us-104) | Role-Based Onboarding | 5 | entry |
-| [US-202](#us-202) | Context-Rich, Idiot-Proof Technical Parameters | 5 | cross-cutting |
+| [US-202](#us-202) | Context-Rich, Plain-Language Technical Parameters | 5 | cross-cutting |
 | [US-203](#us-203) | Edit Model Input Safely After a Data Mismatch | 3 | cross-cutting |
 | [US-407](#us-407) | Cost-Benefit Analysis and PV Investment Costs | 2 | costs |
 | [US-408](#us-408) | Remove Already-Built-Technology Cost | 5 | costs |
@@ -330,7 +330,7 @@ relevant defaults, terminology, and starting points instead of a generic setup.
 ---
 
 <a id="us-202"></a>
-## US-202 · Context-Rich, Idiot-Proof Technical Parameters
+## US-202 · Context-Rich, Plain-Language Technical Parameters
 
 | | |
 |---|---|
