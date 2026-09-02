@@ -100,7 +100,54 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
 };
 
 /**
- * Custom hook for loading model data including results and PyPSA data
+ * TEMPORARY preview stub — remove when real heat result data flows.
+ * When set to true, a fake "heat" carrier is injected so the carrier toggle
+ * and heat views render without backend heat data. Delete the whole block
+ * (PREVIEW_HEAT + buildHeatPreview + its two usages) once heat results exist.
+ */
+const PREVIEW_HEAT = true;
+
+/** Builds a plausible heat summary from the real power summary (scaled). */
+function buildHeatPreview(structured: StructuredModelResults): StructuredModelResults {
+  const powerSum = structured.carrier_summaries?.power || {
+    sum_production: structured.sum_production || 0,
+    sum_consumption: structured.sum_consumption || 0,
+    renewable_production: structured.renewable_production || 0,
+    grid_import: structured.grid_import || 0,
+    peak_demand: structured.peak_demand || 0,
+    timestep_count: structured.timestep_count || 8760,
+  };
+  const heatConsumption = powerSum.sum_consumption * 3; // heat demand ≈ 3× electric
+  const heatRenewable = heatConsumption * 0.15; // solar thermal share
+  const clone: StructuredModelResults = JSON.parse(JSON.stringify(structured));
+  clone.sum_consumption = heatConsumption;
+  clone.sum_production = heatRenewable + heatConsumption * 0.2; // HP electricity-in → thermal-out
+  clone.renewable_production = heatRenewable;
+  clone.grid_import = heatConsumption - heatRenewable;
+  clone.peak_demand = powerSum.peak_demand * 3;
+  clone.timestep_count = powerSum.timestep_count;
+  clone.carrier_summaries = {
+    ...clone.carrier_summaries,
+    heat: {
+      sum_production: clone.sum_production,
+      sum_consumption: heatConsumption,
+      renewable_production: heatRenewable,
+      grid_import: clone.grid_import,
+      peak_demand: clone.peak_demand,
+      timestep_count: powerSum.timestep_count,
+      prod_aggregates: [],
+      con_aggregates: [],
+    },
+  };
+  return clone;
+}
+
+/**
+ * Custom hook for loading model data including results and PyPSA data.
+ * Supports energy carrier switching: `carrier` filters the structured
+ * results fetch (backend defaults to power). `availableCarriers` is derived
+ * from the unfiltered response's `carrier_summaries` — the truth about what
+ * the webservice actually delivered, not a hard-coded list.
  */
 export const useModelData = (modelId: number | null) => {
   const [model, setModel] = useState<ModelInfo | null>(null);
@@ -111,6 +158,11 @@ export const useModelData = (modelId: number | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initialWorkspace, setInitialWorkspace] = useState<Workspace | null>(null);
+
+  // Active energy carrier. '' = default (backend serves "power").
+  const [carrier, setCarrier] = useState<string>('');
+  // Carriers present in the results, from the unfiltered response.
+  const [availableCarriers, setAvailableCarriers] = useState<string[]>(['power']);
 
   useEffect(() => {
     if (!modelId) {
@@ -130,7 +182,7 @@ export const useModelData = (modelId: number | null) => {
         // Run all three independent requests in parallel
         const [modelData, structuredData, pypsa] = await Promise.all([
           fetchModelWithResults(modelId, controller.signal),
-          fetchStructuredResults(modelId, controller.signal),
+          fetchStructuredResults(modelId, undefined, controller.signal),
           fetchPyPSAResults(modelId, controller.signal),
         ]);
 
@@ -147,6 +199,18 @@ export const useModelData = (modelId: number | null) => {
           setStructuredResults(structuredData);
           const legacyResults = convertStructuredToLegacy(structuredData);
           setResults(legacyResults);
+
+          // Derive available carriers from what the backend actually served.
+          const summaries = structuredData.carrier_summaries;
+          if (summaries && Object.keys(summaries).length > 0) {
+            setAvailableCarriers(Object.keys(summaries));
+          } else {
+            setAvailableCarriers(['power']);
+          }
+          // TEMPORARY preview: force heat carrier to appear.
+          if (PREVIEW_HEAT) {
+            setAvailableCarriers((prev) => (prev.includes('heat') ? prev : [...prev, 'heat']));
+          }
         }
 
         if (pypsa) {
@@ -173,6 +237,29 @@ export const useModelData = (modelId: number | null) => {
     };
   }, [modelId]);
 
+  // Re-fetch structured results when the carrier toggle changes.
+  // '' (default) already fetched above; only non-default carriers need this.
+  useEffect(() => {
+    if (!modelId || carrier === '') return;
+
+    // TEMPORARY preview: for heat, use the fake summary instead of an empty
+    // backend response (no real heat data in the DB yet).
+    if (PREVIEW_HEAT && carrier === 'heat') {
+      setStructuredResults((current) => (current ? buildHeatPreview(current) : current));
+      return;
+    }
+
+    let cancelled = false;
+    fetchStructuredResults(modelId, carrier).then((data) => {
+      if (cancelled || !data) return;
+      setStructuredResults(data);
+      setResults(convertStructuredToLegacy(data));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [modelId, carrier]);
+
   return {
     model,
     results,
@@ -183,5 +270,8 @@ export const useModelData = (modelId: number | null) => {
     loading,
     error,
     initialWorkspace,
+    carrier,
+    setCarrier,
+    availableCarriers,
   };
 };

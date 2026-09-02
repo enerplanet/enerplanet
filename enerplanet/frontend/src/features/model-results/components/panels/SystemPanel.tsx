@@ -67,6 +67,7 @@ const InfoTooltip = ({
 interface SystemPanelProps {
   structuredResults: StructuredModelResults | null;
   modelId: number | null;
+  carrier?: string;
 }
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#ec4899'];
@@ -176,11 +177,12 @@ const formatShare = (value: number, total: number): string => {
   return `${pct.toFixed(1)}%`;
 };
 
-const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
+const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelProps) => {
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const { t } = useTranslation();
   const [systemLoading, setSystemLoading] = useState(false);
   const [systemLoaded, setSystemLoaded] = useState(false);
+  const [loadedCarrier, setLoadedCarrier] = useState('');
   const [unmetDemand, setUnmetDemand] = useState<UnmetDemandRecord[]>([]);
   const [resourceCon, setResourceCon] = useState<ResourceConRecord[]>([]);
   const [lineFlows, setLineFlows] = useState<LineFlowRecord[]>([]);
@@ -188,9 +190,16 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
   const [carrierProd, setCarrierProd] = useState<CarrierProdRecord[]>([]);
   const [carrierCon, setCarrierCon] = useState<CarrierConRecord[]>([]);
 
-  // Lazy-load system time-series data when this panel is first rendered
+  // Active carrier label; '' (default) maps to the backend's "power".
+  const activeCarrier = carrier === '' ? 'power' : carrier;
+
+  // Lazy-load system time-series data when this panel is first rendered.
+  // Re-fetches when the active carrier changes. The system-timeseries
+  // endpoint serves all carriers; carrier_prod/con are filtered server-side
+  // via ?carrier=, the rest is filtered client-side by activeCarrier below.
   useEffect(() => {
-    if (!modelId || systemLoaded) return;
+    if (!modelId) return;
+    if (systemLoaded && loadedCarrier === carrier) return;
 
     const hasEmbeddedSystemData = Boolean(
       structuredResults?.system_balance?.length ||
@@ -215,7 +224,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
       try {
         const [systemData, carrierData] = await Promise.all([
           hasEmbeddedSystemData ? Promise.resolve(null) : fetchSystemTimeSeries(modelId),
-          fetchCarrierTimeSeries(modelId),
+          fetchCarrierTimeSeries(modelId, { carrier }),
         ]);
 
         if (systemData) {
@@ -229,16 +238,20 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
           setCarrierProd(carrierData.carrier_prod || []);
           setCarrierCon(carrierData.carrier_con || []);
         }
+
+        setSystemLoaded(true);
+        setLoadedCarrier(carrier);
       } catch (err) {
         console.error('Failed to load system time series:', err);
+        setSystemLoaded(true);
+        setLoadedCarrier(carrier);
       } finally {
         setSystemLoading(false);
-        setSystemLoaded(true);
       }
     };
 
     loadSystemData();
-  }, [modelId, systemLoaded, structuredResults]);
+  }, [modelId, systemLoaded, loadedCarrier, carrier, structuredResults]);
 
   const dailySupplyDemandData = useMemo(() => {
     if (!carrierProd.length && !carrierCon.length) return [];
@@ -252,7 +265,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
     };
 
     carrierProd.forEach((record) => {
-      if (record.carrier !== 'power') return;
+      if (record.carrier !== activeCarrier) return;
 
       const date = toDateKey(record.timestep);
       const entry = getEntry(date);
@@ -267,7 +280,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
     });
 
     carrierCon.forEach((record) => {
-      if (record.carrier !== 'power' || !isDemandTech(record.techs || '')) return;
+      if (record.carrier !== activeCarrier || !isDemandTech(record.techs || '')) return;
       const date = toDateKey(record.timestep);
       const entry = getEntry(date);
       entry.demand += Math.abs(record.value);
@@ -288,7 +301,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
     const incompleteLast = isLastDayIncomplete(unmetDemand.map(r => r.timestep));
 
     unmetDemand.forEach((record) => {
-      if (record.carrier !== 'power') return;
+      if (record.carrier !== activeCarrier) return;
       const date = toDateKey(record.timestep);
       if (date === incompleteLast) return;
       if (!dailyData.has(date)) {
@@ -306,7 +319,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
     const byLocation = new Map<string, { totalKwh: number; peakKw: number; hoursAffected: number }>();
 
     unmetDemand.forEach((record) => {
-      if (record.carrier !== 'power') return;
+      if (record.carrier !== activeCarrier) return;
       const val = Math.abs(record.value);
       if (val < 1e-9) return;
 
@@ -333,7 +346,7 @@ const SystemPanel = ({ structuredResults, modelId }: SystemPanelProps) => {
     const incompleteLast = isLastDayIncomplete(unmetDemand.map(r => r.timestep));
 
     unmetDemand.forEach((record) => {
-      if (record.carrier !== 'power') return;
+      if (record.carrier !== activeCarrier) return;
       const val = Math.abs(record.value);
       if (val < 1e-9) return;
 
