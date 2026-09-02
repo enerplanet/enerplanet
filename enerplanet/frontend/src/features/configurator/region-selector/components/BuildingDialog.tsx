@@ -48,6 +48,8 @@ interface BuildingDialogProps {
     fClasses?: string[];
     selectedFClass?: string;
     yearlyDemandKwh: number;
+    yearlyHeatDemandKwh?: number;
+    heatDemandEstimated?: boolean;
     peakLoadKw: number;
     area: number;
     gridResultId?: number;
@@ -438,6 +440,23 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
                 />
               </div>
+
+              {/* Yearly Heat Demand (display-only estimate for now) */}
+              {selectedBuilding.yearlyHeatDemandKwh != null && selectedBuilding.yearlyHeatDemandKwh > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    Yearly Heat Demand
+                    {selectedBuilding.heatDemandEstimated && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                        estimated
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    {Math.round(selectedBuilding.yearlyHeatDemandKwh).toLocaleString()} kWh
+                  </span>
+                </div>
+              )}
 
               {/* Peak Load */}
               {hasFiniteNumber(peakLoad) && peakLoad > 0 && (
