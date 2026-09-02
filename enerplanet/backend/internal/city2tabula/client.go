@@ -7,7 +7,9 @@ package city2tabula
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,6 +17,48 @@ import (
 
 	httpclient "platform.local/common/pkg/httpclient"
 )
+
+// ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
+// the given id (a stale or mistyped id), so callers can answer 404 rather than
+// treat it as an upstream failure.
+var ErrRunNotFound = errors.New("city2tabula: run not found")
+
+// BadRequestError is a 400 from City2TABULA (an unsupported country, a
+// malformed bbox) carried through with its message so a handler can answer 400
+// rather than a blanket 502.
+type BadRequestError struct {
+	Message string
+}
+
+func (e *BadRequestError) Error() string {
+	return "city2tabula rejected the request: " + e.Message
+}
+
+// badRequestFromBody builds a BadRequestError from a City2TABULA {"error": ...}
+// body, falling back to a generic message if the body is not in that shape.
+func badRequestFromBody(body io.Reader) *BadRequestError {
+	var parsed struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(body).Decode(&parsed); err != nil || parsed.Error == "" {
+		return &BadRequestError{Message: "bad request"}
+	}
+	return &BadRequestError{Message: parsed.Error}
+}
+
+// checkStatus classifies a City2TABULA response: nil when it matches want, a
+// BadRequestError (carrying the upstream message) on 400, an opaque error
+// otherwise. op names the call for the opaque-error message.
+func checkStatus(resp *http.Response, want int, op string) error {
+	switch resp.StatusCode {
+	case want:
+		return nil
+	case http.StatusBadRequest:
+		return badRequestFromBody(resp.Body)
+	default:
+		return fmt.Errorf("city2tabula %s: unexpected status %d", op, resp.StatusCode)
+	}
+}
 
 // Bbox is a WGS84 (EPSG:4326) lon/lat bounding box — the CRS a user-drawn
 // area of interest naturally comes in as (see geo.BBoxFromGeoJSON).
@@ -74,9 +118,14 @@ type Surface struct {
 	Azimuth *float64 `json:"azimuth,omitempty"`
 	// Tilt: 0=vertical wall, 90=flat roof — inverted from BuEM's own
 	// convention (0=horizontal roof, 90=vertical wall); invert before mapping.
-	Tilt     *float64 `json:"tilt,omitempty"`
-	IsValid  *bool    `json:"is_valid,omitempty"`
-	IsPlanar *bool    `json:"is_planar,omitempty"`
+	Tilt *float64 `json:"tilt,omitempty"`
+	// IsValid and IsPlanar are City2TABULA extraction diagnostics, not
+	// usability flags. IsValid is a 2D-projection ST_IsValid check that is
+	// structurally false for near-vertical walls; IsPlanar is false for most
+	// LOD2 roof faces. Area and angle are computed regardless, so mapping does
+	// not gate on either.
+	IsValid  *bool `json:"is_valid,omitempty"`
+	IsPlanar *bool `json:"is_planar,omitempty"`
 }
 
 // normalizeCountry adapts the backend's country vocabulary (geo.NormalizeCountry,
@@ -104,8 +153,8 @@ func (c *Client) GetCoverage(ctx context.Context, country string, bbox Bbox) (in
 		return 0, fmt.Errorf("city2tabula coverage request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("city2tabula coverage: unexpected status %d", resp.StatusCode)
+	if err := checkStatus(resp, http.StatusOK, "coverage"); err != nil {
+		return 0, err
 	}
 
 	var body struct {
@@ -129,8 +178,8 @@ func (c *Client) TriggerRun(ctx context.Context, country string, bbox Bbox) (*Ru
 		return nil, fmt.Errorf("city2tabula trigger-run request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusAccepted {
-		return nil, fmt.Errorf("city2tabula trigger-run: unexpected status %d", resp.StatusCode)
+	if err := checkStatus(resp, http.StatusAccepted, "trigger-run"); err != nil {
+		return nil, err
 	}
 
 	var run Run
@@ -147,8 +196,11 @@ func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
 		return nil, fmt.Errorf("city2tabula run-status request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("city2tabula run-status: unexpected status %d", resp.StatusCode)
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrRunNotFound
+	}
+	if err := checkStatus(resp, http.StatusOK, "run-status"); err != nil {
+		return nil, err
 	}
 
 	var run Run
@@ -166,8 +218,8 @@ func (c *Client) GetBuildingsByBBox(ctx context.Context, country string, bbox Bb
 		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("city2tabula buildings: unexpected status %d", resp.StatusCode)
+	if err := checkStatus(resp, http.StatusOK, "buildings"); err != nil {
+		return nil, err
 	}
 
 	var buildings []Building
@@ -193,8 +245,8 @@ func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmID
 		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("city2tabula buildings: unexpected status %d", resp.StatusCode)
+	if err := checkStatus(resp, http.StatusOK, "buildings"); err != nil {
+		return nil, err
 	}
 
 	var buildings []Building

@@ -189,6 +189,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "No run with this id (stale or mistyped)",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
                     "502": {
                         "description": "Bad Gateway",
                         "schema": {
