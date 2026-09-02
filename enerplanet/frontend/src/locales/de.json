@@ -508,6 +508,11 @@
     "unableToLoad": "Ergebnisse können nicht geladen werden",
     "modelNotFound": "Modell nicht gefunden",
     "backToDashboard": "Zurück zum Dashboard",
+    "carrier": {
+      "toggleLabel": "Energieträger",
+      "electricity": "Strom",
+      "heat": "Wärme"
+    },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
     "loadingModels": "Modelle werden geladen...",

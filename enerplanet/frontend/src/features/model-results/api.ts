@@ -17,10 +17,13 @@ export async function fetchModelWithResults(modelId: number, signal?: AbortSigna
 }
 
 
-export async function fetchStructuredResults(modelId: number, signal?: AbortSignal): Promise<StructuredModelResults | null> {
+export async function fetchStructuredResults(modelId: number, carrier?: string, signal?: AbortSignal): Promise<StructuredModelResults | null> {
   try {
-    const response = await api.get(`/models/${modelId}/results/structured`, { signal });
-    
+    const params = new URLSearchParams();
+    if (carrier) params.append('carrier', carrier);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await api.get(`/models/${modelId}/results/structured${queryString}`, { signal });
+
     if (response.data?.success && response.data?.data) {
       return response.data.data as StructuredModelResults;
     }
@@ -126,12 +129,14 @@ export async function fetchLocationTimeSeries(
   location: string,
   beginDate?: string,
   endDate?: string,
+  carrier?: string,
   signal?: AbortSignal
 ): Promise<LocationTimeSeriesData | null> {
   try {
     const params = new URLSearchParams();
     if (beginDate) params.append('begin', beginDate);
     if (endDate) params.append('end', endDate);
+    if (carrier) params.append('carrier', carrier);
     
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/models/${modelId}/results/location/${encodeURIComponent(location)}${queryString}`, { signal });
@@ -159,6 +164,7 @@ export async function fetchCarrierTimeSeries(
     beginDate?: string;
     endDate?: string;
     aggregate?: 'daily' | 'hourly';
+    carrier?: string;
     signal?: AbortSignal;
   }
 ): Promise<CarrierTimeSeriesData | null> {
@@ -167,6 +173,7 @@ export async function fetchCarrierTimeSeries(
     if (options?.beginDate) params.append('begin', options.beginDate);
     if (options?.endDate) params.append('end', options.endDate);
     if (options?.aggregate) params.append('aggregate', options.aggregate);
+    if (options?.carrier) params.append('carrier', options.carrier);
 
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/models/${modelId}/results/carrier-timeseries${queryString}`, { signal: options?.signal });
