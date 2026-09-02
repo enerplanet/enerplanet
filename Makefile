@@ -168,6 +168,7 @@ setup-repos:
 	git submodule update --init
 	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
 	@[ -d dependencies/enerplanet-pylovo ] && (cd dependencies/enerplanet-pylovo && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git lfs pull
+	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
 
 .PHONY: env-setup
 env-setup:
@@ -227,3 +228,13 @@ webservice:
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev
+
+.PHONY: opentech-db
+opentech-db: .opentech-db-setup
+	@cd dependencies/$(OPENTECHDB_DIR) && .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8004
+
+.PHONY: .opentech-db-setup
+.opentech-db-setup:
+	@cd dependencies/$(OPENTECHDB_DIR) && \
+		[ -f .env ] || cp .env.example .env; \
+		[ -d .venv ] || (python3 -m venv .venv && .venv/bin/pip install --quiet --upgrade pip && .venv/bin/pip install --quiet -r requirements.txt)
