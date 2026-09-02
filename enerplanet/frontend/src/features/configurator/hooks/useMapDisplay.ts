@@ -11,6 +11,7 @@ import {
   extractSelectedFClassFromProps,
 } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
+import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { parseTechs, extractYearlyDemandCustomOnly } from "@/features/configurator/utils/parsing";
 import { getClusterKeyFromProps } from "@/features/configurator/utils/geometryUtils";
@@ -206,6 +207,7 @@ export const useMapLibre3DHandlers = ({
       const enrichment = extractBuildingEnrichmentFromProps(props);
       const totalDemand = extractYearlyDemandCustomOnly(props);
       const totalPeak = extractPeakLoadFromProps(props);
+      const heat = estimateYearlyHeatDemand(primaryFClass, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
       const effectiveFClasses = fClasses.length > 0 ? fClasses : [primaryFClass];
       const selectedFClass = extractSelectedFClassFromProps(
         props,
@@ -225,6 +227,8 @@ export const useMapLibre3DHandlers = ({
         fClasses,
         selectedFClass,
         yearlyDemandKwh: totalDemand,
+        yearlyHeatDemandKwh: heat.kwh,
+        heatDemandEstimated: heat.estimated,
         peakLoadKw: totalPeak,
         area: props.area || 0,
         gridResultId: props.grid_result_id,
@@ -287,6 +291,7 @@ export const useMapLibre3DHandlers = ({
       const fClasses = getFeatureFClasses(props);
       const primary = getPrimaryFClass(props) || "unknown";
       const enrichment = extractBuildingEnrichmentFromProps(props);
+      const heat = estimateYearlyHeatDemand(primary, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
       mapInteractions.setBuildingTooltip({
         x: pixel[0],
         y: pixel[1],
@@ -294,6 +299,8 @@ export const useMapLibre3DHandlers = ({
         fClass: primary,
         fClasses,
         yearlyDemandKwh: extractYearlyDemandCustomOnly(props),
+        yearlyHeatDemandKwh: heat.kwh,
+        heatDemandEstimated: heat.estimated,
         techs: parseTechs(props.techs),
         gridResultId: props.grid_result_id ?? props.transformer_id,
         ...enrichment,

@@ -5,6 +5,7 @@ import {
   Battery,
   Building2,
   DollarSign,
+  Flame,
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -337,7 +338,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
               <div className="flex items-center gap-1.5 mb-1">
                 <Zap className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-[10px] font-medium text-muted-foreground">
-                  {t("results.buildingDetail.yearlyDemand", "Yearly Demand")}
+                  {t("results.buildingDetail.yearlyElectricityDemand", "Yearly Electricity Demand")}
                 </span>
               </div>
               <p className="text-base font-bold text-foreground">
@@ -348,6 +349,24 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                   {t("results.buildingDetail.peak", "Peak")}: {formatPower(building.peakLoadKw)}
                 </p>
               )}
+            </div>
+          )}
+          {building.yearlyHeatDemandKwh != null && building.yearlyHeatDemandKwh > 0 && (
+            <div className="bg-muted/50 rounded-lg p-3 border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {t("results.buildingDetail.yearlyHeatDemand", "Yearly Heat Demand")}
+                </span>
+                {building.heatDemandEstimated && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                    {t("results.buildingDetail.estimated", "estimated")}
+                  </span>
+                )}
+              </div>
+              <p className="text-base font-bold text-foreground">
+                {formatEnergy(building.yearlyHeatDemandKwh)}
+              </p>
             </div>
           )}
           <div className="bg-muted/50 rounded-lg p-3 border border-border">

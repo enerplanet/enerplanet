@@ -20,6 +20,7 @@ const AreaSelect = lazy(() => import("@/features/configurator/region-selector/Ar
 const AssessmentViewer = lazy(() => import("@/features/assessment-viewer").then(module => ({ default: module.AssessmentViewer })));
 const ModelResultsViewer = lazy(() => import("@/features/model-results").then(module => ({ default: module.ModelResultsViewer })));
 const TechnologiesPage = lazy(() => import("@/features/technologies/TechnologiesPage"));
+const HeatHarnessPage = lazy(() => import("@/features/heat-harness").then(module => ({ default: module.HeatHarnessPage })));
 const LocationsPage = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationsPage })));
 const LocationCreator = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationCreator })));
 const LocationViewer = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationViewer })));
@@ -85,6 +86,7 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/assessment/:id" element={<AssessmentViewer />} />
                   <Route path="/app/model-results/:id" element={<ModelResultsViewer />} />
                   <Route path="/app/technologies" element={<TechnologiesPage />} />
+                  <Route path="/app/heat-harness" element={<HeatHarnessPage />} />
                   <Route path="/app/simulation-reports" element={
                       <SimulationCharts />
                   } />
