@@ -47,6 +47,7 @@ import {
   WindTurbineInfo,
 } from '@/features/model-results/hooks/useModelResultsData';
 import { BuildingResultData, BusStatusData } from './components/map/ResultsMapTypes';
+import CarrierToggle from './components/CarrierToggle';
 import OverviewPanel from './components/panels/OverviewPanel';
 import EnergyPanel from './components/panels/EnergyPanel';
 import GridPanel from './components/panels/GridPanel';
@@ -399,6 +400,9 @@ export const ModelResultsViewer = () => {
     loading,
     error,
     initialWorkspace,
+    carrier,
+    setCarrier,
+    availableCarriers,
   } = useModelData(modelId);
 
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingResultData | null>(null);
@@ -560,6 +564,7 @@ export const ModelResultsViewer = () => {
         <BuildingDetailPanel
           building={selectedBuilding}
           modelId={modelId}
+          carrier={carrier}
           turbineData={turbineData}
         />
       );
@@ -581,7 +586,7 @@ export const ModelResultsViewer = () => {
           />
         );
       case 'energy':
-        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} />;
+        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       case 'cost':
         return (
           <CostPanel
@@ -608,7 +613,7 @@ export const ModelResultsViewer = () => {
           />
         );
       case 'system':
-        return <SystemPanel structuredResults={structuredResults} modelId={modelId} />;
+        return <SystemPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       default:
         return null;
     }
@@ -617,6 +622,7 @@ export const ModelResultsViewer = () => {
     capacityData, costBreakdown, energyFlow, avgCapacityFactor,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
+    carrier,
   ]);
 
   if (error || (!model && !loading)) {
@@ -766,6 +772,14 @@ export const ModelResultsViewer = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Energy carrier toggle (electricity / heat) — only when multiple carriers present */}
+              {!loading && (
+                <CarrierToggle
+                  carriers={availableCarriers}
+                  activeCarrier={carrier}
+                  onSelect={setCarrier}
+                />
+              )}
               {/* Power Flow Convergence Status */}
               {structuredResults?.pypsa && (
                 <Tooltip>
