@@ -20,6 +20,7 @@ import (
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
 	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
+	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
 	"spatialhub_backend/internal/handler/ignis"
@@ -648,6 +649,9 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient)
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
+	heatDemandHandler := heatdemandhandler.NewHandler()
+	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
+
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
 	registerLocationRoutes(protectedAPI, locationHandler)
 
@@ -844,6 +848,14 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler.Handler) {
 	api.POST("/v1/city2tabula/enrich", handler.Enrich)
 	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
+}
+
+// registerHeatDemandRoutes wires the heat-demand resolve endpoint, which turns
+// the simple building form's inputs into an annual heating demand plus a source
+// flag. Stateless; not model-scoped yet (the ignis and BuEM paths add model
+// context when they land - see #50 / #57).
+func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.Handler) {
+	api.POST("/v1/heat-demand/resolve", handler.Resolve)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {

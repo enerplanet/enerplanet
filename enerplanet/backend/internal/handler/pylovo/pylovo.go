@@ -286,7 +286,7 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 			msg += " — Pylovo service is not running. " +
 				"Run: docker compose up -d pylovo-api"
 		}
-		logger.Logger.Errorf(msg)
+		logger.Logger.Error(msg)
 		httputil.InternalError(c, "Internal server error")
 		return
 	}
