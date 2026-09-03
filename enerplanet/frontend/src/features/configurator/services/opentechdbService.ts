@@ -33,9 +33,9 @@ interface OtdbTechListItem {
   n_instances?: number;
 }
 
-const OTDB_SOURCE_KEY = "otdb_source";
+export const OTDB_SOURCE_KEY = "otdb_source";
 const OTDB_ID_KEY = "otdb_id";
-const OTDB_CARRIER_OUT_KEY = "otdb_carrier_out";
+export const OTDB_CARRIER_OUT_KEY = "otdb_carrier_out";
 
 /**
  * Map one OpenTech-DB list item to the legacy Technology shape.
@@ -165,6 +165,18 @@ async function fetchOpenTechCatalog(): Promise<void> {
   }
 
   catalogCache = FALLBACK_CATALOG.map(mapToListTechnology);
+}
+
+/**
+ * Look up a mapped OpenTech-DB tech by its catalog slug. Searches the FULL
+ * catalog (both carriers), because mixed-output heat techs (CHP, biomass_CHP)
+ * appear as carrier_out=electricity under the legacy bridge. Returns undefined
+ * until the catalog has been fetched at least once (call `fetchOpenTechCatalog` or
+ * any fetcher accordingly). Kept sync (catalogCache is module-level, so this is
+ * a warm read after the first fetch).
+ */
+export function fetchOpenTechTechBySlug(slug: string): OtdbBridgeTechnology | undefined {
+  return (catalogCache ?? []).find((t) => t.key === slug);
 }
 
 /** All OpenTech-DB technologies with `carrier_out === heat`. */
