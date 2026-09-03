@@ -204,6 +204,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/heat-demand/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Given a building's usage class and floor area, returns its annual space-heating\ndemand (kWh/a), the specific demand (kWh/m2.a) and a source flag. The source is\n\"estimate\", a specific-demand-by-usage-class lookup. tabula_variant_code and\nhourly_profile are currently always null; a residential building carries a warning.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "HeatDemand"
+                ],
+                "summary": "Resolve a building's annual space-heating demand",
+                "parameters": [
+                    {
+                        "description": "Building inputs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
@@ -505,6 +550,133 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 25
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile": {
+            "type": "object",
+            "properties": {
+                "resolution_minutes": {
+                    "type": "integer"
+                },
+                "start": {
+                    "type": "string"
+                },
+                "summary": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary"
+                },
+                "timeseries_ref": {
+                    "type": "string"
+                },
+                "vectors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho": {
+            "type": "object",
+            "properties": {
+                "building_type": {
+                    "type": "string"
+                },
+                "construction_year": {
+                    "type": "integer"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "f_class": {
+                    "type": "string"
+                },
+                "floor_area_m2": {
+                    "type": "number"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary": {
+            "type": "object",
+            "properties": {
+                "cooling_total_kwh": {
+                    "type": "number"
+                },
+                "electricity_total_kwh": {
+                    "type": "number"
+                },
+                "heating_total_kwh": {
+                    "type": "number"
+                },
+                "peak_cooling_kw": {
+                    "type": "number"
+                },
+                "peak_heating_kw": {
+                    "type": "number"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest": {
+            "type": "object",
+            "properties": {
+                "building_type": {
+                    "type": "string",
+                    "example": "SFH"
+                },
+                "construction_year": {
+                    "type": "integer",
+                    "example": 1975
+                },
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "f_class": {
+                    "type": "string",
+                    "example": "detached"
+                },
+                "floor_area_m2": {
+                    "type": "number",
+                    "example": 120
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse": {
+            "type": "object",
+            "properties": {
+                "heating_demand_kwh_a": {
+                    "type": "integer",
+                    "example": 12000
+                },
+                "hourly_profile": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile"
+                },
+                "inputs_echoed": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho"
+                },
+                "osm_id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "estimate"
+                },
+                "specific_heating_demand_kwh_m2a": {
+                    "type": "number",
+                    "example": 100
+                },
+                "tabula_variant_code": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
