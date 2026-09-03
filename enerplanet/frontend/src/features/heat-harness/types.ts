@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // Heat Harness — types
-// TEMPORARY harness for the heat-network plan (§1–§6). Not final API shapes.
+// TEMPORARY harness for the heat-network feature. Not final API shapes.
 // ---------------------------------------------------------------------------
 
-/** Auto-resolve mode, per heat-network-plan.md §3. */
+/** Auto-resolve mode. */
 export type HeatResolutionMode = 'simple' | 'expected' | 'manual';
 
 /** A heat-capable technology as served by the OpenTech-DB proxy. */

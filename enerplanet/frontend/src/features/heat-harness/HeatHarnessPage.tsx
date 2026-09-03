@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// Heat Harness — minimal functional slice of the heat-network plan.
+// Heat Harness — minimal functional slice of the heat-network feature.
 // Route: /app/heat-harness (auth-protected, see App.tsx).
 //
-// Covers: expected-fit auto-resolve (§1/§3), OpenTech-DB catalog (§5a),
-// light heat links (producer→consumer, §2), blocking check (§4), fuel
-// defaults (§1a). NOT the final configurator — temporary harness, hardcoded
-// English labels, legacy configurator untouched.
+// Covers: expected-fit auto-resolve, OpenTech-DB catalogue, light heat links
+// (producer to consumer), a blocking check, fuel-price defaults. NOT the final
+// configurator — temporary harness, hardcoded English labels, legacy
+// configurator untouched.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useState } from 'react';
@@ -171,7 +171,7 @@ export const HeatHarnessPage = () => {
               Heat Resolution Harness
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Minimal functional slice of the heat-network plan. Auto-resolve heat supply per
+              Minimal functional slice of the heat-network feature. Auto-resolve heat supply per
               building type, link producers to consumers, and block until the network resolves.
             </p>
           </div>
@@ -186,7 +186,7 @@ export const HeatHarnessPage = () => {
           )}
         </header>
 
-        {/* Mode selector (§3) */}
+        {/* Mode selector */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-2">Auto-resolve mode</h2>
           <div className="flex gap-2">
@@ -211,7 +211,7 @@ export const HeatHarnessPage = () => {
           </div>
         </div>
 
-        {/* Buildings (§1/§2/§5) */}
+        {/* Buildings */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
@@ -315,7 +315,7 @@ export const HeatHarnessPage = () => {
           })}
         </div>
 
-        {/* Blocking check (§4) + run */}
+        {/* Blocking check + run */}
         <div className={`rounded-xl border p-4 ${unresolved.length > 0 ? 'border-red-300 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/20' : 'border-green-300 dark:border-green-900/60 bg-green-50/40 dark:bg-green-950/20'}`}>
           {unresolved.length > 0 ? (
             <div className="flex items-start gap-3">

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// External carrier default prices (plan §1a) — EUR per MWh, estimates.
+// External carrier default prices — EUR per MWh, estimates.
 // Everything except heat/electricity is an external purchase.
 // Instance fuel_cost_per_mwh (when populated) overrides these.
 // TEMPORARY harness data — flagged for domain review.
