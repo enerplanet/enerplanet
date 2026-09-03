@@ -17,6 +17,8 @@ export interface OtdbBridgeTechnology extends Technology {
   source: "opentechdb";
   /** Output carrier (e.g. "heat") — gates heat assignment. */
   carrierOut: string;
+  /** Input carriers (fuel in / electricity etc.) — for fuel-price surfacing. */
+  carrierIn: string[];
   /** OpenTech-DB category: supply / storage / conversion / transmission. */
   otdbCategory: string;
   /** OpenTech-DB UUID for detail/instance lookups. */
@@ -54,6 +56,7 @@ function mapToListTechnology(item: OtdbTechListItem): OtdbBridgeTechnology {
     carrierOut: item.output_carriers[0] ?? "",
     otdbCategory: item.category,
     otdbId: item.id,
+    carrierIn: item.input_carriers ?? [],
   };
 }
 

@@ -1110,7 +1110,8 @@
     "addTransformerAction": "Trafo hinzufügen",
     "assignBuildingsAction": "Gebäude zuweisen",
     "runPowerFlowAction": "Lastfluss",
-    "rerunPowerFlowAction": "Erneut berechnen"
+    "rerunPowerFlowAction": "Erneut berechnen",
+    "resolveHeatAction": "Wärme zuweisen"
   },
   "time": {
     "justNow": "Gerade eben",

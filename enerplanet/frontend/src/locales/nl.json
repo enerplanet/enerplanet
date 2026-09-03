@@ -828,7 +828,8 @@
     "addTransformerAction": "Trafo toevoegen",
     "assignBuildingsAction": "Gebouwen toewijzen",
     "runPowerFlowAction": "Vermogensanalyse",
-    "rerunPowerFlowAction": "Opnieuw berekenen"
+    "rerunPowerFlowAction": "Opnieuw berekenen",
+    "resolveHeatAction": "Warmte toewijzen"
   },
   "time": {
     "justNow": "Zojuist",

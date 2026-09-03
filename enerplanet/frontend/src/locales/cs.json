@@ -828,7 +828,8 @@
     "addTransformerAction": "Přidat transformátor",
     "assignBuildingsAction": "Přiřadit budovy",
     "runPowerFlowAction": "Analýza výkonu",
-    "rerunPowerFlowAction": "Přepočítat"
+    "rerunPowerFlowAction": "Přepočítat",
+    "resolveHeatAction": "Vyřešit teplo"
   },
   "time": {
     "justNow": "Právě teď",

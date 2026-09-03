@@ -51,6 +51,8 @@ import {
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import { useTranslation } from "@spatialhub/i18n";
+import { fetchOpenTechTechBySlug } from "@/features/configurator/services/opentechdbService";
+import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
 
 // Wind turbine data structure
 interface WindTurbineData {
@@ -426,6 +428,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [windTurbineData, setWindTurbineData] = useState<Record<string, WindTurbineData>>({});
   const [hubHeightOptions, setHubHeightOptions] = useState<number[]>([]);
   const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
+  const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -524,6 +527,16 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     };
 
     loadDynamicOptions();
+  }, [technology]);
+
+  useEffect(() => {
+    if (!technology) { setFuelCarrier(undefined); return; }
+    // Resolve the priced input carrier for OTDB-sourced techs (fuel in for
+    // boilers/CHP etc.). Simulator techs have no carrier metadata — no price line.
+
+    const bridge = fetchOpenTechTechBySlug(technology.key);
+    if (bridge?.carrierIn?.length) setFuelCarrier(pricedFuelCarrier(bridge.carrierIn));
+    else setFuelCarrier(undefined);
   }, [technology]);
 
   // Handle turbine type selection change
@@ -736,6 +749,9 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       key: constraint.key,
       value: constraintValues[constraint.key],
     }));
+    if (fuelCarrier) {
+      constraints.push({ key: "carrier_price_eur_mwh", value: carrierPrice(fuelCarrier) });
+    }
 
     onSave(technology.key, constraints, false);
     setIsSaving(false);
@@ -766,6 +782,9 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       key: constraint.key,
       value: constraintValues[constraint.key],
     }));
+    if (fuelCarrier) {
+      constraints.push({ key: "carrier_price_eur_mwh", value: carrierPrice(fuelCarrier) });
+    }
 
     onSave(technology.key, constraints, true);
     setIsSaving(false);
@@ -1029,6 +1048,13 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
               <span className="font-medium">{showApplyToAll ? "All Buildings" : buildingType}</span>{" "}
               {showApplyToAll ? "" : `(OSM: ${buildingOsmId})`}
             </span>
+            {fuelCarrier && (
+              <span className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground/70">
+                <Flame className="w-3 h-3 text-amber-500" />
+                <span className="font-medium text-foreground">{fuelCarrier}</span>
+                <span>@ {carrierPrice(fuelCarrier)} €/MWh (external fuel default)</span>
+              </span>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

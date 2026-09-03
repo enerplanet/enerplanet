@@ -63,6 +63,7 @@ import { TransformerDialog } from "./components/TransformerDialog";
 import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
+import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
@@ -268,6 +269,12 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const activeMode = useModelStore((s) => s.activeMode);
   suppressDialogOnClickRef.current = activeMode !== null;
 
+  // ── Heat-add bootstrap (one-time "auto-assign vs manual" prompt) ──
+  const heatBootstrapOpen = useModelStore((s) => s.heatBootstrapOpen);
+  const setHeatBootstrapOpen = useModelStore((s) => s.setHeatBootstrapOpen);
+  const setHeatBootstrapPrompted = useModelStore((s) => s.setHeatBootstrapPrompted);
+  const setHeatResolutionMode = useModelStore((s) => s.setHeatResolutionMode);
+
   // ── Available transformer sizes from API ─────────────────────────
   const [transformerSizes, setTransformerSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
   useEffect(() => {
@@ -317,20 +324,39 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     setIsModified,
   });
 
-  // Single build: when the building dialog closes on a heat-demand building that
-  // has no assigned heat tech, auto-resolve the expected-fit tech (expected mode
-  // only). Resolutions are no-ops when manual mode is active or heat is already
-  // present, so this is idempotent and safe to fire on every close.
-  const handleCloseBuildingDialogWithHeatResolve = useCallback(
-    () => {
-      const feature = mapInteractions.selectedBuildingFeature;
-      mapInteractions.handleCloseBuildingDialog();
-      if (feature) {
-        void heatResolution.resolveBuildingHeat(feature);
-      }
-    },
-    [mapInteractions, heatResolution]
-  );
+  // One-time "auto-assign vs manual" choice (fires after grid data loads).
+  const handleHeatBootstrapAutoAssign = useCallback(async () => {
+    setHeatResolutionMode("expected");
+    await heatResolution.resolveAllBuildingsHeat();
+    setHeatBootstrapPrompted(true);
+    setHeatBootstrapOpen(false);
+    notification.showSuccess(
+      t("gridNotifications.heatResolved") || "Heat technologies auto-assigned."
+    );
+  }, [setHeatResolutionMode, heatResolution, setHeatBootstrapPrompted,
+    setHeatBootstrapOpen, notification, t]);
+
+  const handleHeatBootstrapManual = useCallback(() => {
+    setHeatResolutionMode("manual");
+    setHeatBootstrapPrompted(true);
+    setHeatBootstrapOpen(false);
+  }, [setHeatResolutionMode, setHeatBootstrapPrompted, setHeatBootstrapOpen]);
+
+  // Toolbar "Resolve heat" — re-run the expected-fit auto-assign on demand.
+  const [isResolvingHeat, setIsResolvingHeat] = useState(false);
+  const handleResolveAllHeat = useCallback(async () => {
+    if (isResolvingHeat) return;
+    setIsResolvingHeat(true);
+    try {
+      const count = await heatResolution.resolveAllBuildingsHeat();
+      notification.showSuccess(
+        t("gridNotifications.heatResolved", { count }) ||
+          `${count} building${count === 1 ? "" : "s"} heat-resolved.`
+      );
+    } finally {
+      setIsResolvingHeat(false);
+    }
+  }, [isResolvingHeat, heatResolution, notification, t]);
 
   // ── 3D MapLibre handlers ─────────────────────────────────────────
   const ml3d = useMapLibre3DHandlers({
@@ -450,16 +476,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onAddTechToAll={techOperations.handleAddTechToAll}
             onRemoveTechFromAll={techOperations.handleRemoveTechFromAll}
             appliedTechKeys={techOperations.appliedTechKeys}
-            heatResolutionMode={heatResolution.heatResolutionMode}
-            onSetHeatResolutionMode={heatResolution.setHeatResolutionMode}
-            onResolveAllHeat={() => {
-              void heatResolution.resolveAllBuildingsHeat().then((count) => {
-                notification.showSuccess(
-                  t("gridNotifications.heatResolved", { count }) ||
-                    `${count} building${count === 1 ? "" : "s"} heat-resolved.`
-                );
-              });
-            }}
             gridResultIds={gridResultIds}
             buildingsCount={buildingsInPolygonCount}
             peakLoadKw={peakLoadInPolygonKw}
@@ -530,6 +546,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onRunPowerFlow={handleRunPowerFlow}
               isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
               hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+              onResolveAllHeat={handleResolveAllHeat}
+              isResolvingHeat={isResolvingHeat}
             />
             <MapInteractionBanners
               isAddTransformerMode={addTransformer.isAddTransformerMode}
@@ -634,8 +652,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <BuildingDialog
         open={mapInteractions.buildingDialogOpen}
         selectedBuilding={mapInteractions.selectedBuilding}
-        onClose={handleCloseBuildingDialogWithHeatResolve}
+        onClose={mapInteractions.handleCloseBuildingDialog}
         onFClassDemandChange={buildingDemand.handleFClassDemandChange}
+        onHeatDemandChange={buildingDemand.handleHeatDemandChange}
         onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
         onOpenChange={mapInteractions.setBuildingDialogOpen}
         onEditTech={(techKey) => {
@@ -691,6 +710,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           }
           setIsModified(true);
         }}
+      />
+
+      <HeatBootstrapDialog
+        open={heatBootstrapOpen}
+        onOpenChange={setHeatBootstrapOpen}
+        onAutoAssign={handleHeatBootstrapAutoAssign}
+        onManual={handleHeatBootstrapManual}
       />
 
       <CreateWorkspaceModal

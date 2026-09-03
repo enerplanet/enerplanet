@@ -252,7 +252,8 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 </span>
                             </div>
                         )}
-                        <div className="text-muted-foreground mt-0.5">
+                        <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-sky-500" />
                             {buildingTooltip.yearlyDemandKwh.toLocaleString()} kWh/yr
                         </div>
                         {buildingTooltip.yearlyHeatDemandKwh != null && buildingTooltip.yearlyHeatDemandKwh > 0 && (
