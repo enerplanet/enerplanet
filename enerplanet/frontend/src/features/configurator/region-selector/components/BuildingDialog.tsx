@@ -77,6 +77,7 @@ interface BuildingDialogProps {
   } | null;
   onClose: () => void;
   onFClassDemandChange: (fClass: string, demand: number) => void;
+  onHeatDemandChange?: (heatKwh: number) => void;
   onSelectedFClassChange?: (fClass: string) => void;
   onOpenChange: (open: boolean) => void;
   onEditTech?: (techKey: string) => void;
@@ -140,6 +141,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   selectedBuilding,
   onClose,
   onFClassDemandChange,
+  onHeatDemandChange,
   onSelectedFClassChange,
   onOpenChange,
   onEditTech,
@@ -371,6 +373,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   const yearlyDemand =
     activeFClassDetail?.yearlyDemandKwh ?? selectedBuilding?.yearlyDemandKwh ?? 0;
   const peakLoad = activeFClassDetail?.peakLoadKw ?? selectedBuilding?.peakLoadKw ?? 0;
+  const yearlyHeatDemand = selectedBuilding?.yearlyHeatDemandKwh ?? 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -438,10 +441,10 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 </Select>
               </div>
 
-              {/* Yearly Demand */}
+              {/* Yearly Electricity Demand */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
-                  Yearly Demand (kWh)
+                  Yearly Electricity Demand (kWh)
                 </label>
                 <input
                   type="number"
@@ -451,6 +454,27 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       activeFClassDetail?.fClass ?? selectedFClass,
                       Number(e.target.value)
                     );
+                    onSave?.();
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                />
+              </div>
+
+              {/* Yearly Heat Demand (editable, present by default) */}
+              <div>
+                <label className="block text-sm text-muted-foreground mb-1">
+                  Yearly Heat Demand (kWh)
+                  {selectedBuilding.heatDemandEstimated && (
+                    <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                      estimated
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  value={Math.round(yearlyHeatDemand)}
+                  onChange={(e) => {
+                    onHeatDemandChange?.(Number(e.target.value));
                     onSave?.();
                   }}
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"

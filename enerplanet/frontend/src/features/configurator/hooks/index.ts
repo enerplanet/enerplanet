@@ -30,6 +30,9 @@ export { usePylovoLayers } from "./usePylovoLayers";
 export { useHeatResolution } from "./useHeatResolution";
 export type { HeatResolutionHandlers } from "./useHeatResolution";
 
+export { useHeatLinkMode } from "./useHeatLinkMode";
+export type { HeatLinkModeState } from "./useHeatLinkMode";
+
 export { useTechDragDrop } from "./useTechDragDrop";
 export { useMapClickHandlers } from "./useMapClickHandlers";
 

@@ -7,6 +7,7 @@ import { useModelStore } from "@/features/configurator/store/modelStore";
 import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { extractBuildingEnrichmentFromProps, extractPeakLoadFromProps, extractSelectedFClassFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
+import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { extractTransformerId } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
@@ -27,7 +28,8 @@ const createBuildingTooltip = (feature: any, pixel: number[]) => {
   const props = feature.getProperties() as Record<string, unknown>;
   const fClasses = getFeatureFClasses(props);
   const primary = getPrimaryFClass(props) || 'unknown';
-  return { x: pixel[0], y: pixel[1], type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
+  const heat = estimateYearlyHeatDemand(primary, props.area as number, (props.demand_heat ?? props.yearly_heat_demand_kwh) as number);
+  return { x: pixel[0], y: pixel[1], type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated, techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
 };
 
 const createMvLineTooltip = (feature: any, pixel: number[]) => ({
@@ -102,8 +104,17 @@ export const useMapClickHandlers = ({
         const totalDemand = extractYearlyDemandKwh(props);
         const totalPeak = extractPeakLoadKw(props);
         const effectiveFClasses = fClasses.length > 0 ? fClasses : [primaryFClass];
+        const heat = estimateYearlyHeatDemand(primaryFClass, Number(props.area) || 0, (props.demand_heat ?? props.yearly_heat_demand_kwh) as number);
+        // Backfill the estimated heat demand on the building so it exists without
+        // pressing "Recalculate Demand" — both energy types always have a value.
+        if (feature.get('demand_heat') == null && heat.kwh > 0) {
+          feature.set('demand_heat', heat.kwh);
+          feature.set('yearly_heat_demand_kwh', heat.kwh);
+          feature.set('heat_demand_estimated', heat.estimated);
+        }
         setSelectedBuilding({
           osmId: feature.get('osm_id'), type: primaryFClass, fClass: primaryFClass, fClasses, yearlyDemandKwh: totalDemand,
+          yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated,
           peakLoadKw: totalPeak, area: feature.get('area') || 0, gridResultId: feature.get('grid_result_id'),
           techs: feature.get('techs') || {}, fClassDetails: buildFClassDetails(effectiveFClasses, totalDemand, totalPeak, props.f_class_demands ?? props.fclass_details),
           selectedFClass: extractSelectedFClass(props, effectiveFClasses, primaryFClass), ...enrichment,

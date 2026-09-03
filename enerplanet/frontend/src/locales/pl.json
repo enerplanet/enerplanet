@@ -828,7 +828,8 @@
     "addTransformerAction": "Dodaj transformator",
     "assignBuildingsAction": "Przypisz budynki",
     "runPowerFlowAction": "Analiza przepływu",
-    "rerunPowerFlowAction": "Ponów analizę"
+    "rerunPowerFlowAction": "Ponów analizę",
+    "resolveHeatAction": "Rozwiąż ciepło"
   },
   "time": {
     "justNow": "Właśnie teraz",
