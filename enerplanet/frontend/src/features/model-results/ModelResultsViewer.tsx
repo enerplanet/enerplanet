@@ -958,7 +958,10 @@ export const ModelResultsViewer = () => {
                       <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{selectedBuilding.area.toFixed(0)} m²</span></span>
                     )}
                     {selectedBuilding.yearlyDemandKwh != null && selectedBuilding.yearlyDemandKwh > 0 && (
-                      <span><span className="text-muted-foreground">{t('results.buildingDetail.demand', 'Demand')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                    )}
+                    {selectedBuilding.yearlyHeatDemandKwh != null && selectedBuilding.yearlyHeatDemandKwh > 0 && (
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{selectedBuilding.heatDemandEstimated ? '*' : ''}</span></span>
                     )}
                   </div>
                   {selectedBuilding.technologies.length > 0 && (
@@ -1000,7 +1003,10 @@ export const ModelResultsViewer = () => {
                           <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{mapTooltip.area.toFixed(0)} m²</span></span>
                         )}
                         {mapTooltip.yearlyDemandKwh != null && mapTooltip.yearlyDemandKwh > 0 && (
-                          <span><span className="text-muted-foreground">{t('results.buildingDetail.demand', 'Demand')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                        )}
+                        {mapTooltip.yearlyHeatDemandKwh != null && mapTooltip.yearlyHeatDemandKwh > 0 && (
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{mapTooltip.heatDemandEstimated ? '*' : ''}</span></span>
                         )}
                       </div>
                       {mapTooltip.techs && Object.keys(mapTooltip.techs).length > 0 && (

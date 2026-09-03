@@ -33,6 +33,10 @@ export interface BuildingResultData {
   techConfig?: Record<string, unknown>;
   // Energy demand
   yearlyDemandKwh?: number;
+  /** Yearly heat demand (kWh) — mirrored from backend TABULA estimate or props.demand_heat. */
+  yearlyHeatDemandKwh?: number;
+  /** True when heat demand is estimated locally (no explicit/persisted value). */
+  heatDemandEstimated?: boolean;
   peakLoadKw?: number;
   // Building enrichment (3D BAG for NL, EUBUCCO for DE/AT/others)
   bagId?: string;
