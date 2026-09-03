@@ -1,6 +1,6 @@
 import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
-import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home } from "lucide-react";
+import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame } from "lucide-react";
 import type { FC } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
@@ -28,6 +28,8 @@ interface TooltipBuilding {
     fClass?: string;
     fClasses?: string[];
     yearlyDemandKwh: number;
+    yearlyHeatDemandKwh?: number;
+    heatDemandEstimated?: boolean;
     techs?: Record<string, TechData>;
     gridResultId?: number;
     countryCode?: string;
@@ -253,6 +255,17 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         <div className="text-muted-foreground mt-0.5">
                             {buildingTooltip.yearlyDemandKwh.toLocaleString()} kWh/yr
                         </div>
+                        {buildingTooltip.yearlyHeatDemandKwh != null && buildingTooltip.yearlyHeatDemandKwh > 0 && (
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <Flame className="w-3 h-3 text-orange-500" />
+                                {buildingTooltip.yearlyHeatDemandKwh.toLocaleString()} kWh/yr
+                                {buildingTooltip.heatDemandEstimated && (
+                                    <span className="text-[9px] px-1 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                                        est.
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         {(buildingTooltip.floors3dBag || buildingTooltip.floors || hasFiniteNumber(buildingTooltip.heightMax) || hasFiniteNumber(buildingTooltip.heightMedian) || hasFiniteNumber(buildingTooltip.heightGround) || buildingTooltip.constructionYear || buildingTooltip.energyLabel || hasFiniteNumber(buildingTooltip.energyIndex) || buildingTooltip.labelDate || buildingTooltip.bagId || hasFiniteNumber(buildingTooltip.cbsPopulation) || hasFiniteNumber(buildingTooltip.cbsHouseholds) || hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize)) && (
                             <div className="mt-2 pt-2 border-t border-border space-y-0.5 text-[10px] text-muted-foreground">
                                 <div className="font-semibold text-foreground/90 flex items-center gap-1.5">
