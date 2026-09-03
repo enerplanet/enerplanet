@@ -34,6 +34,7 @@ type Config struct {
 	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
+	IgnisServiceURL       string // URL of the ignis heat-demand microservice
 	CallbackSecret        string // Shared secret for webservice callback authentication
 }
 
@@ -75,11 +76,14 @@ func LoadFromEnv() (*Config, error) {
 		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
 		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
 		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
-		// No default: buem-gateway's real deployment URL/port is unconfirmed (see the
-		// on-request-3d-pipeline plan's risk #6) — empty fails loudly instead of guessing.
+		// No default: buem-gateway's deployment URL and port are not yet
+		// confirmed; an empty value fails loudly instead of guessing.
 		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),
 		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
-		CallbackSecret: os.Getenv("CALLBACK_SECRET"),
+		// 8091: ignis's own default is APP_PORT 8080 (clashes with Keycloak) and
+		// weather-serve now holds 8090; the real deployment URL is unconfirmed.
+		IgnisServiceURL: platformconfig.GetEnv("IGNIS_SERVICE_URL", "http://localhost:8091"),
+		CallbackSecret:  os.Getenv("CALLBACK_SECRET"),
 	}
 	return cfg, nil
 }

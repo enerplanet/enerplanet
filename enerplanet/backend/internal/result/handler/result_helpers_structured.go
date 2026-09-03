@@ -6,29 +6,49 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *ResultHandler) buildStructuredResultsResponse(modelIDUint uint) gin.H {
+func (h *ResultHandler) buildStructuredResultsResponse(modelIDUint uint, carrier string) gin.H {
 	response := h.store.GetStructuredResults(modelIDUint)
 
-	cs := h.store.GetCarrierSummary(modelIDUint)
-	response["sum_production"] = cs.SumProduction
-	response["sum_consumption"] = cs.SumConsumption
-	response["renewable_production"] = cs.RenewableProduction
-	response["grid_import"] = cs.GridImport
-	response["peak_demand"] = cs.PeakDemand
-	response["timestep_count"] = cs.TimestepCount
-	response["prod_aggregates"] = cs.ProdAggregates
-	response["con_aggregates"] = cs.ConAggregates
+	if carrier != "" {
+		// Single carrier summary
+		cs := h.store.GetCarrierSummary(modelIDUint, carrier)
+		response["carrier"] = carrier
+		response["sum_production"] = cs.SumProduction
+		response["sum_consumption"] = cs.SumConsumption
+		response["renewable_production"] = cs.RenewableProduction
+		response["grid_import"] = cs.GridImport
+		response["peak_demand"] = cs.PeakDemand
+		response["timestep_count"] = cs.TimestepCount
+		response["prod_aggregates"] = cs.ProdAggregates
+		response["con_aggregates"] = cs.ConAggregates
+	} else {
+		// All carrier summaries
+		allSummaries := h.store.GetAllCarrierSummaries(modelIDUint)
+		response["carrier_summaries"] = allSummaries
+
+		// Still set the "power" summary at top-level for backward compat
+		if cs, ok := allSummaries["power"]; ok {
+			response["sum_production"] = cs.SumProduction
+			response["sum_consumption"] = cs.SumConsumption
+			response["renewable_production"] = cs.RenewableProduction
+			response["grid_import"] = cs.GridImport
+			response["peak_demand"] = cs.PeakDemand
+			response["timestep_count"] = cs.TimestepCount
+			response["prod_aggregates"] = cs.ProdAggregates
+			response["con_aggregates"] = cs.ConAggregates
+		}
+	}
 
 	return gin.H(response)
 }
 
-func (h *ResultHandler) fetchLocationTimeSeriesData(modelIDUint uint, location string, dateRange dateRangeFilter, response gin.H) {
+func (h *ResultHandler) fetchLocationTimeSeriesData(modelIDUint uint, location string, dateRange dateRangeFilter, carrier string, response gin.H) {
 	dr := resultStore.DateRange{Begin: dateRange.begin, End: dateRange.end}
 
-	if prod, err := h.store.GetLocationCarrierProd(modelIDUint, location, dr); err == nil {
+	if prod, err := h.store.GetLocationCarrierProd(modelIDUint, location, dr, carrier); err == nil {
 		response["production"] = prod
 	}
-	if con, err := h.store.GetLocationCarrierCon(modelIDUint, location, dr); err == nil {
+	if con, err := h.store.GetLocationCarrierCon(modelIDUint, location, dr, carrier); err == nil {
 		response["consumption"] = con
 	}
 	if cf, err := h.store.GetLocationCapacityFactor(modelIDUint, location, dr); err == nil {

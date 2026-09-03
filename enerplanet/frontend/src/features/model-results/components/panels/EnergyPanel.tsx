@@ -241,9 +241,10 @@ const DailyLoadProfileTooltip = () => {
 interface EnergyPanelProps {
   structuredResults: StructuredModelResults | null;
   modelId: number | null;
+  carrier?: string;
 }
 
-const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
+const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelProps) => {
   const { t } = useTranslation();
   const [carrierProd, setCarrierProd] = useState<CarrierProdRecord[]>([]);
   const [carrierCon, setCarrierCon] = useState<CarrierConRecord[]>([]);
@@ -251,10 +252,13 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
   const [dailyCon, setDailyCon] = useState<CarrierConRecord[]>([]);
   const [carrierLoading, setCarrierLoading] = useState(false);
   const [carrierLoaded, setCarrierLoaded] = useState(false);
+  const [loadedCarrier, setLoadedCarrier] = useState('');
 
-  // Lazy-load carrier time-series data when this panel is first rendered
+  // Lazy-load carrier time-series data when this panel is first rendered.
+  // Re-fetches when the active carrier changes ('' = backend default "power").
   useEffect(() => {
-    if (!modelId || carrierLoaded) return;
+    if (!modelId) return;
+    if (carrierLoaded && loadedCarrier === carrier) return;
 
     // If carrier data was already included in structuredResults (small models), use it directly
     if (structuredResults?.carrier_prod?.length || structuredResults?.carrier_con?.length) {
@@ -263,6 +267,7 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
       setDailyProd(structuredResults.carrier_prod || []); // Fallback
       setDailyCon(structuredResults.carrier_con || []);   // Fallback
       setCarrierLoaded(true);
+      setLoadedCarrier(carrier);
       return;
     }
 
@@ -271,8 +276,8 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
       try {
         // Fetch hourly and daily data in parallel
         const [hourlyData, dailyData] = await Promise.all([
-          fetchCarrierTimeSeries(modelId, { aggregate: 'hourly' }),
-          fetchCarrierTimeSeries(modelId, { aggregate: 'daily' })
+          fetchCarrierTimeSeries(modelId, { aggregate: 'hourly', carrier }),
+          fetchCarrierTimeSeries(modelId, { aggregate: 'daily', carrier })
         ]);
 
         if (hourlyData) {
@@ -288,16 +293,20 @@ const EnergyPanel = ({ structuredResults, modelId }: EnergyPanelProps) => {
           setDailyProd(hourlyData.carrier_prod || []);
           setDailyCon(hourlyData.carrier_con || []);
         }
+
+        setCarrierLoaded(true);
+        setLoadedCarrier(carrier);
       } catch (err) {
         console.error('Failed to load carrier time series:', err);
+        setCarrierLoaded(true);
+        setLoadedCarrier(carrier);
       } finally {
         setCarrierLoading(false);
-        setCarrierLoaded(true);
       }
     };
 
     loadCarrierData();
-  }, [modelId, carrierLoaded, structuredResults]);
+  }, [modelId, carrierLoaded, loadedCarrier, carrier, structuredResults]);
   
   if (!structuredResults) {
     return <PanelEmptyState icon={LineChart} title={t('results.energy.noData')} />;

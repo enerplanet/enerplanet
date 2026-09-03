@@ -888,3 +888,262 @@ func specificDemandForFClass(fClass string) float64 {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Heat demand helpers
+// ---------------------------------------------------------------------------
+
+// specificHeatDemandByFClass maps building usage classes to yearly heat demand
+// in kWh/sqm/year (space heating + hot water) for typical German building stock.
+//
+// NOTE: This is a TEMPORARY fallback until BuEM takes over. The BuEM pipeline
+// (internal/jobs/run_buem.go) already runs before calculation dispatch, resolves
+// per-building 3D envelope + weather, and merges each building's actual
+// thermal_load_profile into topology[].from.properties.buem (see mergeBuemResults).
+// These defaults only fill the gap for buildings without 3D data and for
+// payload-time demand estimation before run_buem runs. The calculation
+// webservice should prefer props.buem.thermal_load_profile when present and
+// fall back to demand_heat.
+var specificHeatDemandByFClass = map[string]float64{
+	"apartment":             90,
+	"apartments":            85,
+	"detached":              100,
+	"semidetached_house":    95,
+	"terrace":               85,
+	"townhouse":             85,
+	"house":                 100,
+	"residential":           90,
+	"bungalow":              95,
+	"dormitory":             80,
+	"sfh":                   100,
+	"mfh":                   85,
+
+	"office":                80,
+	"commercial":            85,
+	"retail":                90,
+	"shop":                  90,
+	"supermarket":           110,
+	"mall":                  100,
+	"restaurant":            140,
+	"cafe":                  130,
+	"bar":                   130,
+	"fast_food":             130,
+	"bakery":                150,
+	"butcher":               130,
+	"warehouse":             60,
+	"industrial":            100,
+	"factory":               120,
+	"workshop":              100,
+	"manufacture":           110,
+	"logistics":             60,
+	"storage_tank":          30,
+	"silo":                  30,
+
+	"school":                90,
+	"university":            95,
+	"kindergarten":          100,
+	"hospital":              200,
+	"clinic":                180,
+	"healthcare":            180,
+	"nursing_home":          150,
+	"retirement_home":       140,
+	"church":                80,
+	"chapel":                80,
+	"place_of_worship":      80,
+	"museum":                80,
+	"theatre":               100,
+	"cinema":                100,
+	"library":               90,
+	"courthouse":            90,
+	"government":            90,
+	"police":                90,
+	"fire_station":          100,
+	"community_centre":      90,
+	"sports_centre":         120,
+	"sports_hall":           100,
+	"swimming_pool":         300,
+	"fitness_centre":        100,
+	"public":                85,
+
+	"hotel":                 130,
+	"hostel":                120,
+	"guest_house":           120,
+	"motel":                 120,
+
+	"farm":                  100,
+	"farmhouse":             100,
+	"farm_auxiliary":        60,
+	"agricultural":          80,
+	"greenhouse":            250,
+	"stable":                80,
+	"barn":                  60,
+	"cowshed":               80,
+
+	"data_center":           150,
+	"station":               120,
+	"train_station":         120,
+	"airport":               120,
+
+	"default":               80,
+}
+
+// heatProfileForFClass returns the heat demand profile key for a building class.
+// Heat profiles differ from electricity — they follow seasonal temperature patterns.
+func heatProfileForFClass(fClass string) string {
+	return "heat_" + demandProfileForFClass(fClass)
+}
+
+// parseStoredFClassHeatDemands parses stored heat demand details from building properties.
+// Uses the same shape as f_class_demands but reads heat_demand_energy field.
+func parseStoredFClassHeatDemands(raw interface{}, fallbackClasses []string) ([]map[string]interface{}, int64) {
+	if raw == nil {
+		return nil, 0
+	}
+
+	parsed := raw
+	if text, ok := raw.(string); ok {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			return nil, 0
+		}
+		var decoded []interface{}
+		if err := json.Unmarshal([]byte(text), &decoded); err != nil {
+			return nil, 0
+		}
+		parsed = decoded
+	}
+
+	var rows []interface{}
+	switch v := parsed.(type) {
+	case []interface{}:
+		rows = v
+	case []map[string]interface{}:
+		rows = make([]interface{}, 0, len(v))
+		for _, item := range v {
+			rows = append(rows, item)
+		}
+	default:
+		return nil, 0
+	}
+
+	out := make([]map[string]interface{}, 0, len(rows))
+	var total int64
+	for idx, row := range rows {
+		record, ok := row.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		cls := normalizeFClass(getStringValue(record["f_class"]))
+		if cls == "" {
+			cls = normalizeFClass(getStringValue(record["fClass"]))
+		}
+		if cls == "" {
+			cls = normalizeFClass(getStringValue(record["class"]))
+		}
+		if cls == "" && idx < len(fallbackClasses) {
+			cls = normalizeFClass(fallbackClasses[idx])
+		}
+		if cls == "" {
+			continue
+		}
+
+		demand := getFloatValue(record["demand_heat_energy"])
+		if demand <= 0 {
+			demand = getFloatValue(record["yearly_heat_demand_kwh"])
+		}
+		if demand < 0 {
+			demand = 0
+		}
+
+		profile := heatProfileForFClass(cls)
+
+		demandInt := int64(math.Round(demand))
+		total += demandInt
+		out = append(out, map[string]interface{}{
+			"demand_heat_energy": demandInt,
+			"profile":            profile,
+		})
+	}
+
+	if len(out) == 0 {
+		return nil, 0
+	}
+	return out, total
+}
+
+// calculateYearlyHeatDemandPerFClass computes per-class heat demand analogous to
+// calculateYearlyDemandPerFClass, using stored heat demands, explicit heat demand,
+// or area-based estimation.
+func calculateYearlyHeatDemandPerFClass(
+	fClasses []string,
+	areaSqm float64,
+	storedDetails interface{},
+	explicitHeatDemand float64,
+) ([]map[string]interface{}, int64) {
+	classes := normalizeUniqueFClasses(fClasses)
+
+	if stored, storedTotal := parseStoredFClassHeatDemands(storedDetails, classes); len(stored) > 0 {
+		if storedTotal == 0 && explicitHeatDemand > 0 {
+			targetTotal := int64(math.Round(explicitHeatDemand))
+			base := targetTotal / int64(len(stored))
+			remainder := targetTotal % int64(len(stored))
+			for idx, detail := range stored {
+				demand := base
+				if int64(idx) < remainder {
+					demand++
+				}
+				detail["demand_heat_energy"] = demand
+			}
+			return stored, targetTotal
+		}
+		return stored, storedTotal
+	}
+
+	if explicitHeatDemand > 0 {
+		return distributeDemandEvenly(classes, int64(math.Round(explicitHeatDemand)))
+	}
+
+	if areaSqm <= 0 {
+		return distributeDemandEvenly(classes, 0)
+	}
+
+	areaShare := areaSqm / float64(len(classes))
+	out := make([]map[string]interface{}, 0, len(classes))
+	var total int64
+
+	for _, cls := range classes {
+		demand := int64(math.Round(areaShare * specificHeatDemandForFClass(cls)))
+		if demand < 0 {
+			demand = 0
+		}
+		total += demand
+		out = append(out, map[string]interface{}{
+			"demand_heat_energy": demand,
+			"profile":            heatProfileForFClass(cls),
+		})
+	}
+
+	return out, total
+}
+
+// specificHeatDemandForFClass returns yearly heat demand in kWh/sqm for a building class.
+func specificHeatDemandForFClass(fClass string) float64 {
+	norm := normalizeFClass(fClass)
+	if demand, ok := specificHeatDemandByFClass[norm]; ok {
+		return demand
+	}
+
+	switch inferCategoryFromFClass(norm) {
+	case "public":
+		return 90.0
+	case "industrial":
+		return 90.0
+	case "agricultural":
+		return 80.0
+	case "commercial":
+		return 80.0
+	default:
+		return 80.0
+	}
+}
+
