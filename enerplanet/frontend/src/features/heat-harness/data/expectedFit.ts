@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Expected-fit table — building f-class → most likely heat tech (plan §1).
+// Expected-fit table — building f-class to most likely heat tech.
 // Heuristic, review-flagged, user-overridable, "estimated"-badged.
 // TEMPORARY harness data.
 // ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ const EXPECTED_FIT: Record<string, string> = {
   farm: 'biomass_chp',
   barn: 'biomass_chp',
   stable: 'biomass_chp',
-  greenhouse: 'air_source_heat_pump', // solar thermal not in catalog — see plan §1
+  greenhouse: 'air_source_heat_pump', // solar thermal not in the catalogue
 };
 
 /** Expected-fit tech for a building class; falls back to the simple default. */
