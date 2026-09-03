@@ -76,8 +76,8 @@ func LoadFromEnv() (*Config, error) {
 		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
 		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
 		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
-		// No default: buem-gateway's real deployment URL/port is unconfirmed (see the
-		// on-request-3d-pipeline plan's risk #6) — empty fails loudly instead of guessing.
+		// No default: buem-gateway's deployment URL and port are not yet
+		// confirmed; an empty value fails loudly instead of guessing.
 		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),
 		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
 		// 8091: ignis's own default is APP_PORT 8080 (clashes with Keycloak) and
