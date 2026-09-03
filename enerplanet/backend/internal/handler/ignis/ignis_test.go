@@ -93,11 +93,11 @@ func TestCalculateHeatDemand_forwardsMethodPathAndBody(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "123.45")
 }
 
-func TestCalculateHeatDemand_propagatesErrorStatus(t *testing.T) {
+func TestForwardToIgnis_passesThrough4xxWithMessage(t *testing.T) {
 	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"error":"variant not found"}`))
+		_, _ = w.Write([]byte(`{"error":"variant not found: XX.N.SFH.01.Gen"}`))
 	}))
 	defer ignisService.Close()
 
@@ -109,5 +109,36 @@ func TestCalculateHeatDemand_propagatesErrorStatus(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.GreaterOrEqual(t, w.Code, http.StatusBadRequest)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "variant not found: XX.N.SFH.01.Gen")
+}
+
+func TestForwardToIgnis_maps5xxToBadGateway(t *testing.T) {
+	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"error":"Failed to query variants"}`))
+	}))
+	defer ignisService.Close()
+
+	handler := NewIgnisHandler(ignisService.URL)
+	router := gin.New()
+	router.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code)
+}
+
+func TestForwardToIgnis_unreachableServiceIsBadGateway(t *testing.T) {
+	handler := NewIgnisHandler("http://127.0.0.1:1")
+	router := gin.New()
+	router.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 }

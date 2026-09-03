@@ -68,27 +68,49 @@ func forwardIgnisRequest(ctx context.Context, baseURL, method, path string, payl
 
 // forwardToIgnis forwards a request to ignis and writes the (unmarshalled) JSON response
 // back onto c, wrapped in the standard success envelope.
+//
+// A 4xx from ignis is the caller's problem (unknown variant code, unsupported
+// country, missing query param): the status and ignis's own error message pass
+// straight through. A 5xx or an unreachable service is an upstream failure and
+// becomes a 502, not the caller's fault.
 func (h *IgnisHandler) forwardToIgnis(c *gin.Context, method, path string, payload []byte) {
 	body, status, err := forwardIgnisRequest(c.Request.Context(), h.baseURL, method, path, payload)
 	if err != nil {
 		logger.Logger.Errorf("Error contacting ignis (%s %s): %v", method, path, err)
-		httputil.InternalError(c, "Internal server error")
+		httputil.BadGateway(c, "ignis unavailable")
+		return
+	}
+
+	if status >= http.StatusInternalServerError {
+		logger.Logger.Errorf("ignis %s %s returned %d: %s", method, path, status, string(body))
+		httputil.BadGateway(c, "ignis error")
+		return
+	}
+	if status >= http.StatusBadRequest {
+		httputil.ErrorResponse(c, status, ignisErrorMessage(body))
 		return
 	}
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Logger.Warnf("Failed to parse JSON response from ignis: %s", string(body))
-		httputil.InternalError(c, "Failed to parse response from ignis service")
-		return
-	}
-
-	if status >= http.StatusBadRequest {
-		httputil.InternalError(c, fmt.Sprintf("ignis service responded with %d", status))
+		httputil.BadGateway(c, "invalid response from ignis")
 		return
 	}
 
 	httputil.SuccessResponse(c, result)
+}
+
+// ignisErrorMessage extracts the "error" field from an ignis error body,
+// falling back to a generic message when the body is not in that shape.
+func ignisErrorMessage(body []byte) string {
+	var parsed struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &parsed); err == nil && parsed.Error != "" {
+		return parsed.Error
+	}
+	return "ignis rejected the request"
 }
 
 // GetVariants lists all TABULA variant codes for a country.
