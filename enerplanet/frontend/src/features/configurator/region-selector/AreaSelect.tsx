@@ -40,6 +40,7 @@ import { useRegionName, useRegionSelection } from "@/features/configurator/hooks
 import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
+import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
 // Extracted selectors
@@ -310,6 +311,27 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     multiEditSelectedIds: multiEdit.multiEditSelectedIds,
   });
 
+  // ── Heat resolution (expected-fit auto-resolve) ───────────────────
+  const heatResolution = useHeatResolution({
+    pylovoLayersRef: pylovoLayers.pylovoLayersRef,
+    setIsModified,
+  });
+
+  // Single build: when the building dialog closes on a heat-demand building that
+  // has no assigned heat tech, auto-resolve the expected-fit tech (expected mode
+  // only). Resolutions are no-ops when manual mode is active or heat is already
+  // present, so this is idempotent and safe to fire on every close.
+  const handleCloseBuildingDialogWithHeatResolve = useCallback(
+    () => {
+      const feature = mapInteractions.selectedBuildingFeature;
+      mapInteractions.handleCloseBuildingDialog();
+      if (feature) {
+        void heatResolution.resolveBuildingHeat(feature);
+      }
+    },
+    [mapInteractions, heatResolution]
+  );
+
   // ── 3D MapLibre handlers ─────────────────────────────────────────
   const ml3d = useMapLibre3DHandlers({
     mapInteractions,
@@ -428,6 +450,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onAddTechToAll={techOperations.handleAddTechToAll}
             onRemoveTechFromAll={techOperations.handleRemoveTechFromAll}
             appliedTechKeys={techOperations.appliedTechKeys}
+            heatResolutionMode={heatResolution.heatResolutionMode}
+            onSetHeatResolutionMode={heatResolution.setHeatResolutionMode}
+            onResolveAllHeat={() => {
+              void heatResolution.resolveAllBuildingsHeat().then((count) => {
+                notification.showSuccess(
+                  t("gridNotifications.heatResolved", { count }) ||
+                    `${count} building${count === 1 ? "" : "s"} heat-resolved.`
+                );
+              });
+            }}
             gridResultIds={gridResultIds}
             buildingsCount={buildingsInPolygonCount}
             peakLoadKw={peakLoadInPolygonKw}
@@ -602,7 +634,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <BuildingDialog
         open={mapInteractions.buildingDialogOpen}
         selectedBuilding={mapInteractions.selectedBuilding}
-        onClose={mapInteractions.handleCloseBuildingDialog}
+        onClose={handleCloseBuildingDialogWithHeatResolve}
         onFClassDemandChange={buildingDemand.handleFClassDemandChange}
         onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
         onOpenChange={mapInteractions.setBuildingDialogOpen}
