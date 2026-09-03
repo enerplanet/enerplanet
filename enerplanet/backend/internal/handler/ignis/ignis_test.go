@@ -113,6 +113,27 @@ func TestForwardToIgnis_passesThrough4xxWithMessage(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "variant not found: XX.N.SFH.01.Gen")
 }
 
+func TestGetFieldMetadata_forwardsToIgnisFields(t *testing.T) {
+	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v1/fields", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"key":"A_C_Ref_Input","label":"Reference floor area","unit":"m²"}]}`))
+	}))
+	defer ignisService.Close()
+
+	handler := NewIgnisHandler(ignisService.URL)
+	router := gin.New()
+	router.GET("/v2/ignis/fields", handler.GetFieldMetadata)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/fields", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Reference floor area")
+}
+
 func TestForwardToIgnis_maps5xxToBadGateway(t *testing.T) {
 	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -154,3 +154,11 @@ func (h *IgnisHandler) CalculateHeatDemand(c *gin.Context) {
 
 	h.forwardToIgnis(c, http.MethodPost, path, payload)
 }
+
+// GetFieldMetadata returns the static description of every TABULA input field
+// (label, unit, simple and expert descriptions), used to label and describe the
+// heat-demand form inputs. The list is country-independent.
+// GET /v2/ignis/fields -> ignis GET /api/v1/fields
+func (h *IgnisHandler) GetFieldMetadata(c *gin.Context) {
+	h.forwardToIgnis(c, http.MethodGet, "/api/v1/fields", nil)
+}
