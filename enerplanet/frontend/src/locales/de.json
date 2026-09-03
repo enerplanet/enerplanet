@@ -2006,10 +2006,23 @@
     },
     "dragInstruction": "Ziehen Sie eine Technologie auf ein Gebäude auf der Karte",
     "noTechnologies": "Keine Technologien verfügbar",
+    "carrierToggleLabel": "Technologieträger",
+    "carriers": {
+      "electricity": "Strom",
+      "heat": "Wärme"
+    },
+    "heatSourceHint": "Wärmetechnologien stammen aus der OpenTech-DB und werden von Calliope optimiert.",
+    "noHeatTechnologies": "Keine Wärmetechnologien verfügbar",
+    "searchPlaceholder": "Technologien suchen…",
+    "noSearchResults": "Keine Technologien entsprechen der Suche",
+    "otdbElectricityHint": "OpenTech-DB-Ergänzungen — Calliope optimiert ihre Kapazität.",
     "categories": {
       "supply": "Versorgung",
       "storage": "Speicher",
-      "other": "Sonstige"
+      "other": "Sonstige",
+      "conversion": "Umwandlung",
+      "networks": "Netze",
+      "otdbAdditions": "OpenTech-DB-Ergänzungen"
     },
     "form": {
       "key": "Schlüssel",

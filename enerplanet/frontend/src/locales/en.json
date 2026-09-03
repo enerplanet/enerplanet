@@ -2008,10 +2008,23 @@
     },
     "dragInstruction": "Drag a technology onto a building on the map",
     "noTechnologies": "No technologies available",
+    "carrierToggleLabel": "Technology carrier",
+    "carriers": {
+      "electricity": "Electricity",
+      "heat": "Heat"
+    },
+    "heatSourceHint": "Heat technologies come from OpenTech-DB and are optimized by Calliope.",
+    "noHeatTechnologies": "No heat technologies available",
+    "searchPlaceholder": "Search technologies…",
+    "noSearchResults": "No technologies match your search",
+    "otdbElectricityHint": "OpenTech-DB additions — Calliope optimizes their capacity.",
     "categories": {
       "supply": "Supply",
       "storage": "Storage",
-      "other": "Other"
+      "other": "Other",
+      "conversion": "Conversion",
+      "networks": "Networks",
+      "otdbAdditions": "OpenTech-DB Additions"
     },
     "form": {
       "key": "Key",
