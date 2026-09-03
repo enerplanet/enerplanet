@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@spatialhub/ui";
-import { Building, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building, Eye, EyeOff, Flame, Loader2, Pencil, Plus, Search, Trash2, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import {
   ALL_F_CLASSES,
@@ -24,6 +24,7 @@ import {
   isResidentialFClass,
   normalizeFClass,
 } from "@/features/configurator/utils/fClassUtils";
+import { fetchOpenTechHeatTechnologies, fetchOpenTechElectricityTechnologies } from "@/features/configurator/services/opentechdbService";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import technologyService from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
@@ -329,21 +330,32 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   const techPickerRef = useRef<HTMLDivElement>(null);
   const [showTechPicker, setShowTechPicker] = useState(false);
   const [availableTechs, setAvailableTechs] = useState<Technology[]>([]);
+  const [availableHeatTechs, setAvailableHeatTechs] = useState<Technology[]>([]);
+  const [availableOtdbElectricityTechs, setAvailableOtdbElectricityTechs] = useState<Technology[]>([]);
   const [isLoadingTechs, setIsLoadingTechs] = useState(false);
+  const [pickerCarrier, setPickerCarrier] = useState<"electricity" | "heat">("electricity");
+  const [pickerSearch, setPickerSearch] = useState("");
   const closePicker = useCallback(() => setShowTechPicker(false), []);
   useClickOutside(techPickerRef, showTechPicker, closePicker);
 
   const fetchTechs = useCallback(async () => {
-    if (availableTechs.length > 0) return;
+    if (availableTechs.length > 0 && availableHeatTechs.length > 0) return;
     setIsLoadingTechs(true);
     try {
-      setAvailableTechs(await technologyService.getAll());
+      const [techs, heatTechs, otdbElek] = await Promise.all([
+        technologyService.getAll(),
+        fetchOpenTechHeatTechnologies(),
+        fetchOpenTechElectricityTechnologies(),
+      ]);
+      setAvailableTechs(techs);
+      setAvailableHeatTechs(heatTechs as unknown as Technology[]);
+      setAvailableOtdbElectricityTechs(otdbElek as unknown as Technology[]);
     } catch (err) {
       console.error("Failed to load technologies:", err);
     } finally {
       setIsLoadingTechs(false);
     }
-  }, [availableTechs.length]);
+  }, [availableTechs.length, availableHeatTechs.length]);
 
   // Country-specific metadata
   const isNL = selectedBuilding?.countryCode === "NL";
@@ -738,17 +750,65 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     Available Technologies
                   </div>
                   <div className="max-h-48 overflow-y-auto">
+                    {/* Search */}
+                    <div className="sticky top-0 z-10 bg-background px-2 pt-1 pb-1 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                        <input
+                          type="text"
+                          value={pickerSearch}
+                          onChange={(e) => setPickerSearch(e.target.value)}
+                          placeholder="Search technologies…"
+                          className="w-full rounded border border-border bg-background pl-6 pr-2 py-1 text-[11px] text-foreground outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                    {/* Carrier toggle: electricity (simulator) / heat (OpenTech-DB) */}
+                    <div className="sticky top-0 z-10 flex items-center gap-0.5 bg-background px-2 pt-1 pb-1 border-b border-border">
+                      {([
+                        ["electricity", "Electricity", Zap],
+                        ["heat", "Heat", Flame],
+                      ] as const).map(([view, label, Icon]) => (
+                        <button
+                          key={view}
+                          type="button"
+                          onClick={() => setPickerCarrier(view)}
+                          className={`flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                            pickerCarrier === view
+                              ? "bg-muted text-foreground"
+                              : "text-muted-foreground hover:bg-muted/50"
+                          }`}
+                        >
+                          <Icon className={`h-3 w-3 ${view === "heat" ? "text-orange-500" : "text-primary"}`} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                     {isLoadingTechs ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
-                    ) : availableTechs.length === 0 ? (
+                    ) : (pickerCarrier === "heat" ? availableHeatTechs : availableTechs).length === 0 ? (
                       <div className="px-3 py-3 text-sm text-muted-foreground">
-                        No technologies available.
+                        {pickerCarrier === "heat" ? "No heat technologies available." : "No technologies available."}
                       </div>
                     ) : (
-                      availableTechs.map((tech) => {
+                      (() => {
+                        const pool = pickerCarrier === "heat" ? availableHeatTechs : [...availableTechs, ...availableOtdbElectricityTechs];
+                        const q = pickerSearch.trim().toLowerCase();
+                        const filtered = q === "" ? pool : pool.filter((tech) =>
+                          tech.alias.toLowerCase().includes(q) || tech.key.toLowerCase().includes(q)
+                        );
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="px-3 py-3 text-sm text-muted-foreground">
+                              No technologies match your search
+                            </div>
+                          );
+                        }
+                        return filtered.map((tech) => {
                         const alreadyAdded = techs[tech.key] !== undefined;
+                        const isOtdb = (tech as { source?: string }).source === "opentechdb";
                         return (
                           <button
                             key={tech.key}
@@ -764,12 +824,18 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                               {(tech.alias || tech.key).charAt(0).toUpperCase()}
                             </span>
                             <span className="flex-1 truncate">{tech.alias}</span>
+                            {isOtdb && (
+                              <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-medium">
+                                OTDB
+                              </span>
+                            )}
                             {alreadyAdded && (
                               <span className="text-[10px] text-muted-foreground">Added</span>
                             )}
                           </button>
                         );
-                      })
+                        })
+                      })()
                     )}
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { normalizeFClass, isResidentialFClass } from "@/features/configurator/utils/fClassUtils";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
+import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface BuildingDemandOptions {
@@ -233,6 +234,18 @@ export const useBuildingDemandRecalculation = ({
         pylovoLayers.updateBuildingProperty(osmId, "area", requestedArea);
         pylovoLayers.updateBuildingProperty(osmId, "floors", requestedFloors);
         pylovoLayers.updateBuildingProperty(osmId, "floors_3dbag", requestedFloors);
+
+        // Heat demand: infer alongside electricity so it rides the same
+        // payload path (backend reads demand_heat / yearly_heat_demand_kwh).
+        // Explicit props win; otherwise mirror the backend's TABULA estimate.
+        const heat = estimateYearlyHeatDemand(
+          selectedFClass,
+          requestedArea,
+          toFiniteNumber(selectedBuilding.yearlyHeatDemandKwh) ?? undefined
+        );
+        pylovoLayers.updateBuildingProperty(osmId, "demand_heat", heat.kwh);
+        pylovoLayers.updateBuildingProperty(osmId, "yearly_heat_demand_kwh", heat.kwh);
+        pylovoLayers.updateBuildingProperty(osmId, "heat_demand_estimated", heat.estimated);
         if (shouldUseHouseholdSize) {
           pylovoLayers.updateBuildingProperty(
             osmId,
@@ -269,6 +282,8 @@ export const useBuildingDemandRecalculation = ({
             ? {
               ...prev,
               yearlyDemandKwh: totalYearlyDemand,
+              yearlyHeatDemandKwh: heat.kwh,
+              heatDemandEstimated: heat.estimated,
               peakLoadKw: totalPeakLoad,
               area: requestedArea,
               floors: requestedFloors,
