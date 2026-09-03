@@ -144,6 +144,8 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 	primaryClass := selectPrimaryBuildingFClass(fClasses)
 	selectedFClass := resolveSelectedBuildingFClass(bProps, fClasses)
 	area := getFloatValue(bProps["area"])
+
+	// --- Electricity demand ---
 	explicitDemand := getFloatValue(bProps["yearly_demand_kwh"])
 	if explicitDemand <= 0 {
 		explicitDemand = getFloatValue(bProps["demand_energy"])
@@ -189,6 +191,32 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 		primaryClass = selectedFClass
 	}
 	demandProfile := demandProfileForFClass(primaryClass)
+
+	// --- Heat demand ---
+	explicitHeatDemand := getFloatValue(bProps["yearly_heat_demand_kwh"])
+	if explicitHeatDemand <= 0 {
+		explicitHeatDemand = getFloatValue(bProps["demand_heat"])
+	}
+
+	fClassHeatDemands, yearlyHeatDemandInt := calculateYearlyHeatDemandPerFClass(
+		fClasses,
+		area,
+		bProps["f_class_heat_demands"],
+		explicitHeatDemand,
+	)
+	if len(fClassHeatDemands) == 0 {
+		fClassHeatDemands, yearlyHeatDemandInt = calculateYearlyHeatDemandPerFClass(
+			fClasses,
+			area,
+			bProps["fclass_heat_details"],
+			explicitHeatDemand,
+		)
+	}
+	if yearlyHeatDemandInt <= 0 && area > 0 {
+		yearlyHeatDemandInt = int64(math.Round(area * specificHeatDemandForFClass(primaryClass)))
+	}
+	heatDemandProfile := heatProfileForFClass(primaryClass)
+
 	techs := extractAndTransformTechs(bProps)
 
 	// Convert geometry to point, with fallback to original geometry
@@ -203,19 +231,21 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 		"geometry": pointGeom,
 		"id":       fmt.Sprintf("%d", poiID),
 		"properties": map[string]interface{}{
-			"id":              fmt.Sprintf("%d", poiID),
-			"feature_type":    "BasePOI",
-			"type":            primaryClass,
-			"f_class":         primaryClass,
-			"f_class_demands": fClassDemands,
-			"osm_id":          osmID,
-			"area":            area,
-			"demand_profile":  demandProfile,
-			"demand_energy":   yearlyDemandInt,
-			"demand_heat":     0,
-			"created_at":      nil,
-			"modified_at":     nil,
-			"session_id":      fmt.Sprintf("%d", sessionID),
+			"id":                  fmt.Sprintf("%d", poiID),
+			"feature_type":        "BasePOI",
+			"type":                primaryClass,
+			"f_class":             primaryClass,
+			"f_class_demands":     fClassDemands,
+			"f_class_heat_demands": fClassHeatDemands,
+			"osm_id":              osmID,
+			"area":                area,
+			"demand_profile":      demandProfile,
+			"demand_energy":       yearlyDemandInt,
+			"demand_heat":         yearlyHeatDemandInt,
+			"demand_heat_profile": heatDemandProfile,
+			"created_at":          nil,
+			"modified_at":         nil,
+			"session_id":          fmt.Sprintf("%d", sessionID),
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,

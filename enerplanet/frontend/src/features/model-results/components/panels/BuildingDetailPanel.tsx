@@ -36,6 +36,7 @@ interface WindTurbineInfo {
 interface BuildingDetailPanelProps {
   building: BuildingResultData;
   modelId: number;
+  carrier?: string;
   turbineData?: Record<string, WindTurbineInfo>;
 }
 
@@ -94,10 +95,10 @@ const getEnergyLabelColor = (label: string): string => {
   return colors[label] || "bg-muted text-muted-foreground";
 };
 
-const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDetailPanelProps) => {
+const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {} }: BuildingDetailPanelProps) => {
   const [timeSeriesData, setTimeSeriesData] = useState<LocationTimeSeriesData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<BuildingTab>("energy");
+  const [activeTab, setActiveTab] = useState<BuildingTab>('energy');
   const { t } = useTranslation();
 
   const turbineIdToName = useMemo(() => {
@@ -139,7 +140,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       if (!building.matchedLocationId) return;
       setLoading(true);
       try {
-        const data = await fetchLocationTimeSeries(modelId, building.matchedLocationId);
+        const data = await fetchLocationTimeSeries(modelId, building.matchedLocationId, undefined, undefined, carrier);
         setTimeSeriesData(data);
       } catch (error) {
         console.error("Failed to load time series:", error);
@@ -148,7 +149,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       }
     };
     loadTimeSeries();
-  }, [modelId, building.matchedLocationId]);
+  }, [modelId, building.matchedLocationId, carrier]);
 
   const fClassLabels = useMemo(() => {
     const rawClasses =

@@ -159,7 +159,8 @@ func (h *ResultHandler) GetStructuredResults(c *gin.Context) {
 	}
 
 	modelIDUint := parseUint(modelID)
-	response := h.buildStructuredResultsResponse(modelIDUint)
+	carrier := c.Query("carrier")
+	response := h.buildStructuredResultsResponse(modelIDUint, carrier)
 	httputil.SuccessResponse(c, response)
 }
 func (h *ResultHandler) GetCarrierTimeSeries(c *gin.Context) {
@@ -181,14 +182,15 @@ func (h *ResultHandler) GetCarrierTimeSeries(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 	aggregate := c.Query("aggregate")
+	carrier := c.Query("carrier")
 
 	response := gin.H{}
 	if aggregate == "daily" {
-		response["carrier_prod"] = h.store.GetDailyCarrierProdTimeSeries(modelIDUint)
-		response["carrier_con"] = h.store.GetDailyCarrierConTimeSeries(modelIDUint)
+		response["carrier_prod"] = h.store.GetDailyCarrierProdTimeSeries(modelIDUint, carrier)
+		response["carrier_con"] = h.store.GetDailyCarrierConTimeSeries(modelIDUint, carrier)
 	} else {
-		response["carrier_prod"] = h.store.GetCarrierProdTimeSeries(modelIDUint)
-		response["carrier_con"] = h.store.GetCarrierConTimeSeries(modelIDUint)
+		response["carrier_prod"] = h.store.GetCarrierProdTimeSeries(modelIDUint, carrier)
+		response["carrier_con"] = h.store.GetCarrierConTimeSeries(modelIDUint, carrier)
 	}
 
 	httputil.SuccessResponse(c, response)
@@ -254,9 +256,10 @@ func (h *ResultHandler) GetLocationTimeSeries(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 	dateRange := dateRangeFilter{begin: c.Query("begin"), end: c.Query("end")}
+	carrier := c.Query("carrier")
 
 	response := gin.H{"location": location}
-	h.fetchLocationTimeSeriesData(modelIDUint, location, dateRange, response)
+	h.fetchLocationTimeSeriesData(modelIDUint, location, dateRange, carrier, response)
 	httputil.SuccessResponse(c, response)
 }
 

@@ -207,17 +207,15 @@ func (s *StreamingInserter) StreamCarrierProd(resultsDir string) error {
 			continue
 		}
 
-		// Apply power scale
-		if carrier == "power" && s.scale != 1 {
+		// Apply scale to all carriers
+		if s.scale != 1 {
 			value *= s.scale
 		}
 
-		// Accumulate sum production
-		if carrier == "power" {
-			tech := techBase(techs)
-			if tech != "power_transmission" {
-				s.SumProduction += math.Abs(value)
-			}
+		// Accumulate production (exclude transmission)
+		tech := techBase(techs)
+		if tech != "power_transmission" {
+			s.SumProduction += math.Abs(value)
 		}
 
 		fromLoc, toLoc := parseLocationParts(safeGetString(row, idx.locs))
@@ -291,12 +289,12 @@ func (s *StreamingInserter) StreamCarrierCon(resultsDir string) error {
 		}
 
 		// Apply power scale
-		if carrier == "power" && s.scale != 1 {
+		if s.scale != 1 {
 			value *= s.scale
 		}
 
 		// Accumulate sum consumption
-		if carrier == "power" && isDemandTech(techs) {
+		if isDemandTech(techs) {
 			s.SumConsumption += math.Abs(value)
 		}
 
@@ -406,8 +404,8 @@ func (s *StreamingInserter) StreamSystemBalance(resultsDir string) error {
 			}
 
 			carrier := safeGetString(row, colIdx[0])
-			// Apply power scale to system balance
-			if carrier == "power" && s.scale != 1 {
+			// Apply power scale
+			if s.scale != 1 {
 				val *= s.scale
 			}
 
@@ -437,8 +435,8 @@ func (s *StreamingInserter) StreamUnmetDemand(resultsDir string) error {
 			}
 
 			carrier := safeGetString(row, colIdx[0])
-			// Apply power scale to unmet demand
-			if carrier == "power" && s.scale != 1 {
+			// Apply scale to unmet demand
+			if s.scale != 1 {
 				val *= s.scale
 			}
 
