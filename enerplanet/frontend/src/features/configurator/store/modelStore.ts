@@ -15,6 +15,8 @@ export type ActiveMode =
   | "multi-edit"
   | null;
 
+export type HeatResolutionMode = "expected" | "manual";
+
 export type AssignStep = "select-buildings" | "select-transformer";
 
 export interface ModelStore {
@@ -23,6 +25,10 @@ export interface ModelStore {
   setActiveMode: (mode: ActiveMode) => void;
   assignStep: AssignStep;
   setAssignStep: (step: AssignStep) => void;
+ 
+  // ── Heat resolution (expected-fit auto-resolve / manual) ──
+  heatResolutionMode: HeatResolutionMode;
+  setHeatResolutionMode: (mode: HeatResolutionMode) => void;
 
   // ── Grid / pylovo data ──
   pylovoGridData: PylovoGridData | undefined;
@@ -173,6 +179,7 @@ export interface ModelStore {
 const getInitialState = () => ({
   activeMode: null as ActiveMode,
   assignStep: "select-buildings" as AssignStep,
+  heatResolutionMode: "expected" as HeatResolutionMode,
   pylovoGridData: undefined as PylovoGridData | undefined,
   isRunningPowerFlow: false,
   powerFlowResults: new Map<number, any>(),
@@ -232,6 +239,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setActiveMode: (mode) => set({ activeMode: mode }),
   assignStep: "select-buildings",
   setAssignStep: (step) => set({ assignStep: step }),
+  heatResolutionMode: "expected",
+  setHeatResolutionMode: (mode) => set({ heatResolutionMode: mode }),
 
   // ── Grid / pylovo data ──
   pylovoGridData: undefined,

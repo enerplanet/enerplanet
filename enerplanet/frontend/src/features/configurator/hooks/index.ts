@@ -27,6 +27,9 @@ export { useTransformerActions } from "./useTransformerActions";
 // Extracted internal hooks
 export { useCustomLocationLayers } from "./useCustomLocationLayers";
 export { usePylovoLayers } from "./usePylovoLayers";
+export { useHeatResolution } from "./useHeatResolution";
+export type { HeatResolutionHandlers } from "./useHeatResolution";
+
 export { useTechDragDrop } from "./useTechDragDrop";
 export { useMapClickHandlers } from "./useMapClickHandlers";
 

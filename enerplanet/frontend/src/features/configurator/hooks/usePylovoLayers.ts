@@ -17,12 +17,32 @@ import { normalizeFClassToken } from "@/features/configurator/utils/buildingFeat
 import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers } from "@/features/configurator/utils/gridLayerUtils";
 import { extractPeakLoadFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
+import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 
 // Local aliases matching original useAreaSelect.ts
 const extractPeakLoadKw = extractPeakLoadFromProps;
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
+
+/**
+ * Backfill a default heat demand onto a building feature based on its building
+ * type (f-class × area), mirroring how the backend ships default electricity
+ * demand per building type (demand_energy / yearly_demand_kwh). Only fills when
+ * no explicit heat demand is present; zero-demand classes (shed/garage/…) resolve
+ * to 0, which is a valid outcome — not every building is heated.
+ */
+const backfillDefaultHeatDemand = (feature: Feature<Geometry>): void => {
+  const props = feature.getProperties() as Record<string, unknown>;
+  if (props.demand_heat !== undefined || props.yearly_heat_demand_kwh !== undefined) return;
+  const primary = getPrimaryFClass(props) || "unknown";
+  const area = toFiniteNumber(props.area);
+  if (!area || area <= 0) return;
+  const heat = estimateYearlyHeatDemand(primary, area);
+  feature.set("demand_heat", heat.kwh);
+  feature.set("yearly_heat_demand_kwh", heat.kwh);
+  feature.set("heat_demand_estimated", heat.estimated);
+};
 
 export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | null, editMode: boolean, loadedConfig: any }) => {
   const pylovoGridData = useModelStore((s) => s.pylovoGridData);
@@ -160,7 +180,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const lIds = nd.lines?.features ? collectTransformerIds(nd.lines.features) : new Set<number>();
     const tIds = Array.from(new Set([...bIds, ...lIds])).sort((a, b) => a - b);
     const colorMap = new Map<number, number>(); tIds.forEach((id, i) => colorMap.set(id, i));
-    const bLayer = createPylovoLayer(nd.buildings, 'building', 100, (f) => { f.set('parsed_class', parsePoiClass(f)); f.setStyle(createBuildingStyleFunction(true, false)); }, colorMap);
+    const bLayer = createPylovoLayer(nd.buildings, 'building', 100, (f) => { f.set('parsed_class', parsePoiClass(f)); backfillDefaultHeatDemand(f); f.setStyle(createBuildingStyleFunction(true, false)); }, colorMap);
     if (bLayer) pylovoLayersRef.current.push(bLayer);
     if (nd.lines?.features?.length && map) {
       const src = new VectorSource(); const fmt = new GeoJSON();
