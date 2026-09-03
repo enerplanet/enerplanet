@@ -204,6 +204,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       map.addLayer(layer); pylovoLayersRef.current.push(layer);
     }
     if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
+
+    // One-time "how to add heat techs" prompt — fires once after grid data lands
+    // (generation or edit-model load) so the user decides auto-assign vs manual
+    // before hand-picking; never on rebuilds once a choice has been made.
+    const storeState = useModelStore.getState();
+    if ((nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
+      storeState.setHeatBootstrapOpen(true);
+    }
   }, [map, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
 
   // Auto-run power flow debounce

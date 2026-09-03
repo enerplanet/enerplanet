@@ -71,10 +71,6 @@ interface SidebarPanelProps {
   onAddTechToAll?: (tech: Technology) => void;
   onRemoveTechFromAll?: (tech: Technology) => void;
   appliedTechKeys?: string[];
-  // Heat resolution (expected-fit auto-resolve)
-  heatResolutionMode?: "expected" | "manual";
-  onSetHeatResolutionMode?: (mode: "expected" | "manual") => void;
-  onResolveAllHeat?: () => void;
   gridResultIds?: number[];
   buildingsCount?: number;
   peakLoadKw?: number;
@@ -105,9 +101,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onAddTechToAll,
   onRemoveTechFromAll,
   appliedTechKeys = [],
-  heatResolutionMode = "expected",
-  onSetHeatResolutionMode,
-  onResolveAllHeat,
   gridResultIds = [],
   buildingsCount,
   peakLoadKw,
@@ -436,42 +429,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                         {t('simulation.parameters')}
                     </Button> */}
         </div>
-
-        {/* Heat resolution: mode + bulk auto-resolve of missing heat techs */}
-        {onResolveAllHeat && (
-          <div className="bg-muted dark:bg-gray-700 border border-border rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Heating</span>
-              <Select
-                value={heatResolutionMode}
-                onValueChange={(mode) =>
-                  onSetHeatResolutionMode?.(mode as "expected" | "manual")
-                }
-              >
-                <SelectTrigger className="w-[130px] h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expected">Expected</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              variant="outline"
-              onClick={onResolveAllHeat}
-              disabled={heatResolutionMode !== "expected"}
-              className="w-full h-7 cursor-pointer"
-              title={
-                heatResolutionMode === "manual"
-                  ? "Switch to Expected mode to auto-assign missing heat techs"
-                  : "Assign an expected-fit heat tech to every building missing one"
-              }
-            >
-              Resolve missing heat
-            </Button>
-          </div>
-        )}
 
         <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
           <div className="flex items-center gap-2">

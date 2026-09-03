@@ -1070,7 +1070,8 @@
     "addTransformerAction": "Añadir trafo",
     "assignBuildingsAction": "Asignar edificios",
     "runPowerFlowAction": "Flujo de potencia",
-    "rerunPowerFlowAction": "Recalcular flujo"
+    "rerunPowerFlowAction": "Recalcular flujo",
+    "resolveHeatAction": "Resolver calefacción"
   },
   "time": {
     "justNow": "Ahora mismo",

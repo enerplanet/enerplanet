@@ -1110,7 +1110,8 @@
     "addTransformerAction": "Add Transformer",
     "assignBuildingsAction": "Assign Buildings",
     "runPowerFlowAction": "Power Flow",
-    "rerunPowerFlowAction": "Re-run Flow"
+    "rerunPowerFlowAction": "Re-run Flow",
+    "resolveHeatAction": "Resolve heat"
   },
   "time": {
     "justNow": "Just now",

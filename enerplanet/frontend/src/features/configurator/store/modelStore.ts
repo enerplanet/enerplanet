@@ -13,6 +13,7 @@ export type ActiveMode =
   | "move-transformer"
   | "assign-buildings"
   | "multi-edit"
+  | "heat-link"
   | null;
 
 export type HeatResolutionMode = "expected" | "manual";
@@ -29,6 +30,11 @@ export interface ModelStore {
   // ── Heat resolution (expected-fit auto-resolve / manual) ──
   heatResolutionMode: HeatResolutionMode;
   setHeatResolutionMode: (mode: HeatResolutionMode) => void;
+  // One-time "how to add heat techs" bootstrap, shown once after grid data loads.
+  heatBootstrapOpen: boolean;
+  setHeatBootstrapOpen: (v: boolean) => void;
+  heatBootstrapPrompted: boolean;
+  setHeatBootstrapPrompted: (v: boolean) => void;
 
   // ── Grid / pylovo data ──
   pylovoGridData: PylovoGridData | undefined;
@@ -150,6 +156,10 @@ export interface ModelStore {
   availableBoundaryGeoJSON: GeoJSON.FeatureCollection | undefined;
   setAvailableBoundaryGeoJSON: (v: GeoJSON.FeatureCollection | undefined) => void;
 
+  // ── Heat links (producer → consumer) ──
+  selectedHeatLinkSource: string | null;
+  setSelectedHeatLinkSource: (v: string | null) => void;
+
   // ── Selected buildings for assign mode ──
   selectedBuildingsForAssign: string[];
   setSelectedBuildingsForAssign: (ids: string[] | ((prev: string[]) => string[])) => void;
@@ -180,6 +190,8 @@ const getInitialState = () => ({
   activeMode: null as ActiveMode,
   assignStep: "select-buildings" as AssignStep,
   heatResolutionMode: "expected" as HeatResolutionMode,
+  heatBootstrapOpen: false,
+  heatBootstrapPrompted: false,
   pylovoGridData: undefined as PylovoGridData | undefined,
   isRunningPowerFlow: false,
   powerFlowResults: new Map<number, any>(),
@@ -224,6 +236,7 @@ const getInitialState = () => ({
   availableRegions: [],
   showBoundary: true,
   availableBoundaryGeoJSON: undefined as GeoJSON.FeatureCollection | undefined,
+  selectedHeatLinkSource: null as string | null,
   selectedBuildingsForAssign: [],
   reassignmentLineAnchor: null as [number, number] | null,
   newTransformerCoords: null as [number, number] | null,
@@ -241,6 +254,10 @@ export const useModelStore = create<ModelStore>((set) => ({
   setAssignStep: (step) => set({ assignStep: step }),
   heatResolutionMode: "expected",
   setHeatResolutionMode: (mode) => set({ heatResolutionMode: mode }),
+  heatBootstrapOpen: false,
+  setHeatBootstrapOpen: (v) => set({ heatBootstrapOpen: v }),
+  heatBootstrapPrompted: false,
+  setHeatBootstrapPrompted: (v) => set({ heatBootstrapPrompted: v }),
 
   // ── Grid / pylovo data ──
   pylovoGridData: undefined,
@@ -374,6 +391,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   availableBoundaryGeoJSON: undefined,
   setAvailableBoundaryGeoJSON: (v) => set({ availableBoundaryGeoJSON: v }),
 
+  selectedHeatLinkSource: null as string | null,
+  setSelectedHeatLinkSource: (v) => set({ selectedHeatLinkSource: v }),
   // ── Selected buildings for assign mode ──
   selectedBuildingsForAssign: [],
   setSelectedBuildingsForAssign: (ids) =>

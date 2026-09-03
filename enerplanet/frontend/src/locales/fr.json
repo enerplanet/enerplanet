@@ -1070,7 +1070,8 @@
     "addTransformerAction": "Ajouter transfo",
     "assignBuildingsAction": "Affecter bâtiments",
     "runPowerFlowAction": "Flux de puissance",
-    "rerunPowerFlowAction": "Relancer flux"
+    "rerunPowerFlowAction": "Relancer flux",
+    "resolveHeatAction": "Résoudre la chaleur"
   },
   "time": {
     "justNow": "À l'instant",

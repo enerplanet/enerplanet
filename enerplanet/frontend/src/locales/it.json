@@ -828,7 +828,8 @@
     "addTransformerAction": "Aggiungi trasformatore",
     "assignBuildingsAction": "Assegna edifici",
     "runPowerFlowAction": "Flusso di potenza",
-    "rerunPowerFlowAction": "Ricalcola flusso"
+    "rerunPowerFlowAction": "Ricalcola flusso",
+    "resolveHeatAction": "Risolvi calore"
   },
   "time": {
     "justNow": "Proprio ora",
