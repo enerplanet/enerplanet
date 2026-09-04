@@ -14,6 +14,7 @@ import (
 
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/ignis"
 )
 
 func floatPtr(f float64) *float64 { return &f }
@@ -55,7 +56,7 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 		},
 	}
 
-	buildings := buildingsForBuem(topology, envelopeByOSMID)
+	buildings := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID)
 
 	require.Len(t, buildings, 1, "only building 111 has a resolved envelope; the transformer and building 222 must be excluded")
 	assert.Equal(t, "111", buildings[0].ID)
@@ -186,4 +187,111 @@ func TestBuildingOSMIDs_CollectsOnlyBasePOI(t *testing.T) {
 
 	ids := buildingOSMIDs(topology)
 	assert.ElementsMatch(t, []string{"111", "222"}, ids)
+}
+
+func TestBuildingConstructionYear(t *testing.T) {
+	if got := buildingConstructionYear(map[string]interface{}{"construction_year": float64(1975)}); got == nil || *got != 1975 {
+		t.Errorf("float64 input: got %v, want 1975", got)
+	}
+	if got := buildingConstructionYear(map[string]interface{}{"construction_year": 1975}); got == nil || *got != 1975 {
+		t.Errorf("int input: got %v, want 1975", got)
+	}
+	if got := buildingConstructionYear(map[string]interface{}{}); got != nil {
+		t.Errorf("absent: got %v, want nil", got)
+	}
+	if got := buildingConstructionYear(map[string]interface{}{"construction_year": nil}); got != nil {
+		t.Errorf("explicit nil: got %v, want nil", got)
+	}
+}
+
+// fakeEnvelopeUValueResolver is a hand-rolled envelopeUValueResolver so
+// attachEnvelopeUValues can be tested without a live ignis server.
+type fakeEnvelopeUValueResolver struct {
+	code       string
+	matchErr   error
+	uValues    ignis.EnvelopeUValues
+	uValuesErr error
+}
+
+func (f fakeEnvelopeUValueResolver) ExistingStateVariant(ctx context.Context, iso2, buildingType string, year int) (string, error) {
+	if f.matchErr != nil {
+		return "", f.matchErr
+	}
+	return f.code, nil
+}
+
+func (f fakeEnvelopeUValueResolver) GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error) {
+	if f.uValuesErr != nil {
+		return ignis.EnvelopeUValues{}, f.uValuesErr
+	}
+	return f.uValues, nil
+}
+
+func testYear(y int) *int { return &y }
+
+func envelopeFixture() []city2tabula.EnvelopeElement {
+	return []city2tabula.EnvelopeElement{
+		{ID: "w1", Type: "wall", Area: city2tabula.Quantity{Value: 20, Unit: "m2"}},
+		{ID: "r1", Type: "roof", Area: city2tabula.Quantity{Value: 15, Unit: "m2"}},
+		{ID: "f1", Type: "floor", Area: city2tabula.Quantity{Value: 30, Unit: "m2"}},
+	}
+}
+
+func TestAttachEnvelopeUValues_setsWallRoofFloorOnly(t *testing.T) {
+	client := fakeEnvelopeUValueResolver{
+		code:    "DE.N.SFH.05.Gen",
+		uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1},
+	}
+
+	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "detached", "germany", testYear(1975))
+
+	require.Len(t, got, 3)
+	for _, el := range got {
+		require.NotNil(t, el.U, "%s should have U set", el.Type)
+	}
+	byType := map[string]float64{}
+	for _, el := range got {
+		byType[el.Type] = el.U.Value
+	}
+	assert.Equal(t, 1.2, byType["wall"])
+	assert.Equal(t, 0.9, byType["roof"])
+	assert.Equal(t, 1.1, byType["floor"])
+}
+
+func TestAttachEnvelopeUValues_nilClientLeavesElementsUnchanged(t *testing.T) {
+	got := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "detached", "germany", testYear(1975))
+
+	for _, el := range got {
+		assert.Nil(t, el.U)
+	}
+}
+
+func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testing.T) {
+	cases := []struct {
+		name             string
+		fClass           string
+		country          string
+		constructionYear *int
+	}{
+		{"non-residential", "office", "germany", testYear(1975)},
+		{"no year", "detached", "germany", nil},
+		{"no country", "detached", "", testYear(1975)},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			client := fakeEnvelopeUValueResolver{code: "DE.N.SFH.05.Gen", uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1}}
+			got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), tt.fClass, tt.country, tt.constructionYear)
+			for _, el := range got {
+				assert.Nil(t, el.U, "%s should not carry a resolved U-value", tt.name)
+			}
+		})
+	}
+}
+
+func TestAttachEnvelopeUValues_ignisFailureLeavesElementsUnchanged(t *testing.T) {
+	client := fakeEnvelopeUValueResolver{matchErr: assert.AnError}
+	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "detached", "germany", testYear(1975))
+	for _, el := range got {
+		assert.Nil(t, el.U)
+	}
 }

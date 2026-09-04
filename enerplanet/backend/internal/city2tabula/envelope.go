@@ -9,13 +9,18 @@ type Quantity struct {
 
 // EnvelopeElement is one BuEM envelope element derived from a City2TABULA
 // surface. id carries the City2TABULA surface id unchanged so a caller can map
-// a rendered surface back to the element being edited.
+// a rendered surface back to the element being edited. U is not derived from
+// City2TABULA (it has no thermal-performance data) — it is nil here and set
+// afterward by a caller that has resolved a TABULA archetype (run_buem, #61).
+// BuEM rejects a wall/roof/floor element with no U, so a caller sending these
+// on to BuEM must fill it in first.
 type EnvelopeElement struct {
-	ID      string   `json:"id" example:"w1"`
-	Type    string   `json:"type" example:"wall"`
-	Area    Quantity `json:"area"`
-	Azimuth Quantity `json:"azimuth"`
-	Tilt    Quantity `json:"tilt"`
+	ID      string    `json:"id" example:"w1"`
+	Type    string    `json:"type" example:"wall"`
+	Area    Quantity  `json:"area"`
+	Azimuth Quantity  `json:"azimuth"`
+	Tilt    Quantity  `json:"tilt"`
+	U       *Quantity `json:"U,omitempty"`
 }
 
 // envelopeTypeByClassname maps City2TABULA's CityGML surface classnames onto
