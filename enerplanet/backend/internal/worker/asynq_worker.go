@@ -10,6 +10,7 @@ import (
 	"platform.local/platform/logger"
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/services"
 	weatherclient "spatialhub_backend/internal/weather"
@@ -26,6 +27,7 @@ type TaskProcessor struct {
 	weatherClient       *weatherclient.Client
 	weatherProvider     string
 	buemClient          *buem.Client
+	ignisClient         *ignis.Client
 }
 
 func NewTaskProcessor(
@@ -38,6 +40,7 @@ func NewTaskProcessor(
 	weatherClient *weatherclient.Client,
 	weatherProvider string,
 	buemClient *buem.Client,
+	ignisClient *ignis.Client,
 ) *TaskProcessor {
 	return &TaskProcessor{
 		db:                  db,
@@ -49,6 +52,7 @@ func NewTaskProcessor(
 		weatherClient:       weatherClient,
 		weatherProvider:     weatherProvider,
 		buemClient:          buemClient,
+		ignisClient:         ignisClient,
 	}
 }
 
@@ -61,7 +65,7 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeProcessResult:
 		return jobs.HandleProcessResult(ctx, t, p.db, p.notificationService, p.wsClient)
 	case jobs.TypeRunBuem:
-		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.weatherClient, p.weatherProvider, p.buemClient, p.asynqClient, p.notificationService)
+		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.weatherClient, p.weatherProvider, p.buemClient, p.ignisClient, p.asynqClient, p.notificationService)
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:

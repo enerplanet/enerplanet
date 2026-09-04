@@ -32,6 +32,7 @@ import (
 	technologyhandler "spatialhub_backend/internal/handler/technology"
 	usershandler "spatialhub_backend/internal/handler/users"
 	"spatialhub_backend/internal/handler/weather"
+	ignisclient "spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
@@ -250,8 +251,9 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	city2tabulaClient := city2tabula.NewClient(cfg.City2TabulaServiceURL)
 	weatherClient := weatherclient.NewClient(cfg.WeatherServiceURL, cfg.WeatherAPIKey)
 	buemClient := buem.NewClient(cfg.BuemServiceURL, cfg.BuemAPIKey)
+	runBuemIgnisClient := ignisclient.NewClient(cfg.IgnisServiceURL)
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
