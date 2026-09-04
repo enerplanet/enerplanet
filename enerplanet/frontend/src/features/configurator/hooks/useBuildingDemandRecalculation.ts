@@ -3,6 +3,7 @@ import { normalizeFClass, isResidentialFClass } from "@/features/configurator/ut
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import type { HeatDemandResolveResponse } from "@/features/configurator/services/heatDemandService";
 
 interface BuildingDemandOptions {
   pylovoLayers: {
@@ -17,6 +18,7 @@ interface BuildingDemandOptions {
 
 export interface BuildingDemandHandlers {
   handleFClassDemandChange: (fClass: string, newDemand: number) => void;
+  handleHeatDemandResolved: (osmId: string, result: HeatDemandResolveResponse) => void;
   handleFloorsChange: (floors: number) => void;
   handleAreaChange: (area: number) => void;
   handleHouseholdSizeChange: (householdSize: number) => void;
@@ -87,6 +89,38 @@ export const useBuildingDemandRecalculation = ({
   );
 
   // Handle area change from BuildingDialog
+  // Persists a resolved heating demand onto the building. yearly_heat_demand_kwh
+  // and construction_year are the keys payload_topology_transform.go already
+  // reads back at calculation time (see #49/#61); heat_demand_source is display
+  // only today, read by the dialog instead of recomputing a local estimate.
+  const handleHeatDemandResolved = useCallback(
+    (osmId: string, result: HeatDemandResolveResponse) => {
+      if (!selectedBuilding || selectedBuilding.osmId !== osmId) return;
+      pylovoLayers.updateBuildingProperty(osmId, "yearly_heat_demand_kwh", result.heating_demand_kwh_a);
+      pylovoLayers.updateBuildingProperty(osmId, "heat_demand_source", result.source);
+      if (result.tabula_variant_code) {
+        pylovoLayers.updateBuildingProperty(osmId, "tabula_variant_code", result.tabula_variant_code);
+      }
+      if (result.inputs_echoed.construction_year) {
+        pylovoLayers.updateBuildingProperty(
+          osmId,
+          "construction_year",
+          result.inputs_echoed.construction_year
+        );
+      }
+      setSelectedBuilding((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              yearlyHeatDemandKwh: result.heating_demand_kwh_a,
+              heatDemandEstimated: result.source === "estimate",
+            }
+          : null
+      );
+    },
+    [selectedBuilding, pylovoLayers, setSelectedBuilding]
+  );
+
   const handleAreaChange = useCallback(
     (area: number) => {
       if (!selectedBuilding) return;
@@ -310,6 +344,7 @@ export const useBuildingDemandRecalculation = ({
 
   return {
     handleFClassDemandChange,
+    handleHeatDemandResolved,
     handleFloorsChange,
     handleAreaChange,
     handleHouseholdSizeChange,

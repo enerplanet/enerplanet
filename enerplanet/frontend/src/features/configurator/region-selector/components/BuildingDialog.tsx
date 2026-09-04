@@ -27,6 +27,8 @@ import {
 import type { Technology } from "@/features/technologies/services/technologyService";
 import technologyService from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { HeatDemandSection } from "./HeatDemandSection";
+import type { HeatDemandResolveResponse } from "@/features/configurator/services/heatDemandService";
 
 interface TechData {
   alias: string;
@@ -99,6 +101,7 @@ interface BuildingDialogProps {
   isExcluded?: boolean;
   onToggleExclude?: (buildingId: number) => void;
   onSave?: () => void;
+  onHeatDemandResolved?: (osmId: string, result: HeatDemandResolveResponse) => void;
 }
 
 const hasFiniteNumber = (value: unknown): value is number =>
@@ -147,6 +150,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   onSave,
   isExcluded = false,
   onToggleExclude,
+  onHeatDemandResolved,
 }) => {
   const techs = selectedBuilding?.techs || {};
   const techEntries = Object.entries(techs);
@@ -463,6 +467,17 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 <ReadOnlyRow label="Peak Load" value={peakLoad.toFixed(2)} unit="kW" />
               )}
             </div>
+
+            {onHeatDemandResolved && (
+              <HeatDemandSection
+                osmId={selectedBuilding.osmId}
+                fClass={activeFClassDetail?.fClass ?? selectedFClass}
+                countryCode={selectedBuilding.countryCode}
+                areaSqm={editedArea}
+                initialConstructionYear={selectedBuilding.constructionYear}
+                onResolved={(result) => onHeatDemandResolved(selectedBuilding.osmId, result)}
+              />
+            )}
 
             {/* Building Geometry */}
             <div className="pt-2 border-t space-y-2">
