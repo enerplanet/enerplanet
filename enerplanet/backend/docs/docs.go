@@ -211,7 +211,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "Given a building's usage class and floor area, returns its annual space-heating\ndemand (kWh/a), the specific demand (kWh/m2.a) and a source flag. The source is\n\"estimate\", a specific-demand-by-usage-class lookup. tabula_variant_code and\nhourly_profile are currently always null; a residential building carries a warning.",
+                "description": "Given a building's usage class, floor area, and (for a residential building)\nits TABULA type / construction year / country, returns its annual space-heating\ndemand (kWh/a), the specific demand (kWh/m2.a) and a source flag (\"ignis\" when a\nTABULA archetype matched, \"estimate\" otherwise). tabula_variant_code is set only\nfor source \"ignis\". hourly_profile is currently always null (source \"buem\" is not\nyet wired). A residential building that falls back to the estimate carries a\nwarning naming why.",
                 "consumes": [
                     "application/json"
                 ],

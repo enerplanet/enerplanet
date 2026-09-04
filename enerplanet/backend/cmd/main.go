@@ -20,9 +20,9 @@ import (
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
 	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
-	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
+	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	"spatialhub_backend/internal/handler/ignis"
 	locationhandler "spatialhub_backend/internal/handler/location"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
@@ -655,7 +655,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient)
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
-	heatDemandHandler := heatdemandhandler.NewHandler()
+	heatDemandHandler := heatdemandhandler.NewHandler(deps.Cfg.IgnisServiceURL)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
 
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
