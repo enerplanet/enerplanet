@@ -445,23 +445,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 />
               </div>
 
-              {/* Yearly Heat Demand (display-only estimate for now) */}
-              {selectedBuilding.yearlyHeatDemandKwh != null && selectedBuilding.yearlyHeatDemandKwh > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                    Yearly Heat Demand
-                    {selectedBuilding.heatDemandEstimated && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
-                        estimated
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-medium tabular-nums">
-                    {Math.round(selectedBuilding.yearlyHeatDemandKwh).toLocaleString()} kWh
-                  </span>
-                </div>
-              )}
-
               {/* Peak Load */}
               {hasFiniteNumber(peakLoad) && peakLoad > 0 && (
                 <ReadOnlyRow label="Peak Load" value={peakLoad.toFixed(2)} unit="kW" />
