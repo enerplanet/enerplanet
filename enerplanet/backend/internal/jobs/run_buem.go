@@ -15,6 +15,8 @@ import (
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/geo"
+	"spatialhub_backend/internal/heatdemand"
+	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/weather"
@@ -42,8 +44,8 @@ type RunBuemPayload struct {
 // buildings in the topology it can, calls buem-gateway synchronously so BuEM
 // writes its load-profile CSVs, then enqueues "dispatch_model_calculation"
 // exactly as StartCalculation used to do directly. City2TABULA/weather-serve
-// resolution here is a temporary stand-in for Orchestrator's future
-// dependency-resolution role — see the on-request-3d-pipeline plan.
+// resolution here is a temporary stand-in for a future Orchestrator layer's
+// dependency-resolution role.
 func HandleRunBuem(
 	ctx context.Context,
 	t *asynq.Task,
@@ -52,6 +54,7 @@ func HandleRunBuem(
 	wx *weather.Client,
 	weatherProvider string,
 	buemClient *buem.Client,
+	ignisClient *ignis.Client,
 	asynqClient *asynq.Client,
 	notificationService *services.NotificationService,
 ) (retErr error) {
@@ -83,7 +86,11 @@ func HandleRunBuem(
 
 	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, wx, weatherProvider, model, rp.Payload)
 
-	buildings := buildingsForBuem(rp.Payload.Topology, envelopeByOSMID)
+	country := ""
+	if model.Country != nil {
+		country = *model.Country
+	}
+	buildings := buildingsForBuem(ctx, ignisClient, country, rp.Payload.Topology, envelopeByOSMID)
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
 		log.Warnf("model %d: no buildings with a resolved envelope and weather, skipping buem-gateway call", rp.ModelID)
 	} else {
@@ -278,7 +285,7 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 // envelope, since buem-gateway would just reject it anyway. weather is not
 // attached here — it is sent once, shared across the whole request, by the
 // caller of RunBuildings.
-func buildingsForBuem(topology []interface{}, envelopeByOSMID map[string]city2tabula.Building) []buem.Building {
+func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string]city2tabula.Building) []buem.Building {
 	var buildings []buem.Building
 	seen := make(map[string]bool)
 	for _, entry := range topology {
@@ -287,7 +294,7 @@ func buildingsForBuem(topology []interface{}, envelopeByOSMID map[string]city2ta
 			continue
 		}
 		for _, key := range []string{"from", "to"} {
-			b, ok := buildingForBuem(e[key], envelopeByOSMID, seen)
+			b, ok := buildingForBuem(ctx, ignisClient, country, e[key], envelopeByOSMID, seen)
 			if !ok {
 				continue
 			}
@@ -301,12 +308,12 @@ func buildingsForBuem(topology []interface{}, envelopeByOSMID map[string]city2ta
 // reports false if feature isn't a building with a resolved, non-empty
 // envelope, or its osm_id was already collected (a building can appear on
 // both sides of more than one grid edge).
-func buildingForBuem(feature interface{}, envelopeByOSMID map[string]city2tabula.Building, seen map[string]bool) (buem.Building, bool) {
+func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, feature interface{}, envelopeByOSMID map[string]city2tabula.Building, seen map[string]bool) (buem.Building, bool) {
 	node, ok := feature.(map[string]interface{})
 	if !ok {
 		return buem.Building{}, false
 	}
-	_, osmID, ok := buildingProperties(feature)
+	props, osmID, ok := buildingProperties(feature)
 	if !ok || seen[osmID] {
 		return buem.Building{}, false
 	}
@@ -318,6 +325,8 @@ func buildingForBuem(feature interface{}, envelopeByOSMID map[string]city2tabula
 	if len(elements) == 0 {
 		return buem.Building{}, false
 	}
+	fClass, _ := props["f_class"].(string)
+	elements = attachEnvelopeUValues(ctx, ignisClient, elements, fClass, country, buildingConstructionYear(props))
 	geometry, err := json.Marshal(node["geometry"])
 	if err != nil {
 		return buem.Building{}, false
@@ -331,6 +340,64 @@ func buildingForBuem(feature interface{}, envelopeByOSMID map[string]city2tabula
 
 	seen[osmID] = true
 	return buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}, true
+}
+
+// buildingConstructionYear reads properties.construction_year, set only once
+// a building has been through the heat-demand resolve-and-save flow (#49/
+// #53). JSON numbers decode as float64 in a map[string]interface{}.
+func buildingConstructionYear(props map[string]interface{}) *int {
+	switch v := props["construction_year"].(type) {
+	case float64:
+		year := int(v)
+		return &year
+	case int:
+		return &v
+	default:
+		return nil
+	}
+}
+
+// envelopeUValueResolver is the ignis surface attachEnvelopeUValues needs.
+// Satisfied by *ignis.Client; faked in tests.
+type envelopeUValueResolver interface {
+	heatdemand.VariantResolver
+	GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error)
+}
+
+// attachEnvelopeUValues resolves the building's TABULA variant and sets U on
+// its wall/roof/floor elements: BuEM rejects a wall/roof/floor element with no
+// U, and City2TABULA carries no thermal-performance data to supply one from.
+// Only wall/roof/floor get U — no explicit window or door elements are added.
+// BuEM synthesizes windows at its default window-to-wall ratio and subtracts
+// their area from the wall; it does not also subtract caller-supplied opening
+// areas, so adding explicit windows here would double-count transmission.
+//
+// Any resolution failure (non-residential, no construction year on record,
+// no matching archetype, ignis unreachable) leaves elements unchanged: the
+// building reaches buem-gateway exactly as it does today and BuEM rejects it
+// the same way, which mergeBuemResults already treats as a building with no
+// result, not a job failure.
+func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolver, elements []city2tabula.EnvelopeElement, fClass, country string, constructionYear *int) []city2tabula.EnvelopeElement {
+	if ignisClient == nil {
+		return elements
+	}
+	code, err := heatdemand.ResolveVariant(ctx, ignisClient, fClass, "", country, constructionYear)
+	if err != nil {
+		return elements
+	}
+	u, err := ignisClient.GetEnvelopeUValues(ctx, code)
+	if err != nil {
+		return elements
+	}
+	uByType := map[string]float64{"wall": u.Wall, "roof": u.Roof, "floor": u.Floor}
+	for i := range elements {
+		value, ok := uByType[elements[i].Type]
+		if !ok {
+			continue
+		}
+		elements[i].U = &city2tabula.Quantity{Value: value, Unit: "W/(m2.K)"}
+	}
+	return elements
 }
 
 // mergeBuemResults writes each successful result's enriched buem block onto

@@ -48,7 +48,6 @@ var genericPrimaryFClasses = map[string]struct{}{
 	"other":              {},
 }
 
-
 var specificDemandByFClass = map[string]float64{
 	"ab":                      28,
 	"agricultural":            50,
@@ -894,7 +893,6 @@ func specificDemandForFClass(fClass string) float64 {
 // Heat demand helpers
 // ---------------------------------------------------------------------------
 
-
 // heatProfileForFClass returns the heat demand profile key for a building class.
 // Heat profiles differ from electricity — they follow seasonal temperature patterns.
 func heatProfileForFClass(fClass string) string {
@@ -1041,4 +1039,3 @@ func calculateYearlyHeatDemandPerFClass(
 func specificHeatDemandForFClass(fClass string) float64 {
 	return heatdemand.SpecificDemandKwhM2a(fClass)
 }
-
