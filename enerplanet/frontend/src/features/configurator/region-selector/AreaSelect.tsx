@@ -605,6 +605,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         selectedBuilding={mapInteractions.selectedBuilding}
         onClose={mapInteractions.handleCloseBuildingDialog}
         onFClassDemandChange={buildingDemand.handleFClassDemandChange}
+        onHeatDemandResolved={buildingDemand.handleHeatDemandResolved}
         onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
         onOpenChange={mapInteractions.setBuildingDialogOpen}
         onEditTech={(techKey) => {
