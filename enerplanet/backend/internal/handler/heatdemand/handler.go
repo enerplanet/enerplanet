@@ -19,6 +19,7 @@ import (
 	"spatialhub_backend/internal/api/contracts"
 	hd "spatialhub_backend/internal/heatdemand"
 	ignisclient "spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
 )
 
 // Handler serves the heat-demand resolve endpoint.
@@ -26,10 +27,9 @@ type Handler struct {
 	ignis hd.IgnisResolver
 }
 
-// NewHandler returns a Handler that resolves the ignis path against the
-// ignis service at baseURL.
-func NewHandler(baseURL string) *Handler {
-	return &Handler{ignis: ignisclient.NewClient(baseURL)}
+// NewHandler returns a Handler that resolves the ignis path through TentaCron.
+func NewHandler(tc *tentacron.Client) *Handler {
+	return &Handler{ignis: ignisclient.NewClient(tc)}
 }
 
 // Resolve godoc

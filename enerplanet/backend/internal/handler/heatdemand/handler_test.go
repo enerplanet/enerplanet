@@ -14,6 +14,7 @@ import (
 
 	"spatialhub_backend/internal/api/contracts"
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
 )
 
 func init() { gin.SetMode(gin.TestMode) }
@@ -96,6 +97,6 @@ func TestResolve_badJSON_400(t *testing.T) {
 }
 
 func TestNewHandler_buildsAnIgnisBackedHandler(t *testing.T) {
-	h := NewHandler("http://localhost:0")
+	h := NewHandler(tentacron.New("http://localhost:0", "test-key"))
 	require.NotNil(t, h.ignis)
 }
