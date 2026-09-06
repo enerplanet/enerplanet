@@ -19,6 +19,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/tentacron"
@@ -88,5 +89,43 @@ func TestResolveChainLive(t *testing.T) {
 			t.Fatal("want a fallback warning explaining the missing construction year")
 		}
 		t.Logf("warning: %s", got.Warnings[0])
+	})
+
+	// The run_buem envelope path: resolve a variant, then fetch its U-values
+	// (ignis-data). Not part of Resolve.
+	t.Run("envelope U-values resolve for run_buem", func(t *testing.T) {
+		code, err := client.ExistingStateVariant(ctx, "DE", "SFH", 1975)
+		if err != nil {
+			t.Fatalf("ExistingStateVariant: %v", err)
+		}
+		u, err := client.GetEnvelopeUValues(ctx, code)
+		if err != nil {
+			t.Fatalf("GetEnvelopeUValues: %v", err)
+		}
+		if u.Wall <= 0 || u.Roof <= 0 || u.Floor <= 0 {
+			t.Fatalf("non-positive U-value in %+v", u)
+		}
+		t.Logf("variant=%s U wall=%.2f roof=%.2f floor=%.2f W/(m2.K)", code, u.Wall, u.Roof, u.Floor)
+	})
+
+	t.Run("added latency per resolve call is small", func(t *testing.T) {
+		start := time.Now()
+		const n = 5
+		for i := 0; i < n; i++ {
+			if got := Resolve(ctx, client, Input{
+				FClass: "detached", Country: "germany",
+				ConstructionYear: intPtr(1975), FloorAreaM2: 120,
+			}); got.Source != SourceIgnis {
+				t.Fatalf("iteration %d: source = %q", i, got.Source)
+			}
+		}
+		perResolve := time.Since(start) / n
+		// Each resolve is two TentaCron round-trips (match + calculate), each a
+		// submit plus one ?wait GET. Well under a second against a local
+		// TentaCron; this only fails if the 202+poll overhead is pathological.
+		if perResolve > time.Second {
+			t.Fatalf("per-resolve wall time %s exceeds 1s", perResolve)
+		}
+		t.Logf("~%s per resolve (2 TentaCron calls each)", perResolve.Round(time.Millisecond))
 	})
 }
