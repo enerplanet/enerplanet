@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	httpclient "platform.local/common/pkg/httpclient"
@@ -72,6 +74,24 @@ type TargetError struct {
 
 func (e *TargetError) Error() string {
 	return fmt.Sprintf("tentacron request failed (%s): %s", e.Code, e.Message)
+}
+
+// upstreamMsgPrefix is TentaCron's "target <name>: HTTP <status>: " stamp on an
+// upstream HTTP failure message.
+var upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+
+// UpstreamMessage is the upstream service's own error text: the prefix stripped
+// and a {"error":"..."} wrapper unwrapped. Falls back to the trimmed message
+// when it is not in that shape.
+func (e *TargetError) UpstreamMessage() string {
+	m := strings.TrimSpace(upstreamMsgPrefix.ReplaceAllString(e.Message, ""))
+	var w struct {
+		Error string `json:"error"`
+	}
+	if json.Unmarshal([]byte(m), &w) == nil && w.Error != "" {
+		return w.Error
+	}
+	return m
 }
 
 type submitRequest struct {

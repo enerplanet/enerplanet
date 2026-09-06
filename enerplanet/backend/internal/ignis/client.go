@@ -5,15 +5,13 @@
 // resolved or calculated.
 //
 // This is separate from internal/handler/ignis, the public HTTP proxy the
-// frontend form calls for its dropdown data; that proxy still forwards to
-// ignis directly.
+// frontend form calls for its dropdown data; that proxy also goes through
+// TentaCron.
 package ignis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"regexp"
 	"strings"
 
 	"spatialhub_backend/internal/tentacron"
@@ -67,28 +65,15 @@ var ignisRejectionCodes = map[string]bool{
 	"target_timeout":    true,
 }
 
-// targetErrMsgPrefix is TentaCron's "target <name>: HTTP <status>: " stamp on
-// an upstream HTTP failure message; stripped so BadRequestError.Message
-// carries just the ignis text.
-var targetErrMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
-
 // asIgnisError maps a TentaCron *TargetError from an ignis rejection to a
-// *BadRequestError carrying ignis's own message. ignis 400 bodies are
-// {"error":"<text>"}; the bare text is unwrapped when present. Anything that
-// is not an ignis rejection is returned unchanged.
+// *BadRequestError carrying ignis's own message. Anything that is not an ignis
+// rejection is returned unchanged.
 func asIgnisError(err error) error {
 	te, ok := tentacron.AsTargetError(err)
 	if !ok || !ignisRejectionCodes[te.Code] {
 		return err
 	}
-	msg := strings.TrimSpace(targetErrMsgPrefix.ReplaceAllString(te.Message, ""))
-	var body struct {
-		Error string `json:"error"`
-	}
-	if json.Unmarshal([]byte(msg), &body) == nil && body.Error != "" {
-		msg = body.Error
-	}
-	return &BadRequestError{Message: msg}
+	return &BadRequestError{Message: te.UpstreamMessage()}
 }
 
 // isoByCountry maps geo.NormalizeCountry's canonical country names to the
