@@ -1,16 +1,18 @@
 //go:build manualignis
 
-// Regression guard for the resolve chain against a real ignis service. Not
-// run by `go test ./...` or CI: it needs an ignis instance backed by a
-// TABULA-populated database, which is not available in CI.
+// Regression guard for the resolve chain against a live TentaCron fronting a
+// real ignis service. Not run by `go test ./...` or CI: it needs a running
+// TentaCron with the three ignis targets configured and an ignis instance
+// backed by a TABULA-populated database, none of which exist in CI.
 //
-// Run it after any change to internal/ignis or internal/heatdemand, or after
-// an ignis release, with ignis reachable and:
+// Run it after any change to internal/tentacron, internal/ignis or
+// internal/heatdemand, or after an ignis release, with the stack reachable:
 //
-//	IGNIS_LIVE_URL=http://127.0.0.1:18080 \
+//	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestResolveChainLive -v ./internal/heatdemand/
 //
-// IGNIS_LIVE_URL defaults to http://127.0.0.1:18080.
+// TENTACRON_LIVE_URL defaults to http://127.0.0.1:8092, the key to
+// dev-frontend-key.
 package heatdemand
 
 import (
@@ -19,19 +21,23 @@ import (
 	"testing"
 
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
 )
 
-func liveIgnisURL() string {
-	if u := os.Getenv("IGNIS_LIVE_URL"); u != "" {
-		return u
+func liveEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
-	return "http://127.0.0.1:18080"
+	return fallback
 }
 
 func intPtr(v int) *int { return &v }
 
 func TestResolveChainLive(t *testing.T) {
-	client := ignis.NewClient(liveIgnisURL())
+	client := ignis.NewClient(tentacron.New(
+		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
+		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
+	))
 	ctx := context.Background()
 
 	t.Run("residential resolves via ignis", func(t *testing.T) {

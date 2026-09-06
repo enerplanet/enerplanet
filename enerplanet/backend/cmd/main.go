@@ -43,6 +43,7 @@ import (
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
+	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
 	"spatialhub_backend/internal/worker"
@@ -173,6 +174,7 @@ type AppDependencies struct {
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
 	City2TabulaClient   *city2tabula.Client
+	TentacronClient     *tentacron.Client
 	Cfg                 *config.Config
 }
 
@@ -251,7 +253,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	city2tabulaClient := city2tabula.NewClient(cfg.City2TabulaServiceURL)
 	weatherClient := weatherclient.NewClient(cfg.WeatherServiceURL, cfg.WeatherAPIKey)
 	buemClient := buem.NewClient(cfg.BuemServiceURL, cfg.BuemAPIKey)
-	runBuemIgnisClient := ignisclient.NewClient(cfg.IgnisServiceURL)
+	tentacronClient := tentacron.New(cfg.TentacronServiceURL, cfg.TentacronAPIKey)
+	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
 	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient)
 	mux := asynq.NewServeMux()
@@ -287,6 +290,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 		KeycloakCache:       keycloakCache,
 		SyncCache:           syncCache,
 		City2TabulaClient:   city2tabulaClient,
+		TentacronClient:     tentacronClient,
 		Cfg:                 cfg,
 	}
 }
@@ -349,6 +353,7 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 		KeycloakCache:       deps.KeycloakCache,
 		SyncCache:           deps.SyncCache,
 		City2TabulaClient:   deps.City2TabulaClient,
+		TentacronClient:     deps.TentacronClient,
 	}
 	configureProtectedAPI(r, routeDeps)
 
@@ -597,6 +602,7 @@ type RouteDeps struct {
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
 	City2TabulaClient   *city2tabula.Client
+	TentacronClient     *tentacron.Client
 }
 
 // configureProtectedAPI registers protected API routes that require a valid session.
@@ -657,7 +663,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient)
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
-	heatDemandHandler := heatdemandhandler.NewHandler(deps.Cfg.IgnisServiceURL)
+	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
 
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
