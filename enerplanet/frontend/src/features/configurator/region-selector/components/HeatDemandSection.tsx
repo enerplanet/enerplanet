@@ -1,6 +1,7 @@
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@spatialhub/ui";
+import { useTranslation } from "@spatialhub/i18n";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useMemo, useState, type FC } from "react";
 import {
   useIgnisBuildingTypesQuery,
   useIgnisFieldsQuery,
@@ -43,8 +44,13 @@ export const HeatDemandSection: FC<HeatDemandSectionProps> = ({
   initialConstructionYear,
   onResolved,
 }) => {
+  const { i18n } = useTranslation();
   const countryName = countryNameForIso2(countryCode);
   const isResidential = isResidentialFClass(fClass);
+
+  // Group digits per the active UI language (de: "111.500", en: "111,500")
+  // so the thousands separator is not misread as a decimal comma.
+  const nf = useMemo(() => new Intl.NumberFormat(i18n.language), [i18n.language]);
 
   const [buildingType, setBuildingType] = useState<string>("");
   const [constructionYear, setConstructionYear] = useState<string>(
@@ -120,7 +126,7 @@ export const HeatDemandSection: FC<HeatDemandSectionProps> = ({
       )}
 
       <p className="text-xs text-muted-foreground">
-        {floorAreaField?.label ?? "Floor area"}: {Math.round(areaSqm).toLocaleString()}{" "}
+        {floorAreaField?.label ?? "Floor area"}: {nf.format(Math.round(areaSqm))}{" "}
         {floorAreaField?.unit ?? "m²"}
         {countryName ? ` · ${countryName}` : ""}
       </p>
@@ -146,12 +152,13 @@ export const HeatDemandSection: FC<HeatDemandSectionProps> = ({
               </span>
             </span>
             <span className="font-medium tabular-nums">
-              {Math.round(result.heating_demand_kwh_a).toLocaleString()} kWh
+              {nf.format(Math.round(result.heating_demand_kwh_a / 100) * 100)} kWh
             </span>
           </div>
-          {result.tabula_variant_code && (
-            <p className="text-xs text-muted-foreground">Variant: {result.tabula_variant_code}</p>
-          )}
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {nf.format(Math.round(result.specific_heating_demand_kwh_m2a))} kWh/m²·a
+            {result.tabula_variant_code ? ` · ${result.tabula_variant_code}` : ""}
+          </p>
           {(result.warnings ?? []).map((warning) => (
             <p key={warning} className="text-xs text-amber-600 dark:text-amber-400">
               {warning}
