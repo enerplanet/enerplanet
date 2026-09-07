@@ -253,7 +253,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	tentacronClient := tentacron.New(cfg.TentacronServiceURL, cfg.TentacronAPIKey)
 	city2tabulaClient := city2tabula.NewClient(tentacronClient)
 	weatherClient := weatherclient.NewClient(tentacronClient)
-	buemClient := buem.NewClient(cfg.BuemServiceURL, cfg.BuemAPIKey)
+	buemClient := buem.NewClient(tentacronClient)
 	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
 	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient)

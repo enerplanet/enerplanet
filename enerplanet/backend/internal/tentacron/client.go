@@ -139,9 +139,22 @@ type statusResponse struct {
 // Do submits a request for the named target with payload, waits for the job to
 // reach a terminal state, and unmarshals the verbatim upstream response into
 // out (nil to discard it). A "failed" or "cancelled" outcome is returned as
-// *TargetError.
+// *TargetError. The whole submit-and-await is bounded by opTimeout (60s).
 func (c *Client) Do(ctx context.Context, target string, payload, out any) error {
-	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	return c.doWithTimeout(ctx, target, payload, out, opTimeout)
+}
+
+// DoTimeout is Do with an explicit ceiling on the whole submit-and-await in
+// place of the opTimeout default, for a target whose upstream job legitimately
+// runs minutes (a BuEM batch). Pass a value above TentaCron's own job_timeout
+// for that target, so the backend does not abandon a job TentaCron would still
+// finish. Every other caller stays on Do / opTimeout.
+func (c *Client) DoTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	return c.doWithTimeout(ctx, target, payload, out, timeout)
+}
+
+func (c *Client) doWithTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	id, err := c.submit(ctx, target, payload)

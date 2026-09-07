@@ -30,9 +30,7 @@ type Config struct {
 	WebserviceServiceURL string // URL of the webservice microservice
 	PylovoServiceURL     string // URL of the pylovo microservice
 	WeatherProvider      string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
-	BuemServiceURL       string // URL of buem-gateway
-	BuemAPIKey           string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
-	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve and City2TABULA call (resolve endpoint, run_buem, enrich, the /v2/ignis/* proxy) routes through it
+	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v2/ignis/* proxy) routes through it
 	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
 	OpenTechDBServiceURL string // URL of the OpenTech-DB service
 	CallbackSecret       string // Shared secret for webservice callback authentication
@@ -71,10 +69,6 @@ func LoadFromEnv() (*Config, error) {
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
 		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
-		// No default: buem-gateway's deployment URL and port are not yet
-		// confirmed; an empty value fails loudly instead of guessing.
-		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),
-		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
 		// 8092: TentaCron's own HOST_PORT default is 8080 (clashes with
 		// Keycloak); the real deployment URL is unconfirmed.
 		TentacronServiceURL:  platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8092"),

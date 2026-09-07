@@ -108,7 +108,8 @@ func TestTargetError_UpstreamStatus(t *testing.T) {
 		{"upstream 404", `target c2t-run-status: HTTP 404: {"error":"run not found"}`, 404, true},
 		{"upstream 400", `target c2t-trigger-run: HTTP 400: bad bbox`, 400, true},
 		{"upstream 500", "target c2t-buildings: HTTP 500: pq: relation does not exist", 500, true},
-		{"timeout, no status", "target timed out after 30s", 0, false},
+		{"upstream 502", "target buem-buildings: HTTP 502: Bad Gateway", 502, true},
+		{"timeout, no status", "target buem-buildings timed out after 570s", 0, false},
 		{"caller mistake, no status", "no target named c2t-run-status", 0, false},
 	}
 	for _, tc := range cases {
@@ -118,4 +119,26 @@ func TestTargetError_UpstreamStatus(t *testing.T) {
 			assert.Equal(t, tc.wantCode, code)
 		})
 	}
+}
+
+func TestDoTimeout_boundsTheWholeOperation(t *testing.T) {
+	// The status GET never returns a terminal state; DoTimeout's own ceiling
+	// must abort the await rather than hang.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"req-1"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"state":"awaiting_target"}`))
+	}))
+	defer srv.Close()
+
+	pollBackstop = time.Millisecond
+	t.Cleanup(func() { pollBackstop = time.Second })
+
+	start := time.Now()
+	err := New(srv.URL, "k").DoTimeout(context.Background(), "buem-buildings", nil, nil, 80*time.Millisecond)
+	require.Error(t, err)
+	assert.Less(t, time.Since(start), time.Second, "DoTimeout must abort near its own ceiling, not opTimeout")
 }
