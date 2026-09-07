@@ -263,25 +263,36 @@ func envelopeFixture() []city2tabula.EnvelopeElement {
 	}
 }
 
-func TestAttachEnvelopeUValues_setsWallRoofFloorOnly(t *testing.T) {
+func TestAttachEnvelopeUValues_setsEffectiveUAndBTransmission(t *testing.T) {
 	client := fakeEnvelopeUValueResolver{
-		code:    "DE.N.SFH.05.Gen",
-		uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1},
+		code: "DE.N.SFH.05.Gen",
+		uValues: ignis.EnvelopeUValues{
+			UWall: 1.2, URoof: 0.9, UFloor: 1.1,
+			BTransWall: 1, BTransRoof: 1, BTransFloor: 0.5,
+			Bridging: 0.1,
+		},
 	}
 
 	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975))
 
 	require.Len(t, got, 3)
+	u := map[string]float64{}
+	bt := map[string]*city2tabula.Quantity{}
 	for _, el := range got {
 		require.NotNil(t, el.U, "%s should have U set", el.Type)
+		u[el.Type] = el.U.Value
+		bt[el.Type] = el.BTransmission
 	}
-	byType := map[string]float64{}
-	for _, el := range got {
-		byType[el.Type] = el.U.Value
-	}
-	assert.Equal(t, 1.2, byType["wall"])
-	assert.Equal(t, 0.9, byType["roof"])
-	assert.Equal(t, 1.1, byType["floor"])
+	// effective U = U_Actual + bridging delta
+	assert.InDelta(t, 1.3, u["wall"], 1e-9)
+	assert.InDelta(t, 1.0, u["roof"], 1e-9)
+	assert.InDelta(t, 1.2, u["floor"], 1e-9)
+	// b_transmission set only where ignis gave a value below 1
+	assert.Nil(t, bt["wall"])
+	assert.Nil(t, bt["roof"])
+	require.NotNil(t, bt["floor"])
+	assert.Equal(t, 0.5, bt["floor"].Value)
+	assert.Equal(t, "-", bt["floor"].Unit)
 }
 
 func TestAttachEnvelopeUValues_nilClientLeavesElementsUnchanged(t *testing.T) {
@@ -305,7 +316,7 @@ func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testi
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			client := fakeEnvelopeUValueResolver{code: "DE.N.SFH.05.Gen", uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1}}
+			client := fakeEnvelopeUValueResolver{code: "DE.N.SFH.05.Gen", uValues: ignis.EnvelopeUValues{UWall: 1.2, URoof: 0.9, UFloor: 1.1}}
 			got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", tt.fClass, tt.country, tt.constructionYear)
 			for _, el := range got {
 				assert.Nil(t, el.U, "%s should not carry a resolved U-value", tt.name)
@@ -329,7 +340,7 @@ func TestAttachEnvelopeUValues_ignisFailureLeavesElementsUnchanged(t *testing.T)
 func TestAttachEnvelopeUValues_usesCity2TabulaVariantCodeWithoutYear(t *testing.T) {
 	client := fakeEnvelopeUValueResolver{
 		matchErr: assert.AnError,
-		uValues:  ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1},
+		uValues:  ignis.EnvelopeUValues{UWall: 1.2, URoof: 0.9, UFloor: 1.1},
 	}
 
 	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "NL.N.AB.01.Por1945.ReEx.001.001", "office", "netherlands", nil)
@@ -342,4 +353,5 @@ func TestAttachEnvelopeUValues_usesCity2TabulaVariantCodeWithoutYear(t *testing.
 	assert.Equal(t, 1.2, byType["wall"])
 	assert.Equal(t, 0.9, byType["roof"])
 	assert.Equal(t, 1.1, byType["floor"])
+	// Bridging and b_transmission default to 0/nil here, so effective U == U_Actual.
 }

@@ -9,18 +9,20 @@ type Quantity struct {
 
 // EnvelopeElement is one BuEM envelope element derived from a City2TABULA
 // surface. id carries the City2TABULA surface id unchanged so a caller can map
-// a rendered surface back to the element being edited. U is not derived from
-// City2TABULA (it has no thermal-performance data) — it is nil here and set
-// afterward by a caller that has resolved a TABULA archetype (run_buem, #61).
-// BuEM rejects a wall/roof/floor element with no U, so a caller sending these
-// on to BuEM must fill it in first.
+// a rendered surface back to the element being edited. U and BTransmission are
+// not derived from City2TABULA (it has no thermal-performance data) — they are
+// nil here and set afterward by a caller that has resolved a TABULA archetype
+// (run_buem, #61). BuEM rejects a wall/roof/floor element with no U, so a caller
+// sending these on to BuEM must fill it in first; BTransmission omitted means
+// BuEM's default of 1.0.
 type EnvelopeElement struct {
-	ID      string    `json:"id" example:"w1"`
-	Type    string    `json:"type" example:"wall"`
-	Area    Quantity  `json:"area"`
-	Azimuth Quantity  `json:"azimuth"`
-	Tilt    Quantity  `json:"tilt"`
-	U       *Quantity `json:"U,omitempty"`
+	ID            string    `json:"id" example:"w1"`
+	Type          string    `json:"type" example:"wall"`
+	Area          Quantity  `json:"area"`
+	Azimuth       Quantity  `json:"azimuth"`
+	Tilt          Quantity  `json:"tilt"`
+	U             *Quantity `json:"U,omitempty"`
+	BTransmission *Quantity `json:"b_transmission,omitempty"` // TABULA b_Transmission: adjacency correction for elements next to unheated space
 }
 
 // envelopeTypeByClassname maps City2TABULA's CityGML surface classnames onto
