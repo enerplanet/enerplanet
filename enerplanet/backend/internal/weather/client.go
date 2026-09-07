@@ -1,75 +1,77 @@
-// Package weather is a thin HTTP client for weather-serve (UU-BUEM/weather),
-// used by run_buem to resolve the per-building weather timeseries buem-gateway
-// requires. Calling weather-serve directly here is a deliberate, temporary
-// exception — see the on-request-3d-pipeline plan and its linked decision
-// note for why: the intended design has Orchestrator resolve this, and this
-// is expected to move there once it exists.
+// Package weather resolves the per-model weather timeseries buem-gateway
+// requires, from weather-serve (UU-BUEM/weather), reached through the TentaCron
+// orchestrator - the backend makes no direct weather-serve call. Used by
+// run_buem.
 package weather
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"time"
 
-	httpclient "platform.local/common/pkg/httpclient"
+	"spatialhub_backend/internal/tentacron"
 )
 
-// Client talks to weather-serve's HTTP API.
+// targetPoint is the TentaCron proxy target for weather-serve's point query
+// (GET /v1/weather/point). response.mode direct; TentaCron maps the payload
+// onto the query string per its target config.
+const targetPoint = "weather-point"
+
+// Client resolves weather data through TentaCron.
 type Client struct {
-	http   *httpclient.Client
-	apiKey string
+	tc *tentacron.Client
 }
 
-// NewClient creates a Client bound to weather-serve at baseURL. apiKey is
-// sent as X-API-Key on every request — weather-serve's Flask app checks it
-// itself (unlike buem-gateway's, this isn't a reverse-proxy-only concern), so
-// it is required regardless of network path. See WEATHER_API_KEYS in
-// weather-serve's own docker-compose.serve.yml.
-func NewClient(baseURL, apiKey string) *Client {
-	return &Client{
-		http:   httpclient.New(baseURL, httpclient.WithTimeout(30*time.Second)),
-		apiKey: apiKey,
-	}
-}
-
-func (c *Client) headers() http.Header {
-	h := make(http.Header)
-	if c.apiKey != "" {
-		h.Set("X-API-Key", c.apiKey)
-	}
-	return h
+// NewClient returns a Client that reaches weather-serve through the given
+// TentaCron client.
+func NewClient(tc *tentacron.Client) *Client {
+	return &Client{tc: tc}
 }
 
 // GetPointWeather returns the hourly weather timeseries for one location/year,
-// as raw JSON already shaped {"index": [...], "variables": {name: [...]}} —
+// as raw JSON already shaped {"index": [...], "variables": {name: [...]}} -
 // exactly the shape buem-gateway's buem.weather block expects (see
-// internal/buem/weather_validate.go in buem-gateway), so callers can embed it
-// directly without re-parsing it into a typed struct first. provider selects
-// which weather archive to query (e.g. "era5-land"); year selects which
-// archive file weather-serve reads. use_case=solar is fixed, not a parameter:
-// weather-serve requires one of variables/use_case, and solar (T, GHI, DHI,
-// DNI) is exactly buem-gateway's own requirement — this client has no other
-// caller that would want a different set.
+// internal/buem/weather_validate.go in buem-gateway), so callers embed it
+// directly without re-parsing. provider selects the weather archive; year
+// selects the archive file. use_case and format are sent explicitly on every
+// call: weather-serve requires one of variables/use_case, solar (T, GHI, DHI,
+// DNI) is buem-gateway's own set, and without format=json weather-serve
+// answers with parquet.
 func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, year int, provider string) (json.RawMessage, error) {
-	path := fmt.Sprintf("/v1/weather/point?lat=%g&lon=%g&year=%d&provider=%s&use_case=solar&format=json",
-		lat, lon, year, url.QueryEscape(provider))
+	payload := map[string]any{
+		"lat":      lat,
+		"lon":      lon,
+		"year":     year,
+		"provider": provider,
+		"use_case": "solar",
+		"format":   "json",
+	}
+	var raw json.RawMessage
+	if err := c.tc.Do(ctx, targetPoint, payload, &raw); err != nil {
+		return nil, asWeatherError(err)
+	}
+	return raw, nil
+}
 
-	resp, err := c.http.Do(ctx, http.MethodGet, path, nil, c.headers())
-	if err != nil {
-		return nil, fmt.Errorf("weather-serve point request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("weather-serve point: unexpected status %d", resp.StatusCode)
-	}
+// weatherRejectionCodes are the TentaCron error codes that mean weather-serve
+// itself declined the call: bad coordinates or an unknown provider (400), a
+// missing API key (401), no archive for the year (404), the archive backend
+// down (503), or a weather-serve timeout. run_buem logs and proceeds without
+// weather whatever the cause; this only trims the log line to weather-serve's
+// own message.
+var weatherRejectionCodes = map[string]bool{
+	"target_error":   true,
+	"target_timeout": true,
+}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read weather-serve response: %w", err)
+// asWeatherError flattens a weather-serve rejection to a plain error carrying
+// weather-serve's own message. Anything else (unknown_target, invalid_payload,
+// max_attempts_exceeded, internal - all backend or infrastructure faults) is
+// returned unchanged.
+func asWeatherError(err error) error {
+	te, ok := tentacron.AsTargetError(err)
+	if !ok || !weatherRejectionCodes[te.Code] {
+		return err
 	}
-	return json.RawMessage(body), nil
+	return fmt.Errorf("weather-serve rejected the request: %s", te.UpstreamMessage())
 }
