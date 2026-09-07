@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -15,6 +17,7 @@ import (
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
 )
 
 func floatPtr(f float64) *float64 { return &f }
@@ -93,6 +96,40 @@ func TestMergeBuemResults_WritesByOSMIDAndSkipsFailures(t *testing.T) {
 	assert.NotContains(t, failed, "buem", "building 222's result carried an error, must be left alone")
 }
 
+// fakeTentacronC2T stands up a fake TentaCron whose every target call is
+// answered by respond(target) -> (upstreamStatus, jsonBody): a 2xx yields a
+// completed job carrying jsonBody as target_response, anything else a failed
+// job whose target_error message carries the status (as real TentaCron reports
+// an upstream HTTP failure). respond runs on the status poll, so a counter in
+// its closure sees each call.
+func fakeTentacronC2T(t *testing.T, respond func(target string) (int, string)) *city2tabula.Client {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			var req struct {
+				Target string `json:"target"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"` + req.Target + `"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/requests/"):
+			target := strings.TrimPrefix(r.URL.Path, "/v1/requests/")
+			status, body := respond(target)
+			if status >= 200 && status < 300 {
+				_, _ = w.Write([]byte(`{"state":"completed","result":{"target_status":200,"target_response":` + body + `}}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"state":"failed","error":{"code":"target_error","message":"target ` + target +
+				`: HTTP ` + strconv.Itoa(status) + `: ` + body + `"}}`))
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return city2tabula.NewClient(tentacron.New(srv.URL, "k"))
+}
+
 func topologyBuildings(osmIDs ...string) []interface{} {
 	topology := make([]interface{}, len(osmIDs))
 	for i, id := range osmIDs {
@@ -114,28 +151,22 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 	var buildingsCalls int32
 	var runTriggered bool
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/buildings":
+	client := fakeTentacronC2T(t, func(target string) (int, string) {
+		switch target {
+		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				_, _ = w.Write([]byte(`[{"object_id":"DE1","osm_id":"111","match_type":1}]`))
-			} else {
-				_, _ = w.Write([]byte(`[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}]`))
+				return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
 			}
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runs":
+			return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}]`
+		case "c2t-trigger-run":
 			runTriggered = true
-			w.WriteHeader(http.StatusAccepted)
-			_, _ = w.Write([]byte(`{"run_id":"run1","country":"germany","status":"pending"}`))
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/runs/run1":
-			_, _ = w.Write([]byte(`{"run_id":"run1","country":"germany","status":"completed"}`))
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+			return 200, `{"run_id":"run1","country":"germany","status":"pending"}`
+		case "c2t-run-status":
+			return 200, `{"run_id":"run1","country":"germany","status":"completed"}`
 		}
-	}))
-	defer server.Close()
-
-	client := city2tabula.NewClient(server.URL)
+		t.Fatalf("unexpected target %s", target)
+		return 0, ""
+	})
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 
@@ -151,17 +182,12 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 // original optimization: when every building the topology needs is already
 // linked, no run is triggered.
 func TestResolveEnvelope_FullCoverageSkipsRun(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == "/api/v1/buildings" {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`[{"object_id":"DE1","osm_id":"111","match_type":1}]`))
-			return
+	client := fakeTentacronC2T(t, func(target string) (int, string) {
+		if target != "c2t-buildings" {
+			t.Fatalf("no run should be triggered when all needed buildings are already linked; got target %s", target)
 		}
-		t.Fatalf("unexpected request: %s %s — no run should be triggered when all needed buildings are already linked", r.Method, r.URL.Path)
-	}))
-	defer server.Close()
-
-	client := city2tabula.NewClient(server.URL)
+		return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
+	})
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 

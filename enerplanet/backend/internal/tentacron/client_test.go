@@ -97,3 +97,25 @@ func TestDo_cancelledContext(t *testing.T) {
 	err := New(srv.URL, "k").Do(ctx, "ignis-data", nil, nil)
 	require.Error(t, err)
 }
+
+func TestTargetError_UpstreamStatus(t *testing.T) {
+	cases := []struct {
+		name     string
+		message  string
+		wantCode int
+		wantOK   bool
+	}{
+		{"upstream 404", `target c2t-run-status: HTTP 404: {"error":"run not found"}`, 404, true},
+		{"upstream 400", `target c2t-trigger-run: HTTP 400: bad bbox`, 400, true},
+		{"upstream 500", "target c2t-buildings: HTTP 500: pq: relation does not exist", 500, true},
+		{"timeout, no status", "target timed out after 30s", 0, false},
+		{"caller mistake, no status", "no target named c2t-run-status", 0, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, ok := (&TargetError{Code: "target_error", Message: tc.message}).UpstreamStatus()
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantCode, code)
+		})
+	}
+}
