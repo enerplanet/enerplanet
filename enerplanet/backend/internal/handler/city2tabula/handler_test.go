@@ -2,6 +2,7 @@ package city2tabula
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,51 +14,82 @@ import (
 
 	"spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/tentacron"
 )
 
 func init() { gin.SetMode(gin.TestMode) }
 
-// fakeC2T stands in for the City2TABULA on-request server.
+// fakeC2T stands in for City2TABULA behind a fake TentaCron: it serves the
+// submit + poll exchange and answers each of the three c2t targets from these
+// fields, so a c2t.Client (which speaks only TentaCron now) can drive it.
 type fakeC2T struct {
-	buildingsJSON       string // response body for GET /api/v1/buildings
-	buildingsBadRequest bool   // GET /api/v1/buildings returns 400 (e.g. unsupported country)
-	runStatus           string // status returned by GET /api/v1/runs/{id}
-	runNotFound         bool   // GET /api/v1/runs/{id} returns 404
-	triggerFails        bool   // POST /api/v1/runs returns 500
+	buildingsJSON       string // target_response for c2t-buildings
+	buildingsBadRequest bool   // c2t-buildings fails as an upstream 400 (unsupported country)
+	runStatus           string // status field returned by c2t-run-status
+	runNotFound         bool   // c2t-run-status fails as an upstream 404
+	triggerFails        bool   // c2t-trigger-run fails as an upstream 500
 	triggeredRuns       int
 }
 
-func (f *fakeC2T) server(t *testing.T) *httptest.Server {
+func (f *fakeC2T) client(t *testing.T) *c2t.Client {
 	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/buildings":
-			if f.buildingsBadRequest {
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte(`{"error":"unsupported country \"string\": no TABULA data available"}`))
-				return
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			var req struct {
+				Target string `json:"target"`
 			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(f.buildingsJSON))
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/runs":
-			f.triggeredRuns++
-			if f.triggerFails {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			if req.Target == "c2t-trigger-run" {
+				f.triggeredRuns++
 			}
 			w.WriteHeader(http.StatusAccepted)
-			_, _ = w.Write([]byte(`{"run_id":"run-1","country":"germany","status":"pending"}`))
-		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/v1/runs/"):
-			if f.runNotFound {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			_, _ = w.Write([]byte(`{"run_id":"run-1","country":"germany","status":"` + f.runStatus + `"}`))
+			_, _ = fmt.Fprintf(w, `{"id":%q}`, req.Target)
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/requests/"):
+			_, _ = w.Write([]byte(f.envelope(strings.TrimPrefix(r.URL.Path, "/v1/requests/"))))
 		default:
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
+	t.Cleanup(srv.Close)
+	return c2t.NewClient(tentacron.New(srv.URL, "k"))
+}
+
+// envelope builds the TentaCron job-status body for one target.
+func (f *fakeC2T) envelope(target string) string {
+	ok := func(body string) string {
+		return `{"state":"completed","result":{"target_status":200,"target_response":` + body + `}}`
+	}
+	fail := func(status int, msg string) string {
+		b, _ := json.Marshal(map[string]any{
+			"state": "failed",
+			"error": map[string]any{
+				"code":    "target_error",
+				"message": fmt.Sprintf("target %s: HTTP %d: %s", target, status, msg),
+			},
+		})
+		return string(b)
+	}
+	switch target {
+	case "c2t-buildings":
+		if f.buildingsBadRequest {
+			return fail(http.StatusBadRequest, `unsupported country "string": no TABULA data available`)
+		}
+		return ok(f.buildingsJSON)
+	case "c2t-trigger-run":
+		if f.triggerFails {
+			return fail(http.StatusInternalServerError, "internal server error")
+		}
+		return ok(`{"run_id":"run-1","country":"germany","status":"pending"}`)
+	case "c2t-run-status":
+		if f.runNotFound {
+			return fail(http.StatusNotFound, "run not found")
+		}
+		return ok(`{"run_id":"run-1","country":"germany","status":"` + f.runStatus + `"}`)
+	default:
+		return fail(http.StatusInternalServerError, "unexpected target "+target)
+	}
 }
 
 const twoWallBuilding = `[{
@@ -86,9 +118,7 @@ func postEnrich(t *testing.T, h *Handler, body string) (*httptest.ResponseRecord
 
 func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
 
@@ -115,9 +145,7 @@ func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 
 func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding} // only 111 comes back
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111","222"]}`)
 
@@ -133,9 +161,7 @@ func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {
 
 func TestEnrich_TriggerFails_ReturnsPartial(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding, triggerFails: true}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111","222"]}`)
 
@@ -145,16 +171,14 @@ func TestEnrich_TriggerFails_ReturnsPartial(t *testing.T) {
 }
 
 func TestEnrich_MissingFields_400(t *testing.T) {
-	h := NewHandler(c2t.NewClient("http://unused"))
+	h := NewHandler((&fakeC2T{}).client(t))
 	w, _ := postEnrich(t, h, `{"country":"germany","osm_ids":[]}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	fake := &fakeC2T{runStatus: "running"}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -171,9 +195,7 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 
 func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
 	fake := &fakeC2T{buildingsBadRequest: true}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w, _ := postEnrich(t, h, `{"country":"string","osm_ids":["1"],"bbox":{"xmin":0,"ymin":0,"xmax":0,"ymax":0}}`)
 
@@ -183,9 +205,7 @@ func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
 
 func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
 	fake := &fakeC2T{runNotFound: true}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -198,9 +218,7 @@ func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
 
 func TestEnrichStatus_Completed_WithQueryParams_ReturnsData(t *testing.T) {
 	fake := &fakeC2T{runStatus: "completed", buildingsJSON: twoWallBuilding}
-	srv := fake.server(t)
-	defer srv.Close()
-	h := NewHandler(c2t.NewClient(srv.URL))
+	h := NewHandler(fake.client(t))
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
