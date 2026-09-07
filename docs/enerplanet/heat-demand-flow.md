@@ -90,4 +90,5 @@ sequenceDiagram
   ignis's own message and treats it as a miss.
 
 !!! note "Scope"
-    Only ignis is routed through TentaCron. buem-gateway, City2TABULA and weather are called directly by the backend.
+    Only ignis is routed through TentaCron. buem-gateway, City2TABULA and weather are still called directly by the
+    backend. Moving them behind TentaCron is planned as later increments.
