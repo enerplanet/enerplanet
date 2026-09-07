@@ -269,7 +269,7 @@ func TestAttachEnvelopeUValues_setsWallRoofFloorOnly(t *testing.T) {
 		uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1},
 	}
 
-	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "detached", "germany", testYear(1975))
+	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975))
 
 	require.Len(t, got, 3)
 	for _, el := range got {
@@ -285,7 +285,7 @@ func TestAttachEnvelopeUValues_setsWallRoofFloorOnly(t *testing.T) {
 }
 
 func TestAttachEnvelopeUValues_nilClientLeavesElementsUnchanged(t *testing.T) {
-	got := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "detached", "germany", testYear(1975))
+	got := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "", "detached", "germany", testYear(1975))
 
 	for _, el := range got {
 		assert.Nil(t, el.U)
@@ -306,7 +306,7 @@ func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testi
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fakeEnvelopeUValueResolver{code: "DE.N.SFH.05.Gen", uValues: ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1}}
-			got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), tt.fClass, tt.country, tt.constructionYear)
+			got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", tt.fClass, tt.country, tt.constructionYear)
 			for _, el := range got {
 				assert.Nil(t, el.U, "%s should not carry a resolved U-value", tt.name)
 			}
@@ -316,8 +316,30 @@ func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testi
 
 func TestAttachEnvelopeUValues_ignisFailureLeavesElementsUnchanged(t *testing.T) {
 	client := fakeEnvelopeUValueResolver{matchErr: assert.AnError}
-	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "detached", "germany", testYear(1975))
+	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975))
 	for _, el := range got {
 		assert.Nil(t, el.U)
 	}
+}
+
+// A City2TABULA geometry-derived variant code is used directly: no year is
+// supplied and the f-class is non-residential (both would fail the
+// ResolveVariant fallback), yet U-values still land because the c2t code
+// bypasses that path. matchErr would surface if ResolveVariant were called.
+func TestAttachEnvelopeUValues_usesCity2TabulaVariantCodeWithoutYear(t *testing.T) {
+	client := fakeEnvelopeUValueResolver{
+		matchErr: assert.AnError,
+		uValues:  ignis.EnvelopeUValues{Wall: 1.2, Roof: 0.9, Floor: 1.1},
+	}
+
+	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "NL.N.AB.01.Por1945.ReEx.001.001", "office", "netherlands", nil)
+
+	byType := map[string]float64{}
+	for _, el := range got {
+		require.NotNil(t, el.U, "%s should have U set from the c2t variant code", el.Type)
+		byType[el.Type] = el.U.Value
+	}
+	assert.Equal(t, 1.2, byType["wall"])
+	assert.Equal(t, 0.9, byType["roof"])
+	assert.Equal(t, 1.1, byType["floor"])
 }
