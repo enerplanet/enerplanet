@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,8 +78,28 @@ func (e *TargetError) Error() string {
 }
 
 // upstreamMsgPrefix is TentaCron's "target <name>: HTTP <status>: " stamp on an
-// upstream HTTP failure message.
-var upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+// upstream HTTP failure message. upstreamStatusRe additionally captures the
+// status digits.
+var (
+	upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+	upstreamStatusRe  = regexp.MustCompile(`^target \S+: HTTP (\d{3}): `)
+)
+
+// UpstreamStatus is the HTTP status the upstream service returned, parsed from
+// the message stamp. ok is false when the message carries no status: a
+// timeout, a transport error, or a caller-side rejection (unknown_target,
+// invalid_payload) rather than an upstream HTTP response.
+func (e *TargetError) UpstreamStatus() (int, bool) {
+	m := upstreamStatusRe.FindStringSubmatch(e.Message)
+	if m == nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
 
 // UpstreamMessage is the upstream service's own error text: the prefix stripped
 // and a {"error":"..."} wrapper unwrapped. Falls back to the trimmed message

@@ -1,21 +1,25 @@
-// Package city2tabula is a thin HTTP client for City2TABULA's on-request
-// wrapper (THD-Spatial-AI/city2tabula, cmd/server): bbox-scoped 3D building
-// data for whatever region a model's calculation needs. Used internally by
-// the run_buem job, not exposed as a public backend route.
+// Package city2tabula resolves bbox-scoped 3D building data from City2TABULA's
+// on-request wrapper (THD-Spatial-AI/city2tabula, cmd/server), reached through
+// the TentaCron orchestrator - the backend makes no direct City2TABULA call.
+// Used by the run_buem job and the enrich handler (internal/handler/city2tabula).
 package city2tabula
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 
-	httpclient "platform.local/common/pkg/httpclient"
+	"spatialhub_backend/internal/tentacron"
+)
+
+// TentaCron proxy target names for the three City2TABULA calls. Each is a proxy
+// target with response.mode direct; TentaCron maps the payload onto the
+// City2TABULA URL per its target config.
+const (
+	targetTriggerRun = "c2t-trigger-run"
+	targetRunStatus  = "c2t-run-status"
+	targetBuildings  = "c2t-buildings"
 )
 
 // ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
@@ -34,46 +38,53 @@ func (e *BadRequestError) Error() string {
 	return "city2tabula rejected the request: " + e.Message
 }
 
-// badRequestFromBody builds a BadRequestError from a City2TABULA {"error": ...}
-// body, falling back to a generic message if the body is not in that shape.
-func badRequestFromBody(body io.Reader) *BadRequestError {
-	var parsed struct {
-		Error string `json:"error"`
-	}
-	if err := json.NewDecoder(body).Decode(&parsed); err != nil || parsed.Error == "" {
-		return &BadRequestError{Message: "bad request"}
-	}
-	return &BadRequestError{Message: parsed.Error}
+// c2tRejectionCodes are the TentaCron job error codes that mean City2TABULA
+// itself declined or failed the call. Other codes (unknown_target,
+// invalid_payload, max_attempts_exceeded, internal) are backend or
+// infrastructure faults and are returned as the raw *tentacron.TargetError.
+var c2tRejectionCodes = map[string]bool{
+	"target_error":      true,
+	"target_job_failed": true,
+	"target_timeout":    true,
 }
 
-// checkStatus classifies a City2TABULA response: nil when it matches want, a
-// BadRequestError (carrying the upstream message) on 400, an opaque error
-// otherwise. op names the call for the opaque-error message.
-func checkStatus(resp *http.Response, want int, op string) error {
-	switch resp.StatusCode {
-	case want:
-		return nil
-	case http.StatusBadRequest:
-		return badRequestFromBody(resp.Body)
+// asC2TError maps a TentaCron rejection to the typed error the callers branch
+// on: a 404 to ErrRunNotFound (a stale run id - only GetRunStatus checks for
+// it), any other 4xx to a BadRequestError carrying City2TABULA's own message.
+// A 5xx carries a raw DB error string that must not reach an end user, so it
+// stays an opaque *tentacron.TargetError for the caller to log and nothing
+// more. Anything that is not a City2TABULA rejection is returned unchanged.
+func asC2TError(err error) error {
+	te, ok := tentacron.AsTargetError(err)
+	if !ok || !c2tRejectionCodes[te.Code] {
+		return err
+	}
+	status, hasStatus := te.UpstreamStatus()
+	switch {
+	case hasStatus && status == http.StatusNotFound:
+		return ErrRunNotFound
+	case hasStatus && status >= 400 && status < 500:
+		return &BadRequestError{Message: te.UpstreamMessage()}
 	default:
-		return fmt.Errorf("city2tabula %s: unexpected status %d", op, resp.StatusCode)
+		return err
 	}
 }
 
-// Bbox is a WGS84 (EPSG:4326) lon/lat bounding box — the CRS a user-drawn
+// Bbox is a WGS84 (EPSG:4326) lon/lat bounding box - the CRS a user-drawn
 // area of interest naturally comes in as (see geo.BBoxFromGeoJSON).
 type Bbox struct {
 	Xmin, Ymin, Xmax, Ymax float64
 }
 
-// Client talks to City2TABULA's on-request HTTP wrapper.
+// Client resolves City2TABULA data through TentaCron.
 type Client struct {
-	http *httpclient.Client
+	tc *tentacron.Client
 }
 
-// NewClient creates a Client bound to City2TABULA's server at baseURL.
-func NewClient(baseURL string) *Client {
-	return &Client{http: httpclient.New(baseURL, httpclient.WithTimeout(30*time.Second))}
+// NewClient returns a Client that reaches City2TABULA through the given
+// TentaCron client.
+func NewClient(tc *tentacron.Client) *Client {
+	return &Client{tc: tc}
 }
 
 // Run tracks a triggered City2TABULA pipeline run, as returned by both
@@ -88,7 +99,7 @@ type Run struct {
 
 // Building is one LOD2 building's thematic (non-geometric) 3D attributes, as
 // City2TABULA's GET /api/v1/buildings returns them. Callers reshape these
-// into whatever envelope block BuEM actually needs. No geometry here —
+// into whatever envelope block BuEM actually needs. No geometry here -
 // City2TABULA serves that separately (GET /api/v1/geometry) for consumers
 // that actually need to render it; nothing here does.
 type Building struct {
@@ -116,7 +127,7 @@ type Surface struct {
 	AreaSqm *float64 `json:"area,omitempty"`
 	// Azimuth is -1 (undefined) for near-horizontal surfaces.
 	Azimuth *float64 `json:"azimuth,omitempty"`
-	// Tilt: 0=vertical wall, 90=flat roof — inverted from BuEM's own
+	// Tilt: 0=vertical wall, 90=flat roof - inverted from BuEM's own
 	// convention (0=horizontal roof, 90=vertical wall); invert before mapping.
 	Tilt *float64 `json:"tilt,omitempty"`
 	// IsValid and IsPlanar are City2TABULA extraction diagnostics, not
@@ -140,118 +151,49 @@ func normalizeCountry(country string) string {
 	return country
 }
 
-func bboxQuery(country string, bbox Bbox) string {
-	return fmt.Sprintf("country=%s&xmin=%g&ymin=%g&xmax=%g&ymax=%g",
-		url.QueryEscape(normalizeCountry(country)), bbox.Xmin, bbox.Ymin, bbox.Xmax, bbox.Ymax)
-}
-
-// GetCoverage returns how many already-linked buildings City2TABULA has for
-// country within bbox — a cheap check to decide whether TriggerRun is needed.
-func (c *Client) GetCoverage(ctx context.Context, country string, bbox Bbox) (int, error) {
-	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/coverage?"+bboxQuery(country, bbox), nil, nil)
-	if err != nil {
-		return 0, fmt.Errorf("city2tabula coverage request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	if err := checkStatus(resp, http.StatusOK, "coverage"); err != nil {
-		return 0, err
-	}
-
-	var body struct {
-		Count int `json:"count"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return 0, fmt.Errorf("failed to decode coverage response: %w", err)
-	}
-	return body.Count, nil
-}
-
 // TriggerRun starts a bbox-scoped City2TABULA pipeline run for country and
-// returns immediately with the run to poll via GetRunStatus.
+// returns immediately with the run to poll via GetRunStatus. The c2t-trigger-run
+// target is configured no-retry: a run is not idempotent, so callers must treat
+// a timeout or transient failure as "may or may not have started" rather than
+// re-trigger.
 func (c *Client) TriggerRun(ctx context.Context, country string, bbox Bbox) (*Run, error) {
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"country": normalizeCountry(country),
 		"xmin":    bbox.Xmin, "ymin": bbox.Ymin, "xmax": bbox.Xmax, "ymax": bbox.Ymax,
 	}
-	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/api/v1/runs", payload, nil)
-	if err != nil {
-		return nil, fmt.Errorf("city2tabula trigger-run request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	if err := checkStatus(resp, http.StatusAccepted, "trigger-run"); err != nil {
-		return nil, err
-	}
-
 	var run Run
-	if err := json.NewDecoder(resp.Body).Decode(&run); err != nil {
-		return nil, fmt.Errorf("failed to decode trigger-run response: %w", err)
+	if err := c.tc.Do(ctx, targetTriggerRun, payload, &run); err != nil {
+		return nil, asC2TError(err)
 	}
 	return &run, nil
 }
 
-// GetRunStatus polls the status of a run started by TriggerRun.
+// GetRunStatus polls the status of a run started by TriggerRun. A stale run id
+// comes back as ErrRunNotFound.
 func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
-	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/runs/"+url.PathEscape(runID), nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("city2tabula run-status request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrRunNotFound
-	}
-	if err := checkStatus(resp, http.StatusOK, "run-status"); err != nil {
-		return nil, err
-	}
-
 	var run Run
-	if err := json.NewDecoder(resp.Body).Decode(&run); err != nil {
-		return nil, fmt.Errorf("failed to decode run-status response: %w", err)
+	if err := c.tc.Do(ctx, targetRunStatus, map[string]any{"run_id": runID}, &run); err != nil {
+		return nil, asC2TError(err)
 	}
 	return &run, nil
-}
-
-// GetBuildingsByBBox returns 3D attributes for every building in country
-// whose footprint intersects bbox, independent of any PyLovo link.
-func (c *Client) GetBuildingsByBBox(ctx context.Context, country string, bbox Bbox) ([]Building, error) {
-	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/buildings?"+bboxQuery(country, bbox), nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	if err := checkStatus(resp, http.StatusOK, "buildings"); err != nil {
-		return nil, err
-	}
-
-	var buildings []Building
-	if err := json.NewDecoder(resp.Body).Decode(&buildings); err != nil {
-		return nil, fmt.Errorf("failed to decode buildings response: %w", err)
-	}
-	return buildings, nil
 }
 
 // GetBuildingsByOSMIDs returns 3D attributes for buildings already matched to
-// a PyLovo building via building_link — unlike GetBuildingsByBBox, OSMID and
-// MatchType are populated on every result, so callers can join the response
-// back to their own topology nodes by osm_id.
+// a PyLovo building via building_link. OSMID and MatchType are populated on
+// every result, so callers join the response back to their own topology nodes
+// by osm_id. An empty match set comes back as JSON null and decodes to a nil
+// slice.
 func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) ([]Building, error) {
 	if len(osmIDs) == 0 {
 		return nil, nil
 	}
-	query := fmt.Sprintf("country=%s&osm_ids=%s",
-		url.QueryEscape(normalizeCountry(country)), url.QueryEscape(strings.Join(osmIDs, ",")))
-
-	resp, err := c.http.Do(ctx, http.MethodGet, "/api/v1/buildings?"+query, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("city2tabula buildings request failed: %w", err)
+	payload := map[string]any{
+		"country": normalizeCountry(country),
+		"osm_ids": strings.Join(osmIDs, ","),
 	}
-	defer resp.Body.Close()
-	if err := checkStatus(resp, http.StatusOK, "buildings"); err != nil {
-		return nil, err
-	}
-
 	var buildings []Building
-	if err := json.NewDecoder(resp.Body).Decode(&buildings); err != nil {
-		return nil, fmt.Errorf("failed to decode buildings response: %w", err)
+	if err := c.tc.Do(ctx, targetBuildings, payload, &buildings); err != nil {
+		return nil, asC2TError(err)
 	}
 	return buildings, nil
 }
