@@ -125,12 +125,20 @@ func TestCalculate_backendFaultCodeStaysRaw(t *testing.T) {
 	assert.Equal(t, "unknown_target", te.Code)
 }
 
-func TestGetEnvelopeUValues_extractsWallRoofFloor(t *testing.T) {
+func TestGetEnvelopeUValues_extractsActualUBTransmissionAndBridging(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{
 		"country": "germany",
 		"tabula_data": {
 			"AdvancedParameters": {
-				"Uvalues": {"U_Wall_1": 1.2, "U_Roof_1": 0.9, "U_Floor_1": 1.1, "U_Window_1": 2.8}
+				"Uvalues": {
+					"U_Wall_1": 0.77, "U_Roof_1": 0.77, "U_Floor_1": 0.77,
+					"U_Actual_Wall_1": 1.2, "U_Actual_Roof_1": 0.9, "U_Actual_Floor_1": 1.1,
+					"U_Window_1": 2.8
+				},
+				"HeatLosses": {
+					"b_Transmission_Wall_1": 1, "b_Transmission_Roof_1": 1, "b_Transmission_Floor_1": 0.5
+				},
+				"ThermalBridges": {"delta_U_ThermalBridging_Original": 0.07}
 			}
 		}
 	}`))
@@ -138,9 +146,12 @@ func TestGetEnvelopeUValues_extractsWallRoofFloor(t *testing.T) {
 	u, err := stubClient(stub).GetEnvelopeUValues(context.Background(), "DE.N.SFH.05.Gen")
 
 	require.NoError(t, err)
-	assert.Equal(t, 1.2, u.Wall)
-	assert.Equal(t, 0.9, u.Roof)
-	assert.Equal(t, 1.1, u.Floor)
+	assert.Equal(t, 1.2, u.UWall)
+	assert.Equal(t, 0.9, u.URoof)
+	assert.Equal(t, 1.1, u.UFloor)
+	assert.Equal(t, 1.0, u.BTransWall)
+	assert.Equal(t, 0.5, u.BTransFloor)
+	assert.Equal(t, 0.07, u.Bridging)
 	assert.Equal(t, "ignis-data", stub.lastTarget)
 	assert.Equal(t, "DE.N.SFH.05.Gen", stub.lastPayload["code"])
 }

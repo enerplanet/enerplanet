@@ -405,13 +405,29 @@ func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolv
 	if err != nil {
 		return elements
 	}
-	uByType := map[string]float64{"wall": u.Wall, "roof": u.Roof, "floor": u.Floor}
+	// BuEM applies no thermal-bridging surcharge, so fold ignis's envelope-level
+	// delta into each element's U: sum over elements of delta x area equals
+	// ignis's single delta x total-area term.
+	type elementInputs struct {
+		u, bTrans float64
+	}
+	byType := map[string]elementInputs{
+		"wall":  {u.UWall + u.Bridging, u.BTransWall},
+		"roof":  {u.URoof + u.Bridging, u.BTransRoof},
+		"floor": {u.UFloor + u.Bridging, u.BTransFloor},
+	}
 	for i := range elements {
-		value, ok := uByType[elements[i].Type]
+		in, ok := byType[elements[i].Type]
 		if !ok {
 			continue
 		}
-		elements[i].U = &city2tabula.Quantity{Value: value, Unit: "W/(m2.K)"}
+		elements[i].U = &city2tabula.Quantity{Value: in.u, Unit: "W/(m2.K)"}
+		// b_Transmission is (0,1]. Send it only when it actually reduces the
+		// loss (< 1, e.g. ~0.5 for a ground floor); 1.0 and a missing 0 both
+		// leave it nil, which is BuEM's default.
+		if in.bTrans > 0 && in.bTrans < 1 {
+			elements[i].BTransmission = &city2tabula.Quantity{Value: in.bTrans, Unit: "-"}
+		}
 	}
 	return elements
 }
