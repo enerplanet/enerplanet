@@ -15,30 +15,29 @@ const (
 )
 
 type Config struct {
-	Auth                  auth.Config
-	RedisConfig           goredis.Options
-	AppPort               string
-	AppHost               string
-	AppURL                string
-	AppEnv                string
-	AppTimezone           string
-	CookieDomain          string
-	Database              platformconfig.DatabaseConfig
-	SessionTTLMinutes     int // Session timeout in minutes
-	Email                 platformconfig.EmailSettings
-	AuthServiceURL        string // URL of the auth-service
-	WebserviceServiceURL  string // URL of the webservice microservice
-	PylovoServiceURL      string // URL of the pylovo microservice
-	City2TabulaServiceURL string // URL of City2TABULA's on-request 3D-data server
-	WeatherServiceURL     string // URL of weather-serve
-	WeatherAPIKey         string // X-API-Key for weather-serve — required, checked by weather-serve itself
-	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
-	BuemServiceURL        string // URL of buem-gateway
-	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
-	TentacronServiceURL   string // URL of the TentaCron orchestrator; every ignis call (resolve endpoint, run_buem, the /v2/ignis/* proxy) routes through it
-	TentacronAPIKey       string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
-	OpenTechDBServiceURL  string // URL of the OpenTech-DB service
-	CallbackSecret        string // Shared secret for webservice callback authentication
+	Auth                 auth.Config
+	RedisConfig          goredis.Options
+	AppPort              string
+	AppHost              string
+	AppURL               string
+	AppEnv               string
+	AppTimezone          string
+	CookieDomain         string
+	Database             platformconfig.DatabaseConfig
+	SessionTTLMinutes    int // Session timeout in minutes
+	Email                platformconfig.EmailSettings
+	AuthServiceURL       string // URL of the auth-service
+	WebserviceServiceURL string // URL of the webservice microservice
+	PylovoServiceURL     string // URL of the pylovo microservice
+	WeatherServiceURL    string // URL of weather-serve
+	WeatherAPIKey        string // X-API-Key for weather-serve — required, checked by weather-serve itself
+	WeatherProvider      string // provider passed on every weather-serve call — required, weather-serve has no server-side default
+	BuemServiceURL       string // URL of buem-gateway
+	BuemAPIKey           string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
+	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve and City2TABULA call (resolve endpoint, run_buem, enrich, the /v2/ignis/* proxy) routes through it
+	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
+	OpenTechDBServiceURL string // URL of the OpenTech-DB service
+	CallbackSecret       string // Shared secret for webservice callback authentication
 }
 
 func LoadFromEnv() (*Config, error) {
@@ -73,8 +72,6 @@ func LoadFromEnv() (*Config, error) {
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
-		// 5000 matches City2TABULA's own SERVER_PORT default (cmd/server/main.go).
-		City2TabulaServiceURL: platformconfig.GetEnv("CITY2TABULA_SERVICE_URL", "http://localhost:5000"),
 		// 8090 matches weather-serve's own WEATHER_API_PORT default (docker-compose.serve.yml).
 		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
 		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
