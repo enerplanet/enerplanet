@@ -2,9 +2,11 @@
 
 // Regression guard for the weather leg against a live TentaCron fronting a real
 // weather-serve. Not run by `go test ./...` or CI: it needs a running TentaCron
-// with the weather-point target configured and a weather-serve instance with
-// the 2018 archives, neither of which exists in CI. Shares the manualignis tag
-// with internal/heatdemand/resolve_live_test.go so one run covers both legs.
+// with the weather-point target configured, a weather-serve instance with the
+// 2018 archives, and network reachability from TentaCron to weather-serve
+// (weather-serve is not in TentaCron's compose network yet). Shares the
+// manualignis tag with internal/heatdemand/resolve_live_test.go so one run
+// covers both legs.
 //
 //	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestPointWeatherLive -v ./internal/weather/

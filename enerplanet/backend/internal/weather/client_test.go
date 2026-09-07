@@ -56,13 +56,13 @@ func TestGetPointWeather_ReturnsRawBodyVerbatim(t *testing.T) {
 }
 
 func TestGetPointWeather_UpstreamRejectionSurfacesWeatherMessage(t *testing.T) {
-	status := `{"state":"failed","error":{"code":"target_error","message":"target weather-point: HTTP 404: no archive for year 2099"}}`
+	status := `{"state":"failed","error":{"code":"target_error","message":"target weather-point: HTTP 422: no servable archive for cosmo-rea6 in 2099"}}`
 	tc, _ := fakeTentacron(t, status)
 
 	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, 2099, "cosmo-rea6")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no archive for year 2099")
+	assert.Contains(t, err.Error(), "no servable archive for cosmo-rea6 in 2099")
 }
 
 func TestGetPointWeather_InfraFaultReturnedUnchanged(t *testing.T) {
