@@ -152,7 +152,7 @@ export const HeatDemandSection: FC<HeatDemandSectionProps> = ({
           {result.tabula_variant_code && (
             <p className="text-xs text-muted-foreground">Variant: {result.tabula_variant_code}</p>
           )}
-          {result.warnings.map((warning) => (
+          {(result.warnings ?? []).map((warning) => (
             <p key={warning} className="text-xs text-amber-600 dark:text-amber-400">
               {warning}
             </p>

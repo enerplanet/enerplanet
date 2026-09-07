@@ -69,6 +69,12 @@ func (h *Handler) Resolve(c *gin.Context) {
 		FloorAreaM2:      req.FloorAreaM2,
 	})
 
+	// warnings is a JSON array in the contract; a nil slice marshals to null.
+	warnings := result.Warnings
+	if warnings == nil {
+		warnings = []string{}
+	}
+
 	c.JSON(http.StatusOK, contracts.HeatDemandResolveResponse{
 		OSMID:                       req.OSMID,
 		Source:                      result.Source,
@@ -83,6 +89,6 @@ func (h *Handler) Resolve(c *gin.Context) {
 			FloorAreaM2:      req.FloorAreaM2,
 			Country:          req.Country,
 		},
-		Warnings: result.Warnings,
+		Warnings: warnings,
 	})
 }

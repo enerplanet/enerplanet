@@ -456,7 +456,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 osmId={selectedBuilding.osmId}
                 fClass={activeFClassDetail?.fClass ?? selectedFClass}
                 countryCode={selectedBuilding.countryCode}
-                areaSqm={editedArea}
+                areaSqm={editedArea * editedFloors}
                 initialConstructionYear={selectedBuilding.constructionYear}
                 onResolved={(result) => onHeatDemandResolved(selectedBuilding.osmId, result)}
               />
