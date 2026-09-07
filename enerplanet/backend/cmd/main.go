@@ -250,9 +250,9 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 
 	notificationService := services.NewNotificationService(db, emailService, redisClient, nil)
 	webserviceClient := webservice.NewClient(cfg.WebserviceServiceURL)
-	city2tabulaClient := city2tabula.NewClient(cfg.City2TabulaServiceURL)
-	weatherClient := weatherclient.NewClient(cfg.WeatherServiceURL, cfg.WeatherAPIKey)
 	tentacronClient := tentacron.New(cfg.TentacronServiceURL, cfg.TentacronAPIKey)
+	city2tabulaClient := city2tabula.NewClient(tentacronClient)
+	weatherClient := weatherclient.NewClient(tentacronClient)
 	buemClient := buem.NewClient(tentacronClient)
 	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 

@@ -106,10 +106,11 @@ func TestTargetError_UpstreamStatus(t *testing.T) {
 		wantOK   bool
 	}{
 		{"upstream 404", `target c2t-run-status: HTTP 404: {"error":"run not found"}`, 404, true},
-		{"upstream 400", "target buem-buildings: HTTP 400: bad body", 400, true},
+		{"upstream 400", `target c2t-trigger-run: HTTP 400: bad bbox`, 400, true},
+		{"upstream 500", "target c2t-buildings: HTTP 500: pq: relation does not exist", 500, true},
 		{"upstream 502", "target buem-buildings: HTTP 502: Bad Gateway", 502, true},
 		{"timeout, no status", "target buem-buildings timed out after 570s", 0, false},
-		{"caller mistake, no status", "no target named buem-buildings", 0, false},
+		{"caller mistake, no status", "no target named c2t-run-status", 0, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

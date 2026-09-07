@@ -40,12 +40,13 @@ type RunBuemPayload struct {
 }
 
 // HandleRunBuem runs before "dispatch_model_calculation": it resolves 3D
-// envelope data (City2TABULA) and weather (weather-serve) for whatever
-// buildings in the topology it can, calls buem-gateway synchronously so BuEM
-// writes its load-profile CSVs, then enqueues "dispatch_model_calculation"
-// exactly as StartCalculation used to do directly. City2TABULA/weather-serve
-// resolution here is a temporary stand-in for a future Orchestrator layer's
-// dependency-resolution role.
+// envelope data (City2TABULA) and weather (weather-serve, via TentaCron) for
+// whatever buildings in the topology it can, calls buem-gateway synchronously
+// so BuEM writes its load-profile CSVs, then enqueues
+// "dispatch_model_calculation" exactly as StartCalculation used to do directly.
+// Envelope and weather resolution here is a temporary stand-in for a future
+// Orchestrator layer's dependency-resolution role; the weather leg already
+// routes through TentaCron, City2TABULA still does not.
 func HandleRunBuem(
 	ctx context.Context,
 	t *asynq.Task,
