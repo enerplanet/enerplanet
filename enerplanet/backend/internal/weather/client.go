@@ -55,8 +55,9 @@ func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, year int
 
 // weatherRejectionCodes are the TentaCron error codes that mean weather-serve
 // itself declined the call: bad coordinates or an unknown provider (400), a
-// missing API key (401), no archive for the year (404), the archive backend
-// down (503), or a weather-serve timeout. run_buem logs and proceeds without
+// missing API key (401), an unknown location (404), no servable archive for
+// the year (422 archive_not_servable), weather-serve not configured (503), or
+// a weather-serve timeout. All permanent. run_buem logs and proceeds without
 // weather whatever the cause; this only trims the log line to weather-serve's
 // own message.
 var weatherRejectionCodes = map[string]bool{
