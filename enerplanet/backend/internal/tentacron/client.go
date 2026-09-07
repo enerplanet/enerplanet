@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,8 +78,28 @@ func (e *TargetError) Error() string {
 }
 
 // upstreamMsgPrefix is TentaCron's "target <name>: HTTP <status>: " stamp on an
-// upstream HTTP failure message.
-var upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+// upstream HTTP failure message. upstreamStatusRe additionally captures the
+// status digits.
+var (
+	upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+	upstreamStatusRe  = regexp.MustCompile(`^target \S+: HTTP (\d{3}): `)
+)
+
+// UpstreamStatus is the HTTP status the upstream service returned, parsed from
+// the message stamp. ok is false when the message carries no status: a
+// timeout, a transport error, or a caller-side rejection (unknown_target,
+// invalid_payload) rather than an upstream HTTP response.
+func (e *TargetError) UpstreamStatus() (int, bool) {
+	m := upstreamStatusRe.FindStringSubmatch(e.Message)
+	if m == nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
 
 // UpstreamMessage is the upstream service's own error text: the prefix stripped
 // and a {"error":"..."} wrapper unwrapped. Falls back to the trimmed message
@@ -118,9 +139,22 @@ type statusResponse struct {
 // Do submits a request for the named target with payload, waits for the job to
 // reach a terminal state, and unmarshals the verbatim upstream response into
 // out (nil to discard it). A "failed" or "cancelled" outcome is returned as
-// *TargetError.
+// *TargetError. The whole submit-and-await is bounded by opTimeout (60s).
 func (c *Client) Do(ctx context.Context, target string, payload, out any) error {
-	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	return c.doWithTimeout(ctx, target, payload, out, opTimeout)
+}
+
+// DoTimeout is Do with an explicit ceiling on the whole submit-and-await in
+// place of the opTimeout default, for a target whose upstream job legitimately
+// runs minutes (a BuEM batch). Pass a value above TentaCron's own job_timeout
+// for that target, so the backend does not abandon a job TentaCron would still
+// finish. Every other caller stays on Do / opTimeout.
+func (c *Client) DoTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	return c.doWithTimeout(ctx, target, payload, out, timeout)
+}
+
+func (c *Client) doWithTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	id, err := c.submit(ctx, target, payload)

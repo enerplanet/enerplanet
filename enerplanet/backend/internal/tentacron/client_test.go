@@ -97,3 +97,47 @@ func TestDo_cancelledContext(t *testing.T) {
 	err := New(srv.URL, "k").Do(ctx, "ignis-data", nil, nil)
 	require.Error(t, err)
 }
+
+func TestTargetError_UpstreamStatus(t *testing.T) {
+	cases := []struct {
+		name     string
+		message  string
+		wantCode int
+		wantOK   bool
+	}{
+		{"upstream 404", `target c2t-run-status: HTTP 404: {"error":"run not found"}`, 404, true},
+		{"upstream 400", "target buem-buildings: HTTP 400: bad body", 400, true},
+		{"upstream 502", "target buem-buildings: HTTP 502: Bad Gateway", 502, true},
+		{"timeout, no status", "target buem-buildings timed out after 570s", 0, false},
+		{"caller mistake, no status", "no target named buem-buildings", 0, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, ok := (&TargetError{Code: "target_error", Message: tc.message}).UpstreamStatus()
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantCode, code)
+		})
+	}
+}
+
+func TestDoTimeout_boundsTheWholeOperation(t *testing.T) {
+	// The status GET never returns a terminal state; DoTimeout's own ceiling
+	// must abort the await rather than hang.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"req-1"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"state":"awaiting_target"}`))
+	}))
+	defer srv.Close()
+
+	pollBackstop = time.Millisecond
+	t.Cleanup(func() { pollBackstop = time.Second })
+
+	start := time.Now()
+	err := New(srv.URL, "k").DoTimeout(context.Background(), "buem-buildings", nil, nil, 80*time.Millisecond)
+	require.Error(t, err)
+	assert.Less(t, time.Since(start), time.Second, "DoTimeout must abort near its own ceiling, not opTimeout")
+}
