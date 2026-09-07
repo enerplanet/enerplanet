@@ -1,7 +1,7 @@
 package ignis
 
 import (
-	"io"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,156 +10,116 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"spatialhub_backend/internal/tentacron"
 )
 
-func init() {
-	gin.SetMode(gin.TestMode)
+func init() { gin.SetMode(gin.TestMode) }
+
+// tentacronStub speaks the minimal TentaCron request/poll protocol and records
+// the last submit so a test can assert the target and payload.
+type tentacronStub struct {
+	*httptest.Server
+	lastTarget  string
+	lastPayload map[string]any
+	terminal    string
 }
 
-func TestGetVariants_forwardsToIgnisAndReturnsBody(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Equal(t, "/api/v1/variants/DE", r.URL.Path)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"country":"germany","data":["DE.N.SFH.01.Gen"]}`))
+func newTentacronStub(t *testing.T, terminal string) *tentacronStub {
+	t.Helper()
+	s := &tentacronStub{terminal: terminal}
+	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			var body struct {
+				Target  string         `json:"target"`
+				Payload map[string]any `json:"payload"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			s.lastTarget, s.lastPayload = body.Target, body.Payload
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"req-1","state":"received"}`))
+		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/requests/"):
+			_, _ = w.Write([]byte(s.terminal))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
-	defer ignisService.Close()
+	t.Cleanup(s.Close)
+	return s
+}
 
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
+func completed(targetResponse string) string {
+	return `{"state":"completed","result":{"target_status":200,"target_response":` + targetResponse + `}}`
+}
 
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE", nil)
+func failed(code, message string) string {
+	b, _ := json.Marshal(map[string]any{"state": "failed", "error": map[string]string{"code": code, "message": message}})
+	return string(b)
+}
+
+func newRouter(stub *tentacronStub) *gin.Engine {
+	h := NewIgnisHandler(tentacron.New(stub.URL, "test-key"))
+	r := gin.New()
+	r.GET("/v2/ignis/variants/:country_iso2", h.GetVariants)
+	r.GET("/v2/ignis/fields", h.GetFieldMetadata)
+	return r
+}
+
+func do(r *gin.Engine, path string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+	return w
+}
+
+func TestGetVariants_sendsIso2AndWrapsResponse(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"country":"germany","data":["DE.N.SFH.01.Gen","DE.N.MFH.03.Gen"]}`))
+
+	w := do(newRouter(stub), "/v2/ignis/variants/DE")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "DE.N.SFH.01.Gen")
+	assert.Equal(t, "ignis-variants", stub.lastTarget)
+	assert.Equal(t, "DE", stub.lastPayload["iso2"])
+
+	// {success:true, data:<verbatim ignis body>} - the frontend reads .data.data
+	var env struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Country string   `json:"country"`
+			Data    []string `json:"data"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &env))
+	assert.True(t, env.Success)
+	assert.Equal(t, "germany", env.Data.Country)
+	assert.Equal(t, []string{"DE.N.SFH.01.Gen", "DE.N.MFH.03.Gen"}, env.Data.Data)
 }
 
-func TestMatchVariants_requiresTypeAndPeriod(t *testing.T) {
-	handler := NewIgnisHandler("http://unused")
-	router := gin.New()
-	router.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
+func TestGetFieldMetadata_sendsEmptyPayloadAndWraps(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"data":[{"key":"A_C_Ref_Input","label":"Reference floor area","unit":"m2"}]}`))
 
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE/match", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	w := do(newRouter(stub), "/v2/ignis/fields")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "ignis-fields", stub.lastTarget)
+	assert.Empty(t, stub.lastPayload)
+	assert.Contains(t, w.Body.String(), `"A_C_Ref_Input"`)
+}
+
+func TestGetVariants_ignisRejectionIs400WithMessage(t *testing.T) {
+	stub := newTentacronStub(t, failed("target_error",
+		`target ignis-variants: HTTP 400: {"error":"country ZZ is not supported"}`))
+
+	w := do(newRouter(stub), "/v2/ignis/variants/ZZ")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "country ZZ is not supported")
 }
 
-func TestMatchVariants_forwardsQueryParams(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/variants/DE/match", r.URL.Path)
-		assert.Equal(t, "SFH", r.URL.Query().Get("type"))
-		assert.Equal(t, "01", r.URL.Query().Get("period"))
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"country":"germany","prefix":"DE.N.SFH.01","data":[]}`))
-	}))
-	defer ignisService.Close()
+func TestGetVariants_infrastructureFaultIs502(t *testing.T) {
+	stub := newTentacronStub(t, failed("max_attempts_exceeded", "ignis unreachable after 5 attempts"))
 
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
-
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE/match?type=SFH&period=01", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-}
-
-func TestCalculateHeatDemand_forwardsMethodPathAndBody(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodPost, r.Method)
-		assert.Equal(t, "/api/v1/calculate/DE.N.SFH.01.Gen", r.URL.Path)
-		body, _ := io.ReadAll(r.Body)
-		assert.JSONEq(t, `{"A_ref":150.0}`, string(body))
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"variant_code":"DE.N.SFH.01.Gen","q_h_nd":123.45,"unit":"kWh/(m2.a)"}`))
-	}))
-	defer ignisService.Close()
-
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.POST("/v2/ignis/calculate/:code", handler.CalculateHeatDemand)
-
-	req := httptest.NewRequest(http.MethodPost, "/v2/ignis/calculate/DE.N.SFH.01.Gen", strings.NewReader(`{"A_ref":150.0}`))
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "123.45")
-}
-
-func TestForwardToIgnis_passesThrough4xxWithMessage(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"error":"variant not found: XX.N.SFH.01.Gen"}`))
-	}))
-	defer ignisService.Close()
-
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.POST("/v2/ignis/calculate/:code", handler.CalculateHeatDemand)
-
-	req := httptest.NewRequest(http.MethodPost, "/v2/ignis/calculate/XX.N.SFH.01.Gen", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusNotFound, w.Code)
-	assert.Contains(t, w.Body.String(), "variant not found: XX.N.SFH.01.Gen")
-}
-
-func TestGetFieldMetadata_forwardsToIgnisFields(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, http.MethodGet, r.Method)
-		assert.Equal(t, "/api/v1/fields", r.URL.Path)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"key":"A_C_Ref_Input","label":"Reference floor area","unit":"m²"}]}`))
-	}))
-	defer ignisService.Close()
-
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.GET("/v2/ignis/fields", handler.GetFieldMetadata)
-
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/fields", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Reference floor area")
-}
-
-func TestForwardToIgnis_maps5xxToBadGateway(t *testing.T) {
-	ignisService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"error":"Failed to query variants"}`))
-	}))
-	defer ignisService.Close()
-
-	handler := NewIgnisHandler(ignisService.URL)
-	router := gin.New()
-	router.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
-
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusBadGateway, w.Code)
-}
-
-func TestForwardToIgnis_unreachableServiceIsBadGateway(t *testing.T) {
-	handler := NewIgnisHandler("http://127.0.0.1:1")
-	router := gin.New()
-	router.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
-
-	req := httptest.NewRequest(http.MethodGet, "/v2/ignis/variants/DE", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	w := do(newRouter(stub), "/v2/ignis/variants/DE")
 
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 }

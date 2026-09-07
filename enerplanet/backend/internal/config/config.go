@@ -35,9 +35,8 @@ type Config struct {
 	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
-	TentacronServiceURL   string // URL of the TentaCron orchestrator; the server-side ignis calls (resolve endpoint, run_buem) route through it
+	TentacronServiceURL   string // URL of the TentaCron orchestrator; every ignis call (resolve endpoint, run_buem, the /v2/ignis/* proxy) routes through it
 	TentacronAPIKey       string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
-	IgnisServiceURL       string // URL of ignis, used only by the /v2/ignis/* frontend proxy, which calls ignis directly
 	OpenTechDBServiceURL  string // URL of the OpenTech-DB service
 	CallbackSecret        string // Shared secret for webservice callback authentication
 }
@@ -86,12 +85,8 @@ func LoadFromEnv() (*Config, error) {
 		BuemAPIKey:     os.Getenv("BUEM_API_KEY"),
 		// 8092: TentaCron's own HOST_PORT default is 8080 (clashes with
 		// Keycloak); the real deployment URL is unconfirmed.
-		TentacronServiceURL: platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8092"),
-		TentacronAPIKey:     os.Getenv("TENTACRON_API_KEY"),
-		// 8091: ignis's own APP_PORT default is 8080 (clashes with Keycloak)
-		// and weather-serve now holds 8090; the real deployment URL is
-		// unconfirmed. Consumed only by the /v2/ignis/* proxy.
-		IgnisServiceURL:      platformconfig.GetEnv("IGNIS_SERVICE_URL", "http://localhost:8091"),
+		TentacronServiceURL:  platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8092"),
+		TentacronAPIKey:      os.Getenv("TENTACRON_API_KEY"),
 		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
 	}

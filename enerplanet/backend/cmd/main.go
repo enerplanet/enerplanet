@@ -654,7 +654,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
 
-	ignisHandler := ignis.NewIgnisHandler(deps.Cfg.IgnisServiceURL)
+	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
 
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
@@ -907,12 +907,10 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	// Boundary routes are registered in configurePublicAPI (no auth required)
 }
 
-// registerIgnisRoutes registers proxy routes for the ignis heat-demand microservice.
+// registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
 func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
 	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
-	api.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
 	api.GET("/v2/ignis/fields", handler.GetFieldMetadata)
-	api.POST("/v2/ignis/calculate/:code", handler.CalculateHeatDemand)
 }
 
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {
