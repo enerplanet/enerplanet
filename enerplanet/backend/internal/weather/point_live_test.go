@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -29,13 +30,26 @@ func liveEnv(key, fallback string) string {
 	return fallback
 }
 
+func liveEnvFloat(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return fallback
+}
+
 func TestPointWeatherLive(t *testing.T) {
 	client := NewClient(tentacron.New(
 		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
 		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
 	))
-	// Bremen centroid, a year weather-serve has archives for.
-	const lat, lon, year = 53.08, 8.80, 2018
+	// Amsterdam by default - inside weather-serve's Netherlands country-scoped
+	// archive, which has full-year coverage. Override with WEATHER_LIVE_LAT /
+	// WEATHER_LIVE_LON for another point.
+	lat := liveEnvFloat("WEATHER_LIVE_LAT", 52.37)
+	lon := liveEnvFloat("WEATHER_LIVE_LON", 4.90)
+	const year = 2018
 	provider := liveEnv("WEATHER_LIVE_PROVIDER", "cosmo-rea6")
 
 	start := time.Now()
