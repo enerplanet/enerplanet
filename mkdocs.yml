@@ -115,6 +115,7 @@ nav:
       - Overview: enerplanet/index.md
       - Installation: enerplanet/installation.md
       - Architecture: enerplanet/architecture.md
+      - Heat Demand Resolution: enerplanet/heat-demand-flow.md
       - Deployment: enerplanet/deployment.md
       - Authentication (Keycloak): enerplanet/keycloak.md
       - Identity Brokering: enerplanet/keycloak-identity-brokering.md
