@@ -40,13 +40,13 @@ type RunBuemPayload struct {
 }
 
 // HandleRunBuem runs before "dispatch_model_calculation": it resolves 3D
-// envelope data (City2TABULA) and weather (weather-serve, via TentaCron) for
-// whatever buildings in the topology it can, calls buem-gateway synchronously
-// so BuEM writes its load-profile CSVs, then enqueues
-// "dispatch_model_calculation" exactly as StartCalculation used to do directly.
+// envelope data (City2TABULA) and weather (weather-serve) for whatever
+// buildings in the topology it can, calls buem-gateway synchronously so BuEM
+// writes its load-profile CSVs, then enqueues "dispatch_model_calculation"
+// exactly as StartCalculation used to do directly.
 // Envelope and weather resolution here is a temporary stand-in for a future
-// Orchestrator layer's dependency-resolution role; the weather leg already
-// routes through TentaCron, City2TABULA still does not.
+// Orchestrator layer's dependency-resolution role; every outbound leg
+// (City2TABULA, weather-serve, ignis, buem-gateway) routes through TentaCron.
 func HandleRunBuem(
 	ctx context.Context,
 	t *asynq.Task,
@@ -327,7 +327,11 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 		return buem.Building{}, false
 	}
 	fClass, _ := props["f_class"].(string)
-	elements = attachEnvelopeUValues(ctx, ignisClient, elements, fClass, country, buildingConstructionYear(props))
+	variantCode := ""
+	if cityBuilding.TabulaVariantCode != nil {
+		variantCode = *cityBuilding.TabulaVariantCode
+	}
+	elements = attachEnvelopeUValues(ctx, ignisClient, elements, variantCode, fClass, country, buildingConstructionYear(props))
 	geometry, err := json.Marshal(node["geometry"])
 	if err != nil {
 		return buem.Building{}, false
@@ -367,24 +371,35 @@ type envelopeUValueResolver interface {
 
 // attachEnvelopeUValues resolves the building's TABULA variant and sets U on
 // its wall/roof/floor elements: BuEM rejects a wall/roof/floor element with no
-// U, and City2TABULA carries no thermal-performance data to supply one from.
+// U, and City2TABULA carries no U-values of its own to supply one from.
 // Only wall/roof/floor get U — no explicit window or door elements are added.
 // BuEM synthesizes windows at its default window-to-wall ratio and subtracts
 // their area from the wall; it does not also subtract caller-supplied opening
 // areas, so adding explicit windows here would double-count transmission.
 //
-// Any resolution failure (non-residential, no construction year on record,
-// no matching archetype, ignis unreachable) leaves elements unchanged: the
-// building reaches buem-gateway exactly as it does today and BuEM rejects it
-// the same way, which mergeBuemResults already treats as a building with no
-// result, not a job failure.
-func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolver, elements []city2tabula.EnvelopeElement, fClass, country string, constructionYear *int) []city2tabula.EnvelopeElement {
+// c2tVariantCode is City2TABULA's own geometry-derived TABULA match. When set
+// it is used directly: it already fixes the construction period, so it needs
+// no user-entered construction year and is more specific than an f-class
+// guess. Only when City2TABULA supplied no code does this fall back to
+// resolving a variant from f-class, country and construction year.
+//
+// Any resolution failure (no City2TABULA code and a fallback that cannot
+// resolve — non-residential, no construction year on record, no matching
+// archetype — or ignis unreachable) leaves elements unchanged: the building
+// reaches buem-gateway exactly as it does today and BuEM rejects it the same
+// way, which mergeBuemResults already treats as a building with no result, not
+// a job failure.
+func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolver, elements []city2tabula.EnvelopeElement, c2tVariantCode, fClass, country string, constructionYear *int) []city2tabula.EnvelopeElement {
 	if ignisClient == nil {
 		return elements
 	}
-	code, err := heatdemand.ResolveVariant(ctx, ignisClient, fClass, "", country, constructionYear)
-	if err != nil {
-		return elements
+	code := c2tVariantCode
+	if code == "" {
+		resolved, err := heatdemand.ResolveVariant(ctx, ignisClient, fClass, "", country, constructionYear)
+		if err != nil {
+			return elements
+		}
+		code = resolved
 	}
 	u, err := ignisClient.GetEnvelopeUValues(ctx, code)
 	if err != nil {
