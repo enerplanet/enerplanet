@@ -30,9 +30,7 @@ type Config struct {
 	WebserviceServiceURL  string // URL of the webservice microservice
 	PylovoServiceURL      string // URL of the pylovo microservice
 	City2TabulaServiceURL string // URL of City2TABULA's on-request 3D-data server
-	WeatherServiceURL     string // URL of weather-serve
-	WeatherAPIKey         string // X-API-Key for weather-serve — required, checked by weather-serve itself
-	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
+	WeatherProvider       string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
 	BuemServiceURL        string // URL of buem-gateway
 	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
 	TentacronServiceURL   string // URL of the TentaCron orchestrator; every ignis call (resolve endpoint, run_buem, the /v2/ignis/* proxy) routes through it
@@ -75,10 +73,7 @@ func LoadFromEnv() (*Config, error) {
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
 		// 5000 matches City2TABULA's own SERVER_PORT default (cmd/server/main.go).
 		City2TabulaServiceURL: platformconfig.GetEnv("CITY2TABULA_SERVICE_URL", "http://localhost:5000"),
-		// 8090 matches weather-serve's own WEATHER_API_PORT default (docker-compose.serve.yml).
-		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
-		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
-		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
+		WeatherProvider: platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
 		// No default: buem-gateway's deployment URL and port are not yet
 		// confirmed; an empty value fails loudly instead of guessing.
 		BuemServiceURL: os.Getenv("BUEM_SERVICE_URL"),
