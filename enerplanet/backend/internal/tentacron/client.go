@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -129,6 +130,10 @@ type statusResponse struct {
 	Result *struct {
 		TargetStatus   int             `json:"target_status"`
 		TargetResponse json.RawMessage `json:"target_response"`
+		// Href is set instead of TargetResponse when the upstream body exceeds
+		// TentaCron's inline cap (256 KiB - a full-year weather series, a large
+		// building batch). It points at a sibling endpoint holding the full body.
+		Href string `json:"href"`
 	} `json:"result"`
 	Error *struct {
 		Code    string `json:"code"`
@@ -195,7 +200,7 @@ func (c *Client) await(ctx context.Context, target, id string, out any) error {
 		}
 		switch st.State {
 		case "completed":
-			return decodeTargetResponse(target, st, out)
+			return c.decodeTargetResponse(ctx, target, st, out)
 		case "failed", "cancelled":
 			return targetErrorFrom(id, st)
 		}
@@ -230,17 +235,51 @@ func (c *Client) authHeader() http.Header {
 	return http.Header{"X-Api-Key": {c.apiKey}}
 }
 
-func decodeTargetResponse(target string, st statusResponse, out any) error {
+// decodeTargetResponse unmarshals the completed job's verbatim upstream body
+// into out. TentaCron inlines the body as result.target_response when it is
+// small; a body over its inline cap (256 KiB) is spooled and result carries an
+// href instead, which this follows with one more authenticated GET so all
+// callers get the body the same way regardless of size.
+func (c *Client) decodeTargetResponse(ctx context.Context, target string, st statusResponse, out any) error {
 	if out == nil {
 		return nil
 	}
-	if st.Result == nil || len(st.Result.TargetResponse) == 0 {
-		return fmt.Errorf("tentacron target %q: completed with no target_response", target)
+	if st.Result == nil {
+		return fmt.Errorf("tentacron target %q: completed with no result", target)
 	}
-	if err := json.Unmarshal(st.Result.TargetResponse, out); err != nil {
+
+	body := []byte(st.Result.TargetResponse)
+	if len(body) == 0 {
+		if st.Result.Href == "" {
+			return fmt.Errorf("tentacron target %q: completed with neither target_response nor href", target)
+		}
+		var err error
+		if body, err = c.fetchSpooledResult(ctx, st.Result.Href); err != nil {
+			return fmt.Errorf("tentacron target %q: %w", target, err)
+		}
+	}
+
+	if err := json.Unmarshal(body, out); err != nil {
 		return fmt.Errorf("tentacron target %q: decode target_response: %w", target, err)
 	}
 	return nil
+}
+
+// fetchSpooledResult GETs a spilled-to-href result body (see decodeTargetResponse).
+func (c *Client) fetchSpooledResult(ctx context.Context, href string) ([]byte, error) {
+	resp, err := c.http.Do(ctx, http.MethodGet, href, nil, c.authHeader())
+	if err != nil {
+		return nil, fmt.Errorf("fetch spooled result %s: %w", href, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch spooled result %s: unexpected status %d", href, resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read spooled result %s: %w", href, err)
+	}
+	return b, nil
 }
 
 func targetErrorFrom(id string, st statusResponse) error {
