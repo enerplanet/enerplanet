@@ -35,42 +35,42 @@ sequenceDiagram
     participant TC as TentaCron
     participant IG as ignis
 
-    note over U,PL: 1 — Grid and buildings
-    U->>BE: POST /api/v2/pylovo/generate-grid { geom }
+    note over U,PL: 1 - Grid and buildings
+    U->>BE: POST /api/v2/pylovo/generate-grid (polygon)
     BE->>PL: POST /generate-grid
     PL-->>BE: buildings + LV grid<br>(f_class, floors, area, country_code)
-    BE-->>U: FeatureCollection, buildings drawn on the map
+    BE-->>U: FeatureCollection - buildings drawn on the map
 
-    note over TC: Every TentaCron call is async:<br>POST /v1/requests {target, payload} with X-API-Key returns 202 {id};<br>the backend long-polls GET /v1/requests/{id}?wait=25s until state=completed.<br>result.target_response is the verbatim ignis body.
+    note over TC: Every TentaCron call is async. POST /v1/requests<br>(target + payload, X-API-Key header) returns 202 and a request id.<br>The backend long-polls the request until its state is completed,<br>then reads the verbatim ignis body from result.target_response.
 
-    note over U,IG: 2 — Building clicked, dialog opens
+    note over U,IG: 2 - Building clicked, dialog opens
     U->>BE: GET /api/v2/ignis/fields
-    BE->>TC: target ignis-fields, payload {}
+    BE->>TC: target ignis-fields, empty payload
     TC->>IG: GET /api/v1/fields
     IG-->>TC: field catalogue
     TC-->>BE: completed
-    BE-->>U: { success, data }, form labels
+    BE-->>U: success envelope - form labels
 
     U->>BE: GET /api/v2/ignis/variants/DE
-    BE->>TC: target ignis-variants, payload { iso2 }
+    BE->>TC: target ignis-variants, payload iso2
     TC->>IG: GET /api/v1/variants/DE
     IG-->>TC: variant code strings
     TC-->>BE: completed
-    BE-->>U: { success, data }, Building Type dropdown (SFH / TH / MFH / AB)
+    BE-->>U: success envelope - Building Type dropdown (SFH, TH, MFH, AB)
 
-    note over U,IG: 3 — Type and construction year chosen, Resolve clicked
-    U->>BE: POST /api/v1/heat-demand/resolve<br>{ osm_id, f_class, building_type, construction_year,<br>floor_area_m2 = footprint x floors, country }
-    note over BE: in-process: residential check,<br>TABULA type, ISO2 (no network)
-    BE->>TC: target ignis-variants-match, payload { iso2, type, year }
-    TC->>IG: GET /api/v1/variants/DE/match?type=MFH&year=1975
-    IG-->>TC: [ { code, label } ], existing state first
-    TC-->>BE: completed, matches[0].code
-    BE->>TC: target ignis-calculate, payload { code }
-    TC->>IG: POST /api/v1/calculate/{code} body {}
-    IG-->>TC: { variant_code, q_h_nd, unit }
+    note over U,IG: 3 - Type and construction year chosen, Resolve clicked
+    U->>BE: POST /api/v1/heat-demand/resolve<br>(osm_id, f_class, building_type, construction_year,<br>floor_area_m2 taken as footprint times floors, country)
+    note over BE: in-process - residential check,<br>TABULA type, ISO2 (no network)
+    BE->>TC: target ignis-variants-match, payload iso2 + type + year
+    TC->>IG: GET /api/v1/variants/DE/match for type MFH and year 1975
+    IG-->>TC: code + label pairs, existing state first
+    TC-->>BE: completed - the first code is taken
+    BE->>TC: target ignis-calculate, payload code
+    TC->>IG: POST /api/v1/calculate for that code, empty body
+    IG-->>TC: variant_code, q_h_nd, unit
     TC-->>BE: completed
-    note over BE: heating_demand_kwh_a =<br>round(floor_area_m2 x q_h_nd)
-    BE-->>U: { source: "ignis", heating_demand_kwh_a,<br>specific_heating_demand_kwh_m2a, tabula_variant_code }
+    note over BE: heating_demand_kwh_a is<br>round(floor_area_m2 times q_h_nd)
+    BE-->>U: source ignis, heating_demand_kwh_a,<br>specific_heating_demand_kwh_m2a, tabula_variant_code
 ```
 
 ## Notes
