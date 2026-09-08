@@ -33,8 +33,13 @@ type BuildingHeatProfile struct {
 	ModelID uint   `gorm:"not null;index;uniqueIndex:idx_building_heat_profiles_model_osm" json:"model_id"`
 	OSMID   string `gorm:"size:255;not null;uniqueIndex:idx_building_heat_profiles_model_osm" json:"osm_id"`
 
-	Status             string  `gorm:"size:32;not null;default:pending;index" json:"status"`
-	TabulaVariantCode  *string `gorm:"size:255" json:"tabula_variant_code,omitempty"`
+	Status            string  `gorm:"size:32;not null;default:pending;index" json:"status"`
+	TabulaVariantCode *string `gorm:"size:255" json:"tabula_variant_code,omitempty"`
+	// BuildingType is what run_buem sent BuEM: a TABULA residential type
+	// (SFH/TH/MFH/AB) or a service id (bakery, office, ...). For a service
+	// building BuEM does not model hot water or cooking: HotWaterKwhA and
+	// KitchenKwhA are then 0 by construction, not measured.
+	BuildingType       *string `gorm:"size:32" json:"building_type,omitempty"`
 	RefurbishmentLevel string  `gorm:"size:16;not null;default:existing" json:"refurbishment_level"`
 
 	HeatingKwhA     *float64 `json:"heating_kwh_a,omitempty"`

@@ -151,6 +151,7 @@ func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, model
 	if err := profileStore.SaveResolved(modelID, osmID, heatprofile.ResolvedProfile{
 		TabulaVariantCode:  meta.VariantCode,
 		RefurbishmentLevel: string(meta.Level),
+		BuildingType:       meta.BuildingType,
 		HeatingKwhA:        summary.Heating,
 		CoolingKwhA:        summary.Cooling,
 		ElectricityKwhA:    summary.Electricity,

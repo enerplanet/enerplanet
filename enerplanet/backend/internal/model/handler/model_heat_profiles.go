@@ -90,6 +90,7 @@ func mapHeatProfiles(rows []backendModels.BuildingHeatProfile) []contracts.Build
 			OSMID:              r.OSMID,
 			Status:             r.Status,
 			TabulaVariantCode:  r.TabulaVariantCode,
+			BuildingType:       r.BuildingType,
 			RefurbishmentLevel: r.RefurbishmentLevel,
 			HeatingKwhA:        r.HeatingKwhA,
 			CoolingKwhA:        r.CoolingKwhA,

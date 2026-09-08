@@ -46,7 +46,7 @@ func (s *Store) ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel st
 		DoUpdates: clause.AssignmentColumns([]string{
 			"status", "refurbishment_level", "tabula_variant_code",
 			"heating_kwh_a", "cooling_kwh_a", "electricity_kwh_a",
-			"hot_water_kwh_a", "kitchen_kwh_a", "profile", "error_message",
+			"hot_water_kwh_a", "kitchen_kwh_a", "building_type", "profile", "error_message",
 			"resolved_at", "updated_at",
 		}),
 	}).CreateInBatches(rows, 100).Error
@@ -58,6 +58,7 @@ func (s *Store) ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel st
 type ResolvedProfile struct {
 	TabulaVariantCode  string
 	RefurbishmentLevel string
+	BuildingType       string // "" when unknown, stored as NULL
 	HeatingKwhA        *float64
 	CoolingKwhA        *float64
 	ElectricityKwhA    *float64
@@ -75,6 +76,7 @@ func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) erro
 		Status:             models.HeatProfileStatusResolved,
 		TabulaVariantCode:  &p.TabulaVariantCode,
 		RefurbishmentLevel: p.RefurbishmentLevel,
+		BuildingType:       nilIfEmpty(p.BuildingType),
 		HeatingKwhA:        p.HeatingKwhA,
 		CoolingKwhA:        p.CoolingKwhA,
 		ElectricityKwhA:    p.ElectricityKwhA,
@@ -86,7 +88,7 @@ func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) erro
 	return s.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "model_id"}, {Name: "osm_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"status", "tabula_variant_code", "refurbishment_level",
+			"status", "tabula_variant_code", "refurbishment_level", "building_type",
 			"heating_kwh_a", "cooling_kwh_a", "electricity_kwh_a",
 			"hot_water_kwh_a", "kitchen_kwh_a",
 			"profile", "error_message", "resolved_at", "updated_at",
@@ -155,4 +157,11 @@ func (s *Store) GetStatusCounts(modelID uint) (StatusCounts, error) {
 		}
 	}
 	return counts, nil
+}
+
+func nilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

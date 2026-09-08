@@ -57,6 +57,14 @@ definitions:
     type: object
   spatialhub_backend_internal_api_contracts.BuildingHeatProfile:
     properties:
+      building_type:
+        description: |-
+          building_type is what was modelled: a TABULA residential type (SFH, TH,
+          MFH, AB) or a BuEM service id (bakery, clinic, hotel, office,
+          restaurant, school, supermarket, warehouse). For a service id
+          hot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.
+        example: SFH
+        type: string
       cooling_kwh_a:
         example: 312.4
         type: number
