@@ -129,7 +129,7 @@ func ResolveBuemForModel(
 	if model.Country != nil {
 		country = *model.Country
 	}
-	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, refurbishmentLevel)
+	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, refurbishmentLevel, modelCookingSettings(model.Config))
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
 		log.Warnf("model %d: no buildings with a resolved envelope and weather, skipping buem-gateway call", model.ID)
 		return nil, resolved, unresolved, nil
@@ -326,7 +326,7 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 // Both exist for callers that persist per-building outcomes (see
 // HandleResolveHeatProfiles); HandleRunBuem's calculation-dispatch path
 // ignores them, same behaviour as before this was split out.
-func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
+func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
 	resolved = make(map[string]BuemResolutionMeta)
 	unresolved = make(map[string]string)
 	seen := make(map[string]bool)
@@ -344,7 +344,7 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 			seen[osmID] = true
 
 			node, _ := feature.(map[string]interface{})
-			b, meta, reason, ok := buildingForBuem(ctx, ignisClient, country, node, props, osmID, envelopeByOSMID, defaultLevel)
+			b, meta, reason, ok := buildingForBuem(ctx, ignisClient, country, node, props, osmID, envelopeByOSMID, defaultLevel, defaultCooking)
 			if !ok {
 				unresolved[osmID] = reason
 				continue
@@ -360,7 +360,7 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 // node (props/osmID as buildingProperties extracted them), or reports false
 // with reason set when it has no resolved, non-empty envelope. meta records
 // the TABULA variant/refurbishment level that produced its U-values.
-func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
+func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
 	cityBuilding, ok := envelopeByOSMID[osmID]
 	if !ok {
 		return buem.Building{}, BuemResolutionMeta{}, "no City2TABULA envelope for this building", false
@@ -381,8 +381,14 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal geometry: %v", err), false
 	}
+	// cooking_carrier / include_dhw are building.* fields of buem-gateway's
+	// v6-draft request contract; the gateway forwards the building block
+	// verbatim and a BuEM without the fields ignores them.
+	cooking := buildingCookingSettings(props, defaultCooking)
 	buildingBlock, err := json.Marshal(map[string]interface{}{
-		"envelope": map[string]interface{}{"elements": elements},
+		"envelope":        map[string]interface{}{"elements": elements},
+		"cooking_carrier": cooking.Carrier,
+		"include_dhw":     cooking.IncludeDHW,
 	})
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal building block: %v", err), false

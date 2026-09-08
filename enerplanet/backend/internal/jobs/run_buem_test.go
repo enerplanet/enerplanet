@@ -59,7 +59,7 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 		},
 	}
 
-	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, ignis.RefurbishmentExisting)
+	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: false})
 
 	require.Len(t, buildings, 1, "only building 111 has a resolved envelope; the transformer and building 222 must be excluded")
 	assert.Equal(t, "111", buildings[0].ID)
@@ -72,6 +72,8 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 	require.NoError(t, json.Unmarshal(buildings[0].Building, &block))
 	assert.Contains(t, block, "envelope")
 	assert.NotContains(t, block, "weather", "weather must not be attached per building — RunBuildings sends it once, shared")
+	assert.Equal(t, "gas", block["cooking_carrier"], "model-level cooking default reaches the building block")
+	assert.Equal(t, false, block["include_dhw"])
 }
 
 func TestMergeBuemResults_WritesByOSMIDAndSkipsFailures(t *testing.T) {
