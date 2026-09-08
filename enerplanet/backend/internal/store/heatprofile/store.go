@@ -53,13 +53,16 @@ func (s *Store) ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel st
 }
 
 // ResolvedProfile is one building's resolved annual energy totals, plus the
-// full buem-gateway summary block for anything beyond them.
+// full buem-gateway summary block for anything beyond them. KitchenKwhA is
+// kWh_gas, the other totals kWh - see models.BuildingHeatProfile.
 type ResolvedProfile struct {
 	TabulaVariantCode  string
 	RefurbishmentLevel string
 	HeatingKwhA        *float64
 	CoolingKwhA        *float64
 	ElectricityKwhA    *float64
+	HotWaterKwhA       *float64
+	KitchenKwhA        *float64
 	Profile            []byte // raw JSON, stored as-is
 }
 
@@ -75,6 +78,8 @@ func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) erro
 		HeatingKwhA:        p.HeatingKwhA,
 		CoolingKwhA:        p.CoolingKwhA,
 		ElectricityKwhA:    p.ElectricityKwhA,
+		HotWaterKwhA:       p.HotWaterKwhA,
+		KitchenKwhA:        p.KitchenKwhA,
 		Profile:            p.Profile,
 		ResolvedAt:         &now,
 	}
@@ -83,6 +88,7 @@ func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) erro
 		DoUpdates: clause.AssignmentColumns([]string{
 			"status", "tabula_variant_code", "refurbishment_level",
 			"heating_kwh_a", "cooling_kwh_a", "electricity_kwh_a",
+			"hot_water_kwh_a", "kitchen_kwh_a",
 			"profile", "error_message", "resolved_at", "updated_at",
 		}),
 	}).Create(&row).Error

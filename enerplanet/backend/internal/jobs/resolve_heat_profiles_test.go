@@ -20,6 +20,8 @@ type savedProfile struct {
 	VariantCode string
 	Level       string
 	Heating     *float64
+	HotWater    *float64
+	Kitchen     *float64
 	Reason      string
 }
 
@@ -44,6 +46,8 @@ func (f *fakeProfileStore) SaveResolved(modelID uint, osmID string, p heatprofil
 		VariantCode: p.TabulaVariantCode,
 		Level:       p.RefurbishmentLevel,
 		Heating:     p.HeatingKwhA,
+		HotWater:    p.HotWaterKwhA,
+		Kitchen:     p.KitchenKwhA,
 	}
 	return nil
 }
@@ -64,19 +68,39 @@ func TestExtractEnergySummary(t *testing.T) {
 		}
 	}`)
 
-	heating, cooling, electricity, err := extractEnergySummary(buemJSON)
+	s, err := extractEnergySummary(buemJSON)
 
 	require.NoError(t, err)
-	require.NotNil(t, heating)
-	require.NotNil(t, cooling)
-	require.NotNil(t, electricity)
-	assert.Equal(t, 4823.5, *heating)
-	assert.Equal(t, 312.4, *cooling)
-	assert.Equal(t, 2105.0, *electricity)
+	require.NotNil(t, s.Heating)
+	require.NotNil(t, s.Cooling)
+	require.NotNil(t, s.Electricity)
+	assert.Equal(t, 4823.5, *s.Heating)
+	assert.Equal(t, 312.4, *s.Cooling)
+	assert.Equal(t, 2105.0, *s.Electricity)
+	// pre-6.1.0 gateway shape: the two newer vectors are absent, not zero
+	assert.Nil(t, s.HotWater)
+	assert.Nil(t, s.Kitchen)
+}
+
+func TestExtractEnergySummary_hotWaterAndKitchen(t *testing.T) {
+	buemJSON := json.RawMessage(`{"thermal_load_profile":{"summary":{
+		"heating":   {"total": {"value": 4823.5, "unit": "kWh"}},
+		"hot_water": {"total": {"value": 33.3,   "unit": "kWh"}},
+		"kitchen":   {"total": {"value": 7.76,   "unit": "kWh_gas"}}
+	}}}`)
+
+	s, err := extractEnergySummary(buemJSON)
+
+	require.NoError(t, err)
+	require.NotNil(t, s.HotWater)
+	require.NotNil(t, s.Kitchen)
+	assert.Equal(t, 33.3, *s.HotWater)
+	assert.Equal(t, 7.76, *s.Kitchen)
+	assert.Nil(t, s.Cooling, "an absent vector stays nil")
 }
 
 func TestExtractEnergySummary_malformedJSON(t *testing.T) {
-	_, _, _, err := extractEnergySummary(json.RawMessage(`not json`))
+	_, err := extractEnergySummary(json.RawMessage(`not json`))
 	assert.Error(t, err)
 }
 
@@ -112,7 +136,8 @@ func TestSaveResolvedProfile_successIsSavedAsResolved(t *testing.T) {
 	store := newFakeProfileStore()
 	log := logrus.NewEntry(logrus.New())
 	buemJSON := json.RawMessage(`{"thermal_load_profile":{"summary":{
-		"heating":{"total":{"value":100}},"cooling":{"total":{"value":10}},"electricity":{"total":{"value":50}}}}}`)
+		"heating":{"total":{"value":100}},"cooling":{"total":{"value":10}},"electricity":{"total":{"value":50}},
+		"hot_water":{"total":{"value":33.3,"unit":"kWh"}},"kitchen":{"total":{"value":7.76,"unit":"kWh_gas"}}}}}`)
 
 	saveResolvedProfile(log, store, 1, "111",
 		BuemResolutionMeta{VariantCode: "DE.N.SFH.05.Gen.ReEx.001.001", Level: ignis.RefurbishmentMedium},
@@ -124,4 +149,8 @@ func TestSaveResolvedProfile_successIsSavedAsResolved(t *testing.T) {
 	assert.Equal(t, "medium", got.Level)
 	require.NotNil(t, got.Heating)
 	assert.Equal(t, 100.0, *got.Heating)
+	require.NotNil(t, got.HotWater)
+	assert.Equal(t, 33.3, *got.HotWater)
+	require.NotNil(t, got.Kitchen)
+	assert.Equal(t, 7.76, *got.Kitchen)
 }

@@ -139,7 +139,7 @@ func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, model
 		return
 	}
 
-	heating, cooling, electricity, err := extractEnergySummary(result.BUEM)
+	summary, err := extractEnergySummary(result.BUEM)
 	if err != nil {
 		log.Warnf("model %d osm_id=%s: failed to parse buem summary: %v", modelID, osmID, err)
 		if err := profileStore.SaveFailed(modelID, osmID, "could not parse buem-gateway result"); err != nil {
@@ -151,42 +151,68 @@ func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, model
 	if err := profileStore.SaveResolved(modelID, osmID, heatprofile.ResolvedProfile{
 		TabulaVariantCode:  meta.VariantCode,
 		RefurbishmentLevel: string(meta.Level),
-		HeatingKwhA:        heating,
-		CoolingKwhA:        cooling,
-		ElectricityKwhA:    electricity,
+		HeatingKwhA:        summary.Heating,
+		CoolingKwhA:        summary.Cooling,
+		ElectricityKwhA:    summary.Electricity,
+		HotWaterKwhA:       summary.HotWater,
+		KitchenKwhA:        summary.Kitchen,
 		Profile:            result.BUEM,
 	}); err != nil {
 		log.Errorf("model %d osm_id=%s: failed to save resolved profile: %v", modelID, osmID, err)
 	}
 }
 
-// extractEnergySummary pulls the annual heating/cooling/electricity totals
-// out of a buem-gateway result's buem block
-// (.thermal_load_profile.summary.*.total.value). hot_water and kitchen are
-// not extracted: buem-gateway's response contract does not surface them yet
-// (BuEM's own dhw_cooking.py already computes both internally).
-func extractEnergySummary(buemJSON json.RawMessage) (heating, cooling, electricity *float64, err error) {
+// energySummary is the annual totals of one BuEM result. Kitchen is in
+// kWh_gas (a gas fuel channel), the others in kWh - see
+// models.BuildingHeatProfile.
+type energySummary struct {
+	Heating, Cooling, Electricity, HotWater, Kitchen *float64
+}
+
+// extractEnergySummary pulls the annual per-vector totals out of a
+// buem-gateway result's buem block (.thermal_load_profile.summary.*.total.
+// value). hot_water and kitchen exist from buem-gateway 6.1.0 on; against
+// an older gateway they decode as absent and are returned nil rather than
+// 0, so a missing field is not recorded as a zero-demand building.
+func extractEnergySummary(buemJSON json.RawMessage) (energySummary, error) {
 	var body struct {
 		ThermalLoadProfile struct {
 			Summary struct {
-				Heating     energyTotal `json:"heating"`
-				Cooling     energyTotal `json:"cooling"`
-				Electricity energyTotal `json:"electricity"`
+				Heating     *energyTotal `json:"heating"`
+				Cooling     *energyTotal `json:"cooling"`
+				Electricity *energyTotal `json:"electricity"`
+				HotWater    *energyTotal `json:"hot_water"`
+				Kitchen     *energyTotal `json:"kitchen"`
 			} `json:"summary"`
 		} `json:"thermal_load_profile"`
 	}
 	if err := json.Unmarshal(buemJSON, &body); err != nil {
-		return nil, nil, nil, fmt.Errorf("unmarshal buem summary: %w", err)
+		return energySummary{}, fmt.Errorf("unmarshal buem summary: %w", err)
 	}
 	s := body.ThermalLoadProfile.Summary
-	h, c, e := s.Heating.Total.Value, s.Cooling.Total.Value, s.Electricity.Total.Value
-	return &h, &c, &e, nil
+	return energySummary{
+		Heating:     s.Heating.value(),
+		Cooling:     s.Cooling.value(),
+		Electricity: s.Electricity.value(),
+		HotWater:    s.HotWater.value(),
+		Kitchen:     s.Kitchen.value(),
+	}, nil
 }
 
 type energyTotal struct {
 	Total struct {
 		Value float64 `json:"value"`
 	} `json:"total"`
+}
+
+// value returns the total as a pointer, nil when the vector was absent from
+// the summary.
+func (t *energyTotal) value() *float64 {
+	if t == nil {
+		return nil
+	}
+	v := t.Total.Value
+	return &v
 }
 
 // buildCalculationPayload builds model's calculation payload and asserts its
