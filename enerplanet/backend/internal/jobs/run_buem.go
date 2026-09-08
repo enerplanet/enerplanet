@@ -385,11 +385,11 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	// v6-draft request contract; the gateway forwards the building block
 	// verbatim and a BuEM without the fields ignores them.
 	cooking := buildingCookingSettings(props, defaultCooking)
-	buildingBlock, err := json.Marshal(map[string]interface{}{
-		"envelope":        map[string]interface{}{"elements": elements},
-		"cooking_carrier": cooking.Carrier,
-		"include_dhw":     cooking.IncludeDHW,
-	})
+	block := buildingScalars(cityBuilding)
+	block["envelope"] = map[string]interface{}{"elements": elements}
+	block["cooking_carrier"] = cooking.Carrier
+	block["include_dhw"] = cooking.IncludeDHW
+	buildingBlock, err := json.Marshal(block)
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal building block: %v", err), false
 	}
