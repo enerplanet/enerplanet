@@ -10,7 +10,9 @@ import (
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/geo"
+	"spatialhub_backend/internal/jobs"
 	resultservice "spatialhub_backend/internal/result/service"
+	"spatialhub_backend/internal/store/heatprofile"
 	modelstore "spatialhub_backend/internal/store/model"
 	"spatialhub_backend/internal/webservice"
 
@@ -74,6 +76,7 @@ type ModelHandler struct {
 	wsClient      *webservice.Client
 	keycloakCache *cache.KeycloakCacheService
 	syncCache     *cache.SyncCacheService
+	profileStore  *heatprofile.Store
 }
 
 func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminTokenProvider *pkgauth.AdminTokenProvider, keycloakBaseURL, realm string, wsClient *webservice.Client, keycloakCache *cache.KeycloakCacheService, syncCache *cache.SyncCacheService) *ModelHandler {
@@ -84,8 +87,37 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 		wsClient:      wsClient,
 		keycloakCache: keycloakCache,
 		syncCache:     syncCache,
+		profileStore:  heatprofile.NewStore(db),
 	}
 }
+
+// triggerHeatProfileResolve enqueues a best-effort resolve_heat_profiles job
+// for a model whose config was just saved - the only server-side signal that
+// a building list might now exist (grid generation itself is a stateless
+// pylovo proxy; the frontend PATCHes the result into config separately, see
+// PylovoHandler.GenerateGrid). Fire-and-forget: an enqueue failure is
+// logged, never surfaced to the caller - saving the model must not fail
+// because this optional refresh could not be scheduled, and the job itself
+// is a no-op when the config turns out to have no buildings.
+func (h *ModelHandler) triggerHeatProfileResolve(modelID uint) {
+	if h.asynqClient == nil {
+		return
+	}
+	body, err := json.Marshal(jobs.ResolveHeatProfilesPayload{ModelID: modelID})
+	if err != nil {
+		logger.ForComponent("model").Errorf("failed to marshal resolve_heat_profiles payload model_id=%d err=%v", modelID, err)
+		return
+	}
+	if _, err := h.asynqClient.Enqueue(asynq.NewTask(jobs.TypeResolveHeatProfiles, body),
+		asynq.Queue("buem"),
+		asynq.MaxRetry(3),
+		asynq.Timeout(30*time.Minute),
+		asynq.Retention(24*time.Hour),
+	); err != nil {
+		logger.ForComponent("model").Errorf("failed to enqueue resolve_heat_profiles model_id=%d err=%v", modelID, err)
+	}
+}
+
 func (h *ModelHandler) CreateModel(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
@@ -218,6 +250,10 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	}
 	model.CreatedAt = modelMap["created_at"].(time.Time)
 	model.UpdatedAt = modelMap["updated_at"].(time.Time)
+
+	if len(req.Config) > 0 {
+		h.triggerHeatProfileResolve(model.ID)
+	}
 
 	httputil.Created(c, model)
 }
@@ -373,6 +409,10 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 			httputil.InternalError(c, "Failed to update model")
 			return
 		}
+	}
+
+	if len(req.Config) > 0 {
+		h.triggerHeatProfileResolve(model.ID)
 	}
 
 	h.respondWithPreloadedModel(c, id, model)

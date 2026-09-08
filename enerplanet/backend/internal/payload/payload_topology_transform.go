@@ -244,12 +244,16 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 			"demand_heat":          yearlyHeatDemandInt,
 			"demand_heat_profile":  heatDemandProfile,
 			// Set only once the building has been through the heat-demand
-			// resolve-and-save flow (#49/#53); nil otherwise. run_buem reads it
-			// to resolve a TABULA archetype for BuEM's required U-values (#61).
+			// resolve-and-save flow; nil otherwise. run_buem reads it
+			// to resolve a TABULA archetype for BuEM's required U-values.
 			"construction_year": bProps["construction_year"],
-			"created_at":        nil,
-			"modified_at":       nil,
-			"session_id":        fmt.Sprintf("%d", sessionID),
+			// Per-building refurbishment override ("existing"/"medium"/
+			// "advanced"); nil otherwise, in which case run_buem applies the
+			// model-level default.
+			"refurbishment_level": bProps["refurbishment_level"],
+			"created_at":          nil,
+			"modified_at":         nil,
+			"session_id":          fmt.Sprintf("%d", sessionID),
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,
