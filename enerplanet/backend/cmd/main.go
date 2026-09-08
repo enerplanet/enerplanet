@@ -261,6 +261,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeResolveHeatProfiles, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
