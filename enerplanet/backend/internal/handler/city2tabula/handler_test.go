@@ -1,6 +1,7 @@
 package city2tabula
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,10 +15,25 @@ import (
 
 	"spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/tentacron"
 )
 
 func init() { gin.SetMode(gin.TestMode) }
+
+// fakeYearResolver is a hand-rolled yearResolver so default_construction_year
+// can be tested without a live ignis server.
+type fakeYearResolver struct {
+	uValues map[string]ignis.EnvelopeUValues
+	err     error
+}
+
+func (f fakeYearResolver) GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error) {
+	if f.err != nil {
+		return ignis.EnvelopeUValues{}, f.err
+	}
+	return f.uValues[variantCode], nil
+}
 
 // fakeC2T stands in for City2TABULA behind a fake TentaCron: it serves the
 // submit + poll exchange and answers each of the three c2t targets from these
@@ -118,7 +134,7 @@ func postEnrich(t *testing.T, h *Handler, body string) (*httptest.ResponseRecord
 
 func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
 
@@ -145,7 +161,7 @@ func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 
 func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding} // only 111 comes back
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111","222"]}`)
 
@@ -161,7 +177,7 @@ func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {
 
 func TestEnrich_TriggerFails_ReturnsPartial(t *testing.T) {
 	fake := &fakeC2T{buildingsJSON: twoWallBuilding, triggerFails: true}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111","222"]}`)
 
@@ -171,14 +187,14 @@ func TestEnrich_TriggerFails_ReturnsPartial(t *testing.T) {
 }
 
 func TestEnrich_MissingFields_400(t *testing.T) {
-	h := NewHandler((&fakeC2T{}).client(t))
+	h := &Handler{client: (&fakeC2T{}).client(t)}
 	w, _ := postEnrich(t, h, `{"country":"germany","osm_ids":[]}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	fake := &fakeC2T{runStatus: "running"}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -195,7 +211,7 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 
 func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
 	fake := &fakeC2T{buildingsBadRequest: true}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w, _ := postEnrich(t, h, `{"country":"string","osm_ids":["1"],"bbox":{"xmin":0,"ymin":0,"xmax":0,"ymax":0}}`)
 
@@ -205,7 +221,7 @@ func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
 
 func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
 	fake := &fakeC2T{runNotFound: true}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -216,9 +232,43 @@ func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
+func TestEnrich_SetsDefaultConstructionYearFromTabulaVariant(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	h := &Handler{
+		client: fake.client(t),
+		yearClient: fakeYearResolver{uValues: map[string]ignis.EnvelopeUValues{
+			"DE.N.SFH.05.Gen": {YearFrom: 1958, YearTo: 1968},
+		}},
+	}
+
+	_, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	b := resp.Data["111"]
+	require.NotNil(t, b.DefaultConstructionYear)
+	assert.Equal(t, 1963, *b.DefaultConstructionYear)
+}
+
+func TestEnrich_NoYearClientLeavesDefaultConstructionYearNil(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	h := &Handler{client: fake.client(t)} // yearClient unset, as in most other tests here
+
+	_, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	assert.Nil(t, resp.Data["111"].DefaultConstructionYear)
+}
+
+func TestEnrich_IgnisFailureLeavesDefaultConstructionYearNil(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	h := &Handler{client: fake.client(t), yearClient: fakeYearResolver{err: assert.AnError}}
+
+	_, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	assert.Nil(t, resp.Data["111"].DefaultConstructionYear, "an ignis miss must not fail the enrich response")
+}
+
 func TestEnrichStatus_Completed_WithQueryParams_ReturnsData(t *testing.T) {
 	fake := &fakeC2T{runStatus: "completed", buildingsJSON: twoWallBuilding}
-	h := NewHandler(fake.client(t))
+	h := &Handler{client: fake.client(t)}
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)

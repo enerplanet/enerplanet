@@ -157,15 +157,29 @@ type EnvelopeUValues struct {
 	BTransFloor float64
 
 	Bridging float64 // W/(m2.K), envelope-level thermal-bridging delta to add per element
+
+	// YearFrom/YearTo are ignis's Year1_Building/Year2_Building: the
+	// construction-period range this TABULA variant covers. 0 means
+	// open-ended oldest, 9999 means open-ended newest - see
+	// DefaultConstructionYear.
+	YearFrom int
+	YearTo   int
 }
 
 // GetEnvelopeUValues fetches a TABULA variant's data and extracts the effective
 // per-type wall/roof/floor U-values (U_Actual_*_1), their b_Transmission
-// factors, and the envelope thermal-bridging delta, via the ignis-data target
+// factors, the envelope thermal-bridging delta, and the variant's
+// construction-period year range, via the ignis-data target
 // (GET /api/v1/data/{code}).
 func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (EnvelopeUValues, error) {
 	var body struct {
 		TabulaData struct {
+			BasicParameters struct {
+				BuildingAppearance struct {
+					Year1_Building int
+					Year2_Building int
+				}
+			}
 			AdvancedParameters struct {
 				Uvalues struct {
 					U_Actual_Wall_1  float64
@@ -187,6 +201,7 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 		return EnvelopeUValues{}, asIgnisError(err)
 	}
 	ap := body.TabulaData.AdvancedParameters
+	appearance := body.TabulaData.BasicParameters.BuildingAppearance
 	return EnvelopeUValues{
 		UWall:       ap.Uvalues.U_Actual_Wall_1,
 		URoof:       ap.Uvalues.U_Actual_Roof_1,
@@ -195,6 +210,8 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 		BTransRoof:  ap.HeatLosses.B_Transmission_Roof_1,
 		BTransFloor: ap.HeatLosses.B_Transmission_Floor_1,
 		Bridging:    ap.ThermalBridges.DeltaU,
+		YearFrom:    appearance.Year1_Building,
+		YearTo:      appearance.Year2_Building,
 	}, nil
 }
 
@@ -274,6 +291,25 @@ func (c *Client) GetEnvelopeUValuesForLevel(ctx context.Context, existingStateCo
 		}
 	}
 	return EnvelopeUValuesResult{EnvelopeUValues: u, Level: actual}, nil
+}
+
+// DefaultConstructionYear derives a single representative construction year
+// from a TABULA variant's construction-period range (EnvelopeUValues.
+// YearFrom/YearTo, ignis's Year1_Building/Year2_Building) - for a building
+// whose only construction-year source is its TABULA period classification,
+// not a user-entered year. yearFrom == 0 is an open-ended oldest period, so
+// the period's own end year is the better estimate; yearTo == 9999 is
+// open-ended newest, so the start year is used instead; otherwise the
+// midpoint of the range.
+func DefaultConstructionYear(yearFrom, yearTo int) int {
+	switch {
+	case yearFrom == 0:
+		return yearTo
+	case yearTo == 9999:
+		return yearFrom
+	default:
+		return (yearFrom + yearTo) / 2
+	}
 }
 
 // CalculateResult is ignis's annual specific heating demand for a variant.

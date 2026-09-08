@@ -657,6 +657,11 @@
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
                 },
+                "default_construction_year": {
+                    "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
+                    "type": "integer",
+                    "example": 1963
+                },
                 "match_type": {
                     "type": "integer",
                     "example": 1
