@@ -386,6 +386,21 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	// verbatim and a BuEM without the fields ignores them.
 	cooking := buildingCookingSettings(props, defaultCooking)
 	block := buildingScalars(cityBuilding)
+	// A service class from OSM overrides the TABULA type: City2TABULA's
+	// variant code is a geometry match against residential archetypes and
+	// says nothing about use, and a residential building_type would put a
+	// bakery through BuEM's household occupancy model. The envelope and
+	// U-values stay as resolved; only the occupancy profile changes.
+	if service := serviceBuildingType(fClass); service != "" {
+		block["building_type"] = service
+		delete(block, "construction_period")
+		if capacity := buildingCapacity(props); capacity != nil {
+			block["capacity"] = *capacity
+		}
+	}
+	if bt, _ := block["building_type"].(string); bt != "" {
+		meta.BuildingType = bt
+	}
 	block["envelope"] = map[string]interface{}{"elements": elements}
 	block["cooking_carrier"] = cooking.Carrier
 	block["include_dhw"] = cooking.IncludeDHW
@@ -427,6 +442,10 @@ type envelopeUValueResolver interface {
 type BuemResolutionMeta struct {
 	VariantCode string
 	Level       ignis.RefurbishmentLevel
+	// BuildingType is the building_type sent to BuEM: a TABULA residential
+	// type (SFH/TH/MFH/AB) or a service id such as "bakery"; "" when neither
+	// could be determined and BuEM applied its default.
+	BuildingType string
 }
 
 // buildingRefurbishmentLevel returns a building's per-building refurbishment
