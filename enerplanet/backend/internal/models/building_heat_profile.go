@@ -22,6 +22,12 @@ const (
 // with the electric/thermal vectors as if it were the same energy carrier.
 // HotWaterKwhA/KitchenKwhA are nil for results produced by a buem-gateway
 // older than 6.1.0, which did not report them.
+//
+// TODO: KitchenKwhA reads 0 with the v5 request contract. BuEM only reports
+// gas cooking energy when the request sets cooking_carrier to "gas"; v5 has
+// no such field, so every request gets the "electric" default (cooking then
+// sits inside ElectricityKwhA). Send cooking_carrier once buem-gateway's
+// request schema exposes it.
 type BuildingHeatProfile struct {
 	ID      uint   `gorm:"primaryKey" json:"id"`
 	ModelID uint   `gorm:"not null;index;uniqueIndex:idx_building_heat_profiles_model_osm" json:"model_id"`
