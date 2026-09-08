@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	_ "spatialhub_backend/internal/api/contracts" // swagger response types
 	"spatialhub_backend/internal/tentacron"
 )
 
@@ -54,15 +55,34 @@ func (h *IgnisHandler) forward(c *gin.Context, target string, payload any) {
 	httputil.SuccessResponse(c, result)
 }
 
-// GetVariants lists every TABULA variant code for a country.
-// GET /v2/ignis/variants/:country_iso2
+// GetVariants godoc
+//
+//	@Summary		List a country's TABULA variant codes
+//	@Description	Lists every TABULA archetype variant code ignis has for a country, for the
+//	@Description	heat-demand form's building-type dropdown.
+//	@Tags			Ignis
+//	@Produce		json
+//	@Param			country_iso2	path		string	true	"ISO 3166-1 alpha-2 country code"	example(DE)
+//	@Success		200				{object}	contracts.GetIgnisVariantsResponse
+//	@Failure		400				{object}	contracts.ErrorResponse	"unsupported country"
+//	@Failure		502				{object}	contracts.ErrorResponse	"ignis unavailable"
+//	@Security		SessionAuth
+//	@Router			/v2/ignis/variants/{country_iso2} [get]
 func (h *IgnisHandler) GetVariants(c *gin.Context) {
 	h.forward(c, "ignis-variants", map[string]any{"iso2": c.Param("country_iso2")})
 }
 
-// GetFieldMetadata returns the country-independent TABULA input-field catalogue
-// (label, unit, descriptions) used to label the heat-demand form inputs.
-// GET /v2/ignis/fields
+// GetFieldMetadata godoc
+//
+//	@Summary		Get the TABULA input-field catalogue
+//	@Description	Returns the country-independent TABULA input-field catalogue (label, unit) used
+//	@Description	to label the heat-demand form's inputs.
+//	@Tags			Ignis
+//	@Produce		json
+//	@Success		200	{object}	contracts.GetIgnisFieldMetadataResponse
+//	@Failure		502	{object}	contracts.ErrorResponse	"ignis unavailable"
+//	@Security		SessionAuth
+//	@Router			/v2/ignis/fields [get]
 func (h *IgnisHandler) GetFieldMetadata(c *gin.Context) {
 	h.forward(c, "ignis-fields", map[string]any{})
 }

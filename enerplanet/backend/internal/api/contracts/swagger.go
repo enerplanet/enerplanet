@@ -68,3 +68,38 @@ type GetBoundaryResponse struct {
 	Success bool         `json:"success" example:"true"`
 	Data    BoundaryData `json:"data"`
 }
+
+// --- Ignis TABULA lookups ---
+
+// IgnisVariantsData is a country's TABULA variant codes, forwarded verbatim
+// from ignis.
+type IgnisVariantsData struct {
+	Country string   `json:"country" example:"germany"`
+	Data    []string `json:"data" example:"DE.N.SFH.01.Gen"`
+}
+
+// GetIgnisVariantsResponse is the response for GET /v2/ignis/variants/{country_iso2}.
+type GetIgnisVariantsResponse struct {
+	Success bool              `json:"success" example:"true"`
+	Data    IgnisVariantsData `json:"data"`
+}
+
+// IgnisFieldMetadata describes one TABULA input field, for labelling a
+// heat-demand form control.
+type IgnisFieldMetadata struct {
+	Key   string `json:"key" example:"A_C_Ref_Input"`
+	Label string `json:"label" example:"Reference floor area"`
+	Unit  string `json:"unit" example:"m2"`
+}
+
+// IgnisFieldMetadataData wraps the field catalogue, forwarded verbatim from
+// ignis.
+type IgnisFieldMetadataData struct {
+	Data []IgnisFieldMetadata `json:"data"`
+}
+
+// GetIgnisFieldMetadataResponse is the response for GET /v2/ignis/fields.
+type GetIgnisFieldMetadataResponse struct {
+	Success bool                   `json:"success" example:"true"`
+	Data    IgnisFieldMetadataData `json:"data"`
+}
