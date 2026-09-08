@@ -162,7 +162,11 @@ else
 fi
 
 # ---- 6. model create -> auto-resolve -> heat profiles --------------------
-config="$(jq -c --argjson b "$(cat "$FIXTURE")" -n '{buildings: $b, energyVectors: ["electricity"]}')"
+# One fixture building is sent as a bakery (with an occupant count) to cover
+# BuEM's service occupancy path; the Loenen fixture has no real service
+# building, so its f_class is overridden here rather than in the fixture.
+BAKERY_OSM_ID="$(jq -r '.features[-1].properties.osm_id' "$FIXTURE")"
+config="$(jq -c --argjson b "$(jq '.features[-1].properties.f_class = "bakery" | .features[-1].properties.f_classes = "bakery" | .features[-1].properties.capacity = 4' "$FIXTURE")" -n '{buildings: $b, energyVectors: ["electricity"]}')"
 payload="$(jq -c -n --argjson coords "$LOENEN_POLYGON" --argjson cfg "$config" \
   '{title: ("heat workflow smoke " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
 body="$(request POST /api/models "$payload")"
@@ -180,11 +184,18 @@ if [ -n "$MODEL_ID" ]; then
   core_ok="$(printf '%s' "$body" | jq -r '[.buildings[] | select(.status=="resolved") | select(.heating_kwh_a != null and .cooling_kwh_a != null and .electricity_kwh_a != null)] | length')"
   if [ "${resolved:-0}" -gt 0 ] && [ "$core_ok" = "$resolved" ]; then
     pass "6b. GET /models/$MODEL_ID/heat-profiles -> $resolved/$total resolved with heating/cooling/electricity ($failed_n failed)"
-    printf '%s' "$body" | jq -r '.buildings[] | select(.status=="resolved") | "      \(.osm_id)  \(.tabula_variant_code // "-")  heat \(.heating_kwh_a) cool \(.cooling_kwh_a) elec \(.electricity_kwh_a) hw \(.hot_water_kwh_a // "-") kitchen \(.kitchen_kwh_a // "-") kWh/a"' | head -n 6
+    printf '%s' "$body" | jq -r '.buildings[] | select(.status=="resolved") | "      \(.osm_id)  \(.building_type // "-")  \(.tabula_variant_code // "-")  heat \(.heating_kwh_a) cool \(.cooling_kwh_a) elec \(.electricity_kwh_a) hw \(.hot_water_kwh_a // "-") kitchen \(.kitchen_kwh_a // "-") kWh/a"' | head -n 6
     printf '%s' "$body" | jq -r '.buildings[] | select(.status=="failed") | "      \(.osm_id)  failed: \(.error_message // "-")"' | head -n 6
   else
     fail "6b. heat profiles: resolved=$resolved of $total, with core vectors=$core_ok, failed=$failed_n"
     printf '%s' "$body" | jq -r '.buildings[] | "      \(.osm_id)  \(.status)  \(.error_message // "")"' | head -n 10
+  fi
+  # service building: modelled with BuEM's service occupancy profile, so
+  # heating/electricity are real and hot water is not modelled (0)
+  if printf '%s' "$body" | jq -e --arg id "$BAKERY_OSM_ID" '.buildings[] | select(.osm_id==$id) | .status=="resolved" and .building_type=="bakery" and .heating_kwh_a > 0 and .electricity_kwh_a > 0 and .hot_water_kwh_a == 0' >/dev/null; then
+    pass "6d. bakery $BAKERY_OSM_ID: building_type bakery, heating and electricity > 0, hot water 0"
+  else
+    fail "6d. bakery $BAKERY_OSM_ID: $(printf '%s' "$body" | jq -c --arg id "$BAKERY_OSM_ID" '.buildings[] | select(.osm_id==$id) | {status, building_type, heating_kwh_a, electricity_kwh_a, hot_water_kwh_a, error_message}')"
   fi
   # hot water / kitchen arrive with buem-gateway >= 6.1.0; report rather than fail
   hw_ok="$(printf '%s' "$body" | jq -r '[.buildings[] | select(.status=="resolved") | select(.hot_water_kwh_a != null and .kitchen_kwh_a != null)] | length')"

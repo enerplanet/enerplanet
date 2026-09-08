@@ -387,3 +387,32 @@ func TestAttachEnvelopeUValues_usesCity2TabulaVariantCodeWithoutYear(t *testing.
 	assert.Equal(t, 1.1, byType["floor"])
 	// Bridging and b_transmission default to 0/nil here, so effective U == U_Actual.
 }
+
+// A service class from OSM overrides the TABULA type on the block: the
+// building is still built from its City2TABULA envelope, but BuEM must
+// model it with the service occupancy profile, not a household.
+func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
+	storeys := int32(2)
+	code := "NL.N.SFH.05.Gen.ReEx.001.001"
+	topology := []interface{}{map[string]interface{}{"from": map[string]interface{}{
+		"geometry": map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
+		"properties": map[string]interface{}{
+			"feature_type": "BasePOI", "osm_id": "555", "f_class": "bakery", "capacity": float64(4),
+		},
+	}}}
+	envelopeByOSMID := map[string]city2tabula.Building{"555": {
+		OSMID: "555", NumberOfStoreys: &storeys, TabulaVariantCode: &code,
+		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}},
+	}}
+
+	buildings, resolved, _ := buildingsForBuem(context.Background(), nil, "netherlands", topology, envelopeByOSMID, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
+
+	require.Len(t, buildings, 1)
+	var block map[string]interface{}
+	require.NoError(t, json.Unmarshal(buildings[0].Building, &block))
+	assert.Equal(t, "bakery", block["building_type"])
+	assert.Equal(t, float64(4), block["capacity"])
+	assert.NotContains(t, block, "construction_period", "a TABULA period is residential classification, not sent for a service building")
+	assert.Equal(t, float64(2), block["n_storeys"], "geometry from City2TABULA is still sent")
+	assert.Equal(t, "bakery", resolved["555"].BuildingType)
+}

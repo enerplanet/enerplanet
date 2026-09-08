@@ -256,9 +256,12 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 			// defaults.
 			"cooking_carrier": bProps["cooking_carrier"],
 			"include_dhw":     bProps["include_dhw"],
-			"created_at":      nil,
-			"modified_at":     nil,
-			"session_id":      fmt.Sprintf("%d", sessionID),
+			// Occupant count of a service building (bakery, office, ...);
+			// nil otherwise, BuEM then derives it from floor area.
+			"capacity":    bProps["capacity"],
+			"created_at":  nil,
+			"modified_at": nil,
+			"session_id":  fmt.Sprintf("%d", sessionID),
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,
