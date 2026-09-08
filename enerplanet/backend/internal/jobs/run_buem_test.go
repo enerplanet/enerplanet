@@ -416,3 +416,57 @@ func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
 	assert.Equal(t, float64(2), block["n_storeys"], "geometry from City2TABULA is still sent")
 	assert.Equal(t, "bakery", resolved["555"].BuildingType)
 }
+
+// residential_units comes from the archetype's dwelling count: sent only
+// above one, never for a service building, and 0 (unknown) is omitted.
+func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
+	code := "NL.N.AB.03.Gal.ReEx.001.001"
+	envelope := func(osmID string) city2tabula.Building {
+		return city2tabula.Building{OSMID: osmID, TabulaVariantCode: &code,
+			Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}}}
+	}
+	node := func(osmID, fClass string) map[string]interface{} {
+		return map[string]interface{}{"from": map[string]interface{}{
+			"geometry":   map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
+			"properties": map[string]interface{}{"feature_type": "BasePOI", "osm_id": osmID, "f_class": fClass},
+		}}
+	}
+	block := func(buildings []buem.Building, osmID string) map[string]interface{} {
+		for _, b := range buildings {
+			if b.ID == osmID {
+				var m map[string]interface{}
+				require.NoError(t, json.Unmarshal(b.Building, &m))
+				return m
+			}
+		}
+		t.Fatalf("building %s not sent", osmID)
+		return nil
+	}
+	cooking := cookingSettings{Carrier: CookingElectric, IncludeDHW: true}
+
+	for _, tt := range []struct {
+		name       string
+		apartments int
+		fClass     string
+		want       interface{} // nil = omitted
+	}{
+		{"block of 15", 15, "apartments", float64(15)},
+		{"single dwelling", 1, "detached", nil},
+		{"unknown count", 0, "apartments", nil},
+		{"service building ignores the count", 15, "bakery", nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1, Apartments: tt.apartments}}
+			buildings, resolved, _ := buildingsForBuem(context.Background(), client, "netherlands",
+				[]interface{}{node("1", tt.fClass)}, map[string]city2tabula.Building{"1": envelope("1")}, ignis.RefurbishmentExisting, cooking)
+			got := block(buildings, "1")
+			if tt.want == nil {
+				assert.NotContains(t, got, "residential_units")
+				assert.Equal(t, 0, resolved["1"].ResidentialUnits)
+			} else {
+				assert.Equal(t, tt.want, got["residential_units"])
+				assert.Equal(t, tt.apartments, resolved["1"].ResidentialUnits)
+			}
+		})
+	}
+}
