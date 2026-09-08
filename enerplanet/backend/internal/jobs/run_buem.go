@@ -493,7 +493,10 @@ func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolv
 		if !ok {
 			continue
 		}
-		elements[i].U = &city2tabula.Quantity{Value: in.u, Unit: "W/(m2.K)"}
+		// "W/(m2K)" is the exact spelling buem-gateway's v5 request schema
+		// allows for U (enum: W/(m2K), BTU/(h.ft2.F)); BuEM rejects the
+		// whole building on any other spelling.
+		elements[i].U = &city2tabula.Quantity{Value: in.u, Unit: "W/(m2K)"}
 		// b_Transmission is (0,1]. Send it only when it actually reduces the
 		// loss (< 1, e.g. ~0.5 for a ground floor); 1.0 and a missing 0 both
 		// leave it nil, which is BuEM's default.
