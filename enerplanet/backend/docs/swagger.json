@@ -246,6 +246,84 @@
                 }
             }
         },
+        "/v2/ignis/fields": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the country-independent TABULA input-field catalogue (label, unit) used\nto label the heat-demand form's inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Get the TABULA input-field catalogue",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/ignis/variants/{country_iso2}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Lists every TABULA archetype variant code ignis has for a country, for the\nheat-demand form's building-type dropdown.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "List a country's TABULA variant codes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "DE",
+                        "description": "ISO 3166-1 alpha-2 country code",
+                        "name": "country_iso2",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "unsupported country",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
@@ -519,6 +597,30 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisVariantsData"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.GetModelsResponse": {
             "type": "object",
             "properties": {
@@ -677,6 +779,52 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.IgnisFieldMetadata": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "A_C_Ref_Input"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Reference floor area"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "m2"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadata"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.IgnisVariantsData": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "DE.N.SFH.01.Gen"
+                    ]
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.ModelSummary": {
             "type": "object",
             "properties": {
@@ -749,11 +897,22 @@
         "spatialhub_backend_internal_city2tabula.EnvelopeElement": {
             "type": "object",
             "properties": {
+                "U": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
                 "area": {
                     "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
                 },
                 "azimuth": {
                     "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "b_transmission": {
+                    "description": "TABULA b_Transmission: adjacency correction for elements next to unheated space",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                        }
+                    ]
                 },
                 "id": {
                     "type": "string",

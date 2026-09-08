@@ -147,6 +147,22 @@ definitions:
         example: true
         type: boolean
     type: object
+  spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData'
+      success:
+        example: true
+        type: boolean
+    type: object
+  spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisVariantsData'
+      success:
+        example: true
+        type: boolean
+    type: object
   spatialhub_backend_internal_api_contracts.GetModelsResponse:
     properties:
       data:
@@ -255,6 +271,37 @@ definitions:
           type: string
         type: array
     type: object
+  spatialhub_backend_internal_api_contracts.IgnisFieldMetadata:
+    properties:
+      key:
+        example: A_C_Ref_Input
+        type: string
+      label:
+        example: Reference floor area
+        type: string
+      unit:
+        example: m2
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadata'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.IgnisVariantsData:
+    properties:
+      country:
+        example: germany
+        type: string
+      data:
+        example:
+        - DE.N.SFH.01.Gen
+        items:
+          type: string
+        type: array
+    type: object
   spatialhub_backend_internal_api_contracts.ModelSummary:
     properties:
       country:
@@ -308,10 +355,17 @@ definitions:
     type: object
   spatialhub_backend_internal_city2tabula.EnvelopeElement:
     properties:
+      U:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
       area:
         $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
       azimuth:
         $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      b_transmission:
+        allOf:
+        - $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+        description: 'TABULA b_Transmission: adjacency correction for elements next
+          to unheated space'
       id:
         example: w1
         type: string
@@ -504,6 +558,59 @@ paths:
       summary: Resolve a building's annual space-heating demand
       tags:
       - HeatDemand
+  /v2/ignis/fields:
+    get:
+      description: |-
+        Returns the country-independent TABULA input-field catalogue (label, unit) used
+        to label the heat-demand form's inputs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get the TABULA input-field catalogue
+      tags:
+      - Ignis
+  /v2/ignis/variants/{country_iso2}:
+    get:
+      description: |-
+        Lists every TABULA archetype variant code ignis has for a country, for the
+        heat-demand form's building-type dropdown.
+      parameters:
+      - description: ISO 3166-1 alpha-2 country code
+        example: DE
+        in: path
+        name: country_iso2
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: unsupported country
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: List a country's TABULA variant codes
+      tags:
+      - Ignis
   /v2/pylovo/boundary:
     get:
       description: |-
