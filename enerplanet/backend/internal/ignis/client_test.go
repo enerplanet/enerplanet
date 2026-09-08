@@ -164,7 +164,7 @@ func TestGetEnvelopeUValues_extractsActualUBTransmissionAndBridging(t *testing.T
 		"country": "germany",
 		"tabula_data": {
 			"BasicParameters": {
-				"BuildingAppearance": {"Year1_Building": 1958, "Year2_Building": 1968}
+				"BuildingAppearance": {"Year1_Building": 1958, "Year2_Building": 1968, "n_Apartment": 15}
 			},
 			"AdvancedParameters": {
 				"Uvalues": {
@@ -191,6 +191,7 @@ func TestGetEnvelopeUValues_extractsActualUBTransmissionAndBridging(t *testing.T
 	assert.Equal(t, 0.07, u.Bridging)
 	assert.Equal(t, 1958, u.YearFrom)
 	assert.Equal(t, 1968, u.YearTo)
+	assert.Equal(t, 15, u.Apartments)
 	assert.Equal(t, "ignis-data", stub.lastTarget)
 	assert.Equal(t, "DE.N.SFH.05.Gen", stub.lastPayload["code"])
 }
@@ -283,4 +284,16 @@ func TestCalculate_sendsCodeInPayload(t *testing.T) {
 	assert.Equal(t, 100.5, result.QHNDKwhM2a)
 	assert.Equal(t, "ignis-calculate", stub.lastTarget)
 	assert.Equal(t, "DE.N.SFH.05.Gen", stub.lastPayload["code"])
+}
+
+// An ignis without n_Apartment (older than the field) decodes as 0, which
+// callers treat as unknown.
+func TestGetEnvelopeUValues_missingApartmentCountIsZero(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"tabula_data":{"BasicParameters":{"BuildingAppearance":{"Year1_Building":1958,"Year2_Building":1968}},
+		"AdvancedParameters":{"Uvalues":{"U_Actual_Wall_1":1.2}}}}`))
+
+	u, err := stubClient(stub).GetEnvelopeUValues(context.Background(), "DE.N.SFH.05.Gen")
+
+	require.NoError(t, err)
+	assert.Equal(t, 0, u.Apartments)
 }

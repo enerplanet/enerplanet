@@ -401,6 +401,15 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	if bt, _ := block["building_type"].(string); bt != "" {
 		meta.BuildingType = bt
 	}
+	// The TABULA archetype's dwelling count scales BuEM's household model
+	// (occupants, hot water, electricity, cooking) for multi-dwelling
+	// buildings. 1 is BuEM's default and 0 means ignis has no count, so
+	// only a count above one is sent; a service building is not a set of
+	// dwellings and never gets one.
+	if serviceBuildingType(fClass) == "" && meta.Apartments > 1 {
+		block["residential_units"] = meta.Apartments
+		meta.ResidentialUnits = meta.Apartments
+	}
 	block["envelope"] = map[string]interface{}{"elements": elements}
 	block["cooking_carrier"] = cooking.Carrier
 	block["include_dhw"] = cooking.IncludeDHW
@@ -446,6 +455,13 @@ type BuemResolutionMeta struct {
 	// type (SFH/TH/MFH/AB) or a service id such as "bakery"; "" when neither
 	// could be determined and BuEM applied its default.
 	BuildingType string
+	// ResidentialUnits is the archetype's dwelling count sent as
+	// building.residential_units, 0 when not sent (unknown, a single
+	// dwelling, or a service building).
+	ResidentialUnits int
+	// Apartments is the raw count ignis reported for the variant (0 =
+	// unknown), before the send decision above.
+	Apartments int
 }
 
 // buildingRefurbishmentLevel returns a building's per-building refurbishment
@@ -529,7 +545,7 @@ func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolv
 			elements[i].BTransmission = &city2tabula.Quantity{Value: in.bTrans, Unit: "-"}
 		}
 	}
-	return elements, BuemResolutionMeta{VariantCode: code, Level: u.Level}
+	return elements, BuemResolutionMeta{VariantCode: code, Level: u.Level, Apartments: u.Apartments}
 }
 
 // mergeBuemResults writes each successful result's enriched buem block onto

@@ -164,6 +164,11 @@ type EnvelopeUValues struct {
 	// DefaultConstructionYear.
 	YearFrom int
 	YearTo   int
+
+	// Apartments is ignis's n_Apartment: the archetype's dwelling count.
+	// 0 means unknown (the field is absent before ignis exposes it, and some
+	// archetypes carry no count), never zero dwellings.
+	Apartments int
 }
 
 // GetEnvelopeUValues fetches a TABULA variant's data and extracts the effective
@@ -178,6 +183,7 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 				BuildingAppearance struct {
 					Year1_Building int
 					Year2_Building int
+					N_Apartment    int `json:"n_Apartment"`
 				}
 			}
 			AdvancedParameters struct {
@@ -212,6 +218,7 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 		Bridging:    ap.ThermalBridges.DeltaU,
 		YearFrom:    appearance.Year1_Building,
 		YearTo:      appearance.Year2_Building,
+		Apartments:  appearance.N_Apartment,
 	}, nil
 }
 
