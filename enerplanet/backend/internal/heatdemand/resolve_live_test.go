@@ -102,10 +102,10 @@ func TestResolveChainLive(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetEnvelopeUValues: %v", err)
 		}
-		if u.Wall <= 0 || u.Roof <= 0 || u.Floor <= 0 {
+		if u.UWall <= 0 || u.URoof <= 0 || u.UFloor <= 0 {
 			t.Fatalf("non-positive U-value in %+v", u)
 		}
-		t.Logf("variant=%s U wall=%.2f roof=%.2f floor=%.2f W/(m2.K)", code, u.Wall, u.Roof, u.Floor)
+		t.Logf("variant=%s U wall=%.2f roof=%.2f floor=%.2f W/(m2K)", code, u.UWall, u.URoof, u.UFloor)
 	})
 
 	t.Run("added latency per resolve call is small", func(t *testing.T) {
