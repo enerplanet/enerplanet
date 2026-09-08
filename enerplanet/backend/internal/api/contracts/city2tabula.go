@@ -48,10 +48,15 @@ type BuemNode struct {
 
 // EnrichedBuilding is one entry in the merge map, keyed by osm_id.
 type EnrichedBuilding struct {
-	ObjectID          string   `json:"object_id" example:"DEBW_1"`
-	MatchType         int16    `json:"match_type" example:"1"`
-	TabulaVariantCode *string  `json:"tabula_variant_code,omitempty" example:"DE.N.SFH.05.Gen.ReEx.001.001"`
-	Buem              BuemNode `json:"buem"`
+	ObjectID          string  `json:"object_id" example:"DEBW_1"`
+	MatchType         int16   `json:"match_type" example:"1"`
+	TabulaVariantCode *string `json:"tabula_variant_code,omitempty" example:"DE.N.SFH.05.Gen.ReEx.001.001"`
+	// Derived from the TABULA variant's construction-period range (ignis
+	// Year1_Building/Year2_Building); set only when TabulaVariantCode
+	// resolved and ignis had year data for it. A user-entered construction
+	// year, once saved, takes precedence over this estimate.
+	DefaultConstructionYear *int     `json:"default_construction_year,omitempty" example:"1963"`
+	Buem                    BuemNode `json:"buem"`
 }
 
 // EnrichResponse is returned by both enrich endpoints.

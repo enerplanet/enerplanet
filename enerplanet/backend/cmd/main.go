@@ -660,7 +660,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
-	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient)
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient)
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)

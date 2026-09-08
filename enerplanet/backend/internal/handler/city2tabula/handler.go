@@ -23,16 +23,27 @@ import (
 
 	"spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
 )
+
+// yearResolver is the ignis surface mapBuildings needs to derive
+// default_construction_year. Satisfied by *ignis.Client; faked in tests.
+type yearResolver interface {
+	GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error)
+}
 
 // Handler serves the enrich endpoints, backed by the City2TABULA client.
 type Handler struct {
-	client *c2t.Client
+	client     *c2t.Client
+	yearClient yearResolver
 }
 
-// NewHandler returns a Handler bound to the given City2TABULA client.
-func NewHandler(client *c2t.Client) *Handler {
-	return &Handler{client: client}
+// NewHandler returns a Handler bound to the given City2TABULA client,
+// reaching ignis through the given TentaCron client for
+// default_construction_year lookups.
+func NewHandler(client *c2t.Client, tc *tentacron.Client) *Handler {
+	return &Handler{client: client, yearClient: ignis.NewClient(tc)}
 }
 
 // Enrich godoc
@@ -82,7 +93,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 		Resolved: len(byOSMID),
 		Total:    len(req.OSMIDs),
 		Missing:  missing,
-		Data:     mapBuildings(byOSMID),
+		Data:     h.mapBuildings(ctx, byOSMID),
 	}
 
 	if len(missing) == 0 {
@@ -167,7 +178,7 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 		resp.Resolved = len(byOSMID)
 		resp.Total = len(osmIDs)
 		resp.Missing = missingOSMIDs(osmIDs, byOSMID)
-		resp.Data = mapBuildings(byOSMID)
+		resp.Data = h.mapBuildings(ctx, byOSMID)
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -215,7 +226,7 @@ func splitCSV(s string) []string {
 // run_buem job it keeps a building even when no surface qualifies for the
 // envelope: the configurator still shows its scalar attributes and TABULA
 // variant and falls back to an archetype for the geometry (scenario SC-03).
-func mapBuildings(byOSMID map[string]c2t.Building) map[string]contracts.EnrichedBuilding {
+func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Building) map[string]contracts.EnrichedBuilding {
 	out := make(map[string]contracts.EnrichedBuilding, len(byOSMID))
 	for osmID, b := range byOSMID {
 		bb := contracts.BuemBuilding{
@@ -232,11 +243,28 @@ func mapBuildings(byOSMID map[string]c2t.Building) map[string]contracts.Enriched
 			bb.FootprintArea = &contracts.EnrichQuantity{Value: *b.FootprintAreaSqm, Unit: "m2"}
 		}
 		out[osmID] = contracts.EnrichedBuilding{
-			ObjectID:          b.ObjectID,
-			MatchType:         b.MatchType,
-			TabulaVariantCode: b.TabulaVariantCode,
-			Buem:              contracts.BuemNode{Building: bb},
+			ObjectID:                b.ObjectID,
+			MatchType:               b.MatchType,
+			TabulaVariantCode:       b.TabulaVariantCode,
+			DefaultConstructionYear: h.defaultConstructionYear(ctx, b.TabulaVariantCode),
+			Buem:                    contracts.BuemNode{Building: bb},
 		}
 	}
 	return out
+}
+
+// defaultConstructionYear derives a construction year from variantCode's
+// TABULA period, or nil when there is no code or ignis has no year data for
+// it - a miss here just means the enrich response omits the field, it never
+// fails the request.
+func (h *Handler) defaultConstructionYear(ctx context.Context, variantCode *string) *int {
+	if h.yearClient == nil || variantCode == nil || *variantCode == "" {
+		return nil
+	}
+	u, err := h.yearClient.GetEnvelopeUValues(ctx, *variantCode)
+	if err != nil || (u.YearFrom == 0 && u.YearTo == 0) {
+		return nil
+	}
+	year := ignis.DefaultConstructionYear(u.YearFrom, u.YearTo)
+	return &year
 }

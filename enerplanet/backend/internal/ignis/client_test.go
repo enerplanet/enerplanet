@@ -163,6 +163,9 @@ func TestGetEnvelopeUValues_extractsActualUBTransmissionAndBridging(t *testing.T
 	stub := newTentacronStub(t, completed(`{
 		"country": "germany",
 		"tabula_data": {
+			"BasicParameters": {
+				"BuildingAppearance": {"Year1_Building": 1958, "Year2_Building": 1968}
+			},
 			"AdvancedParameters": {
 				"Uvalues": {
 					"U_Wall_1": 0.77, "U_Roof_1": 0.77, "U_Floor_1": 0.77,
@@ -186,8 +189,16 @@ func TestGetEnvelopeUValues_extractsActualUBTransmissionAndBridging(t *testing.T
 	assert.Equal(t, 1.0, u.BTransWall)
 	assert.Equal(t, 0.5, u.BTransFloor)
 	assert.Equal(t, 0.07, u.Bridging)
+	assert.Equal(t, 1958, u.YearFrom)
+	assert.Equal(t, 1968, u.YearTo)
 	assert.Equal(t, "ignis-data", stub.lastTarget)
 	assert.Equal(t, "DE.N.SFH.05.Gen", stub.lastPayload["code"])
+}
+
+func TestDefaultConstructionYear(t *testing.T) {
+	assert.Equal(t, 1963, DefaultConstructionYear(1958, 1968), "midpoint of a closed range")
+	assert.Equal(t, 1918, DefaultConstructionYear(0, 1918), "open-ended oldest uses year_to")
+	assert.Equal(t, 2020, DefaultConstructionYear(2020, 9999), "open-ended newest uses year_from")
 }
 
 func TestWithRefurbishmentLevel(t *testing.T) {
