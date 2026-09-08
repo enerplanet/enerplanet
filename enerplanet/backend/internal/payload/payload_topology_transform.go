@@ -251,9 +251,14 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 			// "advanced"); nil otherwise, in which case run_buem applies the
 			// model-level default.
 			"refurbishment_level": bProps["refurbishment_level"],
-			"created_at":          nil,
-			"modified_at":         nil,
-			"session_id":          fmt.Sprintf("%d", sessionID),
+			// Per-building cooking overrides ("electric"/"gas"/"none", bool);
+			// nil otherwise, in which case run_buem applies the model-level
+			// defaults.
+			"cooking_carrier": bProps["cooking_carrier"],
+			"include_dhw":     bProps["include_dhw"],
+			"created_at":      nil,
+			"modified_at":     nil,
+			"session_id":      fmt.Sprintf("%d", sessionID),
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,
