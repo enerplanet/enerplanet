@@ -16,13 +16,14 @@ import (
 // savedProfile is what fakeProfileStore recorded for one osm_id, flattened
 // for easy assertions.
 type savedProfile struct {
-	Status      string
-	VariantCode string
-	Level       string
-	Heating     *float64
-	HotWater    *float64
-	Kitchen     *float64
-	Reason      string
+	Status       string
+	VariantCode  string
+	Level        string
+	Heating      *float64
+	BuildingType string
+	HotWater     *float64
+	Kitchen      *float64
+	Reason       string
 }
 
 // fakeProfileStore is a hand-rolled heatProfileStore so
@@ -42,12 +43,13 @@ func (f *fakeProfileStore) ResetForRun(modelID uint, osmIDs []string, refurbishm
 
 func (f *fakeProfileStore) SaveResolved(modelID uint, osmID string, p heatprofile.ResolvedProfile) error {
 	f.saved[osmID] = savedProfile{
-		Status:      "resolved",
-		VariantCode: p.TabulaVariantCode,
-		Level:       p.RefurbishmentLevel,
-		Heating:     p.HeatingKwhA,
-		HotWater:    p.HotWaterKwhA,
-		Kitchen:     p.KitchenKwhA,
+		Status:       "resolved",
+		VariantCode:  p.TabulaVariantCode,
+		Level:        p.RefurbishmentLevel,
+		Heating:      p.HeatingKwhA,
+		BuildingType: p.BuildingType,
+		HotWater:     p.HotWaterKwhA,
+		Kitchen:      p.KitchenKwhA,
 	}
 	return nil
 }
@@ -140,11 +142,12 @@ func TestSaveResolvedProfile_successIsSavedAsResolved(t *testing.T) {
 		"hot_water":{"total":{"value":33.3,"unit":"kWh"}},"kitchen":{"total":{"value":7.76,"unit":"kWh_gas"}}}}}`)
 
 	saveResolvedProfile(log, store, 1, "111",
-		BuemResolutionMeta{VariantCode: "DE.N.SFH.05.Gen.ReEx.001.001", Level: ignis.RefurbishmentMedium},
+		BuemResolutionMeta{VariantCode: "DE.N.SFH.05.Gen.ReEx.001.001", Level: ignis.RefurbishmentMedium, BuildingType: "SFH"},
 		buem.BuildingResult{ID: "111", BUEM: buemJSON})
 
 	got := store.saved["111"]
 	assert.Equal(t, "resolved", got.Status)
+	assert.Equal(t, "SFH", got.BuildingType)
 	assert.Equal(t, "DE.N.SFH.05.Gen.ReEx.001.001", got.VariantCode)
 	assert.Equal(t, "medium", got.Level)
 	require.NotNil(t, got.Heating)

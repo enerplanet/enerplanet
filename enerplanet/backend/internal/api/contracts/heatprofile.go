@@ -9,9 +9,14 @@ package contracts
 // energy carrier. hot_water_kwh_a/kitchen_kwh_a are null for profiles
 // resolved by a buem-gateway older than 6.1.0.
 type BuildingHeatProfile struct {
-	OSMID              string   `json:"osm_id" example:"240054621"`
-	Status             string   `json:"status" example:"resolved"`
-	TabulaVariantCode  *string  `json:"tabula_variant_code,omitempty" example:"DE.N.SFH.05.Gen.ReEx.001.001"`
+	OSMID             string  `json:"osm_id" example:"240054621"`
+	Status            string  `json:"status" example:"resolved"`
+	TabulaVariantCode *string `json:"tabula_variant_code,omitempty" example:"DE.N.SFH.05.Gen.ReEx.001.001"`
+	// building_type is what was modelled: a TABULA residential type (SFH, TH,
+	// MFH, AB) or a BuEM service id (bakery, clinic, hotel, office,
+	// restaurant, school, supermarket, warehouse). For a service id
+	// hot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.
+	BuildingType       *string  `json:"building_type,omitempty" example:"SFH"`
 	RefurbishmentLevel string   `json:"refurbishment_level" example:"existing"`
 	HeatingKwhA        *float64 `json:"heating_kwh_a,omitempty" example:"4823.5"`
 	CoolingKwhA        *float64 `json:"cooling_kwh_a,omitempty" example:"312.4"`

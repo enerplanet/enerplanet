@@ -522,6 +522,11 @@ const docTemplate = `{
         "spatialhub_backend_internal_api_contracts.BuildingHeatProfile": {
             "type": "object",
             "properties": {
+                "building_type": {
+                    "description": "building_type is what was modelled: a TABULA residential type (SFH, TH,\nMFH, AB) or a BuEM service id (bakery, clinic, hotel, office,\nrestaurant, school, supermarket, warehouse). For a service id\nhot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.",
+                    "type": "string",
+                    "example": "SFH"
+                },
                 "cooling_kwh_a": {
                     "type": "number",
                     "example": 312.4
