@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS building_heat_profiles (
     tabula_variant_code VARCHAR(255),
     refurbishment_level VARCHAR(16) NOT NULL DEFAULT 'existing',
 
-    -- Annual totals in kWh. hot_water_kwh_a and kitchen_kwh_a stay NULL until
-    -- buem-gateway's response contract exposes them (today it surfaces only
-    -- heating/cooling/electricity; BuEM's own dhw_cooking.py already computes
-    -- both, they are just not in the gateway's response yet).
+    -- Annual totals in kWh, except kitchen_kwh_a which is kWh_gas: BuEM
+    -- models cooking as a separate gas fuel channel, so it is not the same
+    -- energy carrier as the other vectors. hot_water_kwh_a and kitchen_kwh_a
+    -- are NULL for profiles resolved by a buem-gateway older than 6.1.0.
     heating_kwh_a DOUBLE PRECISION,
     cooling_kwh_a DOUBLE PRECISION,
     electricity_kwh_a DOUBLE PRECISION,

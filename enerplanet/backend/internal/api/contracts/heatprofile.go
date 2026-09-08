@@ -3,9 +3,11 @@ package contracts
 // --- Model heat-profile poll endpoint ---
 
 // BuildingHeatProfile is one building's BuEM-resolved annual energy profile,
-// or its resolution status when not yet resolved. hot_water_kwh_a and
-// kitchen_kwh_a stay null until buem-gateway's response contract exposes
-// them.
+// or its resolution status when not yet resolved. All *_kwh_a totals are
+// annual kWh except kitchen_kwh_a, which is kWh_gas (cooking is a separate
+// gas fuel channel in BuEM) and must not be summed with the others as one
+// energy carrier. hot_water_kwh_a/kitchen_kwh_a are null for profiles
+// resolved by a buem-gateway older than 6.1.0.
 type BuildingHeatProfile struct {
 	OSMID              string   `json:"osm_id" example:"240054621"`
 	Status             string   `json:"status" example:"resolved"`

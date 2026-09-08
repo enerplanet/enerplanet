@@ -15,8 +15,13 @@ const (
 )
 
 // BuildingHeatProfile is one building's BuEM-resolved annual energy profile,
-// persisted so the frontend reads it without re-running BuEM. hot_water and
-// kitchen stay nil until buem-gateway's response contract exposes them.
+// persisted so the frontend reads it without re-running BuEM.
+//
+// The *KwhA totals are annual kWh, except KitchenKwhA which is kWh_gas: BuEM
+// models cooking as a separate gas fuel channel, so it must not be summed
+// with the electric/thermal vectors as if it were the same energy carrier.
+// HotWaterKwhA/KitchenKwhA are nil for results produced by a buem-gateway
+// older than 6.1.0, which did not report them.
 type BuildingHeatProfile struct {
 	ID      uint   `gorm:"primaryKey" json:"id"`
 	ModelID uint   `gorm:"not null;index;uniqueIndex:idx_building_heat_profiles_model_osm" json:"model_id"`
