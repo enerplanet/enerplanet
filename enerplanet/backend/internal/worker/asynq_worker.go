@@ -13,6 +13,7 @@ import (
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/services"
+	"spatialhub_backend/internal/store/heatprofile"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
 )
@@ -28,6 +29,7 @@ type TaskProcessor struct {
 	weatherProvider     string
 	buemClient          *buem.Client
 	ignisClient         *ignis.Client
+	profileStore        *heatprofile.Store
 }
 
 func NewTaskProcessor(
@@ -53,6 +55,7 @@ func NewTaskProcessor(
 		weatherProvider:     weatherProvider,
 		buemClient:          buemClient,
 		ignisClient:         ignisClient,
+		profileStore:        heatprofile.NewStore(db),
 	}
 }
 
@@ -66,6 +69,8 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		return jobs.HandleProcessResult(ctx, t, p.db, p.notificationService, p.wsClient)
 	case jobs.TypeRunBuem:
 		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.weatherClient, p.weatherProvider, p.buemClient, p.ignisClient, p.asynqClient, p.notificationService)
+	case jobs.TypeResolveHeatProfiles:
+		return jobs.HandleResolveHeatProfiles(ctx, t, p.db, p.city2tabulaClient, p.weatherClient, p.weatherProvider, p.ignisClient, p.buemClient, p.profileStore)
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:

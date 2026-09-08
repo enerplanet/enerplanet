@@ -80,6 +80,58 @@
                 }
             }
         },
+        "/models/{id}/heat-profiles": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every building's resolved annual energy profile for a model, along with\nresolution progress. Profiles are produced automatically whenever the model's\nconfig is saved with a non-empty building list; poll this endpoint until status\nis \"completed\" to show a progress bar. A building with status \"failed\" carries\nerror_message explaining why (no envelope match, BuEM rejected it, etc.) - that is\na per-building outcome, not an endpoint error.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get a model's per-building BuEM energy profiles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/city2tabula/enrich": {
             "post": {
                 "security": [
@@ -464,6 +516,49 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.BuildingHeatProfile": {
+            "type": "object",
+            "properties": {
+                "cooling_kwh_a": {
+                    "type": "number",
+                    "example": 312.4
+                },
+                "electricity_kwh_a": {
+                    "type": "number",
+                    "example": 2105
+                },
+                "error_message": {
+                    "type": "string",
+                    "example": "no City2TABULA envelope for this building"
+                },
+                "heating_kwh_a": {
+                    "type": "number",
+                    "example": 4823.5
+                },
+                "hot_water_kwh_a": {
+                    "type": "number"
+                },
+                "kitchen_kwh_a": {
+                    "type": "number"
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                },
+                "refurbishment_level": {
+                    "type": "string",
+                    "example": "existing"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "resolved"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.EnrichBbox": {
             "type": "object",
             "properties": {
@@ -822,6 +917,37 @@
                     "example": [
                         "DE.N.SFH.01.Gen"
                     ]
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse": {
+            "type": "object",
+            "properties": {
+                "buildings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingHeatProfile"
+                    }
+                },
+                "failed": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "pending": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "resolved": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "status": {
+                    "type": "string",
+                    "example": "resolving"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

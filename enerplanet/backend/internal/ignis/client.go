@@ -12,6 +12,7 @@ package ignis
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"spatialhub_backend/internal/tentacron"
@@ -136,7 +137,7 @@ func (c *Client) ExistingStateVariant(ctx context.Context, iso2, buildingType st
 // adjacency correction factors for the three envelope categories it sends
 // (wall, roof, floor), plus the envelope-level thermal-bridging surcharge.
 // Window/door values are not read - run_buem sends no explicit window or door
-// elements; BuEM synthesizes them (see #61).
+// elements; BuEM synthesizes them.
 //
 // U* come from ignis's U_Actual_*_1, the post-measure-blend transmittance ignis
 // uses for opaque conduction - not the base U_*_1, which ignis uses only for
@@ -195,6 +196,84 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 		BTransFloor: ap.HeatLosses.B_Transmission_Floor_1,
 		Bridging:    ap.ThermalBridges.DeltaU,
 	}, nil
+}
+
+// RefurbishmentLevel selects which TABULA refurbishment scenario a variant's
+// U-values should reflect.
+type RefurbishmentLevel string
+
+const (
+	RefurbishmentExisting RefurbishmentLevel = "existing"
+	RefurbishmentMedium   RefurbishmentLevel = "medium"
+	RefurbishmentAdvanced RefurbishmentLevel = "advanced"
+)
+
+// refurbishmentSuffix is the trailing variant-code segment for each
+// refurbishment level above the existing (baseline, ".001") state.
+var refurbishmentSuffix = map[RefurbishmentLevel]string{
+	RefurbishmentMedium:   "002",
+	RefurbishmentAdvanced: "003",
+}
+
+// WithRefurbishmentLevel swaps an existing-state variant code's trailing
+// ".001" for the given level's suffix (".002" medium, ".003" advanced) - a
+// suffix swap, not a separate ignis lookup: /match would return a different
+// sub-form and must not be used here. existingStateCode must end in ".001";
+// City2TABULA's classifier only ever emits that suffix, since its import
+// filter loads only Number_BuildingVariant=1 rows into the lookup table
+// (city2tabula sql/scripts/supplementary/01_extract_tabula_attributes.sql:59).
+// A code that doesn't end in ".001" is rejected rather than swapped, in case
+// that import filter ever changes.
+func WithRefurbishmentLevel(existingStateCode string, level RefurbishmentLevel) (string, error) {
+	if level == "" || level == RefurbishmentExisting {
+		return existingStateCode, nil
+	}
+	suffix, ok := refurbishmentSuffix[level]
+	if !ok {
+		return "", fmt.Errorf("ignis: unknown refurbishment level %q", level)
+	}
+	if !strings.HasSuffix(existingStateCode, ".001") {
+		return "", fmt.Errorf("ignis: %q is not an existing-state (.001) variant code, cannot derive its %s-refurbishment code", existingStateCode, level)
+	}
+	return strings.TrimSuffix(existingStateCode, "001") + suffix, nil
+}
+
+// EnvelopeUValuesResult is GetEnvelopeUValuesForLevel's result: the resolved
+// U-values plus the refurbishment level they actually came from, which can
+// differ from the level requested - see GetEnvelopeUValuesForLevel.
+type EnvelopeUValuesResult struct {
+	EnvelopeUValues
+	Level RefurbishmentLevel
+}
+
+// GetEnvelopeUValuesForLevel resolves U-values at the requested refurbishment
+// level. TABULA has no medium or advanced variant for every archetype (17%
+// of groups have no .002, 15% no .003, per a TABULA workbook audit): a
+// rejection of the swapped code is treated as that scenario being unavailable
+// for this specific building, not an error, and falls back to the existing
+// state. Result.Level says which level was actually used.
+func (c *Client) GetEnvelopeUValuesForLevel(ctx context.Context, existingStateCode string, level RefurbishmentLevel) (EnvelopeUValuesResult, error) {
+	code, err := WithRefurbishmentLevel(existingStateCode, level)
+	if err != nil {
+		return EnvelopeUValuesResult{}, err
+	}
+	actual := level
+	if actual == "" {
+		actual = RefurbishmentExisting
+	}
+
+	u, err := c.GetEnvelopeUValues(ctx, code)
+	if err != nil {
+		var badReq *BadRequestError
+		if actual != RefurbishmentExisting && errors.As(err, &badReq) {
+			u, err = c.GetEnvelopeUValues(ctx, existingStateCode)
+			actual = RefurbishmentExisting
+		}
+		if err != nil {
+			return EnvelopeUValuesResult{}, err
+		}
+	}
+	return EnvelopeUValuesResult{EnvelopeUValues: u, Level: actual}, nil
 }
 
 // CalculateResult is ignis's annual specific heating demand for a variant.

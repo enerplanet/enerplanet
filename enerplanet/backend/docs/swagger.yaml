@@ -55,6 +55,37 @@ definitions:
       building:
         $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding'
     type: object
+  spatialhub_backend_internal_api_contracts.BuildingHeatProfile:
+    properties:
+      cooling_kwh_a:
+        example: 312.4
+        type: number
+      electricity_kwh_a:
+        example: 2105
+        type: number
+      error_message:
+        example: no City2TABULA envelope for this building
+        type: string
+      heating_kwh_a:
+        example: 4823.5
+        type: number
+      hot_water_kwh_a:
+        type: number
+      kitchen_kwh_a:
+        type: number
+      osm_id:
+        example: "240054621"
+        type: string
+      refurbishment_level:
+        example: existing
+        type: string
+      status:
+        example: resolved
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
   spatialhub_backend_internal_api_contracts.EnrichBbox:
     properties:
       xmax:
@@ -302,6 +333,28 @@ definitions:
           type: string
         type: array
     type: object
+  spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse:
+    properties:
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingHeatProfile'
+        type: array
+      failed:
+        example: 2
+        type: integer
+      pending:
+        example: 10
+        type: integer
+      resolved:
+        example: 30
+        type: integer
+      status:
+        example: resolving
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
   spatialhub_backend_internal_api_contracts.ModelSummary:
     properties:
       country:
@@ -437,6 +490,45 @@ paths:
       security:
       - SessionAuth: []
       summary: List models for the authenticated user
+      tags:
+      - EnerPlanET
+  /models/{id}/heat-profiles:
+    get:
+      description: |-
+        Returns every building's resolved annual energy profile for a model, along with
+        resolution progress. Profiles are produced automatically whenever the model's
+        config is saved with a non-empty building list; poll this endpoint until status
+        is "completed" to show a progress bar. A building with status "failed" carries
+        error_message explaining why (no envelope match, BuEM rejected it, etc.) - that is
+        a per-building outcome, not an endpoint error.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get a model's per-building BuEM energy profiles
       tags:
       - EnerPlanET
   /v1/city2tabula/enrich:

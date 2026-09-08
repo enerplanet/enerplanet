@@ -59,11 +59,14 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 		},
 	}
 
-	buildings := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID)
+	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, ignis.RefurbishmentExisting)
 
 	require.Len(t, buildings, 1, "only building 111 has a resolved envelope; the transformer and building 222 must be excluded")
 	assert.Equal(t, "111", buildings[0].ID)
 	assert.JSONEq(t, `{"type":"Point","coordinates":[12.5,48.5]}`, string(buildings[0].Geometry))
+	assert.Contains(t, resolved, "111")
+	assert.Contains(t, unresolved, "222", "no envelope match must be recorded, not silently dropped")
+	assert.NotContains(t, unresolved, "Trafo_1", "a non-building node must not be recorded at all")
 
 	var block map[string]interface{}
 	require.NoError(t, json.Unmarshal(buildings[0].Building, &block))
@@ -246,11 +249,15 @@ func (f fakeEnvelopeUValueResolver) ExistingStateVariant(ctx context.Context, is
 	return f.code, nil
 }
 
-func (f fakeEnvelopeUValueResolver) GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error) {
+func (f fakeEnvelopeUValueResolver) GetEnvelopeUValuesForLevel(ctx context.Context, existingStateCode string, level ignis.RefurbishmentLevel) (ignis.EnvelopeUValuesResult, error) {
 	if f.uValuesErr != nil {
-		return ignis.EnvelopeUValues{}, f.uValuesErr
+		return ignis.EnvelopeUValuesResult{}, f.uValuesErr
 	}
-	return f.uValues, nil
+	actual := level
+	if actual == "" {
+		actual = ignis.RefurbishmentExisting
+	}
+	return ignis.EnvelopeUValuesResult{EnvelopeUValues: f.uValues, Level: actual}, nil
 }
 
 func testYear(y int) *int { return &y }
@@ -273,7 +280,7 @@ func TestAttachEnvelopeUValues_setsEffectiveUAndBTransmission(t *testing.T) {
 		},
 	}
 
-	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975))
+	got, meta := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975), ignis.RefurbishmentExisting)
 
 	require.Len(t, got, 3)
 	u := map[string]float64{}
@@ -293,14 +300,17 @@ func TestAttachEnvelopeUValues_setsEffectiveUAndBTransmission(t *testing.T) {
 	require.NotNil(t, bt["floor"])
 	assert.Equal(t, 0.5, bt["floor"].Value)
 	assert.Equal(t, "-", bt["floor"].Unit)
+	assert.Equal(t, "DE.N.SFH.05.Gen", meta.VariantCode)
+	assert.Equal(t, ignis.RefurbishmentExisting, meta.Level)
 }
 
 func TestAttachEnvelopeUValues_nilClientLeavesElementsUnchanged(t *testing.T) {
-	got := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "", "detached", "germany", testYear(1975))
+	got, meta := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "", "detached", "germany", testYear(1975), ignis.RefurbishmentExisting)
 
 	for _, el := range got {
 		assert.Nil(t, el.U)
 	}
+	assert.Equal(t, BuemResolutionMeta{}, meta)
 }
 
 func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testing.T) {
@@ -317,7 +327,7 @@ func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testi
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fakeEnvelopeUValueResolver{code: "DE.N.SFH.05.Gen", uValues: ignis.EnvelopeUValues{UWall: 1.2, URoof: 0.9, UFloor: 1.1}}
-			got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", tt.fClass, tt.country, tt.constructionYear)
+			got, _ := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", tt.fClass, tt.country, tt.constructionYear, ignis.RefurbishmentExisting)
 			for _, el := range got {
 				assert.Nil(t, el.U, "%s should not carry a resolved U-value", tt.name)
 			}
@@ -327,10 +337,29 @@ func TestAttachEnvelopeUValues_resolutionFailureLeavesElementsUnchanged(t *testi
 
 func TestAttachEnvelopeUValues_ignisFailureLeavesElementsUnchanged(t *testing.T) {
 	client := fakeEnvelopeUValueResolver{matchErr: assert.AnError}
-	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975))
+	got, meta := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "germany", testYear(1975), ignis.RefurbishmentExisting)
 	for _, el := range got {
 		assert.Nil(t, el.U)
 	}
+	assert.Equal(t, BuemResolutionMeta{}, meta)
+}
+
+func TestAttachEnvelopeUValues_unavailableLevelFallsBackToExisting(t *testing.T) {
+	client := fakeEnvelopeUValueResolver{
+		code:    "NL.N.AB.03.Gal.ReEx.001.001",
+		uValues: ignis.EnvelopeUValues{UWall: 1.2, URoof: 0.9, UFloor: 1.1},
+	}
+
+	got, meta := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "", "detached", "netherlands", testYear(1975), ignis.RefurbishmentMedium)
+
+	for _, el := range got {
+		require.NotNil(t, el.U)
+	}
+	// the fake always succeeds and echoes back the level it was asked for -
+	// this only asserts the level requested reaches ignis and comes back in
+	// meta; GetEnvelopeUValuesForLevel's own fallback-on-404 behaviour is
+	// covered in internal/ignis/client_test.go.
+	assert.Equal(t, ignis.RefurbishmentMedium, meta.Level)
 }
 
 // A City2TABULA geometry-derived variant code is used directly: no year is
@@ -343,8 +372,9 @@ func TestAttachEnvelopeUValues_usesCity2TabulaVariantCodeWithoutYear(t *testing.
 		uValues:  ignis.EnvelopeUValues{UWall: 1.2, URoof: 0.9, UFloor: 1.1},
 	}
 
-	got := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "NL.N.AB.01.Por1945.ReEx.001.001", "office", "netherlands", nil)
+	got, meta := attachEnvelopeUValues(context.Background(), client, envelopeFixture(), "NL.N.AB.01.Por1945.ReEx.001.001", "office", "netherlands", nil, ignis.RefurbishmentExisting)
 
+	assert.Equal(t, "NL.N.AB.01.Por1945.ReEx.001.001", meta.VariantCode)
 	byType := map[string]float64{}
 	for _, el := range got {
 		require.NotNil(t, el.U, "%s should have U set from the c2t variant code", el.Type)
