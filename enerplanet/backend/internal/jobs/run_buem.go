@@ -47,7 +47,7 @@ type RunBuemPayload struct {
 // the model's configured refurbishment level (config.refurbishmentLevel,
 // per-building override on top - see modelRefurbishmentLevel), so the
 // simulated demand itself reflects the chosen scenario, not just the
-// resolve_heat_profiles display.
+// resolve_demand_profiles display.
 // Envelope and weather resolution here is a temporary stand-in for a future
 // Orchestrator layer's dependency-resolution role; every outbound leg
 // (City2TABULA, weather-serve, ignis, buem-gateway) routes through TentaCron.
@@ -106,7 +106,7 @@ func HandleRunBuem(
 // attaches TABULA U-values (at refurbishmentLevel, per-building overrides
 // applied on top) to every buildable topology node, and calls buem-gateway.
 // Shared by HandleRunBuem (a full model calculation) and
-// HandleResolveHeatProfiles (the standalone per-building profile resolution
+// HandleResolveDemandProfiles (the standalone per-building profile resolution
 // triggered from UpdateModel), so there is one implementation of this
 // pipeline. resolved/unresolved are always populated, even when the
 // buem-gateway call itself is skipped or fails, so a caller that persists
@@ -324,7 +324,7 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 // that produced its U-values; unresolved maps a building node's osm_id (one
 // that IS a building, unlike a transformer node) to why it could not be sent.
 // Both exist for callers that persist per-building outcomes (see
-// HandleResolveHeatProfiles); HandleRunBuem's calculation-dispatch path
+// HandleResolveDemandProfiles); HandleRunBuem's calculation-dispatch path
 // ignores them, same behaviour as before this was split out.
 func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
 	resolved = make(map[string]BuemResolutionMeta)

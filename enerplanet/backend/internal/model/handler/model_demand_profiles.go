@@ -10,10 +10,10 @@ import (
 
 	"spatialhub_backend/internal/api/contracts"
 	backendModels "spatialhub_backend/internal/models"
-	"spatialhub_backend/internal/store/heatprofile"
+	"spatialhub_backend/internal/store/demandprofile"
 )
 
-// GetModelHeatProfiles godoc
+// GetModelDemandProfiles godoc
 //
 //	@Summary		Get a model's per-building BuEM energy profiles
 //	@Description	Returns every building's resolved annual energy profile for a model, along with
@@ -25,13 +25,13 @@ import (
 //	@Tags			EnerPlanET
 //	@Produce		json
 //	@Param			id	path		int	true	"Model ID"
-//	@Success		200	{object}	contracts.ModelHeatProfilesResponse
+//	@Success		200	{object}	contracts.ModelDemandProfilesResponse
 //	@Failure		403	{object}	contracts.ErrorResponse
 //	@Failure		404	{object}	contracts.ErrorResponse
 //	@Failure		500	{object}	contracts.ErrorResponse
 //	@Security		SessionAuth
-//	@Router			/models/{id}/heat-profiles [get]
-func (h *ModelHandler) GetModelHeatProfiles(c *gin.Context) {
+//	@Router			/models/{id}/demand-profiles [get]
+func (h *ModelHandler) GetModelDemandProfiles(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
 		return
@@ -50,29 +50,29 @@ func (h *ModelHandler) GetModelHeatProfiles(c *gin.Context) {
 
 	rows, err := h.profileStore.GetByModel(model.ID)
 	if err != nil {
-		httputil.InternalError(c, "failed to load heat profiles")
+		httputil.InternalError(c, "failed to load demand profiles")
 		return
 	}
 	counts, err := h.profileStore.GetStatusCounts(model.ID)
 	if err != nil {
-		httputil.InternalError(c, "failed to load heat profile status")
+		httputil.InternalError(c, "failed to load demand profile status")
 		return
 	}
 
-	c.JSON(http.StatusOK, contracts.ModelHeatProfilesResponse{
-		Status:    overallHeatProfileStatus(counts),
+	c.JSON(http.StatusOK, contracts.ModelDemandProfilesResponse{
+		Status:    overallDemandProfileStatus(counts),
 		Total:     counts.Total(),
 		Resolved:  counts.Resolved,
 		Pending:   counts.Pending,
 		Failed:    counts.Failed,
-		Buildings: mapHeatProfiles(rows),
+		Buildings: mapDemandProfiles(rows),
 	})
 }
 
-// overallHeatProfileStatus summarizes a model's resolution run from its row
+// overallDemandProfileStatus summarizes a model's resolution run from its row
 // counts: idle (nothing tracked yet), resolving (some rows still pending), or
 // completed (every row reached a terminal outcome).
-func overallHeatProfileStatus(counts heatprofile.StatusCounts) string {
+func overallDemandProfileStatus(counts demandprofile.StatusCounts) string {
 	switch {
 	case counts.Total() == 0:
 		return "idle"
@@ -83,10 +83,10 @@ func overallHeatProfileStatus(counts heatprofile.StatusCounts) string {
 	}
 }
 
-func mapHeatProfiles(rows []backendModels.BuildingHeatProfile) []contracts.BuildingHeatProfile {
-	out := make([]contracts.BuildingHeatProfile, len(rows))
+func mapDemandProfiles(rows []backendModels.BuildingDemandProfile) []contracts.BuildingDemandProfile {
+	out := make([]contracts.BuildingDemandProfile, len(rows))
 	for i, r := range rows {
-		out[i] = contracts.BuildingHeatProfile{
+		out[i] = contracts.BuildingDemandProfile{
 			OSMID:              r.OSMID,
 			Status:             r.Status,
 			TabulaVariantCode:  r.TabulaVariantCode,

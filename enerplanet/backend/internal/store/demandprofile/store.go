@@ -1,7 +1,7 @@
-// Package heatprofile persists each building's BuEM-resolved annual energy
-// profile (internal/models.BuildingHeatProfile), one row per (model_id,
+// Package demandprofile persists each building's BuEM-resolved annual energy
+// profile (internal/models.BuildingDemandProfile), one row per (model_id,
 // osm_id), so the frontend reads it without re-running BuEM.
-package heatprofile
+package demandprofile
 
 import (
 	"time"
@@ -12,12 +12,12 @@ import (
 	"spatialhub_backend/internal/models"
 )
 
-// Store handles database operations for building heat profiles.
+// Store handles database operations for building demand profiles.
 type Store struct {
 	db *gorm.DB
 }
 
-// NewStore creates a new heatprofile Store.
+// NewStore creates a new demandprofile Store.
 func NewStore(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
@@ -32,12 +32,12 @@ func (s *Store) ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel st
 	if len(osmIDs) == 0 {
 		return nil
 	}
-	rows := make([]models.BuildingHeatProfile, len(osmIDs))
+	rows := make([]models.BuildingDemandProfile, len(osmIDs))
 	for i, osmID := range osmIDs {
-		rows[i] = models.BuildingHeatProfile{
+		rows[i] = models.BuildingDemandProfile{
 			ModelID:            modelID,
 			OSMID:              osmID,
-			Status:             models.HeatProfileStatusPending,
+			Status:             models.DemandProfileStatusPending,
 			RefurbishmentLevel: refurbishmentLevel,
 		}
 	}
@@ -54,7 +54,7 @@ func (s *Store) ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel st
 
 // ResolvedProfile is one building's resolved annual energy totals, plus the
 // full buem-gateway summary block for anything beyond them. KitchenKwhA is
-// kWh_gas, the other totals kWh - see models.BuildingHeatProfile.
+// kWh_gas, the other totals kWh - see models.BuildingDemandProfile.
 type ResolvedProfile struct {
 	TabulaVariantCode  string
 	RefurbishmentLevel string
@@ -70,10 +70,10 @@ type ResolvedProfile struct {
 // SaveResolved upserts a building's resolved profile.
 func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) error {
 	now := time.Now().UTC()
-	row := models.BuildingHeatProfile{
+	row := models.BuildingDemandProfile{
 		ModelID:            modelID,
 		OSMID:              osmID,
-		Status:             models.HeatProfileStatusResolved,
+		Status:             models.DemandProfileStatusResolved,
 		TabulaVariantCode:  &p.TabulaVariantCode,
 		RefurbishmentLevel: p.RefurbishmentLevel,
 		BuildingType:       nilIfEmpty(p.BuildingType),
@@ -100,10 +100,10 @@ func (s *Store) SaveResolved(modelID uint, osmID string, p ResolvedProfile) erro
 // match, no weather, or BuEM itself rejected it), with reason recorded for
 // the frontend to display - not a job failure, see run_buem's mergeBuemResults.
 func (s *Store) SaveFailed(modelID uint, osmID, reason string) error {
-	row := models.BuildingHeatProfile{
+	row := models.BuildingDemandProfile{
 		ModelID:      modelID,
 		OSMID:        osmID,
-		Status:       models.HeatProfileStatusFailed,
+		Status:       models.DemandProfileStatusFailed,
 		ErrorMessage: &reason,
 	}
 	return s.db.Clauses(clause.OnConflict{
@@ -112,9 +112,9 @@ func (s *Store) SaveFailed(modelID uint, osmID, reason string) error {
 	}).Create(&row).Error
 }
 
-// GetByModel returns every building heat profile row for a model.
-func (s *Store) GetByModel(modelID uint) ([]models.BuildingHeatProfile, error) {
-	var rows []models.BuildingHeatProfile
+// GetByModel returns every building demand profile row for a model.
+func (s *Store) GetByModel(modelID uint) ([]models.BuildingDemandProfile, error) {
+	var rows []models.BuildingDemandProfile
 	err := s.db.Where("model_id = ?", modelID).Find(&rows).Error
 	return rows, err
 }
@@ -138,7 +138,7 @@ func (s *Store) GetStatusCounts(modelID uint) (StatusCounts, error) {
 		Status string
 		Count  int64
 	}
-	if err := s.db.Model(&models.BuildingHeatProfile{}).
+	if err := s.db.Model(&models.BuildingDemandProfile{}).
 		Select("status, count(*) as count").
 		Where("model_id = ?", modelID).
 		Group("status").
@@ -148,11 +148,11 @@ func (s *Store) GetStatusCounts(modelID uint) (StatusCounts, error) {
 	var counts StatusCounts
 	for _, r := range rows {
 		switch r.Status {
-		case models.HeatProfileStatusPending:
+		case models.DemandProfileStatusPending:
 			counts.Pending = r.Count
-		case models.HeatProfileStatusResolved:
+		case models.DemandProfileStatusResolved:
 			counts.Resolved = r.Count
-		case models.HeatProfileStatusFailed:
+		case models.DemandProfileStatusFailed:
 			counts.Failed = r.Count
 		}
 	}

@@ -10,7 +10,7 @@ import (
 
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/ignis"
-	"spatialhub_backend/internal/store/heatprofile"
+	"spatialhub_backend/internal/store/demandprofile"
 )
 
 // savedProfile is what fakeProfileStore recorded for one osm_id, flattened
@@ -26,8 +26,8 @@ type savedProfile struct {
 	Reason       string
 }
 
-// fakeProfileStore is a hand-rolled heatProfileStore so
-// HandleResolveHeatProfiles/saveResolvedProfile can be tested without a
+// fakeProfileStore is a hand-rolled demandProfileStore so
+// HandleResolveDemandProfiles/saveResolvedProfile can be tested without a
 // database.
 type fakeProfileStore struct {
 	saved map[string]savedProfile
@@ -41,7 +41,7 @@ func (f *fakeProfileStore) ResetForRun(modelID uint, osmIDs []string, refurbishm
 	return nil
 }
 
-func (f *fakeProfileStore) SaveResolved(modelID uint, osmID string, p heatprofile.ResolvedProfile) error {
+func (f *fakeProfileStore) SaveResolved(modelID uint, osmID string, p demandprofile.ResolvedProfile) error {
 	f.saved[osmID] = savedProfile{
 		Status:       "resolved",
 		VariantCode:  p.TabulaVariantCode,

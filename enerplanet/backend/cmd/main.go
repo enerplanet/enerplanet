@@ -261,7 +261,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
-	mux.HandleFunc(jobs.TypeResolveHeatProfiles, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeResolveDemandProfiles, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
@@ -812,7 +812,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
-	api.GET(routeModelByID+"/heat-profiles", modelHandler.GetModelHeatProfiles)
+	api.GET(routeModelByID+"/demand-profiles", modelHandler.GetModelDemandProfiles)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
