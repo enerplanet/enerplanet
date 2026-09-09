@@ -83,7 +83,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/models/{id}/heat-profiles": {
+        "/models/{id}/demand-profiles": {
             "get": {
                 "security": [
                     {
@@ -111,7 +111,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse"
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse"
                         }
                     },
                     "403": {
@@ -519,7 +519,7 @@ const docTemplate = `{
                 }
             }
         },
-        "spatialhub_backend_internal_api_contracts.BuildingHeatProfile": {
+        "spatialhub_backend_internal_api_contracts.BuildingDemandProfile": {
             "type": "object",
             "properties": {
                 "building_type": {
@@ -933,13 +933,13 @@ const docTemplate = `{
                 }
             }
         },
-        "spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse": {
+        "spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse": {
             "type": "object",
             "properties": {
                 "buildings": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingHeatProfile"
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile"
                     }
                 },
                 "failed": {

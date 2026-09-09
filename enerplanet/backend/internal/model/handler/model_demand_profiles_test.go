@@ -6,24 +6,24 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	backendModels "spatialhub_backend/internal/models"
-	"spatialhub_backend/internal/store/heatprofile"
+	"spatialhub_backend/internal/store/demandprofile"
 )
 
-func TestOverallHeatProfileStatus(t *testing.T) {
-	assert.Equal(t, "idle", overallHeatProfileStatus(heatprofile.StatusCounts{}))
-	assert.Equal(t, "resolving", overallHeatProfileStatus(heatprofile.StatusCounts{Pending: 1, Resolved: 5}))
-	assert.Equal(t, "completed", overallHeatProfileStatus(heatprofile.StatusCounts{Resolved: 5, Failed: 1}))
+func TestOverallDemandProfileStatus(t *testing.T) {
+	assert.Equal(t, "idle", overallDemandProfileStatus(demandprofile.StatusCounts{}))
+	assert.Equal(t, "resolving", overallDemandProfileStatus(demandprofile.StatusCounts{Pending: 1, Resolved: 5}))
+	assert.Equal(t, "completed", overallDemandProfileStatus(demandprofile.StatusCounts{Resolved: 5, Failed: 1}))
 }
 
-func TestMapHeatProfiles(t *testing.T) {
+func TestMapDemandProfiles(t *testing.T) {
 	heating := 4823.5
 	code := "DE.N.SFH.05.Gen.ReEx.001.001"
-	rows := []backendModels.BuildingHeatProfile{
+	rows := []backendModels.BuildingDemandProfile{
 		{OSMID: "111", Status: "resolved", TabulaVariantCode: &code, RefurbishmentLevel: "existing", HeatingKwhA: &heating},
 		{OSMID: "222", Status: "pending", RefurbishmentLevel: "existing"},
 	}
 
-	got := mapHeatProfiles(rows)
+	got := mapDemandProfiles(rows)
 
 	require := assert.New(t)
 	require.Len(got, 2)

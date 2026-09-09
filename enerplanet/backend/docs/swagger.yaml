@@ -55,7 +55,7 @@ definitions:
       building:
         $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding'
     type: object
-  spatialhub_backend_internal_api_contracts.BuildingHeatProfile:
+  spatialhub_backend_internal_api_contracts.BuildingDemandProfile:
     properties:
       building_type:
         description: |-
@@ -349,11 +349,11 @@ definitions:
           type: string
         type: array
     type: object
-  spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse:
+  spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse:
     properties:
       buildings:
         items:
-          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingHeatProfile'
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile'
         type: array
       failed:
         example: 2
@@ -508,7 +508,7 @@ paths:
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
-  /models/{id}/heat-profiles:
+  /models/{id}/demand-profiles:
     get:
       description: |-
         Returns every building's resolved annual energy profile for a model, along with
@@ -529,7 +529,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelHeatProfilesResponse'
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse'
         "403":
           description: Forbidden
           schema:

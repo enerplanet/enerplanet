@@ -1,4 +1,4 @@
-package heatprofile
+package demandprofile
 
 import (
 	"testing"
@@ -23,7 +23,7 @@ func TestGetByModel(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "model_id", "osm_id", "status"}).
 		AddRow(1, 42, "12345", "resolved").
 		AddRow(2, 42, "12346", "pending")
-	mock.ExpectQuery(`SELECT \* FROM "building_heat_profiles" WHERE model_id = \$1`).
+	mock.ExpectQuery(`SELECT \* FROM "building_demand_profiles" WHERE model_id = \$1`).
 		WithArgs(42).
 		WillReturnRows(rows)
 
@@ -43,7 +43,7 @@ func TestGetStatusCounts(t *testing.T) {
 		AddRow("resolved", 30).
 		AddRow("pending", 8).
 		AddRow("failed", 2)
-	mock.ExpectQuery(`SELECT status, count\(\*\) as count FROM "building_heat_profiles" WHERE model_id = \$1 GROUP BY "status"`).
+	mock.ExpectQuery(`SELECT status, count\(\*\) as count FROM "building_demand_profiles" WHERE model_id = \$1 GROUP BY "status"`).
 		WithArgs(42).
 		WillReturnRows(rows)
 
@@ -59,7 +59,7 @@ func TestGetStatusCounts_noRows(t *testing.T) {
 	db, mock := testutil.NewMockDB(t)
 	store := NewStore(db)
 
-	mock.ExpectQuery(`SELECT status, count\(\*\) as count FROM "building_heat_profiles" WHERE model_id = \$1 GROUP BY "status"`).
+	mock.ExpectQuery(`SELECT status, count\(\*\) as count FROM "building_demand_profiles" WHERE model_id = \$1 GROUP BY "status"`).
 		WithArgs(99).
 		WillReturnRows(sqlmock.NewRows(nil))
 

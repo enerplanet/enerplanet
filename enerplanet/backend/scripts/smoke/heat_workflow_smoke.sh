@@ -161,7 +161,7 @@ else
   fail "5. enrich: resolved=$resolved with_variant_code=$with_code with_default_year=$with_year (status $(printf '%s' "$body" | jq -r '.status'))"
 fi
 
-# ---- 6. model create -> auto-resolve -> heat profiles --------------------
+# ---- 6. model create -> auto-resolve -> demand profiles --------------------
 # One fixture building is sent as a bakery (with an occupant count) to cover
 # BuEM's service occupancy path; the Loenen fixture has no real service
 # building, so its f_class is overridden here rather than in the fixture.
@@ -178,16 +178,16 @@ else
 fi
 if [ -n "$MODEL_ID" ]; then
   echo "info  waiting for auto-resolve of model $MODEL_ID"
-  body="$(poll_until "heat profiles" '.status == "completed"' GET "/api/models/$MODEL_ID/heat-profiles")" \
-    || fail "6b. heat profiles for model $MODEL_ID did not complete within ${POLL_TIMEOUT_S}s (status $(printf '%s' "$body" | jq -r '.status'), resolved $(printf '%s' "$body" | jq -r '.resolved')/$(printf '%s' "$body" | jq -r '.total'))"
+  body="$(poll_until "demand profiles" '.status == "completed"' GET "/api/models/$MODEL_ID/demand-profiles")" \
+    || fail "6b. demand profiles for model $MODEL_ID did not complete within ${POLL_TIMEOUT_S}s (status $(printf '%s' "$body" | jq -r '.status'), resolved $(printf '%s' "$body" | jq -r '.resolved')/$(printf '%s' "$body" | jq -r '.total'))"
   total="$(printf '%s' "$body" | jq -r '.total')"; resolved="$(printf '%s' "$body" | jq -r '.resolved')"; failed_n="$(printf '%s' "$body" | jq -r '.failed')"
   core_ok="$(printf '%s' "$body" | jq -r '[.buildings[] | select(.status=="resolved") | select(.heating_kwh_a != null and .cooling_kwh_a != null and .electricity_kwh_a != null)] | length')"
   if [ "${resolved:-0}" -gt 0 ] && [ "$core_ok" = "$resolved" ]; then
-    pass "6b. GET /models/$MODEL_ID/heat-profiles -> $resolved/$total resolved with heating/cooling/electricity ($failed_n failed)"
+    pass "6b. GET /models/$MODEL_ID/demand-profiles -> $resolved/$total resolved with heating/cooling/electricity ($failed_n failed)"
     printf '%s' "$body" | jq -r '.buildings[] | select(.status=="resolved") | "      \(.osm_id)  \(.building_type // "-")  \(.tabula_variant_code // "-")  heat \(.heating_kwh_a) cool \(.cooling_kwh_a) elec \(.electricity_kwh_a) hw \(.hot_water_kwh_a // "-") kitchen \(.kitchen_kwh_a // "-") kWh/a"' | head -n 6
     printf '%s' "$body" | jq -r '.buildings[] | select(.status=="failed") | "      \(.osm_id)  failed: \(.error_message // "-")"' | head -n 6
   else
-    fail "6b. heat profiles: resolved=$resolved of $total, with core vectors=$core_ok, failed=$failed_n"
+    fail "6b. demand profiles: resolved=$resolved of $total, with core vectors=$core_ok, failed=$failed_n"
     printf '%s' "$body" | jq -r '.buildings[] | "      \(.osm_id)  \(.status)  \(.error_message // "")"' | head -n 10
   fi
   # service building: modelled with BuEM's service occupancy profile, so

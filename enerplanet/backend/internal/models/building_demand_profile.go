@@ -6,15 +6,15 @@ import (
 	"gorm.io/datatypes"
 )
 
-// Building heat profile status values. A row starts pending when a
+// Building demand profile status values. A row starts pending when a
 // resolution run begins, then moves to exactly one terminal state.
 const (
-	HeatProfileStatusPending  = "pending"
-	HeatProfileStatusResolved = "resolved"
-	HeatProfileStatusFailed   = "failed"
+	DemandProfileStatusPending  = "pending"
+	DemandProfileStatusResolved = "resolved"
+	DemandProfileStatusFailed   = "failed"
 )
 
-// BuildingHeatProfile is one building's BuEM-resolved annual energy profile,
+// BuildingDemandProfile is one building's BuEM-resolved annual energy profile,
 // persisted so the frontend reads it without re-running BuEM.
 //
 // The *KwhA totals are annual kWh, except KitchenKwhA which is kWh_gas: BuEM
@@ -28,10 +28,10 @@ const (
 // no such field, so every request gets the "electric" default (cooking then
 // sits inside ElectricityKwhA). Send cooking_carrier once buem-gateway's
 // request schema exposes it.
-type BuildingHeatProfile struct {
+type BuildingDemandProfile struct {
 	ID      uint   `gorm:"primaryKey" json:"id"`
-	ModelID uint   `gorm:"not null;index;uniqueIndex:idx_building_heat_profiles_model_osm" json:"model_id"`
-	OSMID   string `gorm:"size:255;not null;uniqueIndex:idx_building_heat_profiles_model_osm" json:"osm_id"`
+	ModelID uint   `gorm:"not null;index;uniqueIndex:idx_building_demand_profiles_model_osm" json:"model_id"`
+	OSMID   string `gorm:"size:255;not null;uniqueIndex:idx_building_demand_profiles_model_osm" json:"osm_id"`
 
 	Status            string  `gorm:"size:32;not null;default:pending;index" json:"status"`
 	TabulaVariantCode *string `gorm:"size:255" json:"tabula_variant_code,omitempty"`
@@ -56,6 +56,6 @@ type BuildingHeatProfile struct {
 	UpdatedAt  time.Time  `json:"updated_at"`
 }
 
-func (BuildingHeatProfile) TableName() string {
-	return "building_heat_profiles"
+func (BuildingDemandProfile) TableName() string {
+	return "building_demand_profiles"
 }

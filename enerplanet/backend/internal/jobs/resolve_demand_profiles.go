@@ -15,32 +15,32 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/payload"
-	"spatialhub_backend/internal/store/heatprofile"
+	"spatialhub_backend/internal/store/demandprofile"
 	"spatialhub_backend/internal/weather"
 )
 
-// TypeResolveHeatProfiles is the auto-resolve job's asynq task type. Enqueued
+// TypeResolveDemandProfiles is the auto-resolve job's asynq task type. Enqueued
 // by UpdateModel/CreateModel whenever a saved config carries a building list
 // (see internal/model/handler/model.go), independent of StartCalculation.
-const TypeResolveHeatProfiles = "resolve_heat_profiles"
+const TypeResolveDemandProfiles = "resolve_demand_profiles"
 
-// ResolveHeatProfilesPayload is the resolve_heat_profiles job payload: just a
+// ResolveDemandProfilesPayload is the resolve_demand_profiles job payload: just a
 // model id. Unlike run_buem, this job rebuilds the calculation payload itself
 // from the model's current, persisted Config rather than carrying a
 // snapshot, since it can fire many times across a model's life.
-type ResolveHeatProfilesPayload struct {
+type ResolveDemandProfilesPayload struct {
 	ModelID uint `json:"model_id"`
 }
 
-// heatProfileStore is the persistence surface HandleResolveHeatProfiles
-// needs. Satisfied by *heatprofile.Store; faked in tests.
-type heatProfileStore interface {
+// demandProfileStore is the persistence surface HandleResolveDemandProfiles
+// needs. Satisfied by *demandprofile.Store; faked in tests.
+type demandProfileStore interface {
 	ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel string) error
-	SaveResolved(modelID uint, osmID string, p heatprofile.ResolvedProfile) error
+	SaveResolved(modelID uint, osmID string, p demandprofile.ResolvedProfile) error
 	SaveFailed(modelID uint, osmID, reason string) error
 }
 
-// HandleResolveHeatProfiles resolves and persists every building's BuEM
+// HandleResolveDemandProfiles resolves and persists every building's BuEM
 // annual energy profile for a model, independent of StartCalculation/
 // run_buem, so a building's profile is ready before the user ever opens its
 // dialog. Reuses ResolveBuemForModel, the same envelope/weather/BuEM
@@ -49,7 +49,7 @@ type heatProfileStore interface {
 // A resolution problem (buem-gateway unreachable, no buildings in the
 // topology) is recorded on the affected rows and never fails the job itself
 // - there is no model status for this job to leave stuck, unlike run_buem.
-func HandleResolveHeatProfiles(
+func HandleResolveDemandProfiles(
 	ctx context.Context,
 	t *asynq.Task,
 	db *gorm.DB,
@@ -58,18 +58,18 @@ func HandleResolveHeatProfiles(
 	weatherProvider string,
 	ignisClient *ignis.Client,
 	buemClient *buem.Client,
-	profileStore heatProfileStore,
+	profileStore demandProfileStore,
 ) (retErr error) {
-	log := logger.ForComponent("job:resolve_heat_profiles")
+	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("PANIC in HandleResolveHeatProfiles: %v", r)
-			retErr = fmt.Errorf("panic in resolve_heat_profiles: %v", r)
+			log.Errorf("PANIC in HandleResolveDemandProfiles: %v", r)
+			retErr = fmt.Errorf("panic in resolve_demand_profiles: %v", r)
 		}
 	}()
 
-	var rp ResolveHeatProfilesPayload
+	var rp ResolveDemandProfilesPayload
 	if err := json.Unmarshal(t.Payload(), &rp); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
@@ -93,7 +93,7 @@ func HandleResolveHeatProfiles(
 
 	refurbLevel := modelRefurbishmentLevel(model.Config)
 	if err := profileStore.ResetForRun(rp.ModelID, osmIDs, string(refurbLevel)); err != nil {
-		return fmt.Errorf("failed to reset heat profile rows for model %d: %w", rp.ModelID, err)
+		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", rp.ModelID, err)
 	}
 
 	results, resolved, unresolved, err := ResolveBuemForModel(ctx, log, c2t, wx, weatherProvider, ignisClient, buemClient, model, calcPayload, refurbLevel)
@@ -127,7 +127,7 @@ func HandleResolveHeatProfiles(
 // saveResolvedProfile records one building's outcome: a BuEM rejection (no
 // result, or a result carrying Error) is saved as failed with BuEM's reason;
 // otherwise the annual energy summary is extracted and saved as resolved.
-func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, modelID uint, osmID string, meta BuemResolutionMeta, result buem.BuildingResult) {
+func saveResolvedProfile(log *logrus.Entry, profileStore demandProfileStore, modelID uint, osmID string, meta BuemResolutionMeta, result buem.BuildingResult) {
 	if result.ID == "" || result.Error != "" || len(result.BUEM) == 0 {
 		reason := "BuEM rejected this building"
 		if result.Error != "" {
@@ -148,7 +148,7 @@ func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, model
 		return
 	}
 
-	if err := profileStore.SaveResolved(modelID, osmID, heatprofile.ResolvedProfile{
+	if err := profileStore.SaveResolved(modelID, osmID, demandprofile.ResolvedProfile{
 		TabulaVariantCode:  meta.VariantCode,
 		RefurbishmentLevel: string(meta.Level),
 		BuildingType:       meta.BuildingType,
@@ -165,7 +165,7 @@ func saveResolvedProfile(log *logrus.Entry, profileStore heatProfileStore, model
 
 // energySummary is the annual totals of one BuEM result. Kitchen is in
 // kWh_gas (a gas fuel channel), the others in kWh - see
-// models.BuildingHeatProfile.
+// models.BuildingDemandProfile.
 type energySummary struct {
 	Heating, Cooling, Electricity, HotWater, Kitchen *float64
 }
