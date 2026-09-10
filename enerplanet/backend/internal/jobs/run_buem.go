@@ -89,11 +89,15 @@ func HandleRunBuem(
 		return nil
 	}
 
-	results, _, _, err := ResolveBuemForModel(ctx, log, c2t, wx, weatherProvider, ignisClient, buemClient, model, rp.Payload, modelRefurbishmentLevel(model.Config))
-	if err != nil {
-		return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
+	if ModelHeatSource(model.Config) == HeatSourceEstimate {
+		log.Infof("model %d: heatSource=estimate, skipping BuEM; the payload's estimate and manual heat demand are dispatched as they are", rp.ModelID)
+	} else {
+		results, _, _, err := ResolveBuemForModel(ctx, log, c2t, wx, weatherProvider, ignisClient, buemClient, model, rp.Payload, modelRefurbishmentLevel(model.Config))
+		if err != nil {
+			return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
+		}
+		mergeBuemResults(log, rp.Payload.Topology, results)
 	}
-	mergeBuemResults(log, rp.Payload.Topology, results)
 
 	if err := enqueueDispatchModelCalculation(asynqClient, rp); err != nil {
 		return failRunBuem(ctx, db, log, notificationService, model, rp, err)

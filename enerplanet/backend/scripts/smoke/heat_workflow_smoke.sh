@@ -206,6 +206,46 @@ if [ -n "$MODEL_ID" ]; then
   fi
 fi
 
-# ---- 7. summary ----------------------------------------------------------
+# ---- 7. heatSource=estimate: neither BuEM step runs --------------------
+# A model with config.heatSource=estimate must resolve no demand profiles
+# at creation and must reach the calculation dispatch without touching
+# buem-gateway, so the gateway is stopped for this step. Needs docker.
+if command -v docker >/dev/null && docker inspect buem-gateway >/dev/null 2>&1; then
+  est_config="$(jq -c --argjson b "$(cat "$FIXTURE")" -n '{buildings: $b, energyVectors: ["electricity"], heatSource: "estimate"}')"
+  est_payload="$(jq -c -n --argjson coords "$LOENEN_POLYGON" --argjson cfg "$est_config" \
+    '{title: ("heat workflow smoke estimate " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
+  body="$(request POST /api/models "$est_payload")"
+  EST_MODEL_ID="$(printf '%s' "$body" | jq -r '.data.id // empty')"
+  if [ -n "$EST_MODEL_ID" ]; then
+    sleep 8
+    body="$(request GET "/api/models/$EST_MODEL_ID/demand-profiles")"
+    if printf '%s' "$body" | jq -e '.status == "idle" and .total == 0' >/dev/null; then
+      pass "7a. heatSource=estimate model $EST_MODEL_ID: no demand profiles resolved at creation"
+    else
+      fail "7a. heatSource=estimate model $EST_MODEL_ID: expected idle/0, got $(printf '%s' "$body" | jq -c '{status,total}')"
+    fi
+    docker stop buem-gateway >/dev/null && echo "info  buem-gateway stopped for the estimate calculation"
+    body="$(request POST "/api/calculation/start/$EST_MODEL_ID")"
+    if [ "$HTTP_CODE" = "200" ]; then
+      sleep 20
+      status="$(request GET "/api/models/$EST_MODEL_ID" | jq -r '.data.status')"
+      if [ "$status" != "failed" ] && [ -n "$status" ]; then
+        pass "7b. calculation with heatSource=estimate and buem-gateway down: model status '$status', BuEM step skipped"
+      else
+        fail "7b. calculation with heatSource=estimate: model status '$status' (a BuEM attempt against the stopped gateway would fail the model)"
+      fi
+    else
+      fail "7b. POST /api/calculation/start/$EST_MODEL_ID: HTTP $HTTP_CODE ${body:0:200}"
+    fi
+    docker start buem-gateway >/dev/null && echo "info  buem-gateway started again"
+    request DELETE "/api/models/$EST_MODEL_ID" >/dev/null
+  else
+    fail "7. POST /api/models (heatSource=estimate): HTTP $HTTP_CODE ${body:0:200}"
+  fi
+else
+  warn "7. docker or the buem-gateway container not reachable, skipping the heatSource=estimate step"
+fi
+
+# ---- 8. summary ----------------------------------------------------------
 echo "== done: $FAILED failure(s) =="
 [ "$FAILED" -eq 0 ]
