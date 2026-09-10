@@ -40,6 +40,7 @@ help:
 	@echo "  make init-keycloak      Re-initialize Keycloak"
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
+	@echo "  make tentacron               Start the tentacron stack (tentacron, ignis, buem, meme)"
 	@echo "  make sonar              Run SonarQube analysis"
 
 # ==============================================================================
@@ -47,7 +48,7 @@ help:
 # ==============================================================================
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo tentacron-stack
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 
@@ -169,6 +170,10 @@ setup-repos:
 	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
 	@[ -d dependencies/enerplanet-pylovo ] && (cd dependencies/enerplanet-pylovo && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git lfs pull
 	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
+	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
+	@[ -d dependencies/$(BUEM_DIR) ] && (cd dependencies/$(BUEM_DIR) && git pull) || git clone $(BUEM_REPO) dependencies/$(BUEM_DIR)
+	@[ -d dependencies/$(MEME_DIR) ] && (cd dependencies/$(MEME_DIR) && git pull) || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
+  @[ -d dependencies/$(TENTACRON_DIR) ] && (cd dependencies/$(TENTACRON_DIR) && git pull) || git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR)
 
 .PHONY: env-setup
 env-setup:
@@ -228,6 +233,45 @@ webservice:
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev
+
+
+.PHONY: tentacron-stack
+tentacron-stack: tentacron-network ignis buem meme tentacron
+	@echo "$(GREEN)TentaCron stack up. ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
+
+.PHONY: tentacron-network
+tentacron-network:
+	@docker network create tentacron-net 2>/dev/null || true
+
+.PHONY: tentacron
+tentacron: tentacron-network
+	@cp tentacron.yaml dependencies/$(TENTACRON_DIR)/config.yaml
+	@cd dependencies/$(TENTACRON_DIR)/environment && make build ENV=dev
+	@cd dependencies/$(TENTACRON_DIR)/environment && CONFIG=config.yaml docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.override.yml up -d api
+	@docker network connect tentacron-net tentacron-env-api-1 2>/dev/null || true
+	@echo "$(GREEN)TentaCron up on http://localhost:8400, attached to 'tentacron-net'$(NC)"
+
+.PHONY: ignis
+ignis: tentacron-network
+	@cd dependencies/$(IGNIS_DIR)/environment && HOST_HTTPS_PORT=$(IGNIS_PORT) docker compose -f docker-compose.quickstart.yml up -d
+	@cd dependencies/$(IGNIS_DIR)/environment && [ -f .ignis-seeded ] || { HOST_HTTPS_PORT=$(IGNIS_PORT) docker compose -f docker-compose.quickstart.yml --profile seed run --rm ignis-build-db >/dev/null 2>&1 || true; touch .ignis-seeded; }
+	@docker network connect tentacron-net ignis-app 2>/dev/null || true
+	@docker network connect tentacron-net ignis-reverse-proxy 2>/dev/null || true
+	@echo "$(GREEN)Ignis up on https://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: buem
+buem: tentacron-network
+	@cd dependencies/$(BUEM_DIR)/environment && HOST_HTTPS_PORT=$(BUEM_PORT) docker compose -f docker-compose.quickstart.yml up -d
+	@docker network connect tentacron-net buem-reverse-proxy 2>/dev/null || true
+	@docker network connect tentacron-net buem-gateway 2>/dev/null || true
+	@docker network connect tentacron-net buem-model 2>/dev/null || true
+	@echo "$(GREEN)BuEM up on https://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: meme
+meme: tentacron-network
+	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.override.yml up -d --build api
+	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
+	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
 opentech-db: .opentech-db-setup
