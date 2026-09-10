@@ -54,6 +54,7 @@ func HandleResolveDemandProfiles(
 	t *asynq.Task,
 	db *gorm.DB,
 	c2t *city2tabula.Client,
+	c2tRuns city2tabulaRunStore,
 	wx *weather.Client,
 	weatherProvider string,
 	ignisClient *ignis.Client,
@@ -101,7 +102,7 @@ func HandleResolveDemandProfiles(
 		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", rp.ModelID, err)
 	}
 
-	results, resolved, unresolved, err := ResolveBuemForModel(ctx, log, c2t, wx, weatherProvider, ignisClient, buemClient, model, calcPayload, refurbLevel)
+	results, resolved, unresolved, err := ResolveBuemForModel(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, buemClient, model, calcPayload, refurbLevel)
 	if err != nil {
 		log.Warnf("model %d: buem-gateway call failed, marking every building failed: %v", rp.ModelID, err)
 		for _, osmID := range osmIDs {

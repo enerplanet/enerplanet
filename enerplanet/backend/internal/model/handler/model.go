@@ -120,6 +120,30 @@ func (h *ModelHandler) triggerDemandProfileResolve(modelID uint, config json.Raw
 	}
 }
 
+// triggerCity2TabulaRun enqueues a trigger_city2tabula_run job for a model
+// whose polygon was just created or changed, so City2TABULA prepares the
+// area's 3D data before the first calculation or per-building request. No
+// retries: a City2TABULA run is not idempotent, and run_buem still triggers
+// one itself when none is recorded. Skipped for heatSource=estimate.
+func (h *ModelHandler) triggerCity2TabulaRun(modelID uint, config json.RawMessage) {
+	if h.asynqClient == nil || jobs.ModelHeatSource(config) == jobs.HeatSourceEstimate {
+		return
+	}
+	body, err := json.Marshal(jobs.TriggerCity2TabulaRunPayload{ModelID: modelID})
+	if err != nil {
+		logger.ForComponent("model").Errorf("failed to marshal trigger_city2tabula_run payload model_id=%d err=%v", modelID, err)
+		return
+	}
+	if _, err := h.asynqClient.Enqueue(asynq.NewTask(jobs.TypeTriggerCity2TabulaRun, body),
+		asynq.Queue("buem"),
+		asynq.MaxRetry(0),
+		asynq.Timeout(5*time.Minute),
+		asynq.Retention(24*time.Hour),
+	); err != nil {
+		logger.ForComponent("model").Errorf("failed to enqueue trigger_city2tabula_run model_id=%d err=%v", modelID, err)
+	}
+}
+
 func (h *ModelHandler) CreateModel(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
@@ -253,6 +277,7 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	model.CreatedAt = modelMap["created_at"].(time.Time)
 	model.UpdatedAt = modelMap["updated_at"].(time.Time)
 
+	h.triggerCity2TabulaRun(model.ID, req.Config)
 	if len(req.Config) > 0 {
 		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}
@@ -413,6 +438,13 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 		}
 	}
 
+	if len(req.Coordinates) > 0 {
+		config := req.Config
+		if len(config) == 0 {
+			config = json.RawMessage(model.Config)
+		}
+		h.triggerCity2TabulaRun(model.ID, config)
+	}
 	if len(req.Config) > 0 {
 		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}

@@ -14,11 +14,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	commonModels "platform.local/common/pkg/models"
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/tentacron"
 )
+
+// fakeRunStore is a hand-rolled city2tabulaRunStore.
+type fakeRunStore struct {
+	rec    *models.ModelCity2TabulaRun
+	saved  []string
+	status []string
+}
+
+func (f *fakeRunStore) Save(modelID uint, runID, country, status string) error {
+	f.saved = append(f.saved, runID)
+	f.rec = &models.ModelCity2TabulaRun{ModelID: modelID, RunID: runID, Country: country, Status: status}
+	return nil
+}
+func (f *fakeRunStore) UpdateStatus(modelID uint, status, errMsg string) error {
+	f.status = append(f.status, status)
+	return nil
+}
+func (f *fakeRunStore) Get(modelID uint) (*models.ModelCity2TabulaRun, error) { return f.rec, nil }
 
 func floatPtr(f float64) *float64 { return &f }
 func boolPtr(b bool) *bool        { return &b }
@@ -175,7 +195,7 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 
-	result := resolveEnvelope(context.Background(), log, client, "germany", bbox, topologyBuildings("111", "222"))
+	result := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111", "222"))
 
 	assert.True(t, runTriggered, "a run must be triggered when the topology needs a building city2tabula hasn't linked yet")
 	assert.Len(t, result, 2, "after the run, both buildings should resolve, not just the one already linked from an earlier overlapping polygon")
@@ -196,7 +216,7 @@ func TestResolveEnvelope_FullCoverageSkipsRun(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 
-	result := resolveEnvelope(context.Background(), log, client, "germany", bbox, topologyBuildings("111"))
+	result := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111"))
 
 	assert.Len(t, result, 1)
 	assert.Contains(t, result, "111")
@@ -469,4 +489,59 @@ func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
 			}
 		})
 	}
+}
+
+// With a run recorded for the model (started when its polygon was created),
+// run_buem waits for that run instead of triggering a second one.
+func TestResolveEnvelope_RecordedRunIsPolledNotRetriggered(t *testing.T) {
+	var buildingsCalls int32
+	client := fakeTentacronC2T(t, func(target string) (int, string) {
+		switch target {
+		case "c2t-buildings":
+			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
+				return 200, `[]`
+			}
+			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+		case "c2t-run-status":
+			return 200, `{"run_id":"recorded-1","country":"germany","status":"completed"}`
+		}
+		t.Fatalf("unexpected target %s: a recorded run must not be retriggered", target)
+		return 0, ""
+	})
+	runs := &fakeRunStore{rec: &models.ModelCity2TabulaRun{ModelID: 7, RunID: "recorded-1", Country: "germany", Status: "running"}}
+	log := logrus.NewEntry(logrus.New())
+
+	result := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
+
+	assert.Contains(t, result, "222")
+	assert.Empty(t, runs.saved, "no new run recorded")
+	assert.Equal(t, []string{"completed"}, runs.status, "the recorded run's final status is written back")
+}
+
+// Without a recorded run, the run run_buem triggers itself is recorded so a
+// later request can poll it instead of starting another.
+func TestResolveEnvelope_TriggeredRunIsRecorded(t *testing.T) {
+	var buildingsCalls int32
+	client := fakeTentacronC2T(t, func(target string) (int, string) {
+		switch target {
+		case "c2t-buildings":
+			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
+				return 200, `[]`
+			}
+			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+		case "c2t-trigger-run":
+			return 200, `{"run_id":"run-9","country":"germany","status":"pending"}`
+		case "c2t-run-status":
+			return 200, `{"run_id":"run-9","country":"germany","status":"completed"}`
+		}
+		t.Fatalf("unexpected target %s", target)
+		return 0, ""
+	})
+	runs := &fakeRunStore{}
+	log := logrus.NewEntry(logrus.New())
+
+	result := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
+
+	assert.Contains(t, result, "222")
+	assert.Equal(t, []string{"run-9"}, runs.saved)
 }
