@@ -18,10 +18,12 @@ const (
 // is a validation in front of the translator, not a different job shape.
 const UnassignedNode = "unassigned"
 
-// Fixed dispatch settings. The heat pump per node is sized so its output
-// covers that node's peak heat demand exactly; MEME's operate mode forbids
-// capacity expansion, so an undersized pump would make the dispatch
-// infeasible rather than expensive.
+// Fixed dispatch settings, policy values rather than physics. heatPumpCOP is
+// a seasonal performance factor for an air-source heat pump; it should come
+// from the technology data (OpenTech-DB) once that is wired in. The pump per
+// node is sized so its output covers that node's peak heat demand exactly;
+// MEME's operate mode forbids capacity expansion, so an undersized pump
+// would make the dispatch infeasible rather than expensive.
 const (
 	heatPumpCOP   = 3.0
 	solverName    = "highs"
