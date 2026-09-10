@@ -79,6 +79,11 @@ func HandleResolveDemandProfiles(
 		return fmt.Errorf("failed to fetch model %d: %w", rp.ModelID, err)
 	}
 
+	if ModelHeatSource(model.Config) == HeatSourceEstimate {
+		log.Debugf("model %d: heatSource=estimate, no demand profiles to resolve", rp.ModelID)
+		return nil
+	}
+
 	calcPayload, err := buildCalculationPayload(&model)
 	if err != nil {
 		log.Debugf("model %d: cannot build calculation payload, nothing to resolve: %v", rp.ModelID, err)

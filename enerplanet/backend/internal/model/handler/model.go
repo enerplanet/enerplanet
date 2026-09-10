@@ -98,9 +98,11 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 // PylovoHandler.GenerateGrid). Fire-and-forget: an enqueue failure is
 // logged, never surfaced to the caller - saving the model must not fail
 // because this optional refresh could not be scheduled, and the job itself
-// is a no-op when the config turns out to have no buildings.
-func (h *ModelHandler) triggerDemandProfileResolve(modelID uint) {
-	if h.asynqClient == nil {
+// is a no-op when the config turns out to have no buildings. Not enqueued at
+// all when config.heatSource is "estimate": that model uses the usage-class
+// estimate and manual heat demand instead of BuEM.
+func (h *ModelHandler) triggerDemandProfileResolve(modelID uint, config json.RawMessage) {
+	if h.asynqClient == nil || jobs.ModelHeatSource(config) == jobs.HeatSourceEstimate {
 		return
 	}
 	body, err := json.Marshal(jobs.ResolveDemandProfilesPayload{ModelID: modelID})
@@ -252,7 +254,7 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	model.UpdatedAt = modelMap["updated_at"].(time.Time)
 
 	if len(req.Config) > 0 {
-		h.triggerDemandProfileResolve(model.ID)
+		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}
 
 	httputil.Created(c, model)
@@ -412,7 +414,7 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 	}
 
 	if len(req.Config) > 0 {
-		h.triggerDemandProfileResolve(model.ID)
+		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}
 
 	h.respondWithPreloadedModel(c, id, model)
