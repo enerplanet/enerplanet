@@ -56,6 +56,7 @@ func HandleRunBuem(
 	t *asynq.Task,
 	db *gorm.DB,
 	c2t *city2tabula.Client,
+	c2tRuns city2tabulaRunStore,
 	wx *weather.Client,
 	weatherProvider string,
 	buemClient *buem.Client,
@@ -92,7 +93,7 @@ func HandleRunBuem(
 	if ModelHeatSource(model.Config) == HeatSourceEstimate {
 		log.Infof("model %d: heatSource=estimate, skipping BuEM; the payload's estimate and manual heat demand are dispatched as they are", rp.ModelID)
 	} else {
-		results, _, _, err := ResolveBuemForModel(ctx, log, c2t, wx, weatherProvider, ignisClient, buemClient, model, rp.Payload, modelRefurbishmentLevel(model.Config))
+		results, _, _, err := ResolveBuemForModel(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, buemClient, model, rp.Payload, modelRefurbishmentLevel(model.Config))
 		if err != nil {
 			return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
 		}
@@ -119,6 +120,7 @@ func ResolveBuemForModel(
 	ctx context.Context,
 	log *logrus.Entry,
 	c2t *city2tabula.Client,
+	c2tRuns city2tabulaRunStore,
 	wx *weather.Client,
 	weatherProvider string,
 	ignisClient envelopeUValueResolver,
@@ -127,7 +129,7 @@ func ResolveBuemForModel(
 	p payload.CalculationPayload,
 	refurbishmentLevel ignis.RefurbishmentLevel,
 ) (results []buem.BuildingResult, resolved map[string]BuemResolutionMeta, unresolved map[string]string, err error) {
-	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, wx, weatherProvider, model, p)
+	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, model, p)
 
 	country := ""
 	if model.Country != nil {
@@ -149,7 +151,7 @@ func ResolveBuemForModel(
 // resolveBuemInputs fetches envelope and weather data for model's area.
 // Both degrade to nil (envelope/weather simply omitted, not a job failure)
 // on any resolution problem — see the plan's "no-3D-data fallback" decision.
-func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, wx *weather.Client, provider string, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, json.RawMessage) {
+func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, json.RawMessage) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)
 		return nil, nil
@@ -163,12 +165,17 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 	}
 	bbox := city2tabula.Bbox{Xmin: xmin, Ymin: ymin, Xmax: xmax, Ymax: ymax}
 
-	envelope := resolveEnvelope(ctx, log, c2t, country, bbox, p.Topology)
+	envelope := resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
 	weatherJSON := resolveWeather(ctx, log, wx, provider, model, bbox)
 	return envelope, weatherJSON
 }
 
-func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, country string, bbox city2tabula.Bbox, topology []interface{}) map[string]city2tabula.Building {
+// resolveEnvelope fetches the topology's buildings from City2TABULA. When
+// some are not linked yet it waits for the model's recorded pipeline run
+// (started when the polygon was created, see HandleTriggerCity2TabulaRun)
+// and, only when no run was recorded, triggers and records one itself, so
+// a model created before runs were recorded still gets its data.
+func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox, topology []interface{}) map[string]city2tabula.Building {
 	osmIDs := buildingOSMIDs(topology)
 	if len(osmIDs) == 0 {
 		return nil
@@ -191,14 +198,21 @@ func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cl
 		return byOSMID
 	}
 
-	run, err := c2t.TriggerRun(ctx, country, bbox)
+	runID, err := recordedOrNewRun(ctx, log, c2t, c2tRuns, model, country, bbox)
 	if err != nil {
 		log.Warnf("city2tabula run trigger failed, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
 		return byOSMID
 	}
-	if err := pollRunStatus(ctx, c2t, run.RunID); err != nil {
+	if err := pollRunStatus(ctx, c2t, runID); err != nil {
 		log.Warnf("city2tabula run did not complete, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
 		return byOSMID
+	}
+	if c2tRuns != nil {
+		if run, serr := c2t.GetRunStatus(ctx, runID); serr == nil {
+			if uerr := c2tRuns.UpdateStatus(model.ID, run.Status, run.Error); uerr != nil {
+				log.Warnf("model %d: failed to record run %s status: %v", model.ID, runID, uerr)
+			}
+		}
 	}
 
 	byOSMID, err = fetchLinkedBuildings(ctx, c2t, country, osmIDs)
@@ -207,6 +221,30 @@ func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cl
 		return nil
 	}
 	return byOSMID
+}
+
+// recordedOrNewRun returns the run id to wait for: the model's recorded run
+// when there is one (whatever its state; pollRunStatus returns at once for a
+// finished run), otherwise a run triggered now and recorded for the model.
+func recordedOrNewRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox) (string, error) {
+	if c2tRuns != nil {
+		rec, err := c2tRuns.Get(model.ID)
+		if err != nil {
+			log.Warnf("model %d: failed to read recorded City2TABULA run: %v", model.ID, err)
+		} else if rec != nil {
+			return rec.RunID, nil
+		}
+	}
+	run, err := c2t.TriggerRun(ctx, country, bbox)
+	if err != nil {
+		return "", err
+	}
+	if c2tRuns != nil {
+		if err := c2tRuns.Save(model.ID, run.RunID, country, run.Status); err != nil {
+			log.Warnf("model %d: failed to record City2TABULA run %s: %v", model.ID, run.RunID, err)
+		}
+	}
+	return run.RunID, nil
 }
 
 // fetchLinkedBuildings fetches osmIDs' 3D attributes and indexes them by
