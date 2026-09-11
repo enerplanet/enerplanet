@@ -30,6 +30,7 @@ import (
 	"spatialhub_backend/internal/handler/render"
 	settingshandler "spatialhub_backend/internal/handler/settings"
 	technologyhandler "spatialhub_backend/internal/handler/technology"
+	timeserieshandler "spatialhub_backend/internal/handler/timeseries"
 	usershandler "spatialhub_backend/internal/handler/users"
 	"spatialhub_backend/internal/handler/weather"
 	ignisclient "spatialhub_backend/internal/ignis"
@@ -165,6 +166,8 @@ func main() {
 type AppDependencies struct {
 	DB                  *gorm.DB
 	SQLdb               *sql.DB
+	TimeseriesDB        *gorm.DB
+	TimeseriesSQLdb     *sql.DB
 	RedisClient         *goredis.Client
 	AsynqClient         *asynq.Client
 	AsynqServer         *asynq.Server
@@ -182,6 +185,9 @@ type AppDependencies struct {
 func (d *AppDependencies) Close() {
 	if d.SQLdb != nil {
 		_ = d.SQLdb.Close()
+	}
+	if d.TimeseriesSQLdb != nil {
+		_ = d.TimeseriesSQLdb.Close()
 	}
 	if d.RedisClient != nil {
 		_ = d.RedisClient.Close()
@@ -206,6 +212,16 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	sqlDB.SetMaxOpenConns(25)
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	// Separate TimescaleDB connection for time-series datasets.
+	tsDB, tsSQLDB, err := platformdatabase.ConnectWithPing(cfg.TimeseriesDatabase)
+	if err != nil {
+		log.Fatalf("failed to connect to timeseries database: %v", err)
+	}
+	tsSQLDB.SetMaxOpenConns(10)
+	tsSQLDB.SetMaxIdleConns(5)
+	tsSQLDB.SetConnMaxLifetime(time.Hour)
+	log.WithField("component", "startup").Info("Timeseries database connection successful")
 
 	ctx := context.Background()
 	redisClient, err := platformdatabase.ConnectRedis(ctx, cfg.RedisConfig)
@@ -283,6 +299,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	return &AppDependencies{
 		DB:                  db,
 		SQLdb:               sqlDB,
+		TimeseriesDB:        tsDB,
+		TimeseriesSQLdb:     tsSQLDB,
 		RedisClient:         redisClient,
 		AsynqClient:         asynqClient,
 		AsynqServer:         asynqServer,
@@ -346,6 +364,7 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 	routeDeps := RouteDeps{
 		Cfg:                 cfg,
 		DB:                  deps.DB,
+		TimeseriesDB:        deps.TimeseriesDB,
 		SessionStore:        sessionStore,
 		AsynqClient:         deps.AsynqClient,
 		RedisClient:         deps.RedisClient,
@@ -595,6 +614,7 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 type RouteDeps struct {
 	Cfg                 *config.Config
 	DB                  *gorm.DB
+	TimeseriesDB        *gorm.DB
 	SessionStore        platformsession.SessionStore
 	AsynqClient         *asynq.Client
 	RedisClient         *goredis.Client
@@ -649,6 +669,9 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
+	timeseriesHandler := timeserieshandler.NewHandler(deps.TimeseriesDB)
+	registerTimeseriesRoutes(protectedAPI, timeseriesHandler)
+
 	weatherHandler := weather.NewWeatherHandler()
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
@@ -689,6 +712,19 @@ func registerTechnologyRoutes(api *gin.RouterGroup, handler *technologyhandler.H
 	api.PUT(routeTechnologyByID+"/constraints", handler.UpdateConstraints)
 	api.POST(routeTechnologyByID+"/constraints", handler.AddConstraint)
 	api.DELETE(routeTechnologyByID+"/constraints/:constraintId", handler.DeleteConstraint)
+}
+
+func registerTimeseriesRoutes(api *gin.RouterGroup, handler *timeserieshandler.Handler) {
+	api.GET("/datasets", handler.ListDatasets)
+	api.POST("/datasets", handler.CreateDataset)
+	api.GET("/datasets/:id", handler.GetDataset)
+	api.PUT("/datasets/:id", handler.UpdateDataset)
+	api.DELETE("/datasets/:id", handler.DeleteDataset)
+	api.POST("/datasets/:id/data", handler.WriteData)
+	api.GET("/datasets/:id/data", handler.ReadData)
+	api.POST("/datasets/:id/share", handler.ShareDataset)
+	api.GET("/datasets/:id/shares", handler.ListShares)
+	api.DELETE("/datasets/:id/shares/:shareId", handler.RevokeShare)
 }
 
 func registerProfileRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {

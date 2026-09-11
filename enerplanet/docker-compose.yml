@@ -8,6 +8,8 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
+      TS_DB_HOST: timescaledb
+      TS_DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}

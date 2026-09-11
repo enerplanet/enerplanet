@@ -36,6 +36,7 @@ help:
 	@echo "  make down               Stop all services"
 	@echo "  make logs               Follow service logs"
 	@echo "  make migrate            Run database migrations"
+	@echo "  make timescale          Start TimescaleDB and run time-series migrations"
 	@echo "  make seed               Seed the database"
 	@echo "  make init-keycloak      Re-initialize Keycloak"
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
@@ -48,7 +49,7 @@ help:
 # ==============================================================================
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo tentacron-stack
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services timescale migrate seed pylovo tentacron-stack
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 
@@ -116,6 +117,18 @@ logs: .env
 migrate:
 	@echo "$(CYAN)Running migrations...$(NC)"
 	@cd enerplanet/backend && go run cmd/migrate/migration.go
+
+# Bring up the separate TimescaleDB container and apply the time-series
+# migrations (datasets, shares, data hypertable). The timescaledb image ships
+# the extension, so no apt install is needed. Runs the timeseries migration
+# runner against the timeseries DB.
+.PHONY: timescale
+timescale: .env
+	@echo "$(CYAN)Starting TimescaleDB and applying time-series migrations...$(NC)"
+	@docker network create spatialhub-net 2>/dev/null || true
+	@docker compose $(PLATFORM_COMPOSE) up -d timescaledb
+	@sleep 5
+	@cd enerplanet/backend && go run cmd/migrate-timeseries/main.go
 
 .PHONY: seed
 seed:

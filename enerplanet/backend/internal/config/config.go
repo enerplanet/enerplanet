@@ -24,6 +24,7 @@ type Config struct {
 	AppTimezone          string
 	CookieDomain         string
 	Database             platformconfig.DatabaseConfig
+	TimeseriesDatabase   platformconfig.DatabaseConfig
 	SessionTTLMinutes    int // Session timeout in minutes
 	Email                platformconfig.EmailSettings
 	AuthServiceURL       string // URL of the auth-service
@@ -65,6 +66,7 @@ func LoadFromEnv() (*Config, error) {
 		SessionTTLMinutes:    sessionTTL,
 		Email:                emailSettings,
 		Database:             platformconfig.AppDatabaseFromEnv(),
+		TimeseriesDatabase:   timeseriesDatabaseFromEnv(),
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
@@ -93,4 +95,19 @@ func normalizeWebserviceURL(raw string) string {
 		return defaultWebserviceURL
 	}
 	return raw
+}
+
+// timeseriesDatabaseFromEnv reads the TS_DB_* variables for the separate
+// TimescaleDB instance that stores time-series datasets. Falls back to the
+// main DB_* variables for host/user/password, but defaults the port to the
+// timescaledb container's published host port (6543) and the database to
+// "timeseries".
+func timeseriesDatabaseFromEnv() platformconfig.DatabaseConfig {
+	return platformconfig.DatabaseConfig{
+		Host:     platformconfig.GetEnv("TS_DB_HOST", platformconfig.GetEnv("DB_HOST", "localhost")),
+		Port:     platformconfig.GetEnv("TS_DB_PORT", "6543"),
+		Name:     platformconfig.GetEnv("TS_DB_DATABASE", "timeseries"),
+		User:     platformconfig.GetEnv("TS_DB_USERNAME", platformconfig.GetEnv("DB_USERNAME", "postgres")),
+		Password: platformconfig.GetEnv("TS_DB_PASSWORD", platformconfig.GetEnv("DB_PASSWORD", "postgres")),
+	}
 }
