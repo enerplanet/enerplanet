@@ -455,6 +455,14 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	block["envelope"] = map[string]interface{}{"elements": elements}
 	block["cooking_carrier"] = cooking.Carrier
 	block["include_dhw"] = cooking.IncludeDHW
+	// The archetype's own glazing first, then anything the user set on the
+	// building. BuEM would otherwise resolve its own TABULA row from
+	// building_type and construction_period, which carries no refurbishment
+	// level: without these the windows stay as built when a user picks a
+	// refurbished level for the rest of the envelope.
+	for k, v := range archetypeGlazing(meta) {
+		block[k] = v
+	}
 	for k, v := range buildingWindowSettings(props) {
 		block[k] = v
 	}
@@ -507,6 +515,12 @@ type BuemResolutionMeta struct {
 	// Apartments is the raw count ignis reported for the variant (0 =
 	// unknown), before the send decision above.
 	Apartments int
+	// WindowU, DoorU and WindowGGl are the archetype's opening properties,
+	// sent as building-level values because BuEM synthesizes the openings
+	// themselves. 0 means ignis reported none and BuEM keeps its own value.
+	WindowU   float64
+	DoorU     float64
+	WindowGGl float64
 }
 
 // buildingRefurbishmentLevel returns a building's per-building refurbishment
@@ -591,7 +605,8 @@ func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolv
 			elements[i].BTransmission = &city2tabula.Quantity{Value: in.bTrans, Unit: "-"}
 		}
 	}
-	return elements, BuemResolutionMeta{VariantCode: code, Level: u.Level, Apartments: u.Apartments}
+	return elements, BuemResolutionMeta{VariantCode: code, Level: u.Level, Apartments: u.Apartments,
+		WindowU: u.UWindow, DoorU: u.UDoor, WindowGGl: u.GGlWindow}
 }
 
 // mergeBuemResults writes each successful result's enriched buem block onto
