@@ -135,14 +135,12 @@ func (c *Client) ExistingStateVariant(ctx context.Context, iso2, buildingType st
 // EnvelopeUValues is the subset of a TABULA variant's physical inputs run_buem
 // needs to make BuEM accept a building: per-type effective U-values and
 // adjacency correction factors for the three envelope categories it sends
-// (wall, roof, floor), plus the envelope-level thermal-bridging surcharge.
-// Window/door values are not read - run_buem sends no explicit window or door
-// elements; BuEM synthesizes them.
+// (wall, roof, floor), plus the envelope-level thermal-bridging surcharge and
+// the archetype's window/door properties.
 //
 // U* come from ignis's U_Actual_*_1, the post-measure-blend transmittance ignis
-// uses for opaque conduction - not the base U_*_1, which ignis uses only for
-// openings and which for some NL periods carries the wall value on all three
-// fields. BTrans* are ignis's b_Transmission_*_1 (1.0 for elements facing
+// uses for conduction - not the base U_*_1, which for some NL periods carries
+// the wall value on all three opaque fields. BTrans* are ignis's b_Transmission_*_1 (1.0 for elements facing
 // outside, lower for elements against unheated space - typically ~0.5 on the
 // ground floor). Bridging is one envelope-wide scalar; BuEM has no bridging
 // surcharge of its own, so the caller adds it to each element's U
@@ -155,6 +153,17 @@ type EnvelopeUValues struct {
 	BTransWall  float64 // dimensionless, TABULA b_Transmission
 	BTransRoof  float64
 	BTransFloor float64
+
+	// UWindow/UDoor/GGlWindow describe the archetype's openings. BuEM
+	// synthesizes windows and doors rather than receiving them as elements,
+	// so these are sent as building-level values, not per element. UWindow is
+	// U_Actual_Window_1, the same post-measure blend ignis itself multiplies
+	// by window area for H_Transmission_Window_1; GGlWindow is
+	// g_gl_n_Window_1, the field BuEM reads from a TABULA row when it
+	// resolves an archetype on its own.
+	UWindow   float64 // W/(m2.K)
+	UDoor     float64 // W/(m2.K)
+	GGlWindow float64 // dimensionless, solar energy transmittance
 
 	Bridging float64 // W/(m2.K), envelope-level thermal-bridging delta to add per element
 
@@ -173,9 +182,9 @@ type EnvelopeUValues struct {
 
 // GetEnvelopeUValues fetches a TABULA variant's data and extracts the effective
 // per-type wall/roof/floor U-values (U_Actual_*_1), their b_Transmission
-// factors, the envelope thermal-bridging delta, and the variant's
-// construction-period year range, via the ignis-data target
-// (GET /api/v1/data/{code}).
+// factors, the envelope thermal-bridging delta, the window/door U-values and
+// window solar transmittance, and the variant's construction-period year
+// range, via the ignis-data target (GET /api/v1/data/{code}).
 func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (EnvelopeUValues, error) {
 	var body struct {
 		TabulaData struct {
@@ -188,9 +197,14 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 			}
 			AdvancedParameters struct {
 				Uvalues struct {
-					U_Actual_Wall_1  float64
-					U_Actual_Roof_1  float64
-					U_Actual_Floor_1 float64
+					U_Actual_Wall_1   float64
+					U_Actual_Roof_1   float64
+					U_Actual_Floor_1  float64
+					U_Actual_Window_1 float64
+					U_Actual_Door_1   float64
+				}
+				SolarTransmittance struct {
+					G_gl_n_Window_1 float64 `json:"g_gl_n_Window_1"`
 				}
 				HeatLosses struct {
 					B_Transmission_Wall_1  float64
@@ -215,6 +229,9 @@ func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (En
 		BTransWall:  ap.HeatLosses.B_Transmission_Wall_1,
 		BTransRoof:  ap.HeatLosses.B_Transmission_Roof_1,
 		BTransFloor: ap.HeatLosses.B_Transmission_Floor_1,
+		UWindow:     ap.Uvalues.U_Actual_Window_1,
+		UDoor:       ap.Uvalues.U_Actual_Door_1,
+		GGlWindow:   ap.SolarTransmittance.G_gl_n_Window_1,
 		Bridging:    ap.ThermalBridges.DeltaU,
 		YearFrom:    appearance.Year1_Building,
 		YearTo:      appearance.Year2_Building,

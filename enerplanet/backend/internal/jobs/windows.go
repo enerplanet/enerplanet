@@ -36,3 +36,25 @@ func propFloat(props map[string]interface{}, key string) (float64, bool) {
 	}
 	return 0, false
 }
+
+// archetypeGlazing returns the resolved TABULA variant's window and door
+// properties as the same building.* keys buildingWindowSettings produces, so
+// a user-set property overrides the archetype simply by being applied after
+// it. A value ignis did not report is omitted and BuEM keeps its own.
+//
+// No thermal-bridging surcharge is added here: attachEnvelopeUValues already
+// folds ignis's whole envelope-level delta into the opaque elements, and
+// adding it again to the openings would count it twice.
+func archetypeGlazing(meta BuemResolutionMeta) map[string]interface{} {
+	out := map[string]interface{}{}
+	if meta.WindowU > 0 {
+		out["window_U"] = map[string]interface{}{"value": meta.WindowU, "unit": "W/(m2K)"}
+	}
+	if meta.DoorU > 0 {
+		out["door_U"] = map[string]interface{}{"value": meta.DoorU, "unit": "W/(m2K)"}
+	}
+	if meta.WindowGGl > 0 && meta.WindowGGl <= 1 {
+		out["window_g_gl"] = meta.WindowGGl
+	}
+	return out
+}
