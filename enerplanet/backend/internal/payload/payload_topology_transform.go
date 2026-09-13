@@ -258,10 +258,19 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 			"include_dhw":     bProps["include_dhw"],
 			// Occupant count of a service building (bakery, office, ...);
 			// nil otherwise, BuEM then derives it from floor area.
-			"capacity":    bProps["capacity"],
-			"created_at":  nil,
-			"modified_at": nil,
-			"session_id":  fmt.Sprintf("%d", sessionID),
+			"capacity": bProps["capacity"],
+			// Per-building glazing overrides; nil otherwise, in which case
+			// run_buem sends the TABULA archetype's own window and door
+			// values. A key missing from this list is dropped silently and
+			// the archetype value stands, so anything run_buem reads from a
+			// building's properties has to be copied here.
+			"window_to_wall_ratio": bProps["window_to_wall_ratio"],
+			"window_U":             bProps["window_U"],
+			"window_g_gl":          bProps["window_g_gl"],
+			"door_U":               bProps["door_U"],
+			"created_at":           nil,
+			"modified_at":          nil,
+			"session_id":           fmt.Sprintf("%d", sessionID),
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,
