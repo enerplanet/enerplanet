@@ -184,8 +184,11 @@ fi
 
 # ---- 2c. pylovo ----------------------------------------------------------
 # The backend forwards pylovo calls directly over HTTP (internal/handler/pylovo
-# builds the URL from its own base URL), not through TentaCron, so this proves
-# the backend route, the network and the key handling rather than a target.
+# resolves its base URL from the database and requests it), not through
+# TentaCron, so this proves the backend route, the network and the key handling
+# rather than a target. TentaCron does carry pylovo targets, but no code path
+# uses them; a test through the orchestrator would exercise a route nothing
+# else takes.
 # transformer-sizes is cached reference data and needs no grid state, so the
 # answer does not depend on anything the smoke run has created.
 body="$(request GET /api/v2/pylovo/transformer-sizes)"
@@ -310,14 +313,15 @@ if [ -n "${BASE_PROFILES:-}" ]; then
     if awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{exit !(b > 0 && a < b)}'; then
       pct="$(awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{printf "%.1f", (b-a)*100/b}')"
       pass "6e. advanced heating below existing: $(printf '%.0f' "$adv_heat") vs $(printf '%.0f' "$base_heat") kWh/a, $pct% lower"
-      # Reference point, not an assertion. On this fixture an opaque-only
-      # envelope improvement measured 35.7% (2026-09-13), before the window
-      # and door values were read from the selected variant. A later run well
-      # above that is glazing moving with the level too; a run at or below it
-      # is worth investigating. No threshold is asserted here, because no
-      # figure has been measured on a build that has the glazing behaviour, and
-      # a floor guessed from the opaque-only number would pass on a build
-      # without it. Set one once a measurement exists.
+      # Reference point, not an assertion, and the absence of a threshold here
+      # is deliberate. On this fixture an opaque-only envelope improvement
+      # measured 35.7% (2026-09-13), before the window and door values were
+      # read from the selected variant. Only that one figure has been
+      # measured, so any floor set from it would still pass on a build where
+      # the windows do not follow the level, which would make an untested path
+      # look tested. To set a real floor: run this comparison against a build
+      # that has the glazing behaviour, then put the floor between the two
+      # figures and assert it here.
       echo "info  6f. envelope improvement $pct% (opaque-only reference: 35.7%, measured 2026-09-13)"
     else
       fail "6e. advanced heating not below existing: advanced $adv_heat vs existing $base_heat kWh/a"
