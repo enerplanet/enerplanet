@@ -20,9 +20,27 @@
 # through nominatim.openstreetmap.org on a cache miss, so the backend needs
 # outbound internet the first time a given area is used.
 #
+# Deliberately not covered, so the next reader does not read these as
+# oversights:
+#   - the simulation layer, which is not deployed
+#   - a service availability endpoint, which does not exist
+#   - typed model settings, which are not typed yet
+#   - the 3D run recorded against a model at creation: the run is stored
+#     (internal/store/c2trun) but no route reads it back, so nothing outside
+#     the database can assert it. Step 6b passing is indirect evidence, since
+#     the envelopes it needs come from that run.
+#   - the dwelling-count path (building.residential_units, sent when the
+#     archetype reports more than one dwelling): the Loenen fixture resolves
+#     to SFH and TH archetypes only, so no building exercises it, and the
+#     demand-profile response carries no dwelling field to assert against
+#     even when it does. Needs a fixture over an apartment block.
+#
 # Exit code is 0 only when every step passes.
 
 set -u -o pipefail
+# printf %f rejects a dot-decimal number under a comma-decimal locale, and
+# every figure here comes from jq as dot-decimal.
+export LC_NUMERIC=C
 
 BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
 TENTACRON_URL="${TENTACRON_URL:-http://localhost:8092}"
@@ -43,7 +61,9 @@ LOENEN_POLYGON='{"type":"Polygon","coordinates":[[[6.0180,52.0978],[6.0356,52.09
 LOENEN_BBOX='{"xmin":6.0180,"ymin":52.0978,"xmax":6.0356,"ymax":52.1079}'
 
 COOKIES="$(mktemp)"
+MODEL_ID_FILE="$(mktemp)"
 MODEL_ID=""
+EXTRA_MODEL_IDS=()
 FAILED=0
 trap cleanup EXIT
 
@@ -84,12 +104,53 @@ poll_until() {
   done
 }
 
+# resolve_model TITLE_SUFFIX CONFIG_JSON -> prints the demand-profiles body and
+# writes the new model id to MODEL_ID_FILE. Callers capture the body with
+# $(...), which runs this in a subshell, so the id travels through the file
+# rather than a variable. Used by the comparison steps, which each need their
+# own model: stored profiles are keyed on model and building, so re-resolving
+# one model at a second refurbishment level overwrites the first result rather
+# than adding to it.
+resolve_model() {
+  local suffix="$1" config="$2" body payload
+  : > "$MODEL_ID_FILE"
+  payload="$(jq -c -n --argjson coords "$LOENEN_POLYGON" --argjson cfg "$config" --arg t "heat workflow smoke $suffix $(date +%s)" \
+    '{title: $t, from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
+  body="$(request POST /api/models "$payload")"
+  local new_id
+  new_id="$(printf '%s' "$body" | jq -r '.data.id // empty')"
+  if [ -z "$new_id" ]; then
+    printf '%s' "$body"; return 1
+  fi
+  printf '%s' "$new_id" > "$MODEL_ID_FILE"
+  poll_until "demand profiles $suffix" '.status == "completed"' GET "/api/models/$new_id/demand-profiles"
+}
+
+# track_resolved_model records the id resolve_model just wrote, so cleanup
+# deletes it whether or not the step that created it went on to pass.
+track_resolved_model() {
+  RESOLVED_MODEL_ID="$(cat "$MODEL_ID_FILE" 2>/dev/null || true)"
+  [ -n "$RESOLVED_MODEL_ID" ] && EXTRA_MODEL_IDS+=("$RESOLVED_MODEL_ID")
+}
+
+# total_heating reads the summed heating of every resolved building in a
+# demand-profiles body.
+total_heating() {
+  printf '%s' "$1" | jq -r '[.buildings[] | select(.status=="resolved") | .heating_kwh_a] | add // 0'
+}
+
 cleanup() {
+  if [ "$KEEP_MODEL" != "1" ]; then
+    for extra in ${EXTRA_MODEL_IDS+"${EXTRA_MODEL_IDS[@]}"}; do
+      request DELETE "/api/models/$extra" >/dev/null
+      [ "$HTTP_CODE" = "200" ] || warn "could not delete smoke model $extra (HTTP $HTTP_CODE)"
+    done
+  fi
   if [ -n "$MODEL_ID" ] && [ "$KEEP_MODEL" != "1" ]; then
     request DELETE "/api/models/$MODEL_ID" >/dev/null
     [ "$HTTP_CODE" = "200" ] && echo "info  deleted smoke model $MODEL_ID" || warn "could not delete smoke model $MODEL_ID (HTTP $HTTP_CODE)"
   fi
-  rm -f "$COOKIES"
+  rm -f "$COOKIES" "$MODEL_ID_FILE"
 }
 
 for tool in curl jq; do
@@ -119,6 +180,20 @@ if [ -n "${TENTACRON_API_KEY:-}" ]; then
   if [ "$code" = "200" ] && [ "${n:-0}" -gt 0 ]; then pass "2b. TentaCron targets configured: $n"; else fail "2b. TentaCron targets: HTTP $code, count ${n:-?}"; fi
 else
   warn "2b. TENTACRON_API_KEY not set, skipping target listing"
+fi
+
+# ---- 2c. pylovo ----------------------------------------------------------
+# The backend forwards pylovo calls directly over HTTP (internal/handler/pylovo
+# builds the URL from its own base URL), not through TentaCron, so this proves
+# the backend route, the network and the key handling rather than a target.
+# transformer-sizes is cached reference data and needs no grid state, so the
+# answer does not depend on anything the smoke run has created.
+body="$(request GET /api/v2/pylovo/transformer-sizes)"
+n="$(printf '%s' "$body" | jq -r '.data.sizes | length' 2>/dev/null || echo 0)"
+if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then
+  pass "2c. GET /v2/pylovo/transformer-sizes ($n sizes)"
+else
+  fail "2c. GET /v2/pylovo/transformer-sizes: HTTP $HTTP_CODE ${body:0:200}"
 fi
 
 # ---- 3. ignis proxies ----------------------------------------------------
@@ -166,7 +241,10 @@ fi
 # BuEM's service occupancy path; the Loenen fixture has no real service
 # building, so its f_class is overridden here rather than in the fixture.
 BAKERY_OSM_ID="$(jq -r '.features[-1].properties.osm_id' "$FIXTURE")"
-config="$(jq -c --argjson b "$(jq '.features[-1].properties.f_class = "bakery" | .features[-1].properties.f_classes = "bakery" | .features[-1].properties.capacity = 4' "$FIXTURE")" -n '{buildings: $b, energyVectors: ["electricity"]}')"
+# Reused by the comparison steps below: they must differ from this model only
+# in the one thing each is testing, so they start from the same buildings.
+SMOKE_BUILDINGS="$(jq '.features[-1].properties.f_class = "bakery" | .features[-1].properties.f_classes = "bakery" | .features[-1].properties.capacity = 4' "$FIXTURE")"
+config="$(jq -c --argjson b "$SMOKE_BUILDINGS" -n '{buildings: $b, energyVectors: ["electricity"]}')"
 payload="$(jq -c -n --argjson coords "$LOENEN_POLYGON" --argjson cfg "$config" \
   '{title: ("heat workflow smoke " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
 body="$(request POST /api/models "$payload")"
@@ -180,6 +258,7 @@ if [ -n "$MODEL_ID" ]; then
   echo "info  waiting for auto-resolve of model $MODEL_ID"
   body="$(poll_until "demand profiles" '.status == "completed"' GET "/api/models/$MODEL_ID/demand-profiles")" \
     || fail "6b. demand profiles for model $MODEL_ID did not complete within ${POLL_TIMEOUT_S}s (status $(printf '%s' "$body" | jq -r '.status'), resolved $(printf '%s' "$body" | jq -r '.resolved')/$(printf '%s' "$body" | jq -r '.total'))"
+  BASE_PROFILES="$body"
   total="$(printf '%s' "$body" | jq -r '.total')"; resolved="$(printf '%s' "$body" | jq -r '.resolved')"; failed_n="$(printf '%s' "$body" | jq -r '.failed')"
   core_ok="$(printf '%s' "$body" | jq -r '[.buildings[] | select(.status=="resolved") | select(.heating_kwh_a != null and .cooling_kwh_a != null and .electricity_kwh_a != null)] | length')"
   if [ "${resolved:-0}" -gt 0 ] && [ "$core_ok" = "$resolved" ]; then
@@ -203,6 +282,66 @@ if [ -n "$MODEL_ID" ]; then
     pass "6c. hot_water/kitchen populated on all $resolved resolved buildings"
   else
     warn "6c. hot_water/kitchen populated on $hw_ok/$resolved resolved buildings (needs buem-gateway >= 6.1.0)"
+  fi
+fi
+
+# ---- 6e. refurbishment level changes the answer ---------------------------
+# A second model over the same buildings at "advanced". Two models are needed
+# rather than re-resolving one: stored profiles are keyed on model and
+# building, so a second resolve at another level overwrites the first instead
+# of sitting beside it.
+if [ -n "${BASE_PROFILES:-}" ]; then
+  adv_config="$(jq -c --argjson b "$SMOKE_BUILDINGS" -n '{buildings: $b, energyVectors: ["electricity"], refurbishmentLevel: "advanced"}')"
+  adv_body="$(resolve_model advanced "$adv_config")" || fail "6e. could not create the advanced model: ${adv_body:0:200}"
+  track_resolved_model
+  adv_resolved="$(printf '%s' "$adv_body" | jq -r '.resolved // 0')"
+  if [ "${adv_resolved:-0}" -gt 0 ]; then
+    base_heat="$(total_heating "$BASE_PROFILES")"
+    adv_heat="$(total_heating "$adv_body")"
+    # every building should report the level it was actually modelled at;
+    # TABULA has no .003 variant for every archetype, and a building that fell
+    # back to the existing state says so rather than silently claiming advanced
+    at_advanced="$(printf '%s' "$adv_body" | jq -r '[.buildings[] | select(.status=="resolved") | select(.refurbishment_level=="advanced")] | length')"
+    if [ "$at_advanced" = "$adv_resolved" ]; then
+      pass "6e. every resolved building in model $RESOLVED_MODEL_ID reports refurbishment_level advanced"
+    else
+      warn "6e. $at_advanced/$adv_resolved buildings modelled at advanced, the rest fell back (TABULA has no advanced variant for every archetype)"
+    fi
+    if awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{exit !(b > 0 && a < b)}'; then
+      pct="$(awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{printf "%.1f", (b-a)*100/b}')"
+      pass "6e. advanced heating below existing: $(printf '%.0f' "$adv_heat") vs $(printf '%.0f' "$base_heat") kWh/a, $pct% lower"
+      # Reference point, not an assertion. On this fixture an opaque-only
+      # envelope improvement measured 35.7% (2026-09-13), before the window
+      # and door values were read from the selected variant. A later run well
+      # above that is glazing moving with the level too; a run at or below it
+      # is worth investigating. No threshold is asserted here, because no
+      # figure has been measured on a build that has the glazing behaviour, and
+      # a floor guessed from the opaque-only number would pass on a build
+      # without it. Set one once a measurement exists.
+      echo "info  6f. envelope improvement $pct% (opaque-only reference: 35.7%, measured 2026-09-13)"
+    else
+      fail "6e. advanced heating not below existing: advanced $adv_heat vs existing $base_heat kWh/a"
+    fi
+  else
+    fail "6e. advanced model resolved no buildings: $(printf '%s' "$adv_body" | jq -c '{status,total,resolved,failed}')"
+  fi
+fi
+
+# ---- 6g. a per-building glazing override wins over the archetype -----------
+# One building carries window_U; every other input is identical to step 6, so
+# any difference in its heating comes from the override alone.
+if [ -n "${BASE_PROFILES:-}" ]; then
+  OVERRIDE_OSM_ID="$(jq -r '.features[0].properties.osm_id' "$FIXTURE")"
+  ovr_buildings="$(printf '%s' "$SMOKE_BUILDINGS" | jq --arg id "$OVERRIDE_OSM_ID" '(.features[] | select(.properties.osm_id==$id) | .properties.window_U) = 0.9')"
+  ovr_config="$(jq -c --argjson b "$ovr_buildings" -n '{buildings: $b, energyVectors: ["electricity"]}')"
+  ovr_body="$(resolve_model override "$ovr_config")" || fail "6g. could not create the override model: ${ovr_body:0:200}"
+  track_resolved_model
+  base_one="$(printf '%s' "$BASE_PROFILES" | jq -r --arg id "$OVERRIDE_OSM_ID" '.buildings[] | select(.osm_id==$id) | .heating_kwh_a // empty')"
+  ovr_one="$(printf '%s' "$ovr_body" | jq -r --arg id "$OVERRIDE_OSM_ID" '.buildings[] | select(.osm_id==$id) | .heating_kwh_a // empty')"
+  if [ -n "$base_one" ] && [ -n "$ovr_one" ] && awk -v a="$ovr_one" -v b="$base_one" 'BEGIN{exit !(a != b)}'; then
+    pass "6g. window_U=0.9 on $OVERRIDE_OSM_ID changed its heating: $(printf '%.0f' "$ovr_one") vs $(printf '%.0f' "$base_one") kWh/a"
+  else
+    fail "6g. window_U=0.9 on $OVERRIDE_OSM_ID did not change its heating (override $ovr_one, archetype $base_one) - the override is not reaching BuEM"
   fi
 fi
 
