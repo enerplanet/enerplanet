@@ -321,12 +321,12 @@ if [ -n "${BASE_PROFILES:-}" ]; then
       # have stopped following the level. Re-measure both ends if the fixture
       # changes.
       #
-      # A figure that moves without the payload path changing is more likely
-      # to come from the thermal model's own glazing treatment. One known
-      # example: TABULA carries the same window solar transmittance at every
-      # refurbishment level (0.60 at both .001 and .003 for NL.N.SFH.05),
-      # while the window U-value does improve, so only half of a glazing
-      # refurbishment reaches the result today.
+      # A drop here is more likely the thermal model than this path. TABULA
+      # holds each archetype's window solar transmittance at its as-built
+      # value through refurbishment while the window U improves, crediting a
+      # refurbished building with solar gain its glazing would not admit;
+      # correcting that raises refurbished heating and lowers this figure
+      # toward the floor. See #83.
       if awk -v p="$pct" 'BEGIN{exit !(p > 50.0)}'; then
         pass "6f. glazing follows the level: $pct% improvement, well above the 35.7% an opaque-only envelope reaches"
       else
