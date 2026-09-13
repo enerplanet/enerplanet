@@ -320,6 +320,13 @@ if [ -n "${BASE_PROFILES:-}" ]; then
       # archetype drift will not trip it, and a run near 35% means the windows
       # have stopped following the level. Re-measure both ends if the fixture
       # changes.
+      #
+      # A figure that moves without the payload path changing is more likely
+      # to come from the thermal model's own glazing treatment. One known
+      # example: TABULA carries the same window solar transmittance at every
+      # refurbishment level (0.60 at both .001 and .003 for NL.N.SFH.05),
+      # while the window U-value does improve, so only half of a glazing
+      # refurbishment reaches the result today.
       if awk -v p="$pct" 'BEGIN{exit !(p > 50.0)}'; then
         pass "6f. glazing follows the level: $pct% improvement, well above the 35.7% an opaque-only envelope reaches"
       else
