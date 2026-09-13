@@ -455,6 +455,9 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	block["envelope"] = map[string]interface{}{"elements": elements}
 	block["cooking_carrier"] = cooking.Carrier
 	block["include_dhw"] = cooking.IncludeDHW
+	for k, v := range buildingWindowSettings(props) {
+		block[k] = v
+	}
 	buildingBlock, err := json.Marshal(block)
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal building block: %v", err), false
@@ -521,7 +524,8 @@ func buildingRefurbishmentLevel(props map[string]interface{}, modelDefault ignis
 // its wall/roof/floor elements: BuEM rejects a wall/roof/floor element with no
 // U, and City2TABULA carries no U-values of its own to supply one from.
 // Only wall/roof/floor get U — no explicit window or door elements are added.
-// BuEM synthesizes windows at its default window-to-wall ratio and subtracts
+// BuEM synthesizes windows at its default window-to-wall ratio (or the
+// building's window_to_wall_ratio, see buildingWindowSettings) and subtracts
 // their area from the wall; it does not also subtract caller-supplied opening
 // areas, so adding explicit windows here would double-count transmission.
 //
