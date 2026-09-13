@@ -313,16 +313,18 @@ if [ -n "${BASE_PROFILES:-}" ]; then
     if awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{exit !(b > 0 && a < b)}'; then
       pct="$(awk -v a="$adv_heat" -v b="$base_heat" 'BEGIN{printf "%.1f", (b-a)*100/b}')"
       pass "6e. advanced heating below existing: $(printf '%.0f' "$adv_heat") vs $(printf '%.0f' "$base_heat") kWh/a, $pct% lower"
-      # Reference point, not an assertion, and the absence of a threshold here
-      # is deliberate. On this fixture an opaque-only envelope improvement
-      # measured 35.7% (2026-09-13), before the window and door values were
-      # read from the selected variant. Only that one figure has been
-      # measured, so any floor set from it would still pass on a build where
-      # the windows do not follow the level, which would make an untested path
-      # look tested. To set a real floor: run this comparison against a build
-      # that has the glazing behaviour, then put the floor between the two
-      # figures and assert it here.
-      echo "info  6f. envelope improvement $pct% (opaque-only reference: 35.7%, measured 2026-09-13)"
+      # Both ends of this comparison are measured on this fixture (2026-09-13):
+      # 35.7% when BuEM synthesised windows from its own defaults, and 71.8%
+      # once the window and door values came from the selected variant. The
+      # floor sits between them, far enough from each that fixture or
+      # archetype drift will not trip it, and a run near 35% means the windows
+      # have stopped following the level. Re-measure both ends if the fixture
+      # changes.
+      if awk -v p="$pct" 'BEGIN{exit !(p > 50.0)}'; then
+        pass "6f. glazing follows the level: $pct% improvement, well above the 35.7% an opaque-only envelope reaches"
+      else
+        fail "6f. glazing appears not to follow the level: $pct% improvement is near the 35.7% opaque-only figure, not the 71.8% expected"
+      fi
     else
       fail "6e. advanced heating not below existing: advanced $adv_heat vs existing $base_heat kWh/a"
     fi
