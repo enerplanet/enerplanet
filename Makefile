@@ -41,6 +41,8 @@ help:
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
 	@echo "  make tentacron               Start the tentacron stack (tentacron, ignis, buem, meme)"
+	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
+	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
 	@echo "  make sonar              Run SonarQube analysis"
 
 # ==============================================================================
@@ -173,7 +175,9 @@ setup-repos:
 	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
 	@[ -d dependencies/$(BUEM_DIR) ] && (cd dependencies/$(BUEM_DIR) && git pull) || git clone $(BUEM_REPO) dependencies/$(BUEM_DIR)
 	@[ -d dependencies/$(MEME_DIR) ] && (cd dependencies/$(MEME_DIR) && git pull) || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
-  @[ -d dependencies/$(TENTACRON_DIR) ] && (cd dependencies/$(TENTACRON_DIR) && git pull) || git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR)
+	@[ -d dependencies/$(TENTACRON_DIR) ] && (cd dependencies/$(TENTACRON_DIR) && git pull) || git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR)
+	@[ -d dependencies/$(CITY2TABULA_DIR) ] && (cd dependencies/$(CITY2TABULA_DIR) && git pull) || git clone $(CITY2TABULA_REPO) dependencies/$(CITY2TABULA_DIR)
+	@[ -d dependencies/$(WEATHER_DIR) ] && (cd dependencies/$(WEATHER_DIR) && git pull) || git clone $(WEATHER_REPO) dependencies/$(WEATHER_DIR)
 
 .PHONY: env-setup
 env-setup:
@@ -236,8 +240,8 @@ pylovo:
 
 
 .PHONY: tentacron-stack
-tentacron-stack: tentacron-network ignis buem meme tentacron
-	@echo "$(GREEN)TentaCron stack up. ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
+tentacron-stack: tentacron-network city2tabula weather ignis buem meme tentacron
+	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
 tentacron-network:
@@ -272,6 +276,18 @@ meme: tentacron-network
 	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.override.yml up -d --build api
 	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: weather
+weather: tentacron-network
+	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" WEATHER_API_PORT=$(WEATHER_PORT) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --build
+	@docker network connect tentacron-net weather-serve 2>/dev/null || true
+	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: city2tabula
+city2tabula: tentacron-network
+	@cd dependencies/$(CITY2TABULA_DIR)/environment && HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml -f ../../../heat-city2tabula.override.yml up -d --build
+	@docker network connect tentacron-net city2tabula-environment 2>/dev/null || true
+	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
 opentech-db: .opentech-db-setup

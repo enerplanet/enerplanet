@@ -136,6 +136,22 @@ targets:
     response:
       mode: direct
 
+  buem-buildings:
+    # The batch endpoint under the name the backend's run_buem job dispatches
+    # to (internal/buem/client.go targetBuildings) — identical to the `buem`
+    # target above but carrying the exact target name the Go client submits.
+    url: "https://buem-reverse-proxy:443/api/v1/buem/buildings"
+    method: POST
+    api_key: "${BUEM_API_KEY}"
+    api_key_inject: header
+    api_key_header: X-Api-Key
+    timeout: 300s
+    retry_on_timeout: false
+    timeseries_path: "."
+    attach_resolvent: false
+    response:
+      mode: direct
+
   ignis-calculate:
     # Proxy target: tentacron contributes auth, persistence, audit and
     # retries but hands the payload through unresolved — no resolvent
@@ -195,7 +211,7 @@ targets:
       mode: direct
 
   ignis-variants:
-    # GET proxy target: \"iso2\" fills the path. The whole variant-code list for
+    # GET proxy target: "iso2" fills the path. The whole variant-code list for
     # a country, distinct from ignis-variants-match (one type-and-year match).
     url: "http://ignis-app:8080/api/v1/variants/{iso2}"
     method: GET
@@ -204,6 +220,46 @@ targets:
     api_key_header: X-Api-Key
     timeout: 10s
     proxy: true
+    response:
+      mode: direct
+
+  # City2TABULA (THD-Spatial-AI/city2tabula) on-request server — the backend
+  # dispatches all three calls through these targets (internal/city2tabula/
+  # client.go). No API key per city2tabula's spec. city2tabula-environment is
+  # the container name from its environment/docker-compose.yml, on
+  # tentacron-net, SERVER_PORT 5000.
+  c2t-trigger-run:
+    url: "http://city2tabula-environment:5000/api/v1/runs"
+    method: POST
+    timeout: 60s
+    response:
+      mode: direct
+
+  c2t-run-status:
+    url: "http://city2tabula-environment:5000/api/v1/runs/{id}"
+    method: GET
+    timeout: 60s
+    response:
+      mode: direct
+
+  c2t-buildings:
+    url: "http://city2tabula-environment:5000/api/v1/buildings"
+    method: GET
+    timeout: 60s
+    response:
+      mode: direct
+
+  # weather-serve (enerplanet/weather) point query — reached by the backend
+  # through TentaCron (internal/weather/client.go targetPoint). WEATHER_API_KEY
+  # is set in the dependency's .env.dev and must match weather-serve's own
+  # WEATHER_API_KEYS. weather-serve is on tentacron-net at container port 8080.
+  weather-point:
+    url: "http://weather-serve:8080/v1/weather/point?format=json"
+    method: GET
+    api_key: "${WEATHER_API_KEY}"
+    api_key_inject: header
+    api_key_header: X-API-Key
+    timeout: 60s
     response:
       mode: direct
 

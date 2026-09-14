@@ -1,0 +1,15 @@
+# Root-repo override for City2TABULA's environment/docker-compose.yml.
+#
+# The dependency's own compose runs an interactive bash shell (its default
+# CMD / command: bash is for development), not the on-request HTTP server.
+# For the heat stack we need cmd/server — the long-running API that the
+# backend reaches through TentaCron (c2t-trigger-run / c2t-run-status /
+# c2t-buildings). This override swaps the command, keeping the dependency's
+# checked-in files untouched.
+#
+# Local variant: server listens on SERVER_PORT inside the container,
+# published on CITY2TABULA_PORT per repos.conf, and the container joins
+# tentacron-net so TentaCron can reach it by name.
+services:
+  city2tabula:
+    command: ["go", "run", "./cmd/server"]
