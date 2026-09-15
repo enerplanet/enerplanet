@@ -29,6 +29,25 @@ City2TABULA itself must be reachable at `CITY2TABULA_SERVICE_URL` (default
 `http://localhost:5000`) with data for the country. Germany LoD2 is the
 reliable test country.
 
+## Calling from another dev server
+
+The CORS allowlist is an exact string match on the `Origin` header, built from
+`http://localhost:3000`, `http://localhost:5173` and `APP_URL`. A browser
+always sends its own origin, so a frontend served from any other port is
+refused with `403` before the handler runs, even when its dev server proxies
+the request so that it never leaves the machine.
+
+`http://127.0.0.1:3000` is refused as well: the spelling has to match, not
+just the port.
+
+A proxy that rewrites `Host` alone does not help, because the check reads
+`Origin`. Either serve the caller on one of the ports above, add its origin to
+`APP_URL`, or have the proxy rewrite `Origin` to the backend's own origin
+before forwarding.
+
+`curl` without an `Origin` header is unaffected, which is why a request that
+works from a terminal can still fail from a browser.
+
 ## Flow and payloads
 
 ### 1. Area already covered
