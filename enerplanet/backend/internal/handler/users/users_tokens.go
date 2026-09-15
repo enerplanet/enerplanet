@@ -23,13 +23,25 @@ const (
 
 type createTokenRequest struct {
 	Name string `json:"name" binding:"required,max=255"`
-	// ExpiresInDays: nil → default (90); 0 → never expires; capped at 365.
+	// Expiry days
 	ExpiresInDays *int   `json:"expires_in_days"`
 	Scope         string `json:"scope"`
 }
 
-// validateTokenAccess: experts for any user, managers for their group.
+// Token permissions
 func (h *Handler) validateTokenAccess(c *gin.Context) (string, *platformsession.SessionData, string, bool) {
+	if c.Param("id") == "" {
+		sessionData, ok := httputil.GetSessionFromContext(c)
+		if !ok {
+			return "", nil, "", false
+		}
+		if sessionData == nil || sessionData.UserID == "" {
+			httputil.Unauthorized(c, "Invalid session")
+			return "", nil, "", false
+		}
+		return sessionData.UserID, sessionData, h.getAuthToken(sessionData), true
+	}
+
 	id, sessionData, authToken, ok := h.validateUserIDAndGetManagerSession(c)
 	if !ok {
 		return "", nil, "", false
@@ -42,7 +54,7 @@ func (h *Handler) validateTokenAccess(c *gin.Context) (string, *platformsession.
 	return id, sessionData, authToken, true
 }
 
-// CreateUserToken issues a token (plaintext shown once).
+// Issue token
 func (h *Handler) CreateUserToken(c *gin.Context) {
 	id, sessionData, authToken, ok := h.validateTokenAccess(c)
 	if !ok {
@@ -64,6 +76,12 @@ func (h *Handler) CreateUserToken(c *gin.Context) {
 		httputil.BadRequest(c, "scope must be 'read' or 'full'")
 		return
 	}
+	if scope == backendModels.APITokenScopeFull &&
+		sessionData.AccessLevel != constants.AccessLevelExpert &&
+		sessionData.AccessLevel != constants.AccessLevelManager {
+		httputil.Forbidden(c, "Only experts and managers can create read & write tokens")
+		return
+	}
 
 	var expiresAt *time.Time
 	days := apiTokenDefaultExpiryDays
@@ -79,7 +97,7 @@ func (h *Handler) CreateUserToken(c *gin.Context) {
 		expiresAt = &t
 	}
 
-	// Identity from Keycloak, not request input.
+	// Verified identity
 	user, err := h.userStore.GetUser(authToken, id)
 	if err != nil {
 		applogger.ForComponent("api_token").Errorf("fetch user %s for token failed: %v", id, err)
@@ -115,7 +133,7 @@ func (h *Handler) CreateUserToken(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"data": gin.H{
-			"token":      gen.Plaintext, // shown once, never retrievable again
+			"token":      gen.Plaintext, // Shown once
 			"id":         token.ID,
 			"name":       token.Name,
 			"prefix":     token.TokenPrefix,
@@ -126,7 +144,7 @@ func (h *Handler) CreateUserToken(c *gin.Context) {
 	})
 }
 
-// ListUserTokens lists the target user's tokens.
+// List tokens
 func (h *Handler) ListUserTokens(c *gin.Context) {
 	id, _, _, ok := h.validateTokenAccess(c)
 	if !ok {
@@ -140,7 +158,7 @@ func (h *Handler) ListUserTokens(c *gin.Context) {
 	httputil.SuccessResponse(c, tokens)
 }
 
-// RevokeUserToken revokes one token of the target user.
+// Revoke token
 func (h *Handler) RevokeUserToken(c *gin.Context) {
 	id, sessionData, _, ok := h.validateTokenAccess(c)
 	if !ok {
@@ -164,7 +182,7 @@ func (h *Handler) RevokeUserToken(c *gin.Context) {
 	httputil.SuccessMessage(c, "Token revoked")
 }
 
-// clampTokenAccessLevel keeps tokens below expert/manager.
+// Limit privileges
 func clampTokenAccessLevel(level string) string {
 	if level == constants.AccessLevelExpert || level == constants.AccessLevelManager {
 		return constants.AccessLevelIntermediate
