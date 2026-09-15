@@ -666,6 +666,9 @@ func registerTechnologyRoutes(api *gin.RouterGroup, handler *technologyhandler.H
 func registerProfileRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
 	api.GET("/users/profile", handler.GetProfile)
 	api.PUT("/users/profile", handler.UpdateProfile)
+	api.POST("/users/profile/tokens", handler.CreateUserToken)
+	api.GET("/users/profile/tokens", handler.ListUserTokens)
+	api.DELETE("/users/profile/tokens/:tokenId", handler.RevokeUserToken)
 }
 
 func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.SettingsHandler) {
@@ -716,7 +719,7 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
 
-	// Per-user API tokens (managed by experts, or managers for their own users).
+	// Managed tokens
 	api.POST(routeUsersByID+"/tokens", handler.CreateUserToken)
 	api.GET(routeUsersByID+"/tokens", handler.ListUserTokens)
 	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
