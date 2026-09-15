@@ -2578,7 +2578,31 @@
       "general": "Algemeen",
       "display": "Weergave",
       "notifications": "Meldingen",
-      "advanced": "Geavanceerd"
+      "advanced": "Geavanceerd",
+      "experimentalFeatures": "Experimentele functies"
+    },
+    "featureFlags": {
+      "title": "Featurevlaggen",
+      "subtitle": "Schakel optionele en in ontwikkeling zijnde functies in.",
+      "warning": {
+        "title": "Experimenteel, mogelijk onstabiel",
+        "description": "Deze functies zijn in actieve ontwikkeling en kunnen onstabiel zijn of zonder aankondiging veranderen."
+      },
+      "sections": {
+        "experimental": {
+          "title": "Experimenteel"
+        },
+        "general": {
+          "title": "Featurevlaggen",
+          "empty": "Geen vlaggen beschikbaar."
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "De modulaire, workflow-gebaseerde Model Builder (vervangt de configurator)."
+        }
+      }
     },
     "stats": {
       "user": "Gebruiker",

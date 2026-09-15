@@ -1,17 +1,8 @@
 /**
- * Feature flag for the ModelBuilder (modular-workflow) feature.
+ * The route path the ModelBuilder is mounted on (under the /app context).
  *
- * There is no central flags mechanism in the app yet, so this uses a simple
- * env-based flag with a constant fallback. Set `VITE_MODELBUILDER_ENABLED=true`
- * in the environment to enable the route.
+ * The feature's on/off state is no longer an env flag — it is a user-toggleable
+ * feature flag (see `src/features/settings/flags.ts` / `flags-store.ts`).
+ * `App.tsx` mounts this route only while the `modelbuilder` flag is enabled.
  */
-const ENV_FLAG = import.meta.env.VITE_MODELBUILDER_ENABLED;
-
-/** Constant fallback — flip to `true` to enable without an env var. */
-const DEFAULT_ENABLED = false;
-
-export const MODELBUILDER_ENABLED: boolean =
-  ENV_FLAG === undefined ? DEFAULT_ENABLED : ENV_FLAG === "true";
-
-/** The route path the ModelBuilder is mounted on (under the /app context). */
 export const MODELBUILDER_ROUTE = "/app/modelbuilder";

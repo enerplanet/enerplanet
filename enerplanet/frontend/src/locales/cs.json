@@ -2628,7 +2628,31 @@
       "general": "Obecné",
       "display": "Zobrazení",
       "notifications": "Oznámení",
-      "advanced": "Pokročilé"
+      "advanced": "Pokročilé",
+      "experimentalFeatures": "Experimentální funkce"
+    },
+    "featureFlags": {
+      "title": "Příznaky funkcí",
+      "subtitle": "Zapínejte volitelné a experimentální funkce.",
+      "warning": {
+        "title": "Experimentální, může být nestabilní",
+        "description": "Tyto funkce jsou v aktivním vývoji a mohou být nestabilní nebo se bez upozornění měnit."
+      },
+      "sections": {
+        "experimental": {
+          "title": "Experimentální"
+        },
+        "general": {
+          "title": "Příznaky funkcí",
+          "empty": "Žádné dostupné příznaky."
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "Modulární Model Builder založený na workflow (nahrazuje konfigurátor)."
+        }
+      }
     },
     "stats": {
       "user": "Uživatel",

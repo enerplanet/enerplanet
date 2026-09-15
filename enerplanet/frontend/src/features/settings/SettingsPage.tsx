@@ -9,6 +9,7 @@ import LanguageSettings from '@/features/settings/LanguageSettings';
 import NotificationManagement from '@/features/settings/NotificationManagement';
 import PolygonLimitsSettings from '@/features/settings/PolygonLimitsSettings';
 import RegionManagement from '@/features/settings/RegionManagement';
+import FeatureFlags from '@/features/settings/featureFlags';
 import { useAuthStore } from '@/store/auth-store';
 import { useTranslation, getCurrentLanguage } from '@spatialhub/i18n';
 import { ACCESS_LEVEL_LABELS, type AccessLevel } from '@/features/polygon-drawer/store/polygon-limits-store';
@@ -26,12 +27,13 @@ import {
   LayoutGrid,
   Monitor,
   Cog,
-  Shield
+  Shield,
+  FlaskConical
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
 import LegalPage from "@/pages/legal/LegalPage";
 
-type TabKey = 'general' | 'display' | 'notifications' | 'privacyTerms' | 'advanced';
+type TabKey = 'general' | 'display' | 'notifications' | 'privacyTerms' | 'advanced' | 'experimentalFeatures';
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -49,6 +51,7 @@ const SettingsPage: React.FC = () => {
     { key: 'notifications', label: t('settings.tabs.notifications'), icon: Bell },
     { key: 'privacyTerms', label: 'Privacy & Terms', icon: Shield },
     { key: 'advanced', label: t('settings.tabs.advanced'), icon: Cog, expertOnly: true },
+    { key: 'experimentalFeatures', label: t('settings.tabs.experimentalFeatures'), icon: FlaskConical },
   ];
   
   // Check if user came from admin dashboard
@@ -314,6 +317,24 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <RegionManagement />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'experimentalFeatures' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Feature Flags */}
+              <div className="bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-muted rounded">
+                    <FlaskConical className="w-3.5 h-3.5 text-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-semibold text-foreground">{t('settings.featureFlags.title')}</h3>
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{t('settings.featureFlags.subtitle')}</p>
+                  </div>
+                </div>
+                <FeatureFlags />
               </div>
             </div>
           )}

@@ -75,7 +75,7 @@ export {
 export { defaultWorkflow } from "./workflows/defaultWorkflow";
 
 // Feature flag
-export { MODELBUILDER_ENABLED, MODELBUILDER_ROUTE } from "./flags";
+export { MODELBUILDER_ROUTE } from "./flags";
 
 // Module system (re-export the module barrel)
 export * from "./modules";

@@ -60,6 +60,7 @@ import { SessionExpiryBanner } from "@/components/ui/SessionExpiryBanner";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { APP_VERSION } from "@/version";
 import { cn } from "@/lib/utils";
+import { useFeatureFlag } from "@/features/settings/flags-store";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -78,6 +79,7 @@ interface SidebarItem {
   color: string;
   bgColor: string;
   dataTour: string;
+  hidden?: boolean; // Optional property to hide the item based on feature flags
 }
 
 interface UserMenuItem {
@@ -175,7 +177,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       startTour();
     }
   };
-
+  const modelBuilderEnabled = useFeatureFlag("modelbuilder");
   const sidebarItems: SidebarItem[] = useMemo(
     () => [
       {
@@ -225,9 +227,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         color: "#06b6d4",
         bgColor: "#cffafe",
         dataTour: "modelbuilder",
+        hidden: !modelBuilderEnabled, // Hide if the feature flag is disabled
       },
     ],
-    [t]
+    [t, modelBuilderEnabled]
   );
 
   const userMenuItems: UserMenuItem[] = useMemo(
@@ -349,6 +352,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   onClick={() => navigate(item.path)}
                   isActive={isActive(item.path)}
                   dataTour={item.dataTour}
+                  isHidden={item.hidden} // Pass the hidden prop to SidebarButton
                 />
               ))}
             </Authorized>

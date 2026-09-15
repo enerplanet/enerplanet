@@ -7,7 +7,8 @@ import { Middleware } from "@/middleware/middleware";
 import { ensureCSRFToken } from "@/utils/csrf";
 import { TooltipProvider } from "@spatialhub/ui";
 import { Loader2 } from "lucide-react";
-import { MODELBUILDER_ENABLED, MODELBUILDER_ROUTE } from "@/features/modular-workflow/flags";
+import { useFeatureFlag } from "@/features/settings/flags-store";
+import { MODELBUILDER_ROUTE } from "@/features/modular-workflow/flags";
 
 // Lazy loaded components for code splitting
 const MapComponent = lazy(() =>
@@ -75,6 +76,7 @@ const PageLoader = () => (
 type AppProps = Record<string, never>;
 
 const App: React.FC<AppProps> = () => {
+  const modelBuilderEnabled = useFeatureFlag("modelbuilder");
   // Initialize CSRF token on app load
   useEffect(() => {
     ensureCSRFToken().catch((err) => {
@@ -142,7 +144,7 @@ const App: React.FC<AppProps> = () => {
                     <Route path="/app/settings" element={<SettingsPage />} />
                     <Route path="/app/settings/weather" element={<WeatherSettings />} />
                     <Route path="/app/notifications" element={<NotificationsPage />} />
-                    {MODELBUILDER_ENABLED && (
+                    {modelBuilderEnabled && (
                       <Route path={MODELBUILDER_ROUTE} element={<ModelBuilderPage />} />
                     )}
                   </Route>

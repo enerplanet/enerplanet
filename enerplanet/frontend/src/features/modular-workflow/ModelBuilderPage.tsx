@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@spatialhub/ui";
-import { MODELBUILDER_ENABLED } from "./flags";
 import { ModelBuilderConfigurator } from "./ModelBuilderConfigurator";
 import { ModelBuilderLanding } from "./ModelBuilderLanding";
 import { WorkflowBuilder } from "./workflow/WorkflowBuilder";
@@ -19,8 +18,8 @@ import type { ConfiguratorContext } from "./types/context";
  * - **Configurator** — the playback shell for the active workflow.
  * - **Builder** — the admin UI to compose/validate/import/export workflows.
  *
- * If the feature flag is disabled, shows a placeholder instead of mounting
- * either view.
+ * The route (`/app/modelbuilder`) is mounted by `App.tsx` only while the
+ * `modelbuilder` feature flag is enabled (see `src/features/settings/flags.ts`).
  *
  * On mount, if a persisted flow snapshot exists (Phase 6), the page offers to
  * resume the previous flow: it looks up the workflow by `workflowId` and seeds
@@ -58,23 +57,6 @@ export default function ModelBuilderPage() {
       savedAt: snapshot.savedAt,
     });
   }, []);
-
-  if (!MODELBUILDER_ENABLED) {
-    return (
-      <div className="mx-auto max-w-3xl p-6">
-        <div className="rounded-lg border border-border bg-card p-10 text-center">
-          <h2 className="text-lg font-semibold">ModelBuilder</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This feature is not enabled. Set{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">
-              VITE_MODELBUILDER_ENABLED=true
-            </code>{" "}
-            to enable it.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   const handleStart = (workflow: WorkflowDefinition, context?: ConfiguratorContext) => {
     setActiveWorkflow(workflow);

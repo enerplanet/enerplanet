@@ -2603,7 +2603,31 @@
       "general": "General",
       "display": "Visualización",
       "notifications": "Notificaciones",
-      "advanced": "Avanzado"
+      "advanced": "Avanzado",
+      "experimentalFeatures": "Funcionalidades experimentales"
+    },
+    "featureFlags": {
+      "title": "Marcas de función",
+      "subtitle": "Activa funciones opcionales o en desarrollo.",
+      "warning": {
+        "title": "Experimental, puede ser inestable",
+        "description": "Estas funciones están en desarrollo activo y pueden ser inestables o cambiar sin previo aviso."
+      },
+      "sections": {
+        "experimental": {
+          "title": "Experimental"
+        },
+        "general": {
+          "title": "Marcas de función",
+          "empty": "No hay funciones disponibles."
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "El Model Builder modular basado en flujos de trabajo (sustituye al configurador)."
+        }
+      }
     },
     "stats": {
       "user": "Usuario",

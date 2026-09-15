@@ -17,10 +17,11 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
   tooltip,
   onClick,
   isActive = false,
+  isHidden = false,
   dataTour,
   className = "",
 }) => {
-  return (
+  return isHidden ? null : (
     <div className="relative group">
       <Tooltip>
         <TooltipTrigger asChild>

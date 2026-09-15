@@ -2582,7 +2582,31 @@
       "general": "General",
       "display": "Display",
       "notifications": "Notifications",
-      "advanced": "Advanced"
+      "advanced": "Advanced",
+      "experimentalFeatures": "Experimental Features"
+    },
+    "featureFlags": {
+      "title": "Feature Flags",
+      "subtitle": "Toggle optional and in-development features.",
+      "warning": {
+        "title": "Experimental, may be unstable",
+        "description": "These features are in active development and can be unstable or change without notice."
+      },
+      "sections": {
+        "experimental": {
+          "title": "Experimental"
+        },
+        "general": {
+          "title": "Feature flags",
+          "empty": "No feature flags available."
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "The modular workflow-based Model Builder (replaces the configurator)."
+        }
+      }
     },
     "stats": {
       "user": "User",
