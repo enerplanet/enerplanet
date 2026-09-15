@@ -1,5 +1,5 @@
-// Package city2tabula is the HTTP handler for the on-request 3D-data enrich
-// endpoint. Given a user-drawn area (country plus its PyLovo osm_ids and the
+// Package city2tabula is the HTTP handler for the on-request 3D-data
+// endpoints. Given a user-drawn area (country plus its PyLovo osm_ids and the
 // bbox), it resolves City2TABULA envelope data for those buildings and returns
 // a per-osm_id merge map the Building Configurator folds onto its building
 // features.
@@ -33,17 +33,19 @@ type yearResolver interface {
 	GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error)
 }
 
-// Handler serves the enrich endpoints, backed by the City2TABULA client.
+// Handler serves the enrich and availability endpoints, backed by the
+// City2TABULA client.
 type Handler struct {
 	client     *c2t.Client
 	yearClient yearResolver
+	grid       gridRegions
 }
 
 // NewHandler returns a Handler bound to the given City2TABULA client,
 // reaching ignis through the given TentaCron client for
-// default_construction_year lookups.
-func NewHandler(client *c2t.Client, tc *tentacron.Client) *Handler {
-	return &Handler{client: client, yearClient: ignis.NewClient(tc)}
+// default_construction_year lookups and reading PyLovo grid extents from grid.
+func NewHandler(client *c2t.Client, tc *tentacron.Client, grid gridRegions) *Handler {
+	return &Handler{client: client, yearClient: ignis.NewClient(tc), grid: grid}
 }
 
 // Enrich godoc
@@ -228,6 +230,21 @@ func splitCSV(s string) []string {
 // variant and falls back to an archetype for the geometry (scenario SC-03).
 func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Building) map[string]contracts.EnrichedBuilding {
 	out := make(map[string]contracts.EnrichedBuilding, len(byOSMID))
+	// One ignis lookup per distinct variant code rather than per building: an
+	// area covering a village shares a handful of archetypes across hundreds
+	// of buildings.
+	years := make(map[string]*int)
+	yearFor := func(code *string) *int {
+		if code == nil {
+			return nil
+		}
+		if y, seen := years[*code]; seen {
+			return y
+		}
+		y := h.defaultConstructionYear(ctx, code)
+		years[*code] = y
+		return y
+	}
 	for osmID, b := range byOSMID {
 		bb := contracts.BuemBuilding{
 			Envelope: contracts.BuemEnvelope{Elements: c2t.EnvelopeElements(b)},
@@ -246,7 +263,7 @@ func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Build
 			ObjectID:                b.ObjectID,
 			MatchType:               b.MatchType,
 			TabulaVariantCode:       b.TabulaVariantCode,
-			DefaultConstructionYear: h.defaultConstructionYear(ctx, b.TabulaVariantCode),
+			DefaultConstructionYear: yearFor(b.TabulaVariantCode),
 			Buem:                    contracts.BuemNode{Building: bb},
 		}
 	}
