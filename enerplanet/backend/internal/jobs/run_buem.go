@@ -137,8 +137,19 @@ func ResolveBuemForModel(
 	}
 	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, refurbishmentLevel, modelCookingSettings(model.Config))
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
-		log.Warnf("model %d: no buildings with a resolved envelope and weather, skipping buem-gateway call", model.ID)
-		return nil, resolved, unresolved, nil
+		reason := "no weather data for this area"
+		if len(buildings) == 0 {
+			reason = "no building had a resolved 3D envelope"
+		}
+		log.Warnf("model %d: %s, skipping buem-gateway call", model.ID, reason)
+		// Buildings that got as far as resolved never reached BuEM here, and a
+		// caller persisting per-building outcomes reads a resolved building
+		// with no result as a BuEM rejection. Move them across carrying the
+		// real cause.
+		for osmID := range resolved {
+			unresolved[osmID] = reason
+		}
+		return nil, nil, unresolved, nil
 	}
 
 	results, err = buemClient.RunBuildings(ctx, buildings, weatherJSON, p.StartDate, p.EndDate, p.Resolution, p.ModelID)
