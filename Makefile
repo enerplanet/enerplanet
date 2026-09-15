@@ -40,6 +40,7 @@ help:
 	@echo "  make init-keycloak      Re-initialize Keycloak"
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
+	@echo "  make fixtures           Load the committed test fixtures into the services"
 	@echo "  make tentacron               Start the tentacron stack (tentacron, ignis, buem, meme)"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
@@ -49,8 +50,15 @@ help:
 # SECTION 1: CORE COMMANDS
 # ==============================================================================
 
+# Fixture files are Git LFS objects; without git lfs pull they are pointer
+# text and the loader copies a few hundred bytes that no service can read.
+.PHONY: fixtures
+fixtures:
+	@git lfs pull --include=fixtures 2>/dev/null || true
+	@./fixtures/load.sh
+
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo tentacron-stack
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo tentacron-stack fixtures
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 

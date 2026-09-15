@@ -13,3 +13,9 @@
 services:
   city2tabula:
     command: ["go", "run", "./cmd/server"]
+    environment:
+      # cmd/server refuses to start unless this is non-empty, even when only
+      # serving. Nothing stats the path and only the extraction pipeline reads
+      # it, so a value is enough for a fixture-only setup with no citydb-tool
+      # installed. Override in the environment to run an actual import.
+      CITYDB_TOOL_PATH: ${CITYDB_TOOL_PATH:-unused-when-serving-fixtures}
