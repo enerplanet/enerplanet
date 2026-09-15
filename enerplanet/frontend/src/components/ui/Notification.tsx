@@ -59,9 +59,12 @@ const Notification: React.FC<NotificationProps> = ({
 
 	return (
 		// Centred over the map rather than top-right, where the configurator's
-		// settings panel sits and was being covered. Positioning stays on the
-		// outer element so the inner drop-in transform does not fight it.
-		<div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+		// settings panel sits and was being covered. top-28 puts it clear of the
+		// map toolbar, so the toast drops out from under the bar rather than
+		// landing on it.
+		// Positioning stays on the outer element so the inner drop-in transform
+		// does not fight it.
+		<div className="fixed top-28 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
 			<div className={`md-drop-in pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg max-w-md ${getNotificationColors(severity)}`}>
 				{getNotificationIcon(severity)}
 				<span className="text-sm font-medium flex-1">{message}</span>
