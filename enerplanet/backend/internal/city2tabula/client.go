@@ -6,6 +6,7 @@ package city2tabula
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -20,6 +21,8 @@ const (
 	targetTriggerRun = "c2t-trigger-run"
 	targetRunStatus  = "c2t-run-status"
 	targetBuildings  = "c2t-buildings"
+	targetCoverage   = "c2t-coverage"
+	targetGeometry   = "c2t-geometry"
 )
 
 // ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
@@ -54,6 +57,11 @@ var c2tRejectionCodes = map[string]bool{
 // A 5xx carries a raw DB error string that must not reach an end user, so it
 // stays an opaque *tentacron.TargetError for the caller to log and nothing
 // more. Anything that is not a City2TABULA rejection is returned unchanged.
+//
+// One City2TABULA failure reaches callers by both routes: a retryable 5xx that
+// exhausts the target's attempt cap arrives as max_attempts_exceeded, not
+// target_error, so the same upstream fault is typed or raw depending only on
+// whether a retry was left. Branch on the error, never on the code alone.
 func asC2TError(err error) error {
 	te, ok := tentacron.AsTargetError(err)
 	if !ok || !c2tRejectionCodes[te.Code] {
@@ -196,4 +204,78 @@ func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmID
 		return nil, asC2TError(err)
 	}
 	return buildings, nil
+}
+
+// GetCoverage returns City2TABULA's coverage count for bbox. Unlike
+// GetBuildingsByOSMIDs it needs no osm_ids, which is what lets a caller ask
+// about an area before it has any building list for it.
+//
+// The count is every building_link row, including those recording a failed
+// pairing: match_type 2, a 3D building with no OSM match, and 3, an OSM
+// building with no 3D one. Neither is modellable, and 724 of the 3106 Dutch
+// rows are match_type 2. The count therefore overstates coverage, and an area
+// where nothing paired still returns non-zero. The filter belongs in
+// City2TABULA's own query, since the count arrives here already summed.
+func (c *Client) GetCoverage(ctx context.Context, country string, bbox Bbox) (int, error) {
+	payload := map[string]any{
+		"country": normalizeCountry(country),
+		"xmin":    bbox.Xmin, "ymin": bbox.Ymin, "xmax": bbox.Xmax, "ymax": bbox.Ymax,
+	}
+	var body struct {
+		Count int `json:"count"`
+	}
+	if err := c.tc.Do(ctx, targetCoverage, payload, &body); err != nil {
+		return 0, asC2TError(err)
+	}
+	return body.Count, nil
+}
+
+// GetBuildingsInBBox returns every LOD2 building City2TABULA holds inside
+// bbox, whether or not it is linked to a PyLovo building. City2TABULA's
+// bbox query cannot report the link, so OSMID is empty and MatchType is 0 on
+// every result: callers that need the PyLovo identity must use
+// GetBuildingsByOSMIDs instead.
+//
+// Read with GetCoverage the count separates "no 3D data here" from "3D data
+// here that the link step has not been run over".
+func (c *Client) GetBuildingsInBBox(ctx context.Context, country string, bbox Bbox) ([]Building, error) {
+	payload := map[string]any{
+		"country": normalizeCountry(country),
+		"xmin":    bbox.Xmin, "ymin": bbox.Ymin, "xmax": bbox.Xmax, "ymax": bbox.Ymax,
+	}
+	var buildings []Building
+	if err := c.tc.Do(ctx, targetBuildings, payload, &buildings); err != nil {
+		return nil, asC2TError(err)
+	}
+	return buildings, nil
+}
+
+// BuildingGeometry is one building's footprint, as City2TABULA's
+// GET /api/v1/geometry returns it.
+//
+// FootprintGeoJSON is in the country's own storage CRS, not WGS84 -
+// EPSG:28992 for the Netherlands, 25832 for Germany - because City2TABULA
+// serves the geometry without reprojecting. The GeoJSON names its CRS in a
+// "crs" member, so a consumer can reproject; nothing here does it for them.
+type BuildingGeometry struct {
+	ObjectID         string          `json:"object_id"`
+	FootprintGeoJSON json.RawMessage `json:"footprint_geojson,omitempty"`
+}
+
+// GetGeometryByObjectIDs returns footprints for the given building object ids.
+// Buildings carry no geometry in the other responses, so this is the only way
+// to place them on a map.
+func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
+	if len(objectIDs) == 0 {
+		return nil, nil
+	}
+	payload := map[string]any{
+		"country":    normalizeCountry(country),
+		"object_ids": strings.Join(objectIDs, ","),
+	}
+	var geometry []BuildingGeometry
+	if err := c.tc.Do(ctx, targetGeometry, payload, &geometry); err != nil {
+		return nil, asC2TError(err)
+	}
+	return geometry, nil
 }

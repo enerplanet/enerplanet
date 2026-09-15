@@ -662,7 +662,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
-	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient)
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB))
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
@@ -859,12 +859,16 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 	weatherRoutes.GET("/current", handler.GetCurrentWeather)
 }
 
-// registerCity2TabulaRoutes wires the on-request 3D-data enrich endpoint. It
-// resolves City2TABULA envelope data for a drawn area's buildings and is
-// consumed by the Building Configurator; not a proxy for City2TABULA's own API.
+// registerCity2TabulaRoutes wires the on-request 3D-data endpoints: the enrich
+// pair, which resolves City2TABULA envelope data for a drawn area's buildings
+// and is consumed by the Building Configurator, and the heat availability
+// check, which reports whether an area can be modelled before anything is
+// drawn against it. Neither is a proxy for City2TABULA's own API.
 func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler.Handler) {
 	api.POST("/v1/city2tabula/enrich", handler.Enrich)
 	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
+	api.POST("/v1/city2tabula/enrich/area", handler.EnrichArea)
+	api.GET("/v1/heat/availability", handler.Availability)
 }
 
 // registerHeatDemandRoutes wires the heat-demand resolve endpoint, which turns

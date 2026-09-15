@@ -40,6 +40,25 @@ func (rs *Store) GetEnabledCachedRegions() ([]models.CachedRegion, error) {
 	return regions, nil
 }
 
+// GridRegionsOverlapping returns the enabled cached regions holding grid data
+// whose bounding box overlaps the given WGS84 area. PyLovo derives each bbox
+// from the postcode areas it actually generated grids for, not from the
+// administrative boundary, but it is still an envelope: an overlap means
+// PyLovo has grids somewhere in that envelope, not that this exact area is
+// covered.
+func (rs *Store) GridRegionsOverlapping(west, south, east, north float64) ([]models.CachedRegion, error) {
+	var regions []models.CachedRegion
+	err := rs.db.
+		Where("grid_count > 0 AND enabled = true").
+		Where("bbox_west <= ? AND bbox_east >= ? AND bbox_south <= ? AND bbox_north >= ?", east, west, north, south).
+		Order("country_code ASC, state_code ASC").
+		Find(&regions).Error
+	if err != nil {
+		return nil, fmt.Errorf("get grid regions overlapping [%v %v %v %v]: %w", west, south, east, north, err)
+	}
+	return regions, nil
+}
+
 // DeleteCachedRegion removes a cached region by ID
 func (rs *Store) DeleteCachedRegion(id uint) error {
 	if err := rs.db.Delete(&models.CachedRegion{}, id).Error; err != nil {

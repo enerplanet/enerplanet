@@ -36,8 +36,8 @@ func (f fakeYearResolver) GetEnvelopeUValues(ctx context.Context, variantCode st
 }
 
 // fakeC2T stands in for City2TABULA behind a fake TentaCron: it serves the
-// submit + poll exchange and answers each of the three c2t targets from these
-// fields, so a c2t.Client (which speaks only TentaCron now) can drive it.
+// submit + poll exchange and answers each c2t target from these fields, so a
+// c2t.Client (which speaks only TentaCron now) can drive it.
 type fakeC2T struct {
 	buildingsJSON       string // target_response for c2t-buildings
 	buildingsBadRequest bool   // c2t-buildings fails as an upstream 400 (unsupported country)
@@ -45,6 +45,11 @@ type fakeC2T struct {
 	runNotFound         bool   // c2t-run-status fails as an upstream 404
 	triggerFails        bool   // c2t-trigger-run fails as an upstream 500
 	triggeredRuns       int
+	coverageCount       int    // count returned by c2t-coverage
+	coverageFails       bool   // c2t-coverage fails as an upstream 500
+	coverageExhausted   bool   // c2t-coverage gives up after its attempt cap
+	geometryJSON        string // target_response for c2t-geometry
+	geometryFails       bool   // c2t-geometry fails as an upstream 500
 }
 
 func (f *fakeC2T) client(t *testing.T) *c2t.Client {
@@ -98,6 +103,27 @@ func (f *fakeC2T) envelope(target string) string {
 			return fail(http.StatusInternalServerError, "internal server error")
 		}
 		return ok(`{"run_id":"run-1","country":"germany","status":"pending"}`)
+	case "c2t-geometry":
+		if f.geometryFails {
+			return fail(http.StatusInternalServerError, "internal server error")
+		}
+		return ok(f.geometryJSON)
+	case "c2t-coverage":
+		if f.coverageExhausted {
+			b, _ := json.Marshal(map[string]any{
+				"state": "failed",
+				"error": map[string]any{
+					"code": "max_attempts_exceeded",
+					"message": "gave up after 2 attempts, last error: target c2t-coverage: " +
+						`HTTP 500: {"error":"failed to count building_link rows for germany"}`,
+				},
+			})
+			return string(b)
+		}
+		if f.coverageFails {
+			return fail(http.StatusInternalServerError, "internal server error")
+		}
+		return ok(fmt.Sprintf(`{"count":%d}`, f.coverageCount))
 	case "c2t-run-status":
 		if f.runNotFound {
 			return fail(http.StatusNotFound, "run not found")
