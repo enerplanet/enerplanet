@@ -96,11 +96,12 @@ export const MapHeader: FC<MapHeaderProps> = ({
   onRegionSelect,
 }) => {
   const { t } = useTranslation();
-  // relative z-50: md-fade-in animates with fill-mode both, which creates a
+  // relative z-30: md-fade-in animates with fill-mode both, which creates a
   // permanent stacking context that traps the region dropdown's own z-50 here.
-  // Without a stacking order the header loses to the map canvas below it.
+  // Without a stacking order the header loses to the map canvas below it; 30
+  // clears the map while staying under the z-50 notification toast.
   return (
-    <div className="md-fade-in relative z-50 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
+    <div className="md-fade-in relative z-30 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
       <div className="flex items-center gap-2">
         {!isLoadingPreference && (
           <Tooltip>
