@@ -248,7 +248,7 @@ pylovo:
 
 
 .PHONY: tentacron-stack
-tentacron-stack: tentacron-network city2tabula weather ignis buem meme tentacron
+tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
@@ -257,19 +257,17 @@ tentacron-network:
 
 .PHONY: tentacron
 tentacron: tentacron-network
-	@cp tentacron.yaml dependencies/$(TENTACRON_DIR)/config.yaml
 	@cd dependencies/$(TENTACRON_DIR)/environment && make build ENV=dev
-	@cd dependencies/$(TENTACRON_DIR)/environment && CONFIG=config.yaml docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.override.yml up -d api
+	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d api
 	@docker network connect tentacron-net tentacron-env-api-1 2>/dev/null || true
-	@echo "$(GREEN)TentaCron up on http://localhost:8400, attached to 'tentacron-net'$(NC)"
+	@echo "$(GREEN)TentaCron up on http://localhost:$(TENTACRON_PORT), attached to 'tentacron-net'$(NC)"
 
 .PHONY: ignis
 ignis: tentacron-network
-	@cd dependencies/$(IGNIS_DIR)/environment && HOST_HTTPS_PORT=$(IGNIS_PORT) docker compose -f docker-compose.quickstart.yml up -d
-	@cd dependencies/$(IGNIS_DIR)/environment && [ -f .ignis-seeded ] || { HOST_HTTPS_PORT=$(IGNIS_PORT) docker compose -f docker-compose.quickstart.yml --profile seed run --rm ignis-build-db >/dev/null 2>&1 || true; touch .ignis-seeded; }
+	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml up -d
+	@cd dependencies/$(IGNIS_DIR)/environment/http && [ -f .ignis-seeded ] || { HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml --profile seed run --rm ignis-build-db >/dev/null 2>&1 || true; touch .ignis-seeded; }
 	@docker network connect tentacron-net ignis-app 2>/dev/null || true
-	@docker network connect tentacron-net ignis-reverse-proxy 2>/dev/null || true
-	@echo "$(GREEN)Ignis up on https://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
+	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
 buem: tentacron-network
@@ -281,7 +279,7 @@ buem: tentacron-network
 
 .PHONY: meme
 meme: tentacron-network
-	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.override.yml up -d --build api
+	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
 	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
@@ -292,9 +290,9 @@ weather: tentacron-network
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: city2tabula
-city2tabula: tentacron-network
-	@cd dependencies/$(CITY2TABULA_DIR)/environment && HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml -f ../../../heat-city2tabula.override.yml up -d --build
-	@docker network connect tentacron-net city2tabula-environment 2>/dev/null || true
+city2tabula: tentacron-network ignis
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --build city2tabula-server
+	@docker network connect tentacron-net city2tabula-server 2>/dev/null || true
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
