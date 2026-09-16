@@ -62,58 +62,67 @@ load_weather() {
 }
 
 # The City2TABULA server derives its database name per request as
-# <DB_NAME>_<country>, and connects with the settings in its own checkout's
-# environment/docker.env. Reading them from there rather than hardcoding keeps
-# this correct when that file changes; override any of them in the environment
-# to point at a different instance.
-load_city2tabula() {
-  local src="$HERE/city2tabula/city2tabula_loenen.sql.gz"
+# <DB_NAME>_<country>. Its database is the city2tabula-db container, which
+# publishes no host port, so psql runs inside it rather than from the host.
+#
+# environment/http/docker.env is deliberately NOT the source here: that file
+# configures the interactive pipeline service, which points at a host Postgres
+# (host.docker.internal) under a different name. Following it restores the
+# fixture into a database the server never reads.
+#
+# One fixture per country, each with its own TABULA lookup: City2TABULA
+# classifies against tabula.tabula, so a building cut without it serves reads
+# but fails any pipeline run.
+C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db}"
+
+c2t_settings() {
+  command -v docker >/dev/null || { fail "city2tabula: docker is required to reach $C2T_DB_CONTAINER"; return 1; }
+  if ! docker exec "$C2T_DB_CONTAINER" true >/dev/null 2>&1; then
+    fail "city2tabula: container $C2T_DB_CONTAINER is not running, start it with 'make city2tabula' first"
+    return 1
+  fi
+  # Defaults match the compose file's own (DB_NAME: ${C2T_DB_NAME:-city2tabula}),
+  # so the loader and the server derive the same database from the same inputs.
+  C2T_TARGET_NAME="${C2T_DB_NAME:-city2tabula}"
+  C2T_TARGET_USER="${C2T_DB_USER:-postgres}"
+  export PGPASSWORD="${C2T_DB_PASSWORD:-postgres}"
+  return 0
+}
+
+c2t_psql() { docker exec -i -e PGPASSWORD="$PGPASSWORD" "$C2T_DB_CONTAINER" psql -U "$C2T_TARGET_USER" -v ON_ERROR_STOP=1 "$@"; }
+
+# restore_c2t COUNTRY BUILDING_FIXTURE TABULA_FIXTURE
+restore_c2t() {
+  local country="$1" src="$HERE/city2tabula/$2" tab="$HERE/city2tabula/$3"
   [ -f "$src" ] || return 0
-  local envfile="$ROOT/dependencies/$CITY2TABULA_DIR/environment/docker.env"
-  if [ ! -f "$envfile" ]; then
-    fail "city2tabula: $envfile not found, run 'make setup-repos' first"
-    return 0
-  fi
-  command -v psql >/dev/null || { fail "city2tabula: psql is required to restore the fixture"; return 0; }
+  local target="${C2T_TARGET_NAME}_${country}"
 
-  local c2t_db c2t_host c2t_port c2t_user
-  c2t_db="$(sed -n 's/^DB_NAME=//p' "$envfile" | tr -d '"' | awk '{print $1}')"
-  c2t_host="$(sed -n 's/^DB_HOST=//p' "$envfile" | tr -d '"' | awk '{print $1}')"
-  c2t_port="$(sed -n 's/^DB_PORT=//p' "$envfile" | tr -d '"' | awk '{print $1}')"
-  c2t_user="$(sed -n 's/^DB_USER=//p' "$envfile" | tr -d '"' | awk '{print $1}')"
-  # host.docker.internal is how the container reaches the host; from a host
-  # shell the same instance is localhost.
-  [ "$c2t_host" = "host.docker.internal" ] && c2t_host=localhost
-  c2t_host="${C2T_DB_HOST:-$c2t_host}"
-  c2t_port="${C2T_DB_PORT:-$c2t_port}"
-  c2t_user="${C2T_DB_USER:-$c2t_user}"
-  export PGPASSWORD="${C2T_DB_PASSWORD:-$(sed -n 's/^DB_PASSWORD=//p' "$envfile" | tr -d '"' | awk '{print $1}')}"
+  if c2t_psql -d postgres -tAc "select 1 from pg_database where datname='$target'" 2>/dev/null | grep -q 1; then
+    skip "city2tabula/$country: database $target already exists in $C2T_DB_CONTAINER, drop it yourself to reload"
+    return 0
+  fi
+  if ! c2t_psql -d postgres -c "create database \"$target\"" >/dev/null 2>&1; then
+    fail "city2tabula/$country: could not create database $target in $C2T_DB_CONTAINER"
+    return 0
+  fi
+  # The geometry type must exist before the dump's tables reference it. Only
+  # one of the fixtures carries CREATE EXTENSION itself, so do not rely on it.
+  c2t_psql -d "$target" -c "create extension if not exists postgis" >/dev/null 2>&1
+  if ! zcat "$src" | c2t_psql -d "$target" >/dev/null 2>&1; then
+    fail "city2tabula/$country: restore into $target failed, the database was left in place for inspection"
+    return 0
+  fi
+  if [ -f "$tab" ] && ! zcat "$tab" | c2t_psql -d "$target" >/dev/null 2>&1; then
+    fail "city2tabula/$country: TABULA restore into $target failed; reads will work, pipeline runs will not"
+    return 0
+  fi
+  ok "city2tabula/$country: restored into $target in $C2T_DB_CONTAINER"
+}
 
-  # The fixture is Dutch, and the server appends the country to DB_NAME.
-  local target="${C2T_DB_NAME:-${c2t_db}}_nl"
-  local psql_base=(psql -h "$c2t_host" -p "$c2t_port" -U "$c2t_user" -v ON_ERROR_STOP=1)
-
-  if ! "${psql_base[@]}" -d postgres -tAc "select 1" >/dev/null 2>&1; then
-    fail "city2tabula: cannot reach postgres at $c2t_host:$c2t_port as $c2t_user"
-    return 0
-  fi
-  if "${psql_base[@]}" -d postgres -tAc "select 1 from pg_database where datname='$target'" 2>/dev/null | grep -q 1; then
-    if [ "$FORCE" != "1" ]; then
-      skip "city2tabula: database $target already exists on $c2t_host:$c2t_port, FORCE=1 is refused here (drop it yourself first)"
-      return 0
-    fi
-    fail "city2tabula: $target exists; FORCE does not drop databases, drop it yourself and re-run"
-    return 0
-  fi
-  if ! "${psql_base[@]}" -d postgres -c "create database \"$target\"" >/dev/null 2>&1; then
-    fail "city2tabula: could not create database $target"
-    return 0
-  fi
-  if zcat "$src" | "${psql_base[@]}" -d "$target" >/dev/null; then
-    ok "city2tabula: restored into $target on $c2t_host:$c2t_port"
-  else
-    fail "city2tabula: restore into $target failed, the database was left in place for inspection"
-  fi
+load_city2tabula() {
+  c2t_settings || return 0
+  restore_c2t nl city2tabula_loenen.sql.gz tabula_nl.sql.gz
+  restore_c2t de city2tabula_bremen.sql.gz tabula_de.sql.gz
 }
 
 # The pylovo fixture carries its own schema, so it restores into a database
@@ -133,18 +142,30 @@ load_pylovo() {
   fi
   command -v psql >/dev/null || { fail "pylovo: psql is required to restore the fixture"; return 0; }
 
-  local db host port user
+  local db host port user pass backend_env
   db="$(sed -n 's/^DBNAME=//p' "$envfile" | tr -d \" | awk '{print $1}')"
-  host="$(sed -n 's/^HOST=//p' "$envfile" | tr -d \" | awk '{print $1}')"
-  port="$(sed -n 's/^PORT=//p' "$envfile" | tr -d \" | awk '{print $1}')"
   user="$(sed -n 's/^DBUSER=//p' "$envfile" | tr -d \" | awk '{print $1}')"
-  # HOST is a compose service name; from a host shell the same server is local.
-  case "$host" in postgres|host.docker.internal|pylovo-db) host=localhost ;; esac
+  pass="$(sed -n 's/^PASSWORD=//p' "$envfile" | tr -d \" | awk '{print $1}')"
+
+  # HOST and PORT in pylovo's env are compose-internal (postgres:5432), which
+  # from a host shell is the wrong server: the platform publishes that same
+  # instance on DB_PORT. Take the host-side address from the backend's env,
+  # which names the instance pylovo_db actually lives in, rather than
+  # rewriting the service name and keeping the container port.
+  backend_env="$ROOT/enerplanet/backend/.env"
+  [ -f "$backend_env" ] || backend_env="$ROOT/enerplanet/backend/.env.example"
+  if [ ! -f "$backend_env" ]; then
+    fail "pylovo: no backend .env or .env.example under $ROOT/enerplanet/backend, run 'make env-setup' first"
+    return 0
+  fi
+  host="$(sed -n 's/^DB_HOST=//p' "$backend_env" | tr -d \" | awk '{print $1}')"
+  port="$(sed -n 's/^DB_PORT=//p' "$backend_env" | tr -d \" | awk '{print $1}')"
+
   db="${PYLOVO_DB_NAME:-$db}"
   host="${PYLOVO_DB_HOST:-$host}"
   port="${PYLOVO_DB_PORT:-$port}"
   user="${PYLOVO_DB_USER:-$user}"
-  export PGPASSWORD="${PYLOVO_DB_PASSWORD:-$(sed -n 's/^PASSWORD=//p' "$envfile" | tr -d \" | awk '{print $1}')}"
+  export PGPASSWORD="${PYLOVO_DB_PASSWORD:-$pass}"
 
   local psql_base=(psql -h "$host" -p "$port" -U "$user" -v ON_ERROR_STOP=1)
   if ! "${psql_base[@]}" -d postgres -tAc "select 1" >/dev/null 2>&1; then
