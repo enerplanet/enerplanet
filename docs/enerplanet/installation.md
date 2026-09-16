@@ -44,8 +44,13 @@
 ```bash
 git clone https://github.com/THD-Spatial/enerplanet.git
 cd enerplanet
+docker network create building-simulation_default
 make setup
 ```
+
+The `docker network create` line is required until City2TABULA stops declaring
+that network as external. Without it `make setup` stops at the City2TABULA
+target and never reaches the test fixtures; see [Test Data](test-data.md).
 
 The `make setup` command runs these steps automatically:
 

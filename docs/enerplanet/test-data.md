@@ -9,22 +9,59 @@ PyLovo grid. Producing those from source means downloading tens of gigabytes
 and running import pipelines. Instead, small extracts covering one area are
 committed to this repository under `fixtures/` and loaded by one command.
 
-## Loading
+## Before you clone
+
+Install Git LFS first. The fixtures and the smoke test's GeoJSON are LFS
+objects, and a clone made without it gives pointer files of a few hundred bytes
+that load without error and fail later as unreadable data.
 
 ```bash
-make setup      # includes the fixtures
-make fixtures   # or load them on their own, at any time
+git lfs install
 ```
 
-`make setup` runs the loader after the service checkouts exist. Run
-`make fixtures` on its own when you already have a working checkout, or after
-pulling a new fixture.
+Budget about 8 GB of disk for a fresh checkout before any container starts.
+`make setup-repos` clones every dependency, and two of them carry large LFS
+histories: simulation-engine is 6 GB and enerplanet-pylovo 1.6 GB. The fixtures
+themselves are 3 MB.
+
+## Loading
+
+First time, from a fresh clone:
+
+```bash
+docker network create building-simulation_default   # see the note below
+make setup                                          # includes the fixtures
+```
+
+`make setup` runs the loader after the service checkouts exist. On a checkout
+that already works, or after pulling a new fixture, load them on their own
+instead:
+
+```bash
+make fixtures
+```
+
+!!! warning "Create that network first, or `make setup` stops part-way"
+    City2TABULA's compose declares the network `building-simulation_default`
+    as external, and nothing creates it: ignis used to, under its old compose
+    project name, and no longer does. Without it `docker compose up` exits 1
+    with `network building-simulation_default declared as external, but could
+    not be found`, and `make setup` stops at that target without reaching the
+    fixtures step.
+
+    Creating it by hand is a temporary measure until City2TABULA drops the
+    dependency. It is safe: an `external` network is used as found, so the
+    empty label set a hand-made network carries is not checked.
 
 Then run the smoke test:
 
 ```bash
 cd enerplanet/backend && ./scripts/smoke/heat_workflow_smoke.sh
 ```
+
+It should report `0 failure(s)`. If it fails at step 2a with `HTTP 000`,
+TentaCron is not on the port `repos.conf` allocates it; see the note on
+existing `.env` files under Connection settings.
 
 ## What is loaded
 
@@ -73,6 +110,40 @@ The loader never overwrites. A file already in place is skipped, and an
 existing database is left alone rather than replaced — a developer who has
 built the real archives locally would otherwise lose them to a test cut.
 
+## Using the fixtures in the frontend
+
+```bash
+cd enerplanet/frontend && npm run dev
+```
+
+Vite serves on port 3000 and proxies `/api` to the backend on 8000. The
+`@spatialhub/*` packages do not need building first: `vite.config.ts` aliases
+them to `libs/*/src`. Sign in with the same account the smoke test uses,
+`admin@example.de` / `12345678`, through the backend rather than Keycloak
+(`VITE_SSO_ENABLED` is false).
+
+Two limits determine where an area can be drawn. Both produce an empty result
+that looks like missing data.
+
+!!! warning "The map does not open where the data is"
+    A fresh map centres on Deggendorf, about 700 km from anything the fixtures
+    cover, so it opens on an empty view. Choose **Gelderland** from the region
+    selector: that fits the view to the region's bounding box, which sits
+    essentially on top of the fixture area.
+
+!!! warning "Draw inside the grid extent"
+    Drawing an area calls PyLovo's `generate-grid`, which computes from
+    PyLovo's own input tables rather than reading the four grids the fixture
+    ships. Those inputs cover only the ground the grids occupy, so a polygon
+    drawn inside
+
+    ```
+    6.0162 52.0988  to  6.0384 52.1130
+    ```
+
+    returns buildings, and one drawn outside it returns none however much map
+    is visible. This is the sharpest limit of the fixture set.
+
 ## Connection settings
 
 The City2TABULA restore runs `psql` inside the `city2tabula-db` container,
@@ -94,6 +165,17 @@ any of these to restore elsewhere:
     `city2tabula_test_*` database on the host and a server still reporting no
     data for the area.
 
+!!! warning "An existing `.env` keeps its old TentaCron port"
+    The backend reaches TentaCron on the port `repos.conf` allocates it, 8400.
+    `make env-setup` copies `.env.example` only when no `.env` exists, so a
+    checkout whose `.env` predates that allocation keeps whatever it had and
+    the backend calls a port nothing listens on. The smoke test reports it as
+    step 2a failing with `HTTP 000`. Fix it in `enerplanet/backend/.env`:
+
+    ```
+    TENTACRON_SERVICE_URL=http://localhost:8400
+    ```
+
 The pylovo restore takes the database name, user and password from that
 checkout's `.env.docker`, falling back to `.env.example`, and the host and port
 from `enerplanet/backend/.env`. Those files disagree deliberately: pylovo's
@@ -104,15 +186,14 @@ published to the host on `DB_PORT`, which is 5433. Overrides are
 
 ## Traps
 
-!!! warning "Run `git lfs pull` first"
-    Fixtures are Git LFS objects. A clone without them gives you pointer
-    files of a few hundred bytes, which load without error and then fail
-    later as unreadable data. `make fixtures` runs `git lfs pull` for you;
-    a manual `fixtures/load.sh` does not.
+!!! warning "`fixtures/load.sh` does not pull LFS objects"
+    `make fixtures` runs `git lfs pull` first; calling the loader directly
+    does not. On a checkout made without Git LFS (see Before you clone) that
+    is the difference between restoring the fixture and restoring a pointer
+    file.
 
-    This is not specific to the fixtures. The smoke test's own
-    `loenen_buildings.geojson` is already an LFS object, so a clone without
-    `git lfs pull` fails the smoke whether or not you load any fixture.
+    The smoke test's own `loenen_buildings.geojson` is an LFS object too, so
+    such a checkout fails the smoke whether or not any fixture is loaded.
 
 !!! warning "City2TABULA will not start without `CITYDB_TOOL_PATH`"
     Its startup check requires the variable to be non-empty, even when only
