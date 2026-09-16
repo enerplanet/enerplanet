@@ -37,15 +37,21 @@ var ignisRejectionCodes = map[string]bool{
 	"target_timeout":    true,
 }
 
+// ignisRejectedMessage stands in for ignis's own rejection text, which reaches
+// a browser from here and can name internal storage; it goes to the log.
+const ignisRejectedMessage = "ignis could not serve this request"
+
 // forward runs a TentaCron target and writes its verbatim ignis response back
-// wrapped in the success envelope. An ignis rejection becomes a 400 carrying
-// ignis's own message; anything else is a 502.
+// wrapped in the success envelope. An ignis rejection becomes a 400; anything
+// else is a 502. Either way the client gets a fixed message and the detail
+// goes to the log.
 func (h *IgnisHandler) forward(c *gin.Context, target string, payload any) {
 	var result map[string]any
 	if err := h.tc.Do(c.Request.Context(), target, payload, &result); err != nil {
 		var te *tentacron.TargetError
 		if errors.As(err, &te) && ignisRejectionCodes[te.Code] {
-			httputil.ErrorResponse(c, http.StatusBadRequest, te.UpstreamMessage())
+			logger.Logger.Warnf("ignis via tentacron (%s) rejected the request: %s", target, te.UpstreamMessage())
+			httputil.ErrorResponse(c, http.StatusBadRequest, ignisRejectedMessage)
 			return
 		}
 		logger.Logger.Errorf("ignis via tentacron (%s): %v", target, err)
@@ -64,7 +70,7 @@ func (h *IgnisHandler) forward(c *gin.Context, target string, payload any) {
 //	@Produce		json
 //	@Param			country_iso2	path		string	true	"ISO 3166-1 alpha-2 country code"	example(DE)
 //	@Success		200				{object}	contracts.GetIgnisVariantsResponse
-//	@Failure		400				{object}	contracts.ErrorResponse	"unsupported country"
+//	@Failure		400				{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502				{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
 //	@Router			/v2/ignis/variants/{country_iso2} [get]

@@ -105,11 +105,19 @@ func logAreaGeometryFailure(country string, err error) {
 		Warnf("city2tabula geometry for %s failed, returning attributes without footprints: %v", country, err)
 }
 
+// upstreamRejectedMessage stands in for an upstream service's own rejection
+// text. That text reaches a browser from here, and carries database names,
+// schema names and container paths; it goes to the log instead.
+const upstreamRejectedMessage = "city2tabula could not serve this request"
+
 // writeC2TError answers a failed City2TABULA call: its own rejection of the
-// request as a 400 carrying its message, anything else as a 502.
+// request as a 400, anything else as a 502. Either way the client gets a
+// fixed message and the detail goes to the log.
 func writeC2TError(c *gin.Context, country string, err error) {
 	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
-		httputil.BadRequest(c, badReq.Message)
+		logger.ForComponent(availabilityComponent).
+			Warnf("city2tabula rejected the availability lookup for %s: %s", country, badReq.Message)
+		httputil.BadRequest(c, upstreamRejectedMessage)
 		return
 	}
 	logger.ForComponent(availabilityComponent).Warnf("city2tabula availability lookup for %s failed: %v", country, err)

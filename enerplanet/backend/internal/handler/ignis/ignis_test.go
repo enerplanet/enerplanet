@@ -106,14 +106,18 @@ func TestGetFieldMetadata_sendsEmptyPayloadAndWraps(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"A_C_Ref_Input"`)
 }
 
-func TestGetVariants_ignisRejectionIs400WithMessage(t *testing.T) {
+// An ignis rejection keeps its 400, so the caller still learns the request was
+// refused rather than that ignis was down. Ignis's own text can name internal
+// storage, so it goes to the log and not into the response.
+func TestGetVariants_ignisRejectionIs400WithoutUpstreamText(t *testing.T) {
 	stub := newTentacronStub(t, failed("target_error",
 		`target ignis-variants: HTTP 400: {"error":"country ZZ is not supported"}`))
 
 	w := do(newRouter(stub), "/v2/ignis/variants/ZZ")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "country ZZ is not supported")
+	assert.Contains(t, w.Body.String(), ignisRejectedMessage)
+	assert.NotContains(t, w.Body.String(), "country ZZ is not supported")
 }
 
 func TestGetVariants_infrastructureFaultIs502(t *testing.T) {
