@@ -18,7 +18,7 @@ in the building dialog.
 | Configurator UI | React building dialog on `:3000` |
 | Backend | Go / Gin on `:8000` |
 | PyLovo | LV-grid service on `:8086` |
-| TentaCron | Orchestrator on `:8092` |
+| TentaCron | Orchestrator on `:8400` |
 | ignis | TABULA / EN ISO 13790 heat-demand service |
 
 ## Request flow

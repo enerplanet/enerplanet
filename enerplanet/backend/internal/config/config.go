@@ -69,9 +69,11 @@ func LoadFromEnv() (*Config, error) {
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
 		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
-		// 8092: TentaCron's own HOST_PORT default is 8080 (clashes with
-		// Keycloak); the real deployment URL is unconfirmed.
-		TentacronServiceURL:  platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8092"),
+		// 8400 is TentaCron's slot in the dev port allocation (repos.conf),
+		// a range chosen to avoid the crowded 8080 and 9000 neighbourhoods.
+		// The Makefile publishes it there; TentaCron's own default is 8080,
+		// which Keycloak holds in this stack.
+		TentacronServiceURL:  platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8400"),
 		TentacronAPIKey:      os.Getenv("TENTACRON_API_KEY"),
 		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),

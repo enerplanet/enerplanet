@@ -8,7 +8,7 @@
 // manualignis tag with internal/heatdemand/resolve_live_test.go so one run
 // covers both legs.
 //
-//	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
+//	TENTACRON_LIVE_URL=http://127.0.0.1:8400 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestPointWeatherLive -v ./internal/weather/
 package weather
 
@@ -41,7 +41,7 @@ func liveEnvFloat(key string, fallback float64) float64 {
 
 func TestPointWeatherLive(t *testing.T) {
 	client := NewClient(tentacron.New(
-		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
+		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8400"),
 		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
 	))
 	// Amsterdam by default - inside weather-serve's Netherlands country-scoped

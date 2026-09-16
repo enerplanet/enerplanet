@@ -12,7 +12,7 @@
 #   SMOKE_SITE          which site to run against, default loenen. The site
 #                       table below says what each one covers.
 #   BACKEND_URL         default http://localhost:8000
-#   TENTACRON_URL       default http://localhost:8092
+#   TENTACRON_URL       default http://localhost:8400
 #   TENTACRON_API_KEY   read from ./.env when unset; TentaCron target listing
 #                       is skipped without it
 #   SMOKE_EMAIL / SMOKE_PASSWORD   dev login, default admin@example.de / 12345678
@@ -46,7 +46,7 @@ set -u -o pipefail
 export LC_NUMERIC=C
 
 BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
-TENTACRON_URL="${TENTACRON_URL:-http://localhost:8092}"
+TENTACRON_URL="${TENTACRON_URL:-http://localhost:8400}"
 SMOKE_EMAIL="${SMOKE_EMAIL:-admin@example.de}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-12345678}"
 POLL_TIMEOUT_S="${POLL_TIMEOUT_S:-900}"

@@ -8,10 +8,10 @@
 // Run it after any change to internal/tentacron, internal/ignis or
 // internal/heatdemand, or after an ignis release, with the stack reachable:
 //
-//	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
+//	TENTACRON_LIVE_URL=http://127.0.0.1:8400 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestResolveChainLive -v ./internal/heatdemand/
 //
-// TENTACRON_LIVE_URL defaults to http://127.0.0.1:8092, the key to
+// TENTACRON_LIVE_URL defaults to http://127.0.0.1:8400, the key to
 // dev-frontend-key.
 package heatdemand
 
@@ -36,7 +36,7 @@ func intPtr(v int) *int { return &v }
 
 func TestResolveChainLive(t *testing.T) {
 	client := ignis.NewClient(tentacron.New(
-		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
+		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8400"),
 		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
 	))
 	ctx := context.Background()
