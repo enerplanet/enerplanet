@@ -39,6 +39,38 @@ names and derives further variables. The result was then cut to a 3 by 3 cell
 window around Loenen, Netherlands, from the Dutch 2018 annual archive and
 recompressed. Full year, hourly, 13 variables.
 
+## fixtures/city2tabula/tabula_nl.sql.gz and tabula_de.sql.gz
+
+The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,
+produced under the Intelligent Energy Europe Programme (IEE/09/739/SI2.558245).
+
+> TABULA Building Typology © Institut Wohnen und Umwelt (IWU), Darmstadt —
+> https://webtool.building-typology.eu/
+
+Licensed CC BY 4.0, which requires both the credit above and this statement of
+modification.
+
+Modifications: the per-country archetype rows City2TABULA imports into its
+`tabula` schema, extracted as the Dutch set (135 rows) and the German set (232
+rows) and recompressed. No values were altered.
+
+## fixtures/city2tabula/city2tabula_bremen.sql.gz — not distributed
+
+The German building fixture is deliberately absent from this repository and is
+listed in `.gitignore`.
+
+It derives from `LOD2_CITYGML_HB_2025_04` (Landesamt GeoInformation Bremen),
+whose data licence the provider has not stated. The product page describes
+LoD1/LoD2 as open data but names no licence, and the CC BY-NC-ND notice on that
+page covers the website rather than the dataset. `3d-data-downloader`'s own
+attribution records the same finding and blocks redistribution of any fixture
+derived from it until the licence is confirmed with the provider.
+
+Local processing is unaffected: `fixtures/load.sh` loads the file when it is
+present and skips the German country when it is not, so a developer who has
+built it locally keeps a working two-country setup without the file entering
+version control.
+
 ## fixtures/pylovo/pylovo_loenen_fixture.sql.gz and the smoke GeoJSON fixtures
 
 Covers `fixtures/pylovo/pylovo_loenen_fixture.sql.gz` and

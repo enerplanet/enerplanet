@@ -20,3 +20,8 @@ auth-service/
 
 # Infrastructure (separate repository)
 dependencies/
+
+# The Bremen 3D fixture is derived from LOD2_CITYGML_HB_2025_04, whose licence
+# the provider has not confirmed. Redistribution is blocked until it is; the
+# file is usable locally and fixtures/load.sh skips it when absent.
+fixtures/city2tabula/city2tabula_bremen.sql.gz
