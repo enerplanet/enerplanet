@@ -10,7 +10,7 @@
 // batch also needs a live BuEM behind the gateway; skip it (WITH_BUEM unset)
 // until one is available.
 //
-//	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
+//	TENTACRON_LIVE_URL=http://127.0.0.1:8400 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestBuemLegLive -v ./internal/buem/
 package buem
 
@@ -33,7 +33,7 @@ func liveEnv(key, fallback string) string {
 
 func TestBuemLegLive(t *testing.T) {
 	client := NewClient(tentacron.New(
-		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
+		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8400"),
 		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
 	))
 	ctx := context.Background()

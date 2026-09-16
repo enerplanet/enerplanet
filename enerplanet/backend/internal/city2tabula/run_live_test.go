@@ -6,7 +6,7 @@
 // city2tabula-server it can reach. Shares the manualignis tag with the ignis
 // and weather live tests so one run covers every TentaCron leg.
 //
-//	TENTACRON_LIVE_URL=http://127.0.0.1:8092 TENTACRON_LIVE_KEY=dev-frontend-key \
+//	TENTACRON_LIVE_URL=http://127.0.0.1:8400 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestC2TLegLive -v ./internal/city2tabula/
 package city2tabula
 
@@ -29,7 +29,7 @@ func liveEnv(key, fallback string) string {
 
 func TestC2TLegLive(t *testing.T) {
 	client := NewClient(tentacron.New(
-		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8092"),
+		liveEnv("TENTACRON_LIVE_URL", "http://127.0.0.1:8400"),
 		liveEnv("TENTACRON_LIVE_KEY", "dev-frontend-key"),
 	))
 	ctx := context.Background()
