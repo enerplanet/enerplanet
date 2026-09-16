@@ -81,7 +81,8 @@ func (h *Handler) Enrich(c *gin.Context) {
 
 	byOSMID, err := h.fetchLinked(ctx, req.Country, req.OSMIDs)
 	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
-		httputil.BadRequest(c, badReq.Message)
+		log.Warnf("city2tabula rejected the building fetch for %s: %s", req.Country, badReq.Message)
+		httputil.BadRequest(c, upstreamRejectedMessage)
 		return
 	}
 	if err != nil {
@@ -169,7 +170,8 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	if run.Status == "completed" && country != "" && len(osmIDs) > 0 {
 		byOSMID, ferr := h.fetchLinked(ctx, country, osmIDs)
 		if badReq := new(c2t.BadRequestError); errors.As(ferr, &badReq) {
-			httputil.BadRequest(c, badReq.Message)
+			log.Warnf("city2tabula rejected the building re-fetch after run %s: %s", runID, badReq.Message)
+			httputil.BadRequest(c, upstreamRejectedMessage)
 			return
 		}
 		if ferr != nil {

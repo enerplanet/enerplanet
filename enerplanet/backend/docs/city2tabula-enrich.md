@@ -174,4 +174,5 @@ client proceeds with what resolved.
 | 200 | resolved, or a run is in progress (`running`), or degraded (`partial`) | poll the run endpoint for `running` |
 | 202 | a pipeline run was triggered | poll the run endpoint |
 | 400 | `country` or `osm_ids` missing | no |
+| 400 | City2TABULA declined the request, for example a country it holds no data for. The body is a fixed message; the reason is in the server log | no |
 | 502 | City2TABULA unreachable | yes, after a delay |

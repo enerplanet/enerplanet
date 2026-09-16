@@ -166,14 +166,17 @@ func TestAvailability_UpstreamFailureIsBadGateway(t *testing.T) {
 
 func TestAvailability_UnsupportedCountryIsBadRequest(t *testing.T) {
 	// c2t-coverage is answered normally; the follow-up building count is the
-	// call that rejects the country, and its message must still reach the user.
+	// call that rejects the country. The 400 tells the caller the request was
+	// refused; City2TABULA's own text stays in the log, since it names the
+	// database and schemas it looked for.
 	fake := &fakeC2T{coverageCount: 0, buildingsBadRequest: true}
 	h := &Handler{client: fake.client(t), grid: fakeGrid{}}
 
 	w, _ := getAvailability(t, h, loenenArea)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "no TABULA data available")
+	assert.Contains(t, w.Body.String(), upstreamRejectedMessage)
+	assert.NotContains(t, w.Body.String(), "no TABULA data available")
 }
 
 func TestAvailability_GridStoreFailureIsNotReportedAsNoGrid(t *testing.T) {

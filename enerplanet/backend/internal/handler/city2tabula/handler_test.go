@@ -242,7 +242,21 @@ func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {
 	w, _ := postEnrich(t, h, `{"country":"string","osm_ids":["1"],"bbox":{"xmin":0,"ymin":0,"xmax":0,"ymax":0}}`)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "unsupported country")
+	assert.Contains(t, w.Body.String(), upstreamRejectedMessage)
+}
+
+// City2TABULA names databases, schemas and container paths in its rejection
+// text. The status still tells the caller the request was refused; the text
+// itself belongs in the log.
+func TestEnrich_UpstreamRejectionTextDoesNotReachTheClient(t *testing.T) {
+	fake := &fakeC2T{buildingsBadRequest: true}
+	h := &Handler{client: fake.client(t)}
+
+	w, _ := postEnrich(t, h, `{"country":"string","osm_ids":["1"],"bbox":{"xmin":0,"ymin":0,"xmax":0,"ymax":0}}`)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.NotContains(t, w.Body.String(), "unsupported country")
+	assert.NotContains(t, w.Body.String(), "TABULA data available")
 }
 
 func TestEnrichStatus_UnknownRunID_Returns404(t *testing.T) {
