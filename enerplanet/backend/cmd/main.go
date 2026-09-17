@@ -930,6 +930,9 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
 	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
 	api.GET("/v2/ignis/fields", handler.GetFieldMetadata)
+	api.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
+	api.GET("/v2/ignis/data/:code", handler.GetVariantData)
+	api.POST("/v2/ignis/calculate/:code", handler.Calculate)
 }
 
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {
