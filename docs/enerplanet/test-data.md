@@ -110,6 +110,36 @@ The loader never overwrites. A file already in place is skipped, and an
 existing database is left alone rather than replaced — a developer who has
 built the real archives locally would otherwise lose them to a test cut.
 
+## The stack runs on plain HTTP
+
+Every heat service runs its `http` environment. Nothing in this setup terminates
+TLS, so there is no certificate to generate, no `caddy trust` step, and no
+browser warning to click through. A reverse proxy is not started at all.
+
+That is the deployed shape too, not a local shortcut: the platform terminates
+TLS at its own front door and the services behind it speak HTTP. Each repo also
+ships an `https` environment for a standalone deployment that has no such front
+door; nothing here uses it.
+
+Ports come from `repos.conf`, which is the one place to change them.
+
+| Service | Port | Who calls it |
+|---|---|---|
+| Frontend (Vite) | 3000 | you |
+| Backend API | 8000 | the frontend, and any other UI |
+| TentaCron | 8400 | the backend only |
+| meme | 8401 | TentaCron only |
+| buem-gateway | 8402 | TentaCron only |
+| ignis | 8403 | TentaCron only |
+| City2TABULA | 8404 | TentaCron only |
+| weather | 8406 | TentaCron only |
+
+Only the backend is called from a browser. The 84xx services talk to each other
+by container name on the `tentacron-net` Docker network, so their published
+ports exist for inspection with curl rather than for the application path. The
+range avoids the crowded 8080 and 9000 neighbourhoods, 8080 in particular being
+Keycloak's.
+
 ## Using the fixtures in the frontend
 
 ```bash
@@ -124,6 +154,23 @@ them to `libs/*/src`. Sign in with the same account the smoke test uses,
 
 Two limits determine where an area can be drawn. Both produce an empty result
 that looks like missing data.
+
+A separate UI can call the same backend without being part of this frontend.
+Serve it on port 3000 or 5173, which the backend's CORS allowlist accepts, and
+authenticate the way the frontend does: `GET /api/csrf-token`, then
+`POST /api/login`, then send every request with credentials included and the
+`X-CSRF-Token` header on anything that is not a GET.
+
+!!! warning "The allowlist is exact, so pin your port"
+    Only `localhost:3000` and `localhost:5173` are accepted, plus whatever
+    `APP_URL` is set to. Any other port is refused, and so is `127.0.0.1` on an
+    accepted port, because the match is on the exact string. A dev server that
+    silently falls back to 5174 when 5173 is busy produces a CORS failure that
+    reads like an auth problem, so pin the port rather than letting it drift.
+
+    Do not repoint `APP_URL` at your own origin to get around this. It is also
+    the callback URL that PyLovo and the simulation engine post results back
+    to, and changing it breaks result delivery.
 
 !!! warning "The map does not open where the data is"
     A fresh map centres on Deggendorf, about 700 km from anything the fixtures
