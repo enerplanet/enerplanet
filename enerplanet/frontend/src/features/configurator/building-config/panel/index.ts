@@ -1,0 +1,1 @@
+export { BuildingConfigurator } from './BuildingConfigurator';
