@@ -192,6 +192,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/city2tabula/enrich/area": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every LOD2 building City2TABULA holds inside the bbox with its BuEM\nenvelope and footprint, keyed by object_id. Unlike the osm_ids endpoint this\nneeds no building list, so a caller with only an area can fetch 3D data. The\ntrade-off is identity: City2TABULA's area query cannot report the PyLovo link,\nso the result carries no osm_id and cannot be joined to demand profiles.\nFootprints are in the country's storage CRS, not WGS84.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Resolve City2TABULA 3D data for an area, without osm_ids",
+                "parameters": [
+                    {
+                        "description": "Area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/city2tabula/enrich/{run_id}": {
             "get": {
                 "security": [
@@ -301,6 +352,87 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/heat/availability": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Answers, for a drawn area, whether it can be modelled now (\"ready\"), needs only a\nCity2TABULA link run over data that is already there (\"linkable\"), or is missing one\nof the two datasets entirely (\"partial\"). has_3d_data and has_grid say which half is\nmissing in the last case.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Report whether heat modelling is available for an area",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "netherlands",
+                        "description": "Country",
+                        "name": "country",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area west edge (WGS84 lon)",
+                        "name": "xmin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area south edge (WGS84 lat)",
+                        "name": "ymin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area east edge (WGS84 lon)",
+                        "name": "xmax",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area north edge (WGS84 lat)",
+                        "name": "ymax",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/ignis/fields": {
             "get": {
                 "security": [
@@ -365,7 +497,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "unsupported country",
+                        "description": "ignis declined the request",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
@@ -438,6 +570,68 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "spatialhub_backend_internal_api_contracts.AreaBuilding": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "default_construction_year": {
+                    "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
+                    "type": "integer",
+                    "example": 1963
+                },
+                "footprint_geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "match_type": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "object_id": {
+                    "type": "string",
+                    "example": "DEBW_1"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.AreaEnrichRequest": {
+            "type": "object",
+            "properties": {
+                "bbox": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "netherlands"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.AreaEnrichResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaBuilding"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 249
+                },
+                "with_geometry": {
+                    "type": "integer",
+                    "example": 249
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.BoundaryData": {
             "type": "object",
             "properties": {
@@ -757,6 +951,44 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 25
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "grid_regions": {
+                    "description": "GridRegions names the PyLovo regions whose extent overlaps the area, as\n\"\u003ccountry_code\u003e/\u003cstate_code\u003e\". Empty when HasGrid is false.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "DE/bremen"
+                    ]
+                },
+                "has_3d_data": {
+                    "description": "Has3DData is true when City2TABULA holds LOD2 buildings here at all,\nmatched or not.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_grid": {
+                    "description": "HasGrid is true when PyLovo reports generated grids for a region covering\nthis area. Status does not imply it: City2TABULA links 3D buildings to\nPyLovo's input buildings (res/oth), never to generated grids, so an area\ncan be ready with HasGrid false. Demand modelling needs only the link; a\nnode-based caller needs HasGrid too, since nodes are transformer areas.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "linked_buildings": {
+                    "description": "LinkedBuildings is City2TABULA's coverage count for the area, above zero\nexactly when Status is ready. It counts attempted matches rather than\nsuccessful ones, so both it and a ready status overstate coverage until\nCity2TABULA excludes the rows where 3D and OSM failed to pair.",
+                    "type": "integer",
+                    "example": 0
+                },
+                "status": {
+                    "type": "string",
+                    "example": "linkable"
                 }
             }
         },
