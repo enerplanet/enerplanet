@@ -250,6 +250,20 @@ func (c *Client) GetBuildingsInBBox(ctx context.Context, country string, bbox Bb
 	return buildings, nil
 }
 
+// SurfaceGeometry is one envelope surface's polygon, keyed by the same surface
+// id the buildings endpoint returns, so a caller can match a rendered face to
+// the element it configures.
+//
+// GeoJSON stays raw for the same reason FootprintGeoJSON does: it passes
+// through byte exact, so a consumer that wants the "crs" member still gets it.
+// Coordinates are [x, y, z] in the country's own storage CRS and rings are
+// closed.
+type SurfaceGeometry struct {
+	ID      string          `json:"id"`
+	Type    string          `json:"type"`
+	GeoJSON json.RawMessage `json:"geojson,omitempty"`
+}
+
 // BuildingGeometry is one building's footprint, as City2TABULA's
 // GET /api/v1/geometry returns it.
 //
@@ -257,21 +271,46 @@ func (c *Client) GetBuildingsInBBox(ctx context.Context, country string, bbox Bb
 // EPSG:28992 for the Netherlands, 25832 for Germany - because City2TABULA
 // serves the geometry without reprojecting. The GeoJSON names its CRS in a
 // "crs" member, so a consumer can reproject; nothing here does it for them.
+//
+// Surfaces is populated only by GetSurfaceGeometryByObjectIDs. City2TABULA
+// omits the key for a building with no surface rows, so absent and empty are
+// the same case.
 type BuildingGeometry struct {
-	ObjectID         string          `json:"object_id"`
-	FootprintGeoJSON json.RawMessage `json:"footprint_geojson,omitempty"`
+	ObjectID         string            `json:"object_id"`
+	FootprintGeoJSON json.RawMessage   `json:"footprint_geojson,omitempty"`
+	Surfaces         []SurfaceGeometry `json:"surfaces,omitempty"`
 }
 
 // GetGeometryByObjectIDs returns footprints for the given building object ids.
 // Buildings carry no geometry in the other responses, so this is the only way
 // to place them on a map.
 func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
+	return c.getGeometry(ctx, country, objectIDs, false)
+}
+
+// GetSurfaceGeometryByObjectIDs returns footprints and every envelope surface
+// polygon, for rendering a building rather than placing it.
+//
+// Ask for this one building at a time. A single building runs to a few hundred
+// faces, around 60 KB of GeoJSON at the worst in the Netherlands set, so an
+// area's worth is tens of megabytes; that is why surfaces are opt-in and why
+// the drawn-area call does not use this.
+func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
+	return c.getGeometry(ctx, country, objectIDs, true)
+}
+
+// getGeometry backs both variants. Unconsumed payload fields reach City2TABULA
+// as query parameters, so include travels without any target configuration.
+func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []string, withSurfaces bool) ([]BuildingGeometry, error) {
 	if len(objectIDs) == 0 {
 		return nil, nil
 	}
 	payload := map[string]any{
 		"country":    normalizeCountry(country),
 		"object_ids": strings.Join(objectIDs, ","),
+	}
+	if withSurfaces {
+		payload["include"] = "surfaces"
 	}
 	var geometry []BuildingGeometry
 	if err := c.tc.Do(ctx, targetGeometry, payload, &geometry); err != nil {
