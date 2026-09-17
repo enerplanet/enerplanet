@@ -19,6 +19,7 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
+	"spatialhub_backend/internal/geo"
 	buemhandler "spatialhub_backend/internal/handler/buem"
 	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
 	feedback "spatialhub_backend/internal/handler/feedback"
@@ -663,7 +664,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
-	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB))
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB), geo.NewNominatimResolver(deps.DB))
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)

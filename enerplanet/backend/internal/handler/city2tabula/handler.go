@@ -12,7 +12,9 @@ package city2tabula
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -33,25 +35,52 @@ type yearResolver interface {
 	GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error)
 }
 
+// countryResolver names the country an area sits in, for a caller that did not.
+// Satisfied by *geo.NominatimResolver; faked in tests.
+type countryResolver interface {
+	Resolve(ctx context.Context, coords json.RawMessage) (string, error)
+}
+
 // Handler serves the enrich and availability endpoints, backed by the
 // City2TABULA client.
 type Handler struct {
 	client     *c2t.Client
 	yearClient yearResolver
 	grid       gridRegions
+	country    countryResolver
 }
 
 // NewHandler returns a Handler bound to the given City2TABULA client,
 // reaching ignis through the given TentaCron client for
 // default_construction_year lookups and reading PyLovo grid extents from grid.
-func NewHandler(client *c2t.Client, tc *tentacron.Client, grid gridRegions) *Handler {
-	return &Handler{client: client, yearClient: ignis.NewClient(tc), grid: grid}
+func NewHandler(client *c2t.Client, tc *tentacron.Client, grid gridRegions, country countryResolver) *Handler {
+	return &Handler{client: client, yearClient: ignis.NewClient(tc), grid: grid, country: country}
+}
+
+// resolveCountry returns the request's country, or works it out from the bbox
+// centroid when the caller left it blank. The same resolver and the same cache
+// back the model run, so both paths name a building's country identically.
+func (h *Handler) resolveCountry(ctx context.Context, req contracts.EnrichRequest) (string, error) {
+	if country := strings.TrimSpace(req.Country); country != "" {
+		return country, nil
+	}
+	if h.country == nil {
+		return "", errors.New("country is required")
+	}
+	centre := fmt.Sprintf(`{"type":"Point","coordinates":[%g,%g]}`,
+		(req.Bbox.Xmin+req.Bbox.Xmax)/2, (req.Bbox.Ymin+req.Bbox.Ymax)/2)
+	country, err := h.country.Resolve(ctx, json.RawMessage(centre))
+	if err != nil {
+		return "", fmt.Errorf("could not resolve the country for this area: %w", err)
+	}
+	return country, nil
 }
 
 // Enrich godoc
 //
 //	@Summary		Resolve City2TABULA 3D data for a drawn area
-//	@Description	Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id
+//	@Description	Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)
+//	@Description	returns a per-osm_id
 //	@Description	merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
 //	@Description	linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
 //	@Description	(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
@@ -71,17 +100,23 @@ func (h *Handler) Enrich(c *gin.Context) {
 		httputil.BadRequest(c, "invalid request payload")
 		return
 	}
-	if req.Country == "" || len(req.OSMIDs) == 0 {
-		httputil.BadRequest(c, "country and osm_ids are required")
+	if len(req.OSMIDs) == 0 {
+		httputil.BadRequest(c, "osm_ids are required")
 		return
 	}
 
 	ctx := c.Request.Context()
 	log := logger.ForComponent("handler:city2tabula_enrich")
 
-	byOSMID, err := h.fetchLinked(ctx, req.Country, req.OSMIDs)
+	country, err := h.resolveCountry(ctx, req)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
+		return
+	}
+
+	byOSMID, err := h.fetchLinked(ctx, country, req.OSMIDs)
 	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
-		log.Warnf("city2tabula rejected the building fetch for %s: %s", req.Country, badReq.Message)
+		log.Warnf("city2tabula rejected the building fetch for %s: %s", country, badReq.Message)
 		httputil.BadRequest(c, upstreamRejectedMessage)
 		return
 	}
@@ -105,7 +140,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 		return
 	}
 
-	run, err := h.client.TriggerRun(ctx, req.Country, c2t.Bbox{
+	run, err := h.client.TriggerRun(ctx, country, c2t.Bbox{
 		Xmin: req.Bbox.Xmin, Ymin: req.Bbox.Ymin, Xmax: req.Bbox.Xmax, Ymax: req.Bbox.Ymax,
 	})
 	if err != nil {
