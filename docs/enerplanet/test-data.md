@@ -71,8 +71,23 @@ The City2TABULA and PyLovo fixtures cover the same ground: the box 6.0162
 PyLovo ships, so every building with a grid behind it also has 3D data.
 
 The second smoke site, Bremen, exercises a different 3D dataset in a different
-CRS against the same single PyLovo database. Only its TABULA cut is
-distributed; the building fixture is not (see the warning below).
+CRS against the same single PyLovo database, and covers the box 8.7908 53.0940
+to 8.7990 53.1027. It has no PyLovo grid: it answers "does a second country's
+3D data work", not "can a grid be generated there".
+
+!!! warning "Bremen needs a weather cut that is not here yet"
+    The German building and TABULA fixtures are included; a German weather cut
+    is not, so `SMOKE_SITE=bremen` cannot resolve demand yet.
+
+    It is withheld deliberately rather than forgotten. Weather archives are
+    selected by country bounding box, and Germany's box contains the Dutch
+    fixture area, so on a weather release that picks the first matching box a
+    German archive silently captures Dutch points and returns a series from a
+    cell hundreds of kilometres away, with no error and a demand figure that
+    looks plausible. Shipping the cut before that selection is fixed would
+    distribute that behaviour to everyone loading the fixtures.
+
+    Loenen is unaffected and needs nothing from this.
 
 PyLovo stores its geometry in EPSG:3035 and City2TABULA in a country-specific
 CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is reprojected at load time, because the join between them
@@ -84,6 +99,7 @@ link step, which these fixtures cannot do.
 | `city2tabula/city2tabula_loenen.sql.gz` | 1.1 MB | 617 buildings, 11,210 surfaces, 617 links (488 matched), 47 TABULA variants | a new `<DB_NAME>_nl` database |
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
+| `city2tabula/city2tabula_bremen.sql.gz` | 2.2 MB | 1,347 buildings, 19,791 surfaces, 1,347 links | a new `<DB_NAME>_de` database |
 | `weather/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
 | `pylovo/pylovo_loenen_fixture.sql.gz` | 230 KB | 4 grids, 249 buildings, 479 lines, 4 transformers, plus their inputs and reference tables | the existing pylovo database |
 
@@ -96,19 +112,6 @@ import schemas are excluded, so feature extraction cannot be re-run from it.
 The TABULA cuts are separate because classification reads `tabula.tabula`: a
 building cut without one answers reads but fails any pipeline run with
 `relation "tabula.tabula" does not exist`.
-
-!!! warning "The German fixture is not in this repository"
-    `city2tabula_bremen.sql.gz` is gitignored. It derives from Bremen's LoD2
-    model, whose licence the provider has not stated, so redistribution is
-    blocked until that is confirmed. See `fixtures/ATTRIBUTION.md`.
-
-    The loader handles both countries. With the file absent it loads the Dutch
-    fixture and skips the German one without failing, so `SMOKE_SITE=bremen`
-    needs a locally built cut.
-
-The loader never overwrites. A file already in place is skipped, and an
-existing database is left alone rather than replaced — a developer who has
-built the real archives locally would otherwise lose them to a test cut.
 
 ## The stack runs on plain HTTP
 

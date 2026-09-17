@@ -7,7 +7,8 @@ including the smoke test's own fixtures outside this directory.
 
 ## fixtures/city2tabula/city2tabula_loenen.sql.gz
 
-Derived from the 3DBAG dataset, licensed CC BY 4.0.
+Derived from the 3DBAG dataset, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
 
 > (c) 3DBAG by tudelft3d and 3DGI — https://docs.3dbag.nl/en/copyright/
 
@@ -47,29 +48,42 @@ produced under the Intelligent Energy Europe Programme (IEE/09/739/SI2.558245).
 > TABULA Building Typology © Institut Wohnen und Umwelt (IWU), Darmstadt —
 > https://webtool.building-typology.eu/
 
-Licensed CC BY 4.0, which requires both the credit above and this statement of
+Licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), which
+requires both the credit above and this statement of
 modification.
 
 Modifications: the per-country archetype rows City2TABULA imports into its
 `tabula` schema, extracted as the Dutch set (135 rows) and the German set (232
 rows) and recompressed. No values were altered.
 
-## fixtures/city2tabula/city2tabula_bremen.sql.gz — not distributed
+## fixtures/city2tabula/city2tabula_bremen.sql.gz
 
-The German building fixture is deliberately absent from this repository and is
-listed in `.gitignore`.
+Derived from `3D-Gebäudemodell LoD2 Land Bremen`, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
 
-It derives from `LOD2_CITYGML_HB_2025_04` (Landesamt GeoInformation Bremen),
-whose data licence the provider has not stated. The product page describes
-LoD1/LoD2 as open data but names no licence, and the CC BY-NC-ND notice on that
-page covers the website rather than the dataset. `3d-data-downloader`'s own
-attribution records the same finding and blocks redistribution of any fixture
-derived from it until the licence is confirmed with the provider.
+> Quellenvermerk: Landesamt GeoInformation Bremen —
+> https://www.geo.bremen.de/
 
-Local processing is unaffected: `fixtures/load.sh` loads the file when it is
-present and skips the German country when it is not, so a developer who has
-built it locally keeps a working two-country setup without the file entering
-version control.
+The licence is named in the dataset's MetaVer metadata record, which also
+records that no access restrictions apply:
+
+> https://www.metaver.de/trefferanzeige?docuuid=226971C2-6677-4B79-95F3-C5311F1275C8
+
+!!! note
+    The provider's own web pages carry a Creative Commons BY-NC-ND notice and
+    name no licence for the data. That notice is read here as applying to the
+    pages rather than to the dataset, whose terms are the metadata record
+    above. The two are easily confused: an earlier reading of the web pages
+    alone concluded no licence existed and blocked redistribution of this
+    fixture.
+
+Modifications: building envelope attributes and surface geometry were
+extracted from the source CityGML by City2TABULA, then cut to the box
+8.7908 53.0940 to 8.7990 53.1027 around Bremen and recompressed. The pipeline
+intermediates were emptied, leaving the served tables only. This is derived
+data, not a redistribution of the source model.
+
+CC BY 4.0 requires both the credit above and this statement of modification.
 
 ## fixtures/pylovo/pylovo_loenen_fixture.sql.gz and the smoke GeoJSON fixtures
 
