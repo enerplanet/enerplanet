@@ -63,7 +63,24 @@ func newRouter(stub *tentacronStub) *gin.Engine {
 	r := gin.New()
 	r.GET("/v2/ignis/variants/:country_iso2", h.GetVariants)
 	r.GET("/v2/ignis/fields", h.GetFieldMetadata)
+	r.GET("/v2/ignis/variants/:country_iso2/match", h.MatchVariants)
+	r.GET("/v2/ignis/data/:code", h.GetVariantData)
+	r.POST("/v2/ignis/calculate/:code", h.Calculate)
 	return r
+}
+
+// post sends a JSON body, or no body at all when body is "".
+func post(r *gin.Engine, path, body string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	var req *http.Request
+	if body == "" {
+		req = httptest.NewRequest(http.MethodPost, path, nil)
+	} else {
+		req = httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+	}
+	r.ServeHTTP(w, req)
+	return w
 }
 
 func do(r *gin.Engine, path string) *httptest.ResponseRecorder {
@@ -126,4 +143,58 @@ func TestGetVariants_infrastructureFaultIs502(t *testing.T) {
 	w := do(newRouter(stub), "/v2/ignis/variants/DE")
 
 	assert.Equal(t, http.StatusBadGateway, w.Code)
+}
+
+func TestMatchVariants_sendsTypeAndYearAlongsideIso2(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"data":[{"code":"NL.N.SFH.05.Gen.ReEx.001.001","label":"Existing state"}]}`))
+
+	w := do(newRouter(stub), "/v2/ignis/variants/NL/match?type=SFH&year=1975")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "ignis-variants-match", stub.lastTarget)
+	assert.Equal(t, "NL", stub.lastPayload["iso2"])
+	assert.Equal(t, "SFH", stub.lastPayload["type"])
+	assert.Equal(t, float64(1975), stub.lastPayload["year"], "year reaches ignis as a number, not the query string")
+}
+
+func TestMatchVariants_rejectsANonNumericYear(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{}`))
+
+	w := do(newRouter(stub), "/v2/ignis/variants/NL/match?type=SFH&year=recently")
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "recently", "the rejected value belongs in the message")
+	assert.Empty(t, stub.lastTarget, "nothing should reach ignis")
+}
+
+func TestGetVariantData_sendsTheCode(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"tabula_data":{"BasicParameters":{}}}`))
+
+	w := do(newRouter(stub), "/v2/ignis/data/NL.N.SFH.05.Gen.ReEx.001.001")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "ignis-data", stub.lastTarget)
+	assert.Equal(t, "NL.N.SFH.05.Gen.ReEx.001.001", stub.lastPayload["code"])
+}
+
+func TestCalculate_forwardsOverridesAndPinsTheCodeToThePath(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"q_h_nd":123.4}`))
+
+	w := post(newRouter(stub), "/v2/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001",
+		`{"U_Actual_Wall_1":0.18,"code":"DE.N.MFH.09.Gen.ReEx.001.001"}`)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "ignis-calculate", stub.lastTarget)
+	assert.Equal(t, 0.18, stub.lastPayload["U_Actual_Wall_1"])
+	assert.Equal(t, "NL.N.SFH.05.Gen.ReEx.001.001", stub.lastPayload["code"],
+		"the path wins, so a body cannot redirect the call at another variant")
+}
+
+func TestCalculate_emptyBodyRunsTheArchetypeUnmodified(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"q_h_nd":99}`))
+
+	w := post(newRouter(stub), "/v2/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001", "")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, map[string]any{"code": "NL.N.SFH.05.Gen.ReEx.001.001"}, stub.lastPayload)
 }
