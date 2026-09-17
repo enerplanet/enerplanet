@@ -19,10 +19,34 @@ that load without error and fail later as unreadable data.
 git lfs install
 ```
 
-Budget about 8 GB of disk for a fresh checkout before any container starts.
-`make setup-repos` clones every dependency, and two of them carry large LFS
-histories: simulation-engine is 6 GB and enerplanet-pylovo 1.6 GB. The fixtures
-themselves are 3 MB.
+Budget 28 to 32 GB of disk, and 40 GB to work in comfortably. The figures
+below were measured on amd64 Linux and drift as base images change, so treat
+them as an order of magnitude.
+
+About 8 GB is the checkout. `make setup-repos` clones every dependency, and two
+carry large LFS histories, simulation-engine at 6 GB and enerplanet-pylovo at
+1.6 GB. The fixtures are 5 MB of that.
+
+Container images are 20 to 24 GB. What moves the figure is City2TABULA: two
+services build it from one Dockerfile, so `make setup` produces it twice. Built
+in the same run the pair shares nearly every layer and costs about 10.4 GB
+between them; built days apart the layer cache has moved and they cost about
+15 GB. Every other image together adds about 9 GB.
+
+Adding up what each image reports gives a larger number, around 35 GB, because
+a layer shared by several images is reported by each of them while being stored
+once. BuEM's model image is the clearest case: it reports 4.1 GB but shares all
+but 18 MB with weather.
+
+City2TABULA is large because the same image carries a Go toolchain, a JDK and
+citydb-tool so that it can also run 3D imports, and because the repository is
+copied into it twice, once by `COPY` and again when ownership is changed. The
+running server adds a further 624 MB writable layer, because it compiles inside
+the container at startup.
+
+The fixtures avoid the source data downloads, which dwarf all of this: a
+weather archive alone runs to tens of gigabytes. They do not make the images
+smaller.
 
 ## Loading
 
