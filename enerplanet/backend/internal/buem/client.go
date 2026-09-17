@@ -8,6 +8,7 @@ package buem
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"spatialhub_backend/internal/tentacron"
@@ -24,6 +25,11 @@ const targetBuildings = "buem-buildings"
 // sits above both - the backend waits out any job TentaCron will still finish
 // and only gives up once TentaCron itself has.
 const runTimeout = 14 * time.Minute
+
+// buildingRunTimeout bounds a single-building run. A person is waiting on this
+// one, so it gives up long before the batch ceiling rather than holding a
+// request open for minutes: one building is seconds of BuEM work.
+const buildingRunTimeout = 90 * time.Second
 
 // defaultResolution is BuEM's timestep in minutes when the model does not set
 // one, matching internal/payload.getResolution. A zero would be sent to BuEM
@@ -104,7 +110,36 @@ type BuildingResult struct {
 //
 // A batch that outruns the buem-buildings target timeout (~9.5 min) comes back
 // as a target_timeout and fails the run_buem job with no retry.
+//
+// The hourly series are not requested: a model's results are read from
+// .thermal_load_profile.summary, and at ~300 KB per building per year a
+// 300-building model would answer with ~90 MB of values nothing reads.
 func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) ([]BuildingResult, error) {
+	return c.run(ctx, buildings, weather, startDate, endDate, resolution, modelID, false, runTimeout)
+}
+
+// RunBuilding runs one building and returns its result with the hourly series
+// attached, for the per-building configurator where a person edits an envelope
+// and waits for the new profile.
+//
+// It goes through the same batch endpoint rather than buem-gateway's
+// single-building route, because the buem-building target is configured against
+// a placeholder host this deployment cannot reach.
+func (c *Client) RunBuilding(ctx context.Context, b Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) (BuildingResult, error) {
+	results, err := c.run(ctx, []Building{b}, weather, startDate, endDate, resolution, modelID, true, buildingRunTimeout)
+	if err != nil {
+		return BuildingResult{}, err
+	}
+	if len(results) == 0 {
+		return BuildingResult{}, fmt.Errorf("buem-gateway returned no result for building %s", b.ID)
+	}
+	return results[0], nil
+}
+
+// run submits a batch and waits for it. keepTimeseries asks buem-gateway to
+// leave the hourly values on each result; it defaults to false there, so the
+// field is only sent when set (buem-gateway v6.2.0 and later).
+func (c *Client) run(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string, keepTimeseries bool, timeout time.Duration) ([]BuildingResult, error) {
 	if resolution <= 0 {
 		resolution = defaultResolution
 	}
@@ -116,9 +151,12 @@ func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather
 		"weather":    weather,
 		"buildings":  buildings,
 	}
+	if keepTimeseries {
+		payload["keep_timeseries"] = true
+	}
 
 	var results []BuildingResult
-	if err := c.tc.DoTimeout(ctx, targetBuildings, payload, &results, runTimeout); err != nil {
+	if err := c.tc.DoTimeout(ctx, targetBuildings, payload, &results, timeout); err != nil {
 		return nil, asBuemError(err)
 	}
 	return results, nil

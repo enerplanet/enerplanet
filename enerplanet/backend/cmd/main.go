@@ -19,6 +19,7 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
+	buemhandler "spatialhub_backend/internal/handler/buem"
 	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
@@ -668,6 +669,9 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
 
+	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider)
+	registerBuemRoutes(protectedAPI, buemHandler)
+
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
 	registerLocationRoutes(protectedAPI, locationHandler)
 
@@ -877,6 +881,14 @@ func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler
 // context when they land - see #50 / #57).
 func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.Handler) {
 	api.POST("/v1/heat-demand/resolve", handler.Resolve)
+}
+
+// registerBuemRoutes wires the per-building BuEM run behind the building
+// configurator. The model path runs BuEM from the run_buem job instead; this is
+// the interactive one, and the only route that takes an envelope from the
+// caller rather than from City2TABULA.
+func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
+	api.POST("/v1/buem/building", handler.RunBuilding)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {

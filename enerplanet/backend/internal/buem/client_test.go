@@ -137,3 +137,42 @@ func TestRunBuildings_BatchTimeoutStaysOpaque(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "target_timeout", te.Code)
 }
+
+func TestRunBuilding_AsksForTheHourlySeriesAndReturnsTheOneResult(t *testing.T) {
+	tc, payload := fakeTentacron(t, completed(
+		`[{"id":"111","buem":{"thermal_load_profile":{"timeseries":{"heating":[1,2,3]}}}}]`))
+
+	result, err := NewClient(tc).RunBuilding(context.Background(), sampleBuildings()[0],
+		json.RawMessage(sampleWeather), "2026-01-01T00:00:00Z", "2026-12-31T23:00:00Z", 60, "model-42")
+
+	require.NoError(t, err)
+	assert.Equal(t, true, (*payload)["keep_timeseries"],
+		"without this buem-gateway strips the hourly values and the configurator has no profile to draw")
+	sent, ok := (*payload)["buildings"].([]any)
+	require.True(t, ok)
+	assert.Len(t, sent, 1)
+
+	assert.Equal(t, "111", result.ID)
+	assert.Contains(t, string(result.BUEM), "timeseries")
+}
+
+func TestRunBuildings_DoesNotAskForTheHourlySeries(t *testing.T) {
+	tc, payload := fakeTentacron(t, completed(`[]`))
+
+	_, err := NewClient(tc).RunBuildings(context.Background(), sampleBuildings(),
+		json.RawMessage(sampleWeather), "s", "e", 60, "m")
+
+	require.NoError(t, err)
+	assert.NotContains(t, *payload, "keep_timeseries",
+		"a 300-building model would answer with ~90 MB of values nothing reads")
+}
+
+func TestRunBuilding_EmptyBatchIsAnErrorNotAPanic(t *testing.T) {
+	tc, _ := fakeTentacron(t, completed(`[]`))
+
+	_, err := NewClient(tc).RunBuilding(context.Background(), sampleBuildings()[0],
+		json.RawMessage(sampleWeather), "s", "e", 60, "m")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "111")
+}
