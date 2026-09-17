@@ -18,8 +18,13 @@ type EnrichBbox struct {
 }
 
 // EnrichRequest is the POST /api/v1/city2tabula/enrich body.
+//
+// country selects City2TABULA's per-country database. Omit it and the bbox
+// centroid decides, which is what a caller that has only drawn an area should
+// do: the canonical spelling is the backend's, and a reverse geocode answers in
+// whatever language it pleases.
 type EnrichRequest struct {
-	Country string     `json:"country" example:"germany"`
+	Country string     `json:"country,omitempty" example:"germany"`
 	Bbox    EnrichBbox `json:"bbox"`
 	OSMIDs  []string   `json:"osm_ids" example:"240054621,240054622"`
 }

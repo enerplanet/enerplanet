@@ -316,23 +316,21 @@ export interface EnrichBbox {
 /**
  * Resolves City2TABULA envelopes for a set of osm_ids, keyed by osm_id.
  *
- * Answers an empty map on failure and when the region's 3D run has not
- * finished: a "running" status means City2TABULA is still importing, and the
- * caller should fall back to defaults rather than wait. Unlike the ignis
- * routes this one answers its body directly, with no success envelope.
+ * The country is deliberately not sent: the backend works it out from the bbox
+ * centre with the same resolver a model run uses, so both name a building's
+ * country identically and the panel never has to hold a canonical spelling.
+ *
+ * Answers an empty map on failure and while a region's 3D import is still
+ * running, so a caller falls back to defaults rather than waiting. Unlike the
+ * ignis routes this one answers its body directly, with no success envelope.
  */
 export async function fetchEnvelopes(
-  country: string,
   bbox: EnrichBbox,
   osmIds: string[],
 ): Promise<Record<string, EnrichEntry>> {
   if (osmIds.length === 0) return {};
   try {
-    const res = await axios.post('/v1/city2tabula/enrich', {
-      country,
-      bbox,
-      osm_ids: osmIds,
-    });
+    const res = await axios.post('/v1/city2tabula/enrich', { bbox, osm_ids: osmIds });
     return (res.data as { data?: Record<string, EnrichEntry> }).data ?? {};
   } catch {
     return {};
