@@ -1,5 +1,52 @@
 basePath: /api
 definitions:
+  spatialhub_backend_internal_api_contracts.AreaBuilding:
+    properties:
+      buem:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      default_construction_year:
+        description: |-
+          Derived from the TABULA variant's construction-period range (ignis
+          Year1_Building/Year2_Building); set only when TabulaVariantCode
+          resolved and ignis had year data for it. A user-entered construction
+          year, once saved, takes precedence over this estimate.
+        example: 1963
+        type: integer
+      footprint_geojson:
+        items:
+          type: integer
+        type: array
+      match_type:
+        example: 1
+        type: integer
+      object_id:
+        example: DEBW_1
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.AreaEnrichRequest:
+    properties:
+      bbox:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox'
+      country:
+        example: netherlands
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.AreaEnrichResponse:
+    properties:
+      data:
+        additionalProperties:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaBuilding'
+        type: object
+      total:
+        example: 249
+        type: integer
+      with_geometry:
+        example: 249
+        type: integer
+    type: object
   spatialhub_backend_internal_api_contracts.BoundaryData:
     properties:
       boundary:
@@ -231,6 +278,47 @@ definitions:
       total:
         example: 25
         type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse:
+    properties:
+      available:
+        example: false
+        type: boolean
+      grid_regions:
+        description: |-
+          GridRegions names the PyLovo regions whose extent overlaps the area, as
+          "<country_code>/<state_code>". Empty when HasGrid is false.
+        example:
+        - DE/bremen
+        items:
+          type: string
+        type: array
+      has_3d_data:
+        description: |-
+          Has3DData is true when City2TABULA holds LOD2 buildings here at all,
+          matched or not.
+        example: true
+        type: boolean
+      has_grid:
+        description: |-
+          HasGrid is true when PyLovo reports generated grids for a region covering
+          this area. Status does not imply it: City2TABULA links 3D buildings to
+          PyLovo's input buildings (res/oth), never to generated grids, so an area
+          can be ready with HasGrid false. Demand modelling needs only the link; a
+          node-based caller needs HasGrid too, since nodes are transformer areas.
+        example: false
+        type: boolean
+      linked_buildings:
+        description: |-
+          LinkedBuildings is City2TABULA's coverage count for the area, above zero
+          exactly when Status is ready. It counts attempted matches rather than
+          successful ones, so both it and a ready status overstate coverage until
+          City2TABULA excludes the rows where 3D and OSM failed to pair.
+        example: 0
+        type: integer
+      status:
+        example: linkable
+        type: string
     type: object
   spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile:
     properties:
@@ -631,6 +719,44 @@ paths:
       summary: Poll a City2TABULA enrich run
       tags:
       - City2TABULA
+  /v1/city2tabula/enrich/area:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Returns every LOD2 building City2TABULA holds inside the bbox with its BuEM
+        envelope and footprint, keyed by object_id. Unlike the osm_ids endpoint this
+        needs no building list, so a caller with only an area can fetch 3D data. The
+        trade-off is identity: City2TABULA's area query cannot report the PyLovo link,
+        so the result carries no osm_id and cannot be joined to demand profiles.
+        Footprints are in the country's storage CRS, not WGS84.
+      parameters:
+      - description: Area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Resolve City2TABULA 3D data for an area, without osm_ids
+      tags:
+      - City2TABULA
   /v1/heat-demand/resolve:
     post:
       consumes:
@@ -666,6 +792,64 @@ paths:
       summary: Resolve a building's annual space-heating demand
       tags:
       - HeatDemand
+  /v1/heat/availability:
+    get:
+      description: |-
+        Answers, for a drawn area, whether it can be modelled now ("ready"), needs only a
+        City2TABULA link run over data that is already there ("linkable"), or is missing one
+        of the two datasets entirely ("partial"). has_3d_data and has_grid say which half is
+        missing in the last case.
+      parameters:
+      - description: Country
+        example: netherlands
+        in: query
+        name: country
+        required: true
+        type: string
+      - description: Area west edge (WGS84 lon)
+        in: query
+        name: xmin
+        required: true
+        type: number
+      - description: Area south edge (WGS84 lat)
+        in: query
+        name: ymin
+        required: true
+        type: number
+      - description: Area east edge (WGS84 lon)
+        in: query
+        name: xmax
+        required: true
+        type: number
+      - description: Area north edge (WGS84 lat)
+        in: query
+        name: ymax
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Report whether heat modelling is available for an area
+      tags:
+      - City2TABULA
   /v2/ignis/fields:
     get:
       description: |-
@@ -707,7 +891,7 @@ paths:
           schema:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
         "400":
-          description: unsupported country
+          description: ignis declined the request
           schema:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
         "502":
