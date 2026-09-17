@@ -271,11 +271,10 @@ ignis: tentacron-network
 
 .PHONY: buem
 buem: tentacron-network
-	@cd dependencies/$(BUEM_DIR)/environment && HOST_HTTPS_PORT=$(BUEM_PORT) docker compose -f docker-compose.quickstart.yml up -d
-	@docker network connect tentacron-net buem-reverse-proxy 2>/dev/null || true
+	@cd dependencies/$(BUEM_DIR)/environment/http && HOST_PORT=$(BUEM_PORT) docker compose -f docker-compose.yml up -d
 	@docker network connect tentacron-net buem-gateway 2>/dev/null || true
 	@docker network connect tentacron-net buem-model 2>/dev/null || true
-	@echo "$(GREEN)BuEM up on https://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
+	@echo "$(GREEN)BuEM up on http://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: meme
 meme: tentacron-network
