@@ -414,12 +414,17 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 // with reason set when it has no resolved, non-empty envelope. meta records
 // the TABULA variant/refurbishment level that produced its U-values.
 func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
-	cityBuilding, ok := envelopeByOSMID[osmID]
-	if !ok {
+	// An envelope edited in the building configurator stands in for the
+	// City2TABULA one, so a building nobody has linked in 3D, or one whose
+	// surfaces a user has corrected, still runs. Without it such a building is
+	// dropped from the model silently.
+	edited, hasEdited := clientEnvelopeElements(props)
+	cityBuilding, hasCity := envelopeByOSMID[osmID]
+	if !hasCity && !hasEdited {
 		return buem.Building{}, BuemResolutionMeta{}, "no City2TABULA envelope for this building", false
 	}
 	elements := city2tabula.EnvelopeElements(cityBuilding)
-	if len(elements) == 0 {
+	if !hasEdited && len(elements) == 0 {
 		return buem.Building{}, BuemResolutionMeta{}, "City2TABULA returned no usable envelope surfaces", false
 	}
 	fClass, _ := props["f_class"].(string)
@@ -429,6 +434,12 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	}
 	level := buildingRefurbishmentLevel(props, defaultLevel)
 	elements, meta = attachEnvelopeUValues(ctx, ignisClient, elements, variantCode, fClass, country, buildingConstructionYear(props), level)
+	// The TABULA resolution above still stands for an edited building: meta
+	// drives the glazing defaults and the dwelling count, neither of which the
+	// envelope editor sets. Only the surfaces are the user's.
+	if hasEdited {
+		elements = edited
+	}
 
 	geometry, err := json.Marshal(node["geometry"])
 	if err != nil {
