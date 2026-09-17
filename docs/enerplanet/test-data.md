@@ -242,6 +242,19 @@ published to the host on `DB_PORT`, which is 5433. Overrides are
     The smoke test's own `loenen_buildings.geojson` is an LFS object too, so
     such a checkout fails the smoke whether or not any fixture is loaded.
 
+!!! warning "City2TABULA reaches the Go module proxy when it starts"
+    Its image pins Go 1.23.3 while its `go.mod` requires 1.25.0, and the
+    server runs through `go run`. Go therefore downloads a 1.25.0 toolchain
+    from the module proxy the first time the container starts, not at build
+    time. On a host with restricted outbound access the container fails to
+    start, and the error names the module proxy rather than anything in these
+    instructions.
+
+    Nothing here can work around it: allow the egress, or pre-warm the
+    toolchain in the image. The cause is a one-line pin mismatch in
+    City2TABULA's Dockerfile. Once that pin is fixed there, this note can be
+    removed.
+
 !!! warning "City2TABULA will not start without `CITYDB_TOOL_PATH`"
     Its startup check requires the variable to be non-empty, even when only
     serving data. It is not read unless you run the extraction pipeline, and
