@@ -193,7 +193,7 @@ func TestGetGeometryByObjectIDs_DoesNotAskForSurfaces(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, *payload, "include",
-		"the drawn-area call places buildings on a map; an area's worth of surfaces is tens of megabytes")
+		"the drawn-area call places buildings on a map; surfaces there risk breaching TentaCron's 10 MiB response cap, which fails the job whole")
 }
 
 func TestGetSurfaceGeometry_NoSurfaceRowsIsNotAnError(t *testing.T) {

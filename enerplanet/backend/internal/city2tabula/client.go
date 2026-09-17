@@ -291,10 +291,10 @@ func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, obj
 // GetSurfaceGeometryByObjectIDs returns footprints and every envelope surface
 // polygon, for rendering a building rather than placing it.
 //
-// Ask for this one building at a time. A single building runs to a few hundred
-// faces, around 60 KB of GeoJSON at the worst in the Netherlands set, so an
-// area's worth is tens of megabytes; that is why surfaces are opt-in and why
-// the drawn-area call does not use this.
+// Ask for this one building at a time. A building's face count is unbounded and
+// TentaCron fails a job whole when a response exceeds upstream.max_response_bytes,
+// so an area would fail on its largest buildings with nothing in the request
+// predicting which those are.
 func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
 	return c.getGeometry(ctx, country, objectIDs, true)
 }
