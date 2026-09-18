@@ -94,8 +94,8 @@ Download size is what crosses the network. Disk size is what Docker extracts, an
 
 `weather` and `buem-model` share almost all their layers (`buem-model` adds only 18 MB), so together they cost about 4.9 GB, not 9 GB.
 
-!!! warning "Local City2TABULA builds are not reproducible"
-    `validation/` is gitignored but not dockerignored, so `COPY . .` copies any local pipeline output in it, and the following `chown -R` duplicates that into a second layer. On a machine that had run the pipeline the image measured 10.4 GB; from a clean clone the build context is only 34 MB. Add `validation/` to `.dockerignore` so the image does not depend on who built it, and always measure images from a clean clone.
+!!! warning "A build context is the working tree, not the tracked files"
+    `COPY . .` copies untracked directories too, so output a tool writes beside its own source lands in the image, and a following `chown -R` stores a second copy of it. An image built that way measures the machine that built it rather than the commit, and two people building one commit get different sizes with no signal that it happened. City2TABULA excludes `validation/` and uses `COPY --chown` for this reason: its development image is 843 MB of content and 3.42 GB extracted, from a 19.2 MB context, whatever the builder has accumulated locally.
 
 ## Build cache
 
