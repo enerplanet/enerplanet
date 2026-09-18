@@ -40,6 +40,28 @@ names and derives further variables. The result was then cut to a 3 by 3 cell
 window around Loenen, Netherlands, from the Dutch 2018 annual archive and
 recompressed. Full year, hourly, 13 variables.
 
+## fixtures/weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc
+
+COSMO-REA6 regional reanalysis, generated in the framework of the
+Hans-Ertel-Centre for Weather Research (HErZ), Climate Monitoring and
+Diagnostics, at the Universities of Bonn and Cologne.
+
+> Data basis: Hans-Ertel-Centre for Weather Research
+>
+> © Hans-Ertel-Centre for Weather Research — https://www.herz-tb4.uni-bonn.de
+
+The data may be used without restriction provided the source is referenced,
+under the German federal terms for geographical data (GeoNutzV). Its binding
+design notes require the "Data basis" wording above, rather than a plain
+"Source:" credit, whenever the data is modified rather than copied verbatim,
+and require the extent of the modification to be stated.
+
+Modifications: retrieved from the DWD open data archive, which hosts the data
+set, and processed by the `weather` pipeline, which standardises variable
+names and derives further variables. The result was then cut to a 4 by 4 cell
+window around Bremen, Germany, from the German 2018 annual archive and
+recompressed. Full year, hourly, 13 variables.
+
 ## fixtures/city2tabula/tabula_nl.sql.gz and tabula_de.sql.gz
 
 The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,

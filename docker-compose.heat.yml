@@ -1,0 +1,243 @@
+# The heat stack: everything the heating parts of EnerPlanET need, from
+# published images only. A target machine needs this file, heat.env and a
+# TentaCron config; no source checkout of any heat repository.
+#
+# ---
+# Usage:  docker compose --env-file heat.env -f docker-compose.heat.yml pull
+#         docker compose --env-file heat.env -f docker-compose.heat.yml up -d
+# ---
+#
+# Why one file rather than each repository's own compose. ignis publishes a
+# deployment-ready compose; the others do not yet. buem-gateway's carries no
+# shared-network block and city2tabula's still builds an interactive shell from
+# source, so neither runs unattended on a server. Assembling the stack here
+# needs no change in those repositories and no source on the target.
+#
+# Service names are the contract. TentaCron addresses ignis-http,
+# city2tabula-server, weather-serve and buem-gateway by name, so these names
+# match its configuration exactly. One compose project means one network and
+# plain service-name resolution, which is why no tentacron-net appears here:
+# that network exists to bridge separate projects, and there are none.
+#
+# Nothing publishes a host port. The only way in is the EnerPlanET backend,
+# which reaches TentaCron over spatialhub-net; every other service is reachable
+# only from inside this project. Nothing in the stack authenticates a caller,
+# so that containment is the trust boundary, not a convenience.
+#
+# Pin every tag in heat.env. `latest` on buem-model moves on every push to its
+# release branch, so following it would change production without a deploy.
+name: heat
+
+services:
+  # --- City2TABULA: 3D envelopes -------------------------------------------
+  city2tabula-db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${C2T_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${C2T_DB_PASSWORD:?set C2T_DB_PASSWORD in heat.env}
+      POSTGRES_DB: ${C2T_DB_NAME:-city2tabula}
+    volumes:
+      - city2tabula-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  city2tabula-server:
+    image: ghcr.io/thd-spatial-ai/city2tabula-server:${C2T_IMAGE_TAG:?pin C2T_IMAGE_TAG in heat.env}
+    environment:
+      # The server derives a per-country database as <DB_NAME>_<country>, which
+      # is what the fixtures restore into (city2tabula_nl, city2tabula_de).
+      DB_HOST: city2tabula-db
+      DB_PORT: 5432
+      DB_USER: ${C2T_DB_USER:-postgres}
+      DB_PASSWORD: ${C2T_DB_PASSWORD:?set C2T_DB_PASSWORD in heat.env}
+      DB_NAME: ${C2T_DB_NAME:-city2tabula}
+      DB_SSL_MODE: disable
+      SERVER_PORT: 5000
+    depends_on:
+      city2tabula-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:5000/api/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # --- ignis: TABULA annual demand -----------------------------------------
+  ignis-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${IGNIS_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${IGNIS_DB_PASSWORD:?set IGNIS_DB_PASSWORD in heat.env}
+      POSTGRES_DB: ${IGNIS_DB_NAME:-ignis}
+    volumes:
+      - ignis-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  ignis-http:
+    image: ghcr.io/thd-spatial-ai/ignis:${IGNIS_IMAGE_TAG:?pin IGNIS_IMAGE_TAG in heat.env}
+    environment:
+      APP_PORT: 8080
+      DB_HOST: ignis-db
+      DB_PORT: 5432
+      DB_USER: ${IGNIS_DB_USER:-postgres}
+      DB_PASSWORD: ${IGNIS_DB_PASSWORD:?set IGNIS_DB_PASSWORD in heat.env}
+      DB_NAME: ${IGNIS_DB_NAME:-ignis}
+      DB_SSL_MODE: disable
+      # Browser callers only. TentaCron and the backend send no Origin header.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    depends_on:
+      ignis-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ignis/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # One-off, destructive: DROPs and recreates every country table from the
+  # TABULA workbook baked into the image. Gated so it never runs on `up`.
+  #   docker compose ... --profile seed run --rm ignis-build-db
+  ignis-build-db:
+    image: ghcr.io/thd-spatial-ai/ignis-build-db:${IGNIS_IMAGE_TAG:?pin IGNIS_IMAGE_TAG in heat.env}
+    profiles: [seed]
+    environment:
+      DB_HOST: ignis-db
+      DB_PORT: 5432
+      DB_USER: ${IGNIS_DB_USER:-postgres}
+      DB_PASSWORD: ${IGNIS_DB_PASSWORD:?set IGNIS_DB_PASSWORD in heat.env}
+      DB_NAME: ${IGNIS_DB_NAME:-ignis}
+      DB_SSL_MODE: disable
+    depends_on:
+      ignis-db:
+        condition: service_healthy
+
+  # --- BuEM: hourly thermal model ------------------------------------------
+  buem-model:
+    image: ghcr.io/enerplanet/buem-model:${BUEM_MODEL_IMAGE_TAG:?pin BUEM_MODEL_IMAGE_TAG in heat.env}
+    environment:
+      BUEM_CBC_EXE: /opt/conda/envs/buem_env/bin/cbc
+      # Every request carries its own weather, so the container needs no
+      # archive of its own.
+      BUEM_WEATHER_FALLBACK: "false"
+      BUEM_RESULTS_DIR: /app/results
+    volumes:
+      - buem-results-data:/app/results
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
+
+  buem-gateway:
+    image: ghcr.io/enerplanet/buem-gateway:${BUEM_GATEWAY_IMAGE_TAG:?pin BUEM_GATEWAY_IMAGE_TAG in heat.env}
+    environment:
+      APP_PORT: 8080
+      BUEM_SERVICE_HOST: buem-model
+      BUEM_SERVICE_PORT: 5000
+      BUEM_DATA_DIR: /app/data
+      # Must match buem-model's: the model writes results here and the gateway
+      # reads and deletes them.
+      BUEM_RESULTS_DIR: /app/results
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+    volumes:
+      - buem-csv-data:/app/data
+      - buem-results-data:/app/results
+    depends_on:
+      buem-model:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/buem/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # --- weather: reanalysis point queries -----------------------------------
+  weather-serve:
+    # 2.0.2 or later: earlier images carry no application code, and the
+    # country-archive selection before 2.0.1 can serve a neighbouring
+    # country's series for a point near a shared border.
+    image: ghcr.io/enerplanet/weather:${WEATHER_IMAGE_TAG:?pin WEATHER_IMAGE_TAG in heat.env}
+    environment:
+      PIPELINE_MODE: serve
+      WEATHER_DATA_DIR: /data
+      WEATHER_API_WORKERS: ${WEATHER_API_WORKERS:-2}
+      WEATHER_API_KEYS: ${WEATHER_API_KEYS:?set WEATHER_API_KEYS in heat.env}
+    volumes:
+      # Read-only: the archive is data the deployment supplies, not state the
+      # service owns.
+      - ${WEATHER_DATA_HOST_DIR:?set WEATHER_DATA_HOST_DIR in heat.env}:/data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/v1/weather/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # --- TentaCron: the broker the backend talks to --------------------------
+  tentacron:
+    image: ghcr.io/enerplanet/tentacron:${TENTACRON_IMAGE_TAG:?pin TENTACRON_IMAGE_TAG in heat.env}
+    environment:
+      PORT: 8080
+      TENTACRON_KEY_FRONTEND: ${TENTACRON_KEY_FRONTEND:?set TENTACRON_KEY_FRONTEND in heat.env}
+      TENTACRON_KEY_BATCH: ${TENTACRON_KEY_BATCH:?set TENTACRON_KEY_BATCH in heat.env}
+      MEME_API_KEY: ${MEME_API_KEY:-unused}
+      BUEM_API_KEY: ${BUEM_API_KEY:-unused}
+      PV1_API_KEY: ${PV1_API_KEY:-unused}
+      WIND_API_KEY: ${WIND_API_KEY:-unused}
+      WEATHER_API_KEY: ${WEATHER_API_KEY:?must match one entry in WEATHER_API_KEYS}
+      IGNIS_API_KEY: ${IGNIS_API_KEY:-unused}
+    volumes:
+      - ${TENTACRON_CONFIG:?set TENTACRON_CONFIG in heat.env}:/etc/tentacron/config.yaml:ro
+      - tentacron-data:/data
+    networks:
+      # Its own project, to reach the heat services by name, and the platform's
+      # network, so the EnerPlanET backend can reach it at http://tentacron:8080.
+      # This is the only service on both, and the only way into the stack.
+      default:
+      spatialhub-net:
+    depends_on:
+      ignis-http:
+        condition: service_healthy
+      city2tabula-server:
+        condition: service_healthy
+      buem-gateway:
+        condition: service_healthy
+      weather-serve:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/tentacron", "healthcheck", "-addr", "127.0.0.1:8080"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  city2tabula-db-data:
+  ignis-db-data:
+  buem-csv-data:
+  # buem-model writes results here and buem-gateway reads and deletes them, so
+  # both mount the same volume.
+  buem-results-data:
+  tentacron-data:
+
+networks:
+  # Created by platform-core before this stack starts, which is why it is
+  # external here rather than declared.
+  spatialhub-net:
+    external: true

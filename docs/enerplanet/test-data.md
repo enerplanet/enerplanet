@@ -19,10 +19,34 @@ that load without error and fail later as unreadable data.
 git lfs install
 ```
 
-Budget about 8 GB of disk for a fresh checkout before any container starts.
-`make setup-repos` clones every dependency, and two of them carry large LFS
-histories: simulation-engine is 6 GB and enerplanet-pylovo 1.6 GB. The fixtures
-themselves are 3 MB.
+Budget 28 to 32 GB of disk, and 40 GB to work in comfortably. The figures
+below were measured on amd64 Linux and drift as base images change, so treat
+them as an order of magnitude.
+
+About 8 GB is the checkout. `make setup-repos` clones every dependency, and two
+carry large LFS histories, simulation-engine at 6 GB and enerplanet-pylovo at
+1.6 GB. The fixtures are 5 MB of that.
+
+Container images are 20 to 24 GB. What moves the figure is City2TABULA: two
+services build it from one Dockerfile, so `make setup` produces it twice. Built
+in the same run the pair shares nearly every layer and costs about 10.4 GB
+between them; built days apart the layer cache has moved and they cost about
+15 GB. Every other image together adds about 9 GB.
+
+Adding up what each image reports gives a larger number, around 35 GB, because
+a layer shared by several images is reported by each of them while being stored
+once. BuEM's model image is the clearest case: it reports 4.1 GB but shares all
+but 18 MB with weather.
+
+City2TABULA is large because the same image carries a Go toolchain, a JDK and
+citydb-tool so that it can also run 3D imports, and because the repository is
+copied into it twice, once by `COPY` and again when ownership is changed. The
+running server adds a further 624 MB writable layer, because it compiles inside
+the container at startup.
+
+The fixtures avoid the source data downloads, which dwarf all of this: a
+weather archive alone runs to tens of gigabytes. They do not make the images
+smaller.
 
 ## Loading
 
@@ -75,19 +99,20 @@ CRS against the same single PyLovo database, and covers the box 8.7908 53.0940
 to 8.7990 53.1027. It has no PyLovo grid: it answers "does a second country's
 3D data work", not "can a grid be generated there".
 
-!!! warning "Bremen needs a weather cut that is not here yet"
-    The German building and TABULA fixtures are included; a German weather cut
-    is not, so `SMOKE_SITE=bremen` cannot resolve demand yet.
+!!! warning "The German weather cut needs weather 2.0.2 or later"
+    Both regions now carry a weather cut, so `SMOKE_SITE=bremen` resolves
+    demand. It depends on which weather release serves it.
 
-    It is withheld deliberately rather than forgotten. Weather archives are
-    selected by country bounding box, and Germany's box contains the Dutch
-    fixture area, so on a weather release that picks the first matching box a
-    German archive silently captures Dutch points and returns a series from a
-    cell hundreds of kilometres away, with no error and a demand figure that
-    looks plausible. Shipping the cut before that selection is fixed would
-    distribute that behaviour to everyone loading the fixtures.
+    Archives are selected by country bounding box, and Germany's box contains
+    the Dutch fixture area. A release that picks the first matching box lets
+    the German archive capture Dutch points and return a series from a cell
+    hundreds of kilometres away, with no error and a demand figure that looks
+    plausible. weather picks the nearest-covering archive instead from 2.0.1,
+    which is what makes shipping both cuts together safe. Ask for 2.0.2 rather
+    than 2.0.1: the fix is in both, but only 2.0.2 has a published image.
 
-    Loenen is unaffected and needs nothing from this.
+    Against an older weather image, load only the Dutch cut. Loenen itself is
+    unaffected either way.
 
 PyLovo stores its geometry in EPSG:3035 and City2TABULA in a country-specific
 CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is reprojected at load time, because the join between them
@@ -100,7 +125,8 @@ link step, which these fixtures cannot do.
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
 | `city2tabula/city2tabula_bremen.sql.gz` | 2.2 MB | 1,347 buildings, 19,791 surfaces, 1,347 links | a new `<DB_NAME>_de` database |
-| `weather/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
+| `weather/cosmo_rea6/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather around Loenen, 3×3 cells, 13 variables | the weather checkout's `data/` |
+| `weather/cosmo_rea6/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather around Bremen, 4×4 cells, 13 variables | the weather checkout's `data/` |
 | `pylovo/pylovo_loenen_fixture.sql.gz` | 230 KB | 4 grids, 249 buildings, 479 lines, 4 transformers, plus their inputs and reference tables | the existing pylovo database |
 
 The pylovo fixture is data only and assumes the pylovo schema already exists,
