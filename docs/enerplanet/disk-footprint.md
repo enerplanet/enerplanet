@@ -6,8 +6,8 @@ audience: developer
 
 Test Data budgets the disk a working setup needs. This page says what fills
 it, measured rather than estimated, so the figures can be argued with and
-reduced. Everything below was measured on amd64 Linux from a clean clone, and drifts
-as the repositories and base images grow.
+reduced. Figures were measured on amd64 Linux, from a clean clone except where the
+text says otherwise, and drift as the repositories and base images grow.
 
 ## A fresh checkout is 8.1 GB, and two repositories are 94 per cent of it
 
@@ -122,11 +122,12 @@ rather than 9 GB; `buem-model` holds only 18 MB that `weather` does not.
 !!! warning "An image built on a working machine measures that machine"
     A locally built image includes whatever the build context holds, and a
     context is the working tree rather than the tracked files. City2TABULA's
-    development image measures 10.4 GB here, of which about 4.6 GB is one
-    directory: `validation/` is gitignored but not dockerignored, so `COPY . .`
-    takes a developer's own 2.3 GB of local output and the `chown -R` on the
+    development image measures 10.4 GB on a machine that has already run the
+    pipeline, of which about 4.6 GB is one directory: `validation/` is
+    gitignored but not dockerignored, so `COPY . .` picks up whatever local
+    pipeline output sits there, 2.3 GB in that case, and the `chown -R` on the
     next line rewrites all of it into a second layer. The same directory is
-    232 KB in a fresh clone.
+    232 KB in a fresh clone, where the whole context is 34 MB.
 
     Figures taken from a machine that has run the pipeline therefore overstate
     what a new developer pays, which is the opposite of the usual staleness
