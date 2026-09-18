@@ -119,6 +119,20 @@ A disk budget therefore takes the second column. The two conda images share
 nearly everything, so weather and buem-model together cost about 4.9 GB
 rather than 9 GB; `buem-model` holds only 18 MB that `weather` does not.
 
+!!! warning "An image built on a working machine measures that machine"
+    A locally built image includes whatever the build context holds, and a
+    context is the working tree rather than the tracked files. City2TABULA's
+    development image measures 10.4 GB here, of which about 4.6 GB is one
+    directory: `validation/` is gitignored but not dockerignored, so `COPY . .`
+    takes a developer's own 2.3 GB of local output and the `chown -R` on the
+    next line rewrites all of it into a second layer. The same directory is
+    232 KB in a fresh clone.
+
+    Figures taken from a machine that has run the pipeline therefore overstate
+    what a new developer pays, which is the opposite of the usual staleness
+    risk. Measure a build from a clean clone, or say which machine the number
+    came from.
+
 !!! warning "Build cache is counted nowhere"
     Images and checkouts are only part of it. `make setup` builds several
     images from source, and the build cache that leaves behind appears in no
