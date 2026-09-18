@@ -2,14 +2,17 @@
 audience: developer
 ---
 
-# Where the disk goes
+# Storage footprint
 
-Test Data budgets the disk a working setup needs. This page says what fills
-it, measured rather than estimated, so the figures can be argued with and
-reduced. Figures were measured on amd64 Linux, from a clean clone except where the
-text says otherwise, and drift as the repositories and base images grow.
+Where EnerPlanET's disk space goes. All figures were measured on amd64 Linux from a clean clone unless stated otherwise, and will drift as repositories and base images grow.
 
-## A fresh checkout is 8.1 GB, and two repositories are 94 per cent of it
+## Summary
+
+- A fresh checkout of all repositories is **8.1 GB**. `simulation-engine` and `enerplanet-pylovo` account for 94 per cent of it.
+- The heat stack's eight container images need **about 8 GB** of disk (2.6 GB to download).
+- Docker build cache comes on top of both and is not included in any figure on this page.
+
+## Repositories
 
 | Repository | On disk | of which `.git` |
 |---|---|---|
@@ -24,16 +27,13 @@ text says otherwise, and drift as the repositories and base images grow.
 | weather | 5.9 MB | 2.1 MB |
 | TentaCron | 5.0 MB | 2.5 MB |
 
-Everything except the first two adds up to under 600 MB, so nothing outside
-them is worth optimising.
+All other repositories together total under 600 MB and are not worth optimising.
 
-## simulation-engine: one directory, and a third of it is duplicate files
+### simulation-engine
 
-`webservice.docker/servicehub/data/` holds 3.3 GB in the working tree and
-2.1 GB of Git LFS objects. Ten LFS files live there, but only **six distinct
-contents**:
+Almost all of the size is in `webservice.docker/servicehub/data/`: 3.3 GB in the working tree and 2.1 GB of Git LFS objects. The directory holds ten LFS files but only six distinct contents.
 
-| Content | Size | Files carrying it |
+| Content hash | Size | Files |
 |---|---|---|
 | `913ce94699` | 441 MB | `AB.csv`, `MFH.csv`, `SFH.csv`, `TH.csv` |
 | `ad0ec373a0` | 440 MB | `Commercial.csv`, `Public.csv` |
@@ -42,43 +42,26 @@ contents**:
 | `c1a7dc1cac` | 11 KB | `charging/durations.csv` |
 | `7b270dff7c` | 2.1 KB | `charging/coefs.csv` |
 
-Eight large files, four distinct contents. About **1.55 GB of the checkout is
-redundant copies**.
+Each large file is an hourly time series from 2015-01-01 to 2025-12-31 (96,433 rows by 325 columns) stored as decimal text. About **1.55 GB of the checkout is duplicate copies**.
 
-!!! warning "Four building types share one file"
-    `AB.csv`, `MFH.csv`, `SFH.csv` and `TH.csv` are byte-identical, and so are
-    `Commercial.csv` and `Public.csv`. Whatever the per-building-type
-    distinction is meant to express, these files do not express it. That is
-    worth resolving before the disk question: if the distinction is real the
-    data is wrong, and if it is not real the files should not exist
-    separately.
+!!! warning "Identical files for different building types"
+    `AB.csv`, `MFH.csv`, `SFH.csv` and `TH.csv` are byte-identical, as are `Commercial.csv` and `Public.csv`. If the per-type distinction is meant to be real, the data is wrong. If it is not, the separate files are unnecessary. Resolve this before optimising storage.
 
-Each file is 96,433 rows by 325 columns, hourly from 2015-01-01 to
-2025-12-31: about 31 million floating-point values held as decimal text at
-roughly 13 bytes each.
+#### Reduction options
 
-### What each remedy is worth
+Measured on one file.
 
-Measured on one 421 MB file.
-
-| Remedy | 3.3 GB becomes | Cost |
+| Option | 3.3 GB becomes | Cost |
 |---|---|---|
-| Stop storing the six duplicates separately | ~1.76 GB | none; they are byte-identical |
-| gzip | ~1.3 GB | readers must handle `.gz` |
-| zstd -19 | ~1.0 GB | as above |
-| float32 binary or Parquet | ~250 to 500 MB | the consuming code changes |
-| Fetch at image build instead of committing | nothing in any clone | somewhere to host it |
+| Remove duplicate copies | ~1.76 GB | None, files are byte-identical |
+| gzip | ~1.3 GB | Readers must handle `.gz` |
+| zstd -19 | ~1.0 GB | Readers must handle `.zst` |
+| float32 binary or Parquet | ~250 to 500 MB | Consuming code must change |
+| Download at image build time | 0 in the clone | Needs a place to host the data |
 
-Compression alone is weak here, 2.5x for gzip and 3.2x for zstd, because
-decimal text of small floats does not pack well. The format is the cost, not
-the packing: 31 million float32 values is 125 MB against 441 MB of text.
+The text format is the main cost. Compression only achieves 2.5x (gzip) to 3.2x (zstd), whereas the same values as float32 take 125 MB instead of 441 MB. Pruning LFS history recovers little, because LFS already stores each unique object once.
 
-!!! note "LFS history is not the problem"
-    `.git/lfs` holds 2.1 GB while the working tree holds 4.0 GB, because LFS
-    stores each unique object once and the checkout materialises all ten
-    files. Pruning history recovers little. The files themselves are the cost.
-
-## enerplanet-pylovo: 1.6 GB, spread out
+### enerplanet-pylovo
 
 | File | Size |
 |---|---|
@@ -89,15 +72,13 @@ the packing: 31 million float32 values is 125 MB against 441 MB of text.
 | `raw_data/netherlands/postcode_netherlands.csv` | 31 MB |
 | `raw_data/transformer_data/` (GeoJSON) | 79 MB |
 
-95 LFS files, 93 distinct contents, so there is no duplication to remove. The
-two database dumps and the postcode tables are the candidates, and both are
-already compressed or compressible text.
+95 LFS files with 93 distinct contents, so there is no meaningful duplication. The database dumps and postcode tables are the only candidates for reduction.
 
-## Images: transfer size against extracted size
+## Container images
 
-For the heat stack's eight images:
+The heat stack's eight images:
 
-| Image | Content | On disk |
+| Image | Download | On disk |
 |---|---|---|
 | `enerplanet/weather` | 1.1 GB | 4.94 GB |
 | `enerplanet/buem-model` | 938 MB | 4.14 GB |
@@ -107,43 +88,15 @@ For the heat stack's eight images:
 | `postgres:17-alpine` | 112 MB | 424 MB |
 | `thd-spatial-ai/ignis-build-db` | 58 MB | 202 MB |
 | `thd-spatial-ai/ignis` | 48 MB | 195 MB |
-| **all eight, shared layers counted once** | **2.6 GB** | **~8 GB** |
+| **Total, shared layers counted once** | **2.6 GB** | **~8 GB** |
 
-The columns differ by about four times. Content is what crosses the network
-and matches `docker save` output to within tar padding. On disk is what the
-storage driver extracts, and a conda environment is hundreds of thousands of
-small files, each occupying a whole filesystem block: the archive packs them,
-the extracted layer does not.
+Download size is what crosses the network. Disk size is what Docker extracts, and is about four times larger because conda environments contain hundreds of thousands of small files, each taking a full filesystem block. **Use the disk column for budgeting.**
 
-A disk budget therefore takes the second column. The two conda images share
-nearly everything, so weather and buem-model together cost about 4.9 GB
-rather than 9 GB; `buem-model` holds only 18 MB that `weather` does not.
+`weather` and `buem-model` share almost all their layers (`buem-model` adds only 18 MB), so together they cost about 4.9 GB, not 9 GB.
 
-!!! warning "An image built on a working machine measures that machine"
-    A locally built image includes whatever the build context holds, and a
-    context is the working tree rather than the tracked files. City2TABULA's
-    development image measures 10.4 GB on a machine that has already run the
-    pipeline, of which about 4.6 GB is one directory: `validation/` is
-    gitignored but not dockerignored, so `COPY . .` picks up whatever local
-    pipeline output sits there, 2.3 GB in that case, and the `chown -R` on the
-    next line rewrites all of it into a second layer. The same directory is
-    232 KB in a fresh clone, where the whole context is 34 MB.
+!!! warning "Local City2TABULA builds are not reproducible"
+    `validation/` is gitignored but not dockerignored, so `COPY . .` copies any local pipeline output in it, and the following `chown -R` duplicates that into a second layer. On a machine that had run the pipeline the image measured 10.4 GB; from a clean clone the build context is only 34 MB. Add `validation/` to `.dockerignore` so the image does not depend on who built it, and always measure images from a clean clone.
 
-    Figures taken from a machine that has run the pipeline therefore overstate
-    what a new developer pays, which is the opposite of the usual staleness
-    risk. Measure a build from a clean clone, or say which machine the number
-    came from.
+## Build cache
 
-    The consequence is reproducibility rather than size. Two people building
-    the same commit get images differing by roughly a factor of two depending
-    on what their working tree happens to hold, and neither gets any signal
-    that it is happening. Excluding `validation/` would save a fresh clone
-    almost nothing, because a fresh clone has nothing there to exclude; what it
-    buys is an image that does not depend on who built it.
-
-!!! warning "Build cache is counted nowhere"
-    Images and checkouts are only part of it. `make setup` builds several
-    images from source, and the build cache that leaves behind appears in no
-    figure on this page or in Test Data. It grows until it is pruned, and
-    `docker builder prune` is what reclaims it. Allow for it, or a budget
-    sized exactly to these tables will be exceeded on the second build.
+`make setup` builds several images from source and leaves build cache behind. It grows until pruned with `docker builder prune` and is not included in any figure above, so leave headroom for it when sizing a disk.
