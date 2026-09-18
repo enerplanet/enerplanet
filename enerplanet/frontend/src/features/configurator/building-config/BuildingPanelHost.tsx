@@ -6,7 +6,7 @@
  * package's clients are built only once a building is actually open.
  */
 
-import type { FC } from 'react';
+import { useEffect, type FC } from 'react';
 
 import {
   BuildingConfigurator,
@@ -36,22 +36,33 @@ const PanelBody: FC<{ osmId: string; onClose: () => void }> = ({ osmId, onClose 
 export const BuildingPanelHost: FC = () => {
   const { buildingId, isOpen, close } = useConfiguratorParams();
 
+  // Escape closes the panel. The backdrop cannot be a button, because the
+  // configurator inside it is full of them and a button may not nest, so this
+  // is what gives the dismissal a keyboard route.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => globalThis.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, close]);
+
   if (!isOpen || buildingId === null) return null;
 
   return (
-    <button
-      type="button"
-      aria-label="Close the building configurator"
+    <div
+      role="presentation"
       onClick={(event) => {
         // Only the backdrop itself closes; a click inside the panel is the
         // user working, not dismissing.
         if (event.target === event.currentTarget) close();
       }}
-      className="fixed inset-0 z-50 flex cursor-default items-center justify-center bg-slate-900/45 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm"
     >
       <BuildingConfiguratorProvider http={heatClient}>
         <PanelBody osmId={buildingId} onClose={close} />
       </BuildingConfiguratorProvider>
-    </button>
+    </div>
   );
 };
