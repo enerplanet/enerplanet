@@ -111,9 +111,14 @@ type BuildingResult struct {
 // A batch that outruns the buem-buildings target timeout (~9.5 min) comes back
 // as a target_timeout and fails the run_buem job with no retry.
 //
-// The hourly series are not requested: a model's results are read from
-// .thermal_load_profile.summary, and at ~300 KB per building per year a
-// 300-building model would answer with ~90 MB of values nothing reads.
+// The hourly series are not requested, and that is a correctness constraint
+// rather than a saving. A model's results are read from
+// .thermal_load_profile.summary, so the values would go unread; but the
+// buem-buildings target answers in direct mode, which TentaCron reads whole
+// under its 10 MiB response cap. One building-year of series measures ~666 KB
+// through this path, so asking for them here fails the entire batch past
+// roughly fifteen buildings, as a target error that names neither the flag nor
+// the size.
 func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) ([]BuildingResult, error) {
 	return c.run(ctx, buildings, weather, startDate, endDate, resolution, modelID, false, runTimeout)
 }
