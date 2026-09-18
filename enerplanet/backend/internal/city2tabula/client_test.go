@@ -155,3 +155,53 @@ func TestGetBuildingsByOSMIDs_EmptyInputSkipsRequest(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, buildings)
 }
+
+// oneBuildingWithSurfaces is City2TABULA's geometry response when surfaces were
+// asked for: the footprint as before, plus one polygon per envelope face.
+const oneBuildingWithSurfaces = `[{
+  "object_id":"NL_1",
+  "footprint_geojson":{"type":"Polygon","coordinates":[[[1,2],[3,4],[1,2]]]},
+  "surfaces":[
+    {"id":"s1","type":"WallSurface","geojson":{"type":"Polygon","crs":{"type":"name","properties":{"name":"EPSG:28992"}},"coordinates":[[[1,2,3],[4,5,6],[1,2,3]]]}},
+    {"id":"s2","type":"RoofSurface","geojson":{"type":"Polygon","coordinates":[[[7,8,9],[1,2,3],[7,8,9]]]}}
+  ]
+}]`
+
+func TestGetSurfaceGeometryByObjectIDs_AsksForSurfacesAndKeepsThemRaw(t *testing.T) {
+	tc, target, payload := fakeTentacron(t, completed(oneBuildingWithSurfaces))
+
+	got, err := NewClient(tc).GetSurfaceGeometryByObjectIDs(context.Background(), "netherlands", []string{"NL_1"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "c2t-geometry", *target)
+	assert.Equal(t, "surfaces", (*payload)["include"],
+		"unconsumed payload fields reach City2TABULA as query parameters")
+
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Surfaces, 2)
+	assert.Equal(t, "s1", got[0].Surfaces[0].ID)
+	assert.Equal(t, "WallSurface", got[0].Surfaces[0].Type)
+	assert.Contains(t, string(got[0].Surfaces[0].GeoJSON), "EPSG:28992",
+		"the crs member survives, which is why the polygon stays raw")
+	assert.NotEmpty(t, got[0].FootprintGeoJSON, "the footprint still comes back alongside")
+}
+
+func TestGetGeometryByObjectIDs_DoesNotAskForSurfaces(t *testing.T) {
+	tc, _, payload := fakeTentacron(t, completed(`[{"object_id":"NL_1"}]`))
+
+	_, err := NewClient(tc).GetGeometryByObjectIDs(context.Background(), "netherlands", []string{"NL_1"})
+
+	require.NoError(t, err)
+	assert.NotContains(t, *payload, "include",
+		"the drawn-area call places buildings on a map; surfaces there risk breaching TentaCron's 10 MiB response cap, which fails the job whole")
+}
+
+func TestGetSurfaceGeometry_NoSurfaceRowsIsNotAnError(t *testing.T) {
+	tc, _, _ := fakeTentacron(t, completed(`[{"object_id":"NL_1","footprint_geojson":{"type":"Polygon","coordinates":[]}}]`))
+
+	got, err := NewClient(tc).GetSurfaceGeometryByObjectIDs(context.Background(), "netherlands", []string{"NL_1"})
+
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].Surfaces, "City2TABULA omits the key entirely, so absent and empty are one case")
+}
