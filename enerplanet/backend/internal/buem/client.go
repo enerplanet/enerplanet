@@ -130,6 +130,12 @@ func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather
 // It goes through the same batch endpoint rather than buem-gateway's
 // single-building route, because the buem-building target is configured against
 // a placeholder host this deployment cannot reach.
+//
+// The same 10 MiB response cap applies. One building-year of series measures
+// ~666 KB against it, but that grows with the requested period rather than
+// staying put: a decade at hourly resolution would reach roughly 65% of the
+// cap, and a decade at quarter-hour steps would not fit. Extrapolated from the
+// one measurement, so an order rather than a cliff.
 func (c *Client) RunBuilding(ctx context.Context, b Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) (BuildingResult, error) {
 	results, err := c.run(ctx, []Building{b}, weather, startDate, endDate, resolution, modelID, true, buildingRunTimeout)
 	if err != nil {
