@@ -99,19 +99,20 @@ CRS against the same single PyLovo database, and covers the box 8.7908 53.0940
 to 8.7990 53.1027. It has no PyLovo grid: it answers "does a second country's
 3D data work", not "can a grid be generated there".
 
-!!! warning "Bremen needs a weather cut that is not here yet"
-    The German building and TABULA fixtures are included; a German weather cut
-    is not, so `SMOKE_SITE=bremen` cannot resolve demand yet.
+!!! warning "The German weather cut needs weather 2.0.2 or later"
+    Both regions now carry a weather cut, so `SMOKE_SITE=bremen` resolves
+    demand. It depends on which weather release serves it.
 
-    It is withheld deliberately rather than forgotten. Weather archives are
-    selected by country bounding box, and Germany's box contains the Dutch
-    fixture area, so on a weather release that picks the first matching box a
-    German archive silently captures Dutch points and returns a series from a
-    cell hundreds of kilometres away, with no error and a demand figure that
-    looks plausible. Shipping the cut before that selection is fixed would
-    distribute that behaviour to everyone loading the fixtures.
+    Archives are selected by country bounding box, and Germany's box contains
+    the Dutch fixture area. A release that picks the first matching box lets
+    the German archive capture Dutch points and return a series from a cell
+    hundreds of kilometres away, with no error and a demand figure that looks
+    plausible. weather picks the nearest-covering archive instead from 2.0.1,
+    which is what makes shipping both cuts together safe. Ask for 2.0.2 rather
+    than 2.0.1: the fix is in both, but only 2.0.2 has a published image.
 
-    Loenen is unaffected and needs nothing from this.
+    Against an older weather image, load only the Dutch cut. Loenen itself is
+    unaffected either way.
 
 PyLovo stores its geometry in EPSG:3035 and City2TABULA in a country-specific
 CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is reprojected at load time, because the join between them
@@ -124,7 +125,8 @@ link step, which these fixtures cannot do.
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
 | `city2tabula/city2tabula_bremen.sql.gz` | 2.2 MB | 1,347 buildings, 19,791 surfaces, 1,347 links | a new `<DB_NAME>_de` database |
-| `weather/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
+| `weather/cosmo_rea6/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather around Loenen, 3×3 cells, 13 variables | the weather checkout's `data/` |
+| `weather/cosmo_rea6/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather around Bremen, 4×4 cells, 13 variables | the weather checkout's `data/` |
 | `pylovo/pylovo_loenen_fixture.sql.gz` | 230 KB | 4 grids, 249 buildings, 479 lines, 4 transformers, plus their inputs and reference tables | the existing pylovo database |
 
 The pylovo fixture is data only and assumes the pylovo schema already exists,
