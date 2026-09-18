@@ -16,6 +16,8 @@ on:
           - infra-keycloak
           - infra-keycloak-init
           - platform-auth-webservice
+          - heat-stack
+          - heat-bootstrap
           - build-app
           - deploy-app
           - migrate
@@ -243,6 +245,78 @@ jobs:
           docker image prune -f
           echo '=== [PROD] Auth Service and Webservice started ==='
 
+  # The heat services: City2TABULA, ignis, BuEM, weather and TentaCron, all
+  # from published images. Safe to re-run; it pulls and recreates, and the
+  # databases live in named volumes that survive.
+  #
+  # heat.env is not in the repository and is never overwritten here. Create it
+  # once on the target from heat.env.example with real passwords and keys.
+  # TENTACRON_KEY_FRONTEND must equal the backend's TENTACRON_API_KEY.
+  heat-stack:
+    if: ${{ github.event.inputs.step == 'heat-stack' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The weather fixtures are LFS objects; without this the target gets
+          # pointer files and weather answers 404 for every point.
+          lfs: true
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Start the heat stack
+        run: |
+          set -e
+          echo '=== [PROD] Starting the heat stack ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}/heat"
+          mkdir -p "$DEPLOY"
+          cp docker-compose.heat.yml tentacron.prod.yaml heat.env.example "$DEPLOY/"
+
+          if [ ! -f "$DEPLOY/heat.env" ]; then
+            echo "ERROR: $DEPLOY/heat.env does not exist."
+            echo "Create it from heat.env.example with real values; it is"
+            echo "deliberately not generated here, so a deployment cannot come"
+            echo "up on placeholder passwords."
+            exit 1
+          fi
+
+          # The weather archive the stack serves. Refreshed every run so a new
+          # fixture reaches the target, and read-only once mounted.
+          mkdir -p "$DEPLOY/weather"
+          cp -r fixtures/weather/. "$DEPLOY/weather/"
+          if head -c 40 "$DEPLOY"/weather/cosmo_rea6/*/output/*.nc 2>/dev/null | grep -q 'git-lfs'; then
+            echo 'ERROR: the weather fixtures are still LFS pointers, not data.'
+            exit 1
+          fi
+
+          cd "$DEPLOY"
+          docker compose --env-file heat.env -f docker-compose.heat.yml pull
+          docker compose --env-file heat.env -f docker-compose.heat.yml up -d
+          docker compose --env-file heat.env -f docker-compose.heat.yml ps
+
+  # One-off and destructive, which is why it is its own step rather than part
+  # of starting the stack. Seeding DROPs and recreates every ignis country
+  # table, and the fixture load creates the City2TABULA databases.
+  heat-bootstrap:
+    if: ${{ github.event.inputs.step == 'heat-bootstrap' }}
+    runs-on: [self-hosted, enerplanet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
+      - name: Seed ignis and load the City2TABULA fixtures
+        run: |
+          set -e
+          echo '=== [PROD] Bootstrapping the heat databases ==='
+          DEPLOY="$HOME/${DEPLOY_SUBDIR}/heat"
+          cd "$DEPLOY"
+          docker compose --env-file heat.env -f docker-compose.heat.yml \
+            --profile seed run --rm ignis-build-db
+          # The loader reaches the database by container name and skips a
+          # database that already exists, so re-running it is safe.
+          C2T_DB_CONTAINER=heat-city2tabula-db-1 \
+            "$GITHUB_WORKSPACE/fixtures/load.sh" || true
+          docker compose --env-file heat.env -f docker-compose.heat.yml ps
+
   build-app:
     if: ${{ github.event.inputs.step == 'build-app' }}
     runs-on: [self-hosted, enerplanet]
@@ -338,6 +412,16 @@ jobs:
           [ -n "${{ secrets.CALLBACK_SECRET_PROD }}" ] && \
             set_env "$ENV_PROD" CALLBACK_SECRET "${{ secrets.CALLBACK_SECRET_PROD }}" || \
             echo 'WARNING: CALLBACK_SECRET_PROD not set'
+          # The heat chain. The backend reaches TentaCron over spatialhub-net,
+          # which TentaCron joins for exactly this; the .env default of
+          # localhost:8400 is a developer's own machine and resolves to nothing
+          # here. Every heat call fails without these two, and it fails as a
+          # refused connection rather than as a misconfiguration, so set them
+          # even though nothing here can check they are right.
+          set_env "$ENV_PROD" TENTACRON_SERVICE_URL "http://tentacron:8080"
+          [ -n "${{ secrets.TENTACRON_KEY_FRONTEND }}" ] && \
+            set_env "$ENV_PROD" TENTACRON_API_KEY "${{ secrets.TENTACRON_KEY_FRONTEND }}" || \
+            echo 'WARNING: TENTACRON_KEY_FRONTEND not set - heat requests will be rejected. It must equal TENTACRON_KEY_FRONTEND in the heat stack heat.env'
           # Redis is started by platform-core with --requirepass ${REDIS_PASSWORD}
           # from platform-core/.env. Take the password from that same file so the
           # backend can never drift from the running server.
