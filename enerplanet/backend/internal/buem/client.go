@@ -115,10 +115,10 @@ type BuildingResult struct {
 // rather than a saving. A model's results are read from
 // .thermal_load_profile.summary, so the values would go unread; but the
 // buem-buildings target answers in direct mode, which TentaCron reads whole
-// under its 10 MiB response cap. One building-year of series measures ~666 KB
-// through this path, so asking for them here fails the entire batch past
-// roughly fifteen buildings, as a target error that names neither the flag nor
-// the size.
+// under its 10 MiB response cap. One building-year of series measures ~666 KB,
+// putting that cap at roughly fifteen building-years, so asking for them here
+// fails the entire batch past about fifteen buildings, as a target error that
+// names neither the flag nor the size.
 func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) ([]BuildingResult, error) {
 	return c.run(ctx, buildings, weather, startDate, endDate, resolution, modelID, false, runTimeout)
 }
@@ -131,11 +131,12 @@ func (c *Client) RunBuildings(ctx context.Context, buildings []Building, weather
 // single-building route, because the buem-building target is configured against
 // a placeholder host this deployment cannot reach.
 //
-// The same 10 MiB response cap applies. One building-year of series measures
-// ~666 KB against it, but that grows with the requested period rather than
-// staying put: a decade at hourly resolution would reach roughly 65% of the
-// cap, and a decade at quarter-hour steps would not fit. Extrapolated from the
-// one measurement, so an order rather than a cliff.
+// The same 10 MiB cap applies, in the same unit: one building-year of series
+// measures ~666 KB, so the cap sits at roughly fifteen building-years, with the
+// period and the resolution each multiplying the count. Fifteen buildings for
+// one year through the batch and one building for fifteen years through here
+// reach it alike. Extrapolated from the one measurement, so an order rather
+// than a cliff.
 func (c *Client) RunBuilding(ctx context.Context, b Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) (BuildingResult, error) {
 	results, err := c.run(ctx, []Building{b}, weather, startDate, endDate, resolution, modelID, true, buildingRunTimeout)
 	if err != nil {
