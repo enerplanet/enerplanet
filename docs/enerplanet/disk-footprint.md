@@ -133,6 +133,13 @@ rather than 9 GB; `buem-model` holds only 18 MB that `weather` does not.
     risk. Measure a build from a clean clone, or say which machine the number
     came from.
 
+    The consequence is reproducibility rather than size. Two people building
+    the same commit get images differing by roughly a factor of two depending
+    on what their working tree happens to hold, and neither gets any signal
+    that it is happening. Excluding `validation/` would save a fresh clone
+    almost nothing, because a fresh clone has nothing there to exclude; what it
+    buys is an image that does not depend on who built it.
+
 !!! warning "Build cache is counted nowhere"
     Images and checkouts are only part of it. `make setup` builds several
     images from source, and the build cache that leaves behind appears in no
