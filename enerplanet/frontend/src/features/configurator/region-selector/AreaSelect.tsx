@@ -68,7 +68,7 @@ import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
-import { ConfiguratorShell } from "@/features/configurator/building-config";
+import { BuildingPanelHost } from "@/features/configurator/building-config";
 
 const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
 
@@ -713,7 +713,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         }}
       />
 
-      <ConfiguratorShell />
+      <BuildingPanelHost />
 
       <HeatBootstrapDialog
         open={heatBootstrapOpen}
