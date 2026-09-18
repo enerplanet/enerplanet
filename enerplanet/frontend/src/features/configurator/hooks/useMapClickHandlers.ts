@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useConfiguratorParams } from "@/features/configurator/building-config";
 import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
@@ -50,6 +51,13 @@ interface MapClickOptions {
 export const useMapClickHandlers = ({
   map, isDrawing, pylovoLayersRef, suppressDialogOnClickRef, suppressMapInteractions = false,
 }: MapClickOptions) => {
+  // The map click effect below re-registers only when the map or the drawing
+  // mode changes. A ref keeps it reading the current opener without widening
+  // that to every URL change, which is when react-router rebuilds it.
+  const { openBuilding } = useConfiguratorParams();
+  const openBuildingRef = useRef(openBuilding);
+  openBuildingRef.current = openBuilding;
+
   const transformerDialogOpen = useModelStore((s) => s.transformerDialogOpen);
   const setTransformerDialogOpen = useModelStore((s) => s.setTransformerDialogOpen);
   const selectedTransformer = useModelStore((s) => s.selectedTransformer);
@@ -120,7 +128,15 @@ export const useMapClickHandlers = ({
           selectedFClass: extractSelectedFClass(props, effectiveFClasses, primaryFClass), ...enrichment,
         });
         setSelectedBuildingFeature(feature as Feature<Geometry>);
-        setBuildingDialogOpen(true);
+        // The configurator is URL-driven, so opening it is a query-string
+        // change rather than dialog state. A building with no osm_id has
+        // nothing to resolve an envelope by, so it keeps the older dialog.
+        const osmId = feature.get('osm_id');
+        if (osmId != null && String(osmId) !== '') {
+          openBuildingRef.current(String(osmId));
+        } else {
+          setBuildingDialogOpen(true);
+        }
       }
     };
 

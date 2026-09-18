@@ -11,6 +11,15 @@
 @source "../../../../libs/auth/src";
 /* stylelint-disable-next-line at-rule-no-unknown */
 @source "../../../../libs/ui/src";
+/* The building configurator ships compiled, so Tailwind scans its bundle for
+   the utility classes it names. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@source "../../node_modules/@thd-spatial-ai/building-configurator/dist";
+
+/* The configurator's own tokens and the .cfg-* classes its inputs use. Its
+   colours are defined against the same custom properties as this file, so it
+   takes on whichever palette is active here. */
+@import "@thd-spatial-ai/building-configurator/styles.css";
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
