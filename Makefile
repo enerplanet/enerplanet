@@ -282,15 +282,18 @@ meme: tentacron-network
 	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
+# weather and city2tabula pull rather than build: both publish an image, and
+# building them locally costs the conda environment and the Go/JDK/citydb
+# toolchain respectively for no gain. meme still builds, having no image.
 .PHONY: weather
 weather: tentacron-network
-	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" WEATHER_API_PORT=$(WEATHER_PORT) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --build
+	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" WEATHER_API_PORT=$(WEATHER_PORT) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
 	@docker network connect tentacron-net weather-serve 2>/dev/null || true
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: city2tabula
 city2tabula: tentacron-network ignis
-	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --build city2tabula-server
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula-server
 	@docker network connect tentacron-net city2tabula-server 2>/dev/null || true
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
