@@ -164,7 +164,9 @@ func TestRunBuildings_DoesNotAskForTheHourlySeries(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotContains(t, *payload, "keep_timeseries",
-		"a 300-building model would answer with ~90 MB of values nothing reads")
+		"buem-buildings is read whole under TentaCron's 10 MiB response cap, and one "+
+			"building-year of series measures ~666 KB, so this flag here fails every batch "+
+			"past roughly fifteen buildings")
 }
 
 func TestRunBuilding_EmptyBatchIsAnErrorNotAPanic(t *testing.T) {
