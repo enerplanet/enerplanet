@@ -25,7 +25,7 @@ them as an order of magnitude.
 
 About 8 GB is the checkout. `make setup-repos` clones every dependency, and two
 carry large LFS histories, simulation-engine at 6 GB and enerplanet-pylovo at
-1.6 GB. The fixtures are 5 MB of that.
+1.6 GB. The fixtures are 39 MB of that.
 
 Container images are 20 to 24 GB. What moves the figure is City2TABULA: two
 services build it from one Dockerfile, so `make setup` produces it twice. Built
@@ -89,53 +89,90 @@ existing `.env` files under Connection settings.
 
 ## What is loaded
 
-The distributed fixtures cover Loenen, Netherlands, the default smoke site.
-The City2TABULA and PyLovo fixtures cover the same ground: the box 6.0162
-52.0988 to 6.0384 52.1130, which is the extent of the four low-voltage grids
-PyLovo ships, so every building with a grid behind it also has 3D data.
+The fixtures cover two regions, both complete enough that a model drawn
+anywhere inside them resolves. Each appears by name under "Go to region" in the
+frontend, which zooms to the covered extent, so there is no bounding box to
+memorise and no hunting for the part of a city that happens to hold data.
 
-The second smoke site, Bremen, exercises a different 3D dataset in a different
-CRS against the same single PyLovo database, and covers the box 8.7908 53.0940
-to 8.7990 53.1027. It has no PyLovo grid: it answers "does a second country's
-3D data work", not "can a grid be generated there".
+| Region | Extent | 3D source | CRS |
+|---|---|---|---|
+| Loenen, Netherlands | postcode 7371 | 3DBAG | EPSG:28992 |
+| Bremen, Germany | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | LoD2 Land Bremen | EPSG:25832 |
 
-!!! warning "Bremen needs a weather cut that is not here yet"
-    The German building and TABULA fixtures are included; a German weather cut
-    is not, so `SMOKE_SITE=bremen` cannot resolve demand yet.
+The region is defined by whichever is narrower, the postcode or the 3D source.
+Loenen's postcode falls inside the 3DBAG cut, so it is used whole. Bremen's
+tile straddles five postcodes and covers none of them completely, so the five
+are clipped to the tile instead. Clipping the geometry rather than shipping the
+administrative boundary is what keeps the extent the UI advertises equal to the
+extent that can be served.
 
-    It is withheld deliberately rather than forgotten. Weather archives are
-    selected by country bounding box, and Germany's box contains the Dutch
-    fixture area, so on a weather release that picks the first matching box a
-    German archive silently captures Dutch points and returns a series from a
-    cell hundreds of kilometres away, with no error and a demand figure that
-    looks plausible. Shipping the cut before that selection is fixed would
-    distribute that behaviour to everyone loading the fixtures.
-
-    Loenen is unaffected and needs nothing from this.
+!!! warning "Both weather cuts together need weather 2.0.1 or newer"
+    Germany's country bounding box contains the Dutch fixture area, so a
+    Loenen query matches both cuts. Releases before 2.0.1 took the first
+    matching box and could answer a Dutch point from the German archive,
+    returning a series from a cell hundreds of kilometres away with no error
+    and a demand figure that looks plausible. 2.0.1 resolves the nearest
+    covering archive instead, and rejects a nearest grid cell further than
+    20 km.
 
 PyLovo stores its geometry in EPSG:3035 and City2TABULA in a country-specific
-CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is reprojected at load time, because the join between them
-is precomputed in `building_link`. It matters only to someone re-running the
-link step, which these fixtures cannot do.
+CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is
+reprojected at load time, because the join between them is precomputed in
+`building_link`.
 
 | Fixture | Size | Populates | Lands in |
 |---|---|---|---|
-| `city2tabula/city2tabula_loenen.sql.gz` | 1.1 MB | 617 buildings, 11,210 surfaces, 617 links (488 matched), 47 TABULA variants | a new `<DB_NAME>_nl` database |
+| `city2tabula/city2tabula_loenen.sql.gz` | 8.1 MB | 3,106 buildings, 53,043 surfaces, 3,106 links (2,382 matched) | a new `<DB_NAME>_nl` database |
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
-| `city2tabula/city2tabula_bremen.sql.gz` | 2.2 MB | 1,347 buildings, 19,791 surfaces, 1,347 links | a new `<DB_NAME>_de` database |
-| `weather/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
-| `pylovo/pylovo_loenen_fixture.sql.gz` | 230 KB | 4 grids, 249 buildings, 479 lines, 4 transformers, plus their inputs and reference tables | the existing pylovo database |
+| `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
+| `weather/…/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
+| `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
+| `pylovo/pylovo_fixture.sql.gz` | 6.8 MB | 138 grids, 11,869 buildings, 23,139 lines, 138 transformers over 6 postcodes, plus their inputs and reference tables | the existing pylovo database |
 
-The pylovo fixture is data only and assumes the pylovo schema already exists,
-which pylovo's own table constructor creates. The loader says so rather than
-emitting an INSERT failure per table.
+The pylovo fixture carries its own schema and restores into an empty database.
+The schema is rendered from pylovo's `config/config_table_structure.py`
+CREATE_QUERIES rather than dumped from a running instance, so it carries no
+drift from whichever machine produced it.
 
 The City2TABULA fixture serves data; it cannot rebuild it. The raw CityGML
-import schemas are excluded, so feature extraction cannot be re-run from it.
-The TABULA cuts are separate because classification reads `tabula.tabula`: a
-building cut without one answers reads but fails any pipeline run with
-`relation "tabula.tabula" does not exist`.
+import schemas are excluded, so feature extraction cannot be re-run from it,
+and neither can the PyLovo link step, whose results are precomputed in
+`building_link`. The TABULA cuts are separate because classification reads
+`tabula.tabula`: a building cut without one answers reads but fails any
+pipeline run with `relation "tabula.tabula" does not exist`.
+
+### Regenerating them
+
+`fixtures/export_pylovo.py` produces the pylovo fixture:
+
+```bash
+./fixtures/export_pylovo.py --scope NL:7371 \
+    --scope DE:28195 --scope DE:28209 --scope DE:28215 \
+    --scope DE:28217 --scope DE:28219 \
+    --clip DE:bremen_tile.wkt --state-osm DE:bremen=62718 \
+    --source-db <populated pylovo db> -o fixtures/pylovo/pylovo_fixture.sql
+```
+
+`--clip` cuts a country to its 3D source extent and clips the postcode
+geometries to match. `--state-osm` fills a state's `osm_relation_id`: every
+German state carries NULL in pylovo's `state` table, and the region endpoint
+looks the boundary up from that id, so a German region renders nothing without
+it. The values are in `datapipeline/config/regions.yaml`.
+
+The City2TABULA fixtures are `pg_dump --schema=city2tabula` of a database that
+has been through extraction and `-link-pylovo` against the pylovo fixture
+above, with `lod2_child_feature`, `lod2_child_feature_geom_dump` and
+`lod2_surface_raw` truncated first. Nothing served reads those three, and they
+triple the fixture size.
+
+!!! warning "Order matters, and the link step is a silent no-op"
+    `building_link` is precomputed against PyLovo, so the pylovo fixture has to
+    be produced and loaded before City2TABULA is linked and dumped. Re-running
+    `-link-pylovo` over an already-populated `building_link` does nothing and
+    still exits 0, logging `No LOD2 buildings with footprints found`: the
+    batching query only selects buildings with no link yet. Truncate
+    `building_link` first.
 
 ## The stack runs on plain HTTP
 
