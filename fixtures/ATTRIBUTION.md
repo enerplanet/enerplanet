@@ -13,12 +13,17 @@ Derived from the 3DBAG dataset, licensed CC BY 4.0
 > (c) 3DBAG by tudelft3d and 3DGI — https://docs.3dbag.nl/en/copyright/
 
 Modifications: building envelope attributes and surface geometry were
-extracted from the source CityGML by City2TABULA, then linked to PyLovo
-buildings. This is derived data, not a redistribution of 3DBAG itself.
+extracted from the source CityGML by City2TABULA for the area around Loenen
+covered by postcode 7371, then linked to PyLovo buildings. 3,106 buildings and
+53,043 surfaces. The pipeline intermediates were emptied, leaving the served
+tables only. This is derived data, not a redistribution of 3DBAG itself.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc
+## fixtures/weather/cosmo_rea6, the Dutch and German cuts
+
+Covers `fixtures/weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc`
+and `fixtures/weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc`.
 
 COSMO-REA6 regional reanalysis, generated in the framework of the
 Hans-Ertel-Centre for Weather Research (HErZ), Climate Monitoring and
@@ -36,9 +41,10 @@ and require the extent of the modification to be stated.
 
 Modifications: retrieved from the DWD open data archive, which hosts the data
 set, and processed by the `weather` pipeline, which standardises variable
-names and derives further variables. The result was then cut to a 3 by 3 cell
-window around Loenen, Netherlands, from the Dutch 2018 annual archive and
-recompressed. Full year, hourly, 13 variables.
+names and derives further variables. The result was then cut to a window
+around each site and recompressed: 3 by 3 cells around Loenen, Netherlands,
+from the Dutch 2018 annual archive, and 4 by 4 cells around Bremen, Germany,
+from the German 2018 annual archive. Full year, hourly, 13 variables each.
 
 ## fixtures/city2tabula/tabula_nl.sql.gz and tabula_de.sql.gz
 
@@ -78,16 +84,17 @@ records that no access restrictions apply:
     fixture.
 
 Modifications: building envelope attributes and surface geometry were
-extracted from the source CityGML by City2TABULA, then cut to the box
-8.7908 53.0940 to 8.7990 53.1027 around Bremen and recompressed. The pipeline
-intermediates were emptied, leaving the served tables only. This is derived
-data, not a redistribution of the source model.
+extracted from the source CityGML by City2TABULA for one LoD2 tile,
+`LoD2_32_486_5882_2_HB`, covering the box 8.7909 53.0873 to 8.8208 53.1053 in
+Bremen, then linked to PyLovo buildings and recompressed. 9,284 buildings and
+137,276 surfaces. The pipeline intermediates were emptied, leaving the served
+tables only. This is derived data, not a redistribution of the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/pylovo/pylovo_loenen_fixture.sql.gz and the smoke GeoJSON fixtures
+## fixtures/pylovo/pylovo_fixture.sql.gz and the smoke GeoJSON fixtures
 
-Covers `fixtures/pylovo/pylovo_loenen_fixture.sql.gz` and
+Covers `fixtures/pylovo/pylovo_fixture.sql.gz` and
 `enerplanet/backend/scripts/smoke/*_buildings.geojson` /
 `*_transformers.geojson`.
 
@@ -104,8 +111,15 @@ MIT licensed, © BigGeoData & Spatial AI, Technische Hochschule Deggendorf. The
 usage classification, floor areas, low-voltage grid assignment and transformer
 rated powers in these files are PyLovo output rather than OpenStreetMap data.
 
-Modifications: a handful of buildings within one bounding box were selected and
-exported as GeoJSON, carrying the OpenStreetMap identifier and footprint
+Modifications: the database fixture carries the grids, buildings, lines and
+transformers of two areas, postcode 7371 around Loenen and the five Bremen
+postcodes the LoD2 tile above intersects, the German side cut to that tile.
+138 grids, 11,869 buildings, 23,139 lines, 138 transformers. Postcode
+geometries on the German side are clipped to the same tile, so the extent the
+fixture advertises is the extent it can serve.
+
+The smoke GeoJSON files are separate: a handful of buildings within one
+bounding box, exported carrying the OpenStreetMap identifier and footprint
 alongside the PyLovo-derived properties above. The Loenen file's
 `grid_result_id` is a placeholder, not a real grid.
 
