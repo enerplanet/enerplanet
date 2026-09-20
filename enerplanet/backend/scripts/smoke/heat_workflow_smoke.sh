@@ -68,13 +68,12 @@ fi
 # topology nodes and hang its buildings off them; without one every building
 # enters the topology standalone (internal/payload/payload_topology_transform.go).
 #
-#   loenen (NL)  Six buildings, no PyLovo grid behind them and no transformer
-#                fixture, so every building is standalone. Fast.
+#   loenen (NL)  Six buildings with no transformer fixture, so every building
+#                enters the topology standalone. Fast.
 #   bremen (DE)  Seven buildings over two real LV grids, 1561 at 630 kVA and
 #                1614 at 250 kVA, with the transformer of each: the only
 #                fixture here carrying transformer topology, and the only one
-#                reaching MFH and AB archetypes. Needs a local German import
-#                into City2TABULA, so it does not run from a fresh clone.
+#                reaching MFH and AB archetypes.
 SMOKE_SITE="${SMOKE_SITE:-loenen}"
 case "$SMOKE_SITE" in
   loenen)
