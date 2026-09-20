@@ -129,7 +129,7 @@ load_city2tabula() {
 # that need only exist. Connection settings come from the checkout's
 # .env.docker, falling back to .env.example.
 load_pylovo() {
-  local src="$HERE/pylovo/pylovo_loenen_fixture.sql.gz"
+  local src="$HERE/pylovo/pylovo_fixture.sql.gz"
   [ -f "$src" ] || return 0
   # repos.conf carries no PYLOVO_DIR: the Makefile clones this one to a fixed
   # path rather than a configured one.
