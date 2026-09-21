@@ -81,12 +81,16 @@ case "$SMOKE_SITE" in
     SITE_POLYGON='{"type":"Polygon","coordinates":[[[6.0180,52.0978],[6.0356,52.0978],[6.0356,52.1079],[6.0180,52.1079],[6.0180,52.0978]]]}'
     SITE_BBOX='{"xmin":6.0180,"ymin":52.0978,"xmax":6.0356,"ymax":52.1079}'
     SITE_GLAZING_FLOOR_PCT="50.0"
+    SITE_REGION_CC="NL"
+    SITE_REGION_STATE="gelderland"
     ;;
   bremen)
     SITE_COUNTRY="germany"
     SITE_POLYGON='{"type":"Polygon","coordinates":[[[8.7815,53.0890],[8.8005,53.0890],[8.8005,53.1046],[8.7815,53.1046],[8.7815,53.0890]]]}'
     SITE_BBOX='{"xmin":8.7815,"ymin":53.0890,"xmax":8.8005,"ymax":53.1046}'
     SITE_GLAZING_FLOOR_PCT=""
+    SITE_REGION_CC="DE"
+    SITE_REGION_STATE="bremen"
     ;;
   *)
     echo "FAIL  unknown SMOKE_SITE '$SMOKE_SITE' (known: loenen, bremen)"
@@ -235,6 +239,59 @@ if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then
   pass "2c. GET /v2/pylovo/transformer-sizes ($n sizes)"
 else
   fail "2c. GET /v2/pylovo/transformer-sizes: HTTP $HTTP_CODE ${body:0:200}"
+fi
+
+# ---- 2d. the site is discoverable as a region ----------------------------
+# The region list is how anyone finds where the fixtures put data: the frontend
+# groups it by region.country and flies to bbox. Nothing else in this script
+# reads it, so fixtures that load and serve perfectly can still advertise
+# nothing, and the failure surfaces only in a browser. Asserting it here keeps
+# "the smoke test passes, so the backend is fine" true.
+body="$(request GET /api/v2/pylovo/boundary/available)"
+region="$(printf '%s' "$body" | jq -c --arg cc "$SITE_REGION_CC" --arg sc "$SITE_REGION_STATE" \
+  '.data.regions[]? | select(.country_code == $cc and .state_code == $sc)' 2>/dev/null)"
+if [ "$HTTP_CODE" != "200" ] || [ -z "$region" ]; then
+  fail "2d. $SITE_REGION_CC/$SITE_REGION_STATE is not in /v2/pylovo/boundary/available: HTTP $HTTP_CODE ${body:0:200}"
+else
+  # region.country is RegionSelector's grouping key; empty collapses every
+  # region into one unlabelled group and drops the per-country states count.
+  country="$(printf '%s' "$region" | jq -r '.region.country // ""')"
+  name="$(printf '%s' "$region" | jq -r '.region.name // ""')"
+  grids="$(printf '%s' "$region" | jq -r '.grid_count // 0')"
+  if [ -n "$country" ] && [ -n "$name" ]; then
+    pass "2d. region $name ($country) listed with $grids grids"
+  else
+    fail "2d. region $SITE_REGION_CC/$SITE_REGION_STATE has country='$country' name='$name'; the region list needs both"
+  fi
+
+  # The area this run draws over has to be inside the extent the region
+  # advertises, or the fixtures cover somewhere the UI never sends anyone.
+  if printf '%s' "$region" | jq -e --argjson s "$SITE_BBOX" '
+      .bbox as $b
+      | (($s.xmin + $s.xmax) / 2) as $x | (($s.ymin + $s.ymax) / 2) as $y
+      | $x >= $b.west and $x <= $b.east and $y >= $b.south and $y <= $b.north' >/dev/null 2>&1; then
+    pass "2e. the $SMOKE_SITE test area falls inside the advertised region extent"
+  else
+    fail "2e. the $SMOKE_SITE test area is outside $name's advertised extent $(printf '%s' "$region" | jq -c '.bbox')"
+  fi
+
+  # A boundary drawn wider than the covered extent invites a model over ground
+  # with no data behind it. Older PyLovo took this outline from Nominatim, so it
+  # was the whole administrative area regardless of coverage; the covered-extent
+  # build labels it, and only that build can be held to this.
+  src="$(printf '%s' "$region" | jq -r '.boundary.properties.source // ""')"
+  if [ "$src" != "postcode_result_covered" ]; then
+    warn "2f. boundary source '${src:-none}', not covered-extent: needs a PyLovo that derives it from the covered postcodes"
+  elif printf '%s' "$region" | jq -e '
+      .bbox as $b | 1e-3 as $eps
+      | ((.boundary.geometry // .boundary).coordinates | flatten) as $f
+      | [range(0; ($f | length); 2) | {x: $f[.], y: $f[. + 1]}]
+      | all(.x >= ($b.west - $eps) and .x <= ($b.east + $eps)
+            and .y >= ($b.south - $eps) and .y <= ($b.north + $eps))' >/dev/null 2>&1; then
+    pass "2f. every $name boundary vertex lies inside its advertised extent"
+  else
+    fail "2f. $name's boundary reaches outside its own bbox, so it claims ground the fixtures do not cover"
+  fi
 fi
 
 # ---- 3. ignis proxies ----------------------------------------------------
