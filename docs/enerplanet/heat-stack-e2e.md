@@ -24,7 +24,7 @@ graph LR
     TC --> C2T[City2TABULA<br>8404]
     TC --> IGN[ignis<br>8403]
     TC --> BG[buem-gateway<br>8402]
-    TC --> WX[weather<br>8090]
+    TC --> WX[weather<br>8406]
     BG --> BM[buem-model]
     C2T --> C2TDB[(city2tabula-db)]
     IGN --> IGNDB[(ignis db)]
@@ -38,20 +38,29 @@ graph LR
 | buem-gateway | 8402 | TentaCron | the BuEM JSON Schema contract |
 | ignis | 8403 | TentaCron | EN ISO 13790, TABULA archetypes |
 | City2TABULA | 8404 | TentaCron | 3D envelopes, one database per country |
-| weather | 8090 | TentaCron | COSMO-REA6 archives |
+| weather | 8406 | TentaCron, over the host | COSMO-REA6 archives |
 
-Ports come from `repos.conf`, which is also where [Test Data](test-data.md)
-takes its table from.
+Ports come from `repos.conf`, the one place they are allocated, which is also
+where [Test Data](test-data.md) takes its table from. The 8400 series avoids the
+8080 neighbourhood, where a developer machine usually has something else
+listening.
 
-!!! warning "weather is allocated one port and looked up on another"
-    `repos.conf` sets `WEATHER_PORT=8406`, and TentaCron's `config.yaml` reaches
-    weather at `host.docker.internal:8090`. The two have to agree or the target
-    resolves to nothing, and `make weather` uses the `repos.conf` value, so the
-    documented command produces a stack where TentaCron cannot reach weather.
+These are host ports, for reaching a service with curl. TentaCron does not use
+them: it reaches every service by container name on `tentacron-net`, at that
+container's internal port, so `buem-gateway:8080` and `ignis-http:8080` are two
+different containers rather than a conflict.
 
-    The table above gives 8090 because that is the value TentaCron reads, and
-    TentaCron is the only caller. Until the two are reconciled, whichever port
-    weather is started on must match `config.yaml`, not `repos.conf`.
+!!! warning "weather is the exception, and its target is stale"
+    weather is the only service TentaCron reaches over a host port, at
+    `host.docker.internal`, because its own compose keeps it out of any
+    consumer's namespace. That makes it the one target where the allocated port
+    matters to TentaCron, and `config.yaml` still says 8090 against the
+    allocated 8406.
+
+    So `make weather` publishes 8406 and TentaCron looks for 8090. Until the
+    target is corrected, start weather on 8090 with the command below, or the
+    weather-point target resolves to nothing and every BuEM call fails for want
+    of a weather series.
 
 ## Bring-up
 
