@@ -33,6 +33,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/bin/backfill_country 
 
 # Build frontend (React + Vite)
 FROM node:20-alpine AS febuilder
+
+# node:20-alpine ships no git, and npm spawns it directly to resolve a github:
+# dependency, so the frontend's @thd-spatial-ai/building-configurator fails here
+# with ENOENT on spawn git rather than anything naming the package.
+RUN apk add --no-cache git
+
 WORKDIR /build
 
 # Copy and build shared libs first (frontend depends on these)
