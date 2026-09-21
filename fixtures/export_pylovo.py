@@ -236,12 +236,12 @@ def main() -> int:
                         help="cut a country to the WGS84 polygon in FILE, repeatable. "
                              "Use where the 3D source does not align with postcodes: "
                              "the region advertised to the UI becomes this polygon.")
-    parser.add_argument("--state-osm", action="append", default=[], metavar="CC:CODE=ID",
-                        help="set a state row's osm_relation_id, repeatable. Every German "
-                             "state carries NULL in pylovo's state table, and the region "
-                             "endpoint looks the boundary up from this id, so a German "
-                             "region renders nothing without it. Values come from "
-                             "datapipeline/config/regions.yaml.")
+    parser.add_argument("--state-name", action="append", default=[], metavar="CC:CODE=NAME",
+                        help="set a state row's state_name, repeatable. This is the label "
+                             "the region list shows. PyLovo fills it from regions.yaml "
+                             "during a constructor run, which a fixture-loaded database "
+                             "never has, so whatever the source database happened to hold "
+                             "is what a reader sees unless it is set here.")
     parser.add_argument("--version", default="1", help="pylovo version_id (default: 1)")
     parser.add_argument("--source-db", default="pylovo_db_prefixture")
     parser.add_argument("--host", default="localhost")
@@ -267,15 +267,15 @@ def main() -> int:
         cc, path = raw.split(":", 1)
         clips[cc.upper()] = Path(path).read_text().strip()
 
-    state_osm = {}
-    for raw in args.state_osm:
+    state_names = {}
+    for raw in args.state_name:
         if ":" not in raw or "=" not in raw:
-            raise SystemExit(f"--state-osm wants CC:CODE=ID, got {raw!r}")
+            raise SystemExit(f"--state-name wants CC:CODE=NAME, got {raw!r}")
         cc, rest = raw.split(":", 1)
-        code, relation = rest.split("=", 1)
-        if not relation.isdigit():
-            raise SystemExit(f"--state-osm id must be numeric, got {relation!r}")
-        state_osm[(cc.upper(), code)] = relation
+        code, label = rest.split("=", 1)
+        if not label.strip():
+            raise SystemExit(f"--state-name needs a non-empty name, got {raw!r}")
+        state_names[(cc.upper(), code)] = label
 
     create_queries = load_create_queries(args.pylovo_repo)
     db = Psql(args.host, args.port, args.user, args.source_db, args.password)
@@ -337,13 +337,13 @@ def main() -> int:
     for table, kind in TABLES:
         where = where_for(kind, table, groups, subs)
         overrides = {}
-        if table == "state" and state_osm:
+        if table == "state" and state_names:
             branches = " ".join(
                 f"WHEN t.country_code = {sql_literal(cc)} AND t.state_code = {sql_literal(code)} "
-                f"THEN {relation}"
-                for (cc, code), relation in state_osm.items()
+                f"THEN {sql_literal(label)}"
+                for (cc, code), label in state_names.items()
             )
-            overrides["osm_relation_id"] = f"CASE {branches} ELSE t.osm_relation_id END"
+            overrides["state_name"] = f"CASE {branches} ELSE t.state_name END"
         if table in CLIPPED_GEOM:
             clipping = [g for g in groups if g["clip_local"]]
             if clipping:
