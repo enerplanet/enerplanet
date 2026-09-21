@@ -247,6 +247,12 @@ fi
 # reads it, so fixtures that load and serve perfectly can still advertise
 # nothing, and the failure surfaces only in a browser. Asserting it here keeps
 # "the smoke test passes, so the backend is fine" true.
+# This endpoint answers from a cache and refreshes it in the background, so the
+# first read after the PyLovo data changes returns the previous answer. Asserting
+# on that reads a boundary the fixtures no longer serve, so spend one read waking
+# the cache and assert on the next.
+request GET /api/v2/pylovo/boundary/available >/dev/null
+sleep 5
 body="$(request GET /api/v2/pylovo/boundary/available)"
 region="$(printf '%s' "$body" | jq -c --arg cc "$SITE_REGION_CC" --arg sc "$SITE_REGION_STATE" \
   '.data.regions[]? | select(.country_code == $cc and .state_code == $sc)' 2>/dev/null)"
