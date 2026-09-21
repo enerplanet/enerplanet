@@ -150,15 +150,15 @@ pipeline run with `relation "tabula.tabula" does not exist`.
 ./fixtures/export_pylovo.py --scope NL:7371 \
     --scope DE:28195 --scope DE:28209 --scope DE:28215 \
     --scope DE:28217 --scope DE:28219 \
-    --clip DE:bremen_tile.wkt --state-osm DE:bremen=62718 \
+    --clip DE:bremen_tile.wkt --state-name NL:gelderland=Gelderland \
     --source-db <populated pylovo db> -o fixtures/pylovo/pylovo_fixture.sql
 ```
 
 `--clip` cuts a country to its 3D source extent and clips the postcode
-geometries to match. `--state-osm` fills a state's `osm_relation_id`: every
-German state carries NULL in pylovo's `state` table, and the region endpoint
-looks the boundary up from that id, so a German region renders nothing without
-it. The values are in `datapipeline/config/regions.yaml`.
+geometries to match. `--state-name` sets the label the region list shows:
+PyLovo fills `state_name` from `regions.yaml` during a constructor run, which a
+fixture-loaded database never has, so without it a reader sees whatever the
+source database happened to hold.
 
 The City2TABULA fixtures are `pg_dump --schema=city2tabula` of a database that
 has been through extraction and `-link-pylovo` against the pylovo fixture
