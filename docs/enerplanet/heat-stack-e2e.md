@@ -50,17 +50,13 @@ them: it reaches every service by container name on `tentacron-net`, at that
 container's internal port, so `buem-gateway:8080` and `ignis-http:8080` are two
 different containers rather than a conflict.
 
-!!! warning "weather is the exception, and its target is stale"
-    weather is the only service TentaCron reaches over a host port, at
-    `host.docker.internal`, because its own compose keeps it out of any
-    consumer's namespace. That makes it the one target where the allocated port
-    matters to TentaCron, and `config.yaml` still says 8090 against the
-    allocated 8406.
-
-    So `make weather` publishes 8406 and TentaCron looks for 8090. Until the
-    target is corrected, start weather on 8090 with the command below, or the
-    weather-point target resolves to nothing and every BuEM call fails for want
-    of a weather series.
+weather is the one exception: TentaCron reaches it over a host port, at
+`host.docker.internal`, because its own compose keeps it out of any consumer's
+namespace. So weather is the single service whose allocated port TentaCron
+reads, and the two have to agree. Its compose defaults to 8090 when
+`WEATHER_API_PORT` is unset, which is right for a bare `docker compose up` of
+that repo alone and wrong for the heat stack, so the port is always passed
+explicitly below.
 
 ## Bring-up
 
@@ -92,13 +88,13 @@ docker network connect tentacron-net tentacron-env-tentacron-1
 **`make weather`** reads `../TentaCron/environment/.env.dev` relative to the
 weather checkout. `dependencies/*` are symlinks, so the shell resolves `..`
 physically into the target's parent and the file is not there. Pass an absolute
-path, and use port 8090 to match TentaCron's target:
+path:
 
 ```bash
 cd dependencies/weather
 set -a && . /abs/path/to/enerplanet/dependencies/TentaCron/environment/.env.dev && set +a
 unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE
-WEATHER_API_KEYS="$WEATHER_API_KEY" WEATHER_API_PORT=8090 \
+WEATHER_API_KEYS="$WEATHER_API_KEY" WEATHER_API_PORT=8406 \
   docker compose -f infrastructure/container/docker-compose.serve.yml up -d --build
 docker network connect tentacron-net weather-serve
 ```
