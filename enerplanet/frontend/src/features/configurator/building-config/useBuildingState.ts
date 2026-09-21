@@ -54,11 +54,47 @@ function bboxOf(geometry: unknown): EnrichBbox | null {
   };
 }
 
+/**
+ * The country whose City2TABULA database holds this building, taken from the
+ * advertised region its footprint falls in.
+ *
+ * The geometry endpoint needs the full country name because City2TABULA keeps a
+ * database per country and derives it from this value; an ISO2 code resolves
+ * nothing. availableRegions carries the name, so no second lookup is needed.
+ */
+function countryForBbox(
+  bbox: EnrichBbox,
+  regions: Array<{ country?: string; bbox?: { west: number; south: number; east: number; north: number } }>,
+): string | null {
+  const x = (bbox.xmin + bbox.xmax) / 2;
+  const y = (bbox.ymin + bbox.ymax) / 2;
+  const hit = regions.find(
+    (r) =>
+      r.country &&
+      r.bbox &&
+      x >= r.bbox.west &&
+      x <= r.bbox.east &&
+      y >= r.bbox.south &&
+      y <= r.bbox.north,
+  );
+  return hit?.country ?? null;
+}
+
 export interface BuildingStateResult {
   building: BuildingState | null;
   loading: boolean;
   /** Set when the building resolved to nothing the configurator can show. */
   error: string | null;
+  /**
+   * The City2TABULA object_id the envelope came from. The surface geometry is
+   * fetched by this rather than by osm_id, and it has to be the id this same
+   * enrich answered with: the 3D view resolves a clicked surface to an envelope
+   * element by id, so an object_id from a different call could name a building
+   * whose surfaces no element matches.
+   */
+  objectId: string | null;
+  /** Full country name for the geometry endpoint; see countryForBbox. */
+  country: string | null;
 }
 
 /**
@@ -72,10 +108,13 @@ export interface BuildingStateResult {
 export function useBuildingState(osmId: string | null): BuildingStateResult {
   const { enerplanet, ignis } = useConfiguratorApi();
   const pylovoGridData = useModelStore((s) => s.pylovoGridData);
+  const availableRegions = useModelStore((s) => s.availableRegions);
   const [result, setResult] = useState<BuildingStateResult>({
     building: null,
     loading: false,
     error: null,
+    objectId: null,
+    country: null,
   });
 
   const feature = useMemo(() => {
@@ -91,20 +130,20 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
   useEffect(() => {
     currentOsmId.current = osmId;
     if (!osmId) {
-      setResult({ building: null, loading: false, error: null });
+      setResult({ building: null, loading: false, error: null, objectId: null, country: null });
       return;
     }
     if (!feature) {
-      setResult({ building: null, loading: false, error: 'This building is not in the loaded grid.' });
+      setResult({ building: null, loading: false, error: 'This building is not in the loaded grid.', objectId: null, country: null });
       return;
     }
     const bbox = bboxOf(feature.geometry);
     if (!bbox) {
-      setResult({ building: null, loading: false, error: 'This building has no usable footprint.' });
+      setResult({ building: null, loading: false, error: 'This building has no usable footprint.', objectId: null, country: null });
       return;
     }
 
-    setResult({ building: null, loading: true, error: null });
+    setResult({ building: null, loading: true, error: null, objectId: null, country: null });
     void (async () => {
       try {
         // The country is left out so the backend resolves it from the bbox
@@ -117,19 +156,27 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
             building: null,
             loading: false,
             error: 'No 3D envelope is available for this building yet.',
+            objectId: null,
+            country: null,
           });
           return;
         }
         const states = await buildBuildingStates(ignis, { features: [feature] }, enrich.data);
         if (currentOsmId.current !== osmId) return;
-        setResult({ building: states[osmId] ?? null, loading: false, error: null });
+        setResult({
+          building: states[osmId] ?? null,
+          loading: false,
+          error: null,
+          objectId: enrich.data[osmId].object_id ?? null,
+          country: countryForBbox(bbox, availableRegions),
+        });
       } catch (err) {
         if (currentOsmId.current !== osmId) return;
         console.error('[configurator] could not resolve building', osmId, err);
-        setResult({ building: null, loading: false, error: 'This building could not be loaded.' });
+        setResult({ building: null, loading: false, error: 'This building could not be loaded.', objectId: null, country: null });
       }
     })();
-  }, [osmId, feature, enerplanet, ignis]);
+  }, [osmId, feature, enerplanet, ignis, availableRegions]);
 
   return result;
 }
