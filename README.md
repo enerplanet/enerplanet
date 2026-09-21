@@ -53,13 +53,12 @@ See the [Installation Guide](https://enerplanet.github.io/enerplanet/docs/enerpl
 ---
 
 ## Key Links
-
-- [System Architecture](https://enerplanet.github.io/enerplanet/docs/enerplanet/architecture/)
-- [Deployment Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/deployment/)
-- [Authentication / Keycloak Setup](https://enerplanet.github.io/enerplanet/docs/enerplanet/keycloak/)
-- [PyLovo Quickstart](https://enerplanet.github.io/enerplanet/docs/pylovo/quickstart/)
-- [AI Energy Estimation](https://enerplanet.github.io/enerplanet/docs/pylovo/ai-estimation/)
-- [REST API Reference](https://enerplanet.github.io/enerplanet/docs/pylovo/api/)
+- [System Architecture](https://enerplanet.github.io/enerplanet/enerplanet/architecture/)
+- [Deployment Guide](https://enerplanet.github.io/enerplanet/enerplanet/deployment/)
+- [Authentication / Keycloak Setup](https://enerplanet.github.io/enerplanet/enerplanet/keycloak/)
+- [PyLovo Quickstart](https://enerplanet.github.io/enerplanet/pylovo/quickstart/)
+- [AI Energy Estimation](https://enerplanet.github.io/enerplanet/pylovo/ai-estimation/)
+- [REST API Reference](https://enerplanet.github.io/enerplanet/pylovo/api/)
 
 ---
 
