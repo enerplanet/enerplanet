@@ -10,6 +10,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import bbox from '@turf/bbox';
+import type { AllGeoJSON } from '@turf/helpers';
+
 import {
   buildBuildingStates,
   useConfiguratorApi,
@@ -25,33 +28,15 @@ interface BuildingFeature {
   properties: { osm_id: string; [key: string]: unknown };
 }
 
-/** Every [lon, lat] pair in a Polygon/MultiPolygon, however deeply nested. */
-function vertices(geometry: unknown): [number, number][] {
-  const out: [number, number][] = [];
-  const walk = (node: unknown) => {
-    if (!Array.isArray(node)) return;
-    if (typeof node[0] === 'number' && typeof node[1] === 'number') {
-      out.push([node[0], node[1]]);
-      return;
-    }
-    node.forEach(walk);
-  };
-  walk((geometry as { coordinates?: unknown } | undefined)?.coordinates);
-  return out;
-}
-
 /** The building's own extent, which is the area enrich is asked about. */
 function bboxOf(geometry: unknown): EnrichBbox | null {
-  const points = vertices(geometry);
-  if (points.length === 0) return null;
-  const lons = points.map((p) => p[0]);
-  const lats = points.map((p) => p[1]);
-  return {
-    xmin: Math.min(...lons),
-    ymin: Math.min(...lats),
-    xmax: Math.max(...lons),
-    ymax: Math.max(...lats),
-  };
+  // recompute ignores any bbox member already on the geometry, which may carry
+  // a z range and so six numbers rather than four.
+  const [xmin, ymin, xmax, ymax] = bbox(geometry as AllGeoJSON, { recompute: true });
+  // turf answers [Infinity, Infinity, -Infinity, -Infinity] for a geometry with
+  // no coordinates.
+  if (!Number.isFinite(xmin)) return null;
+  return { xmin, ymin, xmax, ymax };
 }
 
 export interface BuildingStateResult {
