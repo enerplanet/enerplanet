@@ -384,7 +384,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (enableEditing) {
         const modify = new Modify({
           source: vectorSource,
-          // Alt+click to delete vertices
+          // CTRL+click to delete vertices
           deleteCondition: (event) => {
             return platformModifierKeyOnly(event) && event.type === "singleclick";
           },
