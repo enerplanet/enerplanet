@@ -251,10 +251,15 @@ jobs:
   # command passes both. All from published images. Safe to re-run; it pulls
   # and recreates, and the databases live in named volumes that survive.
   #
-  # heat.env and shared.env are not in the repository and are never
-  # overwritten here. Create them once on the target from the .example files
-  # with real passwords and keys. TENTACRON_KEY_FRONTEND must equal the
-  # backend's TENTACRON_API_KEY.
+  # heat.env and shared.env are not in the repository. They are seeded from
+  # the .example files and their credentials filled in from the repository
+  # secrets, the same way platform-core/.env is built. A value already in a
+  # file on the target is kept, so a machine configured by hand keeps working.
+  #
+  # Secrets read here: C2T_DB_PASSWORD, IGNIS_DB_PASSWORD, WEATHER_API_KEYS,
+  # WEATHER_API_KEY, TENTACRON_KEY_FRONTEND, TENTACRON_KEY_BATCH.
+  # TENTACRON_KEY_FRONTEND is the same secret the backend receives as
+  # TENTACRON_API_KEY, so the two match without anyone copying a value.
   heat-stack:
     if: ${{ github.event.inputs.step == 'heat-stack' }}
     runs-on: [self-hosted, enerplanet]
@@ -274,18 +279,53 @@ jobs:
           cp docker-compose.heat.yml docker-compose.shared.yml tentacron.prod.yaml \
             heat.env.example shared.env.example "$DEPLOY/"
 
-          # A target deployed before the env split has one heat.env holding
-          # both halves. Splitting it is a manual step, so that a machine
-          # cannot come up on a half-filled shared.env.
-          for f in heat.env shared.env; do
-            if [ ! -f "$DEPLOY/$f" ]; then
-              echo "ERROR: $DEPLOY/$f does not exist."
-              echo "Create it from $f.example with real values; it is"
-              echo "deliberately not generated here, so a deployment cannot"
-              echo "come up on placeholder passwords."
+          cd "$DEPLOY"
+          [ -f heat.env ] || cp heat.env.example heat.env
+          [ -f shared.env ] || cp shared.env.example shared.env
+
+          set_env() { # set_env FILE KEY VALUE
+            if grep -q "^$2=" "$1"; then sed -i "s|^$2=.*|$2=$3|" "$1"; else echo "$2=$3" >> "$1"; fi
+          }
+          # An unset secret leaves whatever the file already holds, so a value
+          # set by hand on the target survives a deploy.
+          set_if_given() { # set_if_given FILE KEY VALUE
+            [ -n "$3" ] && set_env "$1" "$2" "$3" || true
+          }
+          require() { # require FILE KEY
+            if [ -z "$(sed -n "s/^$2=//p" "$1")" ]; then
+              echo "ERROR: $2 is empty in $DEPLOY/$1."
+              echo "Set the $2 repository secret, or write the value into"
+              echo "$1 on this machine. The stack is not started on a"
+              echo "placeholder credential."
               exit 1
             fi
-          done
+          }
+
+          set_if_given heat.env C2T_DB_PASSWORD "${{ secrets.C2T_DB_PASSWORD }}"
+          set_if_given heat.env IGNIS_DB_PASSWORD "${{ secrets.IGNIS_DB_PASSWORD }}"
+          set_if_given shared.env WEATHER_API_KEYS "${{ secrets.WEATHER_API_KEYS }}"
+          set_if_given shared.env WEATHER_API_KEY "${{ secrets.WEATHER_API_KEY }}"
+          set_if_given shared.env TENTACRON_KEY_FRONTEND "${{ secrets.TENTACRON_KEY_FRONTEND }}"
+          set_if_given shared.env TENTACRON_KEY_BATCH "${{ secrets.TENTACRON_KEY_BATCH }}"
+          # The archive is copied to $DEPLOY/weather below, not to the path the
+          # example carries for a source checkout.
+          set_env shared.env WEATHER_DATA_HOST_DIR ./weather
+
+          require heat.env C2T_DB_PASSWORD
+          require heat.env IGNIS_DB_PASSWORD
+          require shared.env WEATHER_API_KEYS
+          require shared.env WEATHER_API_KEY
+          require shared.env TENTACRON_KEY_FRONTEND
+          require shared.env TENTACRON_KEY_BATCH
+          # weather-serve accepts only the keys in WEATHER_API_KEYS, so a
+          # WEATHER_API_KEY outside that list fails every TentaCron weather
+          # call while the stack itself looks healthy.
+          if ! printf '%s' "$(sed -n 's/^WEATHER_API_KEYS=//p' shared.env)" | tr ',' '\n' \
+               | grep -qxF "$(sed -n 's/^WEATHER_API_KEY=//p' shared.env)"; then
+            echo 'ERROR: WEATHER_API_KEY is not one of WEATHER_API_KEYS in shared.env.'
+            exit 1
+          fi
+          chmod 600 heat.env shared.env
 
           # The weather archive the stack serves. Refreshed every run so a new
           # fixture reaches the target, and read-only once mounted.
@@ -296,7 +336,6 @@ jobs:
             exit 1
           fi
 
-          cd "$DEPLOY"
           docker compose --env-file heat.env --env-file shared.env \
             -f docker-compose.heat.yml -f docker-compose.shared.yml pull
           docker compose --env-file heat.env --env-file shared.env \
