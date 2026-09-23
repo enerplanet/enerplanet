@@ -237,17 +237,11 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 									</div>
 									<div className="flex-1 min-w-0">
 										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Alt</kbd>
+											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">CTRL</kbd>
 											<span className="mx-1">+</span>
 											<span>{t('polygon.removeVertexHint', 'click on vertex')}</span>
 										</p>
 									</div>
-								</div>
-
-								{/* Escape hint */}
-								<div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
-									<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Esc</kbd>
-									<span>{t('polygon.escToClear', 'to clear polygon')}</span>
 								</div>
 
 								{/* 3D rotation hint — only when 3D buildings map is active */}
@@ -332,7 +326,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 													{/* Expand/collapse indicator for steps with animations */}
 													{hasAnimation && (
-														isStepExpanded 
+														isStepExpanded
 															? <ChevronUp className="w-4 h-4 text-muted-foreground" />
 															: <ChevronDown className="w-4 h-4 text-muted-foreground" />
 													)}
@@ -394,7 +388,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 															<svg width="100%" height="55" viewBox="0 0 180 55" className="text-foreground">
 																{/* Map area */}
 																<rect x="0" y="0" width="180" height="55" rx="4" className="fill-muted/40 stroke-border" strokeWidth="1" strokeDasharray="4 3" />
-																
+
 																{/* Grid lines */}
 																<line x1="60" y1="0" x2="60" y2="55" className="stroke-border/30" strokeWidth="0.5" />
 																<line x1="120" y1="0" x2="120" y2="55" className="stroke-border/30" strokeWidth="0.5" />
@@ -495,7 +489,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 																{/* Transformer box on right */}
 																<rect x="55" y="5" width="40" height="40" rx="5" className="fill-amber-500/20 stroke-amber-500" strokeWidth="2" />
-																
+
 																{/* Transformer icon inside */}
 																<g transform="translate(63, 10)">
 																	<ellipse cx="12" cy="6" rx="8" ry="2.5" className="fill-amber-500" opacity="0.9"/>
@@ -648,19 +642,19 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 							{/* Larger polygon illustration */}
 							<svg width="120" height="80" viewBox="0 0 120 80" className="text-foreground">
 								{/* Polygon shape */}
-								<path 
-									d="M20 60 L50 15 L100 25 L90 65 L35 70 Z" 
-									fill="none" 
-									stroke="currentColor" 
+								<path
+									d="M20 60 L50 15 L100 25 L90 65 L35 70 Z"
+									fill="none"
+									stroke="currentColor"
 									strokeWidth="2"
 									strokeDasharray="6 4"
 									className="opacity-50"
 								/>
 								{/* Connection line to close */}
-								<path 
-									d="M35 70 L20 60" 
-									fill="none" 
-									stroke="currentColor" 
+								<path
+									d="M35 70 L20 60"
+									fill="none"
+									stroke="currentColor"
 									strokeWidth="2"
 									strokeDasharray="6 4"
 									className="opacity-50"
@@ -668,23 +662,23 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 								{/* Points with numbers */}
 								<circle cx="20" cy="60" r="8" className="fill-cyan-500" />
 								<text x="20" y="64" textAnchor="middle" className="fill-white text-[10px] font-bold">1</text>
-								
+
 								<circle cx="50" cy="15" r="5" className="fill-foreground opacity-60" />
 								<text x="50" y="18" textAnchor="middle" className="fill-background text-[8px] font-medium">2</text>
-								
+
 								<circle cx="100" cy="25" r="5" className="fill-foreground opacity-60" />
 								<text x="100" y="28" textAnchor="middle" className="fill-background text-[8px] font-medium">3</text>
-								
+
 								<circle cx="90" cy="65" r="5" className="fill-foreground opacity-60" />
 								<text x="90" y="68" textAnchor="middle" className="fill-background text-[8px] font-medium">4</text>
-								
+
 								<circle cx="35" cy="70" r="5" className="fill-foreground opacity-60" />
 								<text x="35" y="73" textAnchor="middle" className="fill-background text-[8px] font-medium">5</text>
-								
+
 								{/* Arrow pointing to start */}
 								<path d="M28 52 L22 58" stroke="#06b6d4" strokeWidth="2" fill="none" markerEnd="url(#arrowhead)" />
 							</svg>
-							
+
 							<div className="flex items-center justify-center gap-1.5 text-[11px]">
 								<span className="w-3 h-3 rounded-full bg-cyan-500 flex items-center justify-center flex-shrink-0">
 									<span className="text-[8px] font-bold text-white">1</span>
@@ -694,14 +688,6 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 							</div>
 						</div>
 					</div>
-
-					{/* Escape hint - show when drawing */}
-					{isDrawing && (
-						<div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
-							<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[9px] font-mono">Esc</kbd>
-							<span>{t('polygon.escToCancel')}</span>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>
