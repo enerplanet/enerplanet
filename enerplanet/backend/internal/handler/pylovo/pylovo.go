@@ -273,6 +273,30 @@ func (h *PylovoHandler) FinalizeTransformers(c *gin.Context) {
 	h.bindWithUserAndForward(c, http.MethodPost, "/finalize-transformers")
 }
 
+// forwardPylovoError turns a downstream error status into a client response.
+// Only client-fault statuses pass through: a 401 or 403 from Pylovo describes the
+// backend's own credentials, and the frontend axios interceptor reads those as the
+// user's session expiring.
+func forwardPylovoError(c *gin.Context, status int, body []byte) {
+	generic := fmt.Sprintf("Pylovo service responded with %d", status)
+
+	switch status {
+	case http.StatusBadRequest, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity:
+		// FastAPI sends detail as a list for 422 schema errors, so the unmarshal
+		// fails there and the generic message is used.
+		var parsed struct {
+			Detail string `json:"detail"`
+		}
+		if err := json.Unmarshal(body, &parsed); err == nil && parsed.Detail != "" {
+			httputil.ErrorResponse(c, status, parsed.Detail)
+			return
+		}
+		httputil.ErrorResponse(c, status, generic)
+	default:
+		httputil.InternalError(c, generic)
+	}
+}
+
 func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path string, payload []byte) {
 	ctx := c.Request.Context() // no timeout; large models (750+ buildings) need unlimited time
 
@@ -299,7 +323,7 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 	}
 
 	if status >= http.StatusBadRequest {
-		httputil.InternalError(c, fmt.Sprintf("Pylovo service responded with %d", status))
+		forwardPylovoError(c, status, body)
 		return
 	}
 
@@ -535,7 +559,7 @@ func (h *PylovoHandler) GetAvailableRegions(c *gin.Context) {
 	}
 	if status >= http.StatusBadRequest {
 		logger.Logger.Errorf("Pylovo (GET /boundary/available) responded with status %d: %s", status, string(body))
-		httputil.InternalError(c, fmt.Sprintf("Pylovo service responded with %d", status))
+		forwardPylovoError(c, status, body)
 		return
 	}
 
