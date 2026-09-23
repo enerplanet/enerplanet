@@ -304,6 +304,23 @@
   animation: md-fade-in 0.35s ease-out both;
 }
 
+@keyframes md-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* No fill mode: the end state matches the natural one, and a filling
+   animation would leave a permanent stacking context behind. */
+.md-drop-in {
+  animation: md-drop-in 0.25s ease-out;
+}
+
 .md-rise {
   animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
