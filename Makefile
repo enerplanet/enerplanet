@@ -258,8 +258,8 @@ tentacron-network:
 .PHONY: tentacron
 tentacron: tentacron-network
 	@cd dependencies/$(TENTACRON_DIR)/environment && make build ENV=dev
-	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d api
-	@docker network connect tentacron-net tentacron-env-api-1 2>/dev/null || true
+	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d tentacron
+	@docker network connect tentacron-net tentacron-env-tentacron-1 2>/dev/null || true
 	@echo "$(GREEN)TentaCron up on http://localhost:$(TENTACRON_PORT), attached to 'tentacron-net'$(NC)"
 
 .PHONY: ignis
