@@ -14,6 +14,7 @@
 
 import type { FC } from 'react';
 
+import { Button } from '@spatialhub/ui';
 import { BuildingConfiguratorProvider } from '@thd-spatial-ai/building-configurator';
 import { Building3DView } from '@thd-spatial-ai/building-configurator/experimental';
 
@@ -22,11 +23,18 @@ import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useConfiguratorParams } from './useConfiguratorParams';
 
-/** Centred message for the states where there is no view to show yet. */
-const Notice: FC<{ children: string }> = ({ children }) => (
+/**
+ * Centred message for the states where there is no view to show yet. It
+ * carries its own back button because the view's header, and its Escape
+ * handling, are not on screen in these states.
+ */
+const Notice: FC<{ children: string; onExit: () => void }> = ({ children, onExit }) => (
   <div className="flex h-full items-center justify-center">
-    <div className="bg-card text-muted-foreground rounded-lg px-6 py-5 text-sm shadow-2xl">
+    <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
       {children}
+      <Button variant="outline" size="sm" onClick={onExit}>
+        Back to map
+      </Button>
     </div>
   </div>
 );
@@ -35,13 +43,13 @@ const PanelBody: FC<{ osmId: string; onExit: () => void }> = ({ osmId, onExit })
   const { building, loading, error, objectId, country } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
 
-  if (loading) return <Notice>Loading this building…</Notice>;
-  if (error) return <Notice>{error}</Notice>;
+  if (loading) return <Notice onExit={onExit}>Loading this building…</Notice>;
+  if (error) return <Notice onExit={onExit}>{error}</Notice>;
   if (!building) return null;
 
   // A geometry failure is reported rather than passed on as null, which the
   // view reads as still loading and would leave spinning for good.
-  if (geometryError) return <Notice>{geometryError}</Notice>;
+  if (geometryError) return <Notice onExit={onExit}>{geometryError}</Notice>;
 
   return <Building3DView building={building} geometry={geometry} onExit={onExit} />;
 };
