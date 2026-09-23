@@ -1,0 +1,81 @@
+# The services shared across simulation domains: weather-serve, which answers
+# reanalysis point queries for any model, and TentaCron, which brokers heat,
+# grid and simulation targets alike. Neither is heat-specific, which is why
+# they are not in docker-compose.heat.yml.
+#
+# Deployed together with docker-compose.heat.yml as one project; see that
+# file for the command. TentaCron's depends_on names services defined there,
+# so this file does not start on its own.
+#
+# Pin every tag in shared.env.
+
+services:
+  # --- weather: reanalysis point queries -----------------------------------
+  weather-serve:
+    # 2.0.2 or later: earlier images carry no application code, and the
+    # country-archive selection before 2.0.1 can serve a neighbouring
+    # country's series for a point near a shared border.
+    image: ghcr.io/enerplanet/weather:${WEATHER_IMAGE_TAG:?pin WEATHER_IMAGE_TAG in shared.env}
+    environment:
+      PIPELINE_MODE: serve
+      WEATHER_DATA_DIR: /data
+      WEATHER_API_WORKERS: ${WEATHER_API_WORKERS:-2}
+      WEATHER_API_KEYS: ${WEATHER_API_KEYS:?set WEATHER_API_KEYS in shared.env}
+    volumes:
+      # Read-only: the archive is data the deployment supplies, not state the
+      # service owns.
+      - ${WEATHER_DATA_HOST_DIR:?set WEATHER_DATA_HOST_DIR in shared.env}:/data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/v1/weather/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # --- TentaCron: the broker the backend talks to --------------------------
+  tentacron:
+    image: ghcr.io/enerplanet/tentacron:${TENTACRON_IMAGE_TAG:?pin TENTACRON_IMAGE_TAG in shared.env}
+    environment:
+      PORT: 8080
+      TENTACRON_KEY_FRONTEND: ${TENTACRON_KEY_FRONTEND:?set TENTACRON_KEY_FRONTEND in shared.env}
+      TENTACRON_KEY_BATCH: ${TENTACRON_KEY_BATCH:?set TENTACRON_KEY_BATCH in shared.env}
+      MEME_API_KEY: ${MEME_API_KEY:-unused}
+      BUEM_API_KEY: ${BUEM_API_KEY:-unused}
+      PV1_API_KEY: ${PV1_API_KEY:-unused}
+      WIND_API_KEY: ${WIND_API_KEY:-unused}
+      WEATHER_API_KEY: ${WEATHER_API_KEY:?must match one entry in WEATHER_API_KEYS}
+      IGNIS_API_KEY: ${IGNIS_API_KEY:-unused}
+    volumes:
+      - ${TENTACRON_CONFIG:?set TENTACRON_CONFIG in shared.env}:/etc/tentacron/config.yaml:ro
+      - tentacron-data:/data
+    networks:
+      # Its own project, to reach the heat services by name, and the platform's
+      # network, so the EnerPlanET backend can reach it at http://tentacron:8080.
+      # This is the only service on both, and the only way into the stack.
+      default:
+      spatialhub-net:
+    depends_on:
+      ignis-http:
+        condition: service_healthy
+      city2tabula-server:
+        condition: service_healthy
+      buem-gateway:
+        condition: service_healthy
+      weather-serve:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/tentacron", "healthcheck", "-addr", "127.0.0.1:8080"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  tentacron-data:
+
+networks:
+  # Created by platform-core before this stack starts, which is why it is
+  # external here rather than declared.
+  spatialhub-net:
+    external: true

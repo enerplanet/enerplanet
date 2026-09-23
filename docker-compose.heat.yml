@@ -1,31 +1,43 @@
-# The heat stack: everything the heating parts of EnerPlanET need, from
-# published images only. A target machine needs this file, heat.env and a
-# TentaCron config; no source checkout of any heat repository.
+# The heat services: City2TABULA, ignis and BuEM, from published images only.
+# A target machine needs this file, docker-compose.shared.yml, heat.env,
+# shared.env and a TentaCron config; no source checkout of any repository.
 #
 # ---
-# Usage:  docker compose --env-file heat.env -f docker-compose.heat.yml pull
-#         docker compose --env-file heat.env -f docker-compose.heat.yml up -d
+# Usage:  docker compose --env-file heat.env --env-file shared.env \
+#           -f docker-compose.heat.yml -f docker-compose.shared.yml pull
+#         docker compose --env-file heat.env --env-file shared.env \
+#           -f docker-compose.heat.yml -f docker-compose.shared.yml up -d
 # ---
 #
-# Why one file rather than each repository's own compose. ignis publishes a
-# deployment-ready compose; the others do not yet. buem-gateway's carries no
-# shared-network block and city2tabula's still builds an interactive shell from
-# source, so neither runs unattended on a server. Assembling the stack here
-# needs no change in those repositories and no source on the target.
+# This file holds the services that model heat demand. The services that serve
+# every simulation domain, not heat alone, are in docker-compose.shared.yml:
+# weather-serve, which answers reanalysis point queries for any model, and
+# TentaCron, which brokers heat, grid and simulation targets alike. The two
+# files are always deployed together as one project, so service-name
+# resolution and depends_on work across them.
+#
+# Why one file per layer rather than each repository's own compose. ignis
+# publishes a deployment-ready compose; the others do not yet. buem-gateway's
+# carries no shared-network block and city2tabula's still builds an
+# interactive shell from source, so neither runs unattended on a server.
+# Assembling the stack here needs no change in those repositories and no
+# source on the target.
 #
 # Service names are the contract. TentaCron addresses ignis-http,
-# city2tabula-server, weather-serve and buem-gateway by name, so these names
-# match its configuration exactly. One compose project means one network and
-# plain service-name resolution, which is why no tentacron-net appears here:
-# that network exists to bridge separate projects, and there are none.
+# city2tabula-server and buem-gateway by name, so these names match its
+# configuration exactly.
 #
 # Nothing publishes a host port. The only way in is the EnerPlanET backend,
-# which reaches TentaCron over spatialhub-net; every other service is reachable
-# only from inside this project. Nothing in the stack authenticates a caller,
-# so that containment is the trust boundary, not a convenience.
+# which reaches TentaCron over spatialhub-net; every other service is
+# reachable only from inside this project. Nothing in the stack authenticates
+# a caller, so that containment is the trust boundary, not a convenience.
 #
 # Pin every tag in heat.env. `latest` on buem-model moves on every push to its
 # release branch, so following it would change production without a deploy.
+#
+# The project name stays `heat` because the named volumes below are prefixed
+# with it. Renaming the project would orphan the databases on every machine
+# already running this stack.
 name: heat
 
 services:
@@ -166,67 +178,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # --- weather: reanalysis point queries -----------------------------------
-  weather-serve:
-    # 2.0.2 or later: earlier images carry no application code, and the
-    # country-archive selection before 2.0.1 can serve a neighbouring
-    # country's series for a point near a shared border.
-    image: ghcr.io/enerplanet/weather:${WEATHER_IMAGE_TAG:?pin WEATHER_IMAGE_TAG in heat.env}
-    environment:
-      PIPELINE_MODE: serve
-      WEATHER_DATA_DIR: /data
-      WEATHER_API_WORKERS: ${WEATHER_API_WORKERS:-2}
-      WEATHER_API_KEYS: ${WEATHER_API_KEYS:?set WEATHER_API_KEYS in heat.env}
-    volumes:
-      # Read-only: the archive is data the deployment supplies, not state the
-      # service owns.
-      - ${WEATHER_DATA_HOST_DIR:?set WEATHER_DATA_HOST_DIR in heat.env}:/data:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/v1/weather/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    restart: unless-stopped
-
-  # --- TentaCron: the broker the backend talks to --------------------------
-  tentacron:
-    image: ghcr.io/enerplanet/tentacron:${TENTACRON_IMAGE_TAG:?pin TENTACRON_IMAGE_TAG in heat.env}
-    environment:
-      PORT: 8080
-      TENTACRON_KEY_FRONTEND: ${TENTACRON_KEY_FRONTEND:?set TENTACRON_KEY_FRONTEND in heat.env}
-      TENTACRON_KEY_BATCH: ${TENTACRON_KEY_BATCH:?set TENTACRON_KEY_BATCH in heat.env}
-      MEME_API_KEY: ${MEME_API_KEY:-unused}
-      BUEM_API_KEY: ${BUEM_API_KEY:-unused}
-      PV1_API_KEY: ${PV1_API_KEY:-unused}
-      WIND_API_KEY: ${WIND_API_KEY:-unused}
-      WEATHER_API_KEY: ${WEATHER_API_KEY:?must match one entry in WEATHER_API_KEYS}
-      IGNIS_API_KEY: ${IGNIS_API_KEY:-unused}
-    volumes:
-      - ${TENTACRON_CONFIG:?set TENTACRON_CONFIG in heat.env}:/etc/tentacron/config.yaml:ro
-      - tentacron-data:/data
-    networks:
-      # Its own project, to reach the heat services by name, and the platform's
-      # network, so the EnerPlanET backend can reach it at http://tentacron:8080.
-      # This is the only service on both, and the only way into the stack.
-      default:
-      spatialhub-net:
-    depends_on:
-      ignis-http:
-        condition: service_healthy
-      city2tabula-server:
-        condition: service_healthy
-      buem-gateway:
-        condition: service_healthy
-      weather-serve:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/tentacron", "healthcheck", "-addr", "127.0.0.1:8080"]
-      interval: 30s
-      timeout: 5s
-      start_period: 10s
-    restart: unless-stopped
-
 volumes:
   city2tabula-db-data:
   ignis-db-data:
@@ -234,10 +185,3 @@ volumes:
   # buem-model writes results here and buem-gateway reads and deletes them, so
   # both mount the same volume.
   buem-results-data:
-  tentacron-data:
-
-networks:
-  # Created by platform-core before this stack starts, which is why it is
-  # external here rather than declared.
-  spatialhub-net:
-    external: true

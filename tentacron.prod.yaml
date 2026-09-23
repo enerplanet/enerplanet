@@ -6,7 +6,8 @@
 # at is the one in production.
 #
 # The service names this addresses are the service names in
-# docker-compose.heat.yml, so the two must move together.
+# docker-compose.heat.yml and docker-compose.shared.yml, so the three must
+# move together.
 #
 # Not touched on the way across: targets for services this stack does not run
 # (meme, the illustrative pv1 and wind resolvents) still name placeholder

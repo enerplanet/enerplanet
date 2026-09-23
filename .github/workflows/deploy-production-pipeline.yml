@@ -245,13 +245,16 @@ jobs:
           docker image prune -f
           echo '=== [PROD] Auth Service and Webservice started ==='
 
-  # The heat services: City2TABULA, ignis, BuEM, weather and TentaCron, all
-  # from published images. Safe to re-run; it pulls and recreates, and the
-  # databases live in named volumes that survive.
+  # The stack: the heat services (City2TABULA, ignis, BuEM) from
+  # docker-compose.heat.yml, and the shared ones (weather, TentaCron) from
+  # docker-compose.shared.yml. Both files are one compose project, so every
+  # command passes both. All from published images. Safe to re-run; it pulls
+  # and recreates, and the databases live in named volumes that survive.
   #
-  # heat.env is not in the repository and is never overwritten here. Create it
-  # once on the target from heat.env.example with real passwords and keys.
-  # TENTACRON_KEY_FRONTEND must equal the backend's TENTACRON_API_KEY.
+  # heat.env and shared.env are not in the repository and are never
+  # overwritten here. Create them once on the target from the .example files
+  # with real passwords and keys. TENTACRON_KEY_FRONTEND must equal the
+  # backend's TENTACRON_API_KEY.
   heat-stack:
     if: ${{ github.event.inputs.step == 'heat-stack' }}
     runs-on: [self-hosted, enerplanet]
@@ -268,15 +271,21 @@ jobs:
           echo '=== [PROD] Starting the heat stack ==='
           DEPLOY="$HOME/${DEPLOY_SUBDIR}/heat"
           mkdir -p "$DEPLOY"
-          cp docker-compose.heat.yml tentacron.prod.yaml heat.env.example "$DEPLOY/"
+          cp docker-compose.heat.yml docker-compose.shared.yml tentacron.prod.yaml \
+            heat.env.example shared.env.example "$DEPLOY/"
 
-          if [ ! -f "$DEPLOY/heat.env" ]; then
-            echo "ERROR: $DEPLOY/heat.env does not exist."
-            echo "Create it from heat.env.example with real values; it is"
-            echo "deliberately not generated here, so a deployment cannot come"
-            echo "up on placeholder passwords."
-            exit 1
-          fi
+          # A target deployed before the env split has one heat.env holding
+          # both halves. Splitting it is a manual step, so that a machine
+          # cannot come up on a half-filled shared.env.
+          for f in heat.env shared.env; do
+            if [ ! -f "$DEPLOY/$f" ]; then
+              echo "ERROR: $DEPLOY/$f does not exist."
+              echo "Create it from $f.example with real values; it is"
+              echo "deliberately not generated here, so a deployment cannot"
+              echo "come up on placeholder passwords."
+              exit 1
+            fi
+          done
 
           # The weather archive the stack serves. Refreshed every run so a new
           # fixture reaches the target, and read-only once mounted.
@@ -288,9 +297,12 @@ jobs:
           fi
 
           cd "$DEPLOY"
-          docker compose --env-file heat.env -f docker-compose.heat.yml pull
-          docker compose --env-file heat.env -f docker-compose.heat.yml up -d
-          docker compose --env-file heat.env -f docker-compose.heat.yml ps
+          docker compose --env-file heat.env --env-file shared.env \
+            -f docker-compose.heat.yml -f docker-compose.shared.yml pull
+          docker compose --env-file heat.env --env-file shared.env \
+            -f docker-compose.heat.yml -f docker-compose.shared.yml up -d
+          docker compose --env-file heat.env --env-file shared.env \
+            -f docker-compose.heat.yml -f docker-compose.shared.yml ps
 
   # One-off and destructive, which is why it is its own step rather than part
   # of starting the stack. Seeding DROPs and recreates every ignis country
@@ -309,13 +321,15 @@ jobs:
           echo '=== [PROD] Bootstrapping the heat databases ==='
           DEPLOY="$HOME/${DEPLOY_SUBDIR}/heat"
           cd "$DEPLOY"
-          docker compose --env-file heat.env -f docker-compose.heat.yml \
+          docker compose --env-file heat.env --env-file shared.env \
+            -f docker-compose.heat.yml -f docker-compose.shared.yml \
             --profile seed run --rm ignis-build-db
           # The loader reaches the database by container name and skips a
           # database that already exists, so re-running it is safe.
           C2T_DB_CONTAINER=heat-city2tabula-db-1 \
             "$GITHUB_WORKSPACE/fixtures/load.sh" || true
-          docker compose --env-file heat.env -f docker-compose.heat.yml ps
+          docker compose --env-file heat.env --env-file shared.env \
+            -f docker-compose.heat.yml -f docker-compose.shared.yml ps
 
   build-app:
     if: ${{ github.event.inputs.step == 'build-app' }}
