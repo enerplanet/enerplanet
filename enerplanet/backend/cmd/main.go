@@ -19,6 +19,8 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
+	"spatialhub_backend/internal/geo"
+	buemhandler "spatialhub_backend/internal/handler/buem"
 	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
@@ -662,11 +664,14 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
-	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB))
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB), geo.NewNominatimResolver(deps.DB))
 	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
+
+	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider)
+	registerBuemRoutes(protectedAPI, buemHandler)
 
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
 	registerLocationRoutes(protectedAPI, locationHandler)
@@ -879,6 +884,14 @@ func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.H
 	api.POST("/v1/heat-demand/resolve", handler.Resolve)
 }
 
+// registerBuemRoutes wires the per-building BuEM run behind the building
+// configurator. The model path runs BuEM from the run_buem job instead; this is
+// the interactive one, and the only route that takes an envelope from the
+// caller rather than from City2TABULA.
+func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
+	api.POST("/v1/buem/building", handler.RunBuilding)
+}
+
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	api.POST("/v2/pylovo/generate-grid", handler.GenerateGrid)
 	api.GET("/v2/pylovo/transformer-sizes", handler.GetTransformerSizes)
@@ -918,6 +931,9 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
 	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
 	api.GET("/v2/ignis/fields", handler.GetFieldMetadata)
+	api.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
+	api.GET("/v2/ignis/data/:code", handler.GetVariantData)
+	api.POST("/v2/ignis/calculate/:code", handler.Calculate)
 }
 
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {

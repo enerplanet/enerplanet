@@ -3,6 +3,7 @@ package city2tabula
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -325,4 +326,51 @@ func TestEnrichStatus_Completed_WithQueryParams_ReturnsData(t *testing.T) {
 	assert.Equal(t, 2, resp.Total)
 	assert.Equal(t, []string{"222"}, resp.Missing)
 	assert.Contains(t, resp.Data, "111")
+}
+
+// fakeCountry stands in for the Nominatim resolver, recording the geometry it
+// was handed so a test can check which point decided the country.
+type fakeCountry struct {
+	country    string
+	err        error
+	gotGeoJSON string
+}
+
+func (f *fakeCountry) Resolve(_ context.Context, coords json.RawMessage) (string, error) {
+	f.gotGeoJSON = string(coords)
+	return f.country, f.err
+}
+
+func TestEnrich_NoCountry_ResolvesItFromTheBboxCentre(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	country := &fakeCountry{country: "netherlands"}
+	h := &Handler{client: fake.client(t), country: country}
+
+	w, resp := postEnrich(t, h, `{"bbox":{"xmin":5.9,"ymin":52.0,"xmax":6.1,"ymax":52.2},"osm_ids":["111"]}`)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "completed", resp.Status)
+	assert.JSONEq(t, `{"type":"Point","coordinates":[6,52.1]}`, country.gotGeoJSON,
+		"the centre of the drawn area decides, not a corner")
+}
+
+func TestEnrich_CountryGiven_IsNotResolved(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	country := &fakeCountry{country: "netherlands"}
+	h := &Handler{client: fake.client(t), country: country}
+
+	w, _ := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Empty(t, country.gotGeoJSON, "a caller that named the country is taken at its word")
+}
+
+func TestEnrich_CountryUnresolvable_IsA400(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	h := &Handler{client: fake.client(t), country: &fakeCountry{err: errors.New("no country at these coordinates")}}
+
+	w, _ := postEnrich(t, h, `{"bbox":{"xmin":0,"ymin":0,"xmax":0.1,"ymax":0.1},"osm_ids":["111"]}`)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "could not resolve the country")
 }
