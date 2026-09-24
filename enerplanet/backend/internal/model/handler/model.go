@@ -237,6 +237,8 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 // @Failure      401  {object}  contracts.ErrorResponse
 // @Failure      500  {object}  contracts.ErrorResponse
 // @Security     SessionAuth
+// @Security     APITokenAuth
+// @Security     SpatialHubBearer
 // @Router       /models [get]
 func (h *ModelHandler) GetModels(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)

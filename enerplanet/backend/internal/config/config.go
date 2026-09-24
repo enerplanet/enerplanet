@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"spatialhub_backend/internal/bearerauth"
+
 	"platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
 
@@ -16,6 +18,7 @@ const (
 
 type Config struct {
 	Auth                  auth.Config
+	BearerAuth            bearerauth.Options
 	RedisConfig           goredis.Options
 	AppPort               string
 	AppHost               string
@@ -83,6 +86,10 @@ func LoadFromEnv() (*Config, error) {
 		BuemAPIKey:           os.Getenv("BUEM_API_KEY"),
 		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
+	}
+	cfg.BearerAuth, err = loadBearerAuth(cfg.AppEnv)
+	if err != nil {
+		return nil, err
 	}
 	return cfg, nil
 }

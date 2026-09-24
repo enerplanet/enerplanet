@@ -39,6 +39,20 @@ func NewResultHandler(db *gorm.DB, notificationService *services.NotificationSer
 		asynqClient:         asynqClient,
 	}
 }
+
+// GetModelResults godoc
+// @Summary Read results for an accessible model
+// @Tags EnerPlanET
+// @Produce json
+// @Param id path int true "Model ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Security SpatialHubBearer
+// @Security APITokenAuth
+// @Security SessionAuth
+// @Router /models/{id}/results [get]
 func (h *ResultHandler) GetModelResults(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
