@@ -44,8 +44,9 @@ func Hash(plaintext string) string {
 
 // FromAuthorizationHeader returns the API token from the header, or "" if it carries none.
 func FromAuthorizationHeader(header string) string {
+	// Case-insensitive scheme.
 	const bearer = "Bearer "
-	if !strings.HasPrefix(header, bearer) {
+	if len(header) < len(bearer) || !strings.EqualFold(header[:len(bearer)], bearer) {
 		return ""
 	}
 	candidate := strings.TrimSpace(header[len(bearer):])
