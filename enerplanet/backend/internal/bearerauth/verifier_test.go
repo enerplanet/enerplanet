@@ -48,6 +48,50 @@ func TestMissingAccessLevelDefaultsToVeryLow(t *testing.T) {
 	require.Equal(t, "very_low", identity.AccessLevel)
 }
 
+func TestNonStringClaimShapes(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	v, err := New(testOptions(f))
+	require.NoError(t, err)
+	for name, tc := range map[string]struct {
+		claim string
+		value any
+		level string
+	}{
+		"multivalued access level":   {"access_level", []string{"expert"}, "intermediate"},
+		"empty access level array":   {"access_level", []string{}, "very_low"},
+		"null access level":          {"access_level", nil, "very_low"},
+		"string email verified":      {"email_verified", "true", "intermediate"},
+		"multivalued email verified": {"email_verified", []string{"true"}, "intermediate"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			claims := f.Claims("local-user")
+			claims[tc.claim] = tc.value
+			identity, err := v.Verify(context.Background(), f.Sign(t, claims))
+			require.NoError(t, err)
+			require.Equal(t, tc.level, identity.AccessLevel)
+		})
+	}
+}
+
+func TestRejectionCategories(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	v, err := New(testOptions(f))
+	require.NoError(t, err)
+	claims := f.Claims("local-user")
+	claims["exp"] = time.Now().Add(-time.Minute).Unix()
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	require.ErrorIs(t, err, ErrExpired)
+	claims = f.Claims("local-user")
+	claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	require.ErrorIs(t, err, ErrLifetime)
+	_, err = v.Verify(context.Background(), "not-a-jwt")
+	require.ErrorIs(t, err, ErrInvalidToken)
+	var unconfigured *Verifier
+	_, err = unconfigured.Verify(context.Background(), "any")
+	require.ErrorIs(t, err, ErrUnavailable)
+}
+
 func TestRejectInvalidClaims(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
@@ -69,6 +113,12 @@ func TestRejectInvalidClaims(t *testing.T) {
 		{"missing email", "email", nil},
 		{"invalid access level", "access_level", "admin"},
 		{"not yet valid", "nbf", time.Now().Add(time.Minute).Unix()},
+		{"lifetime above ceiling", "exp", time.Now().Add(16 * time.Minute).Unix()},
+		{"missing issued at", "iat", nil},
+		{"access level array of two", "access_level", []string{"intermediate", "expert"}},
+		{"access level number", "access_level", 3},
+		{"email verified text", "email_verified", "yes"},
+		{"email verified false text", "email_verified", "false"},
 		{"future issued", "iat", time.Now().Add(time.Minute).Unix()},
 	}
 	for _, tt := range tests {
@@ -104,7 +154,15 @@ func TestRejectTamperingAndUnsignedTokens(t *testing.T) {
 	require.Error(t, err, "matching claims signed by an untrusted key must fail")
 }
 
+// Disable throttle.
+func noCooldown(t *testing.T) {
+	old := jwksRefreshCooldown
+	jwksRefreshCooldown = 0
+	t.Cleanup(func() { jwksRefreshCooldown = old })
+}
+
 func TestSigningKeyRotationAndOutage(t *testing.T) {
+	noCooldown(t)
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
 	require.NoError(t, err)
@@ -123,9 +181,34 @@ func TestSigningKeyRotationAndOutage(t *testing.T) {
 	require.NoError(t, err, "unknown kid should refresh keys")
 }
 
-func TestJWKSCacheExpiryRemovesOldKeys(t *testing.T) {
+func TestJWKSRefreshThrottled(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
-	keys := &expiringKeySet{ctx: context.Background(), url: f.Issuer + "/protocol/openid-connect/certs", ttl: time.Minute}
+	v, err := New(testOptions(f))
+	require.NoError(t, err)
+	_, err = v.Verify(context.Background(), f.Sign(t, f.Claims("user-a")))
+	require.NoError(t, err)
+	forged := testutil.NewOIDCFixture(t).Sign(t, f.Claims("user-a"))
+	for range 5 {
+		_, err = v.Verify(context.Background(), forged)
+		require.Error(t, err)
+	}
+	require.Equal(t, 1, f.Requests(), "forged tokens must not trigger downloads within the cooldown")
+	f.Rotate(t)
+	rotated := f.Sign(t, f.Claims("user-a"))
+	_, err = v.Verify(context.Background(), rotated)
+	require.Error(t, err, "new key is not fetched inside the cooldown")
+	v.keys.mu.Lock()
+	v.keys.fetched = time.Now().Add(-jwksRefreshCooldown)
+	v.keys.mu.Unlock()
+	_, err = v.Verify(context.Background(), rotated)
+	require.NoError(t, err, "rotation is picked up after the cooldown")
+	require.Equal(t, 2, f.Requests())
+}
+
+func TestJWKSCacheExpiryRemovesOldKeys(t *testing.T) {
+	noCooldown(t)
+	f := testutil.NewOIDCFixture(t)
+	keys := &expiringKeySet{url: f.Issuer + "/protocol/openid-connect/certs", ttl: time.Minute}
 	v := oidc.NewVerifier(f.Issuer, keys, &oidc.Config{ClientID: "enerplanet-api"})
 	raw := f.Sign(t, f.Claims("user-a"))
 	_, err := v.Verify(context.Background(), raw)
@@ -151,6 +234,9 @@ func TestOptionsFailClosed(t *testing.T) {
 		{Issuer: "http://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox"},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "http://keys/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "https://attacker.example/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "https://issuer:8443/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, MaxTokenLifetime: -time.Second},
 	} {
 		_, err := New(opts)
 		require.Error(t, err)

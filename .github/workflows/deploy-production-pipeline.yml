@@ -331,6 +331,8 @@ jobs:
           set_env "$ENV_PROD" KEYCLOAK_API_ISSUER "${SERVER_URL_PROD}/keycloak/realms/${KEYCLOAK_REALM}"
           set_env "$ENV_PROD" KEYCLOAK_API_AUDIENCE enerplanet-api
           set_env "$ENV_PROD" KEYCLOAK_API_CLIENT_ID renvolveit-toolbox
+          # Keep >= realm lifespan.
+          set_env "$ENV_PROD" KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS 900
           # keycloak-init wrote the generated client secret into backend/.env.
           if grep -q '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" 2>/dev/null; then
             KC_SECRET=$(grep '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" | head -1)

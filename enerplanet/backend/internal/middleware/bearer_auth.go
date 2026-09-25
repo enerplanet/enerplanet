@@ -2,12 +2,15 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"platform.local/common/pkg/httputil"
+	platformlogger "platform.local/platform/logger"
 	"spatialhub_backend/internal/bearerauth"
 )
 
@@ -20,7 +23,8 @@ type BearerVerifier interface {
 // Authenticate bearer tokens.
 func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.GetBool(ctxAPITokenAuthenticated) {
+		// Public paths bypass.
+		if httputil.IsPublicPath(c.Request.URL.Path, backendPublicPaths) {
 			c.Next()
 			return
 		}
@@ -37,17 +41,32 @@ func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if len(fields) != 2 || len(headers) != 1 || verifier == nil {
-			rejectBearer(c)
+		// One credential only.
+		if len(headers) != 1 {
+			rejectBearer(c, "multiple_credentials")
+			return
+		}
+		if c.GetBool(ctxAPITokenAuthenticated) {
+			c.Next()
+			return
+		}
+		if len(fields) != 2 {
+			rejectBearer(c, "malformed_header")
+			return
+		}
+		if verifier == nil {
+			rejectBearer(c, bearerauth.ErrUnavailable.Error())
 			return
 		}
 		identity, err := verifier.Verify(c.Request.Context(), fields[1])
 		if err != nil || identity == nil {
-			rejectBearer(c)
+			rejectBearer(c, rejectReason(err))
 			return
 		}
 		if !slices.Contains(strings.Fields(identity.Scope), bearerauth.ReadScope) ||
 			c.Request.Method != http.MethodGet || !toolboxReadRoute(c.FullPath()) {
+			bearerLog(c).WithFields(map[string]any{"user_id": identity.Subject, "token_id": identity.TokenID}).
+				Warn("bearer request not permitted")
 			c.Header("WWW-Authenticate", `Bearer error="insufficient_scope", scope="enerplanet:read"`)
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Token does not permit this operation"})
 			return
@@ -60,11 +79,32 @@ func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
 		c.Set(ctxBearerIdentity, identity)
 		// Skip session validation.
 		c.Set(ctxAPITokenAuthenticated, true)
+		bearerLog(c).WithFields(map[string]any{"user_id": identity.Subject, "token_id": identity.TokenID}).
+			Info("bearer token request")
 		c.Next()
 	}
 }
 
-func rejectBearer(c *gin.Context) {
+// Fixed log reasons.
+func rejectReason(err error) string {
+	for _, known := range []error{bearerauth.ErrUnavailable, bearerauth.ErrExpired, bearerauth.ErrInvalidToken,
+		bearerauth.ErrClaims, bearerauth.ErrLifetime, bearerauth.ErrEmail, bearerauth.ErrAccessLevel} {
+		if errors.Is(err, known) {
+			return known.Error()
+		}
+	}
+	return bearerauth.ErrInvalidToken.Error()
+}
+
+func bearerLog(c *gin.Context) *logrus.Entry {
+	return platformlogger.ForComponent("bearer_auth").WithFields(map[string]any{
+		"method": c.Request.Method,
+		"path":   c.FullPath(),
+	})
+}
+
+func rejectBearer(c *gin.Context, reason string) {
+	bearerLog(c).WithField("reason", reason).Warn("bearer token rejected")
 	c.Header("WWW-Authenticate", `Bearer error="invalid_token"`)
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unrecognised bearer token"})
 }

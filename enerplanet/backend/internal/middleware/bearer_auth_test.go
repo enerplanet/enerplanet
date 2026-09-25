@@ -39,9 +39,11 @@ func TestBearerAuthenticationChain(t *testing.T) {
 	router := gin.New()
 	router.Use(APITokenAuth(personalTokenValidator{}), BearerAuth(v), AuthServiceMiddleware(AuthServiceOptions{AuthServiceURL: authService.URL}))
 	router.GET("/api/auth/whoami", WhoAmI(f.Issuer))
-	for _, path := range []string{"/api/models", "/api/models/:id/results", "/api/users", "/api/webservices/health", "/api/models/:id/shares"} {
+	for _, path := range []string{"/api/models", "/api/models/:id/results", "/api/users", "/api/models/:id/shares"} {
 		router.GET(path, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"subject": c.GetString("user_id")}) })
 	}
+	// Production proxy route.
+	router.Any("/api/webservices/*proxyPath", func(c *gin.Context) { c.Status(http.StatusOK) })
 	router.POST("/api/models", func(c *gin.Context) { c.Status(http.StatusCreated) })
 	raw := f.Sign(t, f.Claims("local-user"))
 	missingScope := f.Claims("local-user")
@@ -68,6 +70,11 @@ func TestBearerAuthenticationChain(t *testing.T) {
 		{"read personal token write", "POST", "/api/models", "Bearer whf_valid", false, 403, "This API token is read-only"},
 		{"browser session", "GET", "/api/auth/whoami", "", true, 200, `"subject":"session-user"`},
 		{"anonymous health", "GET", "/api/webservices/health", "", false, 200, ""},
+		{"health with JWT", "GET", "/api/webservices/health", "Bearer " + raw, false, 200, ""},
+		{"health with garbage bearer", "GET", "/api/webservices/health", "Bearer garbage", false, 200, ""},
+		{"health with personal token", "GET", "/api/webservices/health", "Bearer whf_valid", false, 200, ""},
+		{"personal token lowercase scheme", "GET", "/api/auth/whoami", "bearer whf_valid", false, 200, `"authentication_method":"api_token"`},
+		{"other proxied path with JWT", "GET", "/api/webservices/models", "Bearer " + raw, false, 403, "Token does not permit"},
 		{"anonymous private", "GET", "/api/models", "", false, 401, "Session not found"},
 	}
 	for _, tt := range tests {
@@ -89,6 +96,15 @@ func TestBearerAuthenticationChain(t *testing.T) {
 				require.Empty(t, w.Header().Values("Set-Cookie"))
 			}
 		})
+	}
+	// One credential only.
+	for _, pair := range [][2]string{{"Bearer " + raw, "Bearer " + raw}, {"Bearer whf_valid", "Bearer " + raw}, {"Bearer " + raw, "Bearer whf_valid"}} {
+		req := httptest.NewRequest("GET", "/api/models", nil)
+		req.Header.Add("Authorization", pair[0])
+		req.Header.Add("Authorization", pair[1])
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		require.Equal(t, 401, w.Code, pair[0][:12]+" then "+pair[1][:12])
 	}
 	req := httptest.NewRequest("GET", "/api/models", nil)
 	req.Header.Add("Authorization", "Bearer "+raw)
