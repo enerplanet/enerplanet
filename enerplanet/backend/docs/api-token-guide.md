@@ -4,8 +4,11 @@ This guide explains how users generate personal API tokens in Enerplanet,
 and access their models and results from scripts, Postman or other apps.
 Experts and managers can also issue and revoke tokens for users they manage.
 
+The RENvolveIT toolbox does not use these tokens. It sends SpatialHub access
+tokens instead; see [SpatialHub tokens](#spatialhub-tokens-renvolveit-toolbox).
+
 - Base URL (local development): `http://localhost:8000/api`
-- Base URL (production): `https://wildfire.th-deg.de/api`
+- Base URL (production): `https://enerplanet.th-deg.de/api`
 
 ---
 
@@ -125,7 +128,8 @@ print(metrics)
 ### Selecting a model
 
 `GET /models` returns **all the models you can access** — your own plus any
-shared with you. You pick the one you want from that list. Each entry includes:
+shared with you. The first call also links workspace invites and model shares
+sent to your email to your account, even with a read-only token. You pick the one you want from that list. Each entry includes:
 
 - `id` — the model id you pass to every other `/models/{id}/...` endpoint.
 - `title` — the human name of the model (e.g. `Galicia`), so you can recognise it.
@@ -269,6 +273,24 @@ tokens. So a manager can both onboard a user and issue them an API token from
 this one screen.
 
 ---
+
+## SpatialHub tokens (RENvolveIT toolbox)
+
+The toolbox backend sends a short-lived SpatialHub access token instead of a
+`whf_` token. These tokens:
+
+- can only read (`GET`) models and results, and need the `enerplanet:read` scope;
+- act as the user, like a personal token (including the invite linking above);
+- are checked locally and cannot be revoked, so a disabled user keeps access
+  until the token expires.
+
+**For operators:** keep the `spatialhub` realm's *Access Token Lifespan*
+(5 minutes today) at or below `KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS`
+(900 seconds). This lifespan is how long a disabled user can still read data.
+Longer tokens are rejected.
+
+After Keycloak rotates its signing key, new tokens can fail with `401` for up
+to 30 seconds while the API waits to download the new key.
 
 ## Troubleshooting
 

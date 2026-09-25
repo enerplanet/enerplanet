@@ -249,7 +249,8 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	ctx := c.Request.Context()
 	modelSvc := h.newModelService()
 
-	// Only sync once per session (cached)
+	// Only sync once per session (cached).
+	// Also runs for API tokens: invited users need it.
 	if h.syncCache == nil || !h.syncCache.HasSynced(ctx, userCtx.UserID) {
 		modelSvc.SyncWorkspaceMemberUserID(userCtx.UserID, userCtx.Email)
 		if h.syncCache != nil {
