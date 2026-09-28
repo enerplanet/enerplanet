@@ -57,8 +57,16 @@ fixtures:
 	@git lfs pull --include=fixtures 2>/dev/null || true
 	@./fixtures/load.sh
 
+# pylovo's `make dev` loads its full Bremen dump unless pylovo_db already
+# exists, and the loader never overwrites a populated database, so the pylovo
+# fixture has to go in before the pylovo target runs.
+.PHONY: pylovo-fixture
+pylovo-fixture:
+	@git lfs pull --include=fixtures/pylovo 2>/dev/null || true
+	@./fixtures/load.sh pylovo
+
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo tentacron-stack fixtures
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 

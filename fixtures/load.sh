@@ -5,6 +5,7 @@
 #
 # Usage:
 #   fixtures/load.sh          # load what is missing, leave what is present
+#   fixtures/load.sh pylovo   # only the named sets: weather, city2tabula, pylovo
 #   FORCE=1 fixtures/load.sh  # overwrite targets that already exist
 #
 # Never overwrites by default: a developer who has built the real archives
@@ -192,8 +193,11 @@ load_pylovo() {
 }
 
 echo "== loading fixtures from $HERE =="
-load_weather
-load_city2tabula
-load_pylovo
+for set in ${@:-weather city2tabula pylovo}; do
+  case "$set" in
+    weather|city2tabula|pylovo) "load_$set" ;;
+    *) fail "unknown fixture set: $set" ;;
+  esac
+done
 echo "== $LOADED loaded, $SKIPPED skipped, $FAILED failed =="
 [ "$FAILED" -eq 0 ]
