@@ -19,30 +19,22 @@ that load without error and fail later as unreadable data.
 git lfs install
 ```
 
-Budget 28 to 32 GB of disk, and 40 GB to work in comfortably. The figures
-below were measured on amd64 Linux and drift as base images change, so treat
-them as an order of magnitude.
+Budget 27 GB of disk, and 35 GB to work in comfortably. The figures below
+were measured on amd64 Linux on 2026-09-27 and drift as base images change, so
+treat them as an order of magnitude.
 
-About 8 GB is the checkout. `make setup-repos` clones every dependency, and two
-carry large LFS histories, simulation-engine at 6 GB and enerplanet-pylovo at
-1.6 GB. The fixtures are 39 MB of that.
+About 2.2 GB is the checkout, and `npm install` adds 1 GB of `node_modules`.
+enerplanet-pylovo accounts for 1.6 GB of it, most of that LFS history. The
+fixtures are 39 MB. simulation-engine is not cloned by `make setup`; `make
+webservice` clones it (6 GB) when the Calliope/PyPSA simulation is needed.
 
-Container images are 20 to 24 GB. What moves the figure is City2TABULA: two
-services build it from one Dockerfile, so `make setup` produces it twice. Built
-in the same run the pair shares nearly every layer and costs about 10.4 GB
-between them; built days apart the layer cache has moved and they cost about
-15 GB. Every other image together adds about 9 GB.
+Container images take about 22 GB. The largest are PyLovo's API at 6.5 GB,
+which `make setup` builds locally, and weather at 4.9 GB.
 
 Adding up what each image reports gives a larger number, around 35 GB, because
 a layer shared by several images is reported by each of them while being stored
 once. BuEM's model image is the clearest case: it reports 4.1 GB but shares all
 but 18 MB with weather.
-
-City2TABULA is large because the same image carries a Go toolchain, a JDK and
-citydb-tool so that it can also run 3D imports, and because the repository is
-copied into it twice, once by `COPY` and again when ownership is changed. The
-running server adds a further 624 MB writable layer, because it compiles inside
-the container at startup.
 
 The fixtures avoid the source data downloads, which dwarf all of this: a
 weather archive alone runs to tens of gigabytes. They do not make the images
@@ -53,8 +45,7 @@ smaller.
 First time, from a fresh clone:
 
 ```bash
-docker network create building-simulation_default   # see the note below
-make setup                                          # includes the fixtures
+make setup    # includes the fixtures
 ```
 
 `make setup` runs the loader after the service checkouts exist. On a checkout
@@ -64,18 +55,6 @@ instead:
 ```bash
 make fixtures
 ```
-
-!!! warning "Create that network first, or `make setup` stops part-way"
-    City2TABULA's compose declares the network `building-simulation_default`
-    as external, and nothing creates it: ignis used to, under its old compose
-    project name, and no longer does. Without it `docker compose up` exits 1
-    with `network building-simulation_default declared as external, but could
-    not be found`, and `make setup` stops at that target without reaching the
-    fixtures step.
-
-    Creating it by hand is a temporary measure until City2TABULA drops the
-    dependency. It is safe: an `external` network is used as found, so the
-    empty label set a hand-made network carries is not checked.
 
 Then run the smoke test:
 
@@ -259,7 +238,7 @@ authenticate the way the frontend does: `GET /api/csrf-token`, then
 
 The City2TABULA restore runs `psql` inside the `city2tabula-db` container,
 because that database publishes no host port and is the one
-`city2tabula-server` reads. The defaults mirror the compose file's own, so the
+`city2tabula` reads. The defaults mirror the compose file's own, so the
 loader and the server derive the same database from the same inputs. Override
 any of these to restore elsewhere:
 
@@ -305,28 +284,6 @@ published to the host on `DB_PORT`, which is 5433. Overrides are
 
     The smoke test's own `loenen_buildings.geojson` is an LFS object too, so
     such a checkout fails the smoke whether or not any fixture is loaded.
-
-!!! warning "City2TABULA reaches the Go module proxy when it starts"
-    Its image pins Go 1.23.3 while its `go.mod` requires 1.25.0, and the
-    server runs through `go run`. Go therefore downloads a 1.25.0 toolchain
-    from the module proxy the first time the container starts, not at build
-    time. On a host with restricted outbound access the container fails to
-    start, and the error names the module proxy rather than anything in these
-    instructions.
-
-    Nothing here can work around it: allow the egress, or pre-warm the
-    toolchain in the image. The cause is a one-line pin mismatch in
-    City2TABULA's Dockerfile. Once that pin is fixed there, this note can be
-    removed.
-
-!!! warning "City2TABULA will not start without `CITYDB_TOOL_PATH`"
-    Its startup check requires the variable to be non-empty, even when only
-    serving data. It is not read unless you run the extraction pipeline, and
-    nothing checks that the path exists, so any value satisfies it:
-
-    ```bash
-    CITYDB_TOOL_PATH=unused
-    ```
 
 !!! info "Gelderland carries no \"3D\" badge, and that is correct"
     The region selector badges a region as 3D from PyLovo's `has_3d`, which
