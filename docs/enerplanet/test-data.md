@@ -245,7 +245,10 @@ workflow and the 3D building view can be tried without drawing an area first.
 | Example: Bremen (DE) | 7 | 29 | 2018 |
 
 Every building in both has a City2TABULA envelope, and the period matches the
-weather fixtures.
+weather fixtures. Loenen's building 268428040 was edited in the 3D view and
+saved (attached neighbours set to terraced), so it carries a stored BuEM
+building: opening it, and running the model, take the saved values rather
+than City2TABULA's.
 
 They are a starting point for work that begins from a saved model. Work on
 creating a model (drawing an area, grid generation, building selection) draws

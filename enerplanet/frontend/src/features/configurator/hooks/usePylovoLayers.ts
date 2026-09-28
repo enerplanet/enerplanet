@@ -230,6 +230,16 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
 
   const updateTransformerKva = useCallback((gid: number, kva: number) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'transformer' && f.get('grid_result_id') === gid) f.set('rated_power_kva', kva); }); }); }, []);
   const updateBuildingType = useCallback((osmId: string, t: string) => { const n = normalizeFClass(t) || t.trim().toLowerCase() || 'residential'; pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) { f.set('type', n); f.set('f_class', n); f.set('f_classes', [n]); f.set('parsed_class', n); } }); }); }, []);
+  // Save serialises buildings from the map features and reopening a building
+  // reads them from the store, so a building's stored BuEM goes into both.
+  const storeBuildingBuem = useCallback((osmId: string, buem: unknown) => {
+    pylovoLayersRef.current.forEach(layer => { layer.getSource()?.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && String(f.get('osm_id')) === osmId) f.set('buem', buem); }); });
+    setPylovoGridData(prev => {
+      if (!prev?.buildings?.features) return prev;
+      const features = prev.buildings.features.map((f: any) => String(f.properties?.osm_id) === osmId ? { ...f, properties: { ...f.properties, buem } } : f);
+      return { ...prev, buildings: { ...prev.buildings, features } };
+    });
+  }, [setPylovoGridData]);
   const updateBuildingProperty = useCallback((osmId: string, key: string, val: unknown) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) f.set(key, val); }); }); }, []);
   const updateBuildingFClassDemand = useCallback((osmId: string, fClass: string, newDemand: number) => {
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
@@ -237,13 +247,13 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
-    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
+    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
-    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
+    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

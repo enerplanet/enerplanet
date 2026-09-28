@@ -24,6 +24,7 @@ import axios from '@/lib/axios';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 
 import { configuratorServices } from './heatClient';
+import { fromStoredBuem, storedBuemOf } from './storedBuem';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -76,14 +77,19 @@ async function resolveBuilding(
     osm_ids: [osmId],
   });
   const entry = res.data.data?.[osmId];
-  if (!entry) return failed('No 3D envelope is available for this building yet.');
+  // A building edited before reopens as it was saved; enrich still supplies
+  // the object_id and country its 3D geometry is fetched by.
+  const stored = storedBuemOf(feature.properties);
+  if (!entry && !stored) return failed('No 3D envelope is available for this building yet.');
 
-  const states = await buildBuildingStates(configuratorServices, { features: [feature] }, res.data.data);
+  const building = stored
+    ? fromStoredBuem(osmId, feature.geometry, stored)
+    : (await buildBuildingStates(configuratorServices, { features: [feature] }, res.data.data))[osmId];
   return {
-    building: states[osmId] ?? null,
+    building: building ?? null,
     loading: false,
     error: null,
-    objectId: entry.object_id ?? null,
+    objectId: entry?.object_id ?? null,
     country: res.data.country ?? null,
   };
 }

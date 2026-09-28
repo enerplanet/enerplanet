@@ -10,9 +10,10 @@
 
 import type { FC } from 'react';
 
-import { Building3DView } from '@thd-spatial-ai/building-configurator';
+import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { configuratorServices } from './heatClient';
+import { toStoredBuem, type StoredBuem } from './storedBuem';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useConfiguratorParams } from './useConfiguratorParams';
@@ -26,13 +27,24 @@ const Notice: FC<{ children: string }> = ({ children }) => (
   </div>
 );
 
-const PanelBody: FC<{ osmId: string; onExit: () => void }> = ({ osmId, onExit }) => {
+/** Receives a building the user changed, as the model should store it. */
+export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
+
+const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited }> = ({ osmId, onExit, onEdited }) => {
   const { building, loading, error, objectId, country } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
 
   if (loading) return <Notice>Loading this building…</Notice>;
   if (error) return <Notice>{error}</Notice>;
   if (!building) return null;
+  if (!objectId) return <Notice>City2TABULA no longer holds this building's 3D geometry.</Notice>;
+
+  // The view hands back the building it was given when nothing changed, and a
+  // new object when something did.
+  const exit = (edited: BuildingState | undefined) => {
+    if (edited && edited !== building) onEdited?.(osmId, toStoredBuem(edited));
+    onExit();
+  };
 
   // A geometry failure is reported rather than passed on as null, which the
   // view reads as still loading and would leave spinning for good.
@@ -42,13 +54,13 @@ const PanelBody: FC<{ osmId: string; onExit: () => void }> = ({ osmId, onExit })
     <Building3DView
       building={building}
       geometry={geometry}
-      onExit={onExit}
+      onExit={exit}
       services={configuratorServices}
     />
   );
 };
 
-export const BuildingPanelHost: FC = () => {
+export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited }> = ({ onBuildingEdited }) => {
   const { buildingId, isOpen, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
@@ -60,7 +72,7 @@ export const BuildingPanelHost: FC = () => {
   // the package's positioning and must follow it if its root element changes.
   return (
     <div className="bg-background fixed right-0 bottom-0 z-[60] top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
-      <PanelBody osmId={buildingId} onExit={close} />
+      <PanelBody osmId={buildingId} onExit={close} onEdited={onBuildingEdited} />
     </div>
   );
 };
