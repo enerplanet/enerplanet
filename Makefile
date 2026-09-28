@@ -298,8 +298,7 @@ weather: tentacron-network
 
 .PHONY: city2tabula
 city2tabula: tentacron-network ignis
-	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula-server
-	@docker network connect tentacron-net city2tabula-server 2>/dev/null || true
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
