@@ -194,7 +194,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [map, defaultRegion, editMode]);
 
   // Unsaved changes guard — skip when navigating due to session expiry
-  const isDirty = state.allPolygons.length > 0;
+  const isDirty = state.isModified;
 
   useEffect(() => {
     if (!isDirty || typeof window === "undefined") return;
