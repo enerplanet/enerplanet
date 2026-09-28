@@ -101,17 +101,18 @@ GRID_FILTER = """version_id = {version}
 # 3D tiling happens to align with postcode boundaries; the Bremen LoD2 tile
 # straddles five of them, so no single postcode is both covered and covering.
 #
-# Grids are kept whole rather than cut to the clip. A grid with some of its
-# buildings removed is no longer a grid that power flow can run on, and the
-# buildings outside the clip are unreachable anyway once postcode_result is
-# clipped to the same polygon.
+# A grid is kept only when every one of its buildings lies inside the clip. The
+# map draws a grid's buildings wherever they stand, so a grid crossing the edge
+# offers buildings the 3D source has no envelope for. Cutting such a grid to the
+# clip instead would leave one power flow cannot run on.
 CLIP_IN_REGION = "WHERE t.country_code = {cc} AND ST_Intersects(ST_Transform(t.geom, 4326), {clip})"
 
 CLIP_GRID_FILTER = """version_id = {version} AND country_code = {cc}
     AND grid_result_id IN (
         SELECT br.grid_result_id FROM buildings_result br
         WHERE br.version_id = {version}
-          AND ST_Intersects(ST_Transform(br.geom, 4326), {clip}))"""
+        GROUP BY br.grid_result_id
+        HAVING bool_and(ST_Within(ST_Transform(br.geom, 4326), {clip})))"""
 
 
 def load_create_queries(pylovo_repo: Path) -> dict[str, str]:

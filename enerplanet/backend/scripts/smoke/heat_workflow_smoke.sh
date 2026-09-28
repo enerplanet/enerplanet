@@ -70,7 +70,7 @@ fi
 #
 #   loenen (NL)  Six buildings with no transformer fixture, so every building
 #                enters the topology standalone. Fast.
-#   bremen (DE)  Seven buildings over two real LV grids, 1561 at 630 kVA and
+#   bremen (DE)  Seven buildings over two real LV grids, 29 at 630 kVA and
 #                1614 at 250 kVA, with the transformer of each: the only
 #                fixture here carrying transformer topology, and the only one
 #                reaching MFH and AB archetypes.
@@ -86,8 +86,8 @@ case "$SMOKE_SITE" in
     ;;
   bremen)
     SITE_COUNTRY="germany"
-    SITE_POLYGON='{"type":"Polygon","coordinates":[[[8.7815,53.0890],[8.8005,53.0890],[8.8005,53.1046],[8.7815,53.1046],[8.7815,53.0890]]]}'
-    SITE_BBOX='{"xmin":8.7815,"ymin":53.0890,"xmax":8.8005,"ymax":53.1046}'
+    SITE_POLYGON='{"type":"Polygon","coordinates":[[[8.7940,53.0900],[8.8140,53.0900],[8.8140,53.1040],[8.7940,53.1040],[8.7940,53.0900]]]}'
+    SITE_BBOX='{"xmin":8.7940,"ymin":53.0900,"xmax":8.8140,"ymax":53.1040}'
     SITE_GLAZING_FLOOR_PCT=""
     SITE_REGION_CC="DE"
     SITE_REGION_STATE="bremen"

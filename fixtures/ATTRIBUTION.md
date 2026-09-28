@@ -113,8 +113,9 @@ rated powers in these files are PyLovo output rather than OpenStreetMap data.
 
 Modifications: the database fixture carries the grids, buildings, lines and
 transformers of two areas, postcode 7371 around Loenen and the five Bremen
-postcodes the LoD2 tile above intersects, the German side cut to that tile.
-138 grids, 11,869 buildings, 23,139 lines, 138 transformers. Postcode
+postcodes the LoD2 tile above intersects, keeping only the German grids whose
+buildings all lie inside that tile. 104 grids, 7,518 buildings, 14,829 lines,
+22 transformers. Postcode
 geometries on the German side are clipped to the same tile, so the extent the
 fixture advertises is the extent it can serve.
 
