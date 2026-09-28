@@ -242,8 +242,8 @@ async function saveAreaData(params: any) {
         } else {
             const newModel = await createModelMutation.mutateAsync(modelData);
             if (draftId && newModel?.data?.id) try { await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId); } catch { /* non-critical */ }
+            params.navigate(DASHBOARD_ROUTE);
         }
-        params.navigate(DASHBOARD_ROUTE);
     } catch { /* ignore */ }
     finally { setIsSaving(false); }
 }
