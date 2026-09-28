@@ -193,7 +193,9 @@ git-credential-cache:
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
 	git submodule update --init
-	@[ -d dependencies/enerplanet-pylovo ] && (cd dependencies/enerplanet-pylovo && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git lfs pull
+	@# Pinned to PYLOVO_REF (see repos.conf). An existing checkout is left alone:
+	@# it may be a developer's own branch.
+	@[ -d dependencies/enerplanet-pylovo ] || (git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git checkout -q $(PYLOVO_REF) && git lfs pull)
 	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
 	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
 	@[ -d dependencies/$(BUEM_DIR) ] && (cd dependencies/$(BUEM_DIR) && git pull) || git clone $(BUEM_REPO) dependencies/$(BUEM_DIR)
