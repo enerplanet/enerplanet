@@ -177,7 +177,6 @@ git-credential-cache:
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
 	git submodule update --init
-	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
 	@[ -d dependencies/enerplanet-pylovo ] && (cd dependencies/enerplanet-pylovo && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git lfs pull
 	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
 	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
@@ -239,7 +238,10 @@ up-services: .env
 	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service webservice
 
 .PHONY: webservice
+# Cloned here rather than in setup-repos: only the Calliope/PyPSA simulation
+# needs it, and its 6 GB of LFS data would otherwise land on every checkout.
 webservice:
+	@[ -d dependencies/simulation-engine ] || (git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull)
 	@cd dependencies/simulation-engine && make build && make up-min
 
 .PHONY: pylovo
