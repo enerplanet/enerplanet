@@ -270,8 +270,7 @@ tentacron: tentacron-network
 .PHONY: ignis
 ignis: tentacron-network
 	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml up -d
-	@cd dependencies/$(IGNIS_DIR)/environment/http && [ -f .ignis-seeded ] || { HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml --profile seed run --rm ignis-build-db >/dev/null 2>&1 || true; touch .ignis-seeded; }
-	@docker network connect tentacron-net ignis-app 2>/dev/null || true
+	@cd dependencies/$(IGNIS_DIR)/environment/http && [ -f .ignis-seeded ] || { HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml --profile seed run --rm build-db && touch .ignis-seeded; }
 	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
