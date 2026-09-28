@@ -234,6 +234,39 @@ authenticate the way the frontend does: `GET /api/csrf-token`, then
     returns buildings, and one drawn outside it returns none however much map
     is visible. This is the sharpest limit of the fixture set.
 
+## Example models
+
+A development setup opens with one saved model per fixture region, so the heat
+workflow and the 3D building view can be tried without drawing an area first.
+
+| Model | Buildings | Grid | Period |
+|---|---|---|---|
+| Example: Loenen (NL) | 8 | 2585 | 2018 |
+| Example: Bremen (DE) | 7 | 29 | 2018 |
+
+Every building in both has a City2TABULA envelope, and the period matches the
+weather fixtures.
+
+They are a starting point for work that begins from a saved model. Work on
+creating a model (drawing an area, grid generation, building selection) draws
+in the full regions under What is loaded, so it is not tested only against a
+handful of buildings. `make dev-bg` creates them once the backend is up, owned by
+the dev admin and in its default workspace; run `make example-models` to create
+them against a backend started some other way. A model whose title already
+exists is left alone.
+
+!!! warning "Development only"
+    `fixtures/example_models.sh` does nothing unless `enerplanet/backend/.env`
+    sets `APP_ENV=development` explicitly. An unset `APP_ENV` is not enough,
+    because the backend itself treats unset as development.
+
+Each file under `fixtures/models/` is the request body the frontend sends when
+a model is saved. To replace one, save the model in the frontend against the
+fixtures, then export its row from the `models` table as
+`{title, description, from_date, to_date, resolution, coordinates, config}`.
+Keep the drawn area inside the fixture extent, or its buildings resolve no
+envelope.
+
 ## Connection settings
 
 The City2TABULA restore runs `psql` inside the `city2tabula-db` container,

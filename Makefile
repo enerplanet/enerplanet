@@ -41,6 +41,7 @@ help:
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
 	@echo "  make fixtures           Load the committed test fixtures into the services"
+	@echo "  make example-models     Create the example models (development only, backend running)"
 	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem)"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
@@ -65,6 +66,12 @@ pylovo-fixture:
 	@git lfs pull --include=fixtures/pylovo 2>/dev/null || true
 	@./fixtures/load.sh pylovo
 
+# Needs the backend running, which setup does not start, so dev-bg runs it
+# once the backend is up. The script itself refuses outside APP_ENV=development.
+.PHONY: example-models
+example-models:
+	@./fixtures/example_models.sh
+
 .PHONY: setup
 setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
@@ -86,6 +93,7 @@ dev-bg:
 		 echo "Password:         12345678" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Run 'make list-bg' to see status or 'make clean-bg' to stop.")
+	@./fixtures/example_models.sh
 
 # 2. Show active background sessions
 list-bg:

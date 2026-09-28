@@ -92,9 +92,9 @@ tables only. This is derived data, not a redistribution of the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/pylovo/pylovo_fixture.sql.gz and the smoke GeoJSON fixtures
+## fixtures/pylovo/pylovo_fixture.sql.gz, the example models and the smoke GeoJSON fixtures
 
-Covers `fixtures/pylovo/pylovo_fixture.sql.gz` and
+Covers `fixtures/pylovo/pylovo_fixture.sql.gz`, `fixtures/models/*.json` and
 `enerplanet/backend/scripts/smoke/*_buildings.geojson` /
 `*_transformers.geojson`.
 
@@ -118,6 +118,11 @@ buildings all lie inside that tile. 104 grids, 7,518 buildings, 14,829 lines,
 22 transformers. Postcode
 geometries on the German side are clipped to the same tile, so the extent the
 fixture advertises is the extent it can serve.
+
+The example models are one saved model each for Loenen and Bremen, 8 and 7
+buildings, exported as the request body the frontend sends: footprints and
+PyLovo-derived properties as above, plus the lines and transformer of the grid
+they sit on.
 
 The smoke GeoJSON files are separate: a handful of buildings within one
 bounding box, exported carrying the OpenStreetMap identifier and footprint
