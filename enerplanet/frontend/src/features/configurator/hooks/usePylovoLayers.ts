@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
@@ -66,26 +66,13 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   const availableBoundaryLayersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const unmountedRef = useRef(false);
 
-  // Fetched through react-query so a failed request is retried, and while it
-  // keeps failing it is asked again every 30 s: one failure at page load must
-  // not leave "Go to region" empty until the page is reloaded.
-  const { data: regionsResponse } = useQuery({
-    queryKey: ['pylovo', 'available-regions'],
-    queryFn: async () => {
-      const response = await pylovoService.getAvailableRegions();
-      if (response.status !== 'success') throw new Error(`region list answered status '${response.status}'`);
-      return response;
-    },
-    enabled: !!map && showBoundary,
-    retry: 3,
-    refetchInterval: (query) => (query.state.status === 'error' ? 30_000 : false),
-  });
+  const { data: regionsResponse } = useAvailableRegions(!!map && showBoundary);
 
   // Show the available regions once the list has arrived
   useEffect(() => {
     if (!map || !showBoundary) { setAvailableBoundaryGeoJSON(undefined); return; }
     const response = regionsResponse;
-    // Loading or failing: keep what is shown, the query above retries.
+    // Loading or failing: keep what is shown, useAvailableRegions retries.
     if (!response) return;
     if (!response.regions?.length) {
       setAvailableRegions([]); setAvailableBoundaryGeoJSON(undefined);

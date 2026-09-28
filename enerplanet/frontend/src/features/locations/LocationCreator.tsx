@@ -10,7 +10,7 @@ import { customLocationService } from '@/features/locations/services/customLocat
 import { useNotification } from '@/features/notifications/hooks/useNotification';
 import Notification from '@/components/ui/Notification';
 import { RegionSelector, type AvailableRegion } from '@/features/configurator/region-selector/components/RegionSelector';
-import { pylovoService } from '@/features/configurator/services/pylovoService';
+import { useAvailableRegions } from '@/features/configurator/hooks/useAvailableRegions';
 import { loadAvailableBoundaryLayers, highlightSelectedRegionBoundary } from '@/features/configurator/utils/gridLayerUtils';
 import { transformExtent } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
@@ -86,32 +86,26 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   const zoomToCoordinates = useZoomToCoordinates(map);
   useClearOverlays(clearOverlayLayers, setFireRiskOverlay);
 
-  // Fetch available regions
+  // Show the available regions once the list has arrived
+  const { data: regionsResponse } = useAvailableRegions(!!map);
   useEffect(() => {
-    if (!map) return;
-    pylovoService.getAvailableRegions()
-      .then((response) => {
-        if (response.status === 'success' && response.regions?.length) {
-          setAvailableRegions(
-            response.regions
-              .filter((r) => r.region?.name)
-              .map((r) => ({
-                name: r.region!.name,
-                gridCount: r.grid_count,
-                country: r.region?.country,
-                bbox: r.bbox,
-              }))
-          );
-          const boundaryRegions = response.regions
-            .filter((r) => r.boundary && r.region?.name)
-            .map((r) => ({ boundary: r.boundary!, name: r.region!.name }));
-          if (boundaryRegions.length) {
-            loadAvailableBoundaryLayers(map, boundaryRegions);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [map]);
+    if (!map || !regionsResponse?.regions?.length) return;
+    setAvailableRegions(
+      regionsResponse.regions
+        .filter((r) => r.region?.name)
+        .map((r) => ({
+          name: r.region!.name,
+          gridCount: r.grid_count,
+          country: r.region?.country,
+          bbox: r.bbox,
+        }))
+    );
+    const boundaryRegions = regionsResponse.regions
+      .filter((r) => r.boundary && r.region?.name)
+      .map((r) => ({ boundary: r.boundary!, name: r.region!.name }));
+    const layers = boundaryRegions.length ? loadAvailableBoundaryLayers(map, boundaryRegions) : [];
+    return () => layers.forEach((layer) => map.removeLayer(layer));
+  }, [map, regionsResponse]);
 
   const handleRegionSelect = useCallback((region: AvailableRegion) => {
     if (!map || !region.bbox) return;
