@@ -89,6 +89,8 @@ type Building struct {
 	ID       string          `json:"id"`
 	Geometry json.RawMessage `json:"geometry"`
 	Building json.RawMessage `json:"building"`
+	// Solver is BuEM's solver block (use_milp); omitted when not set.
+	Solver json.RawMessage `json:"solver,omitempty"`
 }
 
 // BuildingResult is one building's outcome from RunBuildings. Exactly one of

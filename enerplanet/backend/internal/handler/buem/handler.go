@@ -102,6 +102,7 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 		ID:       req.OSMID,
 		Geometry: req.Geometry,
 		Building: req.Building,
+		Solver:   req.Solver,
 	}, weather, req.StartDate, req.EndDate, req.Resolution, req.ModelID)
 	if err != nil {
 		// buem-gateway rejecting the body is the caller's envelope being wrong,

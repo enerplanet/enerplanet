@@ -271,6 +271,10 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 			"created_at":           nil,
 			"modified_at":          nil,
 			"session_id":           fmt.Sprintf("%d", sessionID),
+			// The BuEM building block of a building edited in the
+			// configurator; nil otherwise. run_buem sends it in place of one
+			// built from City2TABULA.
+			"buem": bProps["buem"],
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,

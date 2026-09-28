@@ -21,6 +21,9 @@ type BuemBuildingRunRequest struct {
 	EndDate    string          `json:"end_date" example:"2018-12-31T23:00:00Z"`
 	Resolution int             `json:"resolution,omitempty" example:"60"`
 	ModelID    string          `json:"model_id,omitempty" example:"42"`
+	// Solver is BuEM's solver block, forwarded as properties.buem.solver;
+	// omitted, BuEM uses its default solver.
+	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
 }
 
 // BuemBuildingRunResponse carries BuEM's result for the building unchanged.

@@ -165,3 +165,18 @@ func TestRunBuilding_WeatherFailureIsABadGateway(t *testing.T) {
 	assert.Equal(t, http.StatusBadGateway, w.Code,
 		"buem-gateway requires a complete weather block, so there is no useful result without one")
 }
+
+// The configurator sends the solver the user chose beside the building block.
+// Dropped here, every run would use BuEM's default solver whatever was chosen.
+func TestRunBuilding_ForwardsTheSolver(t *testing.T) {
+	tc, fake := newFakeTentacron(t, map[string]string{
+		"weather-point":  sampleWeather,
+		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
+	})
+	body := strings.Replace(postBody("111"), `"start_date"`, `"solver":{"use_milp":true},"start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	buildings := fake.submitted["buem-buildings"]["buildings"].([]any)
+	assert.Equal(t, map[string]any{"use_milp": true}, buildings[0].(map[string]any)["solver"])
+}

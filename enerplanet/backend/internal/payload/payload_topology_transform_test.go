@@ -50,3 +50,18 @@ func TestCreateBuildingFeature_absentOverridesStayNil(t *testing.T) {
 		assert.Nil(t, props[key], "%s must be nil when the user set nothing", key)
 	}
 }
+
+// A building edited in the configurator carries its BuEM building block under
+// properties.buem, and run_buem reads it from the topology node, so it has to
+// survive the copy like the per-building overrides above.
+func TestCreateBuildingFeature_carriesStoredBuemBlock(t *testing.T) {
+	stored := map[string]interface{}{"building": map[string]interface{}{"building_type": "MFH"}}
+	building := map[string]interface{}{
+		"geometry":   map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
+		"properties": map[string]interface{}{"osm_id": "1", "f_class": "apartments", "area": 100.0, "buem": stored},
+	}
+
+	props, _ := createBuildingFeature(building, 1, 99)["properties"].(map[string]interface{})
+
+	assert.Equal(t, stored, props["buem"])
+}

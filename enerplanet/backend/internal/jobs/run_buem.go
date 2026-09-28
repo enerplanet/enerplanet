@@ -414,6 +414,9 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 // with reason set when it has no resolved, non-empty envelope. meta records
 // the TABULA variant/refurbishment level that produced its U-values.
 func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
+	if stored, ok := storedBuemBlock(props); ok {
+		return storedBuildingForBuem(node, osmID, stored)
+	}
 	cityBuilding, ok := envelopeByOSMID[osmID]
 	if !ok {
 		return buem.Building{}, BuemResolutionMeta{}, "no City2TABULA envelope for this building", false
@@ -483,6 +486,39 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	}
 
 	return buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}, meta, "", true
+}
+
+// storedBuemBlock returns the BuEM building block a building edited in the
+// configurator carries under properties.buem: its building block and, when
+// set, its solver.
+func storedBuemBlock(props map[string]interface{}) (map[string]interface{}, bool) {
+	stored, _ := props["buem"].(map[string]interface{})
+	_, ok := stored["building"].(map[string]interface{})
+	return stored, ok
+}
+
+// storedBuildingForBuem sends a stored block as it is. The configurator built
+// it complete, the same block its own per-building BuEM run sends, so no
+// City2TABULA envelope, U-value resolution or archetype default applies.
+func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map[string]interface{}) (buem.Building, BuemResolutionMeta, string, bool) {
+	geometry, err := json.Marshal(node["geometry"])
+	if err != nil {
+		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal geometry: %v", err), false
+	}
+	block := stored["building"].(map[string]interface{})
+	buildingBlock, err := json.Marshal(block)
+	if err != nil {
+		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored building block: %v", err), false
+	}
+	b := buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}
+	if solver, ok := stored["solver"]; ok {
+		if b.Solver, err = json.Marshal(solver); err != nil {
+			return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored solver: %v", err), false
+		}
+	}
+	var meta BuemResolutionMeta
+	meta.BuildingType, _ = block["building_type"].(string)
+	return b, meta, "", true
 }
 
 // buildingConstructionYear reads properties.construction_year, set only once
@@ -661,8 +697,26 @@ func mergeBuemResults(log *logrus.Entry, topology []interface{}, results []buem.
 			if err := json.Unmarshal(result.BUEM, &buemData); err != nil {
 				continue
 			}
-			props["buem"] = buemData
+			mergeBuemInto(props, buemData)
 		}
+	}
+}
+
+// mergeBuemInto adds a run result to a building's buem property. A stored
+// building block, the input of an edited building, is kept rather than
+// replaced by whatever the result carries under the same key.
+func mergeBuemInto(props map[string]interface{}, result interface{}) {
+	existing, hasExisting := props["buem"].(map[string]interface{})
+	fields, isObject := result.(map[string]interface{})
+	if !hasExisting || !isObject {
+		props["buem"] = result
+		return
+	}
+	for key, value := range fields {
+		if _, kept := existing[key]; key == "building" && kept {
+			continue
+		}
+		existing[key] = value
 	}
 }
 
