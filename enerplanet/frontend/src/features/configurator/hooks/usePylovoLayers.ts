@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
@@ -65,37 +66,46 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   const availableBoundaryLayersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const unmountedRef = useRef(false);
 
-  // Fetch available regions
+  // Fetched through react-query so a failed request is retried, and while it
+  // keeps failing it is asked again every 30 s: one failure at page load must
+  // not leave "Go to region" empty until the page is reloaded.
+  const { data: regionsResponse } = useQuery({
+    queryKey: ['pylovo', 'available-regions'],
+    queryFn: async () => {
+      const response = await pylovoService.getAvailableRegions();
+      if (response.status !== 'success') throw new Error(`region list answered status '${response.status}'`);
+      return response;
+    },
+    enabled: !!map && showBoundary,
+    retry: 3,
+    refetchInterval: (query) => (query.state.status === 'error' ? 30_000 : false),
+  });
+
+  // Show the available regions once the list has arrived
   useEffect(() => {
     if (!map || !showBoundary) { setAvailableBoundaryGeoJSON(undefined); return; }
-    const loadAvailableRegions = async () => {
-      try {
-        const response = await pylovoService.getAvailableRegions();
-        if (response.status !== 'success' || !response.regions?.length) {
-          setAvailableRegions([]); setAvailableBoundaryGeoJSON(undefined);
-          availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; return;
-        }
-        const regionsForLegend = response.regions.filter(r => r.region?.name).map(r => ({
-          name: r.region!.name, gridCount: r.grid_count, country: r.region?.country,
-          countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
-          has3d: r.has_3d || false, bbox: r.bbox,
-        }));
-        setAvailableRegions(regionsForLegend);
-        availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-        const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
-          boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
-          countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
-        }));
-        setAvailableBoundaryGeoJSON(boundaryRegions.length > 0 ? { type: 'FeatureCollection', features: boundaryRegions.map(r => ({ ...r.boundary, properties: { ...(r.boundary.properties ?? {}), name: r.name, grid_count: r.gridCount, _boundary_role: 'available' } })) } : undefined);
-        if (boundaryRegions.length > 0) availableBoundaryLayersRef.current = loadAvailableBoundaryLayers(map, boundaryRegions);
-      } catch {
-        setAvailableBoundaryGeoJSON(undefined);
-        availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-      }
-    };
-    loadAvailableRegions();
+    const response = regionsResponse;
+    // Loading or failing: keep what is shown, the query above retries.
+    if (!response) return;
+    if (!response.regions?.length) {
+      setAvailableRegions([]); setAvailableBoundaryGeoJSON(undefined);
+      availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; return;
+    }
+    const regionsForLegend = response.regions.filter(r => r.region?.name).map(r => ({
+      name: r.region!.name, gridCount: r.grid_count, country: r.region?.country,
+      countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
+      has3d: r.has_3d || false, bbox: r.bbox,
+    }));
+    setAvailableRegions(regionsForLegend);
+    availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
+    const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
+      boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
+      countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
+    }));
+    setAvailableBoundaryGeoJSON(boundaryRegions.length > 0 ? { type: 'FeatureCollection', features: boundaryRegions.map(r => ({ ...r.boundary, properties: { ...(r.boundary.properties ?? {}), name: r.name, grid_count: r.gridCount, _boundary_role: 'available' } })) } : undefined);
+    if (boundaryRegions.length > 0) availableBoundaryLayersRef.current = loadAvailableBoundaryLayers(map, boundaryRegions);
     return () => { availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; };
-  }, [map, showBoundary]);
+  }, [map, showBoundary, regionsResponse]);
 
   const fetchBoundaryForGrid = useCallback(async (buildings: GeoJSON.FeatureCollection) => {
     if (!map || !showBoundary) return;

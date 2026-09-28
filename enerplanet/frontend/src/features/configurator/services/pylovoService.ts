@@ -539,7 +539,10 @@ export const pylovoService = {
         } }>("/v2/pylovo/boundary/available", { timeout: 180000 })
             .then(response => {
                 const result = response.data?.data || { status: 'error', regions: [] };
-                _availableRegionsCache = { data: result, timestamp: Date.now() };
+                // A failed answer is not cached, so a retry asks again.
+                if (result.status === 'success') {
+                    _availableRegionsCache = { data: result, timestamp: Date.now() };
+                }
                 return result;
             })
             .finally(() => {
