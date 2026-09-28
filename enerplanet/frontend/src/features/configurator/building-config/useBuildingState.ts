@@ -15,12 +15,15 @@ import type { AllGeoJSON } from '@turf/helpers';
 
 import {
   buildBuildingStates,
-  useConfiguratorApi,
   type BuildingState,
   type EnrichBbox,
+  type EnrichResponse,
 } from '@thd-spatial-ai/building-configurator';
 
+import axios from '@/lib/axios';
 import { useModelStore } from '@/features/configurator/store/modelStore';
+
+import { configuratorServices } from './heatClient';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -44,24 +47,58 @@ export interface BuildingStateResult {
   loading: boolean;
   /** Set when the building resolved to nothing the configurator can show. */
   error: string | null;
+  /**
+   * The City2TABULA object_id the envelope came from. The surface geometry is
+   * fetched by this, and it has to be the id this same enrich answered with:
+   * the 3D view resolves a clicked surface to an envelope element by id.
+   */
+  objectId: string | null;
+  /** The City2TABULA database the envelope came from, as the enrich resolved it. */
+  country: string | null;
+}
+
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, objectId: null, country: null };
+
+const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
+
+/** Enrich one building and build its state, or say why there is none. */
+async function resolveBuilding(
+  osmId: string,
+  feature: BuildingFeature,
+  box: EnrichBbox,
+): Promise<BuildingStateResult> {
+  // The country is left out so the backend resolves it from the bbox centre;
+  // this application holds a display name, not the canonical form the backend
+  // matches on.
+  const res = await axios.post<EnrichResponse & { country?: string }>('/v1/city2tabula/enrich', {
+    country: '',
+    bbox: box,
+    osm_ids: [osmId],
+  });
+  const entry = res.data.data?.[osmId];
+  if (!entry) return failed('No 3D envelope is available for this building yet.');
+
+  const states = await buildBuildingStates(configuratorServices, { features: [feature] }, res.data.data);
+  return {
+    building: states[osmId] ?? null,
+    loading: false,
+    error: null,
+    objectId: entry.object_id ?? null,
+    country: res.data.country ?? null,
+  };
 }
 
 /**
  * Resolves one building by osm_id, or reports why it could not.
  *
  * The result keeps its identity until the osm_id changes: the configurator
- * resets all of its editing state whenever this object is a new one, so a
+ * resets all of its editing state whenever the building is a new object, so a
  * value rebuilt on every render would discard the user's edits as they made
  * them.
  */
 export function useBuildingState(osmId: string | null): BuildingStateResult {
-  const { enerplanet, ignis } = useConfiguratorApi();
   const pylovoGridData = useModelStore((s) => s.pylovoGridData);
-  const [result, setResult] = useState<BuildingStateResult>({
-    building: null,
-    loading: false,
-    error: null,
-  });
+  const [result, setResult] = useState<BuildingStateResult>(EMPTY);
 
   const feature = useMemo(() => {
     if (!osmId) return null;
@@ -75,46 +112,22 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
 
   useEffect(() => {
     currentOsmId.current = osmId;
-    if (!osmId) {
-      setResult({ building: null, loading: false, error: null });
-      return;
-    }
-    if (!feature) {
-      setResult({ building: null, loading: false, error: 'This building is not in the loaded grid.' });
-      return;
-    }
-    const bbox = bboxOf(feature.geometry);
-    if (!bbox) {
-      setResult({ building: null, loading: false, error: 'This building has no usable footprint.' });
-      return;
-    }
+    if (!osmId) return setResult(EMPTY);
+    if (!feature) return setResult(failed('This building is not in the loaded grid.'));
+    const box = bboxOf(feature.geometry);
+    if (!box) return setResult(failed('This building has no usable footprint.'));
 
-    setResult({ building: null, loading: true, error: null });
-    void (async () => {
-      try {
-        // The country is left out so the backend resolves it from the bbox
-        // centre; this application holds a display name, not the canonical
-        // form the backend matches on.
-        const enrich = await enerplanet.enrichBuildings(bbox, [osmId]);
-        if (currentOsmId.current !== osmId) return;
-        if (!enrich.data?.[osmId]) {
-          setResult({
-            building: null,
-            loading: false,
-            error: 'No 3D envelope is available for this building yet.',
-          });
-          return;
-        }
-        const states = await buildBuildingStates(ignis, { features: [feature] }, enrich.data);
-        if (currentOsmId.current !== osmId) return;
-        setResult({ building: states[osmId] ?? null, loading: false, error: null });
-      } catch (err) {
+    setResult({ ...EMPTY, loading: true });
+    resolveBuilding(osmId, feature, box)
+      .then((next) => {
+        if (currentOsmId.current === osmId) setResult(next);
+      })
+      .catch((err) => {
         if (currentOsmId.current !== osmId) return;
         console.error('[configurator] could not resolve building', osmId, err);
-        setResult({ building: null, loading: false, error: 'This building could not be loaded.' });
-      }
-    })();
-  }, [osmId, feature, enerplanet, ignis]);
+        setResult(failed('This building could not be loaded.'));
+      });
+  }, [osmId, feature]);
 
   return result;
 }
