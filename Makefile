@@ -41,7 +41,7 @@ help:
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
 	@echo "  make fixtures           Load the committed test fixtures into the services"
-	@echo "  make tentacron               Start the tentacron stack (tentacron, ignis, buem, meme)"
+	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem)"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
 	@echo "  make sonar              Run SonarQube analysis"
@@ -182,7 +182,9 @@ setup-repos:
 	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
 	@[ -d dependencies/$(BUEM_DIR) ] && (cd dependencies/$(BUEM_DIR) && git pull) || git clone $(BUEM_REPO) dependencies/$(BUEM_DIR)
 	@[ -d dependencies/$(MEME_DIR) ] && (cd dependencies/$(MEME_DIR) && git pull) || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
-	@[ -d dependencies/$(TENTACRON_DIR) ] && (cd dependencies/$(TENTACRON_DIR) && git pull) || git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR)
+	@# Pinned to TENTACRON_REF (see repos.conf). An existing checkout is left alone:
+	@# it may be a developer's own branch.
+	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
 	@[ -d dependencies/$(CITY2TABULA_DIR) ] && (cd dependencies/$(CITY2TABULA_DIR) && git pull) || git clone $(CITY2TABULA_REPO) dependencies/$(CITY2TABULA_DIR)
 	@[ -d dependencies/$(WEATHER_DIR) ] && (cd dependencies/$(WEATHER_DIR) && git pull) || git clone $(WEATHER_REPO) dependencies/$(WEATHER_DIR)
 
@@ -250,8 +252,10 @@ pylovo:
 
 
 .PHONY: tentacron-stack
-tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
-	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
+# meme is left out until its translator and parser packages are released; it
+# serves only the simulation step. `make meme` starts it on its own.
+tentacron-stack: tentacron-network ignis city2tabula weather buem tentacron
+	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
 # ignis and city2tabula declare tentacron-net in their compose files, and
