@@ -254,8 +254,11 @@ tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
+# ignis and city2tabula declare tentacron-net in their compose files, and
+# Compose refuses a same-named network whose com.docker.compose.network
+# label differs from the key, so the label is set here to match.
 tentacron-network:
-	@docker network create tentacron-net 2>/dev/null || true
+	@docker network create --label com.docker.compose.network=tentacron-net tentacron-net 2>/dev/null || true
 
 .PHONY: tentacron
 tentacron: tentacron-network
