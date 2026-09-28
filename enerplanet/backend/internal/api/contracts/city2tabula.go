@@ -146,7 +146,10 @@ type EnrichedBuilding struct {
 //   - partial:   some resolved, a run was needed but could not be triggered
 //   - pending / no_data / failed: City2TABULA's own run states (run endpoint only)
 type EnrichResponse struct {
-	Status   string                      `json:"status" example:"completed"`
+	Status string `json:"status" example:"completed"`
+	// Country is the database the buildings came from, as given or resolved
+	// from the bbox centre; GET /v1/city2tabula/geometry takes the same value.
+	Country  string                      `json:"country,omitempty" example:"netherlands"`
 	RunID    string                      `json:"run_id,omitempty" example:"a1b2c3d4"`
 	Resolved int                         `json:"resolved" example:"40"`
 	Total    int                         `json:"total" example:"42"`

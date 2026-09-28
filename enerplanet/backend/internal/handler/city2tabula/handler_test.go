@@ -352,6 +352,8 @@ func TestEnrich_NoCountry_ResolvesItFromTheBboxCentre(t *testing.T) {
 	assert.Equal(t, "completed", resp.Status)
 	assert.JSONEq(t, `{"type":"Point","coordinates":[6,52.1]}`, country.gotGeoJSON,
 		"the centre of the drawn area decides, not a corner")
+	assert.Equal(t, "netherlands", resp.Country,
+		"the resolved country is returned, so a caller can ask for geometry in the same database")
 }
 
 func TestEnrich_CountryGiven_IsNotResolved(t *testing.T) {

@@ -128,6 +128,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 
 	missing := missingOSMIDs(req.OSMIDs, byOSMID)
 	resp := contracts.EnrichResponse{
+		Country:  country,
 		Resolved: len(byOSMID),
 		Total:    len(req.OSMIDs),
 		Missing:  missing,
