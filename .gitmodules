@@ -7,3 +7,6 @@
 [submodule "infrastructure"]
 	path = infrastructure
 	url = https://github.com/enerplanet/infrastructure-utilities.git
+[submodule "submodules/Coati"]
+	path = submodules/Coati
+	url = https://github.com/enerplanet/Coati.git

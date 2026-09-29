@@ -32,11 +32,16 @@ func (s *Store) Save(modelID uint, runID, status string) error {
 	}).Create(&row).Error
 }
 
-// UpdateStatus records a status change for the model's MEME run.
+// UpdateStatus records a status change for the model's MEME run. A non-empty
+// errMsg sets the error column; an empty errMsg (a success transition, e.g.
+// back to MemeRunStatusCompleted) clears any prior error so a self-healed run
+// does not carry a stale failure.
 func (s *Store) UpdateStatus(modelID uint, status, errMsg string) error {
 	updates := map[string]interface{}{"status": status}
 	if errMsg != "" {
 		updates["error"] = errMsg
+	} else {
+		updates["error"] = nil
 	}
 	return s.db.Model(&models.ModelMemeRun{}).Where("model_id = ?", modelID).Updates(updates).Error
 }

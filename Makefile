@@ -74,7 +74,7 @@ example-models:
 	@./fixtures/example_models.sh
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures
+setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures
 	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
 
 
@@ -337,3 +337,22 @@ opentech-db: .opentech-db-setup
 	@cd dependencies/$(OPENTECHDB_DIR) && \
 		[ -f .env ] || cp .env.example .env; \
 		[ -d .venv ] || (python3 -m venv .venv && .venv/bin/pip install --quiet --upgrade pip && .venv/bin/pip install --quiet -r requirements.txt)
+
+# Coati is a HARD dependency of the result-ingest path (Step 6): a git submodule
+# under submodules/Coati (version-pinned by this repo, updatable on demand),
+# NOT a soft/externally-installed dependency. The backend shells out to its CLI
+# (resolved via COATI_BIN, else coati on PATH, else submodules/Coati/.venv/bin).
+# Until enerplanet-coati is published to PyPI, `make coati` provisions the
+# submodule's venv; the swap to `pip install enerplanet-coati==<pin>` then only
+# touches this target and the runner's COATI_BIN default. In PRODUCTION this
+# target's venv step is repeated at container build (Option B: bake the venv
+# into the image, set COATI_BIN) — see internal/result/service/coati.go.
+.PHONY: coati
+coati: .coati-setup
+	@echo "$(GREEN)Coati ready: submodules/Coati/.venv/bin/coati$(NC)"
+
+.PHONY: .coati-setup
+.coati-setup:
+	@git submodule update --init submodules/Coati
+	@cd submodules/Coati && \
+		[ -d .venv ] || (python3 -m venv .venv && .venv/bin/pip install --quiet --upgrade pip && .venv/bin/pip install --quiet -e .)

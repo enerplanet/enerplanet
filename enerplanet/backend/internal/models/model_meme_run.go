@@ -21,10 +21,27 @@ func (ModelMemeRun) TableName() string {
 	return "model_meme_runs"
 }
 
-// MemeRunFinished reports whether a MEME run status is terminal.
+// MEME run lifecycle statuses (model_meme_runs.status).
+const (
+	// MemeRunStatusPending is a run recorded but not yet dispatched.
+	MemeRunStatusPending = "pending"
+	// MemeRunStatusRunning is a run dispatched and in-flight (MEME solving
+	// through the TentaCron durable queue).
+	MemeRunStatusRunning = "running"
+	// MemeRunStatusCompleted is a run whose result zip was stored AND ingested
+	// into the R2 result tables. It is terminal.
+	MemeRunStatusCompleted = "completed"
+	// MemeRunStatusFailed is a run whose dispatch failed or whose result-ingest
+	// (Coati/R2 parse) failed. It is terminal.
+	MemeRunStatusFailed = "failed"
+)
+
+// MemeRunFinished reports whether a MEME run status is terminal. Only
+// MemeRunStatusCompleted and MemeRunStatusFailed are terminal; a run in either
+// state can only be re-run by a user-initiated re-solve (a fresh dispatch).
 func MemeRunFinished(status string) bool {
 	switch status {
-	case "completed", "failed":
+	case MemeRunStatusCompleted, MemeRunStatusFailed:
 		return true
 	}
 	return false

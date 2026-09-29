@@ -158,6 +158,17 @@ func dispatchPost(t *testing.T, modelID uint) *asynq.Task {
 	return asynq.NewTask(TypeDispatchMeme, pb)
 }
 
+// fakeIngestMemeEnqueuer records the ingest it is asked to enqueue so the
+// dispatch handler can be tested without Redis.
+type fakeIngestMemeEnqueuer struct {
+	enqueued []IngestMemeResultPayload
+}
+
+func (f *fakeIngestMemeEnqueuer) EnqueueIngestMeme(_ context.Context, p IngestMemeResultPayload) error {
+	f.enqueued = append(f.enqueued, p)
+	return nil
+}
+
 func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	const modelID = uint(42)
 	fakeZip := []byte("PK\x03\x04simulated-meme-result\x00tail\xff")
@@ -172,8 +183,9 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 
 	base := t.TempDir()
 	store := NewFilesystemResultZipStore(base)
+	enq := &fakeIngestMemeEnqueuer{}
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, store)
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, store, enq)
 	require.NoError(t, err)
 
 	// The T1K job (as a generic object) reached the meme target, with an
@@ -181,13 +193,18 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	require.Equal(t, "meme", fake.gotTarget)
 	require.Contains(t, fake.gotPayload, "model")
 	require.Contains(t, fake.gotPayload, "experiment")
-	require.Equal(t, "model_42", fake.gotIdempotency, "Idempotency-Key is model-scoped")
+	// No run recorded (first solve) and no CalculationStartedAt in the fixtures,
+	// so the run-scoped key falls back to the bare per-model key.
+	require.Equal(t, "model_42", fake.gotIdempotency, "Idempotency-Key is model-scoped on a first solve")
 	require.EqualValues(t, 1, fake.submitted.Load(), "exactly one submit on a fresh dispatch")
 
-	// The TentaCron job id was persisted per model.
+	// The TentaCron job id was persisted per model. Dispatch leaves the run
+	// 'running' — it does NOT pre-mark 'completed'; the terminal transition is
+	// owned by the ingest handler (completed on parse success, failed on parse
+	// failure), which runs after dispatch enqueues it.
 	require.NotNil(t, runs.rec)
 	require.Equal(t, "job-42", runs.rec.RunID)
-	require.Equal(t, "completed", runs.rec.Status)
+	require.Equal(t, "running", runs.rec.Status, "dispatch leaves the run running; the ingest owns the terminal state")
 
 	// The zip landed under storage/data/model_<id>_<unix>/sim_<id>.zip.
 	entries, err := os.ReadDir(base)
@@ -198,6 +215,12 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	got, err := os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, fakeZip, got, "the fetched MEME zip is stored verbatim")
+
+	// The ingest (Step 6) is enqueued for the stored zip path so the R2 tables
+	// are populated from the zip via Coati.
+	require.Len(t, enq.enqueued, 1, "one ingest enqueued per dispatch")
+	assert.Equal(t, modelID, enq.enqueued[0].ModelID)
+	assert.Equal(t, path, enq.enqueued[0].ZipPath)
 }
 
 func TestHandleDispatchMeme_retryResumesByIDNoResubmit(t *testing.T) {
@@ -217,10 +240,43 @@ func TestHandleDispatchMeme_retryResumesByIDNoResubmit(t *testing.T) {
 	runs := &fakeMemeRuns{t: t}
 	require.NoError(t, runs.Save(modelID, "job-42", "running"))
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(t.TempDir()))
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.NoError(t, err)
 	require.EqualValues(t, 0, fake.submitted.Load(), "retry resumes by id, never resubmits (no duplicate MEME job)")
-	require.Equal(t, "completed", runs.rec.Status, "the resumed run reaches completed")
+	require.Equal(t, "running", runs.rec.Status, "a resumed run stays running; the ingest owns the terminal completed/failed transition")
+}
+
+func TestHandleDispatchMeme_terminalRunResubmitsFreshWithRunScopedKey(t *testing.T) {
+	const modelID = uint(42)
+	fakeZip := []byte("PK\x03\x04re-solve-zip\x00ff")
+	fake := newFakeMemeTentacron(t, "job-42-v2", fakeZip)
+
+	// The model already has a run in a TERMINAL state ('failed': dispatch or
+	// ingest failed) plus a fresh CalculationStartedAt set by StartCalculation.
+	// A recorded terminal run can only be a USER-INITIATED re-solve, which must
+	// FRESH-submit a new MEME solve, never resume the old one.
+	startedAt := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+
+	country := "netherlands"
+	rows := sqlmock.NewRows([]string{"id", "user_id", "user_email", "title", "country", "region", "from_date", "to_date", "resolution", "config", "calculation_started_at"}).
+		AddRow(int64(modelID), "u1", "a@b.c", "Test model", country, nil,
+			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), 60, []byte(memeTopologyConfig), startedAt)
+	db, _ := newDispatchMockDB(t, rows)
+
+	runs := &fakeMemeRuns{t: t}
+	require.NoError(t, runs.Save(modelID, "job-42-v1", "failed"))
+
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	require.NoError(t, err)
+
+	// A fresh MEME solve was submitted, keyed run-scoped by CalculationStartedAt
+	// (so TentaCron creates a NEW job despite the unchanged payload), and the
+	// recorded run was overwritten with the new job id.
+	require.EqualValues(t, 1, fake.submitted.Load(), "terminal run re-solves by fresh-submit, exactly once")
+	expectedKey := fmt.Sprintf("model_%d_%d", modelID, startedAt.UnixMilli())
+	require.Equal(t, expectedKey, fake.gotIdempotency, "re-solve uses a run-scoped Idempotency-Key (new TentaCron job)")
+	require.Equal(t, "job-42-v2", runs.rec.RunID, "the recorded run is overwritten with the new job id")
+	require.Equal(t, "running", runs.rec.Status, "the re-solved run is running; the ingest owns the terminal transition")
 }
 
 func TestHandleDispatchMeme_missingCountryIsAnError(t *testing.T) {
@@ -236,7 +292,7 @@ func TestHandleDispatchMeme_missingCountryIsAnError(t *testing.T) {
 			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), []byte(`{}`))
 	db, _ := newDispatchMockDB(t, rows)
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, NewFilesystemResultZipStore(t.TempDir()))
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "country", "missing-country surfaces clearly")
 }
