@@ -189,6 +189,15 @@ git-credential-cache:
 		git config credential.helper 'cache --timeout=120'; \
 	fi
 
+# pinned_checkout DIR REPO REF: clones REPO at release tag REF. An existing
+# checkout on a pin (detached HEAD) moves to REF; one on a branch is left
+# alone, since it may be a developer's own work.
+define pinned_checkout
+	@if [ ! -d dependencies/$(1) ]; then git clone -q --branch $(3) $(2) dependencies/$(1); \
+	elif git -C dependencies/$(1) symbolic-ref -q HEAD >/dev/null; then echo "dependencies/$(1) is on a branch, left alone (pin: $(3))"; \
+	else git -C dependencies/$(1) fetch -q --tags && git -C dependencies/$(1) checkout -q $(3); fi
+endef
+
 .PHONY: setup-repos
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
@@ -197,14 +206,14 @@ setup-repos:
 	@# it may be a developer's own branch.
 	@[ -d dependencies/enerplanet-pylovo ] || (git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git checkout -q $(PYLOVO_REF) && git lfs pull)
 	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
-	@[ -d dependencies/$(IGNIS_DIR) ] && (cd dependencies/$(IGNIS_DIR) && git pull) || git clone $(IGNIS_REPO) dependencies/$(IGNIS_DIR)
-	@[ -d dependencies/$(BUEM_DIR) ] && (cd dependencies/$(BUEM_DIR) && git pull) || git clone $(BUEM_REPO) dependencies/$(BUEM_DIR)
+	$(call pinned_checkout,$(IGNIS_DIR),$(IGNIS_REPO),$(IGNIS_REF))
+	$(call pinned_checkout,$(BUEM_DIR),$(BUEM_REPO),$(BUEM_REF))
 	@[ -d dependencies/$(MEME_DIR) ] && (cd dependencies/$(MEME_DIR) && git pull) || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
 	@# Pinned to TENTACRON_REF (see repos.conf). An existing checkout is left alone:
 	@# it may be a developer's own branch.
 	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
-	@[ -d dependencies/$(CITY2TABULA_DIR) ] && (cd dependencies/$(CITY2TABULA_DIR) && git pull) || git clone $(CITY2TABULA_REPO) dependencies/$(CITY2TABULA_DIR)
-	@[ -d dependencies/$(WEATHER_DIR) ] && (cd dependencies/$(WEATHER_DIR) && git pull) || git clone $(WEATHER_REPO) dependencies/$(WEATHER_DIR)
+	$(call pinned_checkout,$(CITY2TABULA_DIR),$(CITY2TABULA_REPO),$(CITY2TABULA_REF))
+	$(call pinned_checkout,$(WEATHER_DIR),$(WEATHER_REPO),$(WEATHER_REF))
 
 .PHONY: env-setup
 env-setup:
@@ -291,15 +300,12 @@ tentacron: tentacron-network
 
 .PHONY: ignis
 ignis: tentacron-network
-	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml up -d
-	@cd dependencies/$(IGNIS_DIR)/environment/http && [ -f .ignis-seeded ] || { HOST_PORT=$(IGNIS_PORT) docker compose -f docker-compose.prod.yml --profile seed run --rm build-db && touch .ignis-seeded; }
+	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose -f docker-compose.prod.yml up -d
 	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
 buem: tentacron-network
-	@cd dependencies/$(BUEM_DIR)/environment/http && HOST_PORT=$(BUEM_PORT) docker compose -f docker-compose.yml up -d
-	@docker network connect tentacron-net buem-gateway 2>/dev/null || true
-	@docker network connect tentacron-net buem-model 2>/dev/null || true
+	@cd dependencies/$(BUEM_DIR)/environment/http && HOST_PORT=$(BUEM_PORT) BUEM_GATEWAY_IMAGE_TAG=$(BUEM_GATEWAY_IMAGE_TAG) BUEM_MODEL_IMAGE_TAG=$(BUEM_MODEL_IMAGE_TAG) docker compose -f docker-compose.yml up -d
 	@echo "$(GREEN)BuEM up on http://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: meme
@@ -313,13 +319,12 @@ meme: tentacron-network
 # toolchain respectively for no gain. meme still builds, having no image.
 .PHONY: weather
 weather: tentacron-network
-	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" WEATHER_API_PORT=$(WEATHER_PORT) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
-	@docker network connect tentacron-net weather-serve 2>/dev/null || true
+	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" HOST_PORT=$(WEATHER_PORT) WEATHER_IMAGE=ghcr.io/enerplanet/weather:$(WEATHER_IMAGE_TAG) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: city2tabula
 city2tabula: tentacron-network ignis
-	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && C2T_SERVER_HOST_PORT=$(CITY2TABULA_PORT) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
