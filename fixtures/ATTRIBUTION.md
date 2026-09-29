@@ -20,10 +20,11 @@ tables only. This is derived data, not a redistribution of 3DBAG itself.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/weather/cosmo_rea6, the Dutch and German cuts
+## fixtures/weather/cosmo_rea6, the Dutch, German and Czech cuts
 
-Covers `fixtures/weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc`
-and `fixtures/weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc`.
+Covers `COSMO_REA6_2018_annual_all_attrs.nc` under
+`fixtures/weather/cosmo_rea6/netherlands/output/`, `.../germany/output/` and
+`.../czech_republic/output/`.
 
 COSMO-REA6 regional reanalysis, generated in the framework of the
 Hans-Ertel-Centre for Weather Research (HErZ), Climate Monitoring and
@@ -43,8 +44,9 @@ Modifications: retrieved from the DWD open data archive, which hosts the data
 set, and processed by the `weather` pipeline, which standardises variable
 names and derives further variables. The result was then cut to a window
 around each site and recompressed: 3 by 3 cells around Loenen, Netherlands,
-from the Dutch 2018 annual archive, and 4 by 4 cells around Bremen, Germany,
-from the German 2018 annual archive. Full year, hourly, 13 variables each.
+from the Dutch 2018 annual archive, 4 by 4 cells around Bremen, Germany, from
+the German 2018 annual archive, and 4 by 4 cells around Prague, Czechia, from
+the Czech 2018 annual archive. Full year, hourly, 13 variables each.
 
 ## fixtures/city2tabula/tabula_nl.sql.gz and tabula_de.sql.gz
 

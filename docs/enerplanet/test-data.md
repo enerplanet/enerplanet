@@ -107,6 +107,7 @@ reprojected at load time, because the join between them is precomputed in
 | `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
 | `weather/…/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
+| `weather/…/czech_republic/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Prague, 13 variables | the weather checkout's `data/` |
 | `pylovo/pylovo_fixture.sql.gz` | 6.8 MB | 138 grids, 11,869 buildings, 23,139 lines, 138 transformers over 6 postcodes, plus their inputs and reference tables | the existing pylovo database |
 
 The pylovo fixture carries its own schema and restores into an empty database.
