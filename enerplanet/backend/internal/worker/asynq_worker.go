@@ -15,6 +15,8 @@ import (
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/store/c2trun"
 	"spatialhub_backend/internal/store/demandprofile"
+	"spatialhub_backend/internal/store/memerun"
+	tentacronclient "spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
 )
@@ -32,6 +34,9 @@ type TaskProcessor struct {
 	ignisClient         *ignis.Client
 	profileStore        *demandprofile.Store
 	c2tRuns             *c2trun.Store
+	memeRuns            *memerun.Store
+	tentacronClient     *tentacronclient.Client
+	resultZipStore      jobs.ResultZipStore
 }
 
 func NewTaskProcessor(
@@ -45,6 +50,8 @@ func NewTaskProcessor(
 	weatherProvider string,
 	buemClient *buem.Client,
 	ignisClient *ignis.Client,
+	tentacronClient *tentacronclient.Client,
+	resultZipStore jobs.ResultZipStore,
 ) *TaskProcessor {
 	return &TaskProcessor{
 		db:                  db,
@@ -59,6 +66,9 @@ func NewTaskProcessor(
 		ignisClient:         ignisClient,
 		profileStore:        demandprofile.NewStore(db),
 		c2tRuns:             c2trun.NewStore(db),
+		memeRuns:            memerun.NewStore(db),
+		tentacronClient:     tentacronClient,
+		resultZipStore:      resultZipStore,
 	}
 }
 
@@ -76,6 +86,8 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		return jobs.HandleResolveDemandProfiles(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.ignisClient, p.buemClient, p.profileStore)
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
+	case jobs.TypeDispatchMeme:
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore)
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:

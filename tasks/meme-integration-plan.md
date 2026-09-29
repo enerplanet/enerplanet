@@ -97,12 +97,54 @@ the heat-aware reference and stays for the later retrofit.
 `POST /validate?target=pypsa,calliope` clean against live MEME (HTTP 200).
 **Done when:** (was) backend imports T1K, every output passes `payload.Validate` — achieved.
 
-### 5 — Backend dispatch (first real caller)
-A handler that builds the model → translates (T1K) → submits the job over
-TentaCron (reuse the ignis/c2t 202+long-poll helpers) → stores the result.
-Kills the "zero callers" state; `StartCalculation`/`run_buem` path untouched
-for now.
-**Done when:** a model dispatches end-to-end and its result lands in the store.
+### 5 — Backend dispatch (first real caller)  `[DONE 2026-09-29]`
+Native dispatch handler built in `enerplanet/backend/internal/jobs/`
+(`dispatch_meme.go`, task type `dispatch_meme`): loads the model by ID via
+gorm, builds the payload with `payload.BuildCalculationPayload`, translates it
+through the T1K seam (`meme.TranslatePayload`, electricity-only), and submits
+the T1K job bytes as-is over TentaCron's `meme` target. Kills the "zero
+callers" state; `StartCalculation`/`run_buem` untouched.
+
+**Reworked 2026-09-29 — TentaCron-as-durable-queue shape (D5).** TentaCron is
+itself the durable single-instance SQLite queue (ADR-0002) and polls MEME to
+completion (`response.mode: poll`, ADR-0004, 30m budget). The backend must
+**treat it as that**, not as a fire-and-forget endpoint. Two defects were fixed
+grounded in TentaCron's actual source:
+- **No resubmit-on-timeout.** `FetchResultBytes` carried the generic 60s
+  `opTimeout`; a MEME solve takes minutes, the 60s deadline fired, asynq
+  retried, and each retry re-submitted → duplicate MEME jobs. The handler now
+  long-polls **by id on a `memePollBudget` of 30m** (matching TentaCron's own
+  meme poll timeout), never the 60s default.
+- **Idempotency + persist + resume + cancel.** The submit sends an
+  **`Idempotency-Key: model_<id>`** header (TentaCron dedups natively: same
+  key+payload replays return the stored job, different payload → 409). The
+  returned TentaCron job id is **persisted per model** in a new
+  **`model_meme_runs`** table (`046_create_model_meme_runs_table.sql`,
+  `internal/models/model_meme_run.go`, `internal/store/memerun/`, registered by
+  auto-discovery like 045). A later retry/re-run **resumes by that id** (GET
+  status → GET `/v1/requests/{id}/result`) **never resubmitting**. Result is
+  read via the canonical **`GET /v1/requests/{id}/result`** endpoint (raw
+  binary zip), and an abandoned run can be cancelled (`DELETE
+  /v1/requests/{id}`, `CancelMeme`).
+New client methods (in `internal/tentacron/dispatch.go`, additive — `Do`/
+`DoTimeout` + all weather/ignis/buem/heatdemand JSON callers unchanged):
+`SubmitMeme(ctx,target,payload,key) (id,err)`, `AwaitResultByID(ctx,id,
+budget)`, `FetchResultByID(ctx,id) ([]byte,err)`, `CancelMeme(ctx,id)`. The zip
+is persisted via the **swap-pable `jobs.ResultZipStore` interface** (fs impl
+`NewFilesystemResultZipStore(baseDir)`) writing under the existing
+`storage/data` convention: `model_<id>_<unix>/sim_<id>.zip`, the layout the
+result download handler already scans. The T1K job bytes are never unmarshaled
+into `internal/meme/job.go`'s typed Job struct. Wired into
+`internal/worker/asynq_worker.go` + `cmd/main.go`. Unit tests cover the client
+(idempotency header + submit-id, resume-by-id no-resubmit, raw `/result` fetch,
+cancel; `FetchResultBytes` raw/href + inline), the store (`sqlmock`, c2trun
+style) + migration table name, and the handler end-to-end (sqlmock db + fake
+TentaCron httptest: **submits once with the key, persists the job id, resumes
+by id on a retry without resubmitting, stores the zip**). All green on default
+`go test ./...` (live MEME/TentaCron check stays `//go:build manualignis`).
+**Done when:** a model dispatches once and its result lands in the store —
+**✅ verified (unit) via `go build ./...` exit 0 + `go test` on the touched
+packages; live dispatch requires MEME/TentaCron running (`manualignis`).**
 
 ### 6 — R1 + R2 : result ingestion → per-target files as artifacts `[REQ]` (parser half `[COVERED by Coati]`)
 Route the result pipeline through **Coati** on the **unpacked zip's per-target
@@ -170,6 +212,7 @@ carries its own workflow, pitfalls and verification.)
 | D2 | ~~go-meme-parser standalone vs internal?~~ **Superseded — adopt Coati instead** | build go-meme-parser from scratch · **adopt Coati** (existing Python package, github.com/enerplanet/Coati) | **adopt Coati** (verified it converts real MEME result files; no parser to write) | Step 3 |
 | D3 | R3 diff granularity | per-tech + per-timestep · summary only | per-tech + per-timestep (matches `ResultsCarrierProd`/`ResultsCarrierCon`) | Step 7 |
 | D4 | Does buem stay on the path? | yes: meme takes node-level BUEM series · no: meme swallows resolve too | **yes, but phased (2026-09-29):** electricity-first feeds T1K on the CalculationPayload shape; BUEM node-series + heat pump is the heat retrofit in `tasks/heat-patch.md` (buem stays on the path, just deferred as a second vector) | Step 5 + heat-patch |
+| D5 | How does the backend dispatch to MEME given TentaCron's own durability? | fire-and-forget submit + rely on backend retry · **treat TentaCron as the durable queue: submit once with Idempotency-Key, persist the job id, resume by id, never resubmit** · synchronous HTTP passthrough | **treat TentaCron as the durable queue (2026-09-29):** TentaCron is the SQLite queue (ADR-0002) and already polls MEME to completion (ADR-0004); a 60s backend deadline caused duplicate submits. Backend submits once with `Idempotency-Key: model_<id>`, persists the returned job id in `model_meme_runs`, long-polls by id on a 30m budget matched to TentaCron's meme poll timeout, reads the raw zip via `/result`, cancels abandoned runs | Step 5 `[DONE]` |
 
 ---
 
