@@ -12,6 +12,7 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
+	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/store/c2trun"
 	"spatialhub_backend/internal/store/demandprofile"
@@ -37,6 +38,7 @@ type TaskProcessor struct {
 	memeRuns            *memerun.Store
 	tentacronClient     *tentacronclient.Client
 	resultZipStore      jobs.ResultZipStore
+	coatiRunner         resultservice.CoatiRunner
 }
 
 func NewTaskProcessor(
@@ -52,6 +54,7 @@ func NewTaskProcessor(
 	ignisClient *ignis.Client,
 	tentacronClient *tentacronclient.Client,
 	resultZipStore jobs.ResultZipStore,
+	coatiRunner resultservice.CoatiRunner,
 ) *TaskProcessor {
 	return &TaskProcessor{
 		db:                  db,
@@ -69,6 +72,7 @@ func NewTaskProcessor(
 		memeRuns:            memerun.NewStore(db),
 		tentacronClient:     tentacronClient,
 		resultZipStore:      resultZipStore,
+		coatiRunner:         coatiRunner,
 	}
 }
 
@@ -87,7 +91,9 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore)
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+	case jobs.TypeIngestMemeResult:
+		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:

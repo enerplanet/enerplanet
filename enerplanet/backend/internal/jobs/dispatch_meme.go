@@ -34,9 +34,17 @@ const memePollBudget = 30 * time.Minute
 
 // memeIdempotencyKey is the Idempotency-Key sent with a fresh MEME submit so a
 // resubmit (e.g. a retry racing the persist) returns the stored TentaCron job
-// instead of enqueuing a duplicate. It is per-model: TentaCron keys on
-// key+payload, and the payload is a function of that model.
-func memeIdempotencyKey(modelID uint) string {
+// instead of enqueuing a duplicate. TentaCron keys on key+payload, and the
+// payload is unchanged across re-solves of the same model, so the key MUST vary
+// per solve for a user re-solve to produce a NEW TentaCron job. The discriminator
+// is run-scoped: model.CalculationStartedAt is set fresh by StartCalculation on
+// every start (infrastructure/common/pkg/models/model.go), so the key carries
+// startedAt.UnixMilli() when set, else falls back to the bare per-model key (the
+// first-solve / no-run-recorded case).
+func memeIdempotencyKey(modelID uint, startedAt *time.Time) string {
+	if startedAt != nil {
+		return fmt.Sprintf("model_%d_%d", modelID, startedAt.UnixMilli())
+	}
 	return fmt.Sprintf("model_%d", modelID)
 }
 
@@ -66,9 +74,11 @@ type DispatchMemePayload struct {
 // polls MEME to completion (response.mode: poll, ADR-0004); the produced job
 // bytes are set via meme.TranslatePayload (the T1K seam) and never unmarshaled
 // into internal/meme/job.go's lossy typed Job struct. This handler therefore:
-//   - submits ONCE with an Idempotency-Key, captures the TentaCron job id, and
-//     persists it per model (model_meme_runs) so a later retry/re-run resumes
-//     by id instead of resubmitting (no duplicate MEME enqueues);
+//   - submits freshly (only when no run is recorded, or the recorded run is in a
+//     terminal completed|failed state) with a RUN-SCOPED Idempotency-Key, so a
+//     user-initiated re-solve (StartCalculation) creates a NEW TentaCron job
+//     instead of reusing an old one; an in-flight (running) run is resumed by id
+//     so a dispatch retry never duplicates a MEME enqueue;
 //   - long-polls by id on memePollBudget (NOT the 60s default opTimeout);
 //   - reads the raw result via GET /v1/requests/{id}/result (binary zip);
 //   - stores it through the swap-pable ResultZipStore.
@@ -79,6 +89,7 @@ func HandleDispatchMeme(
 	tc *tentacronclient.Client,
 	runs memeRunStore,
 	store ResultZipStore,
+	enq IngestMemeEnqueuer,
 ) (retErr error) {
 	log := logger.ForComponent("job:dispatch_meme")
 
@@ -115,8 +126,9 @@ func HandleDispatchMeme(
 		return fmt.Errorf("translate payload to MEME job for model %d: %w", p.ModelID, err)
 	}
 
-	// 3. Resolve the TentaCron job id, resuming an in-flight one by id.
-	//    Only submit fresh, with an Idempotency-Key, when no job is recorded.
+	// 3. Resolve the TentaCron job id. No run recorded OR a TERMINAL run ->
+	//    fresh submit with a run-scoped Idempotency-Key (guarantees a NEW job);
+	//    a still-alive (running) run -> resume by id, never resubmit.
 	var memeJob any
 	if err := json.Unmarshal(translated.Job, &memeJob); err != nil {
 		return fmt.Errorf("decode translated MEME job for model %d: %w", p.ModelID, err)
@@ -129,8 +141,16 @@ func HandleDispatchMeme(
 	jobID := ""
 	submittedNow := false
 	switch {
-	case rec == nil:
-		jobID, err = tc.SubmitMeme(ctx, memeTarget, memeJob, memeIdempotencyKey(model.ID))
+	case rec == nil || models.MemeRunFinished(rec.Status):
+		// Fresh submit. Either no run is recorded (first solve) or the recorded
+		// run already reached a TERMINAL state (completed|failed). A terminal
+		// run can only be reached here via a USER-INITIATED re-solve (the
+		// StartCalculation path re-dispatches through this job); it must
+		// FRESH-submit a new MEME solve, never resume the old one. The
+		// run-scoped idempotency key (baked from model.CalculationStartedAt,
+		// which StartCalculation sets fresh on every start) guarantees
+		// TentaCron creates a NEW request/job for this solve.
+		jobID, err = tc.SubmitMeme(ctx, memeTarget, memeJob, memeIdempotencyKey(model.ID, model.CalculationStartedAt))
 		if err != nil {
 			return fmt.Errorf("meme dispatch via TentaCron for model %d: %w", p.ModelID, err)
 		}
@@ -139,23 +159,26 @@ func HandleDispatchMeme(
 		}
 		submittedNow = true
 		log.Infof("model %d: submitted MEME job to TentaCron id=%s", p.ModelID, jobID)
-	case models.MemeRunFinished(rec.Status):
-		// Terminal outcome already recorded; resume-by-id to re-read the stored
-		// result for this run (idempotent re-run), never resubmit.
-		jobID = rec.RunID
-		log.Infof("model %d: resuming terminal MEME TentaCron job id=%s (idempotent re-run)", p.ModelID, jobID)
 	default:
-		// A run is recorded and still alive: resume it by id, never resubmit.
+		// A run is recorded and still alive (non-terminal, i.e. running):
+		// resume it by id, never resubmit (a dispatch retry after a transient
+		// post-submit hiccup). No new MEME job is enqueued.
 		jobID = rec.RunID
 		log.Infof("model %d: resuming existing MEME TentaCron job id=%s (no resubmit)", p.ModelID, jobID)
 	}
 
 	// 4. Long-poll by id on the meme budget, then read the raw zip via /result.
+	//    A MEME solve failure must take the run to the TERMINAL 'failed' state
+	//    (Path 2), so a user re-solve is allowed; otherwise the run stays
+	//    'running' forever and a dispatch retry resume-by-id re-fetches the same
+	//    failed TentaCron job.
 	if err := tc.AwaitResultByID(ctx, jobID, memePollBudget); err != nil {
+		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
 		return fmt.Errorf("meme job %s via TentaCron for model %d: %w", jobID, p.ModelID, err)
 	}
 	resultZip, err := tc.FetchResultByID(ctx, jobID)
 	if err != nil {
+		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
 		return fmt.Errorf("fetch MEME result for model %d: %w", p.ModelID, err)
 	}
 
@@ -163,12 +186,21 @@ func HandleDispatchMeme(
 	filename := fmt.Sprintf("sim_%d.zip", model.ID)
 	path, err := store.SaveZIP(ctx, model.ID, filename, resultZip)
 	if err != nil {
+		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
 		return fmt.Errorf("store MEME result zip for model %d: %w", p.ModelID, err)
 	}
 
-	if err := runs.UpdateStatus(p.ModelID, "completed", ""); err != nil {
-		log.Errorf("model %d: failed to record MEME completed: %v", p.ModelID, err)
+	// 6. Enqueue the ingest (Step 6): parse the stored zip via Coati into the
+	//    R2 tables. Dispatch's job ends here: the terminal 'completed'/'failed'
+	//    transition is owned by the ingest handler (completed on parse success,
+	//    failed with the parse error on failure), so dispatch must NOT pre-mark
+	//    'completed' before the parse has run.
+	if err := enq.EnqueueIngestMeme(ctx, IngestMemeResultPayload{ModelID: p.ModelID, UserID: p.UserID, ZipPath: path}); err != nil {
+		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
+		return fmt.Errorf("enqueue ingest_meme_result for model %d: %w", p.ModelID, err)
 	}
+	log.Infof("model %d: enqueued MEME result ingest for stored zip %s, terminal status owned by the ingest", model.ID, path)
+
 	if submittedNow {
 		log.Infof("model %d: MEME dispatch complete, result saved to %s (%d bytes)", model.ID, path, len(resultZip))
 	}

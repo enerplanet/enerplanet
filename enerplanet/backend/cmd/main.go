@@ -37,6 +37,7 @@ import (
 	ignisclient "spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
+	resultservice "spatialhub_backend/internal/result/service"
 	modelhandler "spatialhub_backend/internal/model/handler"
 	opentechdb "spatialhub_backend/internal/opentechdb"
 	resulthandler "spatialhub_backend/internal/result/handler"
@@ -260,7 +261,12 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
 	resultZipStore := jobs.NewFilesystemResultZipStore(constants.StorageDataDir)
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore)
+
+	// Coati runs as a subprocess (COATI_BIN or `coati` on PATH) behind the thin
+	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
+	coatiRunner := resultservice.SubprocessCoatiRunner{}
+
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
@@ -268,6 +274,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeResolveDemandProfiles, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeTriggerCity2TabulaRun, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDispatchMeme, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemeResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
