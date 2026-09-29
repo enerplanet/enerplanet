@@ -1,0 +1,194 @@
+# Meme Integration — Cohesive Plan (next steps)
+
+Purpose: sequence the whole EnerPlanET → MEME (via TentaCron) integration into a
+single, decision-gated runbook. Single entry point for execution. It orchestrates
+and orders the existing task docs — it does **not** re-specify their field-level
+detail:
+
+| Task doc | Role under this plan |
+|---|---|
+| `spec.md` | go-meme-parser package spec — **superseded: Coati (github.com/enerplanet/Coati) IS the parser**; use only for naming/key parity notes |
+| `MEME_RESULT_PARSING.md` | TEMPO-derived source research — its "frozen contract" IS real but **Coati emits it** (from the frameworks' .nc/.h5), it's not served by MEME; use for interpretation parity, not a JSON endpoint |
+| `ENERPLANET_TRANSLATOR.md` | superseded for *writing* a translator — T1K is the translator; this doc reduces to the T1K-adoption note (Step 4) |
+| `INTEGRATION_REQUIREMENTS.md` | R1–R5 / D-register status; referenced per step |
+| `meme-replace-webservice-concept.md` | sequencing rationale + retire path |
+| `COATI.md` (`.local/dependencies/coati/`) | **blackbox doc for the adopted parser** — how to run `coati`, the results-document schema, EnerPlanET workflow, pitfalls (new) |
+
+Status legend: `[DONE]` verified this week · `[ACTIVE]` in work · `[BLOCKED]`
+unverified/live-dependent · `[DECIDE]` open architecture question.
+
+---
+
+## 0. What is already done (do not re-do)
+
+- `enerplanet/backend/internal/meme/translate.go` + `job.go` — translator logic
+  exists (emits a MEME `Job` from node-level series). **Still has zero callers.**
+- `internal/tentacron/client.go` — TentaCron 202 + long-poll client, proven in
+  ignis, weather, buem, city2tabula, heatdemand. The pattern the whole plan
+  leans on already works in this backend.
+- **T1K** (`~/Projects/github/T1K`, standalone) — packaged `enerplanet-to-meme`
+  JSON transformer: embedded mapping, CLI + Go lib, golden tests. This is the
+  translator the old specs described as *to be written*.
+- Backend `go build ./...` exits 0. Repo uses `go.work` (modules listed there).
+- MEME deps present (no path calls meme directly yet).
+
+---
+
+## Steps (canonical, gated — do not skip the blockers)
+
+### 1 — Verify MEME passthrough via TentaCron  `[DONE 2026-09-28]` · critical path
+Confirmed backend → TentaCron → MEME round-trips (R5 / D3): submitted a real
+job through TentaCron's `meme` target (`dev-frontend-key` / `localhost:8400`),
+long-polled to `completed`, and pulled the result via `target_response`'s
+`result.href` → a zip (`target_status: 200`, real Calliope solve, objective 49400).
+Infra fixed along the way: TentaCron's Dockerfile lacked `git config --system
+--add safe.directory /src` (mirrored meme's line 41), and `meme-env-api-1`
+needed attaching to `tentacron-net`. Note: this proved the TentaCron→MEME wire;
+the backend's *native* dispatch caller is Step 5 (still zero callers on
+`meme.Translate`).
+**Done when:** (was) a real job submits through a meme-* TentaCron target,
+long-polls to `completed`, and `target_response` returns a result — ✅ verified.
+
+### 2 — Capture one real result bundle  `[DONE 2026-09-28]`
+**Finding (verified 2026-09-28): MEME serves NO JSON contract.** The router has
+no `/jobs/{id}/result.json` (404), and `results.json` inside the zip is
+run-grades only. The parseable result is the **per-target model output** in the
+zip: Calliope `output/results.nc` + `output/csv/*`, PyPSA `output/network.nc`.
+**Resolved by Coati (github.com/enerplanet/Coati, ~/Projects/github/Coati):**
+Coati converts exactly those result files into the unified `loc::tech` results
+document (`capacities`/`dispatch`/`generation`/`objective`/`tech_metadata`/
+`termination_condition`/…) — the old "frozen contract" IS real, Coati emits it
+from the frameworks' own files (MEME just never serves it as JSON). Verified
+end-to-end: a real Calliope `results.nc` → full document (objective 58179.03,
+matches the solver). Fixtures: `.local/dependencies/meme/results/` +
+`real-calliope-bundle-example.zip` + `coati_out.json`.
+**Unblocks** parser steps 3 & 6 — Coati IS the parser; no go-meme-parser to build.
+**Done when:** (was) a real Calliope `results_*.csv` fixture pinned in
+go-meme-parser — superseded: the real fixture + Coati output are pinned in `.local`.
+
+### 3 — Adopt Coati as the result parser  `[COVERED by Coati]`
+**Coati replaces the plan's "build go-meme-parser from scratch" entirely.** It is
+a pip-installed Python package/CLI that reads Calliope 0.7 (dev7/0.7.0 tested),
+PyPSA 1.2.4/1.3.0, and AdOpT-NET0 0.1.10 result files and writes the unified
+results document. Only parse path needed: **extract the per-target file from
+MEME's zip → shell `coati <file> <doc.json> <framework-id>` (or the Python API)
+→ ingest the JSON**. AdOpT normalizer included (model-aware, gated) — no separate
+effort. Cross-check emitted payload ↔ T1K naming (R P-A7) still applies to the
+*input* side (Step 4).
+**Done when:** verify Coati converts a real Calliope + PyPSA result file into a
+document that satisfies the backend's R1/R2 needs (parity with old
+`result_parser.go`); wire the call site in Step 6, not a new module.
+
+### 4 — Adopt T1K as the translator `[DONE 2026-09-29]`
+**Decision (D1/D4):** imported T1K as a **native Go module**
+(`go get github.com/enerplanet/T1K@v0.0.0-20260927224744-348964757412`, added
+to `backend/go.mod`) — not a workspace `use()` entry, per the user's call
+(fetch via github like any package, don't bind to the local explorer clone).
+Electricity-first: the dispatcher feeds the **CalculationPayload shape** into
+T1K's embedded `enerplanet-to-meme` mapping from
+`internal/meme/mapping.json` (the embedded mapping with the
+`allow_unmet_demand` rule **removed**, because PyPSA rejects it and MEME's
+TentaCron target is hard-fixed `pypsa,calliope`). **Heat is deferred** to
+`tasks/heat-patch.md` — T1K's mapping currently drops heat entirely; the
+existing `internal/meme/Translate()` (node-level BUEM series, heat pump) is
+the heat-aware reference and stays for the later retrofit.
+**Verified:** `internal/meme/t1k.go` `TranslatePayload` + unit tests +
+`t1k_live_test.go` (`//go:build manualignis`) — the translated job passes
+`POST /validate?target=pypsa,calliope` clean against live MEME (HTTP 200).
+**Done when:** (was) backend imports T1K, every output passes `payload.Validate` — achieved.
+
+### 5 — Backend dispatch (first real caller)
+A handler that builds the model → translates (T1K) → submits the job over
+TentaCron (reuse the ignis/c2t 202+long-poll helpers) → stores the result.
+Kills the "zero callers" state; `StartCalculation`/`run_buem` path untouched
+for now.
+**Done when:** a model dispatches end-to-end and its result lands in the store.
+
+### 6 — R1 + R2 : result ingestion → per-target files as artifacts `[REQ]` (parser half `[COVERED by Coati]`)
+Route the result pipeline through **Coati** on the **unpacked zip's per-target
+output** (Calliope `results.nc`, PyPSA `network.nc`) to get the unified results
+document JSON, then feed R2's tables from that JSON. Port (not delete)
+`result_service_zip.go` / `result_parser.go` to consume the Coati document. Keep
+`client.Bundle` / the raw zip for download + storage only — never parse
+`results.json` (run-grades) for UI data and never hand-parse the temp file (Coati
+owns that).
+**Done when:** the only parse path reads the per-target model output through
+Coati into the R2 tables; the zip is stored + downloadable, not parsed as JSON.
+
+### 7 — R3 : run-id diff schema `[DECIDE D3]` · schema doc first
+Write the schema-change doc (your convention) before any code. Store each run
+against a stable run-id + input hash + translator version so two runs diff only
+on real model change. Identity for the join per row: `(run_id, carrier, tech,
+location, timestep)`.
+**Done when:** two runs of the same model diff correctly per the decided granularity.
+
+### 8 — R4 : route PyPSA through MEME
+Submit PyPSA as MEME jobs (`target=pypsa`), keep the PyPSA result tables as
+consumers of the parsed per-target output (PyPSA `network.nc` / bus+gen CSVs),
+so PyPSA + Calliope land in the same store.
+**Done when:** a PyPSA model submits via TentaCron and results land in the store.
+
+### 9 — Frontend "Run" trigger
+Build/send the model config to backend, surface the meme run on a Run affordance
+in configurator / model-builder, display returned result.
+**Done when:** a user triggers a run from the UI and sees the result.
+
+### 10 — Retire the webservice path, at parity `[REQ]`
+Deactivate the asynq `buem` / `spatialAI_public` dispatch and
+`webservice.Client.Forward` behind the new meme route. **Never delete**
+dependencies/ or platform-core/webservice — record webservice in the deprecated
+register for later removal. Extend `heat_workflow_smoke.sh` with the final
+dispatch → meme accepted → result step so the old path is removed only at parity.
+**Done when:** the parity gate passes and no code path calls MEME directly
+(`[grep]` for the MEME base URL finds only the TentaCron route).
+
+---
+
+## Useful skills
+
+Skills that make executing this plan faster — load the relevant one for the
+step, rather than re-deriving approach. (Load via the Hermes skill system; each
+carries its own workflow, pitfalls and verification.)
+
+| Skill | What it does | Helps with |
+|---|---|---|
+| `t1k` | Use the T1K JSON transformer: CLI, Go lib, project integration, mapping authoring | **Step 4** (adopt T1K), adapting/editing the `enerplanet-to-meme` mapping, round-trip verification |
+| `meme-result-parsing` | Decode MEME run results into typed data — **now delegated to Coati** (the unified results doc); this skill documents the contract & framing | **Steps 2–3, 6** — naming/key rules, what the Coati document holds |
+| `code-editing-hygiene` | Edit code via patches, verify, hand off cleanly | **All backend steps (5–8, 10)** — the go-module and schema edits |
+| `building-configurator` | Work with the Building Configurator React UI | **Step 9** — frontend Run affordance |
+| `enerplanet-ui-conventions` | EnerPlanET React app UI conventions | **Step 9** — keep the trigger consistent with configurator/model-builder |
+| `enerplanet-dev-stack` | Wire an EnerPlanET dev-stack service (containers, `make`, local reset) | **Steps 1, 5, 10** — standing up TentaCron/meme targets and the smoke test |
+| `debugging-hung-services` | Diagnose a service that hangs, times out, or logs go silent | **Step 1, 5** — the long-poll / async request lifecycle is exactly where these failures hide |
+
+---
+
+## Decision log (decide these before the steps that need them)
+
+| # | Question | Options | Recommended | Needed by |
+|---|---|---|---|---|
+| D1 | How is T1K consumed? | `go.work` `use()` entry · `go.mod require` (native module fetch) · `replace` · vendoring | **`go.mod require` + native import (DONE 2026-09-29)** — fetch `github.com/enerplanet/T1K@v0.0.0-2026…` like any dependency; don't bind to the local explorer clone | Step 4 `[DONE]` |
+| D2 | ~~go-meme-parser standalone vs internal?~~ **Superseded — adopt Coati instead** | build go-meme-parser from scratch · **adopt Coati** (existing Python package, github.com/enerplanet/Coati) | **adopt Coati** (verified it converts real MEME result files; no parser to write) | Step 3 |
+| D3 | R3 diff granularity | per-tech + per-timestep · summary only | per-tech + per-timestep (matches `ResultsCarrierProd`/`ResultsCarrierCon`) | Step 7 |
+| D4 | Does buem stay on the path? | yes: meme takes node-level BUEM series · no: meme swallows resolve too | **yes, but phased (2026-09-29):** electricity-first feeds T1K on the CalculationPayload shape; BUEM node-series + heat pump is the heat retrofit in `tasks/heat-patch.md` (buem stays on the path, just deferred as a second vector) | Step 5 + heat-patch |
+
+---
+
+## Critical-path rule
+
+Steps 1 → 2 → 3 were a hard sequence. Step 1 (TentaCron→MEME passthrough) is
+**done**; Step 2's fixture is **done**; Step 3 no longer requires building a
+parser — **Coati is adopted** and verified. The parser/parse-path is therefore
+no longer `[BLOCKED]` by a live server or by TEMPO inference. Remaining steps
+are the **backend dispatch (5), result ingestion (6), diff schema (7), PyPSA
+route (8), frontend (9), and webservice retirement (10)**, which may be prepped
+in parallel; Step 5's dispatch must still not rely on unverified wire behavior
+past what Step 1 proved.
+
+---
+
+## End state / parity gate
+
+A model runs: **dispatch → meme accepted (via TentaCron) → result parsed →
+stored → visible**. The webservice's queue/proxy is deactivated (recorded, not
+deleted), PyPSA + Calliope land in the same structured store, and the UI can
+diff two runs. No code path calls MEME directly.
