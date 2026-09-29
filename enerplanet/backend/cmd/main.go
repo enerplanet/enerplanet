@@ -51,6 +51,7 @@ import (
 	"spatialhub_backend/internal/worker"
 	workspacehandler "spatialhub_backend/internal/workspace/handler"
 
+	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
 	authplatform "platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -258,13 +259,15 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	buemClient := buem.NewClient(tentacronClient)
 	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient)
+	resultZipStore := jobs.NewFilesystemResultZipStore(constants.StorageDataDir)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeResolveDemandProfiles, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeTriggerCity2TabulaRun, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMeme, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {

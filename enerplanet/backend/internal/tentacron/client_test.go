@@ -104,6 +104,68 @@ func TestDo_completedWithNeitherBodyNorHrefIsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "neither target_response nor href")
 }
 
+func TestFetchResultBytes_returnsRawSpooledBytes(t *testing.T) {
+	// MEME's result is a binary zip, always spooled as result.href. The raw
+	// bytes must come back untouched — a "sim" zip body, including a NUL byte
+	// that would be invalid JSON, proving no json.Unmarshal path is taken.
+	zipBody := append([]byte("PK\x03\x04simulated zip\x00tail"), 0x00, 0xff)
+	pollBackstop = time.Millisecond
+	t.Cleanup(func() { pollBackstop = time.Second })
+
+	var gotTarget string
+	var gotPayload map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			var req submitRequest
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			gotTarget = req.Target
+			gotPayload = req.Payload.(map[string]interface{})
+			require.Equal(t, "meme", gotTarget)
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"req-meme-1"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/req-meme-1":
+			_, _ = w.Write([]byte(`{"state":"completed","result":{"target_status":200,"href":"/v1/requests/req-meme-1/result","content_type":"application/zip"}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/req-meme-1/result":
+			assert.Equal(t, "k", r.Header.Get("X-API-Key"))
+			_, _ = w.Write(zipBody)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+	}))
+	defer srv.Close()
+
+	job, _ := json.Marshal(map[string]interface{}{"model": map[string]interface{}{"name": "m1"}})
+	var payload any
+	require.NoError(t, json.Unmarshal(job, &payload))
+
+	got, err := New(srv.URL, "k").FetchResultBytes(context.Background(), "meme", payload)
+
+	require.NoError(t, err)
+	require.Equal(t, zipBody, got, "the raw zip bytes must be returned verbatim")
+	require.Equal(t, "meme", gotTarget, "submitted against the meme target")
+	require.Contains(t, gotPayload, "model")
+}
+
+func TestFetchResultBytes_inlinedTargetResponseIsReturnedRaw(t *testing.T) {
+	// A small (sub-cap) upstream body is inlined as result.target_response — the
+	// JSON-encoded body. FetchResultBytes returns those field bytes verbatim
+	// (including the JSON quoting), never json.Unmarshal'ed into a value.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusAccepted)
+			_, _ = w.Write([]byte(`{"id":"req-2"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"state":"completed","result":{"target_status":200,"target_response":"not-json-zip-x"}}`))
+	}))
+	defer srv.Close()
+
+	got, err := New(srv.URL, "k").FetchResultBytes(context.Background(), "meme", map[string]any{"model": "m"})
+	require.NoError(t, err)
+	require.Equal(t, []byte(`"not-json-zip-x"`), got, "target_response bytes returned verbatim, not JSON-decoded")
+}
+
 func TestDo_failedStateReturnsTargetError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -150,6 +212,100 @@ func TestDo_cancelledContext(t *testing.T) {
 
 	err := New(srv.URL, "k").Do(ctx, "ignis-data", nil, nil)
 	require.Error(t, err)
+}
+
+func TestSubmitMeme_setsIdempotencyKeyAndReturnsJobID(t *testing.T) {
+	var gotKey string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/requests" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+		gotKey = r.Header.Get("Idempotency-Key")
+		var body submitRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.Equal(t, "meme", body.Target)
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"id":"job-42","state":"received"}`))
+	}))
+	defer srv.Close()
+
+	id, err := New(srv.URL, "k").SubmitMeme(context.Background(), "meme", map[string]any{"model": "m"}, "model_42")
+
+	require.NoError(t, err)
+	require.Equal(t, "job-42", id, "submit returns the job id")
+	require.Equal(t, "model_42", gotKey, "Idempotency-Key is set on the POST")
+}
+
+func TestSubmitMeme_partialResponseNoIDIsError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"state":"received"}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "k").SubmitMeme(context.Background(), "meme", map[string]any{}, "k1")
+	require.Error(t, err)
+}
+
+func TestAwaitResultByID_resumesNoResubmit(t *testing.T) {
+	// A dispatch that already has a job id must resume by id (GET status /
+	// GET result) and never POST /v1/requests again.
+	pollBackstop = time.Millisecond
+	t.Cleanup(func() { pollBackstop = time.Second })
+
+	var posts atomic.Int32
+	zipBody := []byte("PK\x03\x04resume-zip\x00\xff")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			posts.Add(1)
+			t.Fatalf("resume-by-id must not resubmit")
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/job-9":
+			_, _ = w.Write([]byte(`{"state":"completed","result":{"target_status":200,"href":"/v1/requests/job-9/result","content_type":"application/zip"}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/job-9/result":
+			_, _ = w.Write(zipBody)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "k")
+	require.NoError(t, c.AwaitResultByID(context.Background(), "job-9", memePollBudget))
+	got, err := c.FetchResultByID(context.Background(), "job-9")
+
+	require.NoError(t, err)
+	require.Equal(t, zipBody, got, "the raw zip is fetched verbatim via /result")
+	assert.Zero(t, posts.Load(), "no resubmission during resume-by-id")
+}
+
+func TestAwaitResultByID_failedStateReturnsTargetError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			t.Fatalf("resume-by-id must not resubmit")
+		}
+		_, _ = w.Write([]byte(`{"state":"failed","error":{"code":"target_error","message":"target meme: HTTP 500: boom"}}`))
+	}))
+	defer srv.Close()
+
+	err := New(srv.URL, "k").AwaitResultByID(context.Background(), "job-f", memePollBudget)
+	require.Error(t, err)
+	te, ok := AsTargetError(err)
+	require.True(t, ok)
+	assert.Equal(t, "target_error", te.Code)
+}
+
+func TestCancelMeme_deletesRequest(t *testing.T) {
+	var gotMethod string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		require.Equal(t, "/v1/requests/job-1", r.URL.Path)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer srv.Close()
+
+	require.NoError(t, New(srv.URL, "k").CancelMeme(context.Background(), "job-1"))
+	assert.Equal(t, http.MethodDelete, gotMethod)
 }
 
 func TestTargetError_UpstreamStatus(t *testing.T) {
