@@ -46,6 +46,11 @@ const (
 	// Calliope emitter (0.7.0.dev7 / 0.7.0, per the Coati table). The id is a
 	// claim Coati checks against the file's actual layout.
 	CoatiFrameworkCalliope07 = "calliope-v0-7"
+
+	// CoatiFrameworkPyPSA124 is the framework identifier for the MEME PyPSA
+	// emitter (pinned 1.2.4). Used for the wire mapping, which prefers the
+	// PyPSA leg's network.nc.
+	CoatiFrameworkPyPSA124 = "pypsa-v1-2-4"
 )
 
 // SubprocessCoatiRunner shells out to the `coati` CLI and returns its stdout

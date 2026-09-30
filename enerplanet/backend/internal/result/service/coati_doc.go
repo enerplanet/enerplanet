@@ -11,31 +11,60 @@ import "encoding/json"
 //
 // See enerplanet/.local/dependencies/coati/COATI.md for the full schema.
 type CoatiResultsDocument struct {
-	SchemaVersion          string                     `json:"schema_version"`
-	Framework              string                     `json:"framework"`
-	FrameworkVersion       string                     `json:"framework_version"`
-	ModelName              *string                    `json:"model_name"`
-	Solver                 *string                    `json:"solver"`
-	Success                *bool                      `json:"success"`
-	TerminationCondition   *string                    `json:"termination_condition"`
-	Objective              *float64                   `json:"objective"`
-	ObjectiveFunctionValue *float64                   `json:"objective_function_value"`
-	Timestamps             []string                   `json:"timestamps"`
-	Capacities             map[string]float64         `json:"capacities"`          // "loc::tech" -> installed capacity
-	StorageCapacities      map[string]float64         `json:"storage_capacities"`  // "loc::tech" -> energy capacity
-	Coordinates            map[string][]float64       `json:"coordinates"`         // "loc" -> [x, y]
-	CostsByLocation        map[string]map[string]float64 `json:"costs_by_location"` // "loc" -> { "tech": cost }
-	CostsByTech            map[string]float64         `json:"costs_by_tech"`        // "tech" -> cost (systemwide)
-	TotalUnmetDemand       *float64                   `json:"total_unmet_demand"`
+	SchemaVersion          string                        `json:"schema_version"`
+	Framework              string                        `json:"framework"`
+	FrameworkVersion       string                        `json:"framework_version"`
+	ModelName              *string                       `json:"model_name"`
+	Solver                 *string                       `json:"solver"`
+	Success                *bool                         `json:"success"`
+	TerminationCondition   *string                       `json:"termination_condition"`
+	Objective              *float64                      `json:"objective"`
+	ObjectiveFunctionValue *float64                      `json:"objective_function_value"`
+	Timestamps             []string                      `json:"timestamps"`
+	Capacities             map[string]float64            `json:"capacities"`         // "loc::tech" -> installed capacity
+	StorageCapacities      map[string]float64            `json:"storage_capacities"` // "loc::tech" -> energy capacity
+	Coordinates            map[string][]float64          `json:"coordinates"`        // "loc" -> [x, y]
+	CostsByLocation        map[string]map[string]float64 `json:"costs_by_location"`  // "loc" -> { "tech": cost }
+	CostsByTech            map[string]float64            `json:"costs_by_tech"`      // "tech" -> cost (systemwide)
+	TotalUnmetDemand       *float64                      `json:"total_unmet_demand"`
 
-	// Large time-series — deferred for the R2 streaming tables (see above).
-	Generation        map[string]json.RawMessage `json:"generation"`
-	Dispatch          map[string]json.RawMessage `json:"dispatch"`
-	DemandTimeseries  json.RawMessage            `json:"demand_timeseries"`
-	TransmissionFlow  map[string]json.RawMessage `json:"transmission_flow"`
+	// Large time-series — the wire mapping consumes TransmissionFlow; the rest
+	// is deferred for the R2 streaming tables (see above).
+	Generation       map[string]json.RawMessage   `json:"generation"`
+	Dispatch         map[string]json.RawMessage   `json:"dispatch"`
+	DemandTimeseries json.RawMessage              `json:"demand_timeseries"`
+	TransmissionFlow map[string]CoatiTransmission `json:"transmission_flow"`
+
+	// TechMetadata classifies every technology (parent: supply | demand |
+	// conversion | storage | transmission). It is the authoritative way to tell
+	// a wire from a conversion link.
+	TechMetadata map[string]CoatiTechMetadata `json:"tech_metadata"`
 
 	Warnings []string        `json:"warnings"`
 	Metadata json.RawMessage `json:"metadata"`
+}
+
+// CoatiTechMetadata is one entry of the document's tech_metadata map.
+type CoatiTechMetadata struct {
+	Parent     string `json:"parent"`
+	CarrierOut string `json:"carrier_out"`
+}
+
+// CoatiTransmission is one entry of transmission_flow, keyed "a::b" (a<b
+// alphabetically). Timeseries is the NET ARRIVAL at To — i.e. the origin-side
+// flow scaled by the arc's efficiency — and is index-aligned with the
+// document's Timestamps.
+type CoatiTransmission struct {
+	From       string    `json:"from"`
+	To         string    `json:"to"`
+	Timeseries []float64 `json:"timeseries"`
+}
+
+// IsTransmission reports whether a technology is classified as a transmission
+// arc (a wire) by the document's tech_metadata.
+func (d *CoatiResultsDocument) IsTransmission(tech string) bool {
+	meta, ok := d.TechMetadata[tech]
+	return ok && meta.Parent == "transmission"
 }
 
 // doesCoatiSucceed reports whether the document grades as a successful solve
@@ -51,17 +80,26 @@ func (d *CoatiResultsDocument) doesCoatiSucceed() bool {
 // ingest path (analogous to legacy results JSON, but derived from the Coati
 // document rather than the Calliope CSVs).
 type CoatiSummary struct {
-	Framework           string   `json:"framework"`
-	FrameworkVersion    string   `json:"framework_version"`
-	ModelName           string   `json:"model_name,omitempty"`
-	Solver              string   `json:"solver,omitempty"`
-	Success             bool     `json:"success"`
-	TerminationCondition string  `json:"termination_condition,omitempty"`
-	Objective           *float64 `json:"objective,omitempty"`
-	TotalUnmetDemand    *float64 `json:"total_unmet_demand,omitempty"`
-	EnergyCapCount      int      `json:"energy_cap_count"`
-	StorageCapCount     int      `json:"storage_capacity_count"`
-	LocationCount       int      `json:"location_count"`
+	Framework            string   `json:"framework"`
+	FrameworkVersion     string   `json:"framework_version"`
+	ModelName            string   `json:"model_name,omitempty"`
+	Solver               string   `json:"solver,omitempty"`
+	Success              bool     `json:"success"`
+	TerminationCondition string   `json:"termination_condition,omitempty"`
+	Objective            *float64 `json:"objective,omitempty"`
+	TotalUnmetDemand     *float64 `json:"total_unmet_demand,omitempty"`
+	EnergyCapCount       int      `json:"energy_cap_count"`
+	StorageCapCount      int      `json:"storage_capacity_count"`
+	LocationCount        int      `json:"location_count"`
+
+	// LineRatings is the per-wire rating (MW) the ingest derived from the
+	// document's transmission capacities, keyed by wire name. It gives the API
+	// a `line_ratings` map for sources whose bundle has no lines.csv on disk
+	// (MEME). Set by the ingest, not by buildCoatiSummary — the wire data may
+	// come from a different leg (PyPSA) than this summary's document.
+	LineRatings map[string]float64 `json:"line_ratings,omitempty"`
+	// LineCount is the number of wires the document reported a flow for.
+	LineCount int `json:"line_count,omitempty"`
 }
 
 func buildCoatiSummary(doc *CoatiResultsDocument) *CoatiSummary {
