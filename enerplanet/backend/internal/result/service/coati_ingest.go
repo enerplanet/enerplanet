@@ -23,6 +23,41 @@ import (
 // segment (so a multi-target bundle doesn't lazily pick the wrong one).
 var errCoatiLocateFound = errors.New("calliope results.nc found")
 
+// errCoatiPyPSAFound stops the tree walk once a PyPSA network.nc has been
+// located on a path explicitly carrying a "pypsa" segment.
+var errCoatiPyPSAFound = errors.New("pypsa network.nc found")
+
+// locatePyPSANetworkNC returns the first PyPSA network.nc under the extracted
+// bundle, preferring a path containing a "pypsa" segment. It handles both MEME
+// layouts: files/pypsa/run_<i>/output/network.nc (multi-target) and
+// files/run_<i>/output/network.nc (single-target). It is optional — the wire
+// mapping falls back to the Calliope leg when a model has no PyPSA output.
+func locatePyPSANetworkNC(extractDir string) (string, error) {
+	var first string
+	walkErr := filepath.Walk(extractDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if info.Name() != "network.nc" {
+			return nil
+		}
+		if first == "" {
+			first = path
+		}
+		if strings.Contains(strings.ToLower(path), "pypsa") {
+			return errCoatiPyPSAFound
+		}
+		return nil
+	})
+	if walkErr != nil && !errors.Is(walkErr, errCoatiPyPSAFound) {
+		return "", walkErr
+	}
+	if first == "" {
+		return "", fmt.Errorf("no PyPSA network.nc found under %s", extractDir)
+	}
+	return first, nil
+}
+
 // locateCalliopeResultsNC returns the first Calliope results.nc under the
 // extracted bundle, preferring a path containing a "calliope" segment. It
 // handles both MEME layouts seen in the real bundles:
@@ -194,6 +229,14 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 		return nil, fmt.Errorf("map Coati document: %w", err)
 	}
 
+	// Wire loading: one mapping serves both legs, because Coati normalises PyPSA
+	// and Calliope to the same transmission_flow + capacities contract. Prefer
+	// the PyPSA leg (the electricity transport model) and fall back to the
+	// Calliope document already parsed — never concatenate the two, they are
+	// two different solves of the same wires.
+	wireDoc := wireDocument(ctx, &doc, extractDir, runner, log, modelID)
+	parsed.PyPSALineLoading = mapWireLoading(wireDoc)
+
 	// Delete existing R2 rows and store the small/summary results atomically.
 	if err := s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.deleteExistingResults(tx, modelID); err != nil {
@@ -206,6 +249,9 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 	}
 
 	summary = buildCoatiSummary(&doc)
+	// The wire data may come from a different leg than the summary's document.
+	summary.LineRatings = wireRatings(wireDoc)
+	summary.LineCount = len(wireDoc.TransmissionFlow)
 	summaryJSON, err := json.Marshal(summary)
 	if err != nil {
 		log.Errorf("Failed to marshal Coati summary model_id=%d err=%v", modelID, err)

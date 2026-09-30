@@ -2,6 +2,7 @@ package result
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"io"
 	"math"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 type pypsaConvergenceSummary struct {
@@ -35,6 +38,23 @@ type pypsaTransformerLoadingPoint struct {
 	Q0          float64   `json:"q0"`
 	Q1          float64   `json:"q1"`
 	SNomKVA     float64   `json:"s_nom_kva"`
+}
+
+// lineRatingsFromSummary reads the per-wire ratings the Coati ingest recorded in
+// the model's result summary. A MEME bundle carries no lines.csv, so this is
+// where its ratings come from; an electrical source keeps reading them off disk
+// (readPyPSALineRatings), which wins when both exist.
+func lineRatingsFromSummary(summary datatypes.JSON) map[string]float64 {
+	if len(summary) == 0 {
+		return nil
+	}
+	var parsed struct {
+		LineRatings map[string]float64 `json:"line_ratings"`
+	}
+	if err := json.Unmarshal(summary, &parsed); err != nil {
+		return nil
+	}
+	return parsed.LineRatings
 }
 
 func (h *ResultHandler) latestExtractedPath(modelID uint) string {
@@ -446,18 +466,18 @@ func isRenewableGeneratorName(name string) bool {
 
 // Standard cable current ratings (i_nom in kA) from PyPSA line types database.
 var standardLineTypeINom = map[string]float64{
-	"NAYY 4x50 SE":                    0.142,
-	"NAYY 4x120 SE":                   0.230,
-	"NAYY 4x150 SE":                   0.270,
-	"NAYY 4x185 SE":                   0.310,
-	"NAYY 4x240 SE":                   0.364,
-	"NA2XS2Y 1x95 RM/25 12/20 kV":    0.255,
-	"NA2XS2Y 1x150 RM/25 12/20 kV":   0.319,
-	"NA2XS2Y 1x185 RM/25 12/20 kV":   0.366,
-	"NA2XS2Y 1x240 RM/25 12/20 kV":   0.421,
-	"NA2XS2Y 1x95 RM/25 6/10 kV":     0.255,
-	"NA2XS2Y 1x185 RM/25 6/10 kV":    0.366,
-	"NA2XS2Y 1x240 RM/25 6/10 kV":    0.421,
+	"NAYY 4x50 SE":                 0.142,
+	"NAYY 4x120 SE":                0.230,
+	"NAYY 4x150 SE":                0.270,
+	"NAYY 4x185 SE":                0.310,
+	"NAYY 4x240 SE":                0.364,
+	"NA2XS2Y 1x95 RM/25 12/20 kV":  0.255,
+	"NA2XS2Y 1x150 RM/25 12/20 kV": 0.319,
+	"NA2XS2Y 1x185 RM/25 12/20 kV": 0.366,
+	"NA2XS2Y 1x240 RM/25 12/20 kV": 0.421,
+	"NA2XS2Y 1x95 RM/25 6/10 kV":   0.255,
+	"NA2XS2Y 1x185 RM/25 6/10 kV":  0.366,
+	"NA2XS2Y 1x240 RM/25 6/10 kV":  0.421,
 }
 
 // readPyPSALineRatings reads lines.csv and computes s_nom (kVA) for each line

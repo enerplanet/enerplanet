@@ -2,6 +2,7 @@ package result
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -493,10 +494,33 @@ func (s *Store) GetPyPSALineLoading(modelID uint) ([]backendModels.ResultsPyPSAL
 	return items, err
 }
 
-func (s *Store) GetPyPSAVoltageLocations(modelID uint) []string {
-	var locations []string
-	s.db.Model(&backendModels.ResultsPyPSAVoltage{}).Where("model_id = ?", modelID).
-		Distinct("location").Pluck("location", &locations)
+// GetPyPSALocations returns the buses/nodes a model's PyPSA result refers to.
+//
+// An electrical (power-flow) source carries these on results_pypsa_voltage; a
+// Coati-sourced MEME result has no voltage table at all, so the wire endpoints
+// stand in. The Grid panel renders nothing without this list, which makes it the
+// render gate for either source.
+func (s *Store) GetPyPSALocations(modelID uint) []string {
+	seen := map[string]struct{}{}
+	collect := func(table, column string) {
+		var values []string
+		s.db.Table(table).Where("model_id = ?", modelID).
+			Distinct(column).Pluck(column, &values)
+		for _, value := range values {
+			if strings.TrimSpace(value) != "" {
+				seen[value] = struct{}{}
+			}
+		}
+	}
+	collect("results_pypsa_voltage", "location")
+	collect("results_pypsa_line_loading", "bus0")
+	collect("results_pypsa_line_loading", "bus1")
+
+	locations := make([]string, 0, len(seen))
+	for value := range seen {
+		locations = append(locations, value)
+	}
+	sort.Strings(locations)
 	return locations
 }
 

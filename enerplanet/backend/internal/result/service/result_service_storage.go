@@ -35,6 +35,7 @@ func (s *ResultService) smallResultsStoreFuncs() []func(*gorm.DB, *logrus.Entry,
 		s.storeCost,
 		s.storeCostInvestment,
 		s.storePyPSASettings,
+		s.storePyPSALineLoading,
 	}
 }
 
@@ -203,6 +204,29 @@ func (s *ResultService) storePyPSASettings(tx *gorm.DB, log *logrus.Entry, model
 	}
 	log.Debugf("Stored PyPSA settings for model_id=%d, converged=%v", modelID, record.Converged)
 	return nil
+}
+
+// storePyPSALineLoading writes the per-wire flow series. Percent is
+// flow/capacity utilisation for a Coati-sourced result — see
+// PyPSALineLoadingRecord.
+func (s *ResultService) storePyPSALineLoading(tx *gorm.DB, log *logrus.Entry, modelID uint, parsed *ParsedResults) error {
+	if len(parsed.PyPSALineLoading) == 0 {
+		return nil
+	}
+	records := make([]models.ResultsPyPSALineLoading, 0, len(parsed.PyPSALineLoading))
+	for _, l := range parsed.PyPSALineLoading {
+		records = append(records, models.ResultsPyPSALineLoading{
+			ModelID:        modelID,
+			Line:           l.Line,
+			Bus0:           l.Bus0,
+			Bus1:           l.Bus1,
+			Timestep:       l.Timestep,
+			P0:             l.P0,
+			P1:             l.P1,
+			LoadingPercent: l.Percent,
+		})
+	}
+	return batchStore(tx, log, records, 100, modelID, "pypsa line loading records")
 }
 
 func (s *ResultService) storeCostInvestment(tx *gorm.DB, log *logrus.Entry, modelID uint, parsed *ParsedResults) error {
