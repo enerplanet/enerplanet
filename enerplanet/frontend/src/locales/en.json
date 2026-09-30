@@ -230,7 +230,8 @@
       "cannotDelete": "Cannot delete - only the owner or an expert can delete",
       "retryCalculation": "Retry Calculation",
       "startCalculation": "Start Calculation",
-      "engineNotAvailable": "Simulation engine is not available"
+      "engineNotAvailable": "Simulation engine is not available",
+      "runWithMeme": "Run with MEME"
     },
     "pagination": {
       "showing": "Showing",
@@ -747,7 +748,9 @@
       "max": "Max",
       "avg": "Avg",
       "loading": "Loading",
-      "noLoadingData": "No loading data available"
+      "noLoadingData": "No loading data available",
+      "notInResult": "Not in this result",
+      "transmissionUtilization": "Transmission Utilization"
     },
     "system": {
       "noData": "No system data available",

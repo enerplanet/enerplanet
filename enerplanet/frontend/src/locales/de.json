@@ -230,7 +230,8 @@
       "cannotDelete": "Löschen nicht möglich - nur der Eigentümer oder ein Experte kann löschen",
       "retryCalculation": "Berechnung wiederholen",
       "startCalculation": "Berechnung starten",
-      "engineNotAvailable": "Simulationsmodul ist nicht verfügbar"
+      "engineNotAvailable": "Simulationsmodul ist nicht verfügbar",
+      "runWithMeme": "Mit MEME ausführen"
     },
     "pagination": {
       "showing": "Zeige",
@@ -747,7 +748,9 @@
       "max": "Max",
       "avg": "Ø",
       "loading": "Auslastung",
-      "noLoadingData": "Keine Auslastungsdaten verfügbar"
+      "noLoadingData": "Keine Auslastungsdaten verfügbar",
+      "notInResult": "Nicht in diesem Ergebnis",
+      "transmissionUtilization": "Übertragungsauslastung"
     },
     "system": {
       "noData": "Keine Systemdaten verfügbar",

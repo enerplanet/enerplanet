@@ -1,4 +1,4 @@
-import { Eye, Edit, Download, Copy, Play, Trash2, Share, FolderInput, RefreshCw } from "lucide-react";
+import { Eye, Edit, Download, Copy, Play, Trash2, Share, FolderInput, RefreshCw, Zap } from "lucide-react";
 import { ModelStatus } from "@/types/models";
 import { isModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import ModelActionGroup, { ActionConfig, ActionSize } from "../shared/ModelActionGroup";
@@ -13,6 +13,7 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly onDownload?: (model: T) => void;
 	readonly onCopy?: (model: T) => void;
 	readonly onCalculate?: (model: T) => void;
+	readonly onRunMeme?: (model: T) => void;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
 	readonly onMoveToWorkspace?: (model: T) => void;
@@ -21,6 +22,7 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly showDownload?: boolean;
 	readonly showCopy?: boolean;
 	readonly showCalculate?: boolean;
+	readonly showRunMeme?: boolean;
 	readonly showDelete?: boolean;
 	readonly showShare?: boolean;
 	readonly showMoveToWorkspace?: boolean;
@@ -44,6 +46,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onDownload,
 	onCopy,
 	onCalculate,
+	onRunMeme,
 	onDelete,
 	onShare,
 	onMoveToWorkspace,
@@ -52,6 +55,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	showDownload = true,
 	showCopy = true,
 	showCalculate = true,
+	showRunMeme = false,
 	showDelete = true,
 	showShare = true,
 	showMoveToWorkspace = true,
@@ -85,8 +89,8 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	const actions: ActionConfig[] = getActionConfigs(
 		model,
 		{
-			onView, onEdit, onDownload, onCopy, onCalculate, onDelete, onShare, onMoveToWorkspace,
-			showView, showEdit, showDownload, showCopy, showCalculate, showDelete, showShare, showMoveToWorkspace,
+			onView, onEdit, onDownload, onCopy, onCalculate, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+			showView, showEdit, showDownload, showCopy, showCalculate, showRunMeme, showDelete, showShare, showMoveToWorkspace,
 			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, hasAvailableWebservice
 		},
 		{ disabled, completed, shouldDisableDelete, deleteTooltipText },
@@ -103,8 +107,8 @@ const getTooltip = (defaultText: string, disabled: boolean, disabledText?: strin
 function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?: string }>(
 	model: T,
 	props: Pick<ModelActionsProps<T>, 
-		"onView" | "onEdit" | "onDownload" | "onCopy" | "onCalculate" | "onDelete" | "onShare" | "onMoveToWorkspace" |
-		"showView" | "showEdit" | "showDownload" | "showCopy" | "showCalculate" | "showDelete" | "showShare" | "showMoveToWorkspace" |
+		"onView" | "onEdit" | "onDownload" | "onCopy" | "onCalculate" | "onRunMeme" | "onDelete" | "onShare" | "onMoveToWorkspace" |
+		"showView" | "showEdit" | "showDownload" | "showCopy" | "showCalculate" | "showRunMeme" | "showDelete" | "showShare" | "showMoveToWorkspace" |
 		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "hasAvailableWebservice"
 	>,
 	computed: {
@@ -116,8 +120,8 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	t: (key: string) => string
 ): ActionConfig[] {
 	const {
-		onView, onEdit, onDownload, onCopy, onCalculate, onDelete, onShare, onMoveToWorkspace,
-		showView, showEdit, showDownload, showCopy, showCalculate, showDelete, showShare, showMoveToWorkspace,
+		onView, onEdit, onDownload, onCopy, onCalculate, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+		showView, showEdit, showDownload, showCopy, showCalculate, showRunMeme, showDelete, showShare, showMoveToWorkspace,
 		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, hasAvailableWebservice = true
 	} = props;
 	const { disabled, completed, shouldDisableDelete, deleteTooltipText } = computed;
@@ -144,6 +148,19 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			onClick: () => onCalculate?.(model),
 			show: showCalculate && !!onCalculate && (model.status === 'draft' || model.status === 'modified'),
 			disabled: disabled || !hasAvailableWebservice,
+		},
+		{
+			// Step 9: MEME dispatch. Dev-only until the engine choice has a
+			// proper UX (the memo's experimental-toggle pattern); the backend
+			// route (POST /models/:id/run-meme) is the real seam.
+			key: "runMeme",
+			icon: Zap,
+			tooltip: t("common.modelActions.runWithMeme"),
+			variant: "warning",
+			onClick: () => onRunMeme?.(model),
+			show: !!showRunMeme && !!onRunMeme &&
+				(model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
+			disabled,
 		},
 		{
 			key: "view",

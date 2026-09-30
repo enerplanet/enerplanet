@@ -184,7 +184,8 @@
       "cannotDelete": "Nelze smazat - pouze vlastník nebo expert může smazat",
       "retryCalculation": "Opakovat Výpočet",
       "startCalculation": "Zahájit Výpočet",
-      "engineNotAvailable": "Simulační motor není k dispozici"
+      "engineNotAvailable": "Simulační motor není k dispozici",
+      "runWithMeme": "Spustit s MEME"
     },
     "pagination": {
       "showing": "Zobrazeno",
@@ -489,7 +490,9 @@
       "max": "Max",
       "avg": "Prům",
       "loading": "Zatížení",
-      "noLoadingData": "Žádná data o zatížení"
+      "noLoadingData": "Žádná data o zatížení",
+      "notInResult": "Není v tomto výsledku",
+      "transmissionUtilization": "Využití přenosu"
     },
     "system": {
       "noData": "Nejsou k dispozici žádná systémová data",

@@ -55,6 +55,7 @@ import BuildingDetailPanel from './components/panels/BuildingDetailPanel';
 import CostPanel from './components/panels/CostPanel';
 import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
+import { capabilitiesFrom } from '@/config/resultCapabilities';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
 
@@ -512,7 +513,9 @@ export const ModelResultsViewer = () => {
     return calculateBusStatusData(pypsaData);
   }, [pypsaData]);
 
-
+  // What this result actually contains (declared by the backend). Absent block
+  // => least capable, so a stale backend can never un-hide a section.
+  const capabilities = useMemo(() => capabilitiesFrom(pypsaData), [pypsaData]);
 
   // Use shared map for model results visualization
   useModelResultsMap({
@@ -522,7 +525,9 @@ export const ModelResultsViewer = () => {
     onTransformerHover: setHighlightedBuildings,
     onTooltipChange: setMapTooltip,
     busStatusData,
-    showBusMarkers: rightPanelView === 'grid',
+    // Bus markers are voltage-derived; without voltage they would all default to
+    // a green "1.00" — so never create them for a result that has no voltage.
+    showBusMarkers: rightPanelView === 'grid' && capabilities.voltage,
     highlightedBuildings,
   });
 
@@ -603,6 +608,7 @@ export const ModelResultsViewer = () => {
         return (
           <GridPanel
             pypsaData={pypsaData}
+            capabilities={capabilities}
             selectedBus={selectedBus}
             setSelectedBus={setSelectedBus}
             selectedVoltage={selectedVoltage}
@@ -622,7 +628,7 @@ export const ModelResultsViewer = () => {
     capacityData, costBreakdown, energyFlow, avgCapacityFactor,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
-    carrier,
+    carrier, capabilities,
   ]);
 
   if (error || (!model && !loading)) {

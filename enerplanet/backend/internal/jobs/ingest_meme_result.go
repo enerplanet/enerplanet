@@ -62,6 +62,7 @@ func HandleIngestMemeResult(ctx context.Context, t *asynq.Task, db *gorm.DB, run
 		if uerr := runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error()); uerr != nil {
 			log.Errorf("model %d: failed to mark MEME run failed: %v", p.ModelID, uerr)
 		}
+		markModelFailed(db, p.ModelID, err.Error())
 		return fmt.Errorf("ingest MEME result model_id=%d zip=%s: %w", p.ModelID, p.ZipPath, err)
 	}
 
@@ -71,6 +72,7 @@ func HandleIngestMemeResult(ctx context.Context, t *asynq.Task, db *gorm.DB, run
 	if err := runs.UpdateStatus(p.ModelID, models.MemeRunStatusCompleted, ""); err != nil {
 		log.Errorf("model %d: failed to mark MEME run completed: %v", p.ModelID, err)
 	}
+	markModelCompleted(db, p.ModelID)
 	return nil
 }
 

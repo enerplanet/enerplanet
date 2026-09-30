@@ -230,7 +230,8 @@
       "cannotDelete": "No se puede eliminar - solo el propietario o un experto puede eliminar",
       "retryCalculation": "Reintentar Cálculo",
       "startCalculation": "Iniciar Cálculo",
-      "engineNotAvailable": "El motor de simulación no está disponible"
+      "engineNotAvailable": "El motor de simulación no está disponible",
+      "runWithMeme": "Ejecutar con MEME"
     },
     "pagination": {
       "showing": "Mostrando",
@@ -731,7 +732,9 @@
       "max": "Máx",
       "avg": "Prom",
       "loading": "Carga",
-      "noLoadingData": "No hay datos de carga disponibles"
+      "noLoadingData": "No hay datos de carga disponibles",
+      "notInResult": "No está en este resultado",
+      "transmissionUtilization": "Utilización del transporte"
     },
     "system": {
       "noData": "No hay datos del sistema disponibles",

@@ -7,6 +7,7 @@ import {
   useDeleteModelMutation,
   useUpdateModelMutation,
   useStartCalculationMutation,
+  useRunMemeMutation,
   useBulkDeleteModelsMutation
 } from '@/features/model-dashboard/hooks/useModelsQuery';
 
@@ -21,6 +22,7 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
   const deleteMutation = useDeleteModelMutation();
   const updateMutation = useUpdateModelMutation();
   const startCalculationMutation = useStartCalculationMutation();
+  const runMemeMutation = useRunMemeMutation();
   const bulkDeleteMutation = useBulkDeleteModelsMutation();
 
   const refreshData = useCallback(async () => {
@@ -65,6 +67,18 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     }
   }, [startCalculationMutation, refreshData]);
 
+  // Step 9: dispatch the model to MEME instead of the legacy webservice path.
+  const handleRunMeme = useCallback(async (modelIds: number[]): Promise<void> => {
+    try {
+      for (const id of modelIds) {
+        await runMemeMutation.mutateAsync(id);
+      }
+      await refreshData();
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Failed to start MEME calculation:', error);
+    }
+  }, [runMemeMutation, refreshData]);
+
   const handleDownload = useCallback(async (model: Model): Promise<void> => {
     try {
       await downloadModelArchive(model.id, `model_${model.id}.zip`);
@@ -103,6 +117,7 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     handleCopy,
     handleDelete,
     handleCalculate,
+    handleRunMeme,
     handleDownload,
     updateTitle,
     handleBulkDelete,
