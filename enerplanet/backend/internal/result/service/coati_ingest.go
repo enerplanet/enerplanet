@@ -14,6 +14,8 @@ import (
 
 	commonModels "platform.local/common/pkg/models"
 	"platform.local/platform/logger"
+
+	resultcapabilities "spatialhub_backend/internal/result/capabilities"
 )
 
 // errCoatiLocateFound stops the ResultParser-style tree walk once a Calliope
@@ -209,7 +211,10 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 		log.Errorf("Failed to marshal Coati summary model_id=%d err=%v", modelID, err)
 		return nil, fmt.Errorf("marshal Coati summary: %w", err)
 	}
-	if err := s.db.Model(&commonModels.Model{}).Where("id = ?", modelID).Update("results", datatypes.JSON(summaryJSON)).Error; err != nil {
+	if err := s.db.Model(&commonModels.Model{}).Where("id = ?", modelID).Updates(map[string]any{
+		"results":       datatypes.JSON(summaryJSON),
+		"result_source": string(resultcapabilities.SourceMeme),
+	}).Error; err != nil {
 		log.Warnf("Failed to update model.results model_id=%d err=%v", modelID, err)
 	}
 

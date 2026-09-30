@@ -5,6 +5,7 @@ import (
 
 	"platform.local/common/pkg/httputil"
 	"platform.local/platform/logger"
+	resultcapabilities "spatialhub_backend/internal/result/capabilities"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	resultStore "spatialhub_backend/internal/store/result"
@@ -283,7 +284,15 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 
-	response := gin.H{}
+	// Declare what this result actually contains before returning any data: the
+	// UI hides the sections a source cannot provide (and must not render an
+	// empty state that reads as a clean bill of health). The mapping lives in
+	// internal/result/capabilities — see tasks/grid-result-capabilities-plan.md.
+	source := resultcapabilities.Source(model.ResultSource)
+	response := gin.H{
+		"source":       string(source),
+		"capabilities": resultcapabilities.For(source),
+	}
 
 	if voltage, err := h.store.GetPyPSAVoltage(modelIDUint); err == nil {
 		response["voltage"] = voltage
