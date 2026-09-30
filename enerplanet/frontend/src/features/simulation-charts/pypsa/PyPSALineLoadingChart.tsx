@@ -13,6 +13,10 @@ interface PyPSALineLoadingChartProps {
   items: LineLoadingItem[];
   height?: number;
   title?: string;
+  // When true the percentages are flow/capacity utilisation, not electrical
+  // loading — relabel the axis and tooltip accordingly (meaning differs, data
+  // is real; this is a relabel, never a hide).
+  utilizationOnly?: boolean;
 }
 
 const formatKva = (value: number): string => {
@@ -26,6 +30,7 @@ export const PyPSALineLoadingChart = ({
   items,
   height = 260,
   title = 'Peak Line Flow',
+  utilizationOnly = false,
 }: PyPSALineLoadingChartProps) => {
   const themeColors = useThemeColors();
 
@@ -59,7 +64,7 @@ export const PyPSALineLoadingChart = ({
             `<div>Peak active loss: <b>${item.peakLossKw.toFixed(2)} kW</b></div>`,
           ];
           if (item.peakLoadingPercent !== undefined) {
-            lines.push(`<div>Rated loading: <b>${item.peakLoadingPercent.toFixed(1)}%</b></div>`);
+            lines.push(`<div>${utilizationOnly ? 'Utilization' : 'Rated loading'}: <b>${item.peakLoadingPercent.toFixed(1)}%</b></div>`);
           }
           return lines.join('');
         },
@@ -72,7 +77,11 @@ export const PyPSALineLoadingChart = ({
       },
       xAxis: {
         type: 'value',
-        name: displayItems.some(item => item.peakLoadingPercent !== undefined) ? 'Peak flow' : 'kVA',
+        name: utilizationOnly
+          ? '% of rating'
+          : displayItems.some(item => item.peakLoadingPercent !== undefined)
+            ? 'Peak flow'
+            : 'kVA',
         axisLabel: {
           color: themeColors.textMuted,
           formatter: (value: number) => formatKva(value),
@@ -105,7 +114,7 @@ export const PyPSALineLoadingChart = ({
         },
       ],
     };
-  }, [items, themeColors, title]);
+  }, [items, themeColors, title, utilizationOnly]);
 
   if (items.length === 0) {
     return (

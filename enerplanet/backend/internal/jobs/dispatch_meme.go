@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -22,9 +23,24 @@ import (
 // dispatch (the first real caller of the T1K seam).
 const TypeDispatchMeme = "dispatch_meme"
 
-// memeTarget is the TentaCron target that forwards to MEME. It is hard-fixed
-// upstream (see the tentacron skill); the backend just names it.
-const memeTarget = "meme"
+// TentaCron target names for a MEME run. The framework set is fixed per target
+// (a TentaCron request selects a target by name, never a URL), so running fewer
+// frameworks needs its own target: `meme` is pypsa,calliope, `meme-pypsa` is
+// pypsa only. MEME fails a multi-target request as a whole if one framework
+// rejects it, so the split also lets a model solve when only one leg works.
+const (
+	memeTargetDefault   = "meme"
+	memeTargetPyPSAOnly = "meme-pypsa"
+)
+
+// MemeTargetFor maps a requested framework set to the TentaCron target that
+// serves it. Anything other than a lone "pypsa" keeps the full set.
+func MemeTargetFor(frameworks string) string {
+	if strings.TrimSpace(frameworks) == "pypsa" {
+		return memeTargetPyPSAOnly
+	}
+	return memeTargetDefault
+}
 
 // memePollBudget is how long a MEME dispatch may stay alive waiting for the
 // job. It matches TentaCron's own meme target poll timeout (30m), NOT the
@@ -63,6 +79,10 @@ type memeRunStore interface {
 type DispatchMemePayload struct {
 	ModelID uint   `json:"model_id"`
 	UserID  string `json:"user_id"`
+	// Target is the TentaCron target (i.e. the framework set) to dispatch to:
+	// memeTargetDefault (pypsa,calliope) or memeTargetPyPSAOnly. Empty means the
+	// default, so an older payload keeps its meaning.
+	Target string `json:"target,omitempty"`
 }
 
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
@@ -105,6 +125,15 @@ func HandleDispatchMeme(
 		return fmt.Errorf("failed to unmarshal dispatch_meme payload: %w", err)
 	}
 
+	// Any dispatch failure must leave the model in a terminal 'failed' state, or
+	// it sits in 'queue' forever (the ingest handler is the only other writer,
+	// and it never runs when dispatch fails early).
+	defer func() {
+		if retErr != nil {
+			markModelFailed(db, p.ModelID, retErr.Error())
+		}
+	}()
+
 	var model commonModels.Model
 	if err := db.First(&model, p.ModelID).Error; err != nil {
 		return fmt.Errorf("failed to fetch model %d: %w", p.ModelID, err)
@@ -140,6 +169,10 @@ func HandleDispatchMeme(
 	}
 	jobID := ""
 	submittedNow := false
+	target := p.Target
+	if target == "" {
+		target = memeTargetDefault
+	}
 	switch {
 	case rec == nil || models.MemeRunFinished(rec.Status):
 		// Fresh submit. Either no run is recorded (first solve) or the recorded
@@ -150,7 +183,7 @@ func HandleDispatchMeme(
 		// run-scoped idempotency key (baked from model.CalculationStartedAt,
 		// which StartCalculation sets fresh on every start) guarantees
 		// TentaCron creates a NEW request/job for this solve.
-		jobID, err = tc.SubmitMeme(ctx, memeTarget, memeJob, memeIdempotencyKey(model.ID, model.CalculationStartedAt))
+		jobID, err = tc.SubmitMeme(ctx, target, memeJob, memeIdempotencyKey(model.ID, model.CalculationStartedAt))
 		if err != nil {
 			return fmt.Errorf("meme dispatch via TentaCron for model %d: %w", p.ModelID, err)
 		}
@@ -158,6 +191,7 @@ func HandleDispatchMeme(
 			log.Errorf("model %d: failed to persist MEME TentaCron job %s: %v", p.ModelID, jobID, err)
 		}
 		submittedNow = true
+		markModelRunning(db, p.ModelID)
 		log.Infof("model %d: submitted MEME job to TentaCron id=%s", p.ModelID, jobID)
 	default:
 		// A run is recorded and still alive (non-terminal, i.e. running):

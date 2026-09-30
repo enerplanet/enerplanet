@@ -838,6 +838,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/download", resultHandler.DownloadModelResult)
 	api.POST(routeModelByID+"/reprocess-results", resultHandler.ReprocessModelResults)
 	api.POST("/calculation/start/:id", modelHandler.StartCalculation)
+	api.POST(routeModelByID+"/run-meme", modelHandler.StartMemeCalculation)
 	api.GET("/results/:id", resultHandler.GetResult)
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
 }

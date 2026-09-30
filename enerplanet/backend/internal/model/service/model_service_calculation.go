@@ -43,9 +43,11 @@ func (s *ModelService) LogCalculationPayload(model *models.Model, calcPayload in
 	}
 }
 
-func (s *ModelService) StartCalculation(ctx context.Context, userID string, accessLevel string, modelIDParam string, asynqClient *asynq.Client) (*models.Model, error) {
-	log := platformlogger.ForComponent("model")
-
+// prepareModelRun is the part both start paths share: load the model, enforce
+// access and the "not already running" guard, and ensure the country is
+// resolved BEFORE any status mutation (so a stuck model is never left in the
+// "queue" state when resolution fails). It does not mutate model status.
+func (s *ModelService) prepareModelRun(ctx context.Context, userID string, accessLevel string, modelIDParam string) (*models.Model, error) {
 	model, err := s.store.FindModelWithWorkspace(modelIDParam)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,8 +64,6 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 		return nil, fmt.Errorf("model calculation already in progress")
 	}
 
-	// Ensure country is resolved BEFORE any status mutation so a stuck
-	// model cannot be left in the "queue" state when resolution fails.
 	if model.Country == nil || strings.TrimSpace(*model.Country) == "" {
 		if len(model.Coordinates) == 0 {
 			return nil, fmt.Errorf("country is required but model has no coordinates to resolve it")
@@ -77,6 +77,20 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 			return nil, fmt.Errorf("failed to persist resolved country: %w", err)
 		}
 		model.Country = &resolved
+	}
+
+	return model, nil
+}
+
+// StartCalculation is the legacy path: enqueue run_buem, which resolves the 3D
+// envelope + weather and calls buem-gateway before dispatch_model_calculation
+// itself — see internal/jobs/run_buem.go.
+func (s *ModelService) StartCalculation(ctx context.Context, userID string, accessLevel string, modelIDParam string, asynqClient *asynq.Client) (*models.Model, error) {
+	log := platformlogger.ForComponent("model")
+
+	model, err := s.prepareModelRun(ctx, userID, accessLevel, modelIDParam)
+	if err != nil {
+		return nil, err
 	}
 
 	// Build payload up-front; if it fails (e.g. country still missing) we
@@ -115,9 +129,6 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 		return nil, fmt.Errorf("failed to marshal task payload: %w", err)
 	}
 
-	// run_buem resolves 3D envelope + weather data and calls buem-gateway
-	// before enqueueing "dispatch_model_calculation" itself — see
-	// internal/jobs/run_buem.go.
 	task := asynq.NewTask(jobs.TypeRunBuem, payloadBytes)
 	_, err = asynqClient.Enqueue(task,
 		asynq.Queue("buem"),
@@ -127,6 +138,71 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 	)
 	if err != nil {
 		log.Errorf("failed to enqueue task model_id=%d err=%v", model.ID, err)
+		return nil, fmt.Errorf("failed to enqueue calculation: %w", err)
+	}
+
+	return model, nil
+}
+
+// StartMemeCalculation is the MEME path: the model is dispatched to MEME via
+// TentaCron (jobs.TypeDispatchMeme) instead of the legacy webservice. It shares
+// the request/response contract with StartCalculation (same status transition,
+// same error surface) so the UI's Run affordance can target either engine.
+//
+// Dispatch/retry semantics are deliberately different from the legacy path:
+//   - MaxRetry(0): a MEME dispatch either completes (the ingest handler owns the
+//     terminal completed/failed transition) or fails once, terminal. A retry
+//     would land on a terminal 'failed' run, which the dispatch handler treats
+//     as a user re-solve and re-submits — i.e. an automatic re-solve, which is
+//     exactly what the "parse once, no autoheal" rule forbids. A real re-run is
+//     the user pressing Run again.
+//   - Timeout must exceed the handler's own 30m poll budget (memePollBudget) so
+//     asynq does not kill the task mid-poll.
+func (s *ModelService) StartMemeCalculation(ctx context.Context, userID string, accessLevel string, modelIDParam string, frameworks string, asynqClient *asynq.Client) (*models.Model, error) {
+	log := platformlogger.ForComponent("model")
+
+	model, err := s.prepareModelRun(ctx, userID, accessLevel, modelIDParam)
+	if err != nil {
+		return nil, err
+	}
+
+	// Pre-flight only: the dispatch job rebuilds the payload from the stored
+	// model at dispatch time, but a model that cannot build one should fail this
+	// request (400), not a queued job.
+	if _, err := s.BuildCalculationPayload(model); err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	if err := s.store.Update(model, map[string]interface{}{
+		"status":                   models.ModelStatusQueue,
+		"calculation_started_at":   now,
+		"calculation_completed_at": nil,
+		"updated_at":               now,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update model status: %w", err)
+	}
+	model.Status = models.ModelStatusQueue
+
+	payloadBytes, err := json.Marshal(jobs.DispatchMemePayload{
+		ModelID: model.ID,
+		UserID:  userID,
+		Target:  jobs.MemeTargetFor(frameworks),
+	})
+	if err != nil {
+		log.Errorf("failed to marshal dispatch_meme payload model_id=%d err=%v", model.ID, err)
+		return nil, fmt.Errorf("failed to marshal task payload: %w", err)
+	}
+
+	task := asynq.NewTask(jobs.TypeDispatchMeme, payloadBytes)
+	_, err = asynqClient.Enqueue(task,
+		asynq.Queue("buem"),
+		asynq.MaxRetry(0),
+		asynq.Timeout(60*time.Minute),
+		asynq.Retention(24*time.Hour),
+	)
+	if err != nil {
+		log.Errorf("failed to enqueue dispatch_meme model_id=%d err=%v", model.ID, err)
 		return nil, fmt.Errorf("failed to enqueue calculation: %w", err)
 	}
 

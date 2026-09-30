@@ -14,6 +14,11 @@ interface NetworkTopologyProps {
   locations: string[];
   voltageData?: Record<string, number>; // location -> avg voltage
   powerData?: Record<string, number>; // location -> avg power
+  // Declared availability: when false, the corresponding metric is absent from
+  // this result and must not be rendered (a defaulted 1.0 p.u. / 0 kW reads as a
+  // normal, solved grid). See tasks/grid-result-capabilities-plan.md.
+  voltageAvailable?: boolean;
+  powerAvailable?: boolean;
   lineConnections?: LineConnection[]; // Actual grid topology connections
   clusterColors?: Record<string, string>; // location -> cluster color hex (matches map colors)
   height?: number;
@@ -482,6 +487,8 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
   locations,
   voltageData = {},
   powerData = {},
+  voltageAvailable = true,
+  powerAvailable = true,
   lineConnections = [],
   clusterColors = {},
   height = 320,
@@ -533,6 +540,22 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
       ({ nodes, links } = createSimpleLayout(ctx));
     }
 
+    // When voltage is not part of this result, do not colour/label nodes by a
+    // defaulted 1.0 p.u. (green would read as a solved, normal grid) — use a
+    // neutral, cluster-only style instead.
+    if (!voltageAvailable) {
+      nodes = nodes.map(n => ({
+        ...n,
+        itemStyle: {
+          ...n.itemStyle,
+          color: clusterColors[n.name] || '#94a3b8',
+          borderColor: '#94a3b8',
+          shadowColor: 'transparent',
+          shadowBlur: 0,
+        },
+      }));
+    }
+
     const useForceLayout = layoutMode === 'force';
 
     return {
@@ -563,18 +586,28 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
             };
             const connectedCount = type === 'transformer' ? trafoToBuildingsMap[params.name]?.length || 0 : 0;
 
+            const voltageRow = voltageAvailable
+              ? `<span style="color: ${themeColors.textMuted};">${t('results.grid.voltage')}:</span>
+                <span style="font-weight: 600;">${voltage.toFixed(4)} pu</span>`
+              : '';
+            const powerRow = powerAvailable
+              ? `<span style="color: ${themeColors.textMuted};">${t('results.grid.power')}:</span>
+                <span style="font-weight: 600;">${formatPower(power)}</span>`
+              : '';
+            const statusRow = voltageAvailable
+              ? `<span style="color: ${themeColors.textMuted};">${t('results.grid.status')}:</span>
+                <span style="font-weight: 600; color: ${statusColors[status]};">${statusTranslations[status]}</span>`
+              : '';
+
             return `
               <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px; color: ${themeColors.text};">${params.name}</div>
               <div style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; margin-bottom: 8px; background: ${type === 'transformer' ? '#dbeafe' : themeColors.gridLine}; color: ${type === 'transformer' ? '#1d4ed8' : themeColors.text};">
                 ${type === 'transformer' ? `⚡ ${t('results.grid.transformer')}` : `🏠 ${t('results.grid.building')}`}
               </div>
               <div style="display: grid; grid-template-columns: auto auto; gap: 4px 16px; font-size: 12px; color: ${themeColors.text};">
-                <span style="color: ${themeColors.textMuted};">${t('results.grid.voltage')}:</span>
-                <span style="font-weight: 600;">${voltage.toFixed(4)} pu</span>
-                <span style="color: ${themeColors.textMuted};">${t('results.grid.power')}:</span>
-                <span style="font-weight: 600;">${formatPower(power)}</span>
-                <span style="color: ${themeColors.textMuted};">${t('results.grid.status')}:</span>
-                <span style="font-weight: 600; color: ${statusColors[status]};">${statusTranslations[status]}</span>
+                ${voltageRow}
+                ${powerRow}
+                ${statusRow}
                 ${type === 'transformer' ? `
                   <span style="color: ${themeColors.textMuted};">${t('results.grid.connected')}:</span>
                   <span style="font-weight: 600; color: #3b82f6;">${connectedCount} ${t('results.grid.buildings')}</span>
@@ -613,7 +646,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
       },
       trafoToBuildingsMap,
     };
-  }, [networkStructure, voltageData, powerData, clusterColors, height, themeColors, t]);
+  }, [networkStructure, voltageData, powerData, clusterColors, height, themeColors, t, voltageAvailable, powerAvailable]);
 
   // Handle chart events - highlight connected buildings when hovering transformer
   const onEvents = useMemo(() => {
@@ -717,19 +750,27 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
           </>
         )}
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-green-500 bg-transparent shadow-sm shadow-green-500/50"></span>
-            <span className="text-muted-foreground">{t('results.grid.normal')}</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-amber-500 bg-transparent shadow-sm shadow-amber-500/50"></span>
-            <span className="text-muted-foreground">{t('results.grid.warning')}</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-red-500 bg-transparent shadow-sm shadow-red-500/50"></span>
-            <span className="text-muted-foreground">{t('results.grid.critical')}</span>
-          </span>
-          <VoltageStatusTooltip />
+          {voltageAvailable ? (
+            <>
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-green-500 bg-transparent shadow-sm shadow-green-500/50"></span>
+                <span className="text-muted-foreground">{t('results.grid.normal')}</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-amber-500 bg-transparent shadow-sm shadow-amber-500/50"></span>
+                <span className="text-muted-foreground">{t('results.grid.warning')}</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-red-500 bg-transparent shadow-sm shadow-red-500/50"></span>
+                <span className="text-muted-foreground">{t('results.grid.critical')}</span>
+              </span>
+              <VoltageStatusTooltip />
+            </>
+          ) : (
+            <span className="text-[10px] text-muted-foreground italic">
+              {t('results.grid.notInResult')}
+            </span>
+          )}
         </div>
       </div>
     </div>

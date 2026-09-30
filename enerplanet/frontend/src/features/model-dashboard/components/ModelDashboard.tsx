@@ -319,6 +319,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleCopy,
 		handleDelete,
 		handleCalculate,
+		handleRunMeme,
 		handleDownload,
 		updateTitle: updateTitleHandler,
 		handleBulkDelete: bulkDeleteHandler,
@@ -631,6 +632,9 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const handleCalculateSingle = useCallback((model: Model) => {
 		handleCalculate([model.id]);
 	}, [handleCalculate]);
+	const handleRunMemeSingle = useCallback((model: Model) => {
+		handleRunMeme([model.id]);
+	}, [handleRunMeme]);
 
 	const handleBulkCopy = useCallback(() => {
 		if (document.activeElement instanceof HTMLElement) {
@@ -1073,6 +1077,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														onDownload={handleDownload}
 														onCopy={handleCopy}
 														onCalculate={handleCalculateSingle}
+											onRunMeme={handleRunMemeSingle}
 														onDelete={handleSingleDelete}
 														onShare={handleShare}
 														onMoveToWorkspace={handleMoveToWorkspace}

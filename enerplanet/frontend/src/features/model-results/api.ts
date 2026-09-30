@@ -1,6 +1,7 @@
 import axios from 'axios';
 import api from '@/lib/axios';
 import { ModelInfo, ModelResults, StructuredModelResults, CarrierProdRecord, CarrierConRecord, CapacityFactorRecord, EnergyCapRecord, CostRecord, SystemBalanceRecord, UnmetDemandRecord, ResourceConRecord, LineFlowRecord, TransformerFlowRecord } from './types';
+import type { ResultSource, Capabilities } from '@/config/resultCapabilities';
 
 export async function fetchModelWithResults(modelId: number, signal?: AbortSignal): Promise<ModelInfo | null> {
   try {
@@ -215,6 +216,11 @@ export async function fetchSystemTimeSeries(modelId: number, signal?: AbortSigna
 
 
 export interface PyPSAModelResults {
+  // Provenance + what this result actually contains. The backend declares both
+  // per model; consumers hide sections a source cannot provide. See
+  // tasks/grid-result-capabilities-plan.md.
+  source?: ResultSource;
+  capabilities?: Capabilities;
   voltage?: { timestep: string; v_mag_pu: number; v_ang?: number; bus: string; location: string }[];
   power?: { timestep: string; p: number; q?: number; bus: string; location: string }[];
   buses_t_v_mag_pu?: { timestep: string; v_mag_pu: number; v_ang?: number; bus: string; location: string }[];

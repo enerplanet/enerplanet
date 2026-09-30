@@ -824,3 +824,46 @@ func (h *ModelHandler) StartCalculation(c *gin.Context) {
 
 	httputil.SuccessResponse(c, updated)
 }
+
+// StartMemeCalculation dispatches the model to MEME (via TentaCron's durable
+// queue) instead of the legacy webservice. Same contract as StartCalculation so
+// the UI's Run affordance can target either engine.
+func (h *ModelHandler) StartMemeCalculation(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+	modelSvc := h.newModelService()
+
+	// Optional framework set: "pypsa" runs the PyPSA leg only (TentaCron target
+	// meme-pypsa); anything else (or absent) keeps pypsa,calliope. Accepted as a
+	// query param or a JSON body so the UI can post either way.
+	frameworks := c.Query("frameworks")
+	if frameworks == "" {
+		var body struct {
+			Frameworks string `json:"frameworks"`
+		}
+		_ = c.ShouldBindJSON(&body) // body is optional; a parse miss means "no preference"
+		frameworks = body.Frameworks
+	}
+
+	updated, err := modelSvc.StartMemeCalculation(c.Request.Context(), userCtx.UserID, userCtx.AccessLevel, c.Param("id"), frameworks, h.asynqClient)
+	if err != nil {
+		msg := err.Error()
+		switch {
+		case strings.Contains(msg, "not found"):
+			httputil.NotFound(c, errModelNotFound)
+		case strings.Contains(msg, "access denied"):
+			httputil.Forbidden(c, "Access denied")
+		case strings.Contains(msg, "already in progress"):
+			httputil.Conflict(c, "Model calculation already in progress")
+		case strings.Contains(msg, "country"):
+			httputil.BadRequest(c, msg)
+		default:
+			httputil.InternalError(c, "Failed to start calculation")
+		}
+		return
+	}
+
+	httputil.SuccessResponse(c, updated)
+}

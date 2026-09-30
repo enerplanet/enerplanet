@@ -184,7 +184,8 @@
       "cannotDelete": "Kan niet verwijderen - alleen de eigenaar of een expert kan verwijderen",
       "retryCalculation": "Berekening Opnieuw",
       "startCalculation": "Berekening Starten",
-      "engineNotAvailable": "Simulatiemotor is niet beschikbaar"
+      "engineNotAvailable": "Simulatiemotor is niet beschikbaar",
+      "runWithMeme": "Uitvoeren met MEME"
     },
     "pagination": {
       "showing": "Weergave",
@@ -489,7 +490,9 @@
       "max": "Max",
       "avg": "Gem",
       "loading": "Belasting",
-      "noLoadingData": "Geen belastingsgegevens beschikbaar"
+      "noLoadingData": "Geen belastingsgegevens beschikbaar",
+      "notInResult": "Niet in dit resultaat",
+      "transmissionUtilization": "Transmissiebenutting"
     },
     "system": {
       "noData": "Geen systeemgegevens beschikbaar",

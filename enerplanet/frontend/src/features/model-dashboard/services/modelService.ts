@@ -243,6 +243,14 @@ class ModelService {
     return response.data;
   }
 
+  // Dispatch the model to MEME (via TentaCron) instead of the legacy
+  // webservice. Same contract as startCalculation; see
+  // tasks/meme-integration-plan.md Step 9.
+  async runMeme(id: number): Promise<ModelResponse> {
+    const response = await axios.post(`/models/${id}/run-meme`);
+    return response.data;
+  }
+
   async downloadModelResults(id: number): Promise<AxiosResponse<Blob>> {
     return axios.get(`${this.baseURL}/${id}/download`, {
       responseType: 'blob',

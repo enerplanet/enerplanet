@@ -141,7 +141,7 @@
       },
       {
         "to": "node",
-        "template": "$k"
+        "template": "n$k"
       },
       {
         "to": "carrier_out",
@@ -162,7 +162,7 @@
     "grid_tariff": [
       {
         "to": "node",
-        "template": "$k"
+        "template": "n$k"
       },
       {
         "to": "carrier",
@@ -250,7 +250,7 @@
         "value": "BasePOI",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": false
           }
         }
@@ -260,7 +260,7 @@
         "value": "residential",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": false
           }
         },
@@ -271,7 +271,7 @@
         "value": "residential",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": false
           }
         }
@@ -281,7 +281,7 @@
         "value": "residential",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": false
           }
         }
@@ -291,7 +291,7 @@
         "value": 0,
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": false
           }
         }
@@ -301,7 +301,7 @@
         "value": "TopologyNode",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": true
           }
         }
@@ -311,7 +311,7 @@
         "value": "transformer",
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": true
           }
         }
@@ -321,7 +321,7 @@
         "value": null,
         "when": {
           "reverse": {
-            "path": "/model.trade{grid-$k}",
+            "path": "/model.trade{grid_$k}",
             "exists": true
           }
         }
@@ -343,7 +343,7 @@
       {
         "each": {
           "from": "properties",
-          "to": "/model.technologies{demand-$k}"
+          "to": "/model.technologies{demand_$k}"
         },
         "when": {
           "forward": {
@@ -359,7 +359,7 @@
           },
           {
             "to": "node",
-            "template": "$k"
+            "template": "n$k"
           },
           {
             "to": "carrier_in",
@@ -382,7 +382,7 @@
       {
         "each": {
           "from": "properties",
-          "to": "/model.trade{grid-$k}"
+          "to": "/model.trade{grid_$k}"
         },
         "when": {
           "forward": [
@@ -400,7 +400,7 @@
         "rules": [
           {
             "to": "node",
-            "template": "$k"
+            "template": "n$k"
           },
           {
             "to": "carrier",
@@ -430,7 +430,7 @@
       {
         "each": {
           "from": "techs.pv_supply",
-          "to": "/model.technologies{pv_supply-$k}"
+          "to": "/model.technologies{pv_supply_$k}"
         },
         "rules": [
           {
@@ -469,7 +469,7 @@
       {
         "each": {
           "from": "techs.battery_storage",
-          "to": "/model.technologies{battery_storage-$k}"
+          "to": "/model.technologies{battery_storage_$k}"
         },
         "rules": [
           {
@@ -478,7 +478,7 @@
           },
           {
             "to": "node",
-            "template": "$k"
+            "template": "n$k"
           },
           {
             "to": "carrier_in",
@@ -569,7 +569,7 @@
       {
         "each": {
           "from": "techs.wind_onshore",
-          "to": "/model.technologies{wind_onshore-$k}"
+          "to": "/model.technologies{wind_onshore_$k}"
         },
         "rules": [
           {
@@ -607,7 +607,7 @@
       {
         "each": {
           "from": "techs.biomass_supply",
-          "to": "/model.technologies{biomass_supply-$k}"
+          "to": "/model.technologies{biomass_supply_$k}"
         },
         "rules": [
           {
@@ -618,7 +618,7 @@
       {
         "each": {
           "from": "techs.geothermal_supply",
-          "to": "/model.technologies{geothermal_supply-$k}"
+          "to": "/model.technologies{geothermal_supply_$k}"
         },
         "rules": [
           {
@@ -629,7 +629,7 @@
       {
         "each": {
           "from": "techs.water_supply",
-          "to": "/model.technologies{water_supply-$k}"
+          "to": "/model.technologies{water_supply_$k}"
         },
         "rules": [
           {
@@ -640,7 +640,7 @@
       {
         "each": {
           "from": "techs.households_supply",
-          "to": "/model.trade{households-$k}"
+          "to": "/model.trade{households_$k}"
         },
         "rules": [
           {
@@ -651,7 +651,7 @@
       {
         "each": {
           "from": "techs.non_households_supply",
-          "to": "/model.trade{non_households-$k}"
+          "to": "/model.trade{non_households_$k}"
         },
         "rules": [
           {
@@ -766,9 +766,11 @@
     {
       "each": {
         "from": "topology[$i]",
-        "to": "model.transmission{${p}_$i}",
+        "to": "model.transmission{${p}_${from}_${to}}",
         "bind": {
-          "$p": "pipe"
+          "$p": "pipe",
+          "$from": "from.id",
+          "$to": "to.id"
         }
       },
       "when": {
@@ -794,12 +796,12 @@
           }
         },
         {
-          "from": "from.id",
-          "to": "from"
+          "to": "from",
+          "template": "n${from}"
         },
         {
-          "from": "to.id",
-          "to": "to"
+          "to": "to",
+          "template": "n${to}"
         },
         {
           "from": "length",
@@ -812,7 +814,7 @@
     {
       "each": {
         "from": "topology[$i].from",
-        "to": "model.nodes{$k}",
+        "to": "model.nodes{n$k}",
         "bind": {
           "$k": "id"
         }
@@ -827,7 +829,7 @@
     {
       "each": {
         "from": "topology[$i].to",
-        "to": "model.nodes{$k}",
+        "to": "model.nodes{n$k}",
         "bind": {
           "$k": "id"
         }
