@@ -140,11 +140,46 @@ PyLovo fills `state_name` from `regions.yaml` during a constructor run, which a
 fixture-loaded database never has, so without it a reader sees whatever the
 source database happened to hold.
 
-The City2TABULA fixtures are `pg_dump --schema=city2tabula` of a database that
-has been through extraction and `-link-pylovo` against the pylovo fixture
-above, with `lod2_child_feature`, `lod2_child_feature_geom_dump` and
-`lod2_surface_raw` truncated first. Nothing served reads those three, and they
-triple the fixture size.
+The fixtures follow the deployed layout: one pylovo database holding every
+country, and one City2TABULA database per country, each linked to that single
+pylovo database. Each country's City2TABULA fixture is produced in three steps:
+
+1. Extract the country's 3D source into its own City2TABULA database.
+2. Truncate `building_link`, then run `-link-pylovo` with `PYLOVO_FDW_*` pointing
+   at the pylovo database the fixture above is exported from.
+3. `pg_dump --schema=city2tabula`, with `lod2_child_feature`,
+   `lod2_child_feature_geom_dump` and `lod2_surface_raw` truncated first (the
+   `lod3_` equivalents for an LoD3 source, and `_building_part` where it
+   exists). Nothing served reads those tables, and they triple the fixture size.
+
+Link against the pylovo database itself over `postgres_fdw`, not against a copy
+of its `res` and `oth` tables. The link records OSM ids, so a link made against
+different pylovo data points at buildings the pylovo fixture may not contain.
+
+| Variable | Value |
+|---|---|
+| `PYLOVO_FDW_HOST` / `PYLOVO_FDW_PORT` | the pylovo Postgres, as reached from inside `city2tabula-db` |
+| `PYLOVO_FDW_DBNAME` | the populated pylovo database |
+| `PYLOVO_FDW_USER` / `PYLOVO_FDW_PASSWORD` | a role with `SELECT` on `public.res` and `public.oth` only |
+
+!!! warning "The host is resolved by the database server, not by `c2t`"
+    `postgres_fdw` connects from the `city2tabula-db` container, which is on
+    `city2tabula_default` while the platform Postgres is on `spatialhub-net`.
+    `localhost` and `postgres` do not resolve there. The gateway of
+    `city2tabula_default` on the published port 5433 reaches it; so does
+    attaching `city2tabula-db` to `spatialhub-net` and using `postgres:5432`,
+    which does not depend on the port being published.
+
+!!! note "One City2TABULA database per country"
+    `fixtures/load.sh` creates `<DB_NAME>_<cc>` from one file and skips a
+    database that already exists. Every region of a country therefore goes into
+    that country's single dump; a second file for the same country is not
+    loaded.
+
+The link query does not push its area filter to the pylovo server: each batch
+reads the whole `res` table across the connection and filters locally. That is
+a few seconds for a city-sized fixture and grows with the size of the pylovo
+database, so a country-scale link is slow.
 
 !!! warning "Order matters, and the link step is a silent no-op"
     `building_link` is precomputed against PyLovo, so the pylovo fixture has to
