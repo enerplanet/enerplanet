@@ -49,8 +49,9 @@ func NewHandler(tc *tentacron.Client, provider string) *Handler {
 //	@Description	BuEM's block for it including the hourly series. Unlike a model run, the envelope
 //	@Description	is taken from the request rather than looked up in City2TABULA, so a building that
 //	@Description	has no 3D match, or whose surfaces a user has edited, can still be run. The
-//	@Description	building block is forwarded to buem-gateway verbatim and must be complete: no
-//	@Description	U-value resolution or archetype default is applied here.
+//	@Description	building block is forwarded to buem-gateway as sent and must be complete: no
+//	@Description	U-value resolution or archetype default is applied here. The one addition: a block
+//	@Description	that sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.
 //	@Description	weather_provider selects the weather archive; omitted, the backend default applies.
 //	@Tags			BuEM
 //	@Accept			json

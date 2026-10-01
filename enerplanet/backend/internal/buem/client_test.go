@@ -178,3 +178,45 @@ func TestRunBuilding_EmptyBatchIsAnErrorNotAPanic(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "111")
 }
+
+func sentThermal(t *testing.T, payload map[string]any, i int) map[string]any {
+	t.Helper()
+	buildings, ok := payload["buildings"].([]any)
+	require.True(t, ok)
+	block, ok := buildings[i].(map[string]any)["building"].(map[string]any)
+	require.True(t, ok)
+	thermal, _ := block["thermal"].(map[string]any)
+	return thermal
+}
+
+// Without an explicit band BuEM's API applies 21-24 °C, which overstates
+// heating against BuEM's own recommended residential default of 18-21 °C.
+func TestRunBuildings_SendsTheDefaultComfortBand(t *testing.T) {
+	tc, payload := fakeTentacron(t, completed(`[]`))
+
+	_, err := NewClient(tc).RunBuildings(context.Background(), sampleBuildings(),
+		json.RawMessage(sampleWeather), "s", "e", 60, "m")
+
+	require.NoError(t, err)
+	for i := range sampleBuildings() {
+		thermal := sentThermal(t, *payload, i)
+		assert.Equal(t, map[string]any{"value": 18.0, "unit": "degC"}, thermal["comfortT_lb"])
+		assert.Equal(t, map[string]any{"value": 21.0, "unit": "degC"}, thermal["comfortT_ub"])
+	}
+}
+
+// A building edited in the configurator may carry its own band; it reaches
+// BuEM as set, and no default bound is added beside it.
+func TestRunBuilding_KeepsTheBuildingsOwnComfortBand(t *testing.T) {
+	tc, payload := fakeTentacron(t, completed(`[{"id":"111","buem":{}}]`))
+	b := Building{ID: "111", Geometry: json.RawMessage(`{"type":"Point","coordinates":[1,2]}`),
+		Building: json.RawMessage(`{"thermal":{"comfortT_lb":{"value":20,"unit":"degC"},"n_air_use":{"value":0.4,"unit":"1/h"}}}`)}
+
+	_, err := NewClient(tc).RunBuilding(context.Background(), b, json.RawMessage(sampleWeather), "s", "e", 60, "m")
+
+	require.NoError(t, err)
+	thermal := sentThermal(t, *payload, 0)
+	assert.Equal(t, map[string]any{"value": 20.0, "unit": "degC"}, thermal["comfortT_lb"])
+	assert.NotContains(t, thermal, "comfortT_ub")
+	assert.Contains(t, thermal, "n_air_use", "other thermal fields are kept")
+}

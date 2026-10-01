@@ -157,13 +157,22 @@ func (c *Client) run(ctx context.Context, buildings []Building, weather json.Raw
 	if resolution <= 0 {
 		resolution = defaultResolution
 	}
+	sent := make([]Building, len(buildings))
+	for i, b := range buildings {
+		block, err := withDefaultComfortBand(b.Building)
+		if err != nil {
+			return nil, fmt.Errorf("building %s: %w", b.ID, err)
+		}
+		b.Building = block
+		sent[i] = b
+	}
 	payload := map[string]any{
 		"start_date": startDate,
 		"end_date":   endDate,
 		"resolution": resolution,
 		"model_id":   modelID,
 		"weather":    weather,
-		"buildings":  buildings,
+		"buildings":  sent,
 	}
 	if keepTimeseries {
 		payload["keep_timeseries"] = true
