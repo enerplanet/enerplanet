@@ -177,7 +177,7 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 	bbox := city2tabula.Bbox{Xmin: xmin, Ymin: ymin, Xmax: xmax, Ymax: ymax}
 
 	envelope := resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
-	weatherJSON := resolveWeather(ctx, log, wx, provider, model, bbox)
+	weatherJSON := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), model, bbox)
 	return envelope, weatherJSON
 }
 

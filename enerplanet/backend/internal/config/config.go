@@ -68,7 +68,7 @@ func LoadFromEnv() (*Config, error) {
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
-		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
+		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "cosmo-rea6"),
 		// 8400 is TentaCron's slot in the dev port allocation (repos.conf),
 		// a range chosen to avoid the crowded 8080 and 9000 neighbourhoods.
 		// The Makefile publishes it there; TentaCron's own default is 8080,

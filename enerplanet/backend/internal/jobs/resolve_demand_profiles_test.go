@@ -157,3 +157,11 @@ func TestSaveResolvedProfile_successIsSavedAsResolved(t *testing.T) {
 	require.NotNil(t, got.Kitchen)
 	assert.Equal(t, 7.76, *got.Kitchen)
 }
+
+func TestModelWeatherProvider(t *testing.T) {
+	assert.Equal(t, "cosmo-rea6", modelWeatherProvider(nil, "cosmo-rea6"), "no config")
+	assert.Equal(t, "cosmo-rea6", modelWeatherProvider([]byte(`{}`), "cosmo-rea6"), "no weatherProvider key")
+	assert.Equal(t, "cosmo-rea6", modelWeatherProvider([]byte(`{"weatherProvider":"dwd-icon"}`), "cosmo-rea6"), "unknown value falls back to the default")
+	assert.Equal(t, "era5-land", modelWeatherProvider([]byte(`{"weatherProvider":"era5-land"}`), "cosmo-rea6"))
+	assert.Equal(t, "merra-2", modelWeatherProvider([]byte(`{"weatherProvider":"merra-2"}`), "cosmo-rea6"))
+}

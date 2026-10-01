@@ -51,6 +51,7 @@ func NewHandler(tc *tentacron.Client, provider string) *Handler {
 //	@Description	has no 3D match, or whose surfaces a user has edited, can still be run. The
 //	@Description	building block is forwarded to buem-gateway verbatim and must be complete: no
 //	@Description	U-value resolution or archetype default is applied here.
+//	@Description	weather_provider selects the weather archive; omitted, the backend default applies.
 //	@Tags			BuEM
 //	@Accept			json
 //	@Produce		json
@@ -84,6 +85,15 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 		return
 	}
 
+	provider := h.provider
+	if req.WeatherProvider != "" {
+		if !weatherclient.IsProvider(req.WeatherProvider) {
+			httputil.BadRequest(c, "weather_provider must be cosmo-rea6, era5-land or merra-2, got "+req.WeatherProvider)
+			return
+		}
+		provider = req.WeatherProvider
+	}
+
 	xmin, ymin, xmax, ymax, err := geo.BBoxFromGeoJSON(req.Geometry)
 	if err != nil {
 		httputil.BadRequest(c, "geometry is not usable GeoJSON: "+err.Error())
@@ -92,7 +102,7 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 	lon, lat := (xmin+xmax)/2, (ymin+ymax)/2
 
 	ctx := c.Request.Context()
-	weather, err := h.weather.GetPointWeather(ctx, lat, lon, start.Year(), h.provider)
+	weather, err := h.weather.GetPointWeather(ctx, lat, lon, start.Year(), provider)
 	if err != nil {
 		httputil.BadGateway(c, "weather-serve did not return a series for this building: "+err.Error())
 		return

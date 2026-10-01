@@ -24,6 +24,9 @@ type BuemBuildingRunRequest struct {
 	// Solver is BuEM's solver block, forwarded as properties.buem.solver;
 	// omitted, BuEM uses its default solver.
 	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
+	// WeatherProvider is the model's weather archive, so the run uses the same
+	// series as the model run; omitted, the backend default applies.
+	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"cosmo-rea6"`
 }
 
 // BuemBuildingRunResponse carries BuEM's result for the building unchanged.

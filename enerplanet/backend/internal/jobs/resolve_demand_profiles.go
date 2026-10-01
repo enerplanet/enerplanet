@@ -237,6 +237,20 @@ func buildCalculationPayload(model *commonModels.Model) (payload.CalculationPayl
 	return calcPayload, nil
 }
 
+// modelWeatherProvider reads the model's weather archive from
+// config.weatherProvider, the one series every simulation of the model uses,
+// falling back to fallback for an absent, unknown, or unparseable value.
+func modelWeatherProvider(config []byte, fallback string) string {
+	var configMap map[string]interface{}
+	if len(config) == 0 || json.Unmarshal(config, &configMap) != nil {
+		return fallback
+	}
+	if provider, _ := configMap["weatherProvider"].(string); weather.IsProvider(provider) {
+		return provider
+	}
+	return fallback
+}
+
 // modelRefurbishmentLevel reads the model-level refurbishment default from
 // config.refurbishmentLevel (same top-level config map as energyVectors in
 // internal/payload/payload.go), defaulting to existing state for an absent,

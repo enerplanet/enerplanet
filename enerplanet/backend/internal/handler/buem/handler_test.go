@@ -180,3 +180,26 @@ func TestRunBuilding_ForwardsTheSolver(t *testing.T) {
 	buildings := fake.submitted["buem-buildings"]["buildings"].([]any)
 	assert.Equal(t, map[string]any{"use_milp": true}, buildings[0].(map[string]any)["solver"])
 }
+
+// The model's provider reaches the preview, so it runs on the same series as
+// the model run.
+func TestRunBuilding_UsesTheRequestedWeatherProvider(t *testing.T) {
+	tc, fake := newFakeTentacron(t, map[string]string{
+		"weather-point":  sampleWeather,
+		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
+	})
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_provider":"era5-land","start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "era5-land", fake.submitted["weather-point"]["provider"])
+}
+
+func TestRunBuilding_RejectsAnUnknownWeatherProvider(t *testing.T) {
+	tc, _ := newFakeTentacron(t, nil)
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_provider":"dwd-icon","start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "dwd-icon", "the rejected value belongs in the message")
+}

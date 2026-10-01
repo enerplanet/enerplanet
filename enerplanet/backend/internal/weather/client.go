@@ -17,6 +17,14 @@ import (
 // onto the query string per its target config.
 const targetPoint = "weather-point"
 
+// providers are the archives weather-serve answers for, by its canonical names.
+var providers = map[string]bool{"cosmo-rea6": true, "era5-land": true, "merra-2": true}
+
+// IsProvider reports whether name is a weather-serve archive.
+func IsProvider(name string) bool {
+	return providers[name]
+}
+
 // Client resolves weather data through TentaCron.
 type Client struct {
 	tc *tentacron.Client
