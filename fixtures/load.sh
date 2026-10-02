@@ -124,6 +124,8 @@ load_city2tabula() {
   c2t_settings || return 0
   restore_c2t nl city2tabula_loenen.sql.gz tabula_nl.sql.gz
   restore_c2t de city2tabula_bremen.sql.gz tabula_de.sql.gz
+  restore_c2t at city2tabula_vienna.sql.gz tabula_at.sql.gz
+  restore_c2t cz city2tabula_brno.sql.gz tabula_cz.sql.gz
 }
 
 # The pylovo fixture carries its own schema, so it restores into a database

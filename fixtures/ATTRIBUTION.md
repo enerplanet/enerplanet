@@ -20,11 +20,11 @@ tables only. This is derived data, not a redistribution of 3DBAG itself.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/weather/cosmo_rea6, the Dutch, German and Czech cuts
+## fixtures/weather/cosmo_rea6, the Dutch, German, Austrian and Czech cuts
 
 Covers `COSMO_REA6_2018_annual_all_attrs.nc` under
-`fixtures/weather/cosmo_rea6/netherlands/output/`, `.../germany/output/` and
-`.../czech_republic/output/`.
+`fixtures/weather/cosmo_rea6/netherlands/output/`, `.../germany/output/`,
+`.../austria/output/` and `.../czech_republic/output/`.
 
 COSMO-REA6 regional reanalysis, generated in the framework of the
 Hans-Ertel-Centre for Weather Research (HErZ), Climate Monitoring and
@@ -45,10 +45,11 @@ set, and processed by the `weather` pipeline, which standardises variable
 names and derives further variables. The result was then cut to a window
 around each site and recompressed: 3 by 3 cells around Loenen, Netherlands,
 from the Dutch 2018 annual archive, 4 by 4 cells around Bremen, Germany, from
-the German 2018 annual archive, and 4 by 4 cells around Prague, Czechia, from
-the Czech 2018 annual archive. Full year, hourly, 13 variables each.
+the German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
+Austrian 2018 annual archive, and 4 by 4 cells around Brno, Czechia, from the
+Czech 2018 annual archive. Full year, hourly, 13 variables each.
 
-## fixtures/city2tabula/tabula_nl.sql.gz and tabula_de.sql.gz
+## fixtures/city2tabula/tabula_nl.sql.gz, tabula_de.sql.gz, tabula_at.sql.gz and tabula_cz.sql.gz
 
 The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,
 produced under the Intelligent Energy Europe Programme (IEE/09/739/SI2.558245).
@@ -61,8 +62,9 @@ requires both the credit above and this statement of
 modification.
 
 Modifications: the per-country archetype rows City2TABULA imports into its
-`tabula` schema, extracted as the Dutch set (135 rows) and the German set (232
-rows) and recompressed. No values were altered.
+`tabula` schema, extracted as the Dutch set (135 rows), the German set (232
+rows), the Austrian set (165 rows) and the Czech set (84 rows) and recompressed.
+No values were altered.
 
 ## fixtures/city2tabula/city2tabula_bremen.sql.gz
 
@@ -94,6 +96,50 @@ tables only. This is derived data, not a redistribution of the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
+## fixtures/city2tabula/city2tabula_vienna.sql.gz
+
+Derived from `Generalisiertes Dachmodell (LOD2.1)` in CityGML, by Stadt Wien
+(MA 41 Stadtvermessung und Geoinformation), licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+> Datenquelle: Stadt Wien – data.wien.gv.at (https://data.wien.gv.at)
+
+The licence is stated on the dataset page,
+https://www.wien.gv.at/stadtplanung/generalisiertes-dachmodell, and the credit
+wording in the Vienna open data terms of use,
+https://digitales.wien.gv.at/ogd-nutzungsbedingungen/.
+
+Modifications: building envelope attributes and surface geometry were
+extracted from the source CityGML by City2TABULA for the area of postcodes
+1010, 1070, 1080 and 1090 covered by `fixtures/pylovo/vienna_coverage.wkt`,
+then linked to PyLovo buildings and recompressed. 1,318 buildings and 95,807
+surfaces. The pipeline intermediates were emptied, leaving the served tables
+only. This is derived data, not a redistribution of the source model.
+
+CC BY 4.0 requires both the credit above and this statement of modification.
+
+## fixtures/city2tabula/city2tabula_brno.sql.gz
+
+Derived from `3D model budov / 3D Building Model`, published by Statutární
+město Brno on its open data portal, data.brno.cz (dataset item
+`dc95041d63e44e129ba0d9258a1dddb4`).
+
+> Statutární město Brno, data.brno.cz: 3D model budov
+
+The dataset's licence field reads `CC BY`. Neither the licence version nor a
+required credit wording is stated on the dataset record (read 2026-10-02). The
+credit above names the publisher and dataset as the record gives them.
+
+Modifications: the photogrammetric LoD2 building model (captured 2020 to 2023,
+EPSG:5514) was converted from Esri FileGDB to CityJSON, grouping faces into
+buildings by `RUIAN_IBO` and mapping surface codes to ground, wall and roof
+surfaces. City2TABULA then extracted envelope attributes and surface geometry
+for the buildings whose footprint centroid lies in the box
+`fixtures/pylovo/brno_box.wkt` (16.603 49.190 to 16.613 49.200), linked them to
+PyLovo buildings and the result was recompressed. 778 buildings and 33,631
+surfaces. The pipeline intermediates were emptied, leaving the served tables
+only. This is derived data, not a redistribution of the source model.
+
 ## fixtures/pylovo/pylovo_fixture.sql.gz, the example models and the smoke GeoJSON fixtures
 
 Covers `fixtures/pylovo/pylovo_fixture.sql.gz`, `fixtures/models/*.json` and
@@ -114,12 +160,24 @@ usage classification, floor areas, low-voltage grid assignment and transformer
 rated powers in these files are PyLovo output rather than OpenStreetMap data.
 
 Modifications: the database fixture carries the grids, buildings, lines and
-transformers of two areas, postcode 7371 around Loenen and the five Bremen
-postcodes the LoD2 tile above intersects, keeping only the German grids whose
-buildings all lie inside that tile. 104 grids, 7,518 buildings, 14,829 lines,
-22 transformers. Postcode
-geometries on the German side are clipped to the same tile, so the extent the
-fixture advertises is the extent it can serve.
+transformers of four areas: postcode 7371 around Loenen; the five Bremen
+postcodes the LoD2 tile above intersects; Vienna postcodes 1010, 1070, 1080 and
+1090; and Brno postcode 60200. Outside Loenen it keeps only the grids whose
+buildings all lie inside that site's clip (the Bremen tile,
+`vienna_coverage.wkt`, `brno_box.wkt`). 221 grids, 9,073 buildings, 17,782
+lines, 39 transformers. Postcode geometries are clipped to the same polygons,
+so the extent the fixture advertises is the extent it can serve.
+
+The Brno postcode row keeps only the postcode number. Its geometry is the clip
+box, its label reads `60200 Czechia` and its area is the box's, so it carries
+no geometry or attribute of the source postcode dataset.
+
+The Vienna postcode geometries are Vienna district boundaries from the
+Statistik Austria municipal boundaries, edition 2026-01-01, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/), clipped as above.
+
+> Datenquelle: Statistik Austria
+> (https://data.statistik.gv.at/web/meta.jsp?dataset=OGDEXT_GEM_1)
 
 The example models are one saved model each for Loenen and Bremen, 8 and 7
 buildings, exported as the request body the frontend sends: footprints and

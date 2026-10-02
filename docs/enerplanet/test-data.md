@@ -68,7 +68,7 @@ existing `.env` files under Connection settings.
 
 ## What is loaded
 
-The fixtures cover two regions, both complete enough that a model drawn
+The fixtures cover four regions, each complete enough that a model drawn
 anywhere inside them resolves. Each appears by name under "Go to region" in the
 frontend, which zooms to the covered extent, so there is no bounding box to
 memorise and no hunting for the part of a city that happens to hold data.
@@ -77,11 +77,15 @@ memorise and no hunting for the part of a city that happens to hold data.
 |---|---|---|---|
 | Loenen, Netherlands | postcode 7371 | 3DBAG | EPSG:28992 |
 | Bremen, Germany | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | LoD2 Land Bremen | EPSG:25832 |
+| Vienna, Austria | postcodes 1010, 1070, 1080 and 1090, clipped to `fixtures/pylovo/vienna_coverage.wkt` | Generalisiertes Dachmodell, Stadt Wien | EPSG:31256 |
+| Brno, Czechia | box 16.603 49.190 to 16.613 49.200 in postcode 60200, `fixtures/pylovo/brno_box.wkt` | 3D model budov, Brno | EPSG:5514 |
 
 The region is defined by whichever is narrower, the postcode or the 3D source.
 Loenen's postcode falls inside the 3DBAG cut, so it is used whole. Bremen's
 tile straddles five postcodes and covers none of them completely, so the five
-are clipped to the tile instead. Clipping the geometry rather than shipping the
+are clipped to the tile instead. Brno has 3D data for the whole city, so it is
+cut to a box of about 0.7 by 1.1 km in the centre to keep the fixture small.
+Clipping the geometry rather than shipping the
 administrative boundary is what keeps the extent the UI advertises equal to the
 extent that can be served.
 
@@ -95,7 +99,8 @@ extent that can be served.
     20 km.
 
 PyLovo stores its geometry in EPSG:3035 and City2TABULA in a country-specific
-CRS, EPSG:28992 for the Netherlands and EPSG:25832 for Germany. Neither is
+CRS, EPSG:28992 for the Netherlands, EPSG:25832 for Germany, EPSG:31256 for
+Austria and EPSG:5514 for Czechia. Neither is
 reprojected at load time, because the join between them is precomputed in
 `building_link`.
 
@@ -105,10 +110,15 @@ reprojected at load time, because the join between them is precomputed in
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
 | `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
+| `city2tabula/tabula_at.sql.gz` | 16 kB | 165 Austrian TABULA archetype rows | the `tabula` schema of `<DB_NAME>_at` |
+| `city2tabula/city2tabula_vienna.sql.gz` | 17 MB | 1,318 buildings, 95,807 surfaces, 1,318 links (1,219 matched) | a new `<DB_NAME>_at` database |
+| `city2tabula/tabula_cz.sql.gz` | 9 kB | 84 Czech TABULA archetype rows | the `tabula` schema of `<DB_NAME>_cz` |
+| `city2tabula/city2tabula_brno.sql.gz` | 4.8 MB | 778 buildings, 33,631 surfaces, 778 links (691 matched) | a new `<DB_NAME>_cz` database |
 | `weather/…/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
-| `weather/…/czech_republic/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Prague, 13 variables | the weather checkout's `data/` |
-| `pylovo/pylovo_fixture.sql.gz` | 6.8 MB | 138 grids, 11,869 buildings, 23,139 lines, 138 transformers over 6 postcodes, plus their inputs and reference tables | the existing pylovo database |
+| `weather/…/austria/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Vienna, 13 variables | the weather checkout's `data/` |
+| `weather/…/czech_republic/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Brno, 13 variables | the weather checkout's `data/` |
+| `pylovo/pylovo_fixture.sql.gz` | 7.8 MB | 221 grids, 9,073 buildings, 17,782 lines, 39 transformers over 11 postcodes, plus their inputs and reference tables | the existing pylovo database |
 
 The pylovo fixture carries its own schema and restores into an empty database.
 The schema is rendered from pylovo's `config/config_table_structure.py`
@@ -130,12 +140,21 @@ pipeline run with `relation "tabula.tabula" does not exist`.
 ./fixtures/export_pylovo.py --scope NL:7371 \
     --scope DE:28195 --scope DE:28209 --scope DE:28215 \
     --scope DE:28217 --scope DE:28219 \
-    --clip DE:bremen_tile.wkt --state-name NL:gelderland=Gelderland \
+    --scope AT:1010 --scope AT:1070 --scope AT:1080 --scope AT:1090 \
+    --scope CZ:60200 \
+    --clip DE:fixtures/pylovo/bremen_tile.wkt \
+    --clip AT:fixtures/pylovo/vienna_coverage.wkt \
+    --clip CZ:fixtures/pylovo/brno_box.wkt \
+    --state-name NL:gelderland=Gelderland \
+    --state-name "AT:wien=Wien (Vienna)" \
+    --state-name "CZ:jihomoravsky=Jihomoravský kraj (Brno)" \
     --source-db <populated pylovo db> -o fixtures/pylovo/pylovo_fixture.sql
 ```
 
 `--clip` cuts a country to its 3D source extent and clips the postcode
-geometries to match. `--state-name` sets the label the region list shows:
+geometries to match. The Brno postcode row is then edited by hand: its `note`
+becomes `60200 Czechia` and its `qkm` the box's area, so the fixture carries
+no attribute of the source postcode dataset (see `fixtures/ATTRIBUTION.md`). `--state-name` sets the label the region list shows:
 PyLovo fills `state_name` from `regions.yaml` during a constructor run, which a
 fixture-loaded database never has, so without it a reader sees whatever the
 source database happened to hold.
@@ -381,6 +400,8 @@ credit and a statement of modification. `fixtures/ATTRIBUTION.md` carries both
 for every extract in this repository, the smoke test's own GeoJSON fixtures
 included, and must be updated whenever one is added or replaced.
 
-Sources currently redistributed: 3DBAG (CC BY 4.0), COSMO-REA6
-(Hans-Ertel-Centre for Weather Research, GeoNutzV) and OpenStreetMap via
-PyLovo (ODbL 1.0).
+Sources currently redistributed: 3DBAG, LoD2 Land Bremen, Stadt Wien's
+Generalisiertes Dachmodell, Statistik Austria municipal boundaries and the
+TABULA typology (all CC BY 4.0); Brno's 3D model budov (CC BY, version not
+stated by the publisher); COSMO-REA6 (Hans-Ertel-Centre for Weather Research,
+GeoNutzV); and OpenStreetMap via PyLovo (ODbL 1.0).

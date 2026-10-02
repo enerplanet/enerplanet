@@ -15,6 +15,8 @@ How the fixtures were produced, and how to regenerate them, is in
 |---|---|---|---|
 | Loenen | NL | postcode 7371 | 3DBAG |
 | Bremen | DE | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | LoD2 Land Bremen |
+| Vienna | AT | postcodes 1010, 1070, 1080 and 1090, clipped to `pylovo/vienna_coverage.wkt` | Generalisiertes Dachmodell (LoD2), Stadt Wien |
+| Brno | CZ | box 16.603 49.190 to 16.613 49.200 inside postcode 60200, `pylovo/brno_box.wkt` | 3D model budov, Brno |
 
 ## Files
 
@@ -24,10 +26,18 @@ How the fixtures were produced, and how to regenerate them, is in
 | `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | City2TABULA | Bremen | as above | `load.sh city2tabula`, into `<DB_NAME>_de` |
 | `city2tabula/tabula_nl.sql.gz` | 12 kB | City2TABULA | NL | Dutch TABULA archetypes, needed to classify buildings | `load.sh city2tabula`, into `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 20 kB | City2TABULA | DE | German TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_de` |
-| `pylovo/pylovo_fixture.sql.gz` | 5.0 MB | PyLovo | Loenen, Bremen | low-voltage grids, buildings and their inputs, for both sites in one database | `make pylovo-fixture` (`load.sh pylovo`), before PyLovo starts |
+| `city2tabula/city2tabula_vienna.sql.gz` | 17 MB | City2TABULA | Vienna | as above | `load.sh city2tabula`, into `<DB_NAME>_at` |
+| `city2tabula/tabula_at.sql.gz` | 16 kB | City2TABULA | AT | Austrian TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_at` |
+| `city2tabula/city2tabula_brno.sql.gz` | 4.8 MB | City2TABULA | Brno | as above | `load.sh city2tabula`, into `<DB_NAME>_cz` |
+| `city2tabula/tabula_cz.sql.gz` | 9 kB | City2TABULA | CZ | Czech TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_cz` |
+| `pylovo/pylovo_fixture.sql.gz` | 7.8 MB | PyLovo | all four | low-voltage grids, buildings and their inputs, for every site in one database | `make pylovo-fixture` (`load.sh pylovo`), before PyLovo starts |
 | `pylovo/bremen_tile.wkt` | 4 kB | `export_pylovo.py` | Bremen | the clip polygon the PyLovo fixture is cut to | not loaded; regeneration input |
+| `pylovo/vienna_coverage.wkt` | 5 kB | `export_pylovo.py` | Vienna | as above | not loaded; regeneration input |
+| `pylovo/brno_box.wkt` | 4 kB | `export_pylovo.py` | Brno | as above | not loaded; regeneration input |
 | `weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | weather-serve | Loenen | hourly 2018 weather, 3×3 cells | `load.sh weather`, into the weather checkout's `data/` |
 | `weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | weather-serve | Bremen | hourly 2018 weather, 4×4 cells | `load.sh weather` |
+| `weather/cosmo_rea6/austria/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Vienna | hourly 2018 weather, 4×4 cells | `load.sh weather` |
+| `weather/cosmo_rea6/czech_republic/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Brno | hourly 2018 weather, 4×4 cells | `load.sh weather` |
 | `models/loenen.json`, `models/bremen.json` | 96 kB, 132 kB | backend | Loenen, Bremen | example saved models, development only | `make example-models` (`example_models.sh`) |
 
 ## Weather per provider
@@ -36,11 +46,11 @@ A model uses one weather archive for all of its simulations. Each provider
 needs its own cut per site, in the layout weather-serve reads:
 `<provider>/<country>/output/<PROVIDER>_2018_annual_all_attrs.nc`.
 
-| Provider | Loenen (NL) | Bremen (DE) |
-|---|---|---|
-| `cosmo-rea6` | committed | committed |
-| `era5-land` | not yet | not yet |
-| `merra-2` | not yet | not yet |
+| Provider | Loenen (NL) | Bremen (DE) | Vienna (AT) | Brno (CZ) |
+|---|---|---|---|---|
+| `cosmo-rea6` | committed | committed | committed | committed |
+| `era5-land` | not yet | not yet | not yet | not yet |
+| `merra-2` | not yet | not yet | not yet | not yet |
 
 ## Scripts
 
