@@ -74,6 +74,9 @@ fi
 #                1614 at 250 kVA, with the transformer of each: the only
 #                fixture here carrying transformer topology, and the only one
 #                reaching MFH and AB archetypes.
+#   brno (CZ)    Seven buildings over two LV grids in the city centre, 6687 at
+#                400 kVA and 6696 at 630 kVA, inside the fixture box
+#                fixtures/pylovo/brno_box.wkt. City2TABULA's country is czechia.
 SMOKE_SITE="${SMOKE_SITE:-loenen}"
 case "$SMOKE_SITE" in
   loenen)
@@ -92,8 +95,16 @@ case "$SMOKE_SITE" in
     SITE_REGION_CC="DE"
     SITE_REGION_STATE="bremen"
     ;;
+  brno)
+    SITE_COUNTRY="czechia"
+    SITE_POLYGON='{"type":"Polygon","coordinates":[[[16.6035,49.1905],[16.6125,49.1905],[16.6125,49.1995],[16.6035,49.1995],[16.6035,49.1905]]]}'
+    SITE_BBOX='{"xmin":16.6035,"ymin":49.1905,"xmax":16.6125,"ymax":49.1995}'
+    SITE_GLAZING_FLOOR_PCT=""
+    SITE_REGION_CC="CZ"
+    SITE_REGION_STATE="jihomoravsky"
+    ;;
   *)
-    echo "FAIL  unknown SMOKE_SITE '$SMOKE_SITE' (known: loenen, bremen)"
+    echo "FAIL  unknown SMOKE_SITE '$SMOKE_SITE' (known: loenen, bremen, brno)"
     exit 1
     ;;
 esac
