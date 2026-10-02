@@ -401,7 +401,8 @@ for every extract in this repository, the smoke test's own GeoJSON fixtures
 included, and must be updated whenever one is added or replaced.
 
 Sources currently redistributed: 3DBAG, LoD2 Land Bremen, Stadt Wien's
-Generalisiertes Dachmodell, Statistik Austria municipal boundaries and the
-TABULA typology (all CC BY 4.0); Brno's 3D model budov (CC BY, version not
-stated by the publisher); COSMO-REA6 (Hans-Ertel-Centre for Weather Research,
-GeoNutzV); and OpenStreetMap via PyLovo (ODbL 1.0).
+Generalisiertes Dachmodell, Brno's 3D model budov, Statistik Austria
+municipal boundaries, CBS postcode areas, ČSÚ postcode polygons and
+Deutscher Wetterdienst's COSMO-REA6 (all CC BY 4.0); the TABULA typology
+(IEE TABULA + EPISCOPE terms of use, attribution required); and
+OpenStreetMap via PyLovo (ODbL 1.0).

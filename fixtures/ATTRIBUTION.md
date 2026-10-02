@@ -5,6 +5,15 @@ test suite runs without downloading the originals. Each entry below states the
 source, its licence and what was changed. This file covers every such extract,
 including the smoke test's own fixtures outside this directory.
 
+City2TABULA changes every 3D extract below in the same way, stated here once:
+
+> City2TABULA derives building attributes (areas, heights, volume, storeys,
+> TABULA type) from the geometry, merges a building's parts into one
+> building, removes or clips faces shared between parts, and omits buildings
+> without wall or roof faces.
+
+Its processing is documented at https://thd-spatial-ai.github.io/city2tabula/code/sql-pipeline/.
+
 ## fixtures/city2tabula/city2tabula_loenen.sql.gz
 
 Derived from the 3DBAG dataset, licensed CC BY 4.0
@@ -26,40 +35,38 @@ Covers `COSMO_REA6_2018_annual_all_attrs.nc` under
 `fixtures/weather/cosmo_rea6/netherlands/output/`, `.../germany/output/`,
 `.../austria/output/` and `.../czech_republic/output/`.
 
-COSMO-REA6 regional reanalysis, generated in the framework of the
-Hans-Ertel-Centre for Weather Research (HErZ), Climate Monitoring and
-Diagnostics, at the Universities of Bonn and Cologne.
+COSMO-REA6 regional reanalysis, produced by the Hans-Ertel-Centre for Weather
+Research (HErZ) at the Universities of Bonn and Cologne and distributed by
+Deutscher Wetterdienst (DWD) on its open data server, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/,
+https://opendata.dwd.de/climate_environment/REA/Terms_of_use.txt).
 
-> Data basis: Hans-Ertel-Centre for Weather Research
->
-> © Hans-Ertel-Centre for Weather Research — https://www.herz-tb4.uni-bonn.de
+> Datenbasis: Deutscher Wetterdienst, Ausschnitt, eigene Elemente ergänzt
 
-The data may be used without restriction provided the source is referenced,
-under the German federal terms for geographical data (GeoNutzV). Its binding
-design notes require the "Data basis" wording above, rather than a plain
-"Source:" credit, whenever the data is modified rather than copied verbatim,
-and require the extent of the modification to be stated.
+DWD's source-notice templates (https://www.dwd.de/copyright) use "Quelle:
+Deutscher Wetterdienst" for unchanged data and "Datenbasis: Deutscher
+Wetterdienst" followed by the kind of change for processed data, which
+applies here.
 
-Modifications: retrieved from the DWD open data archive, which hosts the data
-set, and processed by the `weather` pipeline, which standardises variable
-names and derives further variables. The result was then cut to a window
-around each site and recompressed: 3 by 3 cells around Loenen, Netherlands,
-from the Dutch 2018 annual archive, 4 by 4 cells around Bremen, Germany, from
-the German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
+Modifications: processed by the `weather` pipeline, which standardises
+variable names and derives further variables, then cut to a window around
+each site and recompressed: 3 by 3 cells around Loenen, Netherlands, from the
+Dutch 2018 annual archive, 4 by 4 cells around Bremen, Germany, from the
+German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
 Austrian 2018 annual archive, and 4 by 4 cells around Brno, Czechia, from the
 Czech 2018 annual archive. Full year, hourly, 13 variables each.
 
 ## fixtures/city2tabula/tabula_nl.sql.gz, tabula_de.sql.gz, tabula_at.sql.gz and tabula_cz.sql.gz
 
 The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,
-produced under the Intelligent Energy Europe Programme (IEE/09/739/SI2.558245).
+produced in the Intelligent Energy Europe projects TABULA and EPISCOPE.
 
-> TABULA Building Typology © Institut Wohnen und Umwelt (IWU), Darmstadt —
-> https://webtool.building-typology.eu/
+> IEE Projects TABULA + EPISCOPE (www.episcope.eu)
 
-Licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), which
-requires both the credit above and this statement of
-modification.
+The data is not under a Creative Commons licence. Its terms of use, on the
+download page https://episcope.eu/communication/download/, grant
+non-exclusive use of the files and datasets on condition that the credit
+above is visibly cited as the source.
 
 Modifications: the per-country archetype rows City2TABULA imports into its
 `tabula` schema, extracted as the Dutch set (135 rows), the German set (232
@@ -124,11 +131,12 @@ Derived from `3D model budov / 3D Building Model`, published by Statutární
 město Brno on its open data portal, data.brno.cz (dataset item
 `dc95041d63e44e129ba0d9258a1dddb4`).
 
-> Statutární město Brno, data.brno.cz: 3D model budov
+> Data o 3D modelu budov byla získána pod licencí CC BY z data.brno.cz.
 
-The dataset's licence field reads `CC BY`. Neither the licence version nor a
-required credit wording is stated on the dataset record (read 2026-10-02). The
-credit above names the publisher and dataset as the record gives them.
+The dataset's licence field reads `CC BY`. The portal's licence page,
+https://data.brno.cz/data/licence/, sets CC BY 4.0 as the default for its data
+and gives the citation template the credit above follows, with the dataset
+name substituted.
 
 Modifications: the photogrammetric LoD2 building model (captured 2020 to 2023,
 EPSG:5514) was converted from Esri FileGDB to CityJSON, grouping faces into
@@ -171,6 +179,20 @@ so the extent the fixture advertises is the extent it can serve.
 The Brno postcode row keeps only the postcode number. Its geometry is the clip
 box, its label reads `60200 Czechia` and its area is the box's, so it carries
 no geometry or attribute of the source postcode dataset.
+
+The Loenen postcode geometry and its household figures are from Statistics
+Netherlands, the 2023 PC4 postcode areas and the key figures per postcode,
+licensed CC BY 4.0 (https://www.cbs.nl/en-gb/about-us/website/copyright).
+
+> Source: Statistics Netherlands (CBS)
+
+The Brno postcode number, and which buildings belong to it, come from the
+postcode polygons of the Czech Statistical Office as packaged by RCzechia
+(https://rczechia.jla-data.net), licensed CC BY 4.0
+(https://csu.gov.cz/csu/czso/podminky_pro_vyuzivani_a_dalsi_zverejnovani_statistickych_udaju_csu).
+The fixture's postcode row is derived data, not an official ČSÚ figure.
+
+> Zdroj: Český statistický úřad (ČSÚ)
 
 The Vienna postcode geometries are Vienna district boundaries from the
 Statistik Austria municipal boundaries, edition 2026-01-01, licensed CC BY 4.0

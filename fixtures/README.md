@@ -6,6 +6,21 @@ them; `make fixtures` reloads them on a working checkout. Every file except
 the scripts is a Git LFS object, so install Git LFS before cloning.
 
 Credits and licence terms for every extract are in [ATTRIBUTION.md](ATTRIBUTION.md).
+The credit lines, in short:
+
+| Data | Used for | Credit | Licence |
+|---|---|---|---|
+| 3DBAG | Loenen 3D buildings | © 3DBAG by tudelft3d and 3DGI | CC BY 4.0 |
+| LoD2 Land Bremen | Bremen 3D buildings | Quellenvermerk: Landesamt GeoInformation Bremen | CC BY 4.0 |
+| Generalisiertes Dachmodell | Vienna 3D buildings | Datenquelle: Stadt Wien – data.wien.gv.at | CC BY 4.0 |
+| 3D model budov | Brno 3D buildings | Data o 3D modelu budov byla získána pod licencí CC BY z data.brno.cz. | CC BY 4.0 |
+| TABULA | archetypes, all countries | IEE Projects TABULA + EPISCOPE (www.episcope.eu) | TABULA/EPISCOPE terms of use |
+| OpenStreetMap | grids, buildings, smoke GeoJSON | © OpenStreetMap contributors | ODbL 1.0 |
+| CBS PC4 | Loenen postcode | Source: Statistics Netherlands (CBS) | CC BY 4.0 |
+| Statistik Austria | Vienna postcodes | Datenquelle: Statistik Austria | CC BY 4.0 |
+| ČSÚ via RCzechia | Brno postcode number | Zdroj: Český statistický úřad (ČSÚ) | CC BY 4.0 |
+| COSMO-REA6 | weather, all sites | Datenbasis: Deutscher Wetterdienst, Ausschnitt, eigene Elemente ergänzt | CC BY 4.0 |
+
 How the fixtures were produced, and how to regenerate them, is in
 [docs/enerplanet/test-data.md](../docs/enerplanet/test-data.md).
 
