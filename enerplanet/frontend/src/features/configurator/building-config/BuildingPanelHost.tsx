@@ -12,6 +12,7 @@ import type { FC } from 'react';
 
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
+import { CHANGE_STATEMENT, CHANGE_STATEMENT_URL, creditFor } from './dataCredits';
 import { configuratorServices } from './heatClient';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
 import { useBuildingGeometry } from './useBuildingGeometry';
@@ -50,13 +51,35 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice>{geometryError}</Notice>;
 
+  const credit = creditFor(country);
+
   return (
-    <Building3DView
-      building={building}
-      geometry={geometry}
-      onExit={exit}
-      services={configuratorServices}
-    />
+    <>
+      <Building3DView
+        building={building}
+        geometry={geometry}
+        onExit={exit}
+        services={configuratorServices}
+      />
+      {credit && (
+        <div className="bg-card/80 text-muted-foreground pointer-events-auto absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded px-2 py-0.5 text-[11px]">
+          3D data:{' '}
+          <a href={credit.url} target="_blank" rel="noopener noreferrer" className="underline">
+            {credit.text}
+          </a>
+          , {credit.licence},{' '}
+          <a
+            href={CHANGE_STATEMENT_URL}
+            title={CHANGE_STATEMENT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-dotted"
+          >
+            modified by City2TABULA
+          </a>
+        </div>
+      )}
+    </>
   );
 };
 
