@@ -70,6 +70,7 @@ pylovo-fixture:
 # once the backend is up. The script itself refuses outside APP_ENV=development.
 .PHONY: example-models
 example-models:
+	@git lfs pull --include=fixtures/models 2>/dev/null || true
 	@./fixtures/example_models.sh
 
 .PHONY: setup
