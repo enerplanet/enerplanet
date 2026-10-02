@@ -135,7 +135,9 @@ class Psql:
         self.env = {**os.environ, "PGPASSWORD": password}
 
     def query(self, sql: str) -> list[str]:
-        done = subprocess.run(self.base + ["-c", sql], capture_output=True,
+        # On stdin, not -c: a clip polygon inlined into the SQL can exceed the
+        # 128 KiB limit Linux puts on a single argument.
+        done = subprocess.run(self.base, input=sql, capture_output=True,
                               text=True, env=self.env)
         if done.returncode != 0:
             raise SystemExit(f"psql failed for:\n{sql}\n{done.stderr.strip()}")
