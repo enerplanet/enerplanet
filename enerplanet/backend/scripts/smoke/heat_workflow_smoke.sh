@@ -478,8 +478,14 @@ fi
 # ---- 7. heatSource=estimate: neither BuEM step runs --------------------
 # A model with config.heatSource=estimate must resolve no demand profiles
 # at creation and must reach the calculation dispatch without touching
-# buem-gateway, so the gateway is stopped for this step. Needs docker.
-if command -v docker >/dev/null && docker inspect buem-gateway >/dev/null 2>&1; then
+# buem-gateway, so the gateway is stopped for this step. Needs docker. The
+# container is found by its Compose labels, as the compose file sets no fixed
+# container name.
+GATEWAY_CONTAINER=""
+command -v docker >/dev/null && GATEWAY_CONTAINER="$(docker ps -q \
+  --filter label=com.docker.compose.project=buem-gateway-http \
+  --filter label=com.docker.compose.service=buem-gateway | head -n 1)"
+if [ -n "$GATEWAY_CONTAINER" ]; then
   est_config="$(jq -c --argjson b "$(cat "$FIXTURE")" --argjson x "$SITE_CONFIG_EXTRA" -n '{buildings: $b, energyVectors: ["electricity"], heatSource: "estimate"} + $x')"
   est_payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$est_config" \
     '{title: ("heat workflow smoke estimate " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
@@ -493,7 +499,7 @@ if command -v docker >/dev/null && docker inspect buem-gateway >/dev/null 2>&1; 
     else
       fail "7a. heatSource=estimate model $EST_MODEL_ID: expected idle/0, got $(printf '%s' "$body" | jq -c '{status,total}')"
     fi
-    docker stop buem-gateway >/dev/null && echo "info  buem-gateway stopped for the estimate calculation"
+    docker stop "$GATEWAY_CONTAINER" >/dev/null && echo "info  buem-gateway stopped for the estimate calculation"
     body="$(request POST "/api/calculation/start/$EST_MODEL_ID")"
     if [ "$HTTP_CODE" = "200" ]; then
       sleep 20
@@ -506,7 +512,7 @@ if command -v docker >/dev/null && docker inspect buem-gateway >/dev/null 2>&1; 
     else
       fail "7b. POST /api/calculation/start/$EST_MODEL_ID: HTTP $HTTP_CODE ${body:0:200}"
     fi
-    docker start buem-gateway >/dev/null && echo "info  buem-gateway started again"
+    docker start "$GATEWAY_CONTAINER" >/dev/null && echo "info  buem-gateway started again"
     request DELETE "/api/models/$EST_MODEL_ID" >/dev/null
   else
     fail "7. POST /api/models (heatSource=estimate): HTTP $HTTP_CODE ${body:0:200}"
