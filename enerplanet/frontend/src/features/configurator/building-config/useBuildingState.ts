@@ -23,6 +23,7 @@ import {
 import axios from '@/lib/axios';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 
+import { creditsFor, type DatasetCredit } from './credits';
 import { configuratorServices } from './heatClient';
 import { fromStoredBuem, storedBuemOf } from './storedBuem';
 
@@ -56,9 +57,11 @@ export interface BuildingStateResult {
   objectId: string | null;
   /** The City2TABULA database the envelope came from, as the enrich resolved it. */
   country: string | null;
+  /** Credits for the building's 3D dataset and, when it has one, its TABULA type. */
+  credits: DatasetCredit[];
 }
 
-const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, objectId: null, country: null };
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, objectId: null, country: null, credits: [] };
 
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
 
@@ -71,7 +74,7 @@ async function resolveBuilding(
   // The country is left out so the backend resolves it from the bbox centre;
   // this application holds a display name, not the canonical form the backend
   // matches on.
-  const res = await axios.post<EnrichResponse & { country?: string }>('/v1/city2tabula/enrich', {
+  const res = await axios.post<EnrichResponse & { country?: string; attributions?: DatasetCredit[] }>('/v1/city2tabula/enrich', {
     country: '',
     bbox: box,
     osm_ids: [osmId],
@@ -91,6 +94,11 @@ async function resolveBuilding(
     error: null,
     objectId: entry?.object_id ?? null,
     country: res.data.country ?? null,
+    credits: creditsFor(
+      res.data.attributions,
+      (entry as { dataset_id?: string } | undefined)?.dataset_id ?? null,
+      Boolean(entry?.tabula_variant_code),
+    ),
   };
 }
 

@@ -16,6 +16,8 @@ import {
 
 import axios from '@/lib/axios';
 
+import type { DatasetCredit } from './credits';
+
 export interface BuildingGeometryResult {
   /** Null while loading, which is what Building3DView expects. */
   geometry: SurfaceGeometry | null;
@@ -50,10 +52,12 @@ export function useBuildingGeometry(
     }
 
     axios
-      .get<BuildingGeometry[]>('/v1/city2tabula/geometry', { params: { country, object_ids: objectId } })
+      .get<{ buildings: BuildingGeometry[]; attributions: DatasetCredit[] }>('/v1/city2tabula/geometry', {
+        params: { country, object_ids: objectId },
+      })
       .then((res) => {
         if (current.current !== objectId) return;
-        const surfaces = surfacesFromGeometryResponse(Array.isArray(res.data) ? res.data : []);
+        const surfaces = surfacesFromGeometryResponse(res.data?.buildings ?? []);
         setResult(surfaces.length > 0
           ? { geometry: { surfaces }, error: null }
           : { geometry: null, error: 'This building has no surface geometry to draw.' });
