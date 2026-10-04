@@ -23,7 +23,7 @@ Derived from the 3DBAG dataset, licensed CC BY 4.0
 
 Modifications: building envelope attributes and surface geometry were
 extracted from the source CityGML by City2TABULA for the area around Loenen
-covered by postcode 7371, then linked to PyLovo buildings. 3,106 buildings and
+covered by postcode 7371, then linked to PyLovo buildings. 3,105 buildings and
 53,043 surfaces. The pipeline intermediates were emptied, leaving the served
 tables only. This is derived data, not a redistribution of 3DBAG itself.
 
@@ -119,7 +119,7 @@ https://digitales.wien.gv.at/ogd-nutzungsbedingungen/.
 Modifications: building envelope attributes and surface geometry were
 extracted from the source CityGML by City2TABULA for the area of postcodes
 1010, 1070, 1080 and 1090 covered by `fixtures/pylovo/vienna_coverage.wkt`,
-then linked to PyLovo buildings and recompressed. 1,318 buildings and 95,807
+then linked to PyLovo buildings and recompressed. 1,349 buildings and 97,031
 surfaces. The pipeline intermediates were emptied, leaving the served tables
 only. This is derived data, not a redistribution of the source model.
 

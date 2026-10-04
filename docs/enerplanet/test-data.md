@@ -106,14 +106,14 @@ reprojected at load time, because the join between them is precomputed in
 
 | Fixture | Size | Populates | Lands in |
 |---|---|---|---|
-| `city2tabula/city2tabula_loenen.sql.gz` | 8.1 MB | 3,106 buildings, 53,043 surfaces, 3,106 links (2,382 matched) | a new `<DB_NAME>_nl` database |
+| `city2tabula/city2tabula_loenen.sql.gz` | 5.7 MB | 3,105 buildings, 53,043 surfaces, 3,105 links (2,381 matched) | a new `<DB_NAME>_nl` database |
 | `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
-| `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
+| `city2tabula/city2tabula_bremen.sql.gz` | 20 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
 | `city2tabula/tabula_at.sql.gz` | 16 kB | 165 Austrian TABULA archetype rows | the `tabula` schema of `<DB_NAME>_at` |
-| `city2tabula/city2tabula_vienna.sql.gz` | 17 MB | 1,318 buildings, 95,807 surfaces, 1,318 links (1,219 matched) | a new `<DB_NAME>_at` database |
+| `city2tabula/city2tabula_vienna.sql.gz` | 15 MB | 1,349 buildings, 97,031 surfaces, 1,349 links (1,244 matched) | a new `<DB_NAME>_at` database |
 | `city2tabula/tabula_cz.sql.gz` | 9 kB | 84 Czech TABULA archetype rows | the `tabula` schema of `<DB_NAME>_cz` |
-| `city2tabula/city2tabula_brno.sql.gz` | 4.8 MB | 778 buildings, 33,631 surfaces, 778 links (691 matched) | a new `<DB_NAME>_cz` database |
+| `city2tabula/city2tabula_brno.sql.gz` | 4.7 MB | 778 buildings, 33,631 surfaces, 778 links (691 matched) | a new `<DB_NAME>_cz` database |
 | `weather/…/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/austria/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Vienna, 13 variables | the weather checkout's `data/` |
@@ -163,13 +163,18 @@ The fixtures follow the deployed layout: one pylovo database holding every
 country, and one City2TABULA database per country, each linked to that single
 pylovo database. Each country's City2TABULA fixture is produced in three steps:
 
-1. Extract the country's 3D source into its own City2TABULA database.
+1. Import the site's 3D source into its own City2TABULA database as one
+   dataset folder carrying its `attribution.json`, then run
+   `-extract-features`. Every building records its `dataset_id`, and the
+   dataset's credit is stored in `dataset_attribution`.
 2. Truncate `building_link`, then run `-link-pylovo` with `PYLOVO_FDW_*` pointing
    at the pylovo database the fixture above is exported from.
 3. `pg_dump --schema=city2tabula`, with `lod2_child_feature`,
    `lod2_child_feature_geom_dump` and `lod2_surface_raw` truncated first (the
    `lod3_` equivalents for an LoD3 source, and `_building_part` where it
    exists). Nothing served reads those tables, and they triple the fixture size.
+   Keep `dataset_attribution`: City2TABULA answers HTTP 500 for a building
+   whose dataset has no credit row.
 
 Link against the pylovo database itself over `postgres_fdw`, not against a copy
 of its `res` and `oth` tables. The link records OSM ids, so a link made against

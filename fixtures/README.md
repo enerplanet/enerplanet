@@ -37,13 +37,13 @@ How the fixtures were produced, and how to regenerate them, is in
 
 | File | Size | Used by | Site | Purpose | Loaded by |
 |---|---|---|---|---|---|
-| `city2tabula/city2tabula_loenen.sql.gz` | 8.1 MB | City2TABULA | Loenen | building envelopes, surfaces and links to PyLovo buildings | `load.sh city2tabula`, into `<DB_NAME>_nl` |
-| `city2tabula/city2tabula_bremen.sql.gz` | 19 MB | City2TABULA | Bremen | as above | `load.sh city2tabula`, into `<DB_NAME>_de` |
+| `city2tabula/city2tabula_loenen.sql.gz` | 5.7 MB | City2TABULA | Loenen | building envelopes, surfaces and links to PyLovo buildings | `load.sh city2tabula`, into `<DB_NAME>_nl` |
+| `city2tabula/city2tabula_bremen.sql.gz` | 20 MB | City2TABULA | Bremen | as above | `load.sh city2tabula`, into `<DB_NAME>_de` |
 | `city2tabula/tabula_nl.sql.gz` | 12 kB | City2TABULA | NL | Dutch TABULA archetypes, needed to classify buildings | `load.sh city2tabula`, into `<DB_NAME>_nl` |
 | `city2tabula/tabula_de.sql.gz` | 20 kB | City2TABULA | DE | German TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_de` |
-| `city2tabula/city2tabula_vienna.sql.gz` | 17 MB | City2TABULA | Vienna | as above | `load.sh city2tabula`, into `<DB_NAME>_at` |
+| `city2tabula/city2tabula_vienna.sql.gz` | 15 MB | City2TABULA | Vienna | as above | `load.sh city2tabula`, into `<DB_NAME>_at` |
 | `city2tabula/tabula_at.sql.gz` | 16 kB | City2TABULA | AT | Austrian TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_at` |
-| `city2tabula/city2tabula_brno.sql.gz` | 4.8 MB | City2TABULA | Brno | as above | `load.sh city2tabula`, into `<DB_NAME>_cz` |
+| `city2tabula/city2tabula_brno.sql.gz` | 4.7 MB | City2TABULA | Brno | as above | `load.sh city2tabula`, into `<DB_NAME>_cz` |
 | `city2tabula/tabula_cz.sql.gz` | 9 kB | City2TABULA | CZ | Czech TABULA archetypes | `load.sh city2tabula`, into `<DB_NAME>_cz` |
 | `pylovo/pylovo_fixture.sql.gz` | 7.8 MB | PyLovo | all four | low-voltage grids, buildings and their inputs, for every site in one database | `make pylovo-fixture` (`load.sh pylovo`), before PyLovo starts |
 | `pylovo/bremen_tile.wkt` | 4 kB | `export_pylovo.py` | Bremen | the clip polygon the PyLovo fixture is cut to | not loaded; regeneration input |
