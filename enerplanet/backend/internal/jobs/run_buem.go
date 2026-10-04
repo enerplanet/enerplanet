@@ -426,6 +426,10 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	if len(elements) == 0 {
 		return buem.Building{}, BuemResolutionMeta{}, "City2TABULA returned no usable envelope surfaces", false
 	}
+	location, reason := locationAndFloorArea(country, cityBuilding)
+	if reason != "" {
+		return buem.Building{}, BuemResolutionMeta{}, reason, false
+	}
 	fClass, _ := props["f_class"].(string)
 	variantCode := ""
 	if cityBuilding.TabulaVariantCode != nil {
@@ -455,17 +459,29 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 			block["capacity"] = *capacity
 		}
 	}
-	if bt, _ := block["building_type"].(string); bt != "" {
-		meta.BuildingType = bt
+	for k, v := range location {
+		block[k] = v
 	}
+	// BuEM requires a building_type; MFH is the value it applied when none
+	// was given.
+	if _, set := block["building_type"]; !set {
+		block["building_type"] = defaultBuildingType
+	}
+	meta.BuildingType, _ = block["building_type"].(string)
 	// The TABULA archetype's dwelling count scales BuEM's household model
 	// (occupants, hot water, electricity, cooking) for multi-dwelling
-	// buildings. 1 is BuEM's default and 0 means ignis has no count, so
-	// only a count above one is sent; a service building is not a set of
-	// dwellings and never gets one.
-	if serviceBuildingType(fClass) == "" && meta.Apartments > 1 {
-		block["residential_units"] = meta.Apartments
-		meta.ResidentialUnits = meta.Apartments
+	// buildings, where BuEM requires it; 0 means ignis has no count, which is
+	// sent as one dwelling. A service building is not a set of dwellings and
+	// never gets one.
+	if serviceBuildingType(fClass) == "" {
+		units := meta.Apartments
+		if units < 1 && (meta.BuildingType == "MFH" || meta.BuildingType == "AB") {
+			units = 1
+		}
+		if units > 1 || meta.BuildingType == "MFH" || meta.BuildingType == "AB" {
+			block["residential_units"] = units
+			meta.ResidentialUnits = units
+		}
 	}
 	block["envelope"] = map[string]interface{}{"elements": elements}
 	block["cooking_carrier"] = cooking.Carrier
@@ -487,6 +503,28 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	}
 
 	return buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}, meta, "", true
+}
+
+// defaultBuildingType is the building_type sent when neither City2TABULA nor
+// the OSM class gives one.
+const defaultBuildingType = "MFH"
+
+// locationAndFloorArea returns the country and A_ref BuEM requires: the
+// country as an ISO 3166-1 alpha-2 code, and A_ref as the whole building's
+// conditioned floor area, City2TABULA's footprint area times storeys. A
+// building lacking either is left out with the reason.
+func locationAndFloorArea(country string, b city2tabula.Building) (map[string]interface{}, string) {
+	iso, ok := ignis.ISO2ForCountry(country)
+	if !ok {
+		return nil, fmt.Sprintf("no ISO 3166-1 code for country %q", country)
+	}
+	if b.FloorAreaSqm == nil || *b.FloorAreaSqm <= 0 {
+		return nil, "City2TABULA has no floor area for this building"
+	}
+	return map[string]interface{}{
+		"country": iso,
+		"A_ref":   map[string]interface{}{"value": *b.FloorAreaSqm, "unit": "m2"},
+	}, ""
 }
 
 // storedBuemBlock returns the BuEM building block a building edited in the
