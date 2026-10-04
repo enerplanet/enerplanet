@@ -180,9 +180,9 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
+				return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1}],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-trigger-run":
 			runTriggered = true
 			return 200, `{"run_id":"run1","country":"germany","status":"pending"}`
@@ -211,7 +211,7 @@ func TestResolveEnvelope_FullCoverageSkipsRun(t *testing.T) {
 		if target != "c2t-buildings" {
 			t.Fatalf("no run should be triggered when all needed buildings are already linked; got target %s", target)
 		}
-		return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
+		return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1}],"attributions":[]}`
 	})
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
@@ -499,9 +499,9 @@ func TestResolveEnvelope_RecordedRunIsPolledNotRetriggered(t *testing.T) {
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[]`
+				return 200, `{"buildings":[],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-run-status":
 			return 200, `{"run_id":"recorded-1","country":"germany","status":"completed"}`
 		}
@@ -526,9 +526,9 @@ func TestResolveEnvelope_TriggeredRunIsRecorded(t *testing.T) {
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[]`
+				return 200, `{"buildings":[],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-trigger-run":
 			return 200, `{"run_id":"run-9","country":"germany","status":"pending"}`
 		case "c2t-run-status":

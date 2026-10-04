@@ -88,7 +88,7 @@ func TestAvailability_States(t *testing.T) {
 		{
 			name:          "a grid with no 3D data is partial",
 			linked:        0,
-			buildingsJSON: `[]`,
+			buildingsJSON: `{"buildings":[],"attributions":[]}`,
 			regions:       bremenRegion(),
 			wantStatus:    "partial",
 			wantGrid:      true,

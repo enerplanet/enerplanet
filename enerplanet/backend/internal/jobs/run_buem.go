@@ -262,10 +262,11 @@ func recordedOrNewRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.C
 // osm_id. An osm_id absent from the result has no PyLovo-linked building in
 // City2TABULA yet — see missingOSMIDs.
 func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country string, osmIDs []string) (map[string]city2tabula.Building, error) {
-	buildings, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
+	result, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
 		return nil, err
 	}
+	buildings := result.Buildings
 	byOSMID := make(map[string]city2tabula.Building, len(buildings))
 	for _, b := range buildings {
 		if b.OSMID != "" {

@@ -84,7 +84,7 @@ func (h *Handler) Availability(c *gin.Context) {
 			writeC2TError(c, country, err)
 			return
 		}
-		has3D = len(inArea) > 0
+		has3D = len(inArea.Buildings) > 0
 	}
 
 	resp := contracts.HeatAvailabilityResponse{

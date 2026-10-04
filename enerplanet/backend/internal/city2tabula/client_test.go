@@ -126,46 +126,68 @@ func TestTriggerRun_TimeoutStaysOpaque(t *testing.T) {
 	assert.Equal(t, "target_timeout", te.Code)
 }
 
-func TestGetBuildingsByOSMIDs_ParsesBuildingsAndJoinsOSMIDs(t *testing.T) {
-	tc, target, payload := fakeTentacron(t, completed(`[{"object_id":"DE123","osm_id":"789012","match_type":1,"footprint_area":100.5}]`))
+// bremenCredit is one attributions entry as City2TABULA v0.8.0 returns it,
+// credit_url and terms_url being omitted when the dataset has none.
+const bremenCredit = `{"dataset_id":"de-hb-lod2","provider":"Landesamt GeoInformation Bremen",
+  "dataset":"LoD2 Land Bremen","licence":"CC-BY-4.0","licence_url":"https://creativecommons.org/licenses/by/4.0/",
+  "credit":"Quellenvermerk: Landesamt GeoInformation Bremen","changes":"derived"}`
 
-	buildings, err := NewClient(tc).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"123456", "789012"})
+func TestGetBuildingsByOSMIDs_ParsesBuildingsAndCredits(t *testing.T) {
+	tc, target, payload := fakeTentacron(t, completed(`{"buildings":[{"object_id":"DE123","dataset_id":"de-hb-lod2","osm_id":"789012","match_type":1,"footprint_area":100.5}],
+	  "attributions":[`+bremenCredit+`]}`))
+
+	got, err := NewClient(tc).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"123456", "789012"})
 
 	require.NoError(t, err)
-	require.Len(t, buildings, 1)
-	assert.Equal(t, "789012", buildings[0].OSMID)
-	assert.Equal(t, int16(1), buildings[0].MatchType)
+	require.Len(t, got.Buildings, 1)
+	assert.Equal(t, "789012", got.Buildings[0].OSMID)
+	assert.Equal(t, int16(1), got.Buildings[0].MatchType)
+	assert.Equal(t, "de-hb-lod2", got.Buildings[0].DatasetID)
+	require.Len(t, got.Attributions, 1)
+	assert.Equal(t, "Quellenvermerk: Landesamt GeoInformation Bremen", got.Attributions[0].Credit)
+	assert.Empty(t, got.Attributions[0].CreditURL)
 	assert.Equal(t, "c2t-buildings", *target)
 	assert.Equal(t, map[string]any{"country": "germany", "osm_ids": "123456,789012"}, *payload)
 }
 
-func TestGetBuildingsByOSMIDs_NullResultIsNilSlice(t *testing.T) {
-	tc, _, _ := fakeTentacron(t, completed(`null`))
+func TestGetBuildingsByOSMIDs_EmptyEnvelopeIsEmpty(t *testing.T) {
+	tc, _, _ := fakeTentacron(t, completed(`{"buildings":[],"attributions":[]}`))
 
-	buildings, err := NewClient(tc).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"1"})
+	got, err := NewClient(tc).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"1"})
 
 	require.NoError(t, err)
-	assert.Nil(t, buildings)
+	assert.Empty(t, got.Buildings)
+	assert.Empty(t, got.Attributions)
+}
+
+func TestGetBuildingsByOSMIDs_BareArrayIsAnError(t *testing.T) {
+	tc, _, _ := fakeTentacron(t, completed(`[{"object_id":"DE123","osm_id":"789012","match_type":1}]`))
+
+	_, err := NewClient(tc).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"789012"})
+
+	require.Error(t, err, "a pre-0.8.0 City2TABULA answers with a bare array, which must fail rather than read as no buildings")
 }
 
 func TestGetBuildingsByOSMIDs_EmptyInputSkipsRequest(t *testing.T) {
-	buildings, err := NewClient(tentacron.New("http://unused", "k")).
+	got, err := NewClient(tentacron.New("http://unused", "k")).
 		GetBuildingsByOSMIDs(context.Background(), "germany", nil)
 
 	require.NoError(t, err)
-	assert.Nil(t, buildings)
+	assert.Empty(t, got.Buildings)
 }
 
 // oneBuildingWithSurfaces is City2TABULA's geometry response when surfaces were
 // asked for: the footprint as before, plus one polygon per envelope face.
-const oneBuildingWithSurfaces = `[{
+const oneBuildingWithSurfaces = `{"buildings":[{
   "object_id":"NL_1",
+  "dataset_id":"nl-3dbag",
   "footprint_geojson":{"type":"Polygon","coordinates":[[[1,2],[3,4],[1,2]]]},
   "surfaces":[
     {"id":"s1","type":"WallSurface","geojson":{"type":"Polygon","crs":{"type":"name","properties":{"name":"EPSG:28992"}},"coordinates":[[[1,2,3],[4,5,6],[1,2,3]]]}},
     {"id":"s2","type":"RoofSurface","geojson":{"type":"Polygon","coordinates":[[[7,8,9],[1,2,3],[7,8,9]]]}}
   ]
-}]`
+}],"attributions":[{"dataset_id":"nl-3dbag","provider":"3DBAG","dataset":"3DBAG","licence":"CC-BY-4.0",
+  "licence_url":"https://creativecommons.org/licenses/by/4.0/","credit":"© 3DBAG by tudelft3d and 3DGI","changes":"derived"}]}`
 
 func TestGetSurfaceGeometryByObjectIDs_AsksForSurfacesAndKeepsThemRaw(t *testing.T) {
 	tc, target, payload := fakeTentacron(t, completed(oneBuildingWithSurfaces))
@@ -177,17 +199,21 @@ func TestGetSurfaceGeometryByObjectIDs_AsksForSurfacesAndKeepsThemRaw(t *testing
 	assert.Equal(t, "surfaces", (*payload)["include"],
 		"unconsumed payload fields reach City2TABULA as query parameters")
 
-	require.Len(t, got, 1)
-	require.Len(t, got[0].Surfaces, 2)
-	assert.Equal(t, "s1", got[0].Surfaces[0].ID)
-	assert.Equal(t, "WallSurface", got[0].Surfaces[0].Type)
-	assert.Contains(t, string(got[0].Surfaces[0].GeoJSON), "EPSG:28992",
+	require.Len(t, got.Buildings, 1)
+	b := got.Buildings[0]
+	require.Len(t, b.Surfaces, 2)
+	assert.Equal(t, "s1", b.Surfaces[0].ID)
+	assert.Equal(t, "WallSurface", b.Surfaces[0].Type)
+	assert.Contains(t, string(b.Surfaces[0].GeoJSON), "EPSG:28992",
 		"the crs member survives, which is why the polygon stays raw")
-	assert.NotEmpty(t, got[0].FootprintGeoJSON, "the footprint still comes back alongside")
+	assert.NotEmpty(t, b.FootprintGeoJSON, "the footprint still comes back alongside")
+	assert.Equal(t, "nl-3dbag", b.DatasetID)
+	require.Len(t, got.Attributions, 1)
+	assert.Equal(t, "© 3DBAG by tudelft3d and 3DGI", got.Attributions[0].Credit)
 }
 
 func TestGetGeometryByObjectIDs_DoesNotAskForSurfaces(t *testing.T) {
-	tc, _, payload := fakeTentacron(t, completed(`[{"object_id":"NL_1"}]`))
+	tc, _, payload := fakeTentacron(t, completed(`{"buildings":[{"object_id":"NL_1"}],"attributions":[]}`))
 
 	_, err := NewClient(tc).GetGeometryByObjectIDs(context.Background(), "netherlands", []string{"NL_1"})
 
@@ -197,11 +223,11 @@ func TestGetGeometryByObjectIDs_DoesNotAskForSurfaces(t *testing.T) {
 }
 
 func TestGetSurfaceGeometry_NoSurfaceRowsIsNotAnError(t *testing.T) {
-	tc, _, _ := fakeTentacron(t, completed(`[{"object_id":"NL_1","footprint_geojson":{"type":"Polygon","coordinates":[]}}]`))
+	tc, _, _ := fakeTentacron(t, completed(`{"buildings":[{"object_id":"NL_1","footprint_geojson":{"type":"Polygon","coordinates":[]}}],"attributions":[]}`))
 
 	got, err := NewClient(tc).GetSurfaceGeometryByObjectIDs(context.Background(), "netherlands", []string{"NL_1"})
 
 	require.NoError(t, err)
-	require.Len(t, got, 1)
-	assert.Empty(t, got[0].Surfaces, "City2TABULA omits the key entirely, so absent and empty are one case")
+	require.Len(t, got.Buildings, 1)
+	assert.Empty(t, got.Buildings[0].Surfaces, "City2TABULA omits the key entirely, so absent and empty are one case")
 }

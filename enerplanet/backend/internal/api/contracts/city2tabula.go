@@ -127,7 +127,10 @@ type BuemNode struct {
 
 // EnrichedBuilding is one entry in the merge map, keyed by osm_id.
 type EnrichedBuilding struct {
-	ObjectID          string  `json:"object_id" example:"DEBW_1"`
+	ObjectID string `json:"object_id" example:"DEBW_1"`
+	// DatasetID names the source dataset; its credit is the attributions entry
+	// with the same dataset_id.
+	DatasetID         string  `json:"dataset_id" example:"nl-3dbag-loenen"`
 	MatchType         int16   `json:"match_type" example:"1"`
 	TabulaVariantCode *string `json:"tabula_variant_code,omitempty" example:"DE.N.SFH.05.Gen.ReEx.001.001"`
 	// Derived from the TABULA variant's construction-period range (ignis
@@ -155,4 +158,7 @@ type EnrichResponse struct {
 	Total    int                         `json:"total" example:"42"`
 	Missing  []string                    `json:"missing,omitempty" example:"240054999"`
 	Data     map[string]EnrichedBuilding `json:"data"`
+	// Attributions credits every dataset the buildings in data come from, and
+	// TABULA when any of them carries a TABULA type, as City2TABULA returns them.
+	Attributions []city2tabula.DatasetCredit `json:"attributions"`
 }

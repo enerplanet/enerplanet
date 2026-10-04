@@ -4,6 +4,12 @@ definitions:
     properties:
       buem:
         $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      dataset_id:
+        description: |-
+          DatasetID names the source dataset; its credit is the attributions entry
+          with the same dataset_id.
+        example: nl-3dbag-loenen
+        type: string
       default_construction_year:
         description: |-
           Derived from the TABULA variant's construction-period range (ignis
@@ -89,6 +95,50 @@ definitions:
       n_storeys:
         example: 3
         type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest:
+    properties:
+      building:
+        type: object
+      end_date:
+        example: "2018-12-31T23:00:00Z"
+        type: string
+      geometry:
+        type: object
+      model_id:
+        example: "42"
+        type: string
+      osm_id:
+        example: "240054621"
+        type: string
+      resolution:
+        example: 60
+        type: integer
+      solver:
+        description: |-
+          Solver is BuEM's solver block, forwarded as properties.buem.solver;
+          omitted, BuEM uses its default solver.
+        type: object
+      start_date:
+        example: "2018-01-01T00:00:00Z"
+        type: string
+      weather_provider:
+        description: |-
+          WeatherProvider is the model's weather archive, so the run uses the same
+          series as the model run; omitted, the backend default applies.
+        enum:
+        - cosmo-rea6
+        - era5-land
+        - merra-2
+        example: cosmo-rea6
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse:
+    properties:
+      buem:
+        type: object
+      osm_id:
+        type: string
     type: object
   spatialhub_backend_internal_api_contracts.BuemEnvelope:
     properties:
@@ -182,6 +232,19 @@ definitions:
     type: object
   spatialhub_backend_internal_api_contracts.EnrichResponse:
     properties:
+      attributions:
+        description: |-
+          Attributions credits every dataset the buildings in data come from, and
+          TABULA when any of them carries a TABULA type, as City2TABULA returns them.
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      country:
+        description: |-
+          Country is the database the buildings came from, as given or resolved
+          from the bbox centre; GET /v1/city2tabula/geometry takes the same value.
+        example: netherlands
+        type: string
       data:
         additionalProperties:
           $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichedBuilding'
@@ -209,6 +272,12 @@ definitions:
     properties:
       buem:
         $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      dataset_id:
+        description: |-
+          DatasetID names the source dataset; its credit is the attributions entry
+          with the same dataset_id.
+        example: nl-3dbag-loenen
+        type: string
       default_construction_year:
         description: |-
           Derived from the TABULA variant's construction-period range (ignis
@@ -510,6 +579,42 @@ definitions:
         example: 1
         type: integer
     type: object
+  spatialhub_backend_internal_city2tabula.BuildingGeometry:
+    properties:
+      dataset_id:
+        type: string
+      footprint_geojson:
+        items:
+          type: integer
+        type: array
+      object_id:
+        type: string
+      surfaces:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.SurfaceGeometry'
+        type: array
+    type: object
+  spatialhub_backend_internal_city2tabula.DatasetCredit:
+    properties:
+      changes:
+        type: string
+      credit:
+        type: string
+      credit_url:
+        type: string
+      dataset:
+        type: string
+      dataset_id:
+        type: string
+      licence:
+        type: string
+      licence_url:
+        type: string
+      provider:
+        type: string
+      terms_url:
+        type: string
+    type: object
   spatialhub_backend_internal_city2tabula.EnvelopeElement:
     properties:
       U:
@@ -532,6 +637,17 @@ definitions:
         example: wall
         type: string
     type: object
+  spatialhub_backend_internal_city2tabula.GeometryResult:
+    properties:
+      attributions:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.BuildingGeometry'
+        type: array
+    type: object
   spatialhub_backend_internal_city2tabula.Quantity:
     properties:
       unit:
@@ -540,6 +656,17 @@ definitions:
       value:
         example: 30
         type: number
+    type: object
+  spatialhub_backend_internal_city2tabula.SurfaceGeometry:
+    properties:
+      geojson:
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      type:
+        type: string
     type: object
 host: localhost:8000
 info:
@@ -635,12 +762,53 @@ paths:
       summary: Get a model's per-building BuEM energy profiles
       tags:
       - EnerPlanET
+  /v1/buem/building:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs one building through BuEM with the envelope the caller supplies, and returns
+        BuEM's block for it including the hourly series. Unlike a model run, the envelope
+        is taken from the request rather than looked up in City2TABULA, so a building that
+        has no 3D match, or whose surfaces a user has edited, can still be run. The
+        building block is forwarded to buem-gateway as sent and must be complete: no
+        U-value resolution or archetype default is applied here. The one addition: a block
+        that sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.
+        weather_provider selects the weather archive; omitted, the backend default applies.
+      parameters:
+      - description: Building geometry and BuEM building block
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for a single building
+      tags:
+      - BuEM
   /v1/city2tabula/enrich:
     post:
       consumes:
       - application/json
       description: |-
-        Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id
+        Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)
+        returns a per-osm_id
         merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
         linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
         (the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
@@ -757,6 +925,45 @@ paths:
       summary: Resolve City2TABULA 3D data for an area, without osm_ids
       tags:
       - City2TABULA
+  /v1/city2tabula/geometry:
+    get:
+      description: |-
+        Returns the building's footprint and every envelope surface polygon, for
+        rendering it in 3D. Surface ids are the City2TABULA surface row ids that the
+        BuEM envelope elements carry, so a clicked face resolves back to its element
+        without a second lookup. Geometry is in the country's storage CRS, not WGS84.
+        One building per call.
+      parameters:
+      - description: Country name or ISO2 code
+        in: query
+        name: country
+        required: true
+        type: string
+      - description: City2TABULA building object_id
+        in: query
+        name: object_ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_city2tabula.GeometryResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Envelope surface geometry for a building
+      tags:
+      - City2TABULA
   /v1/heat-demand/resolve:
     post:
       consumes:
@@ -850,6 +1057,77 @@ paths:
       summary: Report whether heat modelling is available for an area
       tags:
       - City2TABULA
+  /v2/ignis/calculate/{code}:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs ignis's EN ISO 13790 pipeline for a variant code, with any TABULA inputs the
+        caller overrides in the body. Returns the annual specific heat demand.
+      parameters:
+      - description: TABULA variant code
+        example: NL.N.SFH.05.Gen.ReEx.001.001
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: TABULA input overrides
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run the TABULA annual heat-demand calculation for a variant
+      tags:
+      - Ignis
+  /v2/ignis/data/{code}:
+    get:
+      description: |-
+        Returns every TABULA input for a variant code: the U-values, areas and
+        appearance parameters the configurator shows and edits.
+      parameters:
+      - description: TABULA variant code
+        example: NL.N.SFH.05.Gen.ReEx.001.001
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one TABULA variant's full record
+      tags:
+      - Ignis
   /v2/ignis/fields:
     get:
       description: |-
@@ -901,6 +1179,51 @@ paths:
       security:
       - SessionAuth: []
       summary: List a country's TABULA variant codes
+      tags:
+      - Ignis
+  /v2/ignis/variants/{country_iso2}/match:
+    get:
+      description: |-
+        Resolves a construction year to its TABULA period and returns that period's
+        refurbishment variants for the building type, existing state first. This is the
+        list behind the building configurator's refurbishment-level selector.
+      parameters:
+      - description: ISO 3166-1 alpha-2 country code
+        example: NL
+        in: path
+        name: country_iso2
+        required: true
+        type: string
+      - description: TABULA building type
+        example: SFH
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Construction year
+        example: 1975
+        in: query
+        name: year
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: List the TABULA refurbishment variants matching a building
       tags:
       - Ignis
   /v2/pylovo/boundary:

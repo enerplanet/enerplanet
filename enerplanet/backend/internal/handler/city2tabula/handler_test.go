@@ -135,15 +135,16 @@ func (f *fakeC2T) envelope(target string) string {
 	}
 }
 
-const twoWallBuilding = `[{
-  "object_id": "DEBW_1", "osm_id": "111", "match_type": 1,
+const twoWallBuilding = `{"buildings": [{
+  "object_id": "DEBW_1", "dataset_id": "de-bw-lod2", "osm_id": "111", "match_type": 1,
   "number_of_storeys": 3, "room_height": 2.5, "footprint_area": 80,
   "tabula_variant_code": "DE.N.SFH.05.Gen",
   "surfaces": [
     {"id": "w1", "type": "WallSurface", "area": 30, "azimuth": 180, "tilt": 0},
     {"id": "r1", "type": "RoofSurface", "area": 60, "azimuth": -1, "tilt": 90}
   ]
-}]`
+}],
+ "attributions": [{"dataset_id":"de-bw-lod2","provider":"p","dataset":"d","licence":"CC-BY-4.0","licence_url":"https://creativecommons.org/licenses/by/4.0/","credit":"Quellenvermerk: test","changes":"derived"}]}`
 
 func postEnrich(t *testing.T, h *Handler, body string) (*httptest.ResponseRecorder, contracts.EnrichResponse) {
 	t.Helper()
@@ -184,6 +185,21 @@ func TestEnrich_AllResolved_ReturnsCompletedInline(t *testing.T) {
 	assert.Equal(t, "wall", elements[0].Type)
 	assert.EqualValues(t, 90, elements[0].Tilt.Value)   // c2t 0 -> BuEM 90
 	assert.EqualValues(t, 0, elements[1].Azimuth.Value) // c2t -1 -> clamped 0
+}
+
+// TestEnrich_PassesCreditsThrough covers the attribution the configurator
+// shows: each building names its dataset, and that dataset's credit comes back
+// as City2TABULA returned it.
+func TestEnrich_PassesCreditsThrough(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: twoWallBuilding}
+	h := &Handler{client: fake.client(t)}
+
+	_, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	assert.Equal(t, "de-bw-lod2", resp.Data["111"].DatasetID)
+	require.Len(t, resp.Attributions, 1)
+	assert.Equal(t, "de-bw-lod2", resp.Attributions[0].DatasetID)
+	assert.Equal(t, "Quellenvermerk: test", resp.Attributions[0].Credit)
 }
 
 func TestEnrich_SomeMissing_TriggersRunAndReturns202(t *testing.T) {

@@ -60,9 +60,9 @@ func TestResolveBuemForModel_WeatherFailureIsNotAttributedToBuem(t *testing.T) {
 		if target == "weather-point" {
 			return 500, "no archive for this area"
 		}
-		return 200, `[{"object_id":"O1","osm_id":"111","match_type":1,"footprint_area":80,` +
+		return 200, `{"buildings":[{"object_id":"O1","osm_id":"111","match_type":1,"footprint_area":80,` +
 			`"number_of_storeys":2,"room_height":2.5,"tabula_variant_code":"NL.N.SFH.05.Gen",` +
-			`"surfaces":[{"id":"w1","type":"WallSurface","area":30,"azimuth":180,"tilt":0}]}]`
+			`"surfaces":[{"id":"w1","type":"WallSurface","area":30,"azimuth":180,"tilt":0}]}],"attributions":[]}`
 	})
 	country := "netherlands"
 	model := commonModels.Model{
