@@ -47,11 +47,13 @@ func TestMapCoatiDocument_MapsSmallTables(t *testing.T) {
 	assert.Equal(t, Coordinate{X: 49.0, Y: 13.2}, parsed.Coordinates["n2"])
 
 	// capacities + storage capacities -> results_energy_cap, and every key
-	// registers the loc-tech pair.
+	// registers the loc-tech pair. POWER capacities (flow_cap, MW) are scaled
+	// MW -> kW (the R2 contract); storage ENERGY capacity (MWh) is not power
+	// and stays unscaled. See Round 4a.
 	assert.Len(t, parsed.EnergyCap, 4, "3 capacities + 1 storage capacity")
-	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 12.026172})
-	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 52.462265}) // storage
-	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n2", Tech: "line1", Value: 200.0})
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 12026.172})
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 52.462265}) // storage (kWh, not scaled)
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n2", Tech: "line1", Value: 200000.0})
 	assert.ElementsMatch(t, []string{"battery", "chp"}, parsed.LocTechs["n1"])
 	assert.Equal(t, []string{"line1"}, parsed.LocTechs["n2"])
 
@@ -95,4 +97,35 @@ func TestMapCoatiDocument_CostsFallbackToSystemwide(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, parsed.Cost, 1)
 	assert.Equal(t, CostRecord{Costs: "monetary", Techs: "battery", Value: 786.0}, parsed.Cost[0])
+}
+
+// Round 4a: the mapping boundary writes POWER in kW (document MW ×1000) while
+// leaving storage ENERGY (kWh) and currencies unscaled. The spec's worked
+// example: a 0.0025 MW demand is written as 2.5 kW.
+func TestMapCoatiDocument_ScalesPowerNotStorageOrCost(t *testing.T) {
+	doc := &CoatiResultsDocument{
+		Capacities: map[string]float64{
+			"n1::demand_1":    0.0025, // MW -> 2.5 kW
+			"n1::pv_supply_1": 0.5,    // MW -> 500 kW
+		},
+		StorageCapacities: map[string]float64{
+			"n1::battery": 8.0, // kWh of energy -> UNCHANGED
+		},
+		TechMetadata: map[string]CoatiTechMetadata{
+			"demand_1":    {Parent: "demand"},
+			"pv_supply_1": {Parent: "supply"},
+			"battery":     {Parent: "storage"},
+		},
+		CostsByLocation: map[string]map[string]float64{"n1": {"pv_supply_1": 42.0}},
+	}
+
+	parsed, err := mapCoatiDocument(doc)
+	require.NoError(t, err)
+
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "n1_demand", Value: 2.5})
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "pv_supply_1", Value: 500})
+	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 8.0},
+		"storage energy capacity is MWh/kWh, not power: must not be scaled")
+	assert.Contains(t, parsed.Cost, CostRecord{FromLocation: "n1", Costs: "monetary", Techs: "pv_supply_1", Value: 42.0},
+		"currency must not be scaled")
 }

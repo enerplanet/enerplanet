@@ -30,8 +30,11 @@ func TestForMemeClaimsUtilisationOnly(t *testing.T) {
 	if !got.LineLoading || !got.UtilizationOnly {
 		t.Errorf("For(meme) must offer line loading as utilisation: %+v", got)
 	}
-	if !got.Curtailment || !got.Losses {
-		t.Errorf("For(meme) must claim the derivable series: %+v", got)
+	// A Coati/MEME bundle has no curtailment source and no loss data (its
+	// transport arcs have no impedance): claiming either makes the Grid render
+	// a fake "0.00 kW" loss per line. See Round 4b.
+	if got.Curtailment || got.Losses {
+		t.Errorf("For(meme) must NOT claim curtailment or losses: %+v", got)
 	}
 }
 

@@ -17,16 +17,22 @@ import (
 //
 // Coati normalises PyPSA and Calliope to the same transmission_flow +
 // capacities + tech_metadata contract, so this one mapping serves either leg.
-// The percent written is flow/capacity UTILISATION, not loading_percent — see
-// internal/result/capabilities and tasks/meme-pypsa-result-parity.md.
+//
+// Round 3: loading_percent is a REAL utilisation. The only rating Coati reports
+// is the LP-optimised flow_cap (the wire sized to its own peak flow), so
+// |flow|/capacity is identically 100. The real rating is resolved on the ingest
+// side from the model config's cable types (per grid, conservative — see
+// cable_ratings.go) and passed in. A wire with no resolvable rating carries NO
+// loading_percent (NULL), never the fabricated artefact.
 
-// mapWireLoading builds one row per wire per timestep.
-func mapWireLoading(doc *CoatiResultsDocument) []PyPSALineLoadingRecord {
+// mapWireLoading builds one row per wire per timestep. cableRatings is the
+// per-grid apparent-power rating (MVA) resolved from the model config, keyed by
+// grid_result_id; a nil/empty map writes no percentages.
+func mapWireLoading(doc *CoatiResultsDocument, cableRatings map[string]float64) []PyPSALineLoadingRecord {
 	if doc == nil || len(doc.TransmissionFlow) == 0 {
 		return nil
 	}
 
-	ratings := wireRatings(doc)
 	names := wireNamesByEndpoints(doc)
 	timestamps := make([]time.Time, len(doc.Timestamps))
 	for i, raw := range doc.Timestamps {
@@ -52,23 +58,32 @@ func mapWireLoading(doc *CoatiResultsDocument) []PyPSALineLoadingRecord {
 			// identifier for the arc.
 			name = key
 		}
-		rating := ratings[name]
+		rating, hasRating := resolveWireRating(name, cableRatings)
 
 		n := len(flow.Timeseries)
 		if len(timestamps) < n {
 			n = len(timestamps)
 		}
 		for i := 0; i < n; i++ {
+			// Coati reports the net flow of the exchange between the two
+			// endpoints (positive = from Bus0 to Bus1). P0 is that flow at the
+			// Bus0 side; the document folds both directions into ONE signed
+			// series per unordered node pair (net_flows), so there is no
+			// distinct other-endpoint series to read: P1 stays NULL rather than
+			// being invented. Power is MW in the document, kW in the R2
+			// contract -> scale at write time (Round 4a).
 			record := PyPSALineLoadingRecord{
 				Line:     name,
 				Bus0:     flow.From,
 				Bus1:     flow.To,
 				Timestep: timestamps[i],
-				// Coati reports the net arrival at To (origin flow scaled by the
-				// arc efficiency); the document carries no origin-side series.
-				P0: flow.Timeseries[i],
+				P0:       mwToKw(flow.Timeseries[i]),
 			}
-			if rating > 0 {
+			if hasRating {
+				// Real utilisation against the weakest cable in the grid; it may
+				// exceed 100, which is the flag. The rating is apparent power
+				// (MVA), so the percentage is computed from the RAW MW flow, not
+				// the kW value stored in P0.
 				percent := math.Abs(flow.Timeseries[i]) / rating * 100
 				record.Percent = &percent
 			}
@@ -153,25 +168,83 @@ func sortedPair(a, b string) string {
 	return a + "::" + b
 }
 
-// wireDocument picks the document the wire mapping reads: the PyPSA leg's
-// (preferred — it is the electricity transport model), falling back to the
-// Calliope document already parsed when the bundle carries no PyPSA output or
-// Coati cannot convert it. The fallback is always logged, never silent.
-func wireDocument(ctx context.Context, calliopeDoc *CoatiResultsDocument, extractDir string, runner CoatiRunner, log *logrus.Entry, modelID uint) *CoatiResultsDocument {
+// wireDocQualifies reports whether a Coati document carries usable wire data:
+// at least one PARSEABLE timestamp (so rows get a real timestep, not
+// 0001-01-01) AND a transmission_flow series longer than one step (so
+// utilisation is a real per-timestep series rather than a single snapshot).
+// A MEME PyPSA target writes one "now" snapshot and fails both tests; the
+// Calliope leg carries the real 73-step series.
+func wireDocQualifies(doc *CoatiResultsDocument) bool {
+	if doc == nil {
+		return false
+	}
+	parseable := false
+	for _, raw := range doc.Timestamps {
+		if _, ok := parseTimestamp(raw); ok {
+			parseable = true
+			break
+		}
+	}
+	if !parseable {
+		return false
+	}
+	for _, flow := range doc.TransmissionFlow {
+		if len(flow.Timeseries) > 1 {
+			return true
+		}
+	}
+	return false
+}
+
+// selectWireDocument picks the wire leg by DATA QUALITY, not by framework.
+// Preference order: the PyPSA leg when it qualifies (it is the electricity
+// transport model), then the Calliope leg; when neither qualifies it keeps the
+// historical Calliope fallback. leg is "pypsa" | "calliope" and reason explains
+// the choice so the caller can log it (never silent).
+func selectWireDocument(pypsaDoc, calliopeDoc *CoatiResultsDocument) (doc *CoatiResultsDocument, leg, reason string) {
+	switch {
+	case wireDocQualifies(pypsaDoc):
+		return pypsaDoc, "pypsa", "parseable timestamps and a multi-step transmission flow"
+	case wireDocQualifies(calliopeDoc):
+		return calliopeDoc, "calliope", "PyPSA leg absent or degenerate; Calliope leg carries a parseable multi-step flow"
+	default:
+		return calliopeDoc, "calliope", "neither leg has parseable timestamps / a multi-step flow; Calliope fallback"
+	}
+}
+
+// loadPyPSAWireDoc converts the bundle's PyPSA network.nc into a Coati document,
+// returning nil (with the reason logged) when the bundle carries no PyPSA
+// output or Coati cannot convert it.
+func loadPyPSAWireDoc(ctx context.Context, extractDir string, runner CoatiRunner, log *logrus.Entry, modelID uint) *CoatiResultsDocument {
 	networkNC, err := locatePyPSANetworkNC(extractDir)
 	if err != nil {
 		log.Warnf("No PyPSA network.nc in bundle; using the Calliope leg for wire loading model_id=%d: %v", modelID, err)
-		return calliopeDoc
+		return nil
 	}
 	raw, err := runner.Convert(ctx, networkNC, CoatiFrameworkPyPSA124)
 	if err != nil {
 		log.Warnf("Coati convert (pypsa) failed; using the Calliope leg for wire loading model_id=%d file=%s err=%v", modelID, networkNC, err)
-		return calliopeDoc
+		return nil
 	}
 	var doc CoatiResultsDocument
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		log.Warnf("Decode PyPSA Coati document failed; using the Calliope leg for wire loading model_id=%d err=%v", modelID, err)
-		return calliopeDoc
+		return nil
 	}
 	return &doc
+}
+
+// wireDocument picks the document the wire mapping reads. It no longer prefers
+// PyPSA unconditionally: the leg is chosen by data quality (selectWireDocument)
+// and the choice is always logged.
+func wireDocument(ctx context.Context, calliopeDoc *CoatiResultsDocument, extractDir string, runner CoatiRunner, log *logrus.Entry, modelID uint) *CoatiResultsDocument {
+	pypsaDoc := loadPyPSAWireDoc(ctx, extractDir, runner, log, modelID)
+
+	doc, leg, reason := selectWireDocument(pypsaDoc, calliopeDoc)
+	if leg == "pypsa" {
+		log.Infof("Wire leg: PyPSA selected model_id=%d (%s)", modelID, reason)
+	} else {
+		log.Warnf("Wire leg: Calliope selected model_id=%d (%s)", modelID, reason)
+	}
+	return doc
 }

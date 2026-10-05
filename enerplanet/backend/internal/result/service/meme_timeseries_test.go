@@ -130,14 +130,18 @@ func TestStreamMemeTimeSeries_MapsAndNormalises(t *testing.T) {
 	require.Contains(t, prod, "power_transmission:line1", "transmission tech renamed")
 	require.Contains(t, prod, "transformer_supply", "grid import renamed")
 	require.NotContains(t, prod, "grid_n1_export", "grid export omitted from carrier_prod")
-	require.Contains(t, prod, "5.5")
+	// POWER: 5.5 MW in the CSV -> 5500 kW in results_carrier_prod (Round 4a).
+	require.Contains(t, prod, "5500")
 	require.Contains(t, prod, "2020-01-01 00:00:00")
 
 	consume := sqlLineFor(t, logs, "results_carrier_con")
 	require.Contains(t, consume, "n1_demand", "demand tech renamed to <node>_demand")
 	require.Contains(t, consume, "battery")
-	require.Contains(t, consume, "7.5")
+	// POWER: 7.5 MW -> 7500 kW, 1.5 MW -> 1500 kW.
+	require.Contains(t, consume, "7500")
+	require.Contains(t, consume, "1500")
 
+	// RATIOS and COSTS are NOT power: they must be stored verbatim (Round 4a).
 	cf := sqlLineFor(t, logs, "results_capacity_factor")
 	require.Contains(t, cf, "pv_supply_1")
 	require.Contains(t, cf, "0.25")

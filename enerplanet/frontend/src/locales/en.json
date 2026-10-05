@@ -750,7 +750,9 @@
       "loading": "Loading",
       "noLoadingData": "No loading data available",
       "notInResult": "Not in this result",
-      "transmissionUtilization": "Transmission Utilization"
+      "transmissionUtilization": "Transmission Utilization",
+      "overloadedConnection": "Overloaded wire",
+      "loadingPreliminary": "Preliminary: each wire is rated against the weakest cable in its grid, so a high utilisation overstates the actual cable."
     },
     "system": {
       "noData": "No system data available",

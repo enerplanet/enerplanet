@@ -88,6 +88,10 @@ func newIngestMockDB(t *testing.T, insertCount int) (*gorm.DB, sqlmock.Sqlmock) 
 	require.NoError(t, err)
 
 	const deleteTables = 22 // deleteExistingResults (21) + the model_results DELETE
+	// Round 3: the ingest resolves the per-grid cable rating from the model's
+	// stored config before opening the write transaction. A null config row
+	// leaves every wire's loading_percent NULL (the fake document has no wires).
+	mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows([]string{"config"}).AddRow([]byte(nil)))
 	mock.ExpectBegin()
 	// 22 DELETEs (deleteExistingResults + the model_results replace) are Execs.
 	for i := 0; i < deleteTables; i++ {

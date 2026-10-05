@@ -148,10 +148,11 @@ func extractNetworkNC(t *testing.T, zipPath, destDir string) string {
 	return ""
 }
 
-// TestLiveWireMappingRealPyPSA proves the wire mapping against real framework
-// output: MEME's PyPSA emitter writes no lines.csv, so the only wire data is
-// transmission_flow + capacities, and the mapping must name the wire from the
-// capacity endpoint pairs and derive its utilisation.
+// TestLiveWireMappingRealPyPSA proves the Round 2 wire-leg selection against
+// real framework output. MEME's PyPSA emitter writes a single "now" snapshot
+// (no parseable timestep, one-step flow), so the selector must REJECT the PyPSA
+// leg and pick the Calliope leg, whose 73-step series yields real timesteps and
+// a varying ≤100 utilisation.
 //
 // Run with: GOFLAGS="-tags=manualignis" go test ./internal/result/service/ -run TestLiveWireMappingRealPyPSA -v
 func TestLiveWireMappingRealPyPSA(t *testing.T) {
@@ -164,15 +165,34 @@ func TestLiveWireMappingRealPyPSA(t *testing.T) {
 		t.Skip("no coati binary found (set COATI_BIN); skipping live convert")
 	}
 
+	// PyPSA leg: the degenerate 1-snapshot document must not qualify.
 	nc := extractNetworkNC(t, zipPath, t.TempDir())
 	out, err := SubprocessCoatiRunner{Bin: bin}.Convert(context.Background(), nc, CoatiFrameworkPyPSA124)
 	require.NoError(t, err)
 
-	var doc CoatiResultsDocument
-	require.NoError(t, json.Unmarshal(out, &doc))
-	require.NotEmpty(t, doc.TransmissionFlow, "a real PyPSA bundle reports wire flows")
+	var pypsaDoc CoatiResultsDocument
+	require.NoError(t, json.Unmarshal(out, &pypsaDoc))
+	require.NotEmpty(t, pypsaDoc.TransmissionFlow, "a real PyPSA bundle reports wire flows")
+	assert.False(t, wireDocQualifies(&pypsaDoc),
+		"the 1-snapshot PyPSA doc must be rejected by the wire-leg selector")
 
-	rows := mapWireLoading(&doc)
+	// Calliope leg: carries the real multi-step series and must be selected.
+	calliopeZip := findFixtureZip(t)
+	if calliopeZip == "" {
+		t.Skip("calliope.zip fixture not present; cannot verify the selected leg")
+	}
+	cnc := extractCalliopeNC(t, calliopeZip, t.TempDir())
+	cout, err := SubprocessCoatiRunner{Bin: bin}.Convert(context.Background(), cnc, CoatiFrameworkCalliope07)
+	require.NoError(t, err)
+
+	var calliopeDoc CoatiResultsDocument
+	require.NoError(t, json.Unmarshal(cout, &calliopeDoc))
+
+	doc, leg, _ := selectWireDocument(&pypsaDoc, &calliopeDoc)
+	require.Equal(t, "calliope", leg, "the selector must fall back to the Calliope leg")
+	require.Equal(t, &calliopeDoc, doc)
+
+	rows := mapWireLoading(doc, nil)
 	require.NotEmpty(t, rows, "the wire mapping produced no rows")
 
 	lines := map[string]bool{}
@@ -193,7 +213,7 @@ func TestLiveWireMappingRealPyPSA(t *testing.T) {
 	assert.Equal(t, len(doc.TransmissionFlow), len(lines),
 		"every reported wire should produce rows")
 
-	ratings := wireRatings(&doc)
+	ratings := wireRatings(doc)
 	assert.NotEmpty(t, ratings, "wire ratings derive from the transmission capacities")
 	for name := range lines {
 		_, ok := ratings[name]

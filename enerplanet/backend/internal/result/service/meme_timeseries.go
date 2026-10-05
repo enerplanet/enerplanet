@@ -37,8 +37,10 @@ var (
 // source) — see tasks/meme-result-timeseries-mapping.md.
 //
 // A missing CSV file (or a missing csv dir, e.g. a PyPSA-only bundle) is not an
-// error: that table is simply skipped. A malformed row is skipped. Values are
-// stored unscaled (MW), matching the Coati energy-cap path for a MEME model.
+// error: that table is simply skipped. A malformed row is skipped. POWER series
+// (carrier_prod/con) are scaled MW -> kW at write time (the R2 contract is kW);
+// ratios, levelised costs and currencies are stored unscaled — see Round 4a of
+// tasks/meme-result-timeseries-mapping.md.
 func streamMemeTimeSeries(tx *gorm.DB, modelID uint, csvDir string, parents map[string]string) error {
 	log := logger.ForComponent("result")
 
@@ -84,20 +86,53 @@ func normMemeCarrier(carrier string) string {
 	return carrier
 }
 
-// normMemeTech rewrites a MEME technology name into the legacy vocabulary.
-// keep is false for grid export rows, which the caller omits from carrier_prod
-// (an offtake, not generation).
-func normMemeTech(tech, node string, parents map[string]string) (string, bool) {
+// memeTechClass is the shared classification of a MEME technology against the
+// legacy vocabulary. Both the time-series normaliser (normMemeTech) and the
+// energy-cap/loc-tech builder (mapCoatiDocument) derive from this ONE source of
+// rules, so a MEME technology is rewritten identically everywhere.
+type memeTechClass int
+
+const (
+	memeTechOther memeTechClass = iota
+	memeTechGridImport
+	memeTechGridExport
+	memeTechTransmission
+	memeTechDemand
+)
+
+// classifyMemeTech applies the shared naming rules. parents maps a technology
+// to its Coati tech_metadata parent (supply | demand | conversion | storage |
+// transmission).
+func classifyMemeTech(tech string, parents map[string]string) memeTechClass {
 	if memeGridExportRe.MatchString(tech) {
-		return tech, false
+		return memeTechGridExport
 	}
 	if memeGridImportRe.MatchString(tech) {
-		return "transformer_supply", true
+		return memeTechGridImport
 	}
 	switch parents[tech] {
 	case "transmission":
-		return "power_transmission:" + tech, true
+		return memeTechTransmission
 	case "demand":
+		return memeTechDemand
+	}
+	return memeTechOther
+}
+
+// normMemeTech rewrites a MEME technology name into the legacy vocabulary. It
+// is the time-series vocabulary (carrier_prod/con, capacity_factor, cost_var),
+// where a wire is named "power_transmission:<tech>". keep is false for grid
+// export rows, which the caller omits from carrier_prod (an offtake, not
+// generation).
+func normMemeTech(tech, node string, parents map[string]string) (string, bool) {
+	switch classifyMemeTech(tech, parents) {
+	case memeTechGridExport:
+		return tech, false
+	case memeTechGridImport:
+		return "transformer_supply", true
+	case memeTechTransmission:
+		return "power_transmission:" + tech, true
+	case memeTechDemand:
 		if node != "" {
 			return node + "_demand", true
 		}
@@ -199,7 +234,7 @@ func (w *memeTimeSeriesWriter) streamCarrierProd() error {
 			Carrier:      normMemeCarrier(memeString(row, cols, "carriers")),
 			Techs:        tech,
 			Timestep:     ts,
-			Value:        value,
+			Value:        mwToKw(value),
 		})
 		if len(batch) >= memeStreamBatchSize {
 			return flushMemeBatch(w.tx, &batch, "results_carrier_prod")
@@ -235,7 +270,7 @@ func (w *memeTimeSeriesWriter) streamCarrierCon() error {
 			Carrier:      normMemeCarrier(memeString(row, cols, "carriers")),
 			Techs:        tech,
 			Timestep:     ts,
-			Value:        value,
+			Value:        mwToKw(value),
 		})
 		if len(batch) >= memeStreamBatchSize {
 			return flushMemeBatch(w.tx, &batch, "results_carrier_con")

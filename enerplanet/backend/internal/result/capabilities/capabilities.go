@@ -76,8 +76,13 @@ func For(s Source) Capabilities {
 		return Capabilities{
 			LineLoading:     true,
 			UtilizationOnly: true,
-			Curtailment:     true,
-			Losses:          true,
+			// A Coati/MEME bundle carries no PyPSA curtailment file and its
+			// transport arcs have no impedance, so neither a curtailment nor a
+			// loss series can be derived. Claiming them made the Grid render a
+			// meaningless "0.00 kW" per line. See Round 4b of
+			// tasks/meme-result-timeseries-mapping.md.
+			Curtailment: false,
+			Losses:      false,
 		}
 	default:
 		return Capabilities{}

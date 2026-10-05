@@ -13,6 +13,8 @@ import {
   PyPSATransformerLoadingChart,
   PyPSALossesChart,
   PyPSACurtailmentChart,
+  connectionKey,
+  isOverloaded,
 } from '@/features/simulation-charts/pypsa';
 import { useTranslation } from '@spatialhub/i18n';
 import { CLUSTER_COLORS } from '@/components/map-controls/maplibre/maplibre-styles';
@@ -320,6 +322,19 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
       .filter(item => item.hoursOutside > 0 || item.maxDeviationPu > 0);
   }, [voltageArr]);
 
+  // Per-connection peak utilisation, keyed the same way NetworkTopology keys an
+  // edge (connectionKey(bus0, bus1)). Red marking is per wire; a wire with no
+  // loading_percent (e.g. no resolvable rating) simply has no entry.
+  const connectionLoading = useMemo(() => {
+    const byConnection: Record<string, number> = {};
+    lineLoadingArr.forEach(entry => {
+      if (entry.loading_percent === undefined || entry.loading_percent === null) return;
+      const key = connectionKey(entry.bus0, entry.bus1);
+      byConnection[key] = Math.max(byConnection[key] ?? 0, entry.loading_percent);
+    });
+    return byConnection;
+  }, [lineLoadingArr]);
+
   const lineLoadingItems = useMemo(() => {
     const byLine = new Map<string, { peakApparentKva: number; peakLossKw: number; peakLoadingPercent?: number }>();
 
@@ -474,6 +489,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
               voltageAvailable={capabilities.voltage}
               powerAvailable={capabilities.power}
               lineConnections={lineConnections}
+              connectionLoading={connectionLoading}
               clusterColors={clusterColors}
               height={420}
               onTransformerHover={onTransformerHover}
@@ -711,9 +727,13 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                 items={lineLoadingItems}
                 height={240}
                 utilizationOnly={capabilities.utilizationOnly}
+                lossesAvailable={capabilities.losses}
                 title={capabilities.utilizationOnly ? t('results.grid.transmissionUtilization') : undefined}
               />
             </ErrorBoundary>
+            <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+              {t('results.grid.loadingPreliminary')}
+            </p>
           </div>
         </GatedSection>
       </div>
@@ -783,19 +803,27 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
             <div className="rounded-lg border border-border bg-muted/20 p-3">
               <p className="text-xs font-medium text-foreground mb-3">Worst Lines</p>
               <div className="space-y-2">
-                {worstLines.length > 0 ? worstLines.map(item => (
-                  <div key={item.name} className="flex items-start justify-between gap-3 text-xs">
-                    <span className="text-muted-foreground truncate">{item.name}</span>
-                    <span className="text-right font-medium text-foreground">
-                      {item.peakLoadingPercent !== undefined
-                        ? `${item.peakLoadingPercent.toFixed(1)}% • ${item.peakLossKw.toFixed(2)} kW`
-                        : `${formatApparentPowerValue(item.peakApparentKva)} • ${item.peakLossKw.toFixed(2)} kW`}
-                    </span>
-                  </div>
-                )) : (
+                {worstLines.length > 0 ? worstLines.map(item => {
+                  const overloaded = isOverloaded(item.peakLoadingPercent);
+                  return (
+                    <div key={item.name} className="flex items-start justify-between gap-3 text-xs">
+                      <span className={`truncate ${overloaded ? 'font-medium text-red-500' : 'text-muted-foreground'}`}>
+                        {item.name}
+                      </span>
+                      <span className={`text-right font-medium ${overloaded ? 'text-red-500' : 'text-foreground'}`}>
+                        {item.peakLoadingPercent !== undefined
+                          ? `${item.peakLoadingPercent.toFixed(1)}%${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`
+                          : `${formatApparentPowerValue(item.peakApparentKva)}${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`}
+                      </span>
+                    </div>
+                  );
+                }) : (
                   <p className="text-xs text-muted-foreground">No line loading data.</p>
                 )}
               </div>
+              <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+                {t('results.grid.loadingPreliminary')}
+              </p>
             </div>
             </GatedSection>
           </div>

@@ -750,7 +750,9 @@
       "loading": "Auslastung",
       "noLoadingData": "Keine Auslastungsdaten verfügbar",
       "notInResult": "Nicht in diesem Ergebnis",
-      "transmissionUtilization": "Übertragungsauslastung"
+      "transmissionUtilization": "Übertragungsauslastung",
+      "overloadedConnection": "Überlastete Leitung",
+      "loadingPreliminary": "Vorläufig: Jede Leitung wird gegen das schwächste Kabel ihres Netzes bewertet, daher überschätzt eine hohe Auslastung das tatsächliche Kabel."
     },
     "system": {
       "noData": "Keine Systemdaten verfügbar",

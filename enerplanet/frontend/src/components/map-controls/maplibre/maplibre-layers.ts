@@ -365,6 +365,39 @@ export function addOrUpdateMvLines(map: maplibregl.Map, geojson: any): void {
   }
 }
 
+/**
+ * Data-driven connection layer for model results: one straight wire segment per
+ * connection (bus0 -> bus1), red when its peak utilisation exceeds 100%.
+ */
+export function addOrUpdateConnections(map: maplibregl.Map, geojson: GeoJSON.FeatureCollection | null): void {
+  if (!geojson?.features?.length) {
+    clearSource(map, 'result-connections');
+    return;
+  }
+
+  const existing = map.getSource('result-connections') as maplibregl.GeoJSONSource | undefined;
+  if (existing) {
+    existing.setData(geojson);
+    return;
+  }
+
+  map.addSource('result-connections', { type: 'geojson', data: geojson });
+
+  if (!map.getLayer('result-connections-line')) {
+    map.addLayer({
+      id: 'result-connections-line',
+      type: 'line',
+      source: 'result-connections',
+      paint: {
+        'line-color': ['case', ['==', ['get', 'overloaded'], true], '#ef4444', '#64748b'],
+        'line-width': ['case', ['==', ['get', 'overloaded'], true], 4, 2.5],
+        'line-opacity': 0.95,
+      },
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+    });
+  }
+}
+
 const TRANSFORMER_IMG_ID = 'transformer-3d';
 const TRANSFORMER_IMG_URL = '/images/3d_transformer.png';
 let transformerImgLoading: Promise<void> | null = null;

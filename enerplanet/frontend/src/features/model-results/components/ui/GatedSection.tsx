@@ -20,7 +20,7 @@ export const GapNote = ({
   className?: string;
 }) => (
   <div
-    className={`flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-center text-xs text-muted-foreground ${className}`}
+    className={`flex items-center justify-center rounded-lg border border-dashed border-amber-500/50 bg-amber-500/10 text-center text-xs font-medium text-amber-700 dark:text-amber-400 ${className}`}
   >
     {label}
   </div>
@@ -44,6 +44,10 @@ interface GatedSectionProps {
  * - capability met  -> children (the child owns its own card wrapper)
  * - not met + prod  -> null
  * - not met + local -> an in-place placeholder card naming the section
+ *
+ * The local placeholder is deliberately AMBER (header + note + card ring) so it
+ * never reads as a neutral part of the result: it marks a section that exists
+ * only while SHOW_RESULT_GAPS is on and will drop out of a production build.
  */
 export const GatedSection = ({
   requires,
@@ -63,7 +67,7 @@ export const GatedSection = ({
   const note = <GapNote label={t('results.grid.notInResult')} />;
   if (bare) return title || Icon ? (
     <div className="space-y-3">
-      <SectionHeader title={title} icon={Icon} />
+      <SectionHeader title={title} icon={Icon} warning />
       {note}
     </div>
   ) : (
@@ -71,16 +75,29 @@ export const GatedSection = ({
   );
 
   return (
-    <div className={className ?? CHART_CARD_CLASS}>
-      <SectionHeader title={title} icon={Icon} />
+    <div className={`${className ?? CHART_CARD_CLASS} ring-1 ring-amber-500/40`}>
+      <SectionHeader title={title} icon={Icon} warning />
       {note}
     </div>
   );
 };
 
-const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: LucideIcon }) => (
-  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-    {Icon && <Icon className="w-4 h-4 text-primary" />}
+const SectionHeader = ({
+  title,
+  icon: Icon,
+  warning,
+}: {
+  title: string;
+  icon?: LucideIcon;
+  /** Tint the header as a local-only placeholder (see SHOW_RESULT_GAPS). */
+  warning?: boolean;
+}) => (
+  <h4
+    className={`mb-3 flex items-center gap-2 text-sm font-semibold ${
+      warning ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'
+    }`}
+  >
+    {Icon && <Icon className={`w-4 h-4 ${warning ? 'text-amber-500' : 'text-primary'}`} />}
     {title}
   </h4>
 );

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gorm.io/datatypes"
@@ -133,22 +134,112 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 	}
 
 	// Installed capacities (and storage capacity) -> results_energy_cap, and
-	// every "loc::tech" key registers the loc-tech pair for lookup. Both
-	// capacities and storage capacities become energy-cap rows, matching how the
-	// legacy Calliope results_energy_cap.csv carried flow_cap + storage_cap.
-	addEnergyCap := func(key string, value float64) {
-		loc, tech := splitLocTech(key)
+	// every emitted tech registers its loc-tech pair for lookup. The names are
+	// rewritten through the SAME shared rules the time-series tables use
+	// (classifyMemeTech/normMemeTech): demand -> <loc>_demand, grid import ->
+	// transformer_supply, grid export is an offtake and is omitted entirely.
+	// Both capacities and storage capacities become energy-cap rows, matching
+	// how the legacy Calliope results_energy_cap.csv carried flow_cap +
+	// storage_cap.
+	techParents := make(map[string]string, len(doc.TechMetadata))
+	for tech, meta := range doc.TechMetadata {
+		techParents[tech] = meta.Parent
+	}
+
+	// Transmission capacities are reported once PER ENDPOINT ("n1::lv_1_trafo_82"
+	// and "ntrafo_82::lv_1_trafo_82"). Collect the endpoints and emit ONE
+	// power_transmission row pairing them, mirroring the legacy vocabulary
+	// (from_location = one endpoint, to_location = the other).
+	type wireEndpoints struct {
+		locs  []string
+		value float64
+	}
+	wires := make(map[string]*wireEndpoints)
+
+	registerLocTech := func(loc, tech string) {
 		if loc == "" || tech == "" {
 			return
 		}
 		out.LocTechs[loc] = appendUnique(out.LocTechs[loc], tech)
+	}
+	addEnergyCap := func(loc, tech string, value float64) {
+		registerLocTech(loc, tech)
 		out.EnergyCap = append(out.EnergyCap, EnergyCap{Location: loc, Tech: tech, Value: value})
 	}
+
+	// power is true for installed POWER capacities (MW -> kW, the R2 contract)
+	// and false for storage ENERGY capacities (MWh is not power and must not be
+	// scaled). See tasks/meme-result-timeseries-mapping.md (Round 4a).
+	addCapacity := func(loc, tech string, value float64, power bool) {
+		if loc == "" || tech == "" {
+			return
+		}
+		if power {
+			value = mwToKw(value)
+		}
+		switch classifyMemeTech(tech, techParents) {
+		case memeTechGridExport:
+			return // offtake, not generation/supply — omit like the time-series path
+		case memeTechTransmission:
+			w := wires[tech]
+			if w == nil {
+				w = &wireEndpoints{}
+				wires[tech] = w
+			}
+			known := false
+			for _, l := range w.locs {
+				if l == loc {
+					known = true
+					break
+				}
+			}
+			if !known {
+				w.locs = append(w.locs, loc)
+			}
+			if value > w.value {
+				w.value = value
+			}
+			return
+		}
+		normTech, keep := normMemeTech(tech, loc, techParents)
+		if !keep || normTech == "" {
+			return
+		}
+		addEnergyCap(loc, normTech, value)
+	}
 	for key, value := range doc.Capacities {
-		addEnergyCap(key, value)
+		loc, tech := splitLocTech(key)
+		addCapacity(loc, tech, value, true) // power capacity: MW -> kW
 	}
 	for key, value := range doc.StorageCapacities {
-		addEnergyCap(key, value)
+		loc, tech := splitLocTech(key)
+		addCapacity(loc, tech, value, false) // energy capacity (MWh) is not power
+	}
+
+	// Emit the paired wire rows deterministically (Go map iteration is random).
+	wireTechs := make([]string, 0, len(wires))
+	for tech := range wires {
+		wireTechs = append(wireTechs, tech)
+	}
+	sort.Strings(wireTechs)
+	for _, tech := range wireTechs {
+		w := wires[tech]
+		sort.Strings(w.locs)
+		if len(w.locs) == 2 {
+			from, to := w.locs[0], w.locs[1]
+			out.EnergyCap = append(out.EnergyCap, EnergyCap{Location: from, Tech: "power_transmission", ToLoc: to, Value: w.value})
+			registerLocTech(from, "power_transmission:"+to)
+			registerLocTech(to, "power_transmission:"+from)
+			continue
+		}
+		// Broken/ambiguous endpoint set (!= 2): still emit the transmission
+		// tech, but there is no honest remote endpoint to name.
+		from := ""
+		if len(w.locs) > 0 {
+			from = w.locs[0]
+		}
+		out.EnergyCap = append(out.EnergyCap, EnergyCap{Location: from, Tech: "power_transmission", Value: w.value})
+		registerLocTech(from, "power_transmission")
 	}
 
 	// Costs -> results_cost, from the per-location, per-tech totals.
@@ -165,6 +256,39 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 	}
 
 	return out, nil
+}
+
+// loadCableRatings resolves the conservative per-grid wire rating (MVA) from the
+// model's stored config (models.config), keyed by grid_result_id. This is the
+// only place the ingest reaches outside the result bundle: a MEME bundle carries
+// no nameplate, only the LP-optimised flow_cap, so a real utilisation must come
+// from the config's cable types. A load/parse failure is NON-FATAL — the wires
+// then carry no loading_percent rather than the fabricated 100.
+func (s *ResultService) loadCableRatings(modelID uint) map[string]float64 {
+	log := logger.ForComponent("result")
+
+	var row struct {
+		Config datatypes.JSON `gorm:"column:config"`
+	}
+	if err := s.db.Raw("SELECT config FROM models WHERE id = ?", modelID).Scan(&row).Error; err != nil {
+		log.Warnf("Wire rating: could not load model config model_id=%d err=%v; loading_percent will be NULL", modelID, err)
+		return nil
+	}
+	if len(row.Config) == 0 {
+		return nil
+	}
+	var config map[string]interface{}
+	if err := json.Unmarshal(row.Config, &config); err != nil {
+		log.Warnf("Wire rating: model config is not valid JSON model_id=%d err=%v; loading_percent will be NULL", modelID, err)
+		return nil
+	}
+	ratings := wireRatingsByGrid(config)
+	if len(ratings) == 0 {
+		log.Warnf("Wire rating: no cable ratings resolved from model config model_id=%d; loading_percent will be NULL", modelID)
+		return nil
+	}
+	log.Infof("Wire rating: resolved %d per-grid cable ratings from model config model_id=%d", len(ratings), modelID)
+	return ratings
 }
 
 // IngestCoatiResult is Step 6's ingest: it extracts a stored MEME result zip,
@@ -234,8 +358,14 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 	// the PyPSA leg (the electricity transport model) and fall back to the
 	// Calliope document already parsed — never concatenate the two, they are
 	// two different solves of the same wires.
+	// Round 3: the wire loading_percent is a REAL utilisation against the
+	// weakest cable in each grid (resolved once from the model's stored config),
+	// not the LP-optimised flow_cap Coati reports (which makes |flow|/rating
+	// identically 100). A wire with no resolvable rating carries NULL, never the
+	// artefact.
+	cableRatings := s.loadCableRatings(modelID)
 	wireDoc := wireDocument(ctx, &doc, extractDir, runner, log, modelID)
-	parsed.PyPSALineLoading = mapWireLoading(wireDoc)
+	parsed.PyPSALineLoading = mapWireLoading(wireDoc, cableRatings)
 
 	summary = buildCoatiSummary(&doc)
 	// The wire data may come from a different leg than the summary's document.

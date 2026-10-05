@@ -162,10 +162,12 @@ type PyPSAVoltageRecord struct {
 
 // PyPSALineLoadingRecord is one wire's flow at one timestep.
 //
-// Percent is flow/capacity UTILISATION, not electrical loading: MEME's PyPSA
-// target emits transmission as a transport Link on a graph with no impedance
-// or rating, so loading_percent cannot exist (see internal/result/capabilities
-// and tasks/meme-pypsa-result-parity.md).
+// Percent is the wire's utilisation against a REAL cable rating resolved on the
+// ingest side from the model config (per grid, conservative — the multimeter
+// against the grid's weakest cable; see cable_ratings.go). The only rating Coati
+// reports is the LP-optimised flow_cap, which makes |flow|/rating identically
+// 100, so it is never used. A wire with no resolvable rating (e.g. an MV arc,
+// no MV cable in the catalogue) leaves Percent nil -> NULL, never fabricated.
 type PyPSALineLoadingRecord struct {
 	Line     string    `json:"line"`
 	Bus0     string    `json:"bus0"`

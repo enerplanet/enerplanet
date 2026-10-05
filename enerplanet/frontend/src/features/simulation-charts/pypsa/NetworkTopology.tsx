@@ -2,7 +2,9 @@ import { useMemo, useRef, useEffect, useState, type FC } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { Info } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
-import { useThemeColors } from './chartUtils';
+import { useThemeColors, connectionKey, isOverloaded } from './chartUtils';
+
+const OVERLOAD_COLOR = '#ef4444';
 
 // Line connection from config.lines GeoJSON features
 interface LineConnection {
@@ -21,6 +23,9 @@ interface NetworkTopologyProps {
   powerAvailable?: boolean;
   lineConnections?: LineConnection[]; // Actual grid topology connections
   clusterColors?: Record<string, string>; // location -> cluster color hex (matches map colors)
+  // Per-connection peak utilisation (%), keyed by connectionKey(bus0, bus1).
+  // A connection whose peak exceeds 100% is drawn red — per edge, not per graph.
+  connectionLoading?: Record<string, number>;
   height?: number;
   onTransformerHover?: (connectedBuildings: string[] | null) => void; // Callback when hovering transformer
   highlightedBuildings?: string[] | null; // Buildings to highlight
@@ -128,13 +133,14 @@ interface LayoutContext {
   trafoToBuildingsMap: Record<string, string[]>;
   buildingToTrafo: Record<string, string>;
   clusterColors: Record<string, string>;
+  connectionLoading: Record<string, number>;
   chartWidth: number;
   chartHeight: number;
 }
 
 // Create nodes and links for clustered layout
 function createClusteredLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } {
-  const { transformers, voltageData, powerData, trafoToBuildingsMap, clusterColors, chartWidth, chartHeight } = ctx;
+  const { transformers, voltageData, powerData, trafoToBuildingsMap, clusterColors, connectionLoading, chartWidth, chartHeight } = ctx;
   const nodes: any[] = [];
   const links: any[] = [];
 
@@ -218,7 +224,9 @@ function createClusteredLayout(ctx: LayoutContext): { nodes: any[]; links: any[]
       links.push({
         source: trafo,
         target: building,
-        lineStyle: { color: trafoClusterColor || bVoltageColor, width: 1, opacity: 0.5 },
+        lineStyle: isOverloaded(connectionLoading[connectionKey(trafo, building)])
+          ? { color: OVERLOAD_COLOR, width: 3, opacity: 0.95 }
+          : { color: trafoClusterColor || bVoltageColor, width: 1, opacity: 0.5 },
       });
     });
   });
@@ -243,7 +251,7 @@ function createClusteredLayout(ctx: LayoutContext): { nodes: any[]; links: any[]
 
 // Create nodes and links for force layout
 function createForceLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } {
-  const { transformers, buildings, voltageData, powerData, trafoToBuildingsMap, buildingToTrafo, clusterColors } = ctx;
+  const { transformers, buildings, voltageData, powerData, trafoToBuildingsMap, buildingToTrafo, clusterColors, connectionLoading } = ctx;
   const nodes: any[] = [];
   const links: any[] = [];
 
@@ -287,7 +295,9 @@ function createForceLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } {
       links.push({
         source: trafo,
         target: building,
-        lineStyle: { color: clusterColors[trafo] || voltageColor, width: 0.8, opacity: 0.4 },
+        lineStyle: isOverloaded(connectionLoading[connectionKey(trafo, building)])
+          ? { color: OVERLOAD_COLOR, width: 3, opacity: 0.95 }
+          : { color: clusterColors[trafo] || voltageColor, width: 0.8, opacity: 0.4 },
       });
     }
   });
@@ -306,7 +316,7 @@ function createForceLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } {
 
 // Create nodes and links for simple layout
 function createSimpleLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } {
-  const { transformers, buildings, voltageData, powerData, buildingToTrafo, clusterColors, chartWidth, chartHeight } = ctx;
+  const { transformers, buildings, voltageData, powerData, buildingToTrafo, clusterColors, connectionLoading, chartWidth, chartHeight } = ctx;
   const nodes: any[] = [];
   const links: any[] = [];
 
@@ -393,10 +403,14 @@ function createSimpleLayout(ctx: LayoutContext): { nodes: any[]; links: any[] } 
       const buildingVoltage = voltageData[building] ?? 1;
       const { color: voltageColor } = getVoltageStatus(buildingVoltage);
 
+      const overloaded = isOverloaded(connectionLoading[connectionKey(connectedTrafo, building)]);
+
       links.push({
         source: connectedTrafo,
         target: building,
-        lineStyle: { color: clusterColors[connectedTrafo] || voltageColor, width: 1.5, curveness: 0.15, opacity: 0.6 },
+        lineStyle: overloaded
+          ? { color: OVERLOAD_COLOR, width: 3, opacity: 0.95 }
+          : { color: clusterColors[connectedTrafo] || voltageColor, width: 1.5, curveness: 0.15, opacity: 0.6 },
       });
     });
 
@@ -491,6 +505,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
   powerAvailable = true,
   lineConnections = [],
   clusterColors = {},
+  connectionLoading = {},
   height = 320,
   onTransformerHover,
   highlightedBuildings,
@@ -498,6 +513,10 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
   const chartRef = useRef<ReactECharts>(null);
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const hasOverload = useMemo(
+    () => Object.values(connectionLoading).some(isOverloaded),
+    [connectionLoading]
+  );
 
   // Build transformer -> buildings mapping
   // Separate structure from data to avoid full layout resets on every voltage/power update
@@ -525,6 +544,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
       trafoToBuildingsMap,
       buildingToTrafo,
       clusterColors,
+      connectionLoading,
       chartWidth,
       chartHeight,
     };
@@ -646,7 +666,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
       },
       trafoToBuildingsMap,
     };
-  }, [networkStructure, voltageData, powerData, clusterColors, height, themeColors, t, voltageAvailable, powerAvailable]);
+  }, [networkStructure, voltageData, powerData, clusterColors, connectionLoading, height, themeColors, t, voltageAvailable, powerAvailable]);
 
   // Handle chart events - highlight connected buildings when hovering transformer
   const onEvents = useMemo(() => {
@@ -749,6 +769,15 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
             <div className="w-px h-4 bg-border" />
           </>
         )}
+        {hasOverload && (
+          <>
+            <span className="flex items-center gap-1.5 text-xs">
+              <span className="h-0.5 w-5 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
+              <span className="font-medium text-red-500">{t('results.grid.overloadedConnection')}</span>
+            </span>
+            <div className="w-px h-4 bg-border" />
+          </>
+        )}
         <div className="flex items-center gap-3">
           {voltageAvailable ? (
             <>
@@ -767,7 +796,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
               <VoltageStatusTooltip />
             </>
           ) : (
-            <span className="text-[10px] text-muted-foreground italic">
+            <span className="text-[10px] italic font-medium text-amber-700 dark:text-amber-400">
               {t('results.grid.notInResult')}
             </span>
           )}
