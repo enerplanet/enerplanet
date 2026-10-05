@@ -41,7 +41,6 @@ interface ModelTableRowProps {
   calculationStartTimes: Record<number, string>;
   calculationCompletionInfo: Record<number, CompletionInfo>;
   canUserDeleteModel: (model: Model) => boolean;
-  hasAvailableWebservice: boolean;
   onSelect: (model: Model) => void;
   onStartEdit: (model: Model) => void;
   onEditTitleChange: (value: string) => void;
@@ -51,7 +50,6 @@ interface ModelTableRowProps {
   onEdit: (model: Model) => void;
   onDownload: (model: Model) => void;
   onCopy: (model: Model) => void;
-  onCalculate: (model: Model) => void;
   onRunMeme: (model: Model) => void;
   onDelete: (model: Model) => void;
   onShare: (model: Model) => void;
@@ -182,7 +180,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   calculationStartTimes,
   calculationCompletionInfo,
   canUserDeleteModel,
-  hasAvailableWebservice,
   onSelect,
   onStartEdit,
   onEditTitleChange,
@@ -192,7 +189,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   onEdit,
   onDownload,
   onCopy,
-  onCalculate,
   onRunMeme,
   onDelete,
   onShare,
@@ -336,9 +332,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             onEdit={onEdit}
             onDownload={onDownload}
             onCopy={onCopy}
-            onCalculate={onCalculate}
             onRunMeme={onRunMeme}
-            showRunMeme={import.meta.env.DEV}
             onDelete={onDelete}
             onShare={onShare}
             onMoveToWorkspace={onMoveToWorkspace}
@@ -352,7 +346,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             shareTooltip={
               canManageModel ? t("common.tooltips.share") : t("model.sharedCannotShare")
             }
-            hasAvailableWebservice={hasAvailableWebservice}
             layout="horizontal"
             size="small"
           />
@@ -406,7 +399,6 @@ const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.editTitle !== next.editTitle) return false;
-  if (prev.hasAvailableWebservice !== next.hasAvailableWebservice) return false;
   if (prev.canUserDeleteModel(prev.model) !== next.canUserDeleteModel(next.model)) return false;
 
   const modelID = prev.model.id;

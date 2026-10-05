@@ -1,4 +1,4 @@
-import { Eye, Edit, Download, Copy, Play, Trash2, Share, FolderInput, RefreshCw, Zap } from "lucide-react";
+import { Eye, Edit, Download, Copy, Trash2, Share, FolderInput, Zap } from "lucide-react";
 import { ModelStatus } from "@/types/models";
 import { isModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import ModelActionGroup, { ActionConfig, ActionSize } from "../shared/ModelActionGroup";
@@ -12,7 +12,6 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly onEdit?: (model: T) => void;
 	readonly onDownload?: (model: T) => void;
 	readonly onCopy?: (model: T) => void;
-	readonly onCalculate?: (model: T) => void;
 	readonly onRunMeme?: (model: T) => void;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
@@ -21,8 +20,6 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly showEdit?: boolean;
 	readonly showDownload?: boolean;
 	readonly showCopy?: boolean;
-	readonly showCalculate?: boolean;
-	readonly showRunMeme?: boolean;
 	readonly showDelete?: boolean;
 	readonly showShare?: boolean;
 	readonly showMoveToWorkspace?: boolean;
@@ -32,7 +29,6 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly moveToWorkspaceTooltip?: string;
 	readonly disableShare?: boolean;
 	readonly shareTooltip?: string;
-	readonly hasAvailableWebservice?: boolean;
 	readonly layout?: "horizontal" | "grid";
 	readonly size?: ActionSize;
 }
@@ -45,7 +41,6 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onEdit,
 	onDownload,
 	onCopy,
-	onCalculate,
 	onRunMeme,
 	onDelete,
 	onShare,
@@ -54,8 +49,6 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	showEdit = true,
 	showDownload = true,
 	showCopy = true,
-	showCalculate = true,
-	showRunMeme = false,
 	showDelete = true,
 	showShare = true,
 	showMoveToWorkspace = true,
@@ -65,7 +58,6 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	moveToWorkspaceTooltip,
 	disableShare = false,
 	shareTooltip,
-	hasAvailableWebservice = true,
 	layout = "horizontal",
 	size = "small",
 }: ModelActionsProps<T>) {
@@ -89,9 +81,9 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	const actions: ActionConfig[] = getActionConfigs(
 		model,
 		{
-			onView, onEdit, onDownload, onCopy, onCalculate, onRunMeme, onDelete, onShare, onMoveToWorkspace,
-			showView, showEdit, showDownload, showCopy, showCalculate, showRunMeme, showDelete, showShare, showMoveToWorkspace,
-			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, hasAvailableWebservice
+			onView, onEdit, onDownload, onCopy, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+			showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
+			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
 		},
 		{ disabled, completed, shouldDisableDelete, deleteTooltipText },
 		t
@@ -107,9 +99,9 @@ const getTooltip = (defaultText: string, disabled: boolean, disabledText?: strin
 function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?: string }>(
 	model: T,
 	props: Pick<ModelActionsProps<T>, 
-		"onView" | "onEdit" | "onDownload" | "onCopy" | "onCalculate" | "onRunMeme" | "onDelete" | "onShare" | "onMoveToWorkspace" |
-		"showView" | "showEdit" | "showDownload" | "showCopy" | "showCalculate" | "showRunMeme" | "showDelete" | "showShare" | "showMoveToWorkspace" |
-		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "hasAvailableWebservice"
+		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onDelete" | "onShare" | "onMoveToWorkspace" |
+		"showView" | "showEdit" | "showDownload" | "showCopy" | "showDelete" | "showShare" | "showMoveToWorkspace" |
+		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip"
 	>,
 	computed: {
 		disabled: boolean;
@@ -120,45 +112,24 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	t: (key: string) => string
 ): ActionConfig[] {
 	const {
-		onView, onEdit, onDownload, onCopy, onCalculate, onRunMeme, onDelete, onShare, onMoveToWorkspace,
-		showView, showEdit, showDownload, showCopy, showCalculate, showRunMeme, showDelete, showShare, showMoveToWorkspace,
-		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, hasAvailableWebservice = true
+		onView, onEdit, onDownload, onCopy, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+		showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
+		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
 	} = props;
 	const { disabled, completed, shouldDisableDelete, deleteTooltipText } = computed;
 
-	// Helper to get webservice tooltip with translation
-	const getWebserviceTooltip = (action: string, available: boolean): string =>
-		available ? action : t("common.modelActions.engineNotAvailable");
-
 	return [
 		{
-			key: "retry",
-			icon: RefreshCw,
-			tooltip: getWebserviceTooltip(t("common.modelActions.retryCalculation"), hasAvailableWebservice),
-			variant: "warning",
-			onClick: () => onCalculate?.(model),
-			show: showCalculate && !!onCalculate && model.status === 'failed',
-			disabled: disabled || !hasAvailableWebservice,
-		},
-		{
-			key: "calculate",
-			icon: Play,
-			tooltip: getWebserviceTooltip(t("common.modelActions.startCalculation"), hasAvailableWebservice),
-			variant: "success",
-			onClick: () => onCalculate?.(model),
-			show: showCalculate && !!onCalculate && (model.status === 'draft' || model.status === 'modified'),
-			disabled: disabled || !hasAvailableWebservice,
-		},
-		{
-			// Step 9: MEME dispatch. Dev-only until the engine choice has a
-			// proper UX (the memo's experimental-toggle pattern); the backend
-			// route (POST /models/:id/run-meme) is the real seam.
+			// The only run trigger: MEME dispatch over TentaCron. The legacy
+			// webservice run was removed so a model can never be sent down the
+			// retired power-flow path by accident; POST /models/:id/run-meme is
+			// the seam.
 			key: "runMeme",
 			icon: Zap,
 			tooltip: t("common.modelActions.runWithMeme"),
 			variant: "warning",
 			onClick: () => onRunMeme?.(model),
-			show: !!showRunMeme && !!onRunMeme &&
+			show: !!onRunMeme &&
 				(model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
 			disabled,
 		},

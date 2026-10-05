@@ -16,8 +16,8 @@ import {
 	Edit,
 	BarChart3,
 	AlertCircle,
-	Play,
 	GitCompareArrows,
+	Zap,
 } from "lucide-react";
 
 import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
@@ -62,7 +62,6 @@ import ModelActionGroup, { type ActionConfig } from "@/components/shared/ModelAc
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import { ModelTableRow } from "./ModelTableRow";
-import { useWebservices } from "@/features/admin-dashboard/hooks/useWebservices";
 import { processModelTimingUpdates, type TimingUpdate } from "@/features/model-dashboard/utils/modelTimingUtils";
 import { organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { useTranslation } from "@spatialhub/i18n";
@@ -247,9 +246,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
 
-	const { summary: webserviceSummary } = useWebservices({}, { autoRefresh: true, refreshInterval: 10000 });
-	const hasAvailableWebservice = (webserviceSummary?.available ?? 0) > 0;
-
 	const modelsData = useMemo(() => modelsResponse?.data || [], [modelsResponse?.data]);
 
 	// Identify parent models not on the current page but referenced by children
@@ -318,7 +314,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleView,
 		handleCopy,
 		handleDelete,
-		handleCalculate,
 		handleRunMeme,
 		handleDownload,
 		updateTitle: updateTitleHandler,
@@ -615,26 +610,24 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return selectedModels.some((model: Model) => canUserDeleteModel(model));
 	}, [selectedModels, canUserDeleteModel]);
 
-	const canCalculateAnySelected = useMemo(() => {
-		return hasAvailableWebservice && selectedModels.some((model: Model) => !isModelDisabled(model));
-	}, [selectedModels, isModelDisabled, hasAvailableWebservice]);
-
-	const calculatableCount = useMemo(() => {
-		return selectedModels.filter((model: Model) => !isModelDisabled(model)).length;
-	}, [selectedModels, isModelDisabled]);
-
-	const handleBulkCalculate = useCallback(async () => {
-		const calculatableModels = selectedModels.filter((model: Model) => !isModelDisabled(model));
-		const modelIds = calculatableModels.map((m) => m.id);
-		await handleCalculate(modelIds);
-		clearSelection();
-	}, [selectedModels, isModelDisabled, handleCalculate, clearSelection]);
-	const handleCalculateSingle = useCallback((model: Model) => {
-		handleCalculate([model.id]);
-	}, [handleCalculate]);
 	const handleRunMemeSingle = useCallback((model: Model) => {
 		handleRunMeme([model.id]);
 	}, [handleRunMeme]);
+
+	// A model the MEME run action offers on: the same statuses the per-row Zap
+	// shows for (draft | modified | failed). completed/published are excluded.
+	const bulkRunnableModels = useMemo(
+		() => selectedModels.filter((model: Model) =>
+			model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
+		[selectedModels]
+	);
+	const canRunMemeAnySelected = bulkRunnableModels.length > 0;
+
+	const handleBulkRunMeme = useCallback(async () => {
+		if (bulkRunnableModels.length === 0) return;
+		await handleRunMeme(bulkRunnableModels.map((model) => model.id));
+		clearSelection();
+	}, [bulkRunnableModels, handleRunMeme, clearSelection]);
 
 	const handleBulkCopy = useCallback(() => {
 		if (document.activeElement instanceof HTMLElement) {
@@ -660,19 +653,16 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return t('model.cannotMove');
 	}, [selectedModels.length, canMoveAnySelected, t]);
 
-	const getCalculateTooltip = useCallback(() => {
-		if (!hasAvailableWebservice) {
-			return t('model.noWebserviceAvailable');
-		}
-		if (canCalculateAnySelected) {
-			return `${t('model.calculate')} ${calculatableCount} ${t('model.selected')}`;
-		}
-		return t('model.cannotCalculate');
-	}, [hasAvailableWebservice, canCalculateAnySelected, calculatableCount, t]);
-
 	const getCopyTooltip = useCallback(() => {
 		return `${t('model.copy')} ${selectedModels.length} ${t('model.selected')}`;
 	}, [selectedModels.length, t]);
+
+	const getRunMemeTooltip = useCallback(() => {
+		if (canRunMemeAnySelected) {
+			return `${t('common.modelActions.runWithMeme')} ${bulkRunnableModels.length} ${t('model.selected')}`;
+		}
+		return t('model.cannotCalculate');
+	}, [canRunMemeAnySelected, bulkRunnableModels.length, t]);
 
 	const getDeleteTooltip = useCallback(() => {
 		if (canDeleteAnySelected) {
@@ -713,12 +703,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: handleBulkCopy,
 		},
 		{
-			key: "bulk-calculate",
-			icon: Play,
-			tooltip: getCalculateTooltip(),
-			variant: "success" as const,
-			onClick: handleBulkCalculate,
-			disabled: !canCalculateAnySelected,
+			key: "bulk-run-meme",
+			icon: Zap,
+			tooltip: getRunMemeTooltip(),
+			variant: "warning" as const,
+			onClick: handleBulkRunMeme,
+			disabled: !canRunMemeAnySelected,
 		},
 		{
 			key: "bulk-delete",
@@ -728,7 +718,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: showBulkDeleteConfirm,
 			disabled: !canDeleteAnySelected,
 		},
-	], [getMoveTooltip, getCopyTooltip, getCalculateTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkCalculate, showBulkDeleteConfirm, canMoveAnySelected, canCalculateAnySelected, canDeleteAnySelected, t]);
+	], [getMoveTooltip, getCopyTooltip, getRunMemeTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkRunMeme, showBulkDeleteConfirm, canMoveAnySelected, canRunMemeAnySelected, canDeleteAnySelected, t]);
 
 	return (
 		<Fragment>
@@ -1066,7 +1056,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														calculationStartTimes={calculationStartTimes}
 														calculationCompletionInfo={calculationCompletionInfo}
 														canUserDeleteModel={canUserDeleteModel}
-														hasAvailableWebservice={hasAvailableWebservice}
 														onSelect={handleSelectModel}
 														onStartEdit={startTitleEdit}
 														onEditTitleChange={setEditTitle}
@@ -1076,8 +1065,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														onEdit={handleEdit}
 														onDownload={handleDownload}
 														onCopy={handleCopy}
-														onCalculate={handleCalculateSingle}
-											onRunMeme={handleRunMemeSingle}
+														onRunMeme={handleRunMemeSingle}
 														onDelete={handleSingleDelete}
 														onShare={handleShare}
 														onMoveToWorkspace={handleMoveToWorkspace}
