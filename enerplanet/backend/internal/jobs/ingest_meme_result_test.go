@@ -82,20 +82,21 @@ func newIngestMockDB(t *testing.T, insertCount int) (*gorm.DB, sqlmock.Sqlmock) 
 	t.Cleanup(func() { dbConn.Close() })
 	// SkipDefaultTransaction keeps the final model.results UPDATE a single
 	// Exec instead of gorm's implicit Begin/Commit wrapper, so the mock's
-	// statement sequence (21 DELETEs + N returning-INSERTs + 1 UPDATE) is exact.
+	// statement sequence (21 R2-table DELETEs + 1 model_results DELETE + the
+	// returning-INSERTs + 1 UPDATE) is exact.
 	db, err := gorm.Open(postgres.New(postgres.Config{Conn: dbConn}), &gorm.Config{SkipDefaultTransaction: true})
 	require.NoError(t, err)
 
-	const deleteTables = 21 // deleteExistingResults table count
+	const deleteTables = 22 // deleteExistingResults (21) + the model_results DELETE
 	mock.ExpectBegin()
-	// 21 DELETEs (deleteExistingResults) are Execs carrying WHERE model_id.
+	// 22 DELETEs (deleteExistingResults + the model_results replace) are Execs.
 	for i := 0; i < deleteTables; i++ {
 		mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 	}
-	// The small-table INSERTs go through gorm's CreateInBatches, which on
-	// postgres emits INSERT ... RETURNING "id" to populate the row's primary
-	// key — so each is a Query, not an Exec.
-	for i := 0; i < insertCount; i++ {
+	// The ModelResult INSERT and the small-table INSERTs go through gorm's
+	// Create/CreateInBatches, which on postgres emit INSERT ... RETURNING "id"
+	// to populate the primary key — so each is a Query, not an Exec.
+	for i := 0; i < insertCount+1; i++ {
 		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
 	}
 	mock.ExpectCommit()
@@ -122,6 +123,24 @@ func writeMemeZip(t *testing.T, root string) string {
 	_, err = meta.Write([]byte(`{"target":"calliope","state":"succeeded"}`))
 	require.NoError(t, err)
 
+	// The Calliope leg's long-format time-series CSVs sit beside results.nc
+	// (output/csv/). One row per table exercises the MEME streaming ingest.
+	csvFiles := map[string]string{
+		"results_flow_out.csv":                   "nodes,techs,carriers,timesteps,flow_out\nn1,pv_supply_1,electricity,2020-01-01T00:00:00,5.5\n",
+		"results_flow_in.csv":                    "nodes,techs,carriers,timesteps,flow_in\nn1,demand_1,electricity,2020-01-01T00:00:00,7.5\n",
+		"results_capacity_factor.csv":            "nodes,techs,carriers,timesteps,capacity_factor\nn1,pv_supply_1,electricity,2020-01-01T00:00:00,0.25\n",
+		"results_systemwide_capacity_factor.csv": "techs,carriers,systemwide_capacity_factor\nwind_onshore_1,electricity,0.4\n",
+		"results_systemwide_levelised_cost.csv":  "techs,costs,carriers,systemwide_levelised_cost\npv_supply_1,monetary,electricity,55.5\n",
+		"results_total_levelised_cost.csv":       "costs,carriers,total_levelised_cost\nmonetary,electricity,123.4\n",
+		"results_cost_operation_variable.csv":    "nodes,techs,costs,timesteps,cost_operation_variable\nn1,pv_supply_1,monetary,2020-01-01T00:00:00,9.1\n",
+	}
+	for name, content := range csvFiles {
+		entry, err := w.Create("files/run_0/output/csv/" + name)
+		require.NoError(t, err)
+		_, err = entry.Write([]byte(content))
+		require.NoError(t, err)
+	}
+
 	require.NoError(t, w.Close())
 	return zipPath
 }
@@ -138,8 +157,9 @@ func TestHandleIngestMemeResult_RunsCoatiAndSeedsR2(t *testing.T) {
 	zipPath := writeMemeZip(t, root) // self-contained zip, no real .nc required
 
 	// The fixture maps to: 1 coordinate, 1 loc_tech, 1 energy_cap batch (capacity
-	// + storage), 1 cost -> 4 INSERTs inside the store transaction.
-	db, mock := newIngestMockDB(t, 4)
+	// + storage), 1 cost -> 4 INSERTs inside the store transaction, plus the 7
+	// time-series table INSERTs streamed from the Calliope CSVs.
+	db, mock := newIngestMockDB(t, 4+7)
 
 	runner := &fakeCoatiRunner{}
 	runs := &fakeIngestRuns{}

@@ -178,7 +178,7 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 // NOT streamed here — Coati's dispatch/demand series are tech- and
 // location-aggregated and don't carry the per-location/per-carrier/timestep
 // dimensions those tables need; streaming is deferred (documented in the plan).
-func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zipPath string, runner CoatiRunner) (summary *CoatiSummary, retErr error) {
+func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, userID, zipPath string, runner CoatiRunner) (summary *CoatiSummary, retErr error) {
 	log := logger.ForComponent("result")
 
 	defer func() {
@@ -237,17 +237,6 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 	wireDoc := wireDocument(ctx, &doc, extractDir, runner, log, modelID)
 	parsed.PyPSALineLoading = mapWireLoading(wireDoc)
 
-	// Delete existing R2 rows and store the small/summary results atomically.
-	if err := s.db.Transaction(func(tx *gorm.DB) error {
-		if err := s.deleteExistingResults(tx, modelID); err != nil {
-			return err
-		}
-		return s.storeSmallResultsTx(tx, log, modelID, parsed)
-	}); err != nil {
-		log.Errorf("Failed to store Coati results model_id=%d err=%v", modelID, err)
-		return nil, fmt.Errorf("failed to store Coati results: %w", err)
-	}
-
 	summary = buildCoatiSummary(&doc)
 	// The wire data may come from a different leg than the summary's document.
 	summary.LineRatings = wireRatings(wireDoc)
@@ -257,6 +246,39 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 		log.Errorf("Failed to marshal Coati summary model_id=%d err=%v", modelID, err)
 		return nil, fmt.Errorf("marshal Coati summary: %w", err)
 	}
+
+	// The Calliope leg writes long-format CSVs (already in R2 shape) beside the
+	// results.nc it was parsed from. They carry the per-location × per-tech ×
+	// per-timestep matrix the Coati document lacks, so the R2 time-series tables
+	// are streamed from them (PyPSA-only bundles have no such dir → skipped).
+	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
+	techParents := make(map[string]string, len(doc.TechMetadata))
+	for tech, meta := range doc.TechMetadata {
+		techParents[tech] = meta.Parent
+	}
+
+	// Delete existing R2 rows, replace the ModelResult row, stream the
+	// time-series, and store the small/summary results atomically. The
+	// ModelResult row is what the results list + download endpoints read
+	// (GetModelResults / DownloadModelResult); the legacy power-flow path records
+	// it in ProcessModelResult, and a MEME ingest must do the same or those
+	// endpoints 404 for the model.
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := s.deleteExistingResults(tx, modelID); err != nil {
+			return err
+		}
+		if err := replaceModelResultRow(tx, modelID, userID, zipPath, extractDir, zipStat.Size(), summaryJSON); err != nil {
+			return err
+		}
+		if err := streamMemeTimeSeries(tx, modelID, csvDir, techParents); err != nil {
+			return err
+		}
+		return s.storeSmallResultsTx(tx, log, modelID, parsed)
+	}); err != nil {
+		log.Errorf("Failed to store Coati results model_id=%d err=%v", modelID, err)
+		return nil, fmt.Errorf("failed to store Coati results: %w", err)
+	}
+
 	if err := s.db.Model(&commonModels.Model{}).Where("id = ?", modelID).Updates(map[string]any{
 		"results":       datatypes.JSON(summaryJSON),
 		"result_source": string(resultcapabilities.SourceMeme),
@@ -266,4 +288,33 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, zip
 
 	log.Infof("Ingested MEME result via Coati model_id=%d success=%v capacities=%d", modelID, doc.doesCoatiSucceed(), summary.EnergyCapCount)
 	return summary, nil
+}
+
+// replaceModelResultRow writes the ModelResult row the result list and download
+// endpoints read (store.GetModelResults / DownloadModelResult). The legacy
+// power-flow path records one in ProcessModelResult; a MEME/Coati ingest must
+// record one too, or /results and the download route 404 for the model even
+// though the zip and parsed tables exist.
+//
+// A MEME bundle carries no TIF or geoserver artefacts (unlike the legacy
+// power-flow zip), so only the zip + extracted paths are set and the Coati
+// summary JSON becomes the row metadata. It is replaced (delete-then-create) on
+// every ingest so a re-run never accumulates rows.
+func replaceModelResultRow(tx *gorm.DB, modelID uint, userID, zipPath, extractDir string, size int64, metadata []byte) error {
+	if err := tx.Where("model_id = ?", modelID).Delete(&commonModels.ModelResult{}).Error; err != nil {
+		return fmt.Errorf("delete prior result row: %w", err)
+	}
+	row := &commonModels.ModelResult{
+		ModelID:          modelID,
+		UserID:           userID,
+		ZipPath:          zipPath,
+		ExtractedPath:    extractDir,
+		FileSizeBytes:    size,
+		ExtractionStatus: commonModels.ResultExtractionCompleted,
+		Metadata:         datatypes.JSON(metadata),
+	}
+	if err := tx.Create(row).Error; err != nil {
+		return fmt.Errorf("create result row: %w", err)
+	}
+	return nil
 }

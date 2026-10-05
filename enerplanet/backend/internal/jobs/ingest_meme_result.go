@@ -53,7 +53,7 @@ func HandleIngestMemeResult(ctx context.Context, t *asynq.Task, db *gorm.DB, run
 		return fmt.Errorf("failed to unmarshal ingest_meme_result payload: %w", err)
 	}
 
-	if _, err := resultservice.NewResultService(db).IngestCoatiResult(ctx, p.ModelID, p.ZipPath, runner); err != nil {
+	if _, err := resultservice.NewResultService(db).IngestCoatiResult(ctx, p.ModelID, p.UserID, p.ZipPath, runner); err != nil {
 		// Zero masking: record the terminal 'failed' state with the actual cause
 		// and return the error so it is surfaced exactly once. Coati's own error
 		// already distinguishes parse failure from CLI-missing ('coati binary not
