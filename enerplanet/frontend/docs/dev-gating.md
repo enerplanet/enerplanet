@@ -35,6 +35,24 @@ const showGaps = import.meta.env.DEV || import.meta.env.VITE_SHOW_RESULT_GAPS ==
   startup.
 - `.env` is gitignored; appending to it creates no tracked change.
 
+## Local-only placeholders render **amber**
+
+A placeholder that exists only because of the gate must never look like a neutral
+part of the UI — otherwise it reads as real content that happens to be empty. Render
+it **amber** (the app's warning colour; there is no `--warning` token, so use
+Tailwind `amber-*` with a dark variant, matching `useConfirmDialog` /
+`SidebarPanel`):
+
+```tsx
+border-dashed border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400
+```
+
+So far that means: the `GapNote` box, the gated section's header, and the card's
+`ring-1 ring-amber-500/40` (`GatedSection`), plus the topology legend's inline
+`notInResult` note. Amber = "this slot is local-only and drops out of a prod build";
+if a gap note is ever *not* dev-gated, do not colour it amber — amber asserts the
+gate.
+
 ## DEV gate vs. runtime Settings toggle — pick the right one
 
 | Use a **DEV gate** | Use a **runtime toggle** (Settings → Experimental) |
