@@ -28,11 +28,24 @@ func newMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 func TestStore_SaveUpsertsOnModelID(t *testing.T) {
 	db, mock := newMockDB(t)
 	mock.ExpectBegin()
-	mock.ExpectQuery(`INSERT INTO "model_meme_runs"`).
-		WillReturnRows(sqlmock.NewRows([]string{"model_id"}).AddRow(int64(7)))
+	mock.ExpectExec(`INSERT INTO "model_meme_runs"`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
 	require.NoError(t, NewStore(db).Save(7, "job-1", "running"))
+}
+
+// TestStore_SaveLegIsolatesLeg confirms the leg discriminator is written and
+// the upsert conflicts on the (model_id, leg) composite, so a PyPSA leg can
+// never overwrite the Calliope leg's run record.
+func TestStore_SaveLegIsolatesLeg(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	mock.ExpectExec(`INSERT INTO "model_meme_runs"`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).SaveLeg(7, models.MemeLegPyPSA, "job-pypsa", "running"))
 }
 
 func TestStore_GetReturnsRecord(t *testing.T) {

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "description": "EnerPlanET → MEME 'power_flow' pass defaults. Mirrors what the legacy c2p conversion baked into defaults/*.csv and net.py, lifted into JSON so a PyPSA/branch-version change is an edit here, never code. See internal/meme/pypsapass/pypsapass.go for how each knob is consumed.",
+  "unit": 0.001,
+  "voltages_kv": {
+    "lv": 0.4,
+    "mv": 20.0,
+    "hv": 110.0
+  },
+  "affixes": {
+    "prefix_bus": "bus_",
+    "prefix_poi": "ID_",
+    "suffix_trafo_bus_lv": "_lv",
+    "suffix_trafo_bus_mv": "_mv",
+    "suffix_trafo_bus_hv": "_hv"
+  },
+  "default_types": {
+    "line_type_lv": "NAYY_4_150",
+    "line_type_mv": "NA2XS2Y_1x185",
+    "trafo_type_mv_lv": "Tr_400"
+  },
+  "cables": {
+    "NAYY_4_185": { "r_mohm_per_km": 164.0, "x_mohm_per_km": 80.0, "max_i_a": 313.0 },
+    "NYY_4_95":   { "r_mohm_per_km": 193.0, "x_mohm_per_km": 82.0, "max_i_a": 280.0 },
+    "NAYY_4_150": { "r_mohm_per_km": 208.0, "x_mohm_per_km": 80.0, "max_i_a": 270.0 },
+    "NFA2X_4_95": { "r_mohm_per_km": 320.0, "x_mohm_per_km": 0.0,  "max_i_a": 245.0 },
+    "NAYY_4_120": { "r_mohm_per_km": 225.0, "x_mohm_per_km": 80.0, "max_i_a": 242.0 },
+    "NYY_4_70":   { "r_mohm_per_km": 268.0, "x_mohm_per_km": 82.0, "max_i_a": 232.0 },
+    "NAYY_4_95":  { "r_mohm_per_km": 320.0, "x_mohm_per_km": 82.0, "max_i_a": 215.0 },
+    "NFA2X_4_70": { "r_mohm_per_km": 443.0, "x_mohm_per_km": 0.0,  "max_i_a": 205.0 },
+    "NFA2X_4_50": { "r_mohm_per_km": 641.0, "x_mohm_per_km": 0.0,  "max_i_a": 165.0 },
+    "NAYY_4_50":  { "r_mohm_per_km": 642.0, "x_mohm_per_km": 83.0, "max_i_a": 142.0 },
+    "NYY_4_35":   { "r_mohm_per_km": 524.0, "x_mohm_per_km": 85.0, "max_i_a": 159.0 },
+    "NYY_4_16":   { "r_mohm_per_km": 1150.0, "x_mohm_per_km": 90.0, "max_i_a": 103.0 }
+  },
+  "transformers": {
+    "Tr_100": { "s_max_kva": 100.0 },
+    "Tr_160": { "s_max_kva": 160.0 },
+    "Tr_250": { "s_max_kva": 250.0 },
+    "Tr_400": { "s_max_kva": 400.0 },
+    "Tr_630": { "s_max_kva": 630.0 }
+  }
+}

@@ -25,21 +25,22 @@ const TypeDispatchMeme = "dispatch_meme"
 
 // TentaCron target names for a MEME run. The framework set is fixed per target
 // (a TentaCron request selects a target by name, never a URL), so running fewer
-// frameworks needs its own target: `meme` is pypsa,calliope, `meme-pypsa` is
-// pypsa only. MEME fails a multi-target request as a whole if one framework
-// rejects it, so the split also lets a model solve when only one leg works.
+// frameworks needs its own target: `meme-calliope` is Calliope only, `meme-pypsa`
+// is PyPSA only. The combined `pypsa,calliope` run was dropped (its PyPSA leg emits
+// no lines.csv, never calls pf(), and the ingest discards its single snapshot).
 const (
-	memeTargetDefault   = "meme"
-	memeTargetPyPSAOnly = "meme-pypsa"
+	memeTargetCalliopeOnly = "meme-calliope"
+	memeTargetPyPSAOnly    = "meme-pypsa"
 )
 
 // MemeTargetFor maps a requested framework set to the TentaCron target that
-// serves it. Anything other than a lone "pypsa" keeps the full set.
+// serves it. There are only two targets: lone "pypsa" picks the PyPSA leg; anything
+// else (including absent) runs the Calliope default.
 func MemeTargetFor(frameworks string) string {
 	if strings.TrimSpace(frameworks) == "pypsa" {
 		return memeTargetPyPSAOnly
 	}
-	return memeTargetDefault
+	return memeTargetCalliopeOnly
 }
 
 // memePollBudget is how long a MEME dispatch may stay alive waiting for the
@@ -80,8 +81,8 @@ type DispatchMemePayload struct {
 	ModelID uint   `json:"model_id"`
 	UserID  string `json:"user_id"`
 	// Target is the TentaCron target (i.e. the framework set) to dispatch to:
-	// memeTargetDefault (pypsa,calliope) or memeTargetPyPSAOnly. Empty means the
-	// default, so an older payload keeps its meaning.
+	// memeTargetCalliopeOnly (default) or memeTargetPyPSAOnly. Empty means the
+	// Calliope default, so an older payload keeps its meaning.
 	Target string `json:"target,omitempty"`
 }
 
@@ -171,7 +172,7 @@ func HandleDispatchMeme(
 	submittedNow := false
 	target := p.Target
 	if target == "" {
-		target = memeTargetDefault
+		target = memeTargetCalliopeOnly
 	}
 	switch {
 	case rec == nil || models.MemeRunFinished(rec.Status):

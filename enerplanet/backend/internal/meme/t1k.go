@@ -12,9 +12,10 @@ var mappingJSON []byte
 
 // jobTask is the T1K transform task bound to the embedded enerplanet-to-meme
 // mapping, with the allow_unmet_demand rule removed so the produced job
-// validates clean against BOTH pypsa and calliope (MEME's TentaCron target is
-// hard-fixed to "pypsa,calliope"; PyPSA rejects allow_unmet_demand). The task
-// is stateless and safe to share.
+// validates clean against BOTH pypsa and calliope (MEME's TentaCron targets are
+// per-framework — meme-calliope, meme-pypsa; PyPSA rejects allow_unmet_demand),
+// so the same job body can be dispatched to either leg. The task is stateless
+// and safe to share.
 //
 // mapping.json is copied from T1K's embedded config minus the offending rule;
 // keep it in sync when the upstream mapping changes (see tasks/open/heat-patch.md).

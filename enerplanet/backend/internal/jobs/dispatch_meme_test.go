@@ -188,9 +188,9 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, store, enq)
 	require.NoError(t, err)
 
-	// The T1K job (as a generic object) reached the meme target, with an
+	// The T1K job (as a generic object) reached the Calliope-only target, with an
 	// Idempotency-Key header and exactly one submit.
-	require.Equal(t, "meme", fake.gotTarget)
+	require.Equal(t, "meme-calliope", fake.gotTarget)
 	require.Contains(t, fake.gotPayload, "model")
 	require.Contains(t, fake.gotPayload, "experiment")
 	// No run recorded (first solve) and no CalculationStartedAt in the fixtures,

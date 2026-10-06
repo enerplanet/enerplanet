@@ -836,7 +836,8 @@ func (h *ModelHandler) StartMemeCalculation(c *gin.Context) {
 	modelSvc := h.newModelService()
 
 	// Optional framework set: "pypsa" runs the PyPSA leg only (TentaCron target
-	// meme-pypsa); anything else (or absent) keeps pypsa,calliope. Accepted as a
+	// meme-pypsa); anything else (or absent) runs the Calliope default
+	// (meme-calliope). The combined pypsa,calliope run was removed. Accepted as a
 	// query param or a JSON body so the UI can post either way.
 	frameworks := c.Query("frameworks")
 	if frameworks == "" {

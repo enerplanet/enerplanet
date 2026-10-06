@@ -62,11 +62,16 @@ MEME result mapping. **Nothing in this plan is implemented yet** — it is a pla
   developer**.
 
 **Where we stopped**
-- Awaiting a go-ahead on either of: **(a)** Phase 1 step 3 — read MEME's pypsa target
-  and answer **B1** (*can the schema express `lines` at all?*); no services needed;
-  **(b)** bring the MEME + TentaCron containers back up, which unblocks the actual
-  manual submit.
-- The single open decision that gates everything: **B1**.
+- **B1 is answered (2026-10-06) and recorded in §11**: the schema **cannot** express
+  `lines`, and the pypsa target additionally **never calls `pf()`** (LP dispatch only).
+  Both need MEME changes, so Phase 3 waits on MEME. The next concrete step is to send
+  `pypsa-pass-ask.md` to the developer with the strengthened Q3 evidence.
+- Awaiting the developer's answer on the ask (**Q1 schema direction, Q2 catalogue,
+  Q3 PF-in-run.py, Q4 results source, plus the carried-over slack-bus + link-origin
+  asks and the non-convergence decision**). Nothing else unblocks until then; bringing
+  the MEME/TentaCron containers up is no longer *required* for an offline verdict on
+  the schema (that was answered from source), though it stays useful once the dev
+  confirms the direction.
 
 **Environment state at handoff**
 - **Up:** backend `:8000` (pid 142593), Vite `:3000` (pid 142696).
@@ -89,8 +94,9 @@ legacy evidence) → `pypsa-pass-ask.md` (the open questions to the dev) →
 `tasks/closed/grid-result-capabilities-plan.md` (the capability/provenance contract)
 → `tasks/closed/meme-result-timeseries-mapping.md` (the mapping already built).
 
-**Immediate next action:** start Phase 1 step 3 (answer B1) — it needs no services
-and it is the gate for Phases 3–5.
+**Immediate next action:** build **Step 1 — separate the runs**: Calliope-only by default,
+a **gated, derived PyPSA-only run** reachable only after a successful Calliope run, and the
+MEME `run.py` PF core that makes that leg real (see the new Step 1 section below §0).
 
 ---
 
@@ -105,6 +111,102 @@ and it is the gate for Phases 3–5.
   up with **no frontend change** (locked: `grid-result-capabilities-plan.md` C4).
 - If the PF leg yields nothing (non-convergence is a *normal* outcome) the model
   still completes; only the electrical sections stay gated off.
+
+---
+
+## Step 1 — separate the runs (do this first)
+
+**Why first:** the current default dispatch is the **combined `pypsa,calliope`** run,
+and we established (from `dependencies/meme` source) that its PyPSA leg is **dead
+weight** — MEME's pypsa target emits transmission as transport `Link`s (no `lines.csv`,
+no impedance), its `run.py` never calls `lpf()`/`pf()`, and the backend's own quality
+gate `wireDocQualifies` discards the single-`"now"` PyPSA snapshot, silently falling
+back to the Calliope leg for wire loading. So the combined run adds cost (two-solver
+single request) and returns **nothing** from PyPSA today. Separating the runs is not a
+feature loss — it removes dead weight and gives PyPSA a clean, own place to become real.
+
+**Decision taken (2026-10-06):** Calliope is the **default** leg; PyPSA becomes an
+**optional, derived add-on** — never auto-run, only reachable *after* a successful
+Calliope run.
+
+**1A. Make Calliope the default; drop the combined run.**
+- Add a Calliope-only TentaCron target `meme-calliope`
+  (`dependencies/TentaCron/environment/config.yaml`), a mirror of `meme-pypsa` but
+  `url = ".../simulate?target=calliope"`.
+- **Remove the combined `meme` (`pypsa,calliope`) target entirely** — it doesn't work
+  (its PyPSA leg is dead weight we've verified), so we keep just two: `meme-calliope`
+  and `meme-pypsa`.
+- Flip the backend seam (`internal/jobs/dispatch_meme.go` `MemeTargetFor`) to the
+  two-target world: default → `meme-calliope`; lone `"pypsa"` → `meme-pypsa`; anything
+  else falls back to the Calliope default.
+- Update `meme_target_test.go` for the two-target mapping.
+- **This is the "only run Calliope as default" change — independent, verifiable on its
+  own.** A model run now dispatches Calliope-only.
+
+**1B. The gated, derived PyPSA run (the add-on).**
+- A **separate endpoint** that:
+  1. **gates**: refuses unless the model has a *successful* Calliope result
+     (`model.result_source == meme` + the Calliope leg ingested) — it cannot run
+     standalone;
+  2. **builds the PyPSA payload from the parsed Calliope results**: the pass reads
+     `carrier_prod` → generators `p_set`, `carrier_con` → loads `p_set`, plus the
+     network topology + `pypsa` settings (`type`, `length`, `num_parallel`, `v_nom`)
+     from the config;
+  3. **dispatches independently** to `meme-pypsa` with its **own run record** (a
+     second leg-keyed entry, so it never fights the main run's "resume by id, never
+     resubmit" logic in `memerun.Store`).
+- Ingest its bundle into the **electrical** R2 tables and set the capability source to
+  `full-grid-pf`.
+
+  **1B implementation decision (2026-10-06):** the pass lives as a pure Go module
+  `internal/meme/pypsapass/`, mirroring the legacy `c2p` conversion exactly ($13):
+  - **input** = the `payload.CalculationPayload` the backend already builds (it carries
+    `.Pypsa` = line/trafo types + `.Topology` = from/to/length/pipe) + the parsed
+    Calliope `carrier_prod`/`carrier_con` time series;
+  - **`p_set` source is the MEME bundle's OWN carrier CSVs, NOT the legacy parser and NOT
+    the Coati document** — Coati's `dispatch` is location-aggregated (all locations
+    summed per tech) and cannot give the per-bus series a power flow needs; and the
+    MEME Calliope leg does NOT write the legacy `results_carrier_prod/con.csv` layout.
+    It emits `results_flow_out.csv` / `results_flow_in.csv` (`nodes, techs, timesteps,
+    carriers, flow_out/flow_in`) per location·tech·timestep — exactly the per-bus series
+    the pass needs, and the same files `streamMemeTimeSeries` already ingests. The pass
+    readers those two files (reusing the `readMemeCSV` + `normMemeTech`/`normMemeCarrier`
+    helpers in `result/service/meme_timeseries.go`).
+  - **it is configurable, not hardcoded**: the silly constants the legacy baked into
+    `defaults/*.csv` and `net.py` — `unit` (0.001), per-level `v_nom` (LV 0.4 / MV 20 /
+    HV 110), affixes (`bus_`, `_lv`, `_mv`), default line/trafo types, and the
+    **type→electrical-params catalogue** (`enerplanet-pylovo/raw_data/equipment_data.csv`:
+    `s_max_kva`, `r_mohm_per_km`, `x_mohm_per_km`, `max_i_a`) — become an embedded JSON
+    config, so a PyPSA/branch version bump is "edit the catalogue", never code.
+  - emits the `power_flow` job block (`lines[]`, `transformers[]`, `buses[] {v_nom}`,
+    `generators[]/loads[] {p_set}`), matching whatever 1C's `run.py` PF mode consumes.
+
+**1C. Make the PyPSA leg real — MEME `run.py`.** The derived run only pays off if MEME's
+pypsa target can actually solve a power flow. We are now allowed to adjust MEME
+(additively, without breaking its existing `plan`/`operate`/`alternatives`/`stochastic`
+flows). Needed (source-verified):
+- emitter emits `lines.csv`/`transformers.csv` + bus `v_nom` (it currently emits no
+  line tables at all — `internal/target/pypsa/emitter.go`);
+- `scripts/pypsa_run.py` gains a **`power_flow` mode** that runs `lpf()`/`pf()` and
+  exports the web-PF CSVs (`buses-v_mag_pu`, `lines-p0/p1`, `transformers-*`,
+  `convergence_stats.csv`) — the legacy files our reader already parses
+  (`result_helpers_pypsa_files.go`).
+- Open design fork still to resolve (the developer-facing §12 Q1/Q2): pass literal
+  `r/x/s_nom` (resolved in our backend pass from the pylovo catalogue) vs. a `lines`
+  type library inside MEME. Recommended: **literal-first** (backend resolves the type),
+  keeping MEME decoupled from the catalogue.
+
+**Order within Step 1:** 1A first (independent, unblocks the Calliope-only default), then
+1B, then 1C last — the backend endpoints (1A/1B) can land and be tested against the
+already-working Calliope-only run while the MEME `run.py` work proceeds in its own repo.
+
+**Step 1 acceptance:**
+- [ ] Default model run dispatches Calliope-only (`meme-calliope`); the combined run is
+      gone from our dispatch
+- [ ] The PyPSA endpoint refuses without a successful Calliope result
+- [ ] The PyPSA endpoint builds a request from parsed Calliope results and produces a
+      real PF artifact set (lines/voltage/loading/convergence) via MEME `run.py`
+- [ ] Existing Calliope-only behavior unchanged; legacy models unaffected
 
 ---
 
@@ -343,6 +445,31 @@ parameters (r, x, s_nom)."* Until that changes a PyPSA run can only produce a
 transport network — no PF, no voltage, no loading. **This is the gate**, and Phase 1
 step 3 answers it first, on purpose.
 
+**→ B1 answered (2026-10-06, from the MEME source).** The schema **cannot** express
+`lines` today, and the blocker is harder than the comment suggests. Verified in the
+target:
+- `emitter.go` emits **no `lines.csv`** — the component tables are only `buses`,
+  `carriers`, `generators`, `loads`, `links`, `storage_units`,
+  `global_constraints`; Transmission *always* becomes a transport `Link`
+  (`emitter.go:189-236`). Buses carry only `carrier,x,y` — **no `v_nom`**
+  (`emitter.go:60-88`). There is **no `Line` type** in the canonical model
+  (`internal/model/model.go` — `Transmission` only).
+- The `native = {"pypsa": …}` escape hatch **cannot** rebuild a line: it only merges
+  extra columns into existing component tables (`native.go` `mergeNativeInto`), and
+  the system-wide `_native.pypsa.json` sidecar is explicitly *"not consumed by
+  run.py — documentation payload"* (`schemas/CAPABILITY.md:162`).
+- **The target never runs a power flow at all.** The entire `pypsa_run.py` driver
+  (`internal/scripts/pypsa_run.py`) calls only `solve_model` / `optimize` /
+  `optimize_mga` / `optimize_with_rolling_horizon`, then `export_to_netcdf`. There is
+  **no `lpf()` or `pf()` anywhere** — it is an LP/MILP dispatch optimizer, not a PF
+  solver. So even with the `lines` input added, the §0 outputs (voltage, per-bus P/Q,
+  transformer/line load, losses, convergence) would not appear without a run.py PF
+  step.
+
+**Consequence:** both the input (`lines`) **and** the run (`pf()`) need MEME changes.
+Phase 3 waits on MEME. We escalate with this finding filled in plus the
+`pypsa-pass-ask.md` questions (its Q3 reworded with the run.py evidence → see ask).
+
 **B2 — our mapping must emit the topology + types.** Today the payload's `pypsa`
 block is dropped and transmission arcs carry no electrical attributes
 (`enerplanet/backend/internal/meme/mapping.json`), so even a capable MEME would have
@@ -361,6 +488,8 @@ lines" note.
    `max_i_a`, `r_mohm_per_km`, `x_mohm_per_km`; `s_max_kva` for transformers), or one
    MEME ships?
 3. **Does `meme-pypsa` run the PF** once lines exist, or only emit the network?
+   *(Currently: neither — `scripts/pypsa_run.py` has no `lpf()`/`pf()` at all, only
+   the LP dispatch; the §0 outputs need a PF step added.)*
 4. **Where do the Calliope results come from** — the Calliope leg's own bundle
    (`carrier_prod` / `carrier_con`, which we already map), or a separate document?
 5. **Same job with extra fields, or a distinct PyPSA body?**

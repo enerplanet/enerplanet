@@ -36,6 +36,10 @@ our backend can already select it per request.
    (pylovo `equipment_data.csv`: `max_i_a`, `r_mohm_per_km`, `x_mohm_per_km`;
    `s_max_kva` for transformers), or one MEME ships?
 3. **Does `target=pypsa` run the PF** once lines exist, or only emit the network?
+   *(From our read today: `scripts/pypsa_run.py` only calls `solve_model` /
+   `optimize` / `optimize_mga` — there is **no `lpf()`/`pf()` anywhere**; it exports
+   the LP-dispatch network. And `buses.csv` carries no `v_nom`. So both the `lines`
+   input and a PF step in `run.py` look needed.)*
 4. **Where do the Calliope results come from** for the pass — the Calliope leg's own
    bundle (`carrier_prod` / `carrier_con`, which Coati already gives us), or a
    separate document we hand you?
