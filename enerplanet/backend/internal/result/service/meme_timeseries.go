@@ -34,13 +34,12 @@ var (
 // results_model_levelised_cost, results_model_total_levelised_cost and
 // results_cost_var. results_system_balance / results_resource_con /
 // results_unmet_demand are deliberately left empty (no faithful per-location
-// source) — see tasks/meme-result-timeseries-mapping.md.
+// source).
 //
 // A missing CSV file (or a missing csv dir, e.g. a PyPSA-only bundle) is not an
 // error: that table is simply skipped. A malformed row is skipped. POWER series
 // (carrier_prod/con) are scaled MW -> kW at write time (the R2 contract is kW);
-// ratios, levelised costs and currencies are stored unscaled — see Round 4a of
-// tasks/meme-result-timeseries-mapping.md.
+// ratios, levelised costs and currencies are stored unscaled.
 func streamMemeTimeSeries(tx *gorm.DB, modelID uint, csvDir string, parents map[string]string) error {
 	log := logger.ForComponent("result")
 

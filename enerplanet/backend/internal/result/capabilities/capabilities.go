@@ -6,7 +6,6 @@
 // derived from the source here, so the mapping has exactly one definition and a
 // new, more capable source needs no change in any consumer.
 //
-// See tasks/grid-result-capabilities-plan.md.
 package capabilities
 
 // Source identifies the pipeline that produced a model's parsed results.
@@ -79,8 +78,7 @@ func For(s Source) Capabilities {
 			// A Coati/MEME bundle carries no PyPSA curtailment file and its
 			// transport arcs have no impedance, so neither a curtailment nor a
 			// loss series can be derived. Claiming them made the Grid render a
-			// meaningless "0.00 kW" per line. See Round 4b of
-			// tasks/meme-result-timeseries-mapping.md.
+			// meaningless "0.00 kW" per line.
 			Curtailment: false,
 			Losses:      false,
 		}

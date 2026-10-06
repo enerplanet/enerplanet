@@ -87,7 +87,7 @@ type DispatchMemePayload struct {
 
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
-// seam (electricity-only for now; heat is tracked in tasks/heat-patch.md),
+// seam (electricity-only for now; heat is tracked in tasks/open/heat-patch.md),
 // submits it over TentaCron's "meme" target, and persists the result zip.
 //
 // TentaCron is itself the durable single-instance SQLite queue (ADR-0002) and

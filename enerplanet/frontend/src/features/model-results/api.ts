@@ -217,8 +217,7 @@ export async function fetchSystemTimeSeries(modelId: number, signal?: AbortSigna
 
 export interface PyPSAModelResults {
   // Provenance + what this result actually contains. The backend declares both
-  // per model; consumers hide sections a source cannot provide. See
-  // tasks/grid-result-capabilities-plan.md.
+  // per model; consumers hide sections a source cannot provide.
   source?: ResultSource;
   capabilities?: Capabilities;
   voltage?: { timestep: string; v_mag_pu: number; v_ang?: number; bus: string; location: string }[];

@@ -145,8 +145,8 @@ export const gradients = {
 };
 
 // A wire is flagged when its peak utilisation exceeds 100% of its rating. The
-// rating comes from the weakest cable in the grid (see tasks/meme-result-timeseries-mapping.md),
-// so the flag is per connection and independent of how loading_percent is derived.
+// rating comes from the weakest cable in the grid, so the flag is per connection
+// and independent of how loading_percent is derived.
 export const OVERLOAD_UTILIZATION_PERCENT = 100;
 
 // Location ids arrive in two vocabularies: the current `n1` / `ntrafo_82` and

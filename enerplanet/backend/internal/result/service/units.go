@@ -9,5 +9,5 @@ package resultservice
 //
 // Only POWER is scaled. Ratios (capacity_factor), unit costs (€/kWh levelised
 // costs), currency (cost/cost_var) and identifiers (loc_techs/coordinates) are
-// left untouched — see tasks/meme-result-timeseries-mapping.md (Round 4).
+// left untouched.
 func mwToKw(v float64) float64 { return v * 1000 }

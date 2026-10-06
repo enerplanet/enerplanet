@@ -244,8 +244,7 @@ class ModelService {
   }
 
   // Dispatch the model to MEME (via TentaCron) instead of the legacy
-  // webservice. Same contract as startCalculation; see
-  // tasks/meme-integration-plan.md Step 9.
+  // webservice. Same contract as startCalculation.
   async runMeme(id: number): Promise<ModelResponse> {
     const response = await axios.post(`/models/${id}/run-meme`);
     return response.data;

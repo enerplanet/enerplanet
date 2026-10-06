@@ -6,7 +6,11 @@ added, component/DOM test infra absent in this app. Live end-to-end run still
 pending (see `meme-integration-plan.md` §Remaining work).
 **Supersedes:** `tasks/grid-panel-feature-flags.md` (static flags dropped in favour
 of this dynamic, data-driven design).
-**Parent:** `tasks/meme-integration-plan.md` §8.3/§8.4, D8/D9.
+**Parent:** `tasks/closed/meme-integration-plan.md` §8.3/§8.4, D8/D9.
+**Code this governs:** `enerplanet/backend/internal/result/capabilities/capabilities.go` ·
+`internal/result/handler/result_handler.go` · `migrations/047_add_model_result_source.sql` ·
+frontend `features/model-results/{api.ts, components/ui/GatedSection.tsx, ModelResultsViewer.tsx}` ·
+`features/simulation-charts/pypsa/NetworkTopology.tsx`.
 **Why now:** the MEME PyPSA route is the only source of results for meme runs, and
 it cannot produce voltage/reactive/convergence/transformers. Rather than ship a UI
 that silently omits — or worse, *fakes* — those, we declare result provenance and
@@ -147,6 +151,14 @@ no results.
 ---
 
 ## 4. Phase 3 — PyPSA ingest (resumes Step 8.3)
+
+> **SUPERSEDED IN PART (2026-10-06)** — two decisions below are reversed by
+> `pypsa-isolated-run-plan.md`: **(a)** it *does* now write the electrical layer
+> (voltage / power / transformers / convergence) and sets `source = full-grid-pf`;
+> **(b)** `wireDocument` no longer *prefers* the PyPSA leg — it picks the leg by
+> **data quality** (Round 2 of `meme-result-timeseries-mapping.md`), because MEME's
+> PyPSA leg here is a degenerate single `"now"` snapshot. The wire-ingest work
+> described below still shipped and is still accurate.
 
 Extend `IngestCoatiResult` (`internal/result/service/coati_ingest.go`) with a PyPSA
 branch — the exact work Step 8 left open:

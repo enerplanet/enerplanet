@@ -5,6 +5,15 @@ single, decision-gated runbook. Single entry point for execution. It orchestrate
 and orders the existing task docs — it does **not** re-specify their field-level
 detail:
 
+> Rows below name docs that are **not all in this folder**. The first five live
+> outside this repo (historical / external); the last three sit in `tasks/closed/`
+> since the `open/`+`closed/` split (2026-10-06). See `tasks/index.md`.
+
+**Code this governs:** `enerplanet/backend/internal/meme/{t1k.go, mapping.json}` ·
+`internal/jobs/{dispatch_meme.go, ingest_meme_result.go}` ·
+`internal/tentacron/client.go` · `internal/store/memerun/store.go` ·
+`internal/payload/*` · frontend `features/model-dashboard/services/modelService.ts`.
+
 | Task doc | Role under this plan |
 |---|---|
 | `spec.md` | go-meme-parser package spec — **superseded: Coati (github.com/enerplanet/Coati) IS the parser**; use only for naming/key parity notes |
@@ -13,9 +22,9 @@ detail:
 | `INTEGRATION_REQUIREMENTS.md` | R1–R5 / D-register status; referenced per step |
 | `meme-replace-webservice-concept.md` | sequencing rationale + retire path |
 | `COATI.md` (`.local/dependencies/coati/`) | **blackbox doc for the adopted parser** — how to run `coati`, the results-document schema, EnerPlanET workflow, pitfalls (new) |
-| `meme-pypsa-result-parity.md` (this dir) | **external artifact for the MEME developer** — API contract vs MEME's PyPSA output, why the electrical data is missing, options S0–S4 (utilization → real `Line` + `network.pf()` → canonical `s_nom`) |
-| `meme-pypsa-result-parity-ask.md` (this dir) | **short, sendable version** of the above — the quick ask (link-origin marker → roadmap `power_flow` → Coati coordination + 3 open questions) |
-| `grid-result-capabilities-plan.md` (this dir) | **plan for the conditional Grid UI** — 3-valued `source` (`legacy`/`meme`/`full-grid-pf`), capability lookup in Go, backfill migration, the PyPSA ingest that resumes Step 8.3, and the frontend gating/relabel; contains the component inventory with line refs |
+| `tasks/closed/meme-pypsa-result-parity.md` | **external artifact for the MEME developer** — API contract vs MEME's PyPSA output, why the electrical data is missing, options S0–S4 (utilization → real `Line` + `network.pf()` → canonical `s_nom`) |
+| ~~`meme-pypsa-result-parity-ask.md`~~ | **folded** into `tasks/open/pypsa-isolated-run-plan.md` §12 + `tasks/open/pypsa-pass-ask.md`; the standalone doc was removed (2026-10-06) |
+| `tasks/closed/grid-result-capabilities-plan.md` | **plan for the conditional Grid UI** — 3-valued `source` (`legacy`/`meme`/`full-grid-pf`), capability lookup in Go, backfill migration, the PyPSA ingest that resumes Step 8.3, and the frontend gating/relabel; contains the component inventory with line refs |
 
 Status legend: `[DONE]` verified this week · `[ACTIVE]` in work · `[BLOCKED]`
 unverified/live-dependent · `[DECIDE]` open architecture question.
@@ -92,7 +101,7 @@ T1K's embedded `enerplanet-to-meme` mapping from
 `internal/meme/mapping.json` (the embedded mapping with the
 `allow_unmet_demand` rule **removed**, because PyPSA rejects it and MEME's
 TentaCron target is hard-fixed `pypsa,calliope`). **Heat is deferred** to
-`tasks/heat-patch.md` — T1K's mapping currently drops heat entirely; the
+`tasks/open/heat-patch.md` — T1K's mapping currently drops heat entirely; the
 existing `internal/meme/Translate()` (node-level BUEM series, heat pump) is
 the heat-aware reference and stays for the later retrofit.
 **Verified:** `internal/meme/t1k.go` `TranslatePayload` + unit tests +
@@ -332,7 +341,7 @@ Consequence: **`loading_percent`, per-bus voltage and `converged` cannot be
 sourced from MEME** — no Line, no rating, no reactive, no convergence stage.
 Evidence bundle: `.local/tmp/pypsa-issue/` (`meme/` vs `legacy/`). The
 developer-facing write-up of this gap (contract table, why, options S0–S4) is
-`tasks/meme-pypsa-result-parity.md`.
+`tasks/closed/meme-pypsa-result-parity.md`.
 
 #### 8.2 — What MEME *does* give, and the utilization substitute  `[DECIDED 2026-09-30]`
 
@@ -572,7 +581,7 @@ grouped by whether it blocks the end state. Detail for the frontend half lives i
     comparison covers comparing models/runs.
 11. **Coati pip exchange** (D6/D7) — once `enerplanet-coati` is on PyPI, touches
     only `make coati` + `COATI_BIN`.
-12. **Upstream MEME request** (`meme-pypsa-result-parity-ask.md`) — with the dev;
+12. **Upstream MEME request** (folded → `tasks/open/pypsa-pass-ask.md`) — with the dev;
     out of scope for now. When it (or Option C) lands, re-enabling the electrical
     UI is a capability flip, not a UI change.
 
@@ -604,7 +613,7 @@ carries its own workflow, pitfalls and verification.)
 | D1 | How is T1K consumed? | `go.work` `use()` entry · `go.mod require` (native module fetch) · `replace` · vendoring | **`go.mod require` + native import (DONE 2026-09-29)** — fetch `github.com/enerplanet/T1K@v0.0.0-2026…` like any dependency; don't bind to the local explorer clone | Step 4 `[DONE]` |
 | D2 | ~~go-meme-parser standalone vs internal?~~ **Superseded — adopt Coati instead** | build go-meme-parser from scratch · **adopt Coati** (existing Python package, github.com/enerplanet/Coati) | **adopt Coati** (verified it converts real MEME result files; no parser to write) | Step 3 |
 | D3 | R3 diff granularity | per-tech + per-timestep · summary only · **none — use existing result-compare flow** | **none for now (2026-09-29):** defer run-id diff to a later task; use the existing frontend result comparison (ComparisonCharts/ComparisonSummary), which already compares two models by results and tolerates a differing building set. per-tech+per-timestep parked for a future engine | Step 7 `[DEFERRED]` |
-| D4 | Does buem stay on the path? | yes: meme takes node-level BUEM series · no: meme swallows resolve too | **yes, but phased (2026-09-29):** electricity-first feeds T1K on the CalculationPayload shape; BUEM node-series + heat pump is the heat retrofit in `tasks/heat-patch.md` (buem stays on the path, just deferred as a second vector) | Step 5 + heat-patch |
+| D4 | Does buem stay on the path? | yes: meme takes node-level BUEM series · no: meme swallows resolve too | **yes, but phased (2026-09-29):** electricity-first feeds T1K on the CalculationPayload shape; BUEM node-series + heat pump is the heat retrofit in `tasks/open/heat-patch.md` (buem stays on the path, just deferred as a second vector) | Step 5 + heat-patch |
 | D5 | How does the backend dispatch to MEME given TentaCron's own durability? | fire-and-forget submit + rely on backend retry · **treat TentaCron as the durable queue: submit once with Idempotency-Key, persist the job id, resume by id, never resubmit** · synchronous HTTP passthrough | **treat TentaCron as the durable queue (2026-09-29):** TentaCron is the SQLite queue (ADR-0002) and already polls MEME to completion (ADR-0004); a 60s backend deadline caused duplicate submits. Backend submits once with `Idempotency-Key: model_<id>`, persists the returned job id in `model_meme_runs`, long-polls by id on a 30m budget matched to TentaCron's meme poll timeout, reads the raw zip via `/result`, cancels abandoned runs | Step 5 `[DONE]` |
 | D6 | How does the Go backend run Coati (Python) to parse a result, and how is Coati integrated? | · subprocess behind a thin interface (Option A) · pure-Go parser · HTTP sidecar service · (integration) plain clone / **git submodule** / pip | **Option A transport + Coati as a hard-dependency git submodule (2026-09-29):** `CoatiRunner` interface + `SubprocessCoatiRunner` shells `coati convert <results.nc> - <framework>` (JSON on stdout; binary via `COATI_BIN` else `coati` on PATH); Go never parses netCDF. Coati lives at **`submodules/Coati`** (version-pinned, updated on demand; `.venv` via `make coati`; pip-exchange to `enerplanet-coati==<pin>` later touches only the target + `COATI_BIN`). Distinct from soft deps in `dependencies/`. | Step 6 `[DONE]` + submodule wiring |
 | D7 | Production deployment of Coati (how the container gets a runnable Coati)? | **Option B — bake the venv into the image** (venv-in-container, set `COATI_BIN`) · Option A′ — compile Coati to a self-contained executable and `go:embed` it into the Go binary · Option C″ — pure-Go reimplementation (rejected) | **Option B, venv-in-container (2026-09-29):** the Docker image runs a Python stage that provisions Coati's venv into the image and sets `ENV COATI_BIN=/app/<venv>/bin/coati`; the Go binary stays a thin caller. A "single Go binary with Coati embedded" (A') was evaluated and deferred — it's realistic only as a compiled Coati artifact behind the same `CoatiRunner` interface (a future swap, not now). Once `enerplanet-coati` is on PyPI the image does `pip install enerplanet-coati==<pin>` instead of provisioning the submodule. | Step 6 prod routing (Dockerfile) |

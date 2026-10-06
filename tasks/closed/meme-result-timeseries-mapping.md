@@ -1,10 +1,19 @@
 # MEME result time-series → R2 tables (the Coati/R2 mapping decision)
 
-**Status:** DECIDED — implementation step. The results page reads the R2
-time-series tables (`results_carrier_prod`/`_con`, `_capacity_factor`,
-`_model_*`, `_cost_var`, …) which the MEME ingest currently leaves empty, so a
-MEME model renders as zeros (plus a fabricated heat carrier). This doc fixes
-the source and the exact row mapping.
+**Status:** IMPLEMENTED — as-built reference (Rounds 1–4, committed in `25fdbc0`).
+This doc records the mapping the ingest now performs. The results page reads the R2
+time-series tables (`results_carrier_prod`/`_con`, `_capacity_factor`, `_model_*`,
+`_cost_var`, …) which the MEME ingest **used to** leave empty (so a MEME model
+rendered as zeros, plus a fabricated heat carrier). The rounds below are kept as the
+decision record — note that Round 3's per-grid rating is a **stopgap** that
+`tasks/open/pypsa-isolated-run-plan.md` supersedes once real `lines` exist.
+
+**Code this governs:** `enerplanet/backend/internal/result/service/{units.go,
+coati_ingest.go, coati_wire.go, cable_ratings.go, meme_timeseries.go}` ·
+`internal/result/capabilities/capabilities.go` · frontend
+`features/simulation-charts/pypsa/{chartUtils.ts, NetworkTopology.tsx, PyPSALineLoadingChart.tsx}` ·
+`features/model-results/{ModelResultsViewer.tsx, components/panels/GridPanel.tsx, hooks/useModelResultsMap.ts}` ·
+`components/map-controls/maplibre/{maplibre-layers.ts, useMapLibreLayers.ts}`.
 
 ## Decision — where the per-location series come from
 

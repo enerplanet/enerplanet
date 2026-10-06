@@ -169,7 +169,7 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 
 	// power is true for installed POWER capacities (MW -> kW, the R2 contract)
 	// and false for storage ENERGY capacities (MWh is not power and must not be
-	// scaled). See tasks/meme-result-timeseries-mapping.md (Round 4a).
+	// scaled).
 	addCapacity := func(loc, tech string, value float64, power bool) {
 		if loc == "" || tech == "" {
 			return

@@ -287,7 +287,7 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 	// Declare what this result actually contains before returning any data: the
 	// UI hides the sections a source cannot provide (and must not render an
 	// empty state that reads as a clean bill of health). The mapping lives in
-	// internal/result/capabilities — see tasks/grid-result-capabilities-plan.md.
+	// internal/result/capabilities.
 	source := resultcapabilities.Source(model.ResultSource)
 	response := gin.H{
 		"source":       string(source),

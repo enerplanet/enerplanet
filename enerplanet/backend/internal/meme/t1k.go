@@ -17,7 +17,7 @@ var mappingJSON []byte
 // is stateless and safe to share.
 //
 // mapping.json is copied from T1K's embedded config minus the offending rule;
-// keep it in sync when the upstream mapping changes (see heat-patch.md).
+// keep it in sync when the upstream mapping changes (see tasks/open/heat-patch.md).
 var jobTask = mustLoadJobTask()
 
 func mustLoadJobTask() *t1k.TransformTask {
@@ -41,7 +41,7 @@ type TranslatedJob struct {
 
 // TranslatePayload converts a calculation payload (as JSON) into a MEME job
 // via T1K. Electricity only: the enerplanet-to-meme mapping emits no heat
-// vector or heat pump. Retrofitting heat is tracked in tasks/heat-patch.md.
+// vector or heat pump. Retrofitting heat is tracked in tasks/open/heat-patch.md.
 func TranslatePayload(input []byte) (TranslatedJob, error) {
 	out, err := jobTask.Transform(input)
 	if err != nil {

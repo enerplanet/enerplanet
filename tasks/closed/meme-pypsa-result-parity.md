@@ -3,6 +3,10 @@
 **Audience:** MEME developer.
 **Author:** EnerPlanET backend (THD).
 **Date:** 2026-09-30.
+
+**Code this analyses:** `enerplanet/backend/internal/result/handler/{result_handler.go,
+result_helpers_pypsa_files.go}` (the reader that consumes the exported PF CSVs) ·
+`internal/result/capabilities/capabilities.go` (the source it declares).
 **MEME revision examined:** `enerplanet/meme`, branch `main`, commit `eff4d62` (pinned PyPSA 1.2.4).
 **Intent:** this is a fact-finding + options document, not a bug report. MEME's
 scope choice is understood and reasonable; the question is whether the electrical

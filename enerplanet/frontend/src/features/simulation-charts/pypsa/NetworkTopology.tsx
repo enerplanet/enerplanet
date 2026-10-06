@@ -18,7 +18,7 @@ interface NetworkTopologyProps {
   powerData?: Record<string, number>; // location -> avg power
   // Declared availability: when false, the corresponding metric is absent from
   // this result and must not be rendered (a defaulted 1.0 p.u. / 0 kW reads as a
-  // normal, solved grid). See tasks/grid-result-capabilities-plan.md.
+  // normal, solved grid).
   voltageAvailable?: boolean;
   powerAvailable?: boolean;
   lineConnections?: LineConnection[]; // Actual grid topology connections

@@ -1,8 +1,7 @@
 -- Migration: Add models.result_source (parsed-result provenance)
 -- Created: 2026-09-30
 -- Description: Records which pipeline produced a model's parsed results, so the
--- API can declare what the result contains (see tasks/grid-result-capabilities-plan.md
--- and internal/result/capabilities). Values: 'legacy' | 'meme' | 'full-grid-pf'.
+-- API can declare what the result contains (internal/result/capabilities). Values: 'legacy' | 'meme' | 'full-grid-pf'.
 --
 -- Already-parsed results predate the column, so they are backfilled as 'legacy'
 -- — that keeps them readable/correct even after the legacy parser is removed.
