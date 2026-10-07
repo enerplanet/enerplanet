@@ -22,7 +22,7 @@ func loadConfig() Config {
 		panic("pypsapass: invalid embedded catalog: " + err.Error())
 	}
 	if c.Unit == 0 {
-		c.Unit = 0.001 // legacy default (kW -> MW); the catalogue carries it, keep a safe fallback
+		c.Unit = 1.0 // passthrough: MEME Calliope results_flow_*.csv are natively MW (PyPSA p_set unit)
 	}
 	return c
 }
@@ -47,6 +47,10 @@ func build(cfg Config, opts LoadOptions) (*PowerFlow, error) {
 		Loads:        []Load{},
 	}
 	buses := map[string]float64{} // bus name -> v_nom
+	// trafoMV maps a transformer's LV-side bus name -> its MV-side bus name.
+	// Grid/supply that lands on a trafo's LV bus belongs on the MV side (the
+	// utility connection point) and is the network's slack reference.
+	trafoMV := map[string]string{}
 	numTimesteps := opts.NumTimesteps
 	if numTimesteps < 0 {
 		numTimesteps = 0
@@ -101,6 +105,7 @@ func build(cfg Config, opts LoadOptions) (*PowerFlow, error) {
 			mvName := NodeID(to.id + cfg.Affixes.SuffixTrafoBusMV)
 			if _, ok := buses[mvName]; !ok {
 				addBus(mvName, cfg.VoltagesKV["mv"])
+				trafoMV[bus1Name] = mvName // LV-side -> MV-side; used in section 3
 				pf.Transformers = append(pf.Transformers, Transformer{
 					Name:        to.id,
 					Bus0:        mvName, // MV side (higher voltage)
@@ -125,11 +130,24 @@ func build(cfg Config, opts LoadOptions) (*PowerFlow, error) {
 	// --- 3. generators (carrier_prod) + loads (carrier_con), per bus -------
 	// Each location maps to its bus by name; the series are already index-aligned
 	// with the model timesteps and scaled by the unit here.
+	//
+	// Generator placement: a supply whose node is a transformer's LV-side bus is
+	// the utility grid connection — it belongs on the transformer's MV-side bus
+	// and is the network's slack reference (power enters the LV grid at the trafo,
+	// then flows out the LV feeders). Any other supply (e.g. building PV) stays a
+	// PQ generator at its own bus. Note: the topology's lines are NOT generators —
+	// the dispatch leg strips the connecting-line techs before building the pass.
 	for _, g := range opts.CarrierProd {
+		bus := g.FromLocation
+		control := "PQ"
+		if mv, ok := trafoMV[bus]; ok {
+			bus = mv
+			control = "Slack"
+		}
 		pf.Generators = append(pf.Generators, Generator{
 			Name:    g.FromLocation + "_" + g.Tech,
-			Bus:     g.FromLocation,
-			Control: "PQ",
+			Bus:     bus,
+			Control: control,
 			PSet:    scaleSeries(capTo(g.Timeseries, numTimesteps), cfg.Unit),
 		})
 	}

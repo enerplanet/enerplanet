@@ -231,7 +231,8 @@
       "retryCalculation": "Berechnung wiederholen",
       "startCalculation": "Berechnung starten",
       "engineNotAvailable": "Simulationsmodul ist nicht verfügbar",
-      "runWithMeme": "Mit MEME ausführen"
+      "runWithMeme": "Mit Calliope ausführen",
+      "runPypsaOnMeme": "Leistungsfluss ausführen (PyPSA)"
     },
     "pagination": {
       "showing": "Zeige",
@@ -2596,8 +2597,7 @@
     "coverageMedium": "Mittlere Datenabdeckung",
     "coverageLow": "Geringe Datenabdeckung",
     "summaryFooter": "{{countries}} Länder · {{regions}} Regionen · {{grids}} Raster"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funktionen",

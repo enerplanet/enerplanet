@@ -1,4 +1,4 @@
-import { Eye, Edit, Download, Copy, Trash2, Share, FolderInput, Zap } from "lucide-react";
+import { Eye, Edit, Download, Copy, Trash2, Share, FolderInput, Zap, Activity } from "lucide-react";
 import { ModelStatus } from "@/types/models";
 import { isModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import ModelActionGroup, { ActionConfig, ActionSize } from "../shared/ModelActionGroup";
@@ -13,6 +13,7 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly onDownload?: (model: T) => void;
 	readonly onCopy?: (model: T) => void;
 	readonly onRunMeme?: (model: T) => void;
+	readonly onRunMemePypsa?: (model: T) => void;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
 	readonly onMoveToWorkspace?: (model: T) => void;
@@ -42,6 +43,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onDownload,
 	onCopy,
 	onRunMeme,
+	onRunMemePypsa,
 	onDelete,
 	onShare,
 	onMoveToWorkspace,
@@ -81,7 +83,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	const actions: ActionConfig[] = getActionConfigs(
 		model,
 		{
-			onView, onEdit, onDownload, onCopy, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+			onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 			showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
 			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
 		},
@@ -99,7 +101,7 @@ const getTooltip = (defaultText: string, disabled: boolean, disabledText?: strin
 function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?: string }>(
 	model: T,
 	props: Pick<ModelActionsProps<T>, 
-		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onDelete" | "onShare" | "onMoveToWorkspace" |
+		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onRunMemePypsa" | "onDelete" | "onShare" | "onMoveToWorkspace" |
 		"showView" | "showEdit" | "showDownload" | "showCopy" | "showDelete" | "showShare" | "showMoveToWorkspace" |
 		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip"
 	>,
@@ -112,7 +114,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	t: (key: string) => string
 ): ActionConfig[] {
 	const {
-		onView, onEdit, onDownload, onCopy, onRunMeme, onDelete, onShare, onMoveToWorkspace,
+		onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 		showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
 		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
 	} = props;
@@ -131,6 +133,19 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			onClick: () => onRunMeme?.(model),
 			show: !!onRunMeme &&
 				(model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
+			disabled,
+		},
+		{
+			// Isolated PyPSA power-flow leg: an ADD-ON to a successful Calliope
+			// run (the derived pass reads the Calliope results), so it shows
+			// only on completed models — mirroring view/download. The backend
+			// also enforces this gate (400 on run-meme-pypsa without one).
+			key: "runMemePypsa",
+			icon: Activity,
+			tooltip: t("common.modelActions.runPypsaOnMeme"),
+			variant: "secondary",
+			onClick: () => onRunMemePypsa?.(model),
+			show: !!onRunMemePypsa && completed,
 			disabled,
 		},
 		{

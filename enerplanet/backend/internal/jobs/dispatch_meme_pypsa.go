@@ -128,6 +128,28 @@ type flowSeries struct {
 	values     []float64
 }
 
+// setOfTechs returns the set of tech names present in the given series.
+func setOfTechs(series []pypsapass.CarrierSeries) map[string]bool {
+	out := make(map[string]bool, len(series))
+	for _, s := range series {
+		out[s.Tech] = true
+	}
+	return out
+}
+
+// filterTechs returns the input series keeping (keep=true) or dropping
+// (keep=false) the given techs.
+func filterTechs(series []pypsapass.CarrierSeries, techs map[string]bool, keep bool) []pypsapass.CarrierSeries {
+	out := make([]pypsapass.CarrierSeries, 0, len(series))
+	for _, s := range series {
+		_, in := techs[s.Tech]
+		if in == keep {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // readFlowCSV parses a MEME bundle flow CSV (results_flow_out.csv /
 // results_flow_in.csv — columns nodes, techs, timesteps, carriers plus the
 // value column flow_out | flow_in) into per (node, tech) pypsapass carrier
@@ -245,6 +267,27 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	if err != nil {
 		return nil, fmt.Errorf("read calliope flow_in for pypsa p_set: %w", err)
 	}
+
+	// Strip the transmission (connecting-line) techs. results_flow_*.csv carry
+	// BOTH the real dispatch (supply techs like grid_trafo_82_import in flow_out,
+	// demand sinks like demand_1 in flow_in) AND the line-flow techs
+	// (lv_1_trafo_82 ... lv_9_trafo_82), which appear in BOTH files because each
+	// cable carries energy between its two nodes. A line tech present in both
+	// flow files is NOT a generator or a load — it is the physical connection
+	// the topology already models as a Line. Turning it into a per-node
+	// generator that equals the node's own load cancels the network's net
+	// dispatch (flat 1.0 p.u., zero flow/loss). Discriminator: a link tech
+	// appears in both files; real supply = flow_out-only; real demand =
+	// flow_in-only.
+	linkTechs := map[string]bool{}
+	for _, s := range prod {
+		if _, ok := setOfTechs(con)[s.Tech]; ok {
+			linkTechs[s.Tech] = true
+		}
+	}
+	prod = filterTechs(prod, linkTechs, false)
+	con = filterTechs(con, linkTechs, false)
+
 	// Both sides must be index-aligned with the model's timesteps; they naturally
 	// agree (same snapshots), but take the wider when they ever diverge.
 	numTimesteps := prodSteps

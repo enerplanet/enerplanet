@@ -185,7 +185,8 @@
       "retryCalculation": "Opakovat Výpočet",
       "startCalculation": "Zahájit Výpočet",
       "engineNotAvailable": "Simulační motor není k dispozici",
-      "runWithMeme": "Spustit s MEME"
+      "runWithMeme": "Spustit s Calliope",
+      "runPypsaOnMeme": "Spustit tok výkonu (PyPSA)"
     },
     "pagination": {
       "showing": "Zobrazeno",
@@ -2551,8 +2552,7 @@
     "coverageMedium": "Střední pokrytí dat",
     "coverageLow": "Nízké pokrytí dat",
     "summaryFooter": "{{countries}} zemí · {{regions}} regionů · {{grids}} mřížek"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funkce",

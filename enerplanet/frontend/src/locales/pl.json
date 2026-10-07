@@ -185,7 +185,8 @@
       "retryCalculation": "Ponów Obliczenia",
       "startCalculation": "Rozpocznij Obliczenia",
       "engineNotAvailable": "Silnik symulacji jest niedostępny",
-      "runWithMeme": "Uruchom z MEME"
+      "runWithMeme": "Uruchom z Calliope",
+      "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)"
     },
     "pagination": {
       "showing": "Wyświetlanie",
@@ -2551,8 +2552,7 @@
     "coverageMedium": "Średni zasięg danych",
     "coverageLow": "Niski zasięg danych",
     "summaryFooter": "{{countries}} krajów · {{regions}} regionów · {{grids}} siatek"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funkcje",

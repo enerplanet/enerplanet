@@ -231,7 +231,8 @@
       "retryCalculation": "Reintentar Cálculo",
       "startCalculation": "Iniciar Cálculo",
       "engineNotAvailable": "El motor de simulación no está disponible",
-      "runWithMeme": "Ejecutar con MEME"
+      "runWithMeme": "Ejecutar con Calliope",
+      "runPypsaOnMeme": "Ejecutar flujo de carga (PyPSA)"
     },
     "pagination": {
       "showing": "Mostrando",
@@ -2545,8 +2546,7 @@
     "coverageMedium": "Cobertura de datos media",
     "coverageLow": "Baja cobertura de datos",
     "summaryFooter": "{{countries}} países · {{regions}} regiones · {{grids}} cuadrículas"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funciones",

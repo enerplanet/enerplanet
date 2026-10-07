@@ -185,7 +185,8 @@
       "retryCalculation": "Riprova Calcolo",
       "startCalculation": "Avvia Calcolo",
       "engineNotAvailable": "Motore di simulazione non disponibile",
-      "runWithMeme": "Esegui con MEME"
+      "runWithMeme": "Esegui con Calliope",
+      "runPypsaOnMeme": "Esegui il flusso di potenza (PyPSA)"
     },
     "pagination": {
       "showing": "Visualizzazione",
@@ -2551,8 +2552,7 @@
     "coverageMedium": "Copertura dati media",
     "coverageLow": "Copertura dati bassa",
     "summaryFooter": "{{countries}} paesi · {{regions}} regioni · {{grids}} griglie"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funzionalità",

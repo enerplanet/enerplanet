@@ -185,7 +185,8 @@
       "retryCalculation": "Berekening Opnieuw",
       "startCalculation": "Berekening Starten",
       "engineNotAvailable": "Simulatiemotor is niet beschikbaar",
-      "runWithMeme": "Uitvoeren met MEME"
+      "runWithMeme": "Uitvoeren met Calliope",
+      "runPypsaOnMeme": "Vermogensstroom uitvoeren (PyPSA)"
     },
     "pagination": {
       "showing": "Weergave",
@@ -2551,8 +2552,7 @@
     "coverageMedium": "Gemiddelde gegevensdekking",
     "coverageLow": "Lage gegevensdekking",
     "summaryFooter": "{{countries}} landen · {{regions}} regio's · {{grids}} rasters"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Functies",

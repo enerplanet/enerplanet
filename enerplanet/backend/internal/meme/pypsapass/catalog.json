@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "description": "EnerPlanET → MEME 'power_flow' pass defaults. Mirrors what the legacy c2p conversion baked into defaults/*.csv and net.py, lifted into JSON so a PyPSA/branch-version change is an edit here, never code. See internal/meme/pypsapass/pypsapass.go for how each knob is consumed.",
-  "unit": 0.001,
+  "unit": 1.0,
   "voltages_kv": {
     "lv": 0.4,
     "mv": 20.0,

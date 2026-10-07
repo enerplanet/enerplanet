@@ -8,6 +8,7 @@ import {
   useUpdateModelMutation,
   useStartCalculationMutation,
   useRunMemeMutation,
+  useRunMemePypsaMutation,
   useBulkDeleteModelsMutation
 } from '@/features/model-dashboard/hooks/useModelsQuery';
 
@@ -23,6 +24,7 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
   const updateMutation = useUpdateModelMutation();
   const startCalculationMutation = useStartCalculationMutation();
   const runMemeMutation = useRunMemeMutation();
+  const runMemePypsaMutation = useRunMemePypsaMutation();
   const bulkDeleteMutation = useBulkDeleteModelsMutation();
 
   const refreshData = useCallback(async () => {
@@ -79,6 +81,19 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     }
   }, [runMemeMutation, refreshData]);
 
+  // Isolated PyPSA power-flow leg: a derived run AFTER a successful Calliope
+  // run, so it targets only completed models (the backend enforces the gate).
+  const handleRunMemePypsa = useCallback(async (modelIds: number[]): Promise<void> => {
+    try {
+      for (const id of modelIds) {
+        await runMemePypsaMutation.mutateAsync(id);
+      }
+      await refreshData();
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Failed to start MEME PyPSA leg:', error);
+    }
+  }, [runMemePypsaMutation, refreshData]);
+
   const handleDownload = useCallback(async (model: Model): Promise<void> => {
     try {
       await downloadModelArchive(model.id, `model_${model.id}.zip`);
@@ -118,6 +133,7 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     handleDelete,
     handleCalculate,
     handleRunMeme,
+    handleRunMemePypsa,
     handleDownload,
     updateTitle,
     handleBulkDelete,

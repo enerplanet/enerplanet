@@ -231,7 +231,8 @@
       "retryCalculation": "Retry Calculation",
       "startCalculation": "Start Calculation",
       "engineNotAvailable": "Simulation engine is not available",
-      "runWithMeme": "Run with MEME"
+      "runWithMeme": "Run with Calliope",
+      "runPypsaOnMeme": "Run power flow (PyPSA)"
     },
     "pagination": {
       "showing": "Showing",
@@ -2598,8 +2599,7 @@
     "coverageMedium": "Medium data coverage",
     "coverageLow": "Low data coverage",
     "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Features",

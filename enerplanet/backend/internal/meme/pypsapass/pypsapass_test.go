@@ -93,10 +93,10 @@ func TestBuild_generatorsAndLoadsFromCarrierSeries(t *testing.T) {
 			},
 		},
 		CarrierProd: []CarrierSeries{
-			{FromLocation: "n1", Tech: "pv", Timeseries: []float64{1000, 2000, 0}},
+			{FromLocation: "n1", Tech: "pv", Timeseries: []float64{1.0, 2.0, 0}},
 		},
 		CarrierCon: []CarrierSeries{
-			{FromLocation: "n1", Tech: "load", Timeseries: []float64{500, 0, 300}},
+			{FromLocation: "n1", Tech: "load", Timeseries: []float64{0.5, 0, 0.3}},
 		},
 		NumTimesteps: 3,
 	})
@@ -105,7 +105,7 @@ func TestBuild_generatorsAndLoadsFromCarrierSeries(t *testing.T) {
 	gen := pf.Generators[0]
 	require.Equal(t, "n1", gen.Bus)
 	require.Equal(t, "PQ", gen.Control)
-	// unit 0.001: kW -> MW.
+	// unit 1.0: passthrough — MEME Calliope results are natively MW.
 	require.InDelta(t, 1.0, gen.PSet[0], 1e-9)
 	require.InDelta(t, 2.0, gen.PSet[1], 1e-9)
 

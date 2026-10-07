@@ -209,7 +209,11 @@ setup-repos:
 	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
 	$(call pinned_checkout,$(IGNIS_DIR),$(IGNIS_REPO),$(IGNIS_REF))
 	$(call pinned_checkout,$(BUEM_DIR),$(BUEM_REPO),$(BUEM_REF))
-	@[ -d dependencies/$(MEME_DIR) ] && (cd dependencies/$(MEME_DIR) && git pull) || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
+	@# MEME is a plain clone with its OWN git (a developer branch, e.g.
+	@# feature/power-flow, is left alone — a bare `git pull` on a local
+	@# branch with no upstream fails and trips the || clone into the existing
+	@# dir, breaking `make setup`. Clone only when absent, like TentaCron.
+	@[ -d dependencies/$(MEME_DIR) ] || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
 	@# Pinned to TENTACRON_REF (see repos.conf). An existing checkout is left alone:
 	@# it may be a developer's own branch.
 	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
@@ -282,7 +286,7 @@ pylovo:
 .PHONY: tentacron-stack
 # meme is left out until its translator and parser packages are released; it
 # serves only the simulation step. `make meme` starts it on its own.
-tentacron-stack: tentacron-network ignis city2tabula weather buem tentacron
+tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network

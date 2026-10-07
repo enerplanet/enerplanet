@@ -51,6 +51,7 @@ interface ModelTableRowProps {
   onDownload: (model: Model) => void;
   onCopy: (model: Model) => void;
   onRunMeme: (model: Model) => void;
+  onRunMemePypsa: (model: Model) => void;
   onDelete: (model: Model) => void;
   onShare: (model: Model) => void;
   onMoveToWorkspace: (model: Model) => void;
@@ -190,6 +191,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   onDownload,
   onCopy,
   onRunMeme,
+  onRunMemePypsa,
   onDelete,
   onShare,
   onMoveToWorkspace,
@@ -333,6 +335,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             onDownload={onDownload}
             onCopy={onCopy}
             onRunMeme={onRunMeme}
+            onRunMemePypsa={onRunMemePypsa}
             onDelete={onDelete}
             onShare={onShare}
             onMoveToWorkspace={onMoveToWorkspace}

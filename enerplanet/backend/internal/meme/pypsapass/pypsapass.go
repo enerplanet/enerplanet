@@ -32,7 +32,7 @@ type TransformerParams struct {
 // Config is the embedded, versionable defaults for the pass (see catalog.json).
 type Config struct {
 	SchemaVersion string                       `json:"schema_version"`
-	Unit          float64                      `json:"unit"` // legacy c2p unit scale applied to Calliope p_set
+	Unit          float64                      `json:"unit"` // p_set scale. 1.0 = passthrough: the MEME Calliope results_flow_*.csv are natively MW (PyPSA p_set unit).
 	VoltagesKV    map[string]float64           `json:"voltages_kv"`
 	Affixes       Affixes                      `json:"affixes"`
 	DefaultTypes  DefaultTypes                 `json:"default_types"`

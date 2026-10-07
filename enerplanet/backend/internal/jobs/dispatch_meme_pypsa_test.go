@@ -189,6 +189,73 @@ n1,pv_supply_1,electricity,2020-01-01T01:00:00,5
 	require.InDelta(t, 5, prod[0].Timeseries[1], 1e-9)
 }
 
+func TestPypsaPowerFlow_dropsLineTechsAndSlacksGridImport(t *testing.T) {
+	// Regression for the model-34 symptom: results_flow_out.csv carries the
+	// connecting-line techs (lv_X_trafo_82) in BOTH files. Those must NOT become
+	// per-node generators that cancel the node's own demand (flat 1.0, zero
+	// flow). Only the real supply (grid_trafo_82_import, flow_out-only) survives
+	// as the network slack on the transformer's MV bus; the lv_* techs and the
+	// grid export are dropped; the demands stay loads.
+	root := t.TempDir()
+	dir := root + "/csv"
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_out.csv", []byte(`nodes,techs,carriers,timesteps,flow_out
+ntrafo_82,grid_trafo_82_import,electricity,2020-01-01T00:00:00,10
+n1,lv_1_trafo_82,electricity,2020-01-01T00:00:00,5
+ntrafo_82,lv_1_trafo_82,electricity,2020-01-01T00:00:00,5
+`), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_in.csv", []byte(`nodes,techs,carriers,timesteps,flow_in
+n1,demand_1,electricity,2020-01-01T00:00:00,5
+n1,lv_1_trafo_82,electricity,2020-01-01T00:00:00,5
+ntrafo_82,lv_1_trafo_82,electricity,2020-01-01T00:00:00,5
+ntrafo_82,grid_trafo_82_export,electricity,2020-01-01T00:00:00,0
+`), 0o644))
+
+	// Topology: one building (1) connected to a transformer (trafo_82) — the
+	// transformer's bus name lands on the MV side as "ntrafo_82_mv".
+	calc := map[string]interface{}{
+		"topology": []interface{}{
+			map[string]interface{}{
+				"from": map[string]interface{}{"id": "1"},
+				"to": map[string]interface{}{
+					"id": "trafo_82",
+					"properties": map[string]interface{}{
+						"feature_type": "TopologyNode",
+						"f_class":      "transformer",
+						"rated_power":  400000.0,
+					},
+				},
+				"length": 0.05,
+				"pipe":   "lv",
+			},
+		},
+		"pypsa": map[string]interface{}{},
+	}
+	calcBytes, err := json.Marshal(calc)
+	require.NoError(t, err)
+
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir)
+	require.NoError(t, err)
+
+	// Only the grid import survives as a generator; the lv_1_trafo_82 line tech
+	// must be dropped (it is a Line, not a gen).
+	require.Len(t, pf.Generators, 1, "line techs must not become generators")
+	gen := pf.Generators[0]
+	require.Equal(t, "ntrafo_82_mv", gen.Bus, "grid import lands on the trafo MV bus")
+	require.Equal(t, "Slack", gen.Control, "grid import is the reference/slack")
+	require.InDelta(t, 10, gen.PSet[0], 1e-9)
+
+	// Only the demand stays a load (grid export is a separate zero-valued flow_in
+	// sink on the trafo node — kept, harmless; the line inflow was dropped).
+	require.Len(t, pf.Loads, 2, "demand_1 + the zero grid export sink")
+	require.Equal(t, "n1", pf.Loads[0].Bus)
+	require.InDelta(t, 5, pf.Loads[0].PSet[0], 1e-9)
+
+	// The line itself still exists in the topology (buses n1 <-> ntrafo_82).
+	require.Len(t, pf.Lines, 1)
+	require.Len(t, pf.Buses, 3, "n1, ntrafo_82 (LV), ntrafo_82_mv (MV)")
+}
+
 func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testing.T) {
 	const modelID = uint(42)
 	fakeZip := []byte("PK\x03\x04simulated-meme-pypsa-result\x00tail\xff")
