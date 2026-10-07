@@ -868,3 +868,39 @@ func (h *ModelHandler) StartMemeCalculation(c *gin.Context) {
 
 	httputil.SuccessResponse(c, updated)
 }
+
+// StartMemePyPSACalculation dispatches the isolated PyPSA power-flow leg: the
+// model is sent to MEME's `meme-pypsa` target with a job built from the parsed
+// Calliope results, in its own leg-keyed run record. It shares
+// StartMemeCalculation's response contract, but is GATED at request time —
+// without a successful (completed) Calliope leg it returns 400 and never
+// enqueues the derived run.
+func (h *ModelHandler) StartMemePyPSACalculation(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+	modelSvc := h.newModelService()
+
+	updated, err := modelSvc.StartMemePyPSACalculation(c.Request.Context(), userCtx.UserID, userCtx.AccessLevel, c.Param("id"), h.asynqClient)
+	if err != nil {
+		msg := err.Error()
+		switch {
+		case strings.Contains(msg, "not found"):
+			httputil.NotFound(c, errModelNotFound)
+		case strings.Contains(msg, "access denied"):
+			httputil.Forbidden(c, "Access denied")
+		case strings.Contains(msg, "already in progress"):
+			httputil.Conflict(c, "Model calculation already in progress")
+		case strings.Contains(msg, "calliope leg"):
+			httputil.BadRequest(c, msg)
+		case strings.Contains(msg, "country"):
+			httputil.BadRequest(c, msg)
+		default:
+			httputil.InternalError(c, "Failed to start calculation")
+		}
+		return
+	}
+
+	httputil.SuccessResponse(c, updated)
+}

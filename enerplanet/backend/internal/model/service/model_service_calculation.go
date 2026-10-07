@@ -18,6 +18,7 @@ import (
 	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/payload"
+	"spatialhub_backend/internal/store/memerun"
 )
 
 func (s *ModelService) BuildCalculationPayload(model *models.Model) (interface{}, error) {
@@ -203,6 +204,69 @@ func (s *ModelService) StartMemeCalculation(ctx context.Context, userID string, 
 	)
 	if err != nil {
 		log.Errorf("failed to enqueue dispatch_meme model_id=%d err=%v", model.ID, err)
+		return nil, fmt.Errorf("failed to enqueue calculation: %w", err)
+	}
+
+	return model, nil
+}
+
+// StartMemePyPSACalculation is the isolated PyPSA power-flow leg endpoint: it
+// enqueues jobs.TypeDispatchMemePyPSA, which builds a MEME `meme-pypsa` job
+// from the parsed Calliope results and dispatches it with its own leg-keyed run
+// record. Unlike the Calliope path it:
+//   - enforces the GATE at request time (CalliopeLegReady): a power flow is a
+//     passthrough of the Calliope results and can never run standalone, so a
+//     model without a completed Calliope leg is refused (400) before any task
+//     is enqueued;
+//   - targets only the PyPSA leg (no frameworks parameter — the leg is fixed).
+func (s *ModelService) StartMemePyPSACalculation(ctx context.Context, userID string, accessLevel string, modelIDParam string, asynqClient *asynq.Client) (*models.Model, error) {
+	log := platformlogger.ForComponent("model")
+
+	model, err := s.prepareModelRun(ctx, userID, accessLevel, modelIDParam)
+	if err != nil {
+		return nil, err
+	}
+
+	// GATE (request time): fail fast unless the Calliope leg completed.
+	if err := jobs.CalliopeLegReady(memerun.NewStore(s.db), model.ID); err != nil {
+		return nil, err
+	}
+
+	// Pre-flight only: the dispatch job rebuilds the payload from the stored
+	// model, but a model that cannot build one should fail this request (400).
+	if _, err := s.BuildCalculationPayload(model); err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	if err := s.store.Update(model, map[string]interface{}{
+		"status":                   models.ModelStatusQueue,
+		"calculation_started_at":   now,
+		"calculation_completed_at": nil,
+		"updated_at":               now,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update model status: %w", err)
+	}
+	model.Status = models.ModelStatusQueue
+
+	payloadBytes, err := json.Marshal(jobs.DispatchMemePyPSAPayload{
+		ModelID: model.ID,
+		UserID:  userID,
+	})
+	if err != nil {
+		log.Errorf("failed to marshal dispatch_meme_pypsa payload model_id=%d err=%v", model.ID, err)
+		return nil, fmt.Errorf("failed to marshal task payload: %w", err)
+	}
+
+	task := asynq.NewTask(jobs.TypeDispatchMemePyPSA, payloadBytes)
+	_, err = asynqClient.Enqueue(task,
+		asynq.Queue("buem"),
+		asynq.MaxRetry(0),
+		asynq.Timeout(60*time.Minute),
+		asynq.Retention(24*time.Hour),
+	)
+	if err != nil {
+		log.Errorf("failed to enqueue dispatch_meme_pypsa model_id=%d err=%v", model.ID, err)
 		return nil, fmt.Errorf("failed to enqueue calculation: %w", err)
 	}
 

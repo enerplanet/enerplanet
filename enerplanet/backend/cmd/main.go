@@ -37,10 +37,10 @@ import (
 	ignisclient "spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
-	resultservice "spatialhub_backend/internal/result/service"
 	modelhandler "spatialhub_backend/internal/model/handler"
 	opentechdb "spatialhub_backend/internal/opentechdb"
 	resulthandler "spatialhub_backend/internal/result/handler"
+	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
@@ -275,6 +275,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeTriggerCity2TabulaRun, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDispatchMeme, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeIngestMemeResult, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMemePyPSA, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemePyPSAResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
@@ -839,6 +841,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.POST(routeModelByID+"/reprocess-results", resultHandler.ReprocessModelResults)
 	api.POST("/calculation/start/:id", modelHandler.StartCalculation)
 	api.POST(routeModelByID+"/run-meme", modelHandler.StartMemeCalculation)
+	api.POST(routeModelByID+"/run-meme-pypsa", modelHandler.StartMemePyPSACalculation)
 	api.GET("/results/:id", resultHandler.GetResult)
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
 }

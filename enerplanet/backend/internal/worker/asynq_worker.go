@@ -94,6 +94,10 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
+	case jobs.TypeDispatchMemePyPSA:
+		return jobs.HandleDispatchMemePyPSA(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewDBCalliopeCSVLocator(p.db), jobs.NewAsynqIngestMemePyPSAEnqueuer(p.asynqClient))
+	case jobs.TypeIngestMemePyPSAResult:
+		return jobs.HandleIngestMemePyPSAResult(ctx, t, p.db, p.memeRuns, resultservice.NewResultServicePyPSAIngester(resultservice.NewResultService(p.db)))
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:
