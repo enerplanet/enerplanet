@@ -13,6 +13,7 @@ import (
 	backendModels "spatialhub_backend/internal/models"
 
 	commonModels "platform.local/common/pkg/models"
+	"platform.local/platform/logger"
 )
 
 // Store encapsulates all database operations for the result handler.
@@ -516,8 +517,11 @@ func (s *Store) GetPyPSALocations(modelID uint) []string {
 	seen := map[string]struct{}{}
 	collect := func(table, column string) {
 		var values []string
-		s.db.Table(table).Where("model_id = ?", modelID).
-			Distinct(column).Pluck(column, &values)
+		err := s.db.Table(table).Where("model_id = ?", modelID).
+			Distinct(column).Pluck(column, &values).Error
+		if err != nil {
+			logger.ForComponent("result-store").Errorf("model_id=%d: pluck %s.%s: %v", modelID, table, column, err)
+		}
 		for _, value := range values {
 			if strings.TrimSpace(value) != "" {
 				seen[value] = struct{}{}
