@@ -156,3 +156,29 @@ func TestDateRange(t *testing.T) {
 	assert.Equal(t, "2024-01-01", dr.Begin)
 	assert.Equal(t, "2024-12-31", dr.End)
 }
+
+func TestGetResultSource(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	store := NewStore(db)
+
+	mock.ExpectQuery(`SELECT result_source FROM "models" WHERE id = \$1`).
+		WithArgs(7).
+		WillReturnRows(sqlmock.NewRows([]string{"result_source"}).AddRow("meme"))
+
+	source, err := store.GetResultSource(7)
+	require.NoError(t, err)
+	assert.Equal(t, "meme", source)
+}
+
+func TestGetResultSource_NullIsEmpty(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	store := NewStore(db)
+
+	mock.ExpectQuery(`SELECT result_source FROM "models" WHERE id = \$1`).
+		WithArgs(8).
+		WillReturnRows(sqlmock.NewRows([]string{"result_source"}).AddRow(nil))
+
+	source, err := store.GetResultSource(8)
+	require.NoError(t, err)
+	assert.Equal(t, "", source)
+}
