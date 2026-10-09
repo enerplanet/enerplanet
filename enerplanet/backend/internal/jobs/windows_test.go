@@ -37,7 +37,7 @@ func TestBuildingWindowSettings(t *testing.T) {
 
 func TestBuildingsForBuem_windowSettingsReachTheBlock(t *testing.T) {
 	code := "NL.N.SFH.03.Gen.ReEx.001.001"
-	envelope := map[string]city2tabula.Building{"1": {OSMID: "1", TabulaVariantCode: &code,
+	envelope := map[string]city2tabula.Building{"1": {OSMID: "1", TabulaVariantCode: &code, FloorAreaSqm: floatPtr(120),
 		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}}}}
 	node := map[string]interface{}{"from": map[string]interface{}{
 		"geometry": map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
@@ -66,7 +66,7 @@ func TestArchetypeGlazing_omitsWhatIgnisDidNotReport(t *testing.T) {
 
 func TestBuildingsForBuem_archetypeGlazingSentAndUserValueWins(t *testing.T) {
 	code := "NL.N.SFH.03.Gen.ReEx.001.001"
-	envelope := map[string]city2tabula.Building{"1": {OSMID: "1", TabulaVariantCode: &code,
+	envelope := map[string]city2tabula.Building{"1": {OSMID: "1", TabulaVariantCode: &code, FloorAreaSqm: floatPtr(120),
 		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}}}}
 	node := func(props map[string]interface{}) map[string]interface{} {
 		p := map[string]interface{}{"feature_type": "BasePOI", "osm_id": "1", "f_class": "detached"}

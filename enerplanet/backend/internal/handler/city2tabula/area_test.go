@@ -16,18 +16,20 @@ import (
 
 // areaBuildings is City2TABULA's bbox response: it reports no PyLovo link, so
 // osm_id is empty and match_type is 0 on every row.
-const areaBuildings = `[
+const areaBuildings = `{"buildings": [
   {"object_id":"NL.A","osm_id":"","match_type":0,"number_of_storeys":2,"room_height":2.5,
    "footprint_area":80,"tabula_variant_code":"NL.N.SFH.05.Gen",
    "surfaces":[{"id":"w1","type":"WallSurface","area":30,"azimuth":180,"tilt":0}]},
   {"object_id":"NL.B","osm_id":"","match_type":0,"number_of_storeys":1,"room_height":2.4,
    "footprint_area":40,"tabula_variant_code":"NL.N.SFH.05.Gen",
    "surfaces":[{"id":"w2","type":"WallSurface","area":20,"azimuth":90,"tilt":0}]}
-]`
+],
+ "attributions": []}`
 
-const areaGeometry = `[
+const areaGeometry = `{"buildings": [
   {"object_id":"NL.A","footprint_geojson":{"type":"MultiPolygon","crs":{"type":"name","properties":{"name":"EPSG:28992"}},"coordinates":[[[[198203.0,458493.5]]]]}}
-]`
+],
+ "attributions": []}`
 
 func postArea(t *testing.T, h *Handler, body string) (*httptest.ResponseRecorder, contracts.AreaEnrichResponse) {
 	t.Helper()

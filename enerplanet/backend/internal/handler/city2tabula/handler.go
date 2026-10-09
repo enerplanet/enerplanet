@@ -114,7 +114,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 		return
 	}
 
-	byOSMID, err := h.fetchLinked(ctx, country, req.OSMIDs)
+	byOSMID, credits, err := h.fetchLinked(ctx, country, req.OSMIDs)
 	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
 		log.Warnf("city2tabula rejected the building fetch for %s: %s", country, badReq.Message)
 		httputil.BadRequest(c, upstreamRejectedMessage)
@@ -133,6 +133,8 @@ func (h *Handler) Enrich(c *gin.Context) {
 		Total:    len(req.OSMIDs),
 		Missing:  missing,
 		Data:     h.mapBuildings(ctx, byOSMID),
+
+		Attributions: credits,
 	}
 
 	if len(missing) == 0 {
@@ -196,15 +198,16 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	}
 
 	resp := contracts.EnrichResponse{
-		Status: run.Status,
-		RunID:  run.RunID,
-		Data:   map[string]contracts.EnrichedBuilding{},
+		Status:       run.Status,
+		RunID:        run.RunID,
+		Data:         map[string]contracts.EnrichedBuilding{},
+		Attributions: []c2t.DatasetCredit{},
 	}
 
 	country := c.Query("country")
 	osmIDs := splitCSV(c.Query("osm_ids"))
 	if run.Status == "completed" && country != "" && len(osmIDs) > 0 {
-		byOSMID, ferr := h.fetchLinked(ctx, country, osmIDs)
+		byOSMID, credits, ferr := h.fetchLinked(ctx, country, osmIDs)
 		if badReq := new(c2t.BadRequestError); errors.As(ferr, &badReq) {
 			log.Warnf("city2tabula rejected the building re-fetch after run %s: %s", runID, badReq.Message)
 			httputil.BadRequest(c, upstreamRejectedMessage)
@@ -219,26 +222,31 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 		resp.Total = len(osmIDs)
 		resp.Missing = missingOSMIDs(osmIDs, byOSMID)
 		resp.Data = h.mapBuildings(ctx, byOSMID)
+		resp.Attributions = credits
 	}
 
 	c.JSON(http.StatusOK, resp)
 }
 
-// fetchLinked fetches the osm_ids' 3D attributes and indexes them by osm_id. An
-// osm_id absent from the result has no PyLovo-linked building in City2TABULA
-// yet (see missingOSMIDs).
-func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, error) {
-	buildings, err := h.client.GetBuildingsByOSMIDs(ctx, country, osmIDs)
+// fetchLinked fetches the osm_ids' 3D attributes and indexes them by osm_id,
+// with the credits of their datasets. An osm_id absent from the result has no
+// PyLovo-linked building in City2TABULA yet (see missingOSMIDs).
+func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, []c2t.DatasetCredit, error) {
+	result, err := h.client.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	byOSMID := make(map[string]c2t.Building, len(buildings))
-	for _, b := range buildings {
+	credits := result.Attributions
+	if credits == nil {
+		credits = []c2t.DatasetCredit{}
+	}
+	byOSMID := make(map[string]c2t.Building, len(result.Buildings))
+	for _, b := range result.Buildings {
 		if b.OSMID != "" {
 			byOSMID[b.OSMID] = b
 		}
 	}
-	return byOSMID, nil
+	return byOSMID, credits, nil
 }
 
 // missingOSMIDs returns the osm_ids in want that have no entry in got.
@@ -299,6 +307,7 @@ func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Build
 		}
 		out[osmID] = contracts.EnrichedBuilding{
 			ObjectID:                b.ObjectID,
+			DatasetID:               b.DatasetID,
 			MatchType:               b.MatchType,
 			TabulaVariantCode:       b.TabulaVariantCode,
 			DefaultConstructionYear: yearFor(b.TabulaVariantCode),

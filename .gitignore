@@ -3,7 +3,6 @@ node_modules/
 .env.production
 .env.docker
 heat.env
-package-lock.json
 *.log
 dist/
 .local

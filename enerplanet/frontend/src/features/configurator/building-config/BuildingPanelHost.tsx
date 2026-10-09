@@ -12,7 +12,7 @@ import type { FC } from 'react';
 
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
-import { CHANGE_STATEMENT, CHANGE_STATEMENT_URL, creditFor } from './dataCredits';
+import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID } from './credits';
 import { configuratorServices } from './heatClient';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
 import { useBuildingGeometry } from './useBuildingGeometry';
@@ -32,7 +32,7 @@ const Notice: FC<{ children: string }> = ({ children }) => (
 export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 
 const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited }> = ({ osmId, onExit, onEdited }) => {
-  const { building, loading, error, objectId, country } = useBuildingState(osmId);
+  const { building, loading, error, objectId, country, credits } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
 
   if (loading) return <Notice>Loading this building…</Notice>;
@@ -51,8 +51,6 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice>{geometryError}</Notice>;
 
-  const credit = creditFor(country);
-
   return (
     <>
       <Building3DView
@@ -61,22 +59,40 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
         onExit={exit}
         services={configuratorServices}
       />
-      {credit && (
+      {credits.length > 0 && (
         <div className="bg-card/80 text-muted-foreground pointer-events-auto absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded px-2 py-0.5 text-[11px]">
-          3D data:{' '}
-          <a href={credit.url} target="_blank" rel="noopener noreferrer" className="underline">
-            {credit.text}
-          </a>
-          , {credit.licence},{' '}
-          <a
-            href={CHANGE_STATEMENT_URL}
-            title={CHANGE_STATEMENT}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-dotted"
-          >
-            modified by City2TABULA
-          </a>
+          {credits.map((c) => {
+            const isTabula = c.dataset_id === TABULA_DATASET_ID;
+            return (
+              <div key={c.dataset_id}>
+                {isTabula ? 'Building type' : '3D data'}:{' '}
+                <a
+                  href={c.credit_url ?? c.terms_url ?? c.licence_url}
+                  title={isTabula ? c.changes : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {c.credit}
+                </a>
+                , {c.licence}
+                {!isTabula && (
+                  <>
+                    ,{' '}
+                    <a
+                      href={CHANGE_STATEMENT_URL}
+                      title={c.changes}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-dotted"
+                    >
+                      modified by City2TABULA
+                    </a>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </>

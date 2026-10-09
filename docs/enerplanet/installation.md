@@ -1,179 +1,131 @@
+---
+audience: developer
+---
+
 # Installation
 
-## System Requirements
-
-| Resource | Minimum | Recommended |
-|---|---|---|
-| OS | Ubuntu 20.04 / Windows 10 (WSL2) / macOS 12 | Ubuntu 22.04 LTS |
-| RAM | 8 GB | 16 GB |
-| Storage | 20 GB | 50 GB |
-| CPU | 4 cores | 8 cores |
-
-## Prerequisites
-
-=== "Ubuntu / Debian"
-
-    ```bash
-    sudo apt update && sudo apt upgrade -y
-    sudo apt install -y git curl wget make
-
-    # Docker
-    curl -fsSL https://get.docker.com | sudo sh
-    sudo usermod -aG docker $USER && newgrp docker
-
-    # Node.js 22
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-    sudo apt install -y nodejs
-
-    # Go 1.24
-    wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
-    sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
-    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc && source ~/.bashrc
-    ```
-
-=== "Windows (WSL2)"
-
-    1. Open PowerShell as Administrator and run `wsl --install`
-    2. Restart, then open an Ubuntu terminal
-    3. Follow the Ubuntu instructions above
-    4. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) with the WSL2 backend enabled
-
-## Clone and Setup
-
 ```bash
-git clone https://github.com/THD-Spatial/enerplanet.git
+git lfs install
+git clone https://github.com/enerplanet/enerplanet.git
 cd enerplanet
-docker network create building-simulation_default
 make setup
 ```
 
-The `docker network create` line is required until City2TABULA stops declaring
-that network as external. Without it `make setup` stops at the City2TABULA
-target and never reaches the test fixtures; see [Test Data](test-data.md).
+Open <http://localhost:8000> and sign in as `admin@example.de` / `12345678`.
+The map opens with two example models, one in Loenen and one in Bremen.
 
-The `make setup` command runs these steps automatically:
+## Prerequisites
 
-1. Clone platform-core, libs, and infrastructure sub-repositories
-2. Create `.env` files from `.env.example` templates
-3. Install npm and Go dependencies
-4. Pull Docker images (PostgreSQL, Redis, Keycloak)
-5. Start PostgreSQL and Redis
-6. Create the `spatialai` database
-7. Start Keycloak and configure the `spatialhub` realm
-8. Start auth-service and webservice
-9. Run database migrations and seed initial data
+Everything runs in Docker. The host needs only these:
 
-!!! note
-    When prompted for credentials, enter your repository access credentials. They are cached for 2 minutes.
+| Tool | Version | Check |
+|---|---|---|
+| Git | any recent | `git --version` |
+| Git LFS | 3.x | `git lfs version` |
+| GNU Make | any | `make --version` |
+| Docker Engine | any recent | `docker version` |
+| Docker Compose plugin | 2.24 or newer | `docker compose version` |
 
-## Start the Application
+The user running `make` must be able to run `docker` without `sudo`.
 
-After setup completes, start the backend and frontend in separate terminals:
+| Resource | Minimum |
+|---|---|
+| OS | Linux (amd64). Windows works through WSL2 with Docker Desktop. |
+| RAM | 8 GB, 16 GB recommended |
+| Free disk | 35 GB, see [Storage footprint](disk-footprint.md) |
+
+!!! warning "Install Git LFS before cloning"
+    The test fixtures are Git LFS objects. Without Git LFS a clone holds
+    pointer files of a few hundred bytes, and `make setup` stops at the first
+    fixture step with a `git lfs` error.
+
+!!! note "Docker Desktop needs host networking turned on"
+    The backend container and the helper scripts use host networking. Docker
+    Desktop supports it from 4.34, under Settings, Resources, Network, "Enable
+    host networking". Docker Engine on Linux needs nothing.
+
+## What `make setup` does
+
+`make setup` takes 10 to 30 minutes on the first run, most of it image
+downloads and builds. It can be re-run: each step skips what already exists,
+so after a failure fix the cause and run `make setup` again.
+
+1. Clones the submodules and the service checkouts under `dependencies/`.
+2. Creates every `.env` from its `.env.example`.
+3. Starts PostgreSQL, Redis, Keycloak, auth-service and webservice.
+4. Builds the app image and runs the database migrations and seed in it.
+5. Loads the PyLovo fixture, then starts PyLovo.
+6. Starts the heat services: TentaCron, ignis, City2TABULA, weather and BuEM.
+7. Loads the weather and City2TABULA fixtures.
+8. Starts the app on port 8000 and creates the example models.
+
+The last lines of a successful run are:
+
+```
+== 2 created, 0 skipped, 0 failed ==
+Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678
+```
+
+## Check the installation
 
 ```bash
-# Terminal 1 — Backend
-cd enerplanet/backend
-go run cmd/main.go
-# Listening on http://127.0.0.1:8000
-
-# Terminal 2 — Frontend
-cd enerplanet/frontend
-npm run dev
-# Listening on http://localhost:3000
+make smoke
 ```
 
-### Default Credentials
+This runs the heat workflow end to end against the running stack and ends with
+`== done: 0 failure(s) ==`. It takes one to two minutes.
 
-!!! warning "Development only"
-    These credentials are seeded by `make setup` for local development. **Change both before any non-local deployment.**
+## Everyday commands
 
-```
-Email:    admin@example.com
-Password: 12345678
-```
+| Command | Does |
+|---|---|
+| `make up` | Start every service, rebuilding the app image if the code changed; also the command after a reboot |
+| `make down` | Stop the platform services, PyLovo and the app; the heat services keep running |
+| `make logs` | Follow the platform service logs |
+| `docker logs -f energy-backend` | Follow the app logs |
+| `make migrate` | Run the database migrations |
+| `make seed` | Seed the database |
+| `make fixtures` | Load any fixture that is missing; never overwrites |
+| `make fixtures-reload` | Drop the fixture databases and load the fixtures afresh |
+| `make example-models` | Create the example models that are missing |
+| `make smoke` | Run the heat workflow smoke test |
+
+The fixtures, the regions they cover and how they are regenerated are described
+in [Test Data](test-data.md).
 
 ## Service URLs
 
 | Service | URL |
 |---|---|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| Keycloak Admin | http://localhost:8080 |
+| App (frontend and API) | <http://localhost:8000> |
+| Keycloak admin | <http://localhost:8080/keycloak> |
+| TentaCron | <http://localhost:8400> |
+| PyLovo | <http://localhost:8086> |
 
-## PyLovo Setup
+!!! warning "Development credentials"
+    `admin@example.de` / `12345678` is seeded for local development only.
+    Change it before any non-local deployment.
 
-PyLovo runs as a separate Docker service. See the [PyLovo Quickstart](../pylovo/quickstart.md) for setup instructions.
+## Developing with hot reload
 
-## Makefile Reference
-
-```bash
-make setup              # Full first-time setup
-make up                 # Start all platform services
-make down               # Stop all platform services
-make up-enerplanet      # Start backend + frontend containers
-make down-enerplanet    # Stop backend + frontend containers
-make migrate            # Run database migrations
-make seed               # Seed initial data
-make install            # Reinstall npm + Go dependencies
-make logs               # View platform logs
-```
-
-## Environment Configuration
-
-**`enerplanet/backend/.env`**
+`make setup` runs the app from a production build, so a code change needs
+`make up` to rebuild it. For live reload, run the backend and frontend on the
+host instead. This needs Go 1.24, Node.js 22 and tmux on the host.
 
 ```bash
-APP_NAME=Enerplanet
-APP_ENV=development
-APP_PORT=8000
-DB_HOST=localhost
-DB_PORT=5433
-DB_DATABASE=spatialai
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-REDIS_HOST=localhost
-REDIS_PORT=6379
-KEYCLOAK_URL=http://localhost:8080
-KEYCLOAK_REALM=spatialhub
-KEYCLOAK_CLIENT_ID=spatialhub
-KEYCLOAK_CLIENT_SECRET=
-AUTH_SERVICE_URL=http://localhost:8001
-WEBSERVICE_SERVICE_URL=http://localhost:8082
-PYLOVO_SERVICE_URL=http://localhost:8086
+make install                  # npm and Go dependencies
+docker stop energy-backend    # frees port 8000
+make dev-bg                   # backend on :8000, Vite on :3000, in tmux
 ```
 
-**`enerplanet/frontend/.env`**
-
-```bash
-VITE_API_URL=http://localhost:8000/api
-VITE_KEYCLOAK_URL=http://localhost:8080
-VITE_KEYCLOAK_REALM=spatialhub
-VITE_KEYCLOAK_CLIENT_ID=spatialhub
-```
+The frontend is then on <http://localhost:3000>. `make clean-bg` stops both;
+`make up` starts the container again.
 
 ## Troubleshooting
 
-**Docker permission denied**
-```bash
-sudo usermod -aG docker $USER && newgrp docker
-```
-
-**Port already in use**
-```bash
-lsof -i :8000          # Find the process
-kill -9 <PID>          # Stop it
-```
-
-**Database connection failed**
-```bash
-docker ps | grep postgres
-docker logs postgres --tail 50
-make stop-postgres && make start-postgres
-```
-
-**npm install errors**
-```bash
-npm cache clean --force
-rm -rf node_modules && npm install
-```
+| Symptom | Cause | Fix |
+|---|---|---|
+| `permission denied while trying to connect to the Docker daemon socket` | The user is not in the `docker` group | `sudo usermod -aG docker $USER`, then log out and in again |
+| `Bind for 0.0.0.0:5433 failed: port is already allocated`, or the same for another port | Another process or an older stack holds the port | Stop it; `docker ps` lists containers by port |
+| `git: 'lfs' is not a git command` | Git LFS is not installed | Install it, run `git lfs install`, then `make setup` again |
+| `FAIL  city2tabula: container city2tabula-db is not running` | City2TABULA was not started | `make city2tabula`, then `make fixtures` |

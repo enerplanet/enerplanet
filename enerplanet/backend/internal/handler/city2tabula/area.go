@@ -48,11 +48,12 @@ func (h *Handler) EnrichArea(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	buildings, err := h.client.GetBuildingsInBBox(ctx, country, bbox)
+	result, err := h.client.GetBuildingsInBBox(ctx, country, bbox)
 	if err != nil {
 		writeC2TError(c, country, err)
 		return
 	}
+	buildings := result.Buildings
 
 	byObjectID := make(map[string]c2t.Building, len(buildings))
 	objectIDs := make([]string, 0, len(buildings))
@@ -69,7 +70,7 @@ func (h *Handler) EnrichArea(c *gin.Context) {
 	// failing the request: the envelope data is still useful on its own.
 	footprints := make(map[string]([]byte), len(objectIDs))
 	if geometry, gerr := h.client.GetGeometryByObjectIDs(ctx, country, objectIDs); gerr == nil {
-		for _, g := range geometry {
+		for _, g := range geometry.Buildings {
 			if len(g.FootprintGeoJSON) > 0 {
 				footprints[g.ObjectID] = g.FootprintGeoJSON
 			}

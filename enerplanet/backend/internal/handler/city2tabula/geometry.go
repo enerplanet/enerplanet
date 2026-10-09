@@ -8,6 +8,8 @@ import (
 
 	"platform.local/common/pkg/httputil"
 
+	// Imported for the swag annotations below, which name contracts.ErrorResponse.
+	_ "spatialhub_backend/internal/api/contracts"
 	c2t "spatialhub_backend/internal/city2tabula"
 )
 
@@ -29,7 +31,7 @@ const maxGeometryObjectIDs = 1
 //	@Produce		json
 //	@Param			country		query		string	true	"Country name or ISO2 code"
 //	@Param			object_ids	query		string	true	"City2TABULA building object_id"
-//	@Success		200			{array}		c2t.BuildingGeometry
+//	@Success		200			{object}	c2t.GeometryResult
 //	@Failure		400			{object}	contracts.ErrorResponse
 //	@Failure		502			{object}	contracts.ErrorResponse
 //	@Security		SessionAuth
@@ -51,19 +53,21 @@ func (h *Handler) Geometry(c *gin.Context) {
 		return
 	}
 
-	geometries, err := h.client.GetSurfaceGeometryByObjectIDs(c.Request.Context(), country, objectIDs)
+	result, err := h.client.GetSurfaceGeometryByObjectIDs(c.Request.Context(), country, objectIDs)
 	if err != nil {
 		writeC2TError(c, country, err)
 		return
 	}
 
-	// An array even for one id, and an empty array rather than null for an
-	// unknown one: a caller that takes the first element keeps working if the
-	// single-building cap is ever lifted.
-	if geometries == nil {
-		geometries = []c2t.BuildingGeometry{}
+	// Empty arrays rather than null for an unknown id, so a caller can index
+	// buildings and look up attributions without a nil check.
+	if result.Buildings == nil {
+		result.Buildings = []c2t.BuildingGeometry{}
 	}
-	c.JSON(http.StatusOK, geometries)
+	if result.Attributions == nil {
+		result.Attributions = []c2t.DatasetCredit{}
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // splitObjectIDs reads the comma-separated object_ids parameter, dropping empty

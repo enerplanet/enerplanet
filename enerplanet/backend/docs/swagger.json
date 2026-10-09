@@ -132,6 +132,57 @@
                 }
             }
         },
+        "/v1/buem/building": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs one building through BuEM with the envelope the caller supplies, and returns\nBuEM's block for it including the hourly series. Unlike a model run, the envelope\nis taken from the request rather than looked up in City2TABULA, so a building that\nhas no 3D match, or whose surfaces a user has edited, can still be run. The\nbuilding block is forwarded to buem-gateway as sent and must be complete: no\nU-value resolution or archetype default is applied here. The one addition: a block\nthat sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.\nweather_provider selects the weather archive; omitted, the backend default applies.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for a single building",
+                "parameters": [
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/city2tabula/enrich": {
             "post": {
                 "security": [
@@ -139,7 +190,7 @@
                         "SessionAuth": []
                     }
                 ],
-                "description": "Given a drawn area (country, its PyLovo osm_ids, and the bbox) returns a per-osm_id\nmerge map of BuEM envelope data. Returns 200 \"completed\" when every osm_id is already\nlinked, or 202 \"running\" with a run_id when a bbox-scoped pipeline run was triggered\n(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.",
+                "description": "Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)\nreturns a per-osm_id\nmerge map of BuEM envelope data. Returns 200 \"completed\" when every osm_id is already\nlinked, or 202 \"running\" with a run_id when a bbox-scoped pipeline run was triggered\n(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.",
                 "consumes": [
                     "application/json"
                 ],
@@ -304,6 +355,59 @@
                 }
             }
         },
+        "/v1/city2tabula/geometry": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the building's footprint and every envelope surface polygon, for\nrendering it in 3D. Surface ids are the City2TABULA surface row ids that the\nBuEM envelope elements carry, so a clicked face resolves back to its element\nwithout a second lookup. Geometry is in the country's storage CRS, not WGS84.\nOne building per call.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Envelope surface geometry for a building",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Country name or ISO2 code",
+                        "name": "country",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "City2TABULA building object_id",
+                        "name": "object_ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.GeometryResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/heat-demand/resolve": {
             "post": {
                 "security": [
@@ -430,6 +534,111 @@
                 }
             }
         },
+        "/v2/ignis/calculate/{code}": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs ignis's EN ISO 13790 pipeline for a variant code, with any TABULA inputs the\ncaller overrides in the body. Returns the annual specific heat demand.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Run the TABULA annual heat-demand calculation for a variant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL.N.SFH.05.Gen.ReEx.001.001",
+                        "description": "TABULA variant code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "TABULA input overrides",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/ignis/data/{code}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every TABULA input for a variant code: the U-values, areas and\nappearance parameters the configurator shows and edits.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Get one TABULA variant's full record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL.N.SFH.05.Gen.ReEx.001.001",
+                        "description": "TABULA variant code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/ignis/fields": {
             "get": {
                 "security": [
@@ -483,6 +692,69 @@
                         "description": "ISO 3166-1 alpha-2 country code",
                         "name": "country_iso2",
                         "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/ignis/variants/{country_iso2}/match": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Resolves a construction year to its TABULA period and returns that period's\nrefurbishment variants for the building type, existing state first. This is the\nlist behind the building configurator's refurbishment-level selector.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "List the TABULA refurbishment variants matching a building",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL",
+                        "description": "ISO 3166-1 alpha-2 country code",
+                        "name": "country_iso2",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "SFH",
+                        "description": "TABULA building type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "example": 1975,
+                        "description": "Construction year",
+                        "name": "year",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -572,6 +844,11 @@
             "properties": {
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "dataset_id": {
+                    "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
+                    "type": "string",
+                    "example": "nl-3dbag-loenen"
                 },
                 "default_construction_year": {
                     "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
@@ -688,6 +965,62 @@
                 "n_storeys": {
                     "type": "integer",
                     "example": 3
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest": {
+            "type": "object",
+            "properties": {
+                "building": {
+                    "type": "object"
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2018-12-31T23:00:00Z"
+                },
+                "geometry": {
+                    "type": "object"
+                },
+                "model_id": {
+                    "type": "string",
+                    "example": "42"
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                },
+                "resolution": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "solver": {
+                    "description": "Solver is BuEM's solver block, forwarded as properties.buem.solver;\nomitted, BuEM uses its default solver.",
+                    "type": "object"
+                },
+                "start_date": {
+                    "type": "string",
+                    "example": "2018-01-01T00:00:00Z"
+                },
+                "weather_provider": {
+                    "description": "WeatherProvider is the model's weather archive, so the run uses the same\nseries as the model run; omitted, the backend default applies.",
+                    "type": "string",
+                    "enum": [
+                        "cosmo-rea6",
+                        "era5-land",
+                        "merra-2"
+                    ],
+                    "example": "cosmo-rea6"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "type": "object"
+                },
+                "osm_id": {
+                    "type": "string"
                 }
             }
         },
@@ -817,6 +1150,18 @@
         "spatialhub_backend_internal_api_contracts.EnrichResponse": {
             "type": "object",
             "properties": {
+                "attributions": {
+                    "description": "Attributions credits every dataset the buildings in data come from, and\nTABULA when any of them carries a TABULA type, as City2TABULA returns them.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit"
+                    }
+                },
+                "country": {
+                    "description": "Country is the database the buildings came from, as given or resolved\nfrom the bbox centre; GET /v1/city2tabula/geometry takes the same value.",
+                    "type": "string",
+                    "example": "netherlands"
+                },
                 "data": {
                     "type": "object",
                     "additionalProperties": {
@@ -855,6 +1200,11 @@
             "properties": {
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "dataset_id": {
+                    "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
+                    "type": "string",
+                    "example": "nl-3dbag-loenen"
                 },
                 "default_construction_year": {
                     "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
@@ -1262,6 +1612,61 @@
                 }
             }
         },
+        "spatialhub_backend_internal_city2tabula.BuildingGeometry": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {
+                    "type": "string"
+                },
+                "footprint_geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "object_id": {
+                    "type": "string"
+                },
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.SurfaceGeometry"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.DatasetCredit": {
+            "type": "object",
+            "properties": {
+                "changes": {
+                    "type": "string"
+                },
+                "credit": {
+                    "type": "string"
+                },
+                "credit_url": {
+                    "type": "string"
+                },
+                "dataset": {
+                    "type": "string"
+                },
+                "dataset_id": {
+                    "type": "string"
+                },
+                "licence": {
+                    "type": "string"
+                },
+                "licence_url": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "terms_url": {
+                    "type": "string"
+                }
+            }
+        },
         "spatialhub_backend_internal_city2tabula.EnvelopeElement": {
             "type": "object",
             "properties": {
@@ -1295,6 +1700,23 @@
                 }
             }
         },
+        "spatialhub_backend_internal_city2tabula.GeometryResult": {
+            "type": "object",
+            "properties": {
+                "attributions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit"
+                    }
+                },
+                "buildings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.BuildingGeometry"
+                    }
+                }
+            }
+        },
         "spatialhub_backend_internal_city2tabula.Quantity": {
             "type": "object",
             "properties": {
@@ -1305,6 +1727,23 @@
                 "value": {
                     "type": "number",
                     "example": 30
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.SurfaceGeometry": {
+            "type": "object",
+            "properties": {
+                "geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         }

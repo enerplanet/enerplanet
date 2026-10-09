@@ -72,7 +72,8 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 
 	envelopeByOSMID := map[string]city2tabula.Building{
 		"111": {
-			OSMID: "111",
+			OSMID:        "111",
+			FloorAreaSqm: floatPtr(80),
 			Surfaces: []city2tabula.Surface{
 				{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)},
 			},
@@ -180,9 +181,9 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
+				return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1}],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1},{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-trigger-run":
 			runTriggered = true
 			return 200, `{"run_id":"run1","country":"germany","status":"pending"}`
@@ -211,7 +212,7 @@ func TestResolveEnvelope_FullCoverageSkipsRun(t *testing.T) {
 		if target != "c2t-buildings" {
 			t.Fatalf("no run should be triggered when all needed buildings are already linked; got target %s", target)
 		}
-		return 200, `[{"object_id":"DE1","osm_id":"111","match_type":1}]`
+		return 200, `{"buildings":[{"object_id":"DE1","osm_id":"111","match_type":1}],"attributions":[]}`
 	})
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
@@ -421,7 +422,7 @@ func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
 		},
 	}}}
 	envelopeByOSMID := map[string]city2tabula.Building{"555": {
-		OSMID: "555", NumberOfStoreys: &storeys, TabulaVariantCode: &code,
+		OSMID: "555", NumberOfStoreys: &storeys, TabulaVariantCode: &code, FloorAreaSqm: floatPtr(150),
 		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}},
 	}}
 
@@ -442,7 +443,7 @@ func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
 func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
 	code := "NL.N.AB.03.Gal.ReEx.001.001"
 	envelope := func(osmID string) city2tabula.Building {
-		return city2tabula.Building{OSMID: osmID, TabulaVariantCode: &code,
+		return city2tabula.Building{OSMID: osmID, TabulaVariantCode: &code, FloorAreaSqm: floatPtr(900),
 			Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}}}
 	}
 	node := func(osmID, fClass string) map[string]interface{} {
@@ -464,29 +465,30 @@ func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
 	}
 	cooking := cookingSettings{Carrier: CookingElectric, IncludeDHW: true}
 
+	// The archetype code is AB, for which BuEM requires residential_units, so
+	// a count of 0 or 1 is sent as one dwelling.
 	for _, tt := range []struct {
 		name       string
 		apartments int
 		fClass     string
-		want       interface{} // nil = omitted
+		wantUnits  int // 0 = omitted
 	}{
-		{"block of 15", 15, "apartments", float64(15)},
-		{"single dwelling", 1, "detached", nil},
-		{"unknown count", 0, "apartments", nil},
-		{"service building ignores the count", 15, "bakery", nil},
+		{"block of 15", 15, "apartments", 15},
+		{"single dwelling", 1, "detached", 1},
+		{"unknown count", 0, "apartments", 1},
+		{"service building ignores the count", 15, "bakery", 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1, Apartments: tt.apartments}}
 			buildings, resolved, _ := buildingsForBuem(context.Background(), client, "netherlands",
 				[]interface{}{node("1", tt.fClass)}, map[string]city2tabula.Building{"1": envelope("1")}, ignis.RefurbishmentExisting, cooking)
 			got := block(buildings, "1")
-			if tt.want == nil {
+			if tt.wantUnits == 0 {
 				assert.NotContains(t, got, "residential_units")
-				assert.Equal(t, 0, resolved["1"].ResidentialUnits)
 			} else {
-				assert.Equal(t, tt.want, got["residential_units"])
-				assert.Equal(t, tt.apartments, resolved["1"].ResidentialUnits)
+				assert.Equal(t, float64(tt.wantUnits), got["residential_units"])
 			}
+			assert.Equal(t, tt.wantUnits, resolved["1"].ResidentialUnits)
 		})
 	}
 }
@@ -499,9 +501,9 @@ func TestResolveEnvelope_RecordedRunIsPolledNotRetriggered(t *testing.T) {
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[]`
+				return 200, `{"buildings":[],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-run-status":
 			return 200, `{"run_id":"recorded-1","country":"germany","status":"completed"}`
 		}
@@ -526,9 +528,9 @@ func TestResolveEnvelope_TriggeredRunIsRecorded(t *testing.T) {
 		switch target {
 		case "c2t-buildings":
 			if atomic.AddInt32(&buildingsCalls, 1) == 1 {
-				return 200, `[]`
+				return 200, `{"buildings":[],"attributions":[]}`
 			}
-			return 200, `[{"object_id":"DE2","osm_id":"222","match_type":1}]`
+			return 200, `{"buildings":[{"object_id":"DE2","osm_id":"222","match_type":1}],"attributions":[]}`
 		case "c2t-trigger-run":
 			return 200, `{"run_id":"run-9","country":"germany","status":"pending"}`
 		case "c2t-run-status":

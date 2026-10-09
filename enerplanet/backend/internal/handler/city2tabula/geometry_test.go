@@ -13,14 +13,15 @@ import (
 	c2t "spatialhub_backend/internal/city2tabula"
 )
 
-const surfaceGeometry = `[
-  {"object_id":"DE.A",
+const surfaceGeometry = `{"buildings": [
+  {"object_id":"DE.A", "dataset_id": "de-hb-lod2",
    "footprint_geojson":{"type":"MultiPolygon","coordinates":[[[[486100.0,5882100.0]]]]},
    "surfaces":[
      {"id":"s-1","type":"WallSurface","area":12.5,"azimuth":94.4,"tilt":0},
      {"id":"s-2","type":"RoofSurface","area":31.0,"azimuth":180.0,"tilt":35}
    ]}
-]`
+],
+ "attributions": [{"dataset_id":"de-hb-lod2","provider":"p","dataset":"d","licence":"CC-BY-4.0","licence_url":"https://creativecommons.org/licenses/by/4.0/","credit":"Quellenvermerk: Landesamt GeoInformation Bremen","changes":"derived"}]}`
 
 func getGeometry(t *testing.T, h *Handler, query string) *httptest.ResponseRecorder {
 	t.Helper()
@@ -31,33 +32,36 @@ func getGeometry(t *testing.T, h *Handler, query string) *httptest.ResponseRecor
 	return w
 }
 
-// TestGeometry_ReturnsSurfacesUnwrapped covers the shape the configurator
-// depends on: a bare array, not a {data:...} envelope, with the surface ids
-// that BuEM envelope elements carry.
-func TestGeometry_ReturnsSurfacesUnwrapped(t *testing.T) {
+// TestGeometry_ReturnsSurfacesAndCredits covers the shape the configurator
+// depends on: City2TABULA's {buildings, attributions} passed through, with the
+// surface ids that BuEM envelope elements carry and the dataset credit.
+func TestGeometry_ReturnsSurfacesAndCredits(t *testing.T) {
 	fake := &fakeC2T{geometryJSON: surfaceGeometry}
 	h := &Handler{client: fake.client(t)}
 
 	w := getGeometry(t, h, "country=germany&object_ids=DE.A")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	var got []c2t.BuildingGeometry
-	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got), "the body is a bare array")
-	require.Len(t, got, 1)
-	assert.Equal(t, "DE.A", got[0].ObjectID)
-	require.Len(t, got[0].Surfaces, 2)
+	var got c2t.GeometryResult
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	require.Len(t, got.Buildings, 1)
+	assert.Equal(t, "DE.A", got.Buildings[0].ObjectID)
+	assert.Equal(t, "de-hb-lod2", got.Buildings[0].DatasetID)
+	require.Len(t, got.Buildings[0].Surfaces, 2)
+	require.Len(t, got.Attributions, 1)
+	assert.Equal(t, "Quellenvermerk: Landesamt GeoInformation Bremen", got.Attributions[0].Credit)
 }
 
-// TestGeometry_UnknownBuildingIsAnEmptyArray keeps a caller that indexes the
-// first element from having to distinguish null from a miss.
-func TestGeometry_UnknownBuildingIsAnEmptyArray(t *testing.T) {
-	fake := &fakeC2T{geometryJSON: `[]`}
+// TestGeometry_UnknownBuildingIsEmptyArrays keeps a caller that indexes the
+// first building from having to distinguish null from a miss.
+func TestGeometry_UnknownBuildingIsEmptyArrays(t *testing.T) {
+	fake := &fakeC2T{geometryJSON: `{"buildings":[],"attributions":[]}`}
 	h := &Handler{client: fake.client(t)}
 
 	w := getGeometry(t, h, "country=germany&object_ids=nope")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.JSONEq(t, `[]`, w.Body.String())
+	assert.JSONEq(t, `{"buildings":[],"attributions":[]}`, w.Body.String())
 }
 
 func TestGeometry_RejectsMissingAndOversizedParams(t *testing.T) {

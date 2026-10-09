@@ -39,11 +39,8 @@ func variantTypeAndPeriod(code string) (buildingType, period string) {
 // (building_type selects BuEM's residential occupancy model; a value outside
 // SFH/TH/MFH/AB would route the building through BuEM's service-building
 // branch, so anything else is omitted). A field is left out whenever
-// City2TABULA has no value for it, so BuEM applies its own default instead
-// of receiving a made-up number.
-//
-// A_ref is deliberately not sent: BuEM derives it from the floor elements
-// and its residential occupancy model does not read it.
+// City2TABULA has no value for it. The fields BuEM requires (building_type,
+// country, A_ref) are completed by buildingForBuem.
 func buildingScalars(b city2tabula.Building) map[string]interface{} {
 	out := map[string]interface{}{}
 	if b.NumberOfStoreys != nil && *b.NumberOfStoreys >= 1 {

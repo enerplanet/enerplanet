@@ -14,18 +14,22 @@ City2TABULA changes every 3D extract below in the same way, stated here once:
 
 Its processing is documented at https://thd-spatial-ai.github.io/city2tabula/code/sql-pipeline/.
 
-## fixtures/city2tabula/city2tabula_loenen.sql.gz
+## fixtures/city2tabula/city2tabula_loenen.sql.gz and lod2/netherlands/3dbag/
 
 Derived from the 3DBAG dataset, licensed CC BY 4.0
 (https://creativecommons.org/licenses/by/4.0/).
 
 > (c) 3DBAG by tudelft3d and 3DGI — https://docs.3dbag.nl/en/copyright/
 
-Modifications: building envelope attributes and surface geometry were
-extracted from the source CityGML by City2TABULA for the area around Loenen
-covered by postcode 7371, then linked to PyLovo buildings. 3,106 buildings and
-53,043 surfaces. The pipeline intermediates were emptied, leaving the served
-tables only. This is derived data, not a redistribution of 3DBAG itself.
+Modifications: an excerpt of 3DBAG for the box 6.01175 52.09877 to 6.03662
+52.11506 (EPSG:4326) around Loenen, selected by footprint centroid and limited
+to the 737 buildings that also exist in the PyLovo fixture, exported as
+CityJSON 2.0 and compressed (`lod2/netherlands/3dbag/cityjson/loenen.json.gz`).
+City2TABULA imported the part of the box south of latitude 52.11099, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 333 buildings and 6,778 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+3DBAG.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
@@ -56,7 +60,7 @@ German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
 Austrian 2018 annual archive, and 4 by 4 cells around Brno, Czechia, from the
 Czech 2018 annual archive. Full year, hourly, 13 variables each.
 
-## fixtures/city2tabula/tabula_nl.sql.gz, tabula_de.sql.gz, tabula_at.sql.gz and tabula_cz.sql.gz
+## The TABULA archetypes in the four City2TABULA dumps
 
 The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,
 produced in the Intelligent Energy Europe projects TABULA and EPISCOPE.
@@ -69,11 +73,13 @@ non-exclusive use of the files and datasets on condition that the credit
 above is visibly cited as the source.
 
 Modifications: the per-country archetype rows City2TABULA imports into its
-`tabula` schema, extracted as the Dutch set (135 rows), the German set (232
-rows), the Austrian set (165 rows) and the Czech set (84 rows) and recompressed.
-No values were altered.
+`tabula` schema, carried in each dump: the Dutch set (135 rows) in
+`city2tabula_loenen.sql.gz`, the German set (232 rows) in
+`city2tabula_bremen.sql.gz`, the Austrian set (165 rows) in
+`city2tabula_vienna.sql.gz` and the Czech set (84 rows) in
+`city2tabula_brno.sql.gz`. No values were altered.
 
-## fixtures/city2tabula/city2tabula_bremen.sql.gz
+## fixtures/city2tabula/city2tabula_bremen.sql.gz and lod2/germany/bremen/
 
 Derived from `3D-Gebäudemodell LoD2 Land Bremen`, licensed CC BY 4.0
 (https://creativecommons.org/licenses/by/4.0/).
@@ -94,16 +100,19 @@ records that no access restrictions apply:
     alone concluded no licence existed and blocked redistribution of this
     fixture.
 
-Modifications: building envelope attributes and surface geometry were
-extracted from the source CityGML by City2TABULA for one LoD2 tile,
-`LoD2_32_486_5882_2_HB`, covering the box 8.7909 53.0873 to 8.8208 53.1053 in
-Bremen, then linked to PyLovo buildings and recompressed. 9,284 buildings and
-137,276 surfaces. The pipeline intermediates were emptied, leaving the served
-tables only. This is derived data, not a redistribution of the source model.
+Modifications: an excerpt of the source model for the box 8.79239 53.09770 to
+8.80586 53.10312 (EPSG:4326) in Bremen, selected by footprint centroid and
+limited to the 836 buildings that also exist in the PyLovo fixture, exported as
+CityGML 1.0 and compressed (`lod2/germany/bremen/gml/bremen.gml.gz`).
+City2TABULA imported the part of the box west of longitude 8.79613, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 419 buildings and 7,440 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/city2tabula/city2tabula_vienna.sql.gz
+## fixtures/city2tabula/city2tabula_vienna.sql.gz and lod2/austria/vienna/
 
 Derived from `Generalisiertes Dachmodell (LOD2.1)` in CityGML, by Stadt Wien
 (MA 41 Stadtvermessung und Geoinformation), licensed CC BY 4.0
@@ -116,16 +125,19 @@ https://www.wien.gv.at/stadtplanung/generalisiertes-dachmodell, and the credit
 wording in the Vienna open data terms of use,
 https://digitales.wien.gv.at/ogd-nutzungsbedingungen/.
 
-Modifications: building envelope attributes and surface geometry were
-extracted from the source CityGML by City2TABULA for the area of postcodes
-1010, 1070, 1080 and 1090 covered by `fixtures/pylovo/vienna_coverage.wkt`,
-then linked to PyLovo buildings and recompressed. 1,318 buildings and 95,807
-surfaces. The pipeline intermediates were emptied, leaving the served tables
-only. This is derived data, not a redistribution of the source model.
+Modifications: an excerpt of the source model for the box 16.33877 48.20692 to
+16.35360 48.21506 (EPSG:4326) in Vienna, selected by footprint centroid and
+limited to the 927 buildings that also exist in the PyLovo fixture, exported as
+CityGML 1.0 and compressed (`lod2/austria/vienna/gml/vienna.gml.gz`).
+City2TABULA imported the part of the box west of longitude 16.34686, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 514 buildings and 39,295 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
 
-## fixtures/city2tabula/city2tabula_brno.sql.gz
+## fixtures/city2tabula/city2tabula_brno.sql.gz and lod2/czechia/brno/
 
 Derived from `3D model budov / 3D Building Model`, published by Statutární
 město Brno on its open data portal, data.brno.cz (dataset item
@@ -141,12 +153,15 @@ name substituted.
 Modifications: the photogrammetric LoD2 building model (captured 2020 to 2023,
 EPSG:5514) was converted from Esri FileGDB to CityJSON, grouping faces into
 buildings by `RUIAN_IBO` and mapping surface codes to ground, wall and roof
-surfaces. City2TABULA then extracted envelope attributes and surface geometry
-for the buildings whose footprint centroid lies in the box
-`fixtures/pylovo/brno_box.wkt` (16.603 49.190 to 16.613 49.200), linked them to
-PyLovo buildings and the result was recompressed. 778 buildings and 33,631
-surfaces. The pipeline intermediates were emptied, leaving the served tables
-only. This is derived data, not a redistribution of the source model.
+surfaces. From that, an excerpt for the box 16.60300 49.19000 to 16.61262
+49.19996 (EPSG:4326), selected by footprint centroid and limited to the 655
+buildings that also exist in the PyLovo fixture, was exported as CityJSON 2.0
+and compressed (`lod2/czechia/brno/cityjson/brno.json.gz`). City2TABULA
+imported the part of the box south of latitude 49.19430, extracted envelope
+attributes and surface geometry and linked the buildings to PyLovo: 370
+buildings and 20,648 surfaces. The database dump holds that import, including
+the imported source geometry. Both files redistribute an excerpt of the source
+model.
 
 ## fixtures/pylovo/pylovo_fixture.sql.gz, the example models and the smoke GeoJSON fixtures
 

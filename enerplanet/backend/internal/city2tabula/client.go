@@ -112,6 +112,7 @@ type Run struct {
 // that actually need to render it; nothing here does.
 type Building struct {
 	ObjectID          string    `json:"object_id"`
+	DatasetID         string    `json:"dataset_id"`
 	OSMID             string    `json:"osm_id"`
 	MatchType         int16     `json:"match_type"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
@@ -124,6 +125,28 @@ type Building struct {
 	FloorAreaSqm      *float64  `json:"area_total_floor,omitempty"`
 	TabulaVariantCode *string   `json:"tabula_variant_code,omitempty"`
 	Surfaces          []Surface `json:"surfaces,omitempty"`
+}
+
+// DatasetCredit is one source dataset's attribution as City2TABULA returns it
+// next to the data derived from it. Callers pass it on unchanged.
+type DatasetCredit struct {
+	DatasetID  string `json:"dataset_id"`
+	Provider   string `json:"provider"`
+	Dataset    string `json:"dataset"`
+	Licence    string `json:"licence"`
+	LicenceURL string `json:"licence_url"`
+	Credit     string `json:"credit"`
+	CreditURL  string `json:"credit_url,omitempty"`
+	TermsURL   string `json:"terms_url,omitempty"`
+	Changes    string `json:"changes"`
+}
+
+// BuildingsResult is GET /api/v1/buildings: the buildings and the credit of
+// every dataset they come from, TABULA's included when any building carries a
+// TABULA type.
+type BuildingsResult struct {
+	Buildings    []Building      `json:"buildings"`
+	Attributions []DatasetCredit `json:"attributions"`
 }
 
 // Surface is one envelope surface (wall, roof, or ground) belonging to a
@@ -189,21 +212,20 @@ func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
 // GetBuildingsByOSMIDs returns 3D attributes for buildings already matched to
 // a PyLovo building via building_link. OSMID and MatchType are populated on
 // every result, so callers join the response back to their own topology nodes
-// by osm_id. An empty match set comes back as JSON null and decodes to a nil
-// slice.
-func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) ([]Building, error) {
+// by osm_id.
+func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) (BuildingsResult, error) {
 	if len(osmIDs) == 0 {
-		return nil, nil
+		return BuildingsResult{}, nil
 	}
 	payload := map[string]any{
 		"country": normalizeCountry(country),
 		"osm_ids": strings.Join(osmIDs, ","),
 	}
-	var buildings []Building
-	if err := c.tc.Do(ctx, targetBuildings, payload, &buildings); err != nil {
-		return nil, asC2TError(err)
+	var result BuildingsResult
+	if err := c.tc.Do(ctx, targetBuildings, payload, &result); err != nil {
+		return BuildingsResult{}, asC2TError(err)
 	}
-	return buildings, nil
+	return result, nil
 }
 
 // GetCoverage returns City2TABULA's coverage count for bbox. Unlike
@@ -238,16 +260,16 @@ func (c *Client) GetCoverage(ctx context.Context, country string, bbox Bbox) (in
 //
 // Read with GetCoverage the count separates "no 3D data here" from "3D data
 // here that the link step has not been run over".
-func (c *Client) GetBuildingsInBBox(ctx context.Context, country string, bbox Bbox) ([]Building, error) {
+func (c *Client) GetBuildingsInBBox(ctx context.Context, country string, bbox Bbox) (BuildingsResult, error) {
 	payload := map[string]any{
 		"country": normalizeCountry(country),
 		"xmin":    bbox.Xmin, "ymin": bbox.Ymin, "xmax": bbox.Xmax, "ymax": bbox.Ymax,
 	}
-	var buildings []Building
-	if err := c.tc.Do(ctx, targetBuildings, payload, &buildings); err != nil {
-		return nil, asC2TError(err)
+	var result BuildingsResult
+	if err := c.tc.Do(ctx, targetBuildings, payload, &result); err != nil {
+		return BuildingsResult{}, asC2TError(err)
 	}
-	return buildings, nil
+	return result, nil
 }
 
 // SurfaceGeometry is one envelope surface's polygon, keyed by the same surface
@@ -277,14 +299,22 @@ type SurfaceGeometry struct {
 // the same case.
 type BuildingGeometry struct {
 	ObjectID         string            `json:"object_id"`
+	DatasetID        string            `json:"dataset_id"`
 	FootprintGeoJSON json.RawMessage   `json:"footprint_geojson,omitempty"`
 	Surfaces         []SurfaceGeometry `json:"surfaces,omitempty"`
+}
+
+// GeometryResult is GET /api/v1/geometry: the geometries and the credit of
+// every dataset they come from. It never carries TABULA's credit.
+type GeometryResult struct {
+	Buildings    []BuildingGeometry `json:"buildings"`
+	Attributions []DatasetCredit    `json:"attributions"`
 }
 
 // GetGeometryByObjectIDs returns footprints for the given building object ids.
 // Buildings carry no geometry in the other responses, so this is the only way
 // to place them on a map.
-func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
+func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
 	return c.getGeometry(ctx, country, objectIDs, false)
 }
 
@@ -295,15 +325,15 @@ func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, obj
 // TentaCron fails a job whole when a response exceeds upstream.max_response_bytes,
 // so an area would fail on its largest buildings with nothing in the request
 // predicting which those are.
-func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) ([]BuildingGeometry, error) {
+func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
 	return c.getGeometry(ctx, country, objectIDs, true)
 }
 
 // getGeometry backs both variants. Unconsumed payload fields reach City2TABULA
 // as query parameters, so include travels without any target configuration.
-func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []string, withSurfaces bool) ([]BuildingGeometry, error) {
+func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []string, withSurfaces bool) (GeometryResult, error) {
 	if len(objectIDs) == 0 {
-		return nil, nil
+		return GeometryResult{}, nil
 	}
 	payload := map[string]any{
 		"country":    normalizeCountry(country),
@@ -312,9 +342,9 @@ func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []st
 	if withSurfaces {
 		payload["include"] = "surfaces"
 	}
-	var geometry []BuildingGeometry
-	if err := c.tc.Do(ctx, targetGeometry, payload, &geometry); err != nil {
-		return nil, asC2TError(err)
+	var result GeometryResult
+	if err := c.tc.Do(ctx, targetGeometry, payload, &result); err != nil {
+		return GeometryResult{}, asC2TError(err)
 	}
-	return geometry, nil
+	return result, nil
 }
