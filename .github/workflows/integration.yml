@@ -1,0 +1,68 @@
+name: Integration
+
+# Builds the whole development stack on a fresh runner with `make setup`, the
+# way a new developer would, then runs the heat workflow smoke test against it
+# for every fixture site that has one.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - Makefile
+      - repos.conf
+      - .env.example
+      - fixtures/**
+      - enerplanet/**
+      - platform-core
+      - infrastructure
+      - libs
+      - .github/workflows/integration.yml
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  setup-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      # The images and LFS data need more than the runner's free disk; the
+      # preinstalled toolchains removed here are not used by the stack.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up the stack
+        id: setup
+        run: make setup
+
+      - name: Smoke test, loenen
+        run: SMOKE_SITE=loenen make smoke
+
+      - name: Smoke test, bremen
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: SMOKE_SITE=bremen make smoke
+
+      - name: Smoke test, brno
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: SMOKE_SITE=brno make smoke
+
+      - name: Container state and logs
+        if: ${{ failure() }}
+        run: |
+          docker ps -a
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            echo "::group::$c"
+            docker logs --tail 200 "$c" 2>&1
+            echo "::endgroup::"
+          done
