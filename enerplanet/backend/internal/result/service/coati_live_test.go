@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// findFixtureZip walks up from the current working directory to locate the real
-// MEME Calliope bundle at enerplanet/.local/dependencies/meme/results/calliope.zip.
+// findFixtureZip walks up from the working directory looking for a captured
+// MEME Calliope bundle, .local/dependencies/meme/results/calliope.zip.
 func findFixtureZip(t *testing.T) string {
 	t.Helper()
 	cwd, err := os.Getwd()
@@ -106,8 +106,8 @@ func TestLiveCoatiConvertRealCalliope(t *testing.T) {
 	assert.NotEmpty(t, doc.Coordinates, "real model locates its nodes")
 }
 
-// findPyPSAFixtureZip locates the real PyPSA bundle captured alongside
-// calliope.zip (enerplanet/.local/dependencies/meme/results/pypsa.zip).
+// findPyPSAFixtureZip locates the captured PyPSA bundle, pypsa.zip, beside
+// calliope.zip.
 func findPyPSAFixtureZip(t *testing.T) string {
 	t.Helper()
 	cwd, err := os.Getwd()

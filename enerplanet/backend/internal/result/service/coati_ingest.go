@@ -112,7 +112,7 @@ func appendUnique(slice []string, v string) []string {
 	return append(slice, v)
 }
 
-// mapCoatiDocument converts the Coati results document into the R2 small/summary
+// mapCoatiDocument converts the Coati results document into the small/summary result
 // shape (ParsedResults) so the ingest reuses deleteExistingResults and the
 // storeSmallResults transaction store funcs. Large per-timestep series are not
 // mapped — see the CoatiResultsDocument notes (they are deferred).
@@ -167,7 +167,7 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 		out.EnergyCap = append(out.EnergyCap, EnergyCap{Location: loc, Tech: tech, Value: value})
 	}
 
-	// power is true for installed POWER capacities (MW -> kW, the R2 contract)
+	// power is true for installed POWER capacities (MW -> kW, the unit of the result tables)
 	// and false for storage ENERGY capacities (MWh is not power and must not be
 	// scaled).
 	addCapacity := func(loc, tech string, value float64, power bool) {
@@ -293,7 +293,7 @@ func (s *ResultService) loadCableRatings(modelID uint) map[string]float64 {
 
 // IngestCoatiResult is the MEME result ingest: it extracts a stored MEME result
 // zip, runs Coati over the Calliope results.nc, maps the unified document into
-// the R2 small/summary tables, and writes a compact summary to model.results.
+// the small/summary result tables, and writes a compact summary to model.results.
 // Wire loading prefers the bundle's PyPSA network.nc when present.
 //
 // It follows the ProcessModelResult transaction pattern: deleteExistingResults
@@ -373,9 +373,9 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		return nil, fmt.Errorf("marshal Coati summary: %w", err)
 	}
 
-	// The Calliope leg writes long-format CSVs (already in R2 shape) beside the
+	// The Calliope leg writes long-format CSVs (already in the result tables' long format) beside the
 	// results.nc it was parsed from. They carry the per-location × per-tech ×
-	// per-timestep matrix the Coati document lacks, so the R2 time-series tables
+	// per-timestep matrix the Coati document lacks, so the time-series result tables
 	// are streamed from them (PyPSA-only bundles have no such dir → skipped).
 	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
 	techParents := make(map[string]string, len(doc.TechMetadata))
@@ -383,7 +383,7 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		techParents[tech] = meta.Parent
 	}
 
-	// Delete existing R2 rows, replace the ModelResult row, stream the
+	// Delete existing result rows, replace the ModelResult row, stream the
 	// time-series, and store the small/summary results atomically. The
 	// ModelResult row is what the results list + download endpoints read
 	// (GetModelResults / DownloadModelResult); the legacy power-flow path records
