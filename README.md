@@ -25,24 +25,18 @@ EnerPlanET lets planners and engineers design, simulate, and optimise local low-
 
 ## Quickstart
 
-**Prerequisites:** Docker 20.10+, Docker Compose 2.0+, Git with Git LFS.
+**Prerequisites:** Git, Git LFS, GNU Make and Docker with the Compose plugin 2.24+.
+Nothing else is installed on the host.
 
 ```bash
+git lfs install
 git clone https://github.com/enerplanet/enerplanet.git
 cd enerplanet
-git lfs pull
-docker network create building-simulation_default
-make setup
-
-// requires tmux starts frontend and backend in case vscode tasks aren't used.
-make dev-bg
+make setup    # 10 to 30 minutes on the first run
+make smoke    # optional: end-to-end check, ends with "0 failure(s)"
 ```
 
-> [!NOTE]
-> `make setup` creates the database, builds images, and starts all services. _(This might take a while)_
-> The `docker network create` line above is required until City2TABULA stops declaring that network as
-> external; without it `make setup` stops before loading the test fixtures. See
-> [Test Data](docs/enerplanet/test-data.md) for the detail.
+Then open http://localhost:8000.
 
 > [!CAUTION]
 > Default development credentials (change before any non-local deployment):
@@ -52,7 +46,7 @@ make dev-bg
 > Password: 12345678
 > ```
 
-See the [Installation Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/installation/) for full prerequisites, environment variables, and Keycloak configuration.
+See the [Installation Guide](https://enerplanet.github.io/enerplanet/docs/enerplanet/installation/) for prerequisites, everyday commands and troubleshooting.
 
 ---
 

@@ -2,7 +2,8 @@
 
 Small extracts that let the heat workflow run without any data pipeline: no
 weather download, no CityGML import, no grid generation. `make setup` loads
-them; `make fixtures` reloads them on a working checkout. Every file except
+them; `make fixtures` loads any that are missing, and `make fixtures-reload`
+replaces them all (see Reloading). Every file except
 the scripts is a Git LFS object, so install Git LFS before cloning.
 
 Credits and licence terms for every extract are in [ATTRIBUTION.md](ATTRIBUTION.md).
@@ -79,37 +80,16 @@ needs its own cut per site, in the layout weather-serve reads:
 
 `load.sh` skips a City2TABULA database that already exists and a PyLovo
 database whose `grid_result` has rows; `FORCE=1` replaces only the weather
-files. Reloading over existing data therefore means dropping the databases
-first. Run from the repository root:
+files. To replace everything with the committed fixtures, from the repository
+root:
 
-1. Fetch the current fixtures: `git pull && git lfs pull --include=fixtures`.
-2. Stop PyLovo with `make -C dependencies/enerplanet-pylovo down`. Its
-   `make dev` loads the full Bremen dump when `pylovo_db` is missing, so it
-   must stay down until step 5.
-3. Drop the City2TABULA databases, one per country, inside `city2tabula-db`:
+```bash
+git pull
+make fixtures-reload
+```
 
-   ```bash
-   for c in nl de at cz; do
-     docker exec city2tabula-db psql -U postgres -c "drop database if exists city2tabula_$c with (force)"
-   done
-   ```
-
-   The prefix is `C2T_DB_NAME`, default `city2tabula`.
-4. Drop the PyLovo database on the platform Postgres. The name and user are
-   `DBNAME` and `DBUSER` in `dependencies/enerplanet-pylovo/.env.docker`, the
-   port is `DB_PORT` in `enerplanet/backend/.env`:
-
-   ```bash
-   psql -h localhost -p 5433 -U postgres -d postgres -c 'drop database if exists pylovo_db with (force)'
-   ```
-
-5. Reload with `FORCE=1 make fixtures`. `city2tabula-db` must be running
-   (`make city2tabula`). Any `SKIP` line for `city2tabula` or `pylovo` means
-   its database was not dropped.
-6. Start PyLovo with `make pylovo`, and restart City2TABULA with
-   `make city2tabula`.
-
-**Steps 3 and 4 delete data.** Anything built locally in those databases, such
-as a full-country PyLovo grid, is lost.
+**This drops the City2TABULA databases (`city2tabula_nl`, `_de`, `_at`, `_cz`)
+and `pylovo_db`.** Anything built locally in them, such as a full-country PyLovo
+grid, is lost.
 
 To reload one set, drop only its database and run `fixtures/load.sh <set>`.

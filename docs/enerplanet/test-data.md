@@ -23,7 +23,8 @@ Budget 27 GB of disk, and 35 GB to work in comfortably. The figures below
 were measured on amd64 Linux on 2026-09-27 and drift as base images change, so
 treat them as an order of magnitude.
 
-About 2.2 GB is the checkout, and `npm install` adds 1 GB of `node_modules`.
+About 2.2 GB is the checkout. `make install`, needed only for hot-reload
+development, adds 1 GB of `node_modules`.
 enerplanet-pylovo accounts for 1.6 GB of it, most of that LFS history. The
 fixtures are 39 MB. simulation-engine is not cloned by `make setup`; `make
 webservice` clones it (6 GB) when the Calliope/PyPSA simulation is needed.
@@ -49,17 +50,24 @@ make setup    # includes the fixtures
 ```
 
 `make setup` runs the loader after the service checkouts exist. On a checkout
-that already works, or after pulling a new fixture, load them on their own
-instead:
+that already works, load whatever is missing on its own:
 
 ```bash
 make fixtures
 ```
 
+`make fixtures` never overwrites a database. After pulling a changed fixture,
+replace them all instead; this drops the fixture databases first, so anything
+else built in them is lost:
+
+```bash
+make fixtures-reload
+```
+
 Then run the smoke test:
 
 ```bash
-cd enerplanet/backend && ./scripts/smoke/heat_workflow_smoke.sh
+make smoke
 ```
 
 It should report `0 failure(s)`. If it fails at step 2a with `HTTP 000`,
@@ -228,8 +236,8 @@ Ports come from `repos.conf`, which is the one place to change them.
 
 | Service | Port | Who calls it |
 |---|---|---|
-| Frontend (Vite) | 3000 | you |
-| Backend API | 8000 | the frontend, and any other UI |
+| App (frontend and API) | 8000 | you, and any other UI |
+| Frontend (Vite, hot reload only) | 3000 | you |
 | TentaCron | 8400 | the backend only |
 | meme | 8401 | TentaCron only |
 | buem-gateway | 8402 | TentaCron only |
@@ -245,15 +253,12 @@ Keycloak's.
 
 ## Using the fixtures in the frontend
 
-```bash
-cd enerplanet/frontend && npm run dev
-```
-
-Vite serves on port 3000 and proxies `/api` to the backend on 8000. The
-`@spatialhub/*` packages do not need building first: `vite.config.ts` aliases
-them to `libs/*/src`. Sign in with the same account the smoke test uses,
-`admin@example.de` / `12345678`, through the backend rather than Keycloak
-(`VITE_SSO_ENABLED` is false).
+Open <http://localhost:8000>, where the backend serves the built frontend.
+Sign in with the same account the smoke test uses, `admin@example.de` /
+`12345678`, through the backend rather than Keycloak (`VITE_SSO_ENABLED` is
+false). For hot reload, Vite serves on port 3000 and proxies `/api` to the
+backend on 8000; see Developing with hot reload in
+[Installation](installation.md).
 
 Two limits determine where an area can be drawn. Both produce an empty result
 that looks like missing data.
@@ -313,9 +318,9 @@ than City2TABULA's.
 They are a starting point for work that begins from a saved model. Work on
 creating a model (drawing an area, grid generation, building selection) draws
 in the full regions under What is loaded, so it is not tested only against a
-handful of buildings. `make dev-bg` creates them once the backend is up, owned by
-the dev admin and in its default workspace; run `make example-models` to create
-them against a backend started some other way. A model whose title already
+handful of buildings. `make setup` creates them once the backend is up, owned by
+the dev admin and in its default workspace; `make example-models` creates any
+that are missing. A model whose title already
 exists is left alone.
 
 !!! warning "Development only"
@@ -362,13 +367,11 @@ any of these to restore elsewhere:
     TENTACRON_SERVICE_URL=http://localhost:8400
     ```
 
-The pylovo restore takes the database name, user and password from that
-checkout's `.env.docker`, falling back to `.env.example`, and the host and port
-from `enerplanet/backend/.env`. Those files disagree deliberately: pylovo's
-`HOST`/`PORT` are compose-internal (`postgres:5432`), while the same instance is
-published to the host on `DB_PORT`, which is 5433. Overrides are
-`PYLOVO_DB_NAME`, `PYLOVO_DB_HOST`, `PYLOVO_DB_PORT`, `PYLOVO_DB_USER` and
-`PYLOVO_DB_PASSWORD`.
+The pylovo restore runs `psql` inside the platform Postgres container, which
+holds `pylovo_db`. It takes the database name, user and password from that
+checkout's `.env.docker`, falling back to `.env.example`. Overrides are
+`PYLOVO_DB_CONTAINER` (default `postgres`), `PYLOVO_DB_NAME`, `PYLOVO_DB_USER`
+and `PYLOVO_DB_PASSWORD`.
 
 ## Traps
 
