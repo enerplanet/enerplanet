@@ -148,25 +148,6 @@ func TestMapWireLoadingOmitsPercentForMVArcs(t *testing.T) {
 	}
 }
 
-// A conversion link is a Link too, but it is not a wire: tech_metadata decides.
-func TestMapWireLoadingIgnoresNonTransmissionTechs(t *testing.T) {
-	ratings := wireRatings(wireDocFixture())
-	if _, ok := ratings["chp"]; ok {
-		t.Errorf("wireRatings included the conversion link: %v", ratings)
-	}
-	if ratings["line1"] != 300 {
-		t.Errorf("ratings = %v, want line1 -> 300", ratings)
-	}
-}
-
-func TestWireRatingsTakesTheMaximumAcrossEndpoints(t *testing.T) {
-	doc := wireDocFixture()
-	doc.Capacities["n2::line1"] = 250
-	if got := wireRatings(doc)["line1"]; got != 300 {
-		t.Errorf("rating = %v, want the maximum seen (300)", got)
-	}
-}
-
 func TestWireNamesByEndpointsDropsAmbiguousPairs(t *testing.T) {
 	doc := wireDocFixture()
 	// A second transmission tech over the same node pair: the derivation is

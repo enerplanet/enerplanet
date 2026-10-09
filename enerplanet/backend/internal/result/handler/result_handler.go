@@ -338,14 +338,6 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 		}
 	}
 
-	// A Coati-sourced (MEME) bundle has no lines.csv on disk, so the ingest
-	// records the per-wire ratings in the model's result summary instead.
-	if _, ok := response["line_ratings"]; !ok {
-		if ratings := lineRatingsFromSummary(model.Results); len(ratings) > 0 {
-			response["line_ratings"] = ratings
-		}
-	}
-
 	httputil.SuccessResponse(c, response)
 }
 
