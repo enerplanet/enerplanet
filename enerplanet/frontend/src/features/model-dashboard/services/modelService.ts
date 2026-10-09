@@ -238,13 +238,7 @@ class ModelService {
     return response.data;
   }
 
-  async startCalculation(id: number): Promise<ModelResponse> {
-    const response = await axios.post(`/calculation/start/${id}`);
-    return response.data;
-  }
-
-  // Dispatch the model to MEME (via TentaCron) instead of the legacy
-  // webservice. Same contract as startCalculation.
+  // Dispatch the model to MEME (via TentaCron).
   async runMeme(id: number): Promise<ModelResponse> {
     const response = await axios.post(`/models/${id}/run-meme`);
     return response.data;
