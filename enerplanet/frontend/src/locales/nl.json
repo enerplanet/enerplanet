@@ -182,9 +182,6 @@
       "shareModel": "Model Delen",
       "delete": "Verwijderen",
       "cannotDelete": "Kan niet verwijderen - alleen de eigenaar of een expert kan verwijderen",
-      "retryCalculation": "Berekening Opnieuw",
-      "startCalculation": "Berekening Starten",
-      "engineNotAvailable": "Simulatiemotor is niet beschikbaar",
       "runWithMeme": "Uitvoeren met Calliope",
       "runPypsaOnMeme": "Vermogensstroom uitvoeren (PyPSA)"
     },
@@ -493,7 +490,9 @@
       "loading": "Belasting",
       "noLoadingData": "Geen belastingsgegevens beschikbaar",
       "notInResult": "Niet in dit resultaat",
-      "transmissionUtilization": "Transmissiebenutting"
+      "transmissionUtilization": "Transmissiebenutting",
+      "overloadedConnection": "Overbelaste leiding",
+      "loadingPreliminary": "Voorlopig: elke leiding wordt beoordeeld tegen de zwakste kabel in het net, dus een hoge benutting overschat de werkelijke kabel."
     },
     "system": {
       "noData": "Geen systeemgegevens beschikbaar",
@@ -785,9 +784,7 @@
     "bulkCopyDescription": "Kopieën maken van {{count}} geselecteerd(e) model(len)",
     "bulkCopyFailed": "Sommige modellen konden niet worden gekopieerd. Probeer het opnieuw.",
     "bulkCopySubmit": "Kopieën maken",
-    "calculate": "Berekenen",
     "cannotCalculate": "Kan niet berekenen – geen geschikte modellen geselecteerd",
-    "noWebserviceAvailable": "Geen simulatie-engine beschikbaar",
     "cancelled": "Geannuleerd",
     "modified": "Gewijzigd"
   },

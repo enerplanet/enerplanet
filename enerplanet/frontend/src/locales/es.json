@@ -228,9 +228,6 @@
       "shareModel": "Compartir Modelo",
       "delete": "Eliminar",
       "cannotDelete": "No se puede eliminar - solo el propietario o un experto puede eliminar",
-      "retryCalculation": "Reintentar Cálculo",
-      "startCalculation": "Iniciar Cálculo",
-      "engineNotAvailable": "El motor de simulación no está disponible",
       "runWithMeme": "Ejecutar con Calliope",
       "runPypsaOnMeme": "Ejecutar flujo de carga (PyPSA)"
     },
@@ -735,7 +732,9 @@
       "loading": "Carga",
       "noLoadingData": "No hay datos de carga disponibles",
       "notInResult": "No está en este resultado",
-      "transmissionUtilization": "Utilización del transporte"
+      "transmissionUtilization": "Utilización del transporte",
+      "overloadedConnection": "Línea sobrecargada",
+      "loadingPreliminary": "Preliminar: cada línea se evalúa frente al cable más débil de su red, por lo que una utilización alta sobrestima el cable real."
     },
     "system": {
       "noData": "No hay datos del sistema disponibles",
@@ -1029,9 +1028,7 @@
     "bulkCopyDescription": "Crear copias de {{count}} modelo(s) seleccionado(s)",
     "bulkCopyFailed": "Algunos modelos no pudieron copiarse. Por favor, inténtelo de nuevo.",
     "bulkCopySubmit": "Crear copias",
-    "calculate": "Calcular",
-    "cannotCalculate": "No se puede calcular – no hay modelos elegibles seleccionados",
-    "noWebserviceAvailable": "Motor de simulación no disponible"
+    "cannotCalculate": "No se puede calcular – no hay modelos elegibles seleccionados"
   },
   "polygon": {
     "drawRegion": "Dibuja tu región",
