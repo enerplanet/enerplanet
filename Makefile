@@ -361,6 +361,9 @@ meme: tentacron-network
 # toolchain respectively for no gain. meme still builds, having no image.
 .PHONY: weather
 weather: tentacron-network
+	@# Docker Engine creates a missing bind-mount source as root, and the
+	@# fixture loader, run as the user, then cannot copy the weather cuts into it.
+	@mkdir -p dependencies/$(WEATHER_DIR)/data
 	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" HOST_PORT=$(WEATHER_PORT) WEATHER_IMAGE=ghcr.io/enerplanet/weather:$(WEATHER_IMAGE_TAG) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
