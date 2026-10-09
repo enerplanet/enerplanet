@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, useState, type FC } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { Info } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
+import { SHOW_RESULT_GAPS } from '@/features/model-results/components/ui/GatedSection';
 import { useThemeColors, connectionKey, isOverloaded } from './chartUtils';
 
 const OVERLOAD_COLOR = '#ef4444';
@@ -795,11 +796,11 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
               </span>
               <VoltageStatusTooltip />
             </>
-          ) : (
+          ) : SHOW_RESULT_GAPS ? (
             <span className="text-[10px] italic font-medium text-amber-700 dark:text-amber-400">
               {t('results.grid.notInResult')}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

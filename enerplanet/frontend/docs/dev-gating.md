@@ -73,9 +73,6 @@ feature behind a build-env flag when a runtime toggle is expected.
   it for examples: `useForm`, `map-location`, `geocoding`, …).
 - `VITE_SHOW_RESULT_GAPS` — the two-way gate in `GatedSection` that renders an
   in-place "missing section" placeholder in local builds.
-- `ModelActions` `onRunMeme` — **no longer gated.** The MEME run became the
-  primary (and only) run trigger when the legacy webservice run buttons were
-  removed, so it is always visible.
 
 ## Gotchas
 
