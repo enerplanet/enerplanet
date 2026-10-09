@@ -368,8 +368,6 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 	parsed.PyPSALineLoading = mapWireLoading(wireDoc, cableRatings)
 
 	summary = buildCoatiSummary(&doc)
-	// The wire data may come from a different leg than the summary's document.
-	summary.LineRatings = wireRatings(wireDoc)
 	summary.LineCount = len(wireDoc.TransmissionFlow)
 	summaryJSON, err := json.Marshal(summary)
 	if err != nil {

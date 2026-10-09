@@ -93,26 +93,6 @@ func mapWireLoading(doc *CoatiResultsDocument, cableRatings map[string]float64) 
 	return out
 }
 
-// wireRatings derives each wire's rating (MW) from the transmission
-// technologies' capacities. Coati keys capacities "loc::tech" and attributes a
-// transmission capacity to both endpoint locations, so the maximum seen wins.
-func wireRatings(doc *CoatiResultsDocument) map[string]float64 {
-	if doc == nil {
-		return nil
-	}
-	ratings := map[string]float64{}
-	for key, value := range doc.Capacities {
-		_, tech := splitLocTech(key)
-		if tech == "" || !doc.IsTransmission(tech) {
-			continue
-		}
-		if current, ok := ratings[tech]; !ok || value > current {
-			ratings[tech] = value
-		}
-	}
-	return ratings
-}
-
 // wireNamesByEndpoints maps a node pair ("n1::n2") to the transmission
 // technology connecting those two locations, so a row carries the wire's own
 // name rather than a node pair.

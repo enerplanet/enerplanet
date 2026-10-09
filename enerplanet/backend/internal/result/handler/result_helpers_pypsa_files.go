@@ -2,7 +2,6 @@ package result
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"errors"
 	"io"
 	"math"
@@ -11,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"gorm.io/datatypes"
 )
 
 type pypsaConvergenceSummary struct {
@@ -38,23 +35,6 @@ type pypsaTransformerLoadingPoint struct {
 	Q0          float64   `json:"q0"`
 	Q1          float64   `json:"q1"`
 	SNomKVA     float64   `json:"s_nom_kva"`
-}
-
-// lineRatingsFromSummary reads the per-wire ratings the Coati ingest recorded in
-// the model's result summary. A MEME bundle carries no lines.csv, so this is
-// where its ratings come from; an electrical source keeps reading them off disk
-// (readPyPSALineRatings), which wins when both exist.
-func lineRatingsFromSummary(summary datatypes.JSON) map[string]float64 {
-	if len(summary) == 0 {
-		return nil
-	}
-	var parsed struct {
-		LineRatings map[string]float64 `json:"line_ratings"`
-	}
-	if err := json.Unmarshal(summary, &parsed); err != nil {
-		return nil
-	}
-	return parsed.LineRatings
 }
 
 func (h *ResultHandler) latestExtractedPath(modelID uint) string {

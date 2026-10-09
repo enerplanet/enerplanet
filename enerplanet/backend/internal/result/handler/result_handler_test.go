@@ -5,8 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"spatialhub_backend/internal/middleware"
 	"spatialhub_backend/internal/testutil"
@@ -86,4 +88,28 @@ func TestCallbackUpload_MissingSecret(t *testing.T) {
 
 	// Missing or wrong callback secret should fail
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+// A MEME result's summary may still carry line_ratings in MW from older
+// ingests; the frontend divides kVA by that map, so it must not be served.
+func TestGetPyPSAResults_IgnoresSummaryLineRatings(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	handler := NewResultHandler(db, nil, nil, "secret", nil)
+
+	mock.ExpectQuery(`SELECT \* FROM "models" WHERE id = \$1`).
+		WithArgs("4", 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "results"}).
+			AddRow(4, "owner", []byte(`{"line_ratings":{"lv_1":0.16}}`)))
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/models/4/pypsa", nil)
+	c.Params = gin.Params{{Key: "id", Value: "4"}}
+	c.Set("user_id", "expert-1")
+	c.Set("access_level", "expert")
+
+	handler.GetPyPSAResults(c)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.NotContains(t, w.Body.String(), "line_ratings")
 }

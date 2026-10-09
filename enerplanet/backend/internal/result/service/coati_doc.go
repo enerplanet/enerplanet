@@ -92,12 +92,6 @@ type CoatiSummary struct {
 	StorageCapCount      int      `json:"storage_capacity_count"`
 	LocationCount        int      `json:"location_count"`
 
-	// LineRatings is the per-wire rating (MW) the ingest derived from the
-	// document's transmission capacities, keyed by wire name. It gives the API
-	// a `line_ratings` map for sources whose bundle has no lines.csv on disk
-	// (MEME). Set by the ingest, not by buildCoatiSummary — the wire data may
-	// come from a different leg (PyPSA) than this summary's document.
-	LineRatings map[string]float64 `json:"line_ratings,omitempty"`
 	// LineCount is the number of wires the document reported a flow for.
 	LineCount int `json:"line_count,omitempty"`
 }

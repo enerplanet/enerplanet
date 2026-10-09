@@ -212,11 +212,4 @@ func TestLiveWireMappingRealPyPSA(t *testing.T) {
 	}
 	assert.Equal(t, len(doc.TransmissionFlow), len(lines),
 		"every reported wire should produce rows")
-
-	ratings := wireRatings(doc)
-	assert.NotEmpty(t, ratings, "wire ratings derive from the transmission capacities")
-	for name := range lines {
-		_, ok := ratings[name]
-		assert.True(t, ok, "wire %q has no rating, so its utilisation is omitted", name)
-	}
 }
