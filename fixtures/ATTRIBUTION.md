@@ -92,13 +92,6 @@ records that no access restrictions apply:
 
 > https://www.metaver.de/trefferanzeige?docuuid=226971C2-6677-4B79-95F3-C5311F1275C8
 
-!!! note
-    The provider's own web pages carry a Creative Commons BY-NC-ND notice and
-    name no licence for the data. That notice is read here as applying to the
-    pages rather than to the dataset, whose terms are the metadata record
-    above. The two are easily confused: an earlier reading of the web pages
-    alone concluded no licence existed and blocked redistribution of this
-    fixture.
 
 Modifications: an excerpt of the source model for the box 8.79239 53.09770 to
 8.80586 53.10312 (EPSG:4326) in Bremen, selected by footprint centroid and
