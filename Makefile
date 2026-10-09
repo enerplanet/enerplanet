@@ -19,6 +19,18 @@ ENV_FILE           := --env-file .env
 PLATFORM_COMPOSE   := $(ENV_FILE) -f platform-core/docker-compose.yml -f platform-core/docker-compose.dev.yml
 ENERPLANET_COMPOSE := $(ENV_FILE) -f enerplanet/docker-compose.yml -f enerplanet/docker-compose.dev.yml
 
+# Runs a backend binary (/app/migrate, /app/seed) in the app image.
+BACKEND_RUN := docker compose $(ENERPLANET_COMPOSE) run --rm --build --no-deps --entrypoint
+
+# Runs a bash script from the repo with curl, jq and the docker CLI, so the host
+# needs none of them. Host networking keeps the backend at localhost:8000, the
+# domain its session cookie is scoped to. $(1) is the working directory.
+SCRIPTS_IMAGE := enerplanet-scripts
+define run_script
+	@printf 'FROM alpine:3.20\nRUN apk add --no-cache bash curl jq docker-cli\n' | docker build -q -t $(SCRIPTS_IMAGE) - >/dev/null
+	@docker run --rm --network host -v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
+endef
+
 .env:
 	@cp .env.example .env
 	@echo "$(GREEN)Created .env from .env.example$(NC)"
@@ -32,8 +44,8 @@ help:
 	@echo "  make update             Pull latest changes and update environment"
 	@echo ""
 	@echo "$(YELLOW)SECTION 2: ADMIN & DEVELOPER TOOLS$(NC)"
-	@echo "  make up                 Start all services (Core + App)"
-	@echo "  make down               Stop all services"
+	@echo "  make up                 Start every service: platform, PyLovo, heat stack, app"
+	@echo "  make down               Stop the platform services, PyLovo and the app"
 	@echo "  make logs               Follow service logs"
 	@echo "  make migrate            Run database migrations"
 	@echo "  make seed               Seed the database"
@@ -41,7 +53,9 @@ help:
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
 	@echo "  make fixtures           Load the committed test fixtures into the services"
+	@echo "  make fixtures-reload    Drop the fixture databases and load the fixtures afresh"
 	@echo "  make example-models     Create the example models (development only, backend running)"
+	@echo "  make smoke              Run the heat workflow smoke test against the running stack"
 	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem)"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
@@ -55,7 +69,7 @@ help:
 # text and the loader copies a few hundred bytes that no service can read.
 .PHONY: fixtures
 fixtures:
-	@git lfs pull --include=fixtures 2>/dev/null || true
+	@git lfs pull --include=fixtures
 	@./fixtures/load.sh
 
 # pylovo's `make dev` loads its full Bremen dump unless pylovo_db already
@@ -63,19 +77,35 @@ fixtures:
 # fixture has to go in before the pylovo target runs.
 .PHONY: pylovo-fixture
 pylovo-fixture:
-	@git lfs pull --include=fixtures/pylovo 2>/dev/null || true
+	@git lfs pull --include=fixtures/pylovo
 	@./fixtures/load.sh pylovo
 
-# Needs the backend running, which setup does not start, so dev-bg runs it
-# once the backend is up. The script itself refuses outside APP_ENV=development.
+# Drops every fixture database and loads the committed fixtures afresh; anything
+# else built in those databases, such as a full-country PyLovo grid, is lost.
+# PyLovo stays down until its fixture is in, for the reason given above.
+.PHONY: fixtures-reload
+fixtures-reload:
+	@git lfs pull --include=fixtures
+	@$(MAKE) -C dependencies/enerplanet-pylovo down
+	@for c in nl de at cz; do docker exec city2tabula-db psql -U postgres -qc "drop database if exists city2tabula_$$c with (force)"; done
+	@docker exec postgres psql -U postgres -qc 'drop database if exists pylovo_db with (force)'
+	@FORCE=1 ./fixtures/load.sh
+	@$(MAKE) pylovo
+	@docker restart city2tabula >/dev/null
+
+# Needs the backend running. The script itself refuses outside APP_ENV=development.
 .PHONY: example-models
 example-models:
-	@git lfs pull --include=fixtures/models 2>/dev/null || true
-	@./fixtures/example_models.sh
+	@git lfs pull --include=fixtures/models
+	$(call run_script,,fixtures/example_models.sh)
+
+.PHONY: smoke
+smoke:
+	$(call run_script,enerplanet/backend,scripts/smoke/heat_workflow_smoke.sh)
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures
-	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
+setup: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures up example-models
+	@echo "$(GREEN)Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678$(NC)"
 
 
 .PHONY: dev-bg list-bg clean-bg clean-docker
@@ -94,7 +124,7 @@ dev-bg:
 		 echo "Password:         12345678" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Run 'make list-bg' to see status or 'make clean-bg' to stop.")
-	@./fixtures/example_models.sh
+	@$(MAKE) example-models
 
 # 2. Show active background sessions
 list-bg:
@@ -114,7 +144,7 @@ clean-docker:
 
 
 .PHONY: update
-update: git-credential-cache setup-repos install migrate webservice pylovo
+update: git-credential-cache setup-repos migrate webservice pylovo
 	git pull
 	@echo "$(GREEN)Update complete!$(NC)"
 
@@ -123,31 +153,37 @@ update: git-credential-cache setup-repos install migrate webservice pylovo
 # ==============================================================================
 
 .PHONY: up
+# PyLovo stops and starts with the platform Postgres: its pooled connections do
+# not survive a Postgres restart, and each worker fails a request before
+# reconnecting.
 up: .env
 	@docker network create spatialhub-net 2>/dev/null || true
 	@docker compose $(PLATFORM_COMPOSE) up -d
-	@docker compose $(ENERPLANET_COMPOSE) up -d --build
+	@$(MAKE) pylovo
+	@$(MAKE) tentacron-stack
+	@docker compose $(ENERPLANET_COMPOSE) up -d --build energy-backend
 	@echo "$(GREEN)All services started.$(NC)"
 
 .PHONY: down
 down: .env
 	@docker compose $(ENERPLANET_COMPOSE) down
+	@$(MAKE) -C dependencies/enerplanet-pylovo down
 	@docker compose $(PLATFORM_COMPOSE) down
-	@echo "$(GREEN)All services stopped.$(NC)"
+	@echo "$(GREEN)Platform, PyLovo and app stopped; the heat stack keeps running.$(NC)"
 
 .PHONY: logs
 logs: .env
 	@docker compose $(PLATFORM_COMPOSE) logs -f
 
 .PHONY: migrate
-migrate:
+migrate: .env
 	@echo "$(CYAN)Running migrations...$(NC)"
-	@cd enerplanet/backend && go run cmd/migrate/migration.go
+	@$(BACKEND_RUN) /app/migrate energy-backend
 
 .PHONY: seed
-seed:
+seed: .env
 	@echo "$(CYAN)Seeding database...$(NC)"
-	@cd enerplanet/backend && go run cmd/seed/*.go
+	@$(BACKEND_RUN) /app/seed energy-backend
 
 .PHONY: init-keycloak
 init-keycloak: .env
@@ -274,9 +310,12 @@ webservice:
 	@[ -d dependencies/simulation-engine ] || (git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull)
 	@cd dependencies/simulation-engine && make build && make up-min
 
+# pylovo's `make dev` returns before the API answers, so this waits for it.
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev
+	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
+		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
 
 
 .PHONY: tentacron-stack

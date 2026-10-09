@@ -44,7 +44,7 @@ copy_tree() {
     fi
     mkdir -p "$(dirname "$to")"
     if cp "$from" "$to"; then ok "$label: $rel"; else fail "$label: could not copy $rel"; fi
-  done < <(cd "$src" && find . -type f -printf '%P\n')
+  done < <(cd "$src" && find . -type f | sed 's|^\./||')
 }
 
 # weather-serve resolves a point query against netCDF archives under its
@@ -109,11 +109,11 @@ restore_c2t() {
   # The geometry type must exist before the dump's tables reference it. Only
   # one of the fixtures carries CREATE EXTENSION itself, so do not rely on it.
   c2t_psql -d "$target" -c "create extension if not exists postgis" >/dev/null 2>&1
-  if ! zcat "$src" | c2t_psql -d "$target" >/dev/null 2>&1; then
+  if ! gzip -dc "$src" | c2t_psql -d "$target" >/dev/null 2>&1; then
     fail "city2tabula/$country: restore into $target failed, the database was left in place for inspection"
     return 0
   fi
-  if [ -f "$tab" ] && ! zcat "$tab" | c2t_psql -d "$target" >/dev/null 2>&1; then
+  if [ -f "$tab" ] && ! gzip -dc "$tab" | c2t_psql -d "$target" >/dev/null 2>&1; then
     fail "city2tabula/$country: TABULA restore into $target failed; reads will work, pipeline runs will not"
     return 0
   fi
@@ -129,8 +129,11 @@ load_city2tabula() {
 }
 
 # The pylovo fixture carries its own schema, so it restores into a database
-# that need only exist. Connection settings come from the checkout's
-# .env.docker, falling back to .env.example.
+# that need only exist. The database name, user and password come from the
+# checkout's .env.docker, falling back to .env.example. pylovo_db lives in the
+# platform Postgres container, so psql runs inside it rather than on the host.
+PYLOVO_DB_CONTAINER="${PYLOVO_DB_CONTAINER:-postgres}"
+
 load_pylovo() {
   local src="$HERE/pylovo/pylovo_fixture.sql.gz"
   [ -f "$src" ] || return 0
@@ -143,36 +146,23 @@ load_pylovo() {
     fail "pylovo: no .env.docker or .env.example under $dir, run 'make setup-repos' first"
     return 0
   fi
-  command -v psql >/dev/null || { fail "pylovo: psql is required to restore the fixture"; return 0; }
+  command -v docker >/dev/null || { fail "pylovo: docker is required to reach $PYLOVO_DB_CONTAINER"; return 0; }
+  if ! docker exec "$PYLOVO_DB_CONTAINER" true >/dev/null 2>&1; then
+    fail "pylovo: container $PYLOVO_DB_CONTAINER is not running, start it with 'make up-db' first"
+    return 0
+  fi
 
-  local db host port user pass backend_env
+  local db user pass
   db="$(sed -n 's/^DBNAME=//p' "$envfile" | tr -d \" | awk '{print $1}')"
   user="$(sed -n 's/^DBUSER=//p' "$envfile" | tr -d \" | awk '{print $1}')"
   pass="$(sed -n 's/^PASSWORD=//p' "$envfile" | tr -d \" | awk '{print $1}')"
-
-  # HOST and PORT in pylovo's env are compose-internal (postgres:5432), which
-  # from a host shell is the wrong server: the platform publishes that same
-  # instance on DB_PORT. Take the host-side address from the backend's env,
-  # which names the instance pylovo_db actually lives in, rather than
-  # rewriting the service name and keeping the container port.
-  backend_env="$ROOT/enerplanet/backend/.env"
-  [ -f "$backend_env" ] || backend_env="$ROOT/enerplanet/backend/.env.example"
-  if [ ! -f "$backend_env" ]; then
-    fail "pylovo: no backend .env or .env.example under $ROOT/enerplanet/backend, run 'make env-setup' first"
-    return 0
-  fi
-  host="$(sed -n 's/^DB_HOST=//p' "$backend_env" | tr -d \" | awk '{print $1}')"
-  port="$(sed -n 's/^DB_PORT=//p' "$backend_env" | tr -d \" | awk '{print $1}')"
-
   db="${PYLOVO_DB_NAME:-$db}"
-  host="${PYLOVO_DB_HOST:-$host}"
-  port="${PYLOVO_DB_PORT:-$port}"
   user="${PYLOVO_DB_USER:-$user}"
-  export PGPASSWORD="${PYLOVO_DB_PASSWORD:-$pass}"
+  pass="${PYLOVO_DB_PASSWORD:-$pass}"
 
-  local psql_base=(psql -h "$host" -p "$port" -U "$user" -v ON_ERROR_STOP=1)
+  local psql_base=(docker exec -i -e PGPASSWORD="$pass" "$PYLOVO_DB_CONTAINER" psql -U "$user" -v ON_ERROR_STOP=1)
   if ! "${psql_base[@]}" -d postgres -tAc "select 1" >/dev/null 2>&1; then
-    fail "pylovo: cannot reach postgres at $host:$port as $user"
+    fail "pylovo: cannot connect to postgres in $PYLOVO_DB_CONTAINER as $user"
     return 0
   fi
   # pylovo's own tooling may have created the database already; an empty one
@@ -187,8 +177,8 @@ load_pylovo() {
     skip "pylovo: $db already holds $existing grid_result rows, leaving it alone"
     return 0
   fi
-  if zcat "$src" | "${psql_base[@]}" -d "$db" >/dev/null; then
-    ok "pylovo: restored into $db on $host:$port"
+  if gzip -dc "$src" | "${psql_base[@]}" -d "$db" >/dev/null; then
+    ok "pylovo: restored into $db in $PYLOVO_DB_CONTAINER"
   else
     fail "pylovo: restore into $db failed"
   fi
