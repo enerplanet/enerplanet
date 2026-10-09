@@ -182,9 +182,6 @@
       "shareModel": "Udostępnij Model",
       "delete": "Usuń",
       "cannotDelete": "Nie można usunąć - tylko właściciel lub ekspert może usunąć",
-      "retryCalculation": "Ponów Obliczenia",
-      "startCalculation": "Rozpocznij Obliczenia",
-      "engineNotAvailable": "Silnik symulacji jest niedostępny",
       "runWithMeme": "Uruchom z Calliope",
       "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)"
     },
@@ -493,7 +490,9 @@
       "loading": "Obciążenie",
       "noLoadingData": "Brak danych obciążenia",
       "notInResult": "Brak w tym wyniku",
-      "transmissionUtilization": "Wykorzystanie przesyłu"
+      "transmissionUtilization": "Wykorzystanie przesyłu",
+      "overloadedConnection": "Przeciążona linia",
+      "loadingPreliminary": "Wstępne: każda linia jest oceniana względem najsłabszego kabla w swojej sieci, więc wysokie wykorzystanie zawyża obciążenie rzeczywistego kabla."
     },
     "system": {
       "noData": "Brak dostępnych danych systemowych",
@@ -786,9 +785,7 @@
     "bulkCopyDescription": "Utwórz kopie {{count}} wybranego modelu/modeli",
     "bulkCopyFailed": "Nie udało się skopiować niektórych modeli. Spróbuj ponownie.",
     "bulkCopySubmit": "Utwórz kopie",
-    "calculate": "Oblicz",
     "cannotCalculate": "Nie można obliczyć – nie wybrano odpowiednich modeli",
-    "noWebserviceAvailable": "Silnik symulacji niedostępny",
     "modified": "Zmodyfikowano"
   },
   "polygon": {
