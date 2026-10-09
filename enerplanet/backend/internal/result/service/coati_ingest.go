@@ -65,7 +65,7 @@ func locatePyPSANetworkNC(extractDir string) (string, error) {
 //   - per-target:  files/calliope/run_<i>/output/results.nc
 //   - single-target: files/run_<i>/output/results.nc
 //
-// PyPSA writes network.nc and is a later step; this ingest is Calliope-only.
+// The PyPSA leg's network.nc is located separately (locatePyPSANetworkNC).
 func locateCalliopeResultsNC(extractDir string) (string, error) {
 	var first string
 	walkErr := filepath.Walk(extractDir, func(path string, info os.FileInfo, err error) error {
@@ -291,17 +291,15 @@ func (s *ResultService) loadCableRatings(modelID uint) map[string]float64 {
 	return ratings
 }
 
-// IngestCoatiResult is Step 6's ingest: it extracts a stored MEME result zip,
-// runs Coati over the Calliope results.nc, maps the unified document into the
-// R2 small/summary tables, and writes a compact summary to model.results. It is
-// Calliope-electricity-only for now (PyPSA is a later step).
+// IngestCoatiResult is the MEME result ingest: it extracts a stored MEME result
+// zip, runs Coati over the Calliope results.nc, maps the unified document into
+// the R2 small/summary tables, and writes a compact summary to model.results.
+// Wire loading prefers the bundle's PyPSA network.nc when present.
 //
 // It follows the ProcessModelResult transaction pattern: deleteExistingResults
 // then storeSmallResults in a single transaction, so re-runs are idempotent.
-// Large time-series tables (results_carrier_prod/con, system_balance, etc.) are
-// NOT streamed here — Coati's dispatch/demand series are tech- and
-// location-aggregated and don't carry the per-location/per-carrier/timestep
-// dimensions those tables need; streaming is deferred (documented in the plan).
+// Time-series tables are streamed from the Calliope leg's long-format CSVs, not
+// from the Coati document, whose series are tech- and location-aggregated.
 func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, userID, zipPath string, runner CoatiRunner) (summary *CoatiSummary, retErr error) {
 	log := logger.ForComponent("result")
 
@@ -358,7 +356,7 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 	// the PyPSA leg (the electricity transport model) and fall back to the
 	// Calliope document already parsed — never concatenate the two, they are
 	// two different solves of the same wires.
-	// Round 3: the wire loading_percent is a REAL utilisation against the
+	// The wire loading_percent is a REAL utilisation against the
 	// weakest cable in each grid (resolved once from the model's stored config),
 	// not the LP-optimised flow_cap Coati reports (which makes |flow|/rating
 	// identically 100). A wire with no resolvable rating carries NULL, never the

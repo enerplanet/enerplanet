@@ -54,7 +54,7 @@ func TestTranslatePayload_emitsElectricityJob(t *testing.T) {
 	carriers, _ := model["carriers"].(map[string]interface{})
 	require.NotNil(t, carriers)
 	assert.Contains(t, carriers, "electricity", "electricity carrier present")
-	assert.NotContains(t, carriers, "heat", "no heat carrier yet (heat-patch.md)")
+	assert.NotContains(t, carriers, "heat", "MEME translation is electricity only")
 
 	exp, _ := job["experiment"].(map[string]interface{})
 	require.NotNil(t, exp)

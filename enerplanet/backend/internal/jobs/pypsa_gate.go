@@ -22,9 +22,8 @@ type memeLegRunStore interface {
 // unless the model's Calliope leg reached the terminal 'completed' state (the
 // dispatch happened AND the result was ingested), so the PyPSA pass always
 // reads real Calliope flow series. PyPSA is a passthrough of the Calliope
-// results — a power flow can never run before or alongside a successful
-// Calliope solve (the plan's Appendix A: "PyPSA runs separately — never at the
-// same time as Calliope").
+// results, so a power flow never runs before or alongside a successful
+// Calliope solve.
 //
 // It returns nil when the leg may run, else an error describing the gate
 // failure. Both consumers use it: the run-meme-pypsa endpoint (fail fast at

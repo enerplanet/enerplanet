@@ -19,7 +19,7 @@ func makeMemeTimestamps(n int) []string {
 	return out
 }
 
-// Round 2a: energy_cap + loc_techs are normalised into the legacy vocabulary
+// energy_cap + loc_techs are normalised into the legacy vocabulary
 // using the shared MEME rules — demand -> <loc>_demand, grid import ->
 // transformer_supply, grid export omitted, and the two per-endpoint
 // transmission capacities paired into ONE power_transmission row with a ToLoc.
@@ -90,7 +90,7 @@ func TestMapCoatiDocument_TransmissionWithAmbiguousEndpoints(t *testing.T) {
 	assert.ElementsMatch(t, []string{"power_transmission"}, parsed.LocTechs["n1"])
 }
 
-// Round 2b: the selector rejects a degenerate 1-step / ['now'] document and
+// The selector rejects a degenerate 1-step / ['now'] document and
 // picks the parseable, multi-step one — regardless of which framework it is.
 func TestSelectWireDocumentPrefersTheParseableMultiStepLeg(t *testing.T) {
 	degenerate := &CoatiResultsDocument{

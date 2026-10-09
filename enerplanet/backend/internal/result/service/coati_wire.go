@@ -18,7 +18,7 @@ import (
 // Coati normalises PyPSA and Calliope to the same transmission_flow +
 // capacities + tech_metadata contract, so this one mapping serves either leg.
 //
-// Round 3: loading_percent is a REAL utilisation. The only rating Coati reports
+// loading_percent is a REAL utilisation. The only rating Coati reports
 // is the LP-optimised flow_cap (the wire sized to its own peak flow), so
 // |flow|/capacity is identically 100. The real rating is resolved on the ingest
 // side from the model config's cable types (per grid, conservative — see
@@ -71,7 +71,7 @@ func mapWireLoading(doc *CoatiResultsDocument, cableRatings map[string]float64) 
 			// series per unordered node pair (net_flows), so there is no
 			// distinct other-endpoint series to read: P1 stays NULL rather than
 			// being invented. Power is MW in the document, kW in the R2
-			// contract -> scale at write time (Round 4a).
+			// contract -> scale at write time.
 			record := PyPSALineLoadingRecord{
 				Line:     name,
 				Bus0:     flow.From,

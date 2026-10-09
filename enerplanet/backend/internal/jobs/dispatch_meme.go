@@ -26,8 +26,8 @@ const TypeDispatchMeme = "dispatch_meme"
 // TentaCron target names for a MEME run. The framework set is fixed per target
 // (a TentaCron request selects a target by name, never a URL), so running fewer
 // frameworks needs its own target: `meme-calliope` is Calliope only, `meme-pypsa`
-// is PyPSA only. The combined `pypsa,calliope` run was dropped (its PyPSA leg emits
-// no lines.csv, never calls pf(), and the ingest discards its single snapshot).
+// is PyPSA only. No combined `pypsa,calliope` target exists: its PyPSA leg emits
+// no lines.csv, never calls pf(), and the ingest discards its single snapshot.
 const (
 	memeTargetCalliopeOnly = "meme-calliope"
 	memeTargetPyPSAOnly    = "meme-pypsa"
@@ -88,7 +88,7 @@ type DispatchMemePayload struct {
 
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
-// seam (electricity-only for now; heat is tracked in tasks/open/heat-patch.md),
+// seam (electricity only; heat carriers are not translated),
 // submits it over TentaCron's "meme" target, and persists the result zip.
 //
 // TentaCron is itself the durable single-instance SQLite queue (ADR-0002) and
@@ -204,7 +204,7 @@ func HandleDispatchMeme(
 
 	// 4. Long-poll by id on the meme budget, then read the raw zip via /result.
 	//    A MEME solve failure must take the run to the TERMINAL 'failed' state
-	//    (Path 2), so a user re-solve is allowed; otherwise the run stays
+	//    so a user re-solve is allowed; otherwise the run stays
 	//    'running' forever and a dispatch retry resume-by-id re-fetches the same
 	//    failed TentaCron job.
 	if err := tc.AwaitResultByID(ctx, jobID, memePollBudget); err != nil {
@@ -225,7 +225,7 @@ func HandleDispatchMeme(
 		return fmt.Errorf("store MEME result zip for model %d: %w", p.ModelID, err)
 	}
 
-	// 6. Enqueue the ingest (Step 6): parse the stored zip via Coati into the
+	// 6. Enqueue the ingest: parse the stored zip via Coati into the
 	//    R2 tables. Dispatch's job ends here: the terminal 'completed'/'failed'
 	//    transition is owned by the ingest handler (completed on parse success,
 	//    failed with the parse error on failure), so dispatch must NOT pre-mark

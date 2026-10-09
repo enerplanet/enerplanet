@@ -97,13 +97,9 @@ ENV VITE_SSO_ENABLED=$VITE_SSO_ENABLED \
 
 RUN npm run build
 
-# Bundle the Coati result parser (Step 6). Coati is a hard-dependency git
-# submodule (submodules/Coati) provisioned as its own venv so the Go backend
-# can shell out to it (COATI_BIN) — the Go binary stays a thin caller and never
-# parses netCDF/HDF5 itself. Provisioned here so the runtime image carries it;
-# once enerplanet-coati is published this stage becomes
-#   RUN python3 -m venv /opt/coati && /opt/coati/bin/pip install enerplanet-coati==<pin>
-# and submodules/Coati can be dropped (see enerplanet/backend/internal/result/service/coati.go).
+# Coati (submodules/Coati) parses MEME result netCDF/HDF5 files. It is installed
+# into its own venv and the backend runs it as a subprocess via COATI_BIN, so the
+# Go binary never parses netCDF/HDF5 itself.
 FROM ubuntu:22.04 AS coatibuild
 WORKDIR /coati
 # Need the build tools + python for provisioning; the RUNTIME stage also
@@ -157,8 +153,7 @@ RUN useradd -r -m -d /home/appuser -s /bin/false appuser && \
     chmod +x /app/server /app/migrate /app/seed /app/backfill_country || true && \
     chown -R appuser:appuser /app /initial-data
 
-# Copy the provisioned Coati venv and point the backend at it (Step 6). The
-# venv is read-only to appuser — exactly what the subprocess needs.
+# appuser owns the Coati venv; the backend runs its binary via COATI_BIN.
 COPY --from=coatibuild /opt/coati /opt/coati
 RUN chown -R appuser:appuser /opt/coati
 ENV COATI_BIN=/opt/coati/bin/coati
