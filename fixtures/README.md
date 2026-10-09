@@ -63,7 +63,7 @@ run; draw it clear of the line to test on-request processing.
 | `weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | weather-serve | Bremen | hourly 2018 weather, 4×4 cells | `load.sh weather` |
 | `weather/cosmo_rea6/austria/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Vienna | hourly 2018 weather, 4×4 cells | `load.sh weather` |
 | `weather/cosmo_rea6/czech_republic/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Brno | hourly 2018 weather, 4×4 cells | `load.sh weather` |
-| `models/loenen.json`, `models/bremen.json` | 96 kB, 132 kB | backend | Loenen, Bremen | example saved models, development only | `make example-models` (`example_models.sh`) |
+| `models/loenen.json`, `models/bremen.json` | 96 kB, 62 kB | backend | Loenen, Bremen | example saved models, development only | `make example-models` (`example_models.sh`) |
 
 ## Weather per provider
 

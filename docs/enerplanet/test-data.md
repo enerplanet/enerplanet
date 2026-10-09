@@ -349,7 +349,7 @@ workflow and the 3D building view can be tried without drawing an area first.
 | Model | Buildings | Grid | Period |
 |---|---|---|---|
 | Example: Loenen (NL) | 8 | 2585 | 2018 |
-| Example: Bremen (DE) | 7 | 29 | 2018 |
+| Example: Bremen (DE) | 8 | 1628, 1629, 1631 | 2018 |
 
 Every building in both has a City2TABULA envelope, and the period matches the
 weather fixtures. Loenen's building 268428040 was edited in the 3D view and

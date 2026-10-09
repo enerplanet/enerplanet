@@ -70,10 +70,11 @@ fi
 #
 #   loenen (NL)  Six buildings with no transformer fixture, so every building
 #                enters the topology standalone. Fast.
-#   bremen (DE)  Seven buildings over two real LV grids, 29 at 630 kVA and
-#                1614 at 250 kVA, with the transformer of each: the only
-#                fixture here carrying transformer topology, and the only one
-#                reaching MFH and AB archetypes.
+#   bremen (DE)  Seven buildings over two real LV grids, 1628 and 1629, both
+#                at 250 kVA, with the transformer of each: the only fixture
+#                here carrying transformer topology, and the only one reaching
+#                MFH buildings with several dwellings. The polygon lies in the
+#                processed part of the 3D fixture, west of lon 8.79613.
 #   brno (CZ)    Seven buildings over two LV grids in the city centre, 6687 at
 #                400 kVA and 6696 at 630 kVA, inside the fixture box
 #                fixtures/pylovo/brno_box.wkt. City2TABULA's country is czechia.
@@ -92,8 +93,8 @@ case "$SMOKE_SITE" in
     ;;
   bremen)
     SITE_COUNTRY="germany"
-    SITE_POLYGON='{"type":"Polygon","coordinates":[[[8.7940,53.0900],[8.8140,53.0900],[8.8140,53.1040],[8.7940,53.1040],[8.7940,53.0900]]]}'
-    SITE_BBOX='{"xmin":8.7940,"ymin":53.0900,"xmax":8.8140,"ymax":53.1040}'
+    SITE_POLYGON='{"type":"Polygon","coordinates":[[[8.7932,53.0996],[8.7952,53.0996],[8.7952,53.1010],[8.7932,53.1010],[8.7932,53.0996]]]}'
+    SITE_BBOX='{"xmin":8.7932,"ymin":53.0996,"xmax":8.7952,"ymax":53.1010}'
     SITE_GLAZING_FLOOR_PCT=""
     SITE_REGION_CC="DE"
     SITE_REGION_STATE="bremen"
