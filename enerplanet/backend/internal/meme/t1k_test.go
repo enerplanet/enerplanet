@@ -62,7 +62,7 @@ func TestTranslatePayload_emitsElectricityJob(t *testing.T) {
 
 	// MEME rejects allow_unmet_demand for pypsa; the embedded mapping must not
 	// carry it so the job validates against both pypsa and calliope.
-	assert.NotContains(t, exp, "allow_unmet_demand", "pypsa safety: rule dropped in mapping.json")
+	assert.NotContains(t, exp, "allow_unmet_demand", "MEME PyPSA target rejects allow_unmet_demand")
 }
 
 func TestTranslatePayload_rejectsBrokenInput(t *testing.T) {
