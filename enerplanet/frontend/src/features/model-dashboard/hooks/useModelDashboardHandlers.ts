@@ -6,7 +6,6 @@ import {
   useDuplicateModelMutation,
   useDeleteModelMutation,
   useUpdateModelMutation,
-  useStartCalculationMutation,
   useRunMemeMutation,
   useRunMemePypsaMutation,
   useBulkDeleteModelsMutation
@@ -22,7 +21,6 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
   const duplicateMutation = useDuplicateModelMutation();
   const deleteMutation = useDeleteModelMutation();
   const updateMutation = useUpdateModelMutation();
-  const startCalculationMutation = useStartCalculationMutation();
   const runMemeMutation = useRunMemeMutation();
   const runMemePypsaMutation = useRunMemePypsaMutation();
   const bulkDeleteMutation = useBulkDeleteModelsMutation();
@@ -58,18 +56,6 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     }
   }, [deleteMutation, refreshData]);
 
-  const handleCalculate = useCallback(async (modelIds: number[]): Promise<void> => {
-    try {
-      for (const id of modelIds) {
-        await startCalculationMutation.mutateAsync(id);
-      }
-      await refreshData();
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Failed to start calculation:', error);
-    }
-  }, [startCalculationMutation, refreshData]);
-
-  // Step 9: dispatch the model to MEME instead of the legacy webservice path.
   const handleRunMeme = useCallback(async (modelIds: number[]): Promise<void> => {
     try {
       for (const id of modelIds) {
@@ -131,7 +117,6 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     handleView,
     handleCopy,
     handleDelete,
-    handleCalculate,
     handleRunMeme,
     handleRunMemePypsa,
     handleDownload,
