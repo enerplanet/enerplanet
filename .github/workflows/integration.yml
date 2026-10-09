@@ -4,9 +4,11 @@ name: Integration
 # way a new developer would, then runs the heat workflow smoke test against it
 # for every fixture site that has one.
 
+# The test server deploys feature/heat-integration, so that branch is the one
+# tested; pull requests into main are not, while it diverges from main.
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [feature/heat-integration]
     paths:
       - Makefile
       - repos.conf
