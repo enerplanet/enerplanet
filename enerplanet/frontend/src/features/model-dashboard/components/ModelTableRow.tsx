@@ -51,7 +51,8 @@ interface ModelTableRowProps {
   onDownload: (model: Model) => void;
   onCopy: (model: Model) => void;
   onRunMeme: (model: Model) => void;
-  onRunMemePypsa: (model: Model) => void;
+  // Not passed while the PyPSA leg is withheld; ModelActions hides it then.
+  onRunMemePypsa?: (model: Model) => void;
   onDelete: (model: Model) => void;
   onShare: (model: Model) => void;
   onMoveToWorkspace: (model: Model) => void;

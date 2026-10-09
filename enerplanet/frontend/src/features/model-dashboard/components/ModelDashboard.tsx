@@ -315,7 +315,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleCopy,
 		handleDelete,
 		handleRunMeme,
-		handleRunMemePypsa,
 		handleDownload,
 		updateTitle: updateTitleHandler,
 		handleBulkDelete: bulkDeleteHandler,
@@ -614,10 +613,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const handleRunMemeSingle = useCallback((model: Model) => {
 		handleRunMeme([model.id]);
 	}, [handleRunMeme]);
-
-	const handleRunMemePypsaSingle = useCallback((model: Model) => {
-		handleRunMemePypsa([model.id]);
-	}, [handleRunMemePypsa]);
 
 	// A model the MEME run action offers on: the same statuses the per-row Zap
 	// shows for (draft | modified | failed). completed/published are excluded.
@@ -1071,7 +1066,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														onDownload={handleDownload}
 														onCopy={handleCopy}
 														onRunMeme={handleRunMemeSingle}
-														onRunMemePypsa={handleRunMemePypsaSingle}
 														onDelete={handleSingleDelete}
 														onShare={handleShare}
 														onMoveToWorkspace={handleMoveToWorkspace}
