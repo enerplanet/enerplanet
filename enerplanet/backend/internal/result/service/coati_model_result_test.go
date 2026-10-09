@@ -10,8 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// TestReplaceModelResultRow_DeletesThenInserts guards defect 3: the MEME/Coati
-// ingest must record the ModelResult row the results list + download endpoints
+// TestReplaceModelResultRow_DeletesThenInserts guards that the MEME/Coati
+// ingest records the ModelResult row the results list + download endpoints
 // read. The row is replaced (delete-then-create) so a re-run never accumulates
 // rows. Field values are exercised end-to-end by the live ingest; this pins the
 // statement surface.

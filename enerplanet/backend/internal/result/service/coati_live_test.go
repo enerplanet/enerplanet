@@ -16,8 +16,7 @@ import (
 )
 
 // findFixtureZip walks up from the current working directory to locate the real
-// MEME Calliope bundle captured in Step 2 (enerplanet/.local/dependencies/meme/
-// results/calliope.zip).
+// MEME Calliope bundle at enerplanet/.local/dependencies/meme/results/calliope.zip.
 func findFixtureZip(t *testing.T) string {
 	t.Helper()
 	cwd, err := os.Getwd()
@@ -148,7 +147,7 @@ func extractNetworkNC(t *testing.T, zipPath, destDir string) string {
 	return ""
 }
 
-// TestLiveWireMappingRealPyPSA proves the Round 2 wire-leg selection against
+// TestLiveWireMappingRealPyPSA proves the wire-leg selection against
 // real framework output. MEME's PyPSA emitter writes a single "now" snapshot
 // (no parseable timestep, one-step flow), so the selector must REJECT the PyPSA
 // leg and pick the Calliope leg, whose 73-step series yields real timesteps and

@@ -33,13 +33,8 @@ const (
 	// (enerplanet/backend locally, /app in docker), so Coati must be located
 	// via COATI_BIN or PATH.
 	//
-	// SUBMODULE -> PIP EXCHANGE (production, Option B = venv-in-container):
-	// Coati is currently a hard-dependency git submodule (submodules/Coati)
-	// so the container build bakes its venv and sets COATI_BIN. Once
-	// enerplanet-coati is published to PyPI, the Docker image installs
-	// `pip install enerplanet-coati==<pin>` into its venv instead of from the
-	// submodule, and the submodule can be dropped — this COATI_BIN resolution
-	// and the ingest logic are unchanged. A bump is then "change the pin" only.
+	// In the container image (Dockerfile.ci) Coati is installed from the
+	// submodule into the /opt/coati venv and COATI_BIN points at its binary.
 	CoatiBinEnv = "COATI_BIN"
 
 	// CoatiFrameworkCalliope07 is the framework identifier for the MEME

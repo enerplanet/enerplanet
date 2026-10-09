@@ -13,7 +13,7 @@ import (
 	resultservice "spatialhub_backend/internal/result/service"
 )
 
-// TypeIngestMemeResult is the asynq task type for Step 6's ingest: parsing an
+// TypeIngestMemeResult is the asynq task type for the MEME result ingest: parsing an
 // already-stored MEME result zip's per-target output through Coati and loading
 // it into the R2 result tables. It is a distinct task from dispatch so the
 // dispatch handler (which only stores the zip) stays a thin, easily-tested
@@ -29,7 +29,7 @@ type IngestMemeResultPayload struct {
 }
 
 // HandleIngestMemeResult runs the Coati ingest over a stored zip EXACTLY ONCE,
-// updating the model's MEME run lifecycle (Step 6, simplified design):
+// updating the model's MEME run lifecycle:
 //   - success -> status MemeRunStatusCompleted (clears any prior error), nil;
 //   - failure -> status MemeRunStatusFailed with the captured error, and the
 //     error is returned so the surface reports it (zero masking).

@@ -9,8 +9,8 @@ import (
 )
 
 // coatiFixtureJSON mirrors the shape of a real Coati results document (schema
-// 1.0), trimmed to the fields the R2 ingest maps. It is modeled on the verified
-// real calliope output (.local/dependencies/meme/results/).
+// 1.0), trimmed to the fields the R2 ingest maps, modelled on real Calliope
+// output.
 const coatiFixtureJSON = `{
   "schema_version": "1.0",
   "framework": "calliope",
@@ -49,7 +49,7 @@ func TestMapCoatiDocument_MapsSmallTables(t *testing.T) {
 	// capacities + storage capacities -> results_energy_cap, and every key
 	// registers the loc-tech pair. POWER capacities (flow_cap, MW) are scaled
 	// MW -> kW (the R2 contract); storage ENERGY capacity (MWh) is not power
-	// and stays unscaled. See Round 4a.
+	// and stays unscaled.
 	assert.Len(t, parsed.EnergyCap, 4, "3 capacities + 1 storage capacity")
 	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 12026.172})
 	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 52.462265}) // storage (kWh, not scaled)
@@ -99,7 +99,7 @@ func TestMapCoatiDocument_CostsFallbackToSystemwide(t *testing.T) {
 	assert.Equal(t, CostRecord{Costs: "monetary", Techs: "battery", Value: 786.0}, parsed.Cost[0])
 }
 
-// Round 4a: the mapping boundary writes POWER in kW (document MW ×1000) while
+// The mapping boundary writes POWER in kW (document MW ×1000) while
 // leaving storage ENERGY (kWh) and currencies unscaled. The spec's worked
 // example: a 0.0025 MW demand is written as 2.5 kW.
 func TestMapCoatiDocument_ScalesPowerNotStorageOrCost(t *testing.T) {

@@ -27,7 +27,7 @@ import (
 )
 
 // TypeDispatchMemePyPSA is the asynq task type for the isolated PyPSA power-flow
-// leg (Step 1B): an optional, derived run that builds a MEME `meme-pypsa` job
+// leg: an optional, derived run that builds a MEME `meme-pypsa` job
 // from the parsed Calliope results and dispatches it independently with its own
 // leg-keyed run record. It never touches the Calliope leg's dispatch/ingest.
 const TypeDispatchMemePyPSA = "dispatch_meme_pypsa"
@@ -325,7 +325,7 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 // injectPowerFlow embeds the pass's PowerFlow into the MEME job under the
 // top-level "power_flow" key. It is deliberately top-level (NOT under
 // job.model, whose schema MEME owns and must not gain an unknown key): the
-// `meme-pypsa` target's run.py PF mode (Step 1C) will read it from there. The
+// `meme-pypsa` target's run.py PF mode reads it from there. The
 // key is overridable/clear — a job that carries one replaces any earlier value.
 func injectPowerFlow(memeJob map[string]interface{}, pf *pypsapass.PowerFlow) error {
 	b, err := json.Marshal(pf)

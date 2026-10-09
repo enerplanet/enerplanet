@@ -23,8 +23,8 @@ const (
 	// data exists in this result.
 	SourceMeme Source = "meme"
 
-	// SourceFullGridPF is a future pf-capable source (reclaimed upstream in
-	// MEME, or a dedicated target). Coverage matches SourceLegacy.
+	// SourceFullGridPF is the isolated MEME `meme-pypsa` power-flow leg
+	// (IngestPyPSAResult). Coverage matches SourceLegacy.
 	SourceFullGridPF Source = "full-grid-pf"
 )
 

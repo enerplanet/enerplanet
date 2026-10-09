@@ -69,7 +69,7 @@ func (f *fakeIngestRuns) Get(modelID uint) (*models.ModelMemeRun, error) {
 }
 
 // newIngestMockDB returns a gorm DB whose sqlmock accepts any statement (the
-// ingest writes many fixed tables), with expectations pre-seeded for Step 6's
+// ingest writes many fixed tables), with expectations pre-seeded for the ingest's
 // exact write surface: one transaction containing 21 R2-table DELETEs + the
 // small-table INSERTs, then one model.results UPDATE. deleteCounts are the
 // number of DELETEs (default the full R2 table set).
@@ -88,7 +88,7 @@ func newIngestMockDB(t *testing.T, insertCount int) (*gorm.DB, sqlmock.Sqlmock) 
 	require.NoError(t, err)
 
 	const deleteTables = 22 // deleteExistingResults (21) + the model_results DELETE
-	// Round 3: the ingest resolves the per-grid cable rating from the model's
+	// The ingest resolves the per-grid cable rating from the model's
 	// stored config before opening the write transaction. A null config row
 	// leaves every wire's loading_percent NULL (the fake document has no wires).
 	mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows([]string{"config"}).AddRow([]byte(nil)))

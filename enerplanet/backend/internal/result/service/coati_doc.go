@@ -5,11 +5,10 @@ import "encoding/json"
 // CoatiResultsDocument is the unified results document Coati writes (schema
 // "1.0"). Only the fields the R2 ingest consumes are typed; scalar totals are
 // mapped into the small tables. Large per-timestep series (dispatch, demand,
-// transmission) are kept as json.RawMessage and currently deferred — Coati's
-// series are tech/location-aggregated and do not carry the per-location,
-// per-carrier dimensions results_carrier_prod/con require.
-//
-// See enerplanet/.local/dependencies/coati/COATI.md for the full schema.
+// transmission) are kept as json.RawMessage: Coati's series are
+// tech/location-aggregated and do not carry the per-location, per-carrier
+// dimensions results_carrier_prod/con require. Coati (submodules/Coati) owns
+// the full schema.
 type CoatiResultsDocument struct {
 	SchemaVersion          string                        `json:"schema_version"`
 	Framework              string                        `json:"framework"`
@@ -28,8 +27,8 @@ type CoatiResultsDocument struct {
 	CostsByTech            map[string]float64            `json:"costs_by_tech"`      // "tech" -> cost (systemwide)
 	TotalUnmetDemand       *float64                      `json:"total_unmet_demand"`
 
-	// Large time-series — the wire mapping consumes TransmissionFlow; the rest
-	// is deferred for the R2 streaming tables (see above).
+	// Large time-series: the wire mapping consumes TransmissionFlow; the rest
+	// is not mapped (see above).
 	Generation       map[string]json.RawMessage   `json:"generation"`
 	Dispatch         map[string]json.RawMessage   `json:"dispatch"`
 	DemandTimeseries json.RawMessage              `json:"demand_timeseries"`

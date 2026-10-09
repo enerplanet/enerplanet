@@ -216,7 +216,7 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fakeZip, got, "the fetched MEME zip is stored verbatim")
 
-	// The ingest (Step 6) is enqueued for the stored zip path so the R2 tables
+	// The ingest is enqueued for the stored zip path so the R2 tables
 	// are populated from the zip via Coati.
 	require.Len(t, enq.enqueued, 1, "one ingest enqueued per dispatch")
 	assert.Equal(t, modelID, enq.enqueued[0].ModelID)
