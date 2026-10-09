@@ -1,33 +1,15 @@
 package meme
 
 import (
-	_ "embed"
+	"encoding/json"
 	"fmt"
 
 	"github.com/enerplanet/T1K/pkg/t1k"
 )
 
-//go:embed mapping.json
-var mappingJSON []byte
-
-// jobTask is the T1K transform task bound to the embedded enerplanet-to-meme
-// mapping, with the allow_unmet_demand rule removed so the produced job
-// validates clean against BOTH pypsa and calliope (MEME's TentaCron targets are
-// per-framework — meme-calliope, meme-pypsa; PyPSA rejects allow_unmet_demand),
-// so the same job body can be dispatched to either leg. The task is stateless
-// and safe to share.
-//
-// mapping.json is copied from T1K's embedded config minus the offending rule;
-// keep it in sync when the upstream mapping changes (see tasks/open/heat-patch.md).
-var jobTask = mustLoadJobTask()
-
-func mustLoadJobTask() *t1k.TransformTask {
-	cfg, err := t1k.LoadConfig(mappingJSON)
-	if err != nil {
-		panic(fmt.Sprintf("meme: invalid embedded enerplanet-to-meme mapping: %v", err))
-	}
-	return t1k.NewTransformTask(t1k.WithConfig(cfg))
-}
+// jobTask is T1K's default enerplanet-to-meme transform. It is stateless and
+// safe to share.
+var jobTask = t1k.NewTransformTask(t1k.WithConfig(t1k.DefaultConfig()))
 
 // Payload is the calculation payload this translator consumes: the shape
 // payload.CalculationPayload builds (topology + per-node techs). It is
@@ -42,11 +24,50 @@ type TranslatedJob struct {
 
 // TranslatePayload converts a calculation payload (as JSON) into a MEME job
 // via T1K. Electricity only: the enerplanet-to-meme mapping emits no heat
-// vector or heat pump. Retrofitting heat is tracked in tasks/open/heat-patch.md.
+// vector or heat pump.
+//
+// T1K's default mapping sets experiment.allow_unmet_demand, which MEME's PyPSA
+// target rejects. It is removed so one job body serves both the meme-calliope
+// and meme-pypsa targets.
 func TranslatePayload(input []byte) (TranslatedJob, error) {
 	out, err := jobTask.Transform(input)
 	if err != nil {
 		return TranslatedJob{}, fmt.Errorf("meme: translate payload via T1K: %w", err)
 	}
-	return TranslatedJob{Job: out}, nil
+	job, err := withoutUnmetDemand(out)
+	if err != nil {
+		return TranslatedJob{}, err
+	}
+	return TranslatedJob{Job: job}, nil
+}
+
+// withoutUnmetDemand deletes experiment.allow_unmet_demand from a MEME job.
+// Values stay raw JSON, so numbers are never re-encoded.
+func withoutUnmetDemand(job []byte) ([]byte, error) {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(job, &top); err != nil {
+		return nil, fmt.Errorf("meme: decode T1K job: %w", err)
+	}
+	raw, ok := top["experiment"]
+	if !ok {
+		return job, nil
+	}
+	var experiment map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &experiment); err != nil {
+		return nil, fmt.Errorf("meme: decode T1K job experiment: %w", err)
+	}
+	if _, ok := experiment["allow_unmet_demand"]; !ok {
+		return job, nil
+	}
+	delete(experiment, "allow_unmet_demand")
+	encoded, err := json.Marshal(experiment)
+	if err != nil {
+		return nil, fmt.Errorf("meme: encode job experiment: %w", err)
+	}
+	top["experiment"] = encoded
+	out, err := json.Marshal(top)
+	if err != nil {
+		return nil, fmt.Errorf("meme: encode job: %w", err)
+	}
+	return out, nil
 }
