@@ -731,9 +731,11 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                 title={capabilities.utilizationOnly ? t('results.grid.transmissionUtilization') : undefined}
               />
             </ErrorBoundary>
-            <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
-              {t('results.grid.loadingPreliminary')}
-            </p>
+            {capabilities.utilizationOnly && (
+              <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+                {t('results.grid.loadingPreliminary')}
+              </p>
+            )}
           </div>
         </GatedSection>
       </div>
@@ -746,22 +748,24 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
             </ErrorBoundary>
           </div>
         </GatedSection>
-        <div className={CHART_CARD_CLASS}>
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Zap className="w-4 h-4 text-primary" />
-            Renewable Curtailment
+        <GatedSection requires="curtailment" capabilities={capabilities} title="Renewable Curtailment">
+          <div className={CHART_CARD_CLASS}>
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Zap className="w-4 h-4 text-primary" />
+              Renewable Curtailment
+            </div>
+            <ErrorBoundary label="Curtailment Chart">
+              <PyPSACurtailmentChart
+                timestamps={curtailmentTimeline.map(item => item.timestep)}
+                availableKw={curtailmentTimeline.map(item => item.available_kw)}
+                actualKw={curtailmentTimeline.map(item => item.actual_kw)}
+                curtailedKw={curtailmentTimeline.map(item => item.curtailed_kw)}
+                height={220}
+                title=""
+              />
+            </ErrorBoundary>
           </div>
-          <ErrorBoundary label="Curtailment Chart">
-            <PyPSACurtailmentChart
-              timestamps={curtailmentTimeline.map(item => item.timestep)}
-              availableKw={curtailmentTimeline.map(item => item.available_kw)}
-              actualKw={curtailmentTimeline.map(item => item.actual_kw)}
-              curtailedKw={curtailmentTimeline.map(item => item.curtailed_kw)}
-              height={220}
-              title=""
-            />
-          </ErrorBoundary>
-        </div>
+        </GatedSection>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -821,9 +825,11 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                   <p className="text-xs text-muted-foreground">No line loading data.</p>
                 )}
               </div>
-              <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
-                {t('results.grid.loadingPreliminary')}
-              </p>
+              {capabilities.utilizationOnly && (
+                <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+                  {t('results.grid.loadingPreliminary')}
+                </p>
+              )}
             </div>
             </GatedSection>
           </div>
