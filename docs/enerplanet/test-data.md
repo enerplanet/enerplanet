@@ -26,7 +26,7 @@ treat them as an order of magnitude.
 About 2.2 GB is the checkout. `make install`, needed only for hot-reload
 development, adds 1 GB of `node_modules`.
 enerplanet-pylovo accounts for 1.6 GB of it, most of that LFS history. The
-fixtures are 39 MB. simulation-engine is not cloned by `make setup`; `make
+fixtures are 78 MB. simulation-engine is not cloned by `make setup`; `make
 webservice` clones it (6 GB) when the Calliope/PyPSA simulation is needed.
 
 Container images take about 22 GB. The largest are PyLovo's API at 6.5 GB,
@@ -70,7 +70,9 @@ Then run the smoke test:
 make smoke
 ```
 
-It should report `0 failure(s)`. If it fails at step 2a with `HTTP 000`,
+It runs the Loenen site; `SMOKE_SITE=bremen make smoke` or
+`SMOKE_SITE=brno make smoke` runs another one. It should report
+`0 failure(s)`. If it fails at step 2a with `HTTP 000`,
 TentaCron is not on the port `repos.conf` allocates it; see the note on
 existing `.env` files under Connection settings.
 
@@ -81,7 +83,35 @@ anywhere inside them resolves. Each appears by name under "Go to region" in the
 frontend, which zooms to the covered extent, so there is no bounding box to
 memorise and no hunting for the part of a city that happens to hold data.
 
-| Region | Extent | 3D source | CRS |
+PyLovo covers each whole region. The 3D data covers a box of at most about
+1,000 buildings inside it, small enough to work in one map view. A model drawn
+in the box takes the 3D path; one drawn elsewhere in the region has no 3D data
+and takes the path without it. Each box is split in two:
+
+- the **processed part** is already extracted and linked to PyLovo, so its 3D
+  buildings appear at once;
+- the **raw part** has only the source files, so a model drawn there starts
+  City2TABULA's on-request run (import, extraction and link) and shows its
+  3D buildings once that run completes.
+
+| Region | 3D box (EPSG:4326) | Processed part | 3D buildings (processed) |
+|---|---|---|---|
+| Loenen | 6.01175 52.09877 to 6.03662 52.11506 | south of lat 52.11099 | 737 (333) |
+| Bremen | 8.79239 53.09770 to 8.80586 53.10312 | west of lon 8.79613 | 836 (419) |
+| Vienna | 16.33877 48.20692 to 16.35360 48.21506 | west of lon 16.34686 | 927 (514) |
+| Brno | 16.60300 49.19000 to 16.61262 49.19996 | south of lat 49.19430 | 655 (370) |
+
+Every 3D building in a box also exists in the PyLovo fixture.
+
+!!! note "Draw clear of the split line"
+    City2TABULA decides whether an area needs a run by counting linked
+    buildings whose footprint touches it. A model in the raw part that touches
+    the split line counts some processed buildings and can start no run. Draw
+    the model clear of the line to test on-request processing.
+
+The PyLovo extent of each region:
+
+| Region | PyLovo extent | 3D source | CRS |
 |---|---|---|---|
 | Loenen, Netherlands | postcode 7371 | 3DBAG | EPSG:28992 |
 | Bremen, Germany | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | LoD2 Land Bremen | EPSG:25832 |
@@ -114,14 +144,11 @@ reprojected at load time, because the join between them is precomputed in
 
 | Fixture | Size | Populates | Lands in |
 |---|---|---|---|
-| `city2tabula/city2tabula_loenen.sql.gz` | 5.7 MB | 3,105 buildings, 53,043 surfaces, 3,105 links (2,381 matched) | a new `<DB_NAME>_nl` database |
-| `city2tabula/tabula_nl.sql.gz` | 9 kB | 135 Dutch TABULA archetype rows | the `tabula` schema of `<DB_NAME>_nl` |
-| `city2tabula/tabula_de.sql.gz` | 18 kB | 232 German TABULA archetype rows | the `tabula` schema of `<DB_NAME>_de` |
-| `city2tabula/city2tabula_bremen.sql.gz` | 20 MB | 9,284 buildings, 137,276 surfaces, 9,284 links (7,827 matched) | a new `<DB_NAME>_de` database |
-| `city2tabula/tabula_at.sql.gz` | 16 kB | 165 Austrian TABULA archetype rows | the `tabula` schema of `<DB_NAME>_at` |
-| `city2tabula/city2tabula_vienna.sql.gz` | 15 MB | 1,349 buildings, 97,031 surfaces, 1,349 links (1,244 matched) | a new `<DB_NAME>_at` database |
-| `city2tabula/tabula_cz.sql.gz` | 9 kB | 84 Czech TABULA archetype rows | the `tabula` schema of `<DB_NAME>_cz` |
-| `city2tabula/city2tabula_brno.sql.gz` | 4.7 MB | 778 buildings, 33,631 surfaces, 778 links (691 matched) | a new `<DB_NAME>_cz` database |
+| `city2tabula/city2tabula_loenen.sql.gz` | 4.1 MB | 333 buildings, 6,778 surfaces, 333 links (all matched), 135 Dutch TABULA rows, and the CityDB import they come from | a new `<DB_NAME>_nl` database |
+| `city2tabula/city2tabula_bremen.sql.gz` | 4.4 MB | 419 buildings, 7,440 surfaces, 419 links (all matched), 232 German TABULA rows, and the CityDB import | a new `<DB_NAME>_de` database |
+| `city2tabula/city2tabula_vienna.sql.gz` | 25.1 MB | 514 buildings, 39,295 surfaces, 514 links (all matched), 165 Austrian TABULA rows, and the CityDB import | a new `<DB_NAME>_at` database |
+| `city2tabula/city2tabula_brno.sql.gz` | 11.6 MB | 370 buildings, 20,648 surfaces, 370 links (all matched), 84 Czech TABULA rows, and the CityDB import | a new `<DB_NAME>_cz` database |
+| `city2tabula/lod2/<country>/<dataset>/` | 1.0 to 8.1 MB per site | the 3D source of the whole box (CityJSON for Loenen and Brno, CityGML for Bremen and Vienna), with its `attribution.json` | the City2TABULA checkout's `data/lod2/`, mounted into the server |
 | `weather/…/netherlands/…/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | full-year hourly weather, 3×3 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/austria/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Vienna, 13 variables | the weather checkout's `data/` |
@@ -133,12 +160,12 @@ The schema is rendered from pylovo's `config/config_table_structure.py`
 CREATE_QUERIES rather than dumped from a running instance, so it carries no
 drift from whichever machine produced it.
 
-The City2TABULA fixture serves data; it cannot rebuild it. The raw CityGML
-import schemas are excluded, so feature extraction cannot be re-run from it,
-and neither can the PyLovo link step, whose results are precomputed in
-`building_link`. The TABULA cuts are separate because classification reads
-`tabula.tabula`: a building cut without one answers reads but fails any
-pipeline run with `relation "tabula.tabula" does not exist`.
+Each City2TABULA dump is a whole pipeline database: the CityDB import, the
+`tabula` archetypes and the `city2tabula` tables. City2TABULA refuses an
+on-request run on a database that holds only the `city2tabula` schema, so a
+smaller dump could serve the processed part but never process the raw part.
+The dumps carry no `postgres_fdw` server or user mapping; the server creates
+them from `PYLOVO_FDW_*` on its first run (see Connection settings).
 
 ### Regenerating them
 
@@ -169,20 +196,34 @@ source database happened to hold.
 
 The fixtures follow the deployed layout: one pylovo database holding every
 country, and one City2TABULA database per country, each linked to that single
-pylovo database. Each country's City2TABULA fixture is produced in three steps:
+pylovo database. Each country's City2TABULA fixture is produced with
+City2TABULA v0.9.0 and citydb-tool 1.3.2, from the box and split line in the
+table under What is loaded:
 
-1. Import the site's 3D source into its own City2TABULA database as one
-   dataset folder carrying its `attribution.json`, then run
-   `-extract-features`. Every building records its `dataset_id`, and the
-   dataset's credit is stored in `dataset_attribution`.
-2. Truncate `building_link`, then run `-link-pylovo` with `PYLOVO_FDW_*` pointing
-   at the pylovo database the fixture above is exported from.
-3. `pg_dump --schema=city2tabula`, with `lod2_child_feature`,
-   `lod2_child_feature_geom_dump` and `lod2_surface_raw` truncated first (the
-   `lod3_` equivalents for an LoD3 source, and `_building_part` where it
-   exists). Nothing served reads those tables, and they triple the fixture size.
-   Keep `dataset_attribution`: City2TABULA answers HTTP 500 for a building
-   whose dataset has no credit row.
+1. Run City2TABULA over the site's full 3D source (`-create-db`,
+   `-extract-features`, `-link-pylovo`, with `PYLOVO_FDW_*` pointing at the
+   pylovo database the fixture above is exported from). This gives every
+   building a footprint and a `building_link` row.
+2. Select from that database the buildings whose footprint centroid lies in
+   the box and that have a `building_link` row with `match_type = 1`, and
+   separately those that also lie on the processed side of the split line.
+3. Export each selection with `citydb export` from the `lod2` schema, in the
+   dataset's own format and version (CityJSON 2.0 or CityGML 1.0), filtered by
+   `objectid`. The whole-box export, compressed with `gzip -9` and placed
+   beside the dataset's `attribution.json`, is the fixture's
+   `lod2/<country>/<dataset>/` tree.
+4. Build a fresh City2TABULA database in a `postgis/postgis:16-3.4`
+   container from the processed-part export alone: `-create-db`,
+   `-extract-features`, `-link-pylovo`. Every building records its
+   `dataset_id`, and the dataset's credit is stored in `dataset_attribution`,
+   which City2TABULA needs to serve a building at all.
+5. Drop the `postgres_fdw` servers (`DROP SERVER ... CASCADE`, which also
+   removes the user mappings) and the `pylovo` schema, so no credentials end
+   up in the dump.
+6. `pg_dump --no-owner --no-privileges` the whole database, excluding the data
+   of `city2tabula.lod2_child_feature`, `lod2_child_feature_geom_dump` and
+   their `lod3_` equivalents, which are read only while a building is first
+   extracted. Then check the dump contains no `USER MAPPING` or `password`.
 
 Link against the pylovo database itself over `postgres_fdw`, not against a copy
 of its `res` and `oth` tables. The link records OSM ids, so a link made against
@@ -200,7 +241,8 @@ different pylovo data points at buildings the pylovo fixture may not contain.
     `localhost` and `postgres` do not resolve there. The gateway of
     `city2tabula_default` on the published port 5433 reaches it; so does
     attaching `city2tabula-db` to `spatialhub-net` and using `postgres:5432`,
-    which does not depend on the port being published.
+    which does not depend on the port being published. `make city2tabula`
+    takes the second route.
 
 !!! note "One City2TABULA database per country"
     `fixtures/load.sh` creates `<DB_NAME>_<cc>` from one file and skips a
@@ -346,8 +388,21 @@ any of these to restore elsewhere:
 | Variable | Default |
 |---|---|
 | `C2T_DB_CONTAINER` | `city2tabula-db` |
-| `C2T_DB_NAME` | `city2tabula`, with `_nl` or `_de` appended |
+| `C2T_DB_NAME` | `city2tabula`, with `_nl`, `_de`, `_at` or `_cz` appended |
 | `C2T_DB_USER` / `C2T_DB_PASSWORD` | `postgres` |
+
+The City2TABULA server links buildings from an on-request run to PyLovo over
+`postgres_fdw`. `make city2tabula` passes these to its compose file and attaches
+`city2tabula-db` to `spatialhub-net`, where the platform Postgres holding
+`pylovo_db` is reachable by name. Override them with `make city2tabula
+PYLOVO_FDW_USER=...` and so on, for example to use a read-only role on a
+server:
+
+| Variable | Default |
+|---|---|
+| `PYLOVO_FDW_HOST` / `PYLOVO_FDW_PORT` | `postgres` / `5432` |
+| `PYLOVO_FDW_DBNAME` | `pylovo_db` |
+| `PYLOVO_FDW_USER` / `PYLOVO_FDW_PASSWORD` | `postgres` |
 
 !!! warning "`environment/http/docker.env` is not the source"
     That file configures the interactive pipeline service, which points at a

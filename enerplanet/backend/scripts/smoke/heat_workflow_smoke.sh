@@ -77,6 +77,9 @@ fi
 #   brno (CZ)    Seven buildings over two LV grids in the city centre, 6687 at
 #                400 kVA and 6696 at 630 kVA, inside the fixture box
 #                fixtures/pylovo/brno_box.wkt. City2TABULA's country is czechia.
+#                The polygon stays south of lat 49.1943, the processed part of
+#                the 3D fixture, so creating the model starts no run on the
+#                raw part.
 SMOKE_SITE="${SMOKE_SITE:-loenen}"
 case "$SMOKE_SITE" in
   loenen)
@@ -97,8 +100,8 @@ case "$SMOKE_SITE" in
     ;;
   brno)
     SITE_COUNTRY="czechia"
-    SITE_POLYGON='{"type":"Polygon","coordinates":[[[16.6035,49.1905],[16.6125,49.1905],[16.6125,49.1995],[16.6035,49.1995],[16.6035,49.1905]]]}'
-    SITE_BBOX='{"xmin":16.6035,"ymin":49.1905,"xmax":16.6125,"ymax":49.1995}'
+    SITE_POLYGON='{"type":"Polygon","coordinates":[[[16.6035,49.1905],[16.6125,49.1905],[16.6125,49.1943],[16.6035,49.1943],[16.6035,49.1905]]]}'
+    SITE_BBOX='{"xmin":16.6035,"ymin":49.1905,"xmax":16.6125,"ymax":49.1943}'
     SITE_GLAZING_FLOOR_PCT=""
     SITE_REGION_CC="CZ"
     SITE_REGION_STATE="jihomoravsky"

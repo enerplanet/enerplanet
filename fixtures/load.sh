@@ -71,9 +71,9 @@ load_weather() {
 # (host.docker.internal) under a different name. Following it restores the
 # fixture into a database the server never reads.
 #
-# One fixture per country, each with its own TABULA lookup: City2TABULA
-# classifies against tabula.tabula, so a building cut without it serves reads
-# but fails any pipeline run.
+# One full City2TABULA database per country (the CityDB import, the tabula
+# lookup and the city2tabula tables), because the server refuses an on-request
+# run on a database that holds only the city2tabula schema.
 C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db}"
 
 c2t_settings() {
@@ -92,9 +92,9 @@ c2t_settings() {
 
 c2t_psql() { docker exec -i -e PGPASSWORD="$PGPASSWORD" "$C2T_DB_CONTAINER" psql -U "$C2T_TARGET_USER" -v ON_ERROR_STOP=1 "$@"; }
 
-# restore_c2t COUNTRY BUILDING_FIXTURE TABULA_FIXTURE
+# restore_c2t COUNTRY FIXTURE
 restore_c2t() {
-  local country="$1" src="$HERE/city2tabula/$2" tab="$HERE/city2tabula/$3"
+  local country="$1" src="$HERE/city2tabula/$2"
   [ -f "$src" ] || return 0
   local target="${C2T_TARGET_NAME}_${country}"
 
@@ -106,26 +106,36 @@ restore_c2t() {
     fail "city2tabula/$country: could not create database $target in $C2T_DB_CONTAINER"
     return 0
   fi
-  # The geometry type must exist before the dump's tables reference it. Only
-  # one of the fixtures carries CREATE EXTENSION itself, so do not rely on it.
+  # The dump creates its own extensions with IF NOT EXISTS; postgis first is
+  # the order the fixtures are built and tested in.
   c2t_psql -d "$target" -c "create extension if not exists postgis" >/dev/null 2>&1
   if ! gzip -dc "$src" | c2t_psql -d "$target" >/dev/null 2>&1; then
     fail "city2tabula/$country: restore into $target failed, the database was left in place for inspection"
     return 0
   fi
-  if [ -f "$tab" ] && ! gzip -dc "$tab" | c2t_psql -d "$target" >/dev/null 2>&1; then
-    fail "city2tabula/$country: TABULA restore into $target failed; reads will work, pipeline runs will not"
-    return 0
-  fi
   ok "city2tabula/$country: restored into $target in $C2T_DB_CONTAINER"
 }
 
+# The raw 3D source of each box goes to data/lod2 in the City2TABULA checkout,
+# which its compose file mounts into the server at /app/data/lod2. An
+# on-request run imports the unprocessed part of a box from there.
+load_c2t_sources() {
+  local src="$HERE/city2tabula/lod2" checkout="$ROOT/dependencies/$CITY2TABULA_DIR"
+  [ -d "$src" ] || return 0
+  if [ ! -d "$checkout" ]; then
+    fail "city2tabula: dependencies/$CITY2TABULA_DIR not found, run 'make setup-repos' first"
+    return 0
+  fi
+  copy_tree "$src" "$checkout/data/lod2" "city2tabula sources"
+}
+
 load_city2tabula() {
+  load_c2t_sources
   c2t_settings || return 0
-  restore_c2t nl city2tabula_loenen.sql.gz tabula_nl.sql.gz
-  restore_c2t de city2tabula_bremen.sql.gz tabula_de.sql.gz
-  restore_c2t at city2tabula_vienna.sql.gz tabula_at.sql.gz
-  restore_c2t cz city2tabula_brno.sql.gz tabula_cz.sql.gz
+  restore_c2t nl city2tabula_loenen.sql.gz
+  restore_c2t de city2tabula_bremen.sql.gz
+  restore_c2t at city2tabula_vienna.sql.gz
+  restore_c2t cz city2tabula_brno.sql.gz
 }
 
 # The pylovo fixture carries its own schema, so it restores into a database

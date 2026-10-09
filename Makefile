@@ -364,9 +364,19 @@ weather: tentacron-network
 	@cd dependencies/$(WEATHER_DIR) && set -a && . ../TentaCron/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" HOST_PORT=$(WEATHER_PORT) WEATHER_IMAGE=ghcr.io/enerplanet/weather:$(WEATHER_IMAGE_TAG) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
+# On-request runs link new buildings to PyLovo over postgres_fdw, which
+# connects from city2tabula-db, so that container joins spatialhub-net to reach
+# the platform Postgres holding pylovo_db by name.
+PYLOVO_FDW_HOST ?= postgres
+PYLOVO_FDW_PORT ?= 5432
+PYLOVO_FDW_DBNAME ?= pylovo_db
+PYLOVO_FDW_USER ?= postgres
+PYLOVO_FDW_PASSWORD ?= postgres
+
 .PHONY: city2tabula
 city2tabula: tentacron-network ignis
-	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) PYLOVO_FDW_HOST=$(PYLOVO_FDW_HOST) PYLOVO_FDW_PORT=$(PYLOVO_FDW_PORT) PYLOVO_FDW_DBNAME=$(PYLOVO_FDW_DBNAME) PYLOVO_FDW_USER=$(PYLOVO_FDW_USER) PYLOVO_FDW_PASSWORD=$(PYLOVO_FDW_PASSWORD) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' city2tabula-db | grep -q '"spatialhub-net"' || docker network connect spatialhub-net city2tabula-db
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db
