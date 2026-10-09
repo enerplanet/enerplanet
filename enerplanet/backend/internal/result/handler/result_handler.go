@@ -288,7 +288,13 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 	// UI hides the sections a source cannot provide (and must not render an
 	// empty state that reads as a clean bill of health). The mapping lives in
 	// internal/result/capabilities.
-	source := resultcapabilities.Source(model.ResultSource)
+	rawSource, err := h.store.GetResultSource(modelIDUint)
+	if err != nil {
+		// Unknown provenance declares no capabilities, so the UI hides the
+		// grid sections rather than presenting a guess.
+		logger.ForComponent("result").Errorf("model_id=%d: %v", modelIDUint, err)
+	}
+	source := resultcapabilities.Source(rawSource)
 	response := gin.H{
 		"source":       string(source),
 		"capabilities": resultcapabilities.For(source),

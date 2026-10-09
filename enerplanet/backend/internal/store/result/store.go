@@ -1,6 +1,7 @@
 package result
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -190,6 +191,17 @@ func (s *Store) GetResultsCostInvestment(modelID uint) ([]backendModels.ResultsC
 	var items []backendModels.ResultsCostInvestment
 	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
 	return items, err
+}
+
+// GetResultSource returns models.result_source, the pipeline that produced the
+// model's parsed results. NULL (nothing parsed yet) is returned as "".
+func (s *Store) GetResultSource(modelID uint) (string, error) {
+	var source sql.NullString
+	err := s.db.Table("models").Select("result_source").Where("id = ?", modelID).Row().Scan(&source)
+	if err != nil {
+		return "", fmt.Errorf("read result_source for model %d: %w", modelID, err)
+	}
+	return source.String, nil
 }
 
 func (s *Store) GetResultsPyPSASettings(modelID uint) (*backendModels.ResultsPyPSASettings, error) {
