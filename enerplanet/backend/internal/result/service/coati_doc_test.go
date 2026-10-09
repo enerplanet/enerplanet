@@ -9,7 +9,7 @@ import (
 )
 
 // coatiFixtureJSON mirrors the shape of a real Coati results document (schema
-// 1.0), trimmed to the fields the R2 ingest maps, modelled on real Calliope
+// 1.0), trimmed to the fields the Coati ingest maps, modelled on real Calliope
 // output.
 const coatiFixtureJSON = `{
   "schema_version": "1.0",
@@ -48,7 +48,7 @@ func TestMapCoatiDocument_MapsSmallTables(t *testing.T) {
 
 	// capacities + storage capacities -> results_energy_cap, and every key
 	// registers the loc-tech pair. POWER capacities (flow_cap, MW) are scaled
-	// MW -> kW (the R2 contract); storage ENERGY capacity (MWh) is not power
+	// MW -> kW (the unit of the result tables); storage ENERGY capacity (MWh) is not power
 	// and stays unscaled.
 	assert.Len(t, parsed.EnergyCap, 4, "3 capacities + 1 storage capacity")
 	assert.Contains(t, parsed.EnergyCap, EnergyCap{Location: "n1", Tech: "battery", Value: 12026.172})
