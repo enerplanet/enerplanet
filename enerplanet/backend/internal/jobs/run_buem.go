@@ -684,10 +684,12 @@ func attachEnvelopeUValues(ctx context.Context, ignisClient envelopeUValueResolv
 		// allows for U (enum: W/(m2K), BTU/(h.ft2.F)); BuEM rejects the
 		// whole building on any other spelling.
 		elements[i].U = &city2tabula.Quantity{Value: in.u, Unit: "W/(m2K)"}
-		// b_Transmission is (0,1]. Send it only when it actually reduces the
-		// loss (< 1, e.g. ~0.5 for a ground floor); 1.0 and a missing 0 both
-		// leave it nil, which is BuEM's default.
-		if in.bTrans > 0 && in.bTrans < 1 {
+		// A party wall already carries b_transmission 0 from EnvelopeElements;
+		// the archetype's factor must not replace it. Otherwise send the
+		// archetype's factor only when it reduces the loss (< 1, e.g. ~0.5 for
+		// a ground floor); 1.0 and a missing 0 both leave it nil, which is
+		// BuEM's default.
+		if elements[i].BTransmission == nil && in.bTrans > 0 && in.bTrans < 1 {
 			elements[i].BTransmission = &city2tabula.Quantity{Value: in.bTrans, Unit: "-"}
 		}
 	}

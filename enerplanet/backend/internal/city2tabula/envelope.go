@@ -9,12 +9,12 @@ type Quantity struct {
 
 // EnvelopeElement is one BuEM envelope element derived from a City2TABULA
 // surface. id carries the City2TABULA surface id unchanged so a caller can map
-// a rendered surface back to the element being edited. U and BTransmission are
-// not derived from City2TABULA (it has no thermal-performance data) — they are
-// nil here and set afterward by a caller that has resolved a TABULA archetype
-// (run_buem, #61). BuEM rejects a wall/roof/floor element with no U, so a caller
-// sending these on to BuEM must fill it in first; BTransmission omitted means
-// BuEM's default of 1.0.
+// a rendered surface back to the element being edited. U is not derived from
+// City2TABULA (it has no thermal-performance data): it is nil here and set
+// afterward by a caller that has resolved a TABULA archetype (the run_buem job).
+// BuEM rejects a wall/roof/floor element with no U, so a caller sending these on
+// to BuEM must fill it in first. BTransmission is set here only on a party wall
+// (see EnvelopeElements); omitted means BuEM's default of 1.0.
 type EnvelopeElement struct {
 	ID            string    `json:"id" example:"w1"`
 	Type          string    `json:"type" example:"wall"`
@@ -50,6 +50,11 @@ var envelopeTypeByClassname = map[string]string{
 // element to edit. Each element's id is the City2TABULA surface id unchanged,
 // so a caller can match a rendered surface to its element.
 //
+// A wall City2TABULA marks as a party wall, shared with a neighbouring
+// building, gets b_transmission 0: the neighbour is taken to be heated, so no
+// heat leaves through that wall. City2TABULA does not say whether the
+// neighbour is heated.
+//
 // Shared by the run_buem job and the enrich HTTP handler so the two paths
 // produce identical envelope blocks. Returns nil when no surface qualifies.
 func EnvelopeElements(building Building) []EnvelopeElement {
@@ -71,7 +76,7 @@ func EnvelopeElements(building Building) []EnvelopeElement {
 			azimuth = 0
 		}
 
-		elements = append(elements, EnvelopeElement{
+		element := EnvelopeElement{
 			ID:      s.ID,
 			Type:    elemType,
 			Area:    Quantity{Value: *s.AreaSqm, Unit: "m2"},
@@ -79,7 +84,11 @@ func EnvelopeElements(building Building) []EnvelopeElement {
 			// City2TABULA: 0=vertical wall, 90=flat roof — the opposite of
 			// BuEM's 0=horizontal roof, 90=vertical wall.
 			Tilt: Quantity{Value: 90 - *s.Tilt, Unit: "deg"},
-		})
+		}
+		if elemType == "wall" && s.IsPartyWall != nil && *s.IsPartyWall {
+			element.BTransmission = &Quantity{Value: 0, Unit: "-"}
+		}
+		elements = append(elements, element)
 	}
 	return elements
 }

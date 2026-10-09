@@ -327,6 +327,29 @@ func TestAttachEnvelopeUValues_setsEffectiveUAndBTransmission(t *testing.T) {
 	assert.Equal(t, ignis.RefurbishmentExisting, meta.Level)
 }
 
+func TestAttachEnvelopeUValues_keepsPartyWallBTransmissionZero(t *testing.T) {
+	client := fakeEnvelopeUValueResolver{
+		code: "DE.N.TH.05.Gen",
+		uValues: ignis.EnvelopeUValues{
+			UWall: 1.2, URoof: 0.9, UFloor: 1.1,
+			BTransWall: 0.8, BTransRoof: 1, BTransFloor: 0.5,
+		},
+	}
+	elements := []city2tabula.EnvelopeElement{
+		{ID: "w1", Type: "wall", Area: city2tabula.Quantity{Value: 20, Unit: "m2"}, BTransmission: &city2tabula.Quantity{Value: 0, Unit: "-"}},
+		{ID: "w2", Type: "wall", Area: city2tabula.Quantity{Value: 18, Unit: "m2"}},
+	}
+
+	got, _ := attachEnvelopeUValues(context.Background(), client, elements, "DE.N.TH.05.Gen", "terrace", "germany", testYear(1975), ignis.RefurbishmentExisting)
+
+	require.Len(t, got, 2)
+	require.NotNil(t, got[0].U, "a party wall still needs U for BuEM's schema")
+	require.NotNil(t, got[0].BTransmission)
+	assert.Equal(t, 0.0, got[0].BTransmission.Value, "the party wall's 0 must not be replaced by the archetype's factor")
+	require.NotNil(t, got[1].BTransmission)
+	assert.Equal(t, 0.8, got[1].BTransmission.Value)
+}
+
 func TestAttachEnvelopeUValues_nilClientLeavesElementsUnchanged(t *testing.T) {
 	got, meta := attachEnvelopeUValues(context.Background(), nil, envelopeFixture(), "", "detached", "germany", testYear(1975), ignis.RefurbishmentExisting)
 

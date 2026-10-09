@@ -112,3 +112,19 @@ func TestEnvelopeElements_MultipleSurfaces(t *testing.T) {
 	assert.Equal(t, "w1", got[0].ID)
 	assert.Equal(t, "r1", got[1].ID)
 }
+
+func TestEnvelopeElements_partyWallGetsZeroBTransmission(t *testing.T) {
+	building := Building{Surfaces: []Surface{
+		{ID: "w1", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(90), Tilt: ptrF(0), IsPartyWall: ptrB(true)},
+		{ID: "w2", Type: "WallSurface", AreaSqm: ptrF(25), Azimuth: ptrF(270), Tilt: ptrF(0), IsPartyWall: ptrB(false)},
+		{ID: "r1", Type: "RoofSurface", AreaSqm: ptrF(60), Azimuth: ptrF(-1), Tilt: ptrF(90)},
+	}}
+
+	got := EnvelopeElements(building)
+
+	require.Len(t, got, 3)
+	require.NotNil(t, got[0].BTransmission, "party wall must carry b_transmission")
+	assert.Equal(t, Quantity{Value: 0, Unit: "-"}, *got[0].BTransmission)
+	assert.Nil(t, got[1].BTransmission, "exterior wall keeps BuEM's default")
+	assert.Nil(t, got[2].BTransmission)
+}

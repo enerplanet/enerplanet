@@ -168,6 +168,9 @@ type Surface struct {
 	// not gate on either.
 	IsValid  *bool `json:"is_valid,omitempty"`
 	IsPlanar *bool `json:"is_planar,omitempty"`
+	// IsPartyWall marks a wall piece City2TABULA found shared with a
+	// neighbouring building (City2TABULA v0.9.0 and later).
+	IsPartyWall *bool `json:"is_party_wall,omitempty"`
 }
 
 // normalizeCountry adapts the backend's country vocabulary (geo.NormalizeCountry,
