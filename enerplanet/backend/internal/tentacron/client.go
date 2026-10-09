@@ -240,31 +240,6 @@ func (c *Client) awaitTerminal(ctx context.Context, target, id string) (statusRe
 	}
 }
 
-// FetchResultBytes submits a request for the named target with payload, waits
-// for the job to reach a terminal state, and returns the raw upstream response
-// body — the one path a binary stream (e.g. MEME's result zip) must take,
-// because Do/DoTimeout json.Unmarshal the body and fail on non-JSON. When
-// TentaCron inlined the body as result.target_response the bytes are returned
-// verbatim (including a "null"-shaped body only when TentaCron emitted none and
-// the href path was taken); a spilled-to-href body is fetched with one more
-// authenticated GET. A failed/cancelled outcome is returned as *TargetError.
-// The whole submit-and-await is bounded by opTimeout (60s); callers for a
-// genuinely long solve should treat a deadline here as requeueable.
-func (c *Client) FetchResultBytes(ctx context.Context, target string, payload any) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, opTimeout)
-	defer cancel()
-
-	id, err := c.submit(ctx, target, payload)
-	if err != nil {
-		return nil, err
-	}
-	st, err := c.awaitTerminal(ctx, target, id)
-	if err != nil {
-		return nil, err
-	}
-	return c.resultBytes(ctx, target, st)
-}
-
 // resultBytes returns the completed job's verbatim upstream body as raw bytes,
 // regardless of whether TentaCron inlined it (result.target_response) or
 // spooled it to result.href.
