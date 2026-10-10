@@ -21,7 +21,6 @@ import { ApiTokensDialog } from "@/features/admin-dashboard/components/ApiTokens
 import { useAuthStore } from "@/store/auth-store";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import axios from "@/lib/axios";
-import Notification from "@/components/ui/Notification";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import type { FormDataConvertible } from "@/hooks/useForm";
 import { useConfirm } from "@/hooks/useConfirmDialog";
@@ -160,10 +159,8 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     model_limit: undefined,
   });
   const {
-    notification,
     showSuccess,
     showError,
-    hide: hideNotification,
     setNotification,
   } = useNotification();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -1462,13 +1459,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
         loading={false}
         errors={{}}
         maxWidth="sm"
-      />
-
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hideNotification}
       />
     </div>
   );
