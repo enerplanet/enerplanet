@@ -14,9 +14,24 @@ import {
 interface UseModelDashboardHandlersProps {
   onRefresh: () => Promise<void>;
   onStatsRefresh: () => Promise<void>;
+  onDownloadError: (reason: string) => void;
 }
 
-export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseModelDashboardHandlersProps) => {
+// A failed blob request carries the server's JSON error as a Blob.
+async function downloadErrorReason(error: unknown): Promise<string> {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text()) as { error?: unknown };
+      if (typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    } catch {
+      // Not JSON: fall through to the error's own message.
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh, onDownloadError }: UseModelDashboardHandlersProps) => {
   const navigate = useNavigate();
   const duplicateMutation = useDuplicateModelMutation();
   const deleteMutation = useDeleteModelMutation();
@@ -84,9 +99,9 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     try {
       await downloadModelArchive(model.id, `model_${model.id}.zip`);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Download failed:', error);
+      onDownloadError(await downloadErrorReason(error));
     }
-  }, []);
+  }, [onDownloadError]);
 
   const updateTitle = useCallback(async (model: Model | null, title: string): Promise<void> => {
     if (model && title.trim()) {

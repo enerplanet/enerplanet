@@ -309,6 +309,10 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		clearSelection,
 	} = useModelSelection();
 
+	const handleDownloadError = useCallback((reason: string) => {
+		showError(t("common.modelActions.downloadFailed", { reason }));
+	}, [showError, t]);
+
 	const {
 		handleEdit,
 		handleView,
@@ -321,6 +325,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	} = useModelDashboardHandlers({
 		onRefresh: async () => { await refetchModels(); },
 		onStatsRefresh: loadStats,
+		onDownloadError: handleDownloadError,
 	});
 
 	const setWorkspaceFilter = useCallback((workspaceId: number | undefined) => {

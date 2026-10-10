@@ -175,6 +175,7 @@
     "modelActions": {
       "viewResults": "Zobacz Wyniki",
       "downloadResults": "Pobierz Wyniki",
+      "downloadFailed": "Pobieranie nie powiodło się: {{reason}}",
       "copyConfiguration": "Kopiuj Konfigurację",
       "editConfiguration": "Edytuj Konfigurację",
       "cannotEditCompleted": "Nie można edytować ukończonego modelu",

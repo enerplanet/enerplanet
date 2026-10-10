@@ -221,6 +221,7 @@
     "modelActions": {
       "viewResults": "Voir les Résultats",
       "downloadResults": "Télécharger les Résultats",
+      "downloadFailed": "Échec du téléchargement : {{reason}}",
       "copyConfiguration": "Copier la Configuration",
       "editConfiguration": "Modifier la Configuration",
       "cannotEditCompleted": "Impossible de modifier un modèle terminé",

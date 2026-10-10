@@ -175,6 +175,7 @@
     "modelActions": {
       "viewResults": "Zobrazit Výsledky",
       "downloadResults": "Stáhnout Výsledky",
+      "downloadFailed": "Stažení se nezdařilo: {{reason}}",
       "copyConfiguration": "Kopírovat Konfiguraci",
       "editConfiguration": "Upravit Konfiguraci",
       "cannotEditCompleted": "Nelze upravit dokončený model",

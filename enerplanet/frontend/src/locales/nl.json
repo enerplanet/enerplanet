@@ -175,6 +175,7 @@
     "modelActions": {
       "viewResults": "Resultaten Bekijken",
       "downloadResults": "Resultaten Downloaden",
+      "downloadFailed": "Downloaden mislukt: {{reason}}",
       "copyConfiguration": "Configuratie Kopiëren",
       "editConfiguration": "Configuratie Bewerken",
       "cannotEditCompleted": "Kan voltooid model niet bewerken",

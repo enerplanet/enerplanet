@@ -221,6 +221,7 @@
     "modelActions": {
       "viewResults": "View Results",
       "downloadResults": "Download Results",
+      "downloadFailed": "Download failed: {{reason}}",
       "copyConfiguration": "Copy Configuration",
       "editConfiguration": "Edit Configuration",
       "cannotEditCompleted": "Cannot edit completed model",
