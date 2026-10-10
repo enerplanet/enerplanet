@@ -225,6 +225,10 @@ func HandleDispatchMeme(
 		return fmt.Errorf("store MEME result zip for model %d: %w", p.ModelID, err)
 	}
 
+	// The solve succeeded; from here the model is reading results, so a later
+	// ingest failure is not shown as a failed simulation.
+	markModelProcessing(db, p.ModelID)
+
 	// 6. Enqueue the ingest: parse the stored zip via Coati into the
 	//    R2 tables. Dispatch's job ends here: the terminal 'completed'/'failed'
 	//    transition is owned by the ingest handler (completed on parse success,

@@ -16,8 +16,9 @@ import (
 // writers that move it on:
 //
 //	queue -> running  (dispatch submitted a TentaCron job)
-//	running -> completed (ingest parsed the result and seeded the R2 tables)
-//	queue|running -> failed (dispatch or ingest failed; zero masking)
+//	running -> processing (dispatch stored the result bundle for the ingest)
+//	processing -> completed (ingest parsed the result into the result tables)
+//	queue|running|processing -> failed (dispatch or ingest failed; zero masking)
 //
 // Without this the MEME path only ever wrote model_meme_runs, so a finished or
 // failed run left models.status 'queue' forever: the UI showed a run that never
@@ -28,6 +29,10 @@ import (
 
 func markModelRunning(db *gorm.DB, modelID uint) {
 	markModelStatus(db, modelID, commonModels.ModelStatusRunning, nil, nil)
+}
+
+func markModelProcessing(db *gorm.DB, modelID uint) {
+	markModelStatus(db, modelID, commonModels.ModelStatusProcessing, nil, nil)
 }
 
 func markModelCompleted(db *gorm.DB, modelID uint) {
@@ -41,7 +46,7 @@ func markModelFailed(db *gorm.DB, modelID uint, reason string) {
 }
 
 // markModelStatus applies a status transition to a model that is still in the
-// MEME lifecycle (queue|running), so a late failure can never clobber a model
+// MEME lifecycle (queue|running|processing), so a late failure can never clobber a model
 // another path already finished.
 func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time.Time, reason *string) {
 	updates := map[string]interface{}{
@@ -62,6 +67,7 @@ func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time
 		Where("id = ? AND status IN ?", modelID, []string{
 			commonModels.ModelStatusQueue,
 			commonModels.ModelStatusRunning,
+			commonModels.ModelStatusProcessing,
 		}).
 		Updates(updates).Error
 	if err != nil {
