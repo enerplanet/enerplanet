@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"database/sql/driver"
 	"archive/zip"
 	"context"
 	"encoding/json"
@@ -210,4 +211,39 @@ func TestHandleIngestMemeResult_CoatiFailureIsError(t *testing.T) {
 	// masks the real parse / CLI-missing cause.
 	require.Equal(t, models.MemeRunStatusFailed, runs.status)
 	require.NotEmpty(t, runs.errMsg, "the captured Coati error is persisted on the failed run")
+}
+
+// containsArg matches a SQL argument whose text contains want.
+type containsArg string
+
+func (want containsArg) Match(v driver.Value) bool {
+	var s string
+	switch x := v.(type) {
+	case string:
+		s = x
+	case []byte:
+		s = string(x)
+	default:
+		return false
+	}
+	return strings.Contains(s, string(want))
+}
+
+// A reading failure after a successful solve says so in the model's error, so
+// it is not mistaken for a failed simulation.
+func TestHandleIngestMemeResult_failureNamesTheStage(t *testing.T) {
+	root := t.TempDir()
+	zipPath := writeMemeZip(t, root)
+	failRunner := &fakeCoatiRunner{}
+	failRunner.docJSON = "{not-json"
+
+	db, mock := newStatusMockDB(t)
+	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
+		WithArgs(sqlmock.AnyArg(), containsArg("Simulation finished; reading the results failed: "),
+			"failed", sqlmock.AnyArg(), 7, "queue", "running", "processing").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err := HandleIngestMemeResult(context.Background(), ingestTask(t, zipPath), db, &fakeIngestRuns{}, failRunner)
+	require.Error(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
 }
