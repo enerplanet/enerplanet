@@ -5,7 +5,7 @@ import ModelStatusCards from "@/components/ui/cards/ModelStatusCards";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ModelActions from "@/components/ui/ModelActions";
 import Pagination from "@/components/ui/Pagination";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { ShareModelModal } from "@/features/model-dashboard/components/ShareModelModal";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import {
@@ -59,18 +59,10 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 	const [shareOpen, setShareOpen] = useState(false);
 	const [selectedModel, setSelectedModel] = useState<Model | null>(null);
 
-	const [notification, setNotification] = useState({
-		isOpen: false,
-		message: "",
-		severity: "success" as "success" | "error" | "warning" | "info"
-	});
+	const { show } = useNotification();
 
 	const showNotification = (message: string, severity: "success" | "error" | "warning" | "info" = "success") => {
-		setNotification({
-			isOpen: true,
-			message,
-			severity
-		});
+		show(message, severity);
 	};
 
 	const handleShare = (model: Model) => {
@@ -428,13 +420,6 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 					setShareOpen(false);
 					showNotification(t("modelsManagement.notifications.shared"), 'success');
 				}}
-			/>
-
-			<Notification
-				isOpen={notification.isOpen}
-				message={notification.message}
-				severity={notification.severity}
-				onClose={() => setNotification({ ...notification, isOpen: false })}
 			/>
 		</div>
 	);

@@ -8,7 +8,6 @@ import { PolygonDrawer } from '@/features/polygon-drawer';
 import { useCustomLocationStore } from '@/features/locations/store/custom-location-store';
 import { customLocationService } from '@/features/locations/services/customLocationService';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
-import Notification from '@/components/ui/Notification';
 import { RegionSelector, type AvailableRegion } from '@/features/configurator/region-selector/components/RegionSelector';
 import { useAvailableRegions } from '@/features/configurator/hooks/useAvailableRegions';
 import { loadAvailableBoundaryLayers, highlightSelectedRegionBoundary } from '@/features/configurator/utils/gridLayerUtils';
@@ -43,7 +42,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   const { id } = useParams<{ id: string }>();
   const { map, clearOverlayLayers, setFireRiskOverlay } = useMapStore();
   const { createLocation, updateLocation } = useCustomLocationStore();
-  const { notification, showSuccess, showError, hide } = useNotification();
+  const { showSuccess, showError } = useNotification();
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -245,13 +244,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
 
   return (
     <>
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hide}
-      />
-
       <MapContainer
         modal={false}
         topBar={
