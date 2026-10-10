@@ -6,6 +6,7 @@ import {
   addOrUpdateLvLines,
   addOrUpdateMvLines,
   addOrUpdateTransformers,
+  addOrUpdateConnections,
   addOrUpdateRegionBoundaries,
   addOrUpdatePolygon,
   setupBoundaryInteractions,
@@ -19,6 +20,7 @@ export interface LayerData {
   linesGeoJSON?: any;
   mvLinesGeoJSON?: any;
   transformersGeoJSON?: any;
+  connectionGeoJSON?: GeoJSON.FeatureCollection | null;
   availableBoundaryGeoJSON?: any;
   selectedBoundaryFeature?: any;
   showBoundary?: boolean;
@@ -43,6 +45,7 @@ export function useMapLibreLayers(
     linesGeoJSON,
     mvLinesGeoJSON,
     transformersGeoJSON,
+    connectionGeoJSON,
     availableBoundaryGeoJSON,
     selectedBoundaryFeature,
     showBoundary = true,
@@ -67,6 +70,7 @@ export function useMapLibreLayers(
   const lines = useMemo(() => reprojectGeoJSON(linesGeoJSON), [linesGeoJSON]);
   const mvLines = useMemo(() => reprojectGeoJSON(mvLinesGeoJSON), [mvLinesGeoJSON]);
   const transformers = useMemo(() => reprojectGeoJSON(transformersGeoJSON), [transformersGeoJSON]);
+  const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
 
   const loadAll = useCallback((map: maplibregl.Map) => {
@@ -79,6 +83,7 @@ export function useMapLibreLayers(
     addOrUpdateLvLines(map, lines, colorMap);
     addOrUpdateMvLines(map, mvLines);
     addOrUpdateTransformers(map, transformers, colorMap);
+    addOrUpdateConnections(map, connections);
     addOrUpdateRegionBoundaries(
       map,
       availableBoundaryGeoJSON,
@@ -92,6 +97,7 @@ export function useMapLibreLayers(
     lines,
     mvLines,
     transformers,
+    connections,
     userModels,
     availableBoundaryGeoJSON,
     selectedBoundaryFeature,

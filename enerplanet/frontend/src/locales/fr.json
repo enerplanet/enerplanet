@@ -221,6 +221,7 @@
     "modelActions": {
       "viewResults": "Voir les Résultats",
       "downloadResults": "Télécharger les Résultats",
+      "downloadFailed": "Échec du téléchargement : {{reason}}",
       "copyConfiguration": "Copier la Configuration",
       "editConfiguration": "Modifier la Configuration",
       "cannotEditCompleted": "Impossible de modifier un modèle terminé",
@@ -228,9 +229,8 @@
       "shareModel": "Partager le Modèle",
       "delete": "Supprimer",
       "cannotDelete": "Suppression impossible - seul le propriétaire ou un expert peut supprimer",
-      "retryCalculation": "Réessayer le Calcul",
-      "startCalculation": "Démarrer le Calcul",
-      "engineNotAvailable": "Le moteur de simulation n'est pas disponible"
+      "runWithMeme": "Exécuter avec Calliope",
+      "runPypsaOnMeme": "Exécuter l'écoulement de puissance (PyPSA)"
     },
     "pagination": {
       "showing": "Affichage de",
@@ -731,7 +731,11 @@
       "max": "Max",
       "avg": "Moy",
       "loading": "Charge",
-      "noLoadingData": "Aucune donnée de charge disponible"
+      "noLoadingData": "Aucune donnée de charge disponible",
+      "notInResult": "Absent de ce résultat",
+      "transmissionUtilization": "Utilisation du transport",
+      "overloadedConnection": "Ligne surchargée",
+      "loadingPreliminary": "Préliminaire : chaque ligne est évaluée par rapport au câble le plus faible de son réseau, de sorte qu'une utilisation élevée surestime le câble réel."
     },
     "system": {
       "noData": "Aucune donnée système disponible",
@@ -1025,9 +1029,7 @@
     "bulkCopyDescription": "Créer des copies de {{count}} modèle(s) sélectionné(s)",
     "bulkCopyFailed": "Certains modèles n'ont pas pu être copiés. Veuillez réessayer.",
     "bulkCopySubmit": "Créer les copies",
-    "calculate": "Calculer",
-    "cannotCalculate": "Calcul impossible – aucun modèle éligible sélectionné",
-    "noWebserviceAvailable": "Aucun moteur de simulation disponible"
+    "cannotCalculate": "Calcul impossible – aucun modèle éligible sélectionné"
   },
   "polygon": {
     "drawRegion": "Dessinez votre région",
@@ -2542,8 +2544,7 @@
     "coverageMedium": "Couverture de données moyenne",
     "coverageLow": "Couverture de données faible",
     "summaryFooter": "{{countries}} pays · {{regions}} régions · {{grids}} grilles"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Fonctionnalités",

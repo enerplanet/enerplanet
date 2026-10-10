@@ -55,8 +55,10 @@ import BuildingDetailPanel from './components/panels/BuildingDetailPanel';
 import CostPanel from './components/panels/CostPanel';
 import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
+import { capabilitiesFrom } from '@/config/resultCapabilities';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
+import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
 
@@ -485,6 +487,58 @@ export const ModelResultsViewer = () => {
     return (model?.config as any)?.transformers ?? null;
   }, [(model?.config as any)?.transformers]);
 
+  // Data-driven connection layer: the model config `lines` have no endpoints, so
+  // they cannot be joined to a wire. Instead draw each wire as a straight segment
+  // between its two node coordinates (bus0 -> bus1) and colour it red when its
+  // peak utilisation exceeds 100% — keyed the same way the topology keys an edge
+  // (connectionKey). Served to both the 2D (OpenLayers) and MapLibre-3D paths.
+  const connectionsGeoJSON = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    const rows = pypsaData?.line_loading;
+    const coords = results?.coordinates;
+    if (!rows?.length || !coords) return null;
+
+    // Coordinates are keyed by location id; match against the connection's bus
+    // ids in either vocabulary (`n1` / legacy `ID_1`) via normalizeLocId.
+    const coordEntries = Object.entries(coords).map(
+      ([id, c]) => [normalizeLocId(id), [c.x, c.y] as [number, number]] as const,
+    );
+    const coordFor = (id: string): [number, number] | null => {
+      const direct = coords[id];
+      if (direct) return [direct.x, direct.y];
+      const norm = normalizeLocId(id);
+      const hit = coordEntries.find(([key]) => key === norm);
+      return hit ? hit[1] : null;
+    };
+
+    // One entry per connection with its peak utilisation across timesteps.
+    const connections = new Map<string, { bus0: string; bus1: string; percent: number }>();
+    rows.forEach(row => {
+      if (!row.bus0 || !row.bus1) return;
+      if (row.loading_percent === undefined || row.loading_percent === null) return;
+      const key = connectionKey(row.bus0, row.bus1);
+      const prev = connections.get(key);
+      connections.set(key, {
+        bus0: row.bus0,
+        bus1: row.bus1,
+        percent: prev ? Math.max(prev.percent, row.loading_percent) : row.loading_percent,
+      });
+    });
+
+    const features: GeoJSON.Feature[] = [];
+    connections.forEach(({ bus0, bus1, percent }) => {
+      const a = coordFor(bus0);
+      const b = coordFor(bus1);
+      if (!a || !b) return;
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [a, b] },
+        properties: { overloaded: isOverloaded(percent), loadingPercent: percent },
+      });
+    });
+
+    return features.length > 0 ? { type: 'FeatureCollection', features } : null;
+  }, [pypsaData?.line_loading, results?.coordinates]);
+
   // Calculate accurate summary
   const summary = useMemo(() => {
     if (structuredResults) {
@@ -512,7 +566,9 @@ export const ModelResultsViewer = () => {
     return calculateBusStatusData(pypsaData);
   }, [pypsaData]);
 
-
+  // What this result actually contains (declared by the backend). Absent block
+  // => least capable, so a stale backend can never un-hide a section.
+  const capabilities = useMemo(() => capabilitiesFrom(pypsaData), [pypsaData]);
 
   // Use shared map for model results visualization
   useModelResultsMap({
@@ -522,8 +578,11 @@ export const ModelResultsViewer = () => {
     onTransformerHover: setHighlightedBuildings,
     onTooltipChange: setMapTooltip,
     busStatusData,
-    showBusMarkers: rightPanelView === 'grid',
+    // Bus markers are voltage-derived; without voltage they would all default to
+    // a green "1.00" — so never create them for a result that has no voltage.
+    showBusMarkers: rightPanelView === 'grid' && capabilities.voltage,
     highlightedBuildings,
+    connectionGeoJSON: connectionsGeoJSON,
   });
 
   
@@ -541,8 +600,8 @@ export const ModelResultsViewer = () => {
       // power_transmission records link buildings to transformers via to_loc field
       if (tech === 'power_transmission' && location && toLoc) {
         connections.push({
-          bus0: location.replace(/^ID_/, ''), // "ID_1" → "1"
-          bus1: toLoc, // "Trafo_36646"
+          bus0: location.replace(/^ID_/i, ''), // legacy "ID_1" → "1"; current ids pass through
+          bus1: toLoc, // legacy "Trafo_36646" / current "ntrafo_82"
         });
       }
     });
@@ -603,6 +662,7 @@ export const ModelResultsViewer = () => {
         return (
           <GridPanel
             pypsaData={pypsaData}
+            capabilities={capabilities}
             selectedBus={selectedBus}
             setSelectedBus={setSelectedBus}
             selectedVoltage={selectedVoltage}
@@ -622,7 +682,7 @@ export const ModelResultsViewer = () => {
     capacityData, costBreakdown, energyFlow, avgCapacityFactor,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
-    carrier,
+    carrier, capabilities,
   ]);
 
   if (error || (!model && !loading)) {
@@ -919,6 +979,7 @@ export const ModelResultsViewer = () => {
               linesGeoJSON={linesGeoJSON}
               mvLinesGeoJSON={mvLinesGeoJSON}
               transformersGeoJSON={transformersGeoJSON}
+              connectionGeoJSON={connectionsGeoJSON}
               visible={isMapLibre3D}
             />
           )}

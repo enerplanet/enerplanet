@@ -238,8 +238,18 @@ class ModelService {
     return response.data;
   }
 
-  async startCalculation(id: number): Promise<ModelResponse> {
-    const response = await axios.post(`/calculation/start/${id}`);
+  // Dispatch the model to MEME (via TentaCron).
+  async runMeme(id: number): Promise<ModelResponse> {
+    const response = await axios.post(`/models/${id}/run-meme`);
+    return response.data;
+  }
+
+  // Dispatch the isolated PyPSA power-flow leg (the add-on): builds a
+  // MEME meme-pypsa job from the model's parsed Calliope results. The backend
+  // refuses (400) unless the Calliope leg completed, so the UI only offers it
+  // on completed models.
+  async runMemePypsa(id: number): Promise<ModelResponse> {
+    const response = await axios.post(`/models/${id}/run-meme-pypsa`);
     return response.data;
   }
 

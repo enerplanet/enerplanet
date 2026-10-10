@@ -5,20 +5,19 @@ import ModelStatusCards from "@/components/ui/cards/ModelStatusCards";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ModelActions from "@/components/ui/ModelActions";
 import Pagination from "@/components/ui/Pagination";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { ShareModelModal } from "@/features/model-dashboard/components/ShareModelModal";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import {
 	useModelsQuery,
 	useModelStatsQuery,
 	useDuplicateModelMutation,
-	useStartCalculationMutation,
+	useRunMemeMutation,
 	useDeleteModelMutation
 } from "@/features/model-dashboard/hooks/useModelsQuery";
 import { formatDate } from "@/utils/dateHelpers";
 import { getModelStatusColor } from "@/features/model-dashboard/utils/statusHelpers";
 import type { Model } from "@/features/model-dashboard/services/modelService";
-import { useWebservices } from "@/features/admin-dashboard/hooks/useWebservices";
 import { useAuthStore } from "@/store/auth-store";
 import { useTranslation } from "@spatialhub/i18n";
 import { useConfirm } from "@/hooks/useConfirmDialog";
@@ -53,29 +52,17 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 	const models = modelsResponse?.data || [];
 	const totalItems = modelsResponse?.total || 0;
 
-	// Webservice availability check - refresh every 15 seconds for responsive button updates
-	const { summary: webserviceSummary } = useWebservices({}, { autoRefresh: true, refreshInterval: 15000 });
-	const hasAvailableWebservice = (webserviceSummary?.available ?? 0) > 0;
-
 	const duplicateMutation = useDuplicateModelMutation();
-	const startCalculationMutation = useStartCalculationMutation();
+	const runMemeMutation = useRunMemeMutation();
 	const deleteMutation = useDeleteModelMutation();
 
 	const [shareOpen, setShareOpen] = useState(false);
 	const [selectedModel, setSelectedModel] = useState<Model | null>(null);
 
-	const [notification, setNotification] = useState({
-		isOpen: false,
-		message: "",
-		severity: "success" as "success" | "error" | "warning" | "info"
-	});
+	const { show } = useNotification();
 
 	const showNotification = (message: string, severity: "success" | "error" | "warning" | "info" = "success") => {
-		setNotification({
-			isOpen: true,
-			message,
-			severity
-		});
+		show(message, severity);
 	};
 
 	const handleShare = (model: Model) => {
@@ -104,15 +91,13 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 		}
 	};
 
-	const handleCalculate = async (modelIds: number[]) => {
+	const handleRunMeme = async (model: Model) => {
 		try {
-			for (const id of modelIds) {
-				await startCalculationMutation.mutateAsync(id);
-				onModelAction?.("start_calculation", id);
-			}
+			await runMemeMutation.mutateAsync(model.id);
+			onModelAction?.("run_meme", model.id);
 			showNotification(t("modelsManagement.notifications.calculationStarted"), "success");
 		} catch (error) {
-			if (import.meta.env.DEV) console.error("Failed to start calculation:", error);
+			if (import.meta.env.DEV) console.error("Failed to start MEME calculation:", error);
 			showNotification(t("modelsManagement.notifications.failedToCalculate"), "error");
 		}
 	};
@@ -300,10 +285,9 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 								onDownload={(m) => handleDownload(m as unknown as Model)}
 								onCopy={(m) => handleCopy(m as unknown as Model)}
 								onDelete={(m) => handleDelete(m as unknown as Model)}
-								onCalculate={(m) => handleCalculate([m.id])}
+								onRunMeme={(m) => handleRunMeme(m as unknown as Model)}
 								onShare={(m) => handleShare(m as unknown as Model)}
 								onMoveToWorkspace={(m) => handleMoveToWorkspace(m as unknown as Model)}
-								hasAvailableWebservice={hasAvailableWebservice}
 								layout="horizontal"
 								size="small"
 							/>
@@ -436,13 +420,6 @@ export const ModelsManagement: React.FC<ModelsManagementProps> = ({ onModelActio
 					setShareOpen(false);
 					showNotification(t("modelsManagement.notifications.shared"), 'success');
 				}}
-			/>
-
-			<Notification
-				isOpen={notification.isOpen}
-				message={notification.message}
-				severity={notification.severity}
-				onClose={() => setNotification({ ...notification, isOpen: false })}
 			/>
 		</div>
 	);

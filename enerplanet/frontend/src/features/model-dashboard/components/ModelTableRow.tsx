@@ -41,7 +41,6 @@ interface ModelTableRowProps {
   calculationStartTimes: Record<number, string>;
   calculationCompletionInfo: Record<number, CompletionInfo>;
   canUserDeleteModel: (model: Model) => boolean;
-  hasAvailableWebservice: boolean;
   onSelect: (model: Model) => void;
   onStartEdit: (model: Model) => void;
   onEditTitleChange: (value: string) => void;
@@ -51,7 +50,9 @@ interface ModelTableRowProps {
   onEdit: (model: Model) => void;
   onDownload: (model: Model) => void;
   onCopy: (model: Model) => void;
-  onCalculate: (model: Model) => void;
+  onRunMeme: (model: Model) => void;
+  // Not passed while the PyPSA leg is withheld; ModelActions hides it then.
+  onRunMemePypsa?: (model: Model) => void;
   onDelete: (model: Model) => void;
   onShare: (model: Model) => void;
   onMoveToWorkspace: (model: Model) => void;
@@ -181,7 +182,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   calculationStartTimes,
   calculationCompletionInfo,
   canUserDeleteModel,
-  hasAvailableWebservice,
   onSelect,
   onStartEdit,
   onEditTitleChange,
@@ -191,7 +191,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   onEdit,
   onDownload,
   onCopy,
-  onCalculate,
+  onRunMeme,
+  onRunMemePypsa,
   onDelete,
   onShare,
   onMoveToWorkspace,
@@ -334,7 +335,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             onEdit={onEdit}
             onDownload={onDownload}
             onCopy={onCopy}
-            onCalculate={onCalculate}
+            onRunMeme={onRunMeme}
+            onRunMemePypsa={onRunMemePypsa}
             onDelete={onDelete}
             onShare={onShare}
             onMoveToWorkspace={onMoveToWorkspace}
@@ -348,7 +350,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             shareTooltip={
               canManageModel ? t("common.tooltips.share") : t("model.sharedCannotShare")
             }
-            hasAvailableWebservice={hasAvailableWebservice}
             layout="horizontal"
             size="small"
           />
@@ -402,7 +403,6 @@ const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.editTitle !== next.editTitle) return false;
-  if (prev.hasAvailableWebservice !== next.hasAvailableWebservice) return false;
   if (prev.canUserDeleteModel(prev.model) !== next.canUserDeleteModel(next.model)) return false;
 
   const modelID = prev.model.id;

@@ -8,6 +8,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
+import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
 import type { Geometry } from 'ol/geom';
 import { fromLonLat, toLonLat } from 'ol/proj';
@@ -230,6 +231,12 @@ interface UseModelResultsMapOptions {
   busStatusData?: BusStatusData[];
   showBusMarkers?: boolean;
   highlightedBuildings?: string[] | null;
+  /**
+   * Data-driven connection layer: one straight wire segment per connection
+   * (bus0 -> bus1) in EPSG:4326, with an `overloaded` property. Drawn on the 2D
+   * map; red when the connection's peak utilisation exceeds 100%.
+   */
+  connectionGeoJSON?: GeoJSON.FeatureCollection | null;
 }
 
 export const useModelResultsMap = ({
@@ -241,12 +248,14 @@ export const useModelResultsMap = ({
   busStatusData,
   showBusMarkers = false,
   highlightedBuildings,
+  connectionGeoJSON,
 }: UseModelResultsMapOptions) => {
   const { map } = useMapStore();
   const layersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const polygonLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const buildingSourceRef = useRef<VectorSource | null>(null);
   const busLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const connectionLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Use state for hovered transformer (like AreaSelect) to prevent blinking
   const [hoveredTransformerId, setHoveredTransformerId] = useState<number | null>(null);
@@ -427,6 +436,47 @@ export const useModelResultsMap = ({
       }
     };
   }, [map, showBusMarkers, busStatusData, results?.coordinates, highlightedBuildings]);
+
+  // Data-driven connection layer: each wire drawn as a straight segment between
+  // its two node coordinates (bus0 -> bus1), red when its peak utilisation
+  // exceeds 100%. Above the base grid layers, below the bus markers.
+  useEffect(() => {
+    if (!map) return;
+
+    if (connectionLayerRef.current) {
+      map.removeLayer(connectionLayerRef.current);
+      connectionLayerRef.current = null;
+    }
+
+    if (!connectionGeoJSON?.features?.length) return;
+
+    const source = new VectorSource();
+    connectionGeoJSON.features.forEach(feature => {
+      const geom = feature.geometry;
+      if (!geom || geom.type !== 'LineString') return;
+      const projected = (geom.coordinates as [number, number][]).map(c => fromLonLat(c));
+      const lineFeature = new Feature({ geometry: new LineString(projected) });
+      const overloaded = (feature.properties as Record<string, unknown> | null)?.overloaded === true;
+      lineFeature.setStyle(new Style({
+        stroke: new Stroke({
+          color: overloaded ? '#ef4444' : '#64748b',
+          width: overloaded ? 4 : 2.5,
+        }),
+        zIndex: overloaded ? 20 : 10,
+      }));
+      source.addFeature(lineFeature);
+    });
+
+    connectionLayerRef.current = new VectorLayer({ source, zIndex: 150 });
+    map.addLayer(connectionLayerRef.current);
+
+    return () => {
+      if (connectionLayerRef.current) {
+        map.removeLayer(connectionLayerRef.current);
+        connectionLayerRef.current = null;
+      }
+    };
+  }, [map, connectionGeoJSON]);
 
   // Click and hover handlers
   useEffect(() => {

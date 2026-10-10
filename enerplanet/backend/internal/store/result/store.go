@@ -1,7 +1,9 @@
 package result
 
 import (
+	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -11,6 +13,7 @@ import (
 	backendModels "spatialhub_backend/internal/models"
 
 	commonModels "platform.local/common/pkg/models"
+	"platform.local/platform/logger"
 )
 
 // Store encapsulates all database operations for the result handler.
@@ -189,6 +192,17 @@ func (s *Store) GetResultsCostInvestment(modelID uint) ([]backendModels.ResultsC
 	var items []backendModels.ResultsCostInvestment
 	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
 	return items, err
+}
+
+// GetResultSource returns models.result_source, the pipeline that produced the
+// model's parsed results. NULL (nothing parsed yet) is returned as "".
+func (s *Store) GetResultSource(modelID uint) (string, error) {
+	var source sql.NullString
+	err := s.db.Table("models").Select("result_source").Where("id = ?", modelID).Row().Scan(&source)
+	if err != nil {
+		return "", fmt.Errorf("read result_source for model %d: %w", modelID, err)
+	}
+	return source.String, nil
 }
 
 func (s *Store) GetResultsPyPSASettings(modelID uint) (*backendModels.ResultsPyPSASettings, error) {
@@ -493,10 +507,36 @@ func (s *Store) GetPyPSALineLoading(modelID uint) ([]backendModels.ResultsPyPSAL
 	return items, err
 }
 
-func (s *Store) GetPyPSAVoltageLocations(modelID uint) []string {
-	var locations []string
-	s.db.Model(&backendModels.ResultsPyPSAVoltage{}).Where("model_id = ?", modelID).
-		Distinct("location").Pluck("location", &locations)
+// GetPyPSALocations returns the buses/nodes a model's PyPSA result refers to.
+//
+// An electrical (power-flow) source carries these on results_pypsa_voltage; a
+// Coati-sourced MEME result has no voltage table at all, so the wire endpoints
+// stand in. The Grid panel renders nothing without this list, which makes it the
+// render gate for either source.
+func (s *Store) GetPyPSALocations(modelID uint) []string {
+	seen := map[string]struct{}{}
+	collect := func(table, column string) {
+		var values []string
+		err := s.db.Table(table).Where("model_id = ?", modelID).
+			Distinct(column).Pluck(column, &values).Error
+		if err != nil {
+			logger.ForComponent("result-store").Errorf("model_id=%d: pluck %s.%s: %v", modelID, table, column, err)
+		}
+		for _, value := range values {
+			if strings.TrimSpace(value) != "" {
+				seen[value] = struct{}{}
+			}
+		}
+	}
+	collect("results_pypsa_voltage", "location")
+	collect("results_pypsa_line_loading", "bus0")
+	collect("results_pypsa_line_loading", "bus1")
+
+	locations := make([]string, 0, len(seen))
+	for value := range seen {
+		locations = append(locations, value)
+	}
+	sort.Strings(locations)
 	return locations
 }
 

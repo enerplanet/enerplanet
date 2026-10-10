@@ -170,8 +170,21 @@ func (c *Client) doWithTimeout(ctx context.Context, target string, payload, out 
 }
 
 func (c *Client) submit(ctx context.Context, target string, payload any) (string, error) {
+	return c.submitWithKey(ctx, target, payload, "")
+}
+
+// submitWithKey submits a request for the named target, setting an
+// Idempotency-Key header when key is non-empty. TentaCron dedups natively: a
+// replay of the same key + identical target+payload returns the STORED job
+// (created=false, same id) instead of enqueuing a duplicate; a different
+// payload under the same key returns 409 idempotency_conflict.
+func (c *Client) submitWithKey(ctx context.Context, target string, payload any, key string) (string, error) {
+	hdr := c.authHeader()
+	if key != "" {
+		hdr.Set("Idempotency-Key", key)
+	}
 	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/v1/requests",
-		submitRequest{Target: target, Payload: payload}, c.authHeader())
+		submitRequest{Target: target, Payload: payload}, hdr)
 	if err != nil {
 		return "", fmt.Errorf("tentacron submit %q: %w", target, err)
 	}
@@ -190,29 +203,61 @@ func (c *Client) submit(ctx context.Context, target string, payload any) (string
 }
 
 func (c *Client) await(ctx context.Context, target, id string, out any) error {
+	st, err := c.awaitTerminal(ctx, target, id)
+	if err != nil {
+		return err
+	}
+	return c.decodeTargetResponse(ctx, target, st, out)
+}
+
+// awaitTerminal polls until the job reaches a terminal state and returns its
+// status. A failed/cancelled outcome is returned as *TargetError. A "completed"
+// status is returned as-is so the caller decides how to read the result body —
+// JSON (decodeTargetResponse) or raw bytes (resultBytes).
+func (c *Client) awaitTerminal(ctx context.Context, target, id string) (statusResponse, error) {
 	for {
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("tentacron await %s (%s): %w", id, target, err)
+			return statusResponse{}, fmt.Errorf("tentacron await %s (%s): %w", id, target, err)
 		}
 		st, err := c.status(ctx, id)
 		if err != nil {
-			return err
+			return statusResponse{}, err
 		}
 		switch st.State {
 		case "completed":
-			return c.decodeTargetResponse(ctx, target, st, out)
+			return st, nil
 		case "failed", "cancelled":
-			return targetErrorFrom(id, st)
+			return statusResponse{}, targetErrorFrom(id, st)
 		}
 		// received / resolving / forwarding / awaiting_target: the ?wait GET
 		// normally already blocked for its full duration; the backstop only
 		// matters if it returned early.
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("tentacron await %s (%s): %w", id, target, ctx.Err())
+			return statusResponse{}, fmt.Errorf("tentacron await %s (%s): %w", id, target, ctx.Err())
 		case <-time.After(pollBackstop):
 		}
 	}
+}
+
+// resultBytes returns the completed job's verbatim upstream body as raw bytes,
+// regardless of whether TentaCron inlined it (result.target_response) or
+// spooled it to result.href.
+func (c *Client) resultBytes(ctx context.Context, target string, st statusResponse) ([]byte, error) {
+	if st.Result == nil {
+		return nil, fmt.Errorf("tentacron target %q: completed with no result", target)
+	}
+	body := []byte(st.Result.TargetResponse)
+	if len(body) == 0 {
+		if st.Result.Href == "" {
+			return nil, fmt.Errorf("tentacron target %q: completed with neither target_response nor href", target)
+		}
+		var err error
+		if body, err = c.fetchSpooledResult(ctx, st.Result.Href); err != nil {
+			return nil, fmt.Errorf("tentacron target %q: %w", target, err)
+		}
+	}
+	return body, nil
 }
 
 func (c *Client) status(ctx context.Context, id string) (statusResponse, error) {
@@ -244,19 +289,9 @@ func (c *Client) decodeTargetResponse(ctx context.Context, target string, st sta
 	if out == nil {
 		return nil
 	}
-	if st.Result == nil {
-		return fmt.Errorf("tentacron target %q: completed with no result", target)
-	}
-
-	body := []byte(st.Result.TargetResponse)
-	if len(body) == 0 {
-		if st.Result.Href == "" {
-			return fmt.Errorf("tentacron target %q: completed with neither target_response nor href", target)
-		}
-		var err error
-		if body, err = c.fetchSpooledResult(ctx, st.Result.Href); err != nil {
-			return fmt.Errorf("tentacron target %q: %w", target, err)
-		}
+	body, err := c.resultBytes(ctx, target, st)
+	if err != nil {
+		return err
 	}
 
 	if err := json.Unmarshal(body, out); err != nil {

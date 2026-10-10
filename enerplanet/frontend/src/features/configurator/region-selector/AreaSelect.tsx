@@ -13,7 +13,6 @@ import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModa
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
-import Notification from "@/components/ui/Notification";
 import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
 import { GridActionBar } from "@/components/map-controls/GridActionBar";
 import { useMapProvider } from "@/providers/map-context";
@@ -443,12 +442,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Render ───────────────────────────────────────────────────────
   return (
     <Fragment>
-      <Notification
-        isOpen={notification.data.open}
-        message={notification.data.message}
-        severity={notification.data.severity}
-        onClose={notification.hide}
-      />
       <LoadingOverlay isOpen={editMode && state.isLoadingModel} />
 
       <MapContainer

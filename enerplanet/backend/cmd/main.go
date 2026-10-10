@@ -40,6 +40,7 @@ import (
 	modelhandler "spatialhub_backend/internal/model/handler"
 	opentechdb "spatialhub_backend/internal/opentechdb"
 	resulthandler "spatialhub_backend/internal/result/handler"
+	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
@@ -51,6 +52,7 @@ import (
 	"spatialhub_backend/internal/worker"
 	workspacehandler "spatialhub_backend/internal/workspace/handler"
 
+	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
 	authplatform "platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -258,13 +260,23 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	buemClient := buem.NewClient(tentacronClient)
 	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient)
+	resultZipStore := jobs.NewFilesystemResultZipStore(constants.StorageDataDir)
+
+	// Coati runs as a subprocess (COATI_BIN or `coati` on PATH) behind the thin
+	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
+	coatiRunner := resultservice.SubprocessCoatiRunner{}
+
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeResolveDemandProfiles, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeTriggerCity2TabulaRun, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMeme, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemeResult, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMemePyPSA, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemePyPSAResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go func() {
@@ -828,6 +840,8 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/download", resultHandler.DownloadModelResult)
 	api.POST(routeModelByID+"/reprocess-results", resultHandler.ReprocessModelResults)
 	api.POST("/calculation/start/:id", modelHandler.StartCalculation)
+	api.POST(routeModelByID+"/run-meme", modelHandler.StartMemeCalculation)
+	api.POST(routeModelByID+"/run-meme-pypsa", modelHandler.StartMemePyPSACalculation)
 	api.GET("/results/:id", resultHandler.GetResult)
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
 }

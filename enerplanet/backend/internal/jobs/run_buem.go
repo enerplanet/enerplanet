@@ -161,7 +161,7 @@ func ResolveBuemForModel(
 
 // resolveBuemInputs fetches envelope and weather data for model's area.
 // Both degrade to nil (envelope/weather simply omitted, not a job failure)
-// on any resolution problem — see the plan's "no-3D-data fallback" decision.
+// on any resolution problem, so a building without 3D data still runs.
 func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, json.RawMessage) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)

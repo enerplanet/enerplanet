@@ -152,6 +152,87 @@ func TestDo_cancelledContext(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSubmitMeme_setsIdempotencyKeyAndReturnsJobID(t *testing.T) {
+	var gotKey string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/requests" {
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+		gotKey = r.Header.Get("Idempotency-Key")
+		var body submitRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.Equal(t, "meme", body.Target)
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"id":"job-42","state":"received"}`))
+	}))
+	defer srv.Close()
+
+	id, err := New(srv.URL, "k").SubmitMeme(context.Background(), "meme", map[string]any{"model": "m"}, "model_42")
+
+	require.NoError(t, err)
+	require.Equal(t, "job-42", id, "submit returns the job id")
+	require.Equal(t, "model_42", gotKey, "Idempotency-Key is set on the POST")
+}
+
+func TestSubmitMeme_partialResponseNoIDIsError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"state":"received"}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "k").SubmitMeme(context.Background(), "meme", map[string]any{}, "k1")
+	require.Error(t, err)
+}
+
+func TestAwaitResultByID_resumesNoResubmit(t *testing.T) {
+	// A dispatch that already has a job id must resume by id (GET status /
+	// GET result) and never POST /v1/requests again.
+	pollBackstop = time.Millisecond
+	t.Cleanup(func() { pollBackstop = time.Second })
+
+	var posts atomic.Int32
+	zipBody := []byte("PK\x03\x04resume-zip\x00\xff")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
+			posts.Add(1)
+			t.Fatalf("resume-by-id must not resubmit")
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/job-9":
+			_, _ = w.Write([]byte(`{"state":"completed","result":{"target_status":200,"href":"/v1/requests/job-9/result","content_type":"application/zip"}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/requests/job-9/result":
+			_, _ = w.Write(zipBody)
+		default:
+			t.Fatalf("unexpected %s %s", r.Method, r.URL)
+		}
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "k")
+	require.NoError(t, c.AwaitResultByID(context.Background(), "job-9", time.Minute))
+	got, err := c.FetchResultByID(context.Background(), "job-9")
+
+	require.NoError(t, err)
+	require.Equal(t, zipBody, got, "the raw zip is fetched verbatim via /result")
+	assert.Zero(t, posts.Load(), "no resubmission during resume-by-id")
+}
+
+func TestAwaitResultByID_failedStateReturnsTargetError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			t.Fatalf("resume-by-id must not resubmit")
+		}
+		_, _ = w.Write([]byte(`{"state":"failed","error":{"code":"target_error","message":"target meme: HTTP 500: boom"}}`))
+	}))
+	defer srv.Close()
+
+	err := New(srv.URL, "k").AwaitResultByID(context.Background(), "job-f", time.Minute)
+	require.Error(t, err)
+	te, ok := AsTargetError(err)
+	require.True(t, ok)
+	assert.Equal(t, "target_error", te.Code)
+}
+
 func TestTargetError_UpstreamStatus(t *testing.T) {
 	cases := []struct {
 		name     string

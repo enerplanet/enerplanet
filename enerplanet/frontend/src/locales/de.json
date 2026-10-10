@@ -221,6 +221,7 @@
     "modelActions": {
       "viewResults": "Ergebnisse anzeigen",
       "downloadResults": "Ergebnisse herunterladen",
+      "downloadFailed": "Download fehlgeschlagen: {{reason}}",
       "copyConfiguration": "Konfiguration kopieren",
       "editConfiguration": "Konfiguration bearbeiten",
       "cannotEditCompleted": "Abgeschlossenes Modell kann nicht bearbeitet werden",
@@ -228,9 +229,8 @@
       "shareModel": "Modell teilen",
       "delete": "Löschen",
       "cannotDelete": "Löschen nicht möglich - nur der Eigentümer oder ein Experte kann löschen",
-      "retryCalculation": "Berechnung wiederholen",
-      "startCalculation": "Berechnung starten",
-      "engineNotAvailable": "Simulationsmodul ist nicht verfügbar"
+      "runWithMeme": "Mit Calliope ausführen",
+      "runPypsaOnMeme": "Leistungsfluss ausführen (PyPSA)"
     },
     "pagination": {
       "showing": "Zeige",
@@ -747,7 +747,11 @@
       "max": "Max",
       "avg": "Ø",
       "loading": "Auslastung",
-      "noLoadingData": "Keine Auslastungsdaten verfügbar"
+      "noLoadingData": "Keine Auslastungsdaten verfügbar",
+      "notInResult": "Nicht in diesem Ergebnis",
+      "transmissionUtilization": "Übertragungsauslastung",
+      "overloadedConnection": "Überlastete Leitung",
+      "loadingPreliminary": "Vorläufig: Jede Leitung wird gegen das schwächste Kabel ihres Netzes bewertet, daher überschätzt eine hohe Auslastung das tatsächliche Kabel."
     },
     "system": {
       "noData": "Keine Systemdaten verfügbar",
@@ -1038,9 +1042,7 @@
     "moveSelected": "Ausgewählte verschieben",
     "cannotDelete": "Löschen nicht möglich - Modelle sind deaktiviert oder gehören Ihnen nicht",
     "cannotMove": "Verschieben nicht möglich - Modelle gehören Ihnen nicht",
-    "calculate": "Berechnen",
     "cannotCalculate": "Berechnung nicht möglich – keine geeigneten Modelle ausgewählt",
-    "noWebserviceAvailable": "Keine Simulationsengine verfügbar",
     "bulkCopy": "Modelle kopieren",
     "bulkCopyDescription": "Kopien von {{count}} ausgewählten Modell(en) erstellen",
     "bulkCopySubmit": "Kopien erstellen",
@@ -2591,8 +2593,7 @@
     "coverageMedium": "Mittlere Datenabdeckung",
     "coverageLow": "Geringe Datenabdeckung",
     "summaryFooter": "{{countries}} Länder · {{regions}} Regionen · {{grids}} Raster"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funktionen",

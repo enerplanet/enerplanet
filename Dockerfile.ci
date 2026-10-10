@@ -97,14 +97,34 @@ ENV VITE_SSO_ENABLED=$VITE_SSO_ENABLED \
 
 RUN npm run build
 
+# Coati (submodules/Coati) parses MEME result netCDF/HDF5 files. It is installed
+# into its own venv and the backend runs it as a subprocess via COATI_BIN, so the
+# Go binary never parses netCDF/HDF5 itself.
+FROM ubuntu:22.04 AS coatibuild
+WORKDIR /coati
+# Need the build tools + python for provisioning; the RUNTIME stage also
+# installs python3 so the venv's interpreter and libs are already present and
+# matched (venv from python:3.12-slim would otherwise carry a different
+# libpython into a different base image).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 python3-venv python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+COPY submodules/Coati /coati
+RUN python3 -m venv /opt/coati && \
+    /opt/coati/bin/pip install --quiet --upgrade pip && \
+    /opt/coati/bin/pip install --quiet /coati
+# Smoke-test the provisioned binary so a broken build fails at build time.
+RUN /opt/coati/bin/coati --version
+
 # Runtime image
 FROM ubuntu:22.04
 
-# Install runtime dependencies
+# Install runtime dependencies (python3 so Coati's venv interpreter is present).
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
-    tzdata && \
+    tzdata \
+    python3 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -132,6 +152,11 @@ RUN useradd -r -m -d /home/appuser -s /bin/false appuser && \
     mkdir -p /app/storage/data && \
     chmod +x /app/server /app/migrate /app/seed /app/backfill_country || true && \
     chown -R appuser:appuser /app /initial-data
+
+# appuser owns the Coati venv; the backend runs its binary via COATI_BIN.
+COPY --from=coatibuild /opt/coati /opt/coati
+RUN chown -R appuser:appuser /opt/coati
+ENV COATI_BIN=/opt/coati/bin/coati
 
 USER appuser
 

@@ -221,6 +221,7 @@
     "modelActions": {
       "viewResults": "View Results",
       "downloadResults": "Download Results",
+      "downloadFailed": "Download failed: {{reason}}",
       "copyConfiguration": "Copy Configuration",
       "editConfiguration": "Edit Configuration",
       "cannotEditCompleted": "Cannot edit completed model",
@@ -228,9 +229,8 @@
       "shareModel": "Share Model",
       "delete": "Delete",
       "cannotDelete": "Cannot delete - only the owner or an expert can delete",
-      "retryCalculation": "Retry Calculation",
-      "startCalculation": "Start Calculation",
-      "engineNotAvailable": "Simulation engine is not available"
+      "runWithMeme": "Run with Calliope",
+      "runPypsaOnMeme": "Run power flow (PyPSA)"
     },
     "pagination": {
       "showing": "Showing",
@@ -747,7 +747,11 @@
       "max": "Max",
       "avg": "Avg",
       "loading": "Loading",
-      "noLoadingData": "No loading data available"
+      "noLoadingData": "No loading data available",
+      "notInResult": "Not in this result",
+      "transmissionUtilization": "Transmission Utilization",
+      "overloadedConnection": "Overloaded wire",
+      "loadingPreliminary": "Preliminary: each wire is rated against the weakest cable in its grid, so a high utilisation overstates the actual cable."
     },
     "system": {
       "noData": "No system data available",
@@ -1038,9 +1042,7 @@
     "moveSelected": "Move selected",
     "cannotDelete": "Cannot delete - models are disabled or don't belong to you",
     "cannotMove": "Cannot move - models don't belong to you",
-    "calculate": "Calculate",
     "cannotCalculate": "Cannot calculate - no eligible models selected",
-    "noWebserviceAvailable": "No simulation engine available",
     "bulkCopy": "Copy Models",
     "bulkCopyDescription": "Create copies of {{count}} selected model(s)",
     "bulkCopySubmit": "Create Copies",
@@ -2593,8 +2595,7 @@
     "coverageMedium": "Medium data coverage",
     "coverageLow": "Low data coverage",
     "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Features",

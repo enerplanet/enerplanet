@@ -175,6 +175,7 @@
     "modelActions": {
       "viewResults": "Zobrazit Výsledky",
       "downloadResults": "Stáhnout Výsledky",
+      "downloadFailed": "Stažení se nezdařilo: {{reason}}",
       "copyConfiguration": "Kopírovat Konfiguraci",
       "editConfiguration": "Upravit Konfiguraci",
       "cannotEditCompleted": "Nelze upravit dokončený model",
@@ -182,9 +183,8 @@
       "shareModel": "Sdílet Model",
       "delete": "Smazat",
       "cannotDelete": "Nelze smazat - pouze vlastník nebo expert může smazat",
-      "retryCalculation": "Opakovat Výpočet",
-      "startCalculation": "Zahájit Výpočet",
-      "engineNotAvailable": "Simulační motor není k dispozici"
+      "runWithMeme": "Spustit s Calliope",
+      "runPypsaOnMeme": "Spustit tok výkonu (PyPSA)"
     },
     "pagination": {
       "showing": "Zobrazeno",
@@ -489,7 +489,11 @@
       "max": "Max",
       "avg": "Prům",
       "loading": "Zatížení",
-      "noLoadingData": "Žádná data o zatížení"
+      "noLoadingData": "Žádná data o zatížení",
+      "notInResult": "Není v tomto výsledku",
+      "transmissionUtilization": "Využití přenosu",
+      "overloadedConnection": "Přetížené vedení",
+      "loadingPreliminary": "Předběžné: každé vedení je posuzováno podle nejslabšího kabelu ve své síti, takže vysoké využití nadhodnocuje skutečný kabel."
     },
     "system": {
       "noData": "Nejsou k dispozici žádná systémová data",
@@ -781,9 +785,7 @@
     "bulkCopyDescription": "Vytvořit kopie {{count}} vybraného modelu/modelů",
     "bulkCopyFailed": "Některé modely se nepodařilo zkopírovat. Zkuste to znovu.",
     "bulkCopySubmit": "Vytvořit kopie",
-    "calculate": "Vypočítat",
     "cannotCalculate": "Nelze vypočítat – nejsou vybrány žádné vhodné modely",
-    "noWebserviceAvailable": "Simulační engine není k dispozici",
     "cancelled": "Zrušeno",
     "modified": "Upraveno"
   },
@@ -2548,8 +2550,7 @@
     "coverageMedium": "Střední pokrytí dat",
     "coverageLow": "Nízké pokrytí dat",
     "summaryFooter": "{{countries}} zemí · {{regions}} regionů · {{grids}} mřížek"
-  }
-,
+  },
   "landing": {
     "nav": {
       "features": "Funkce",

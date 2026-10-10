@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Activity, AlertTriangle, Gauge, Network, Info, Zap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
+import { GatedSection, GapNote, SHOW_RESULT_GAPS } from '../ui/GatedSection';
+import type { Capabilities } from '@/config/resultCapabilities';
 import { PyPSAModelResults } from '../../api';
 import {
   PyPSAVoltageChart,
@@ -11,6 +13,8 @@ import {
   PyPSATransformerLoadingChart,
   PyPSALossesChart,
   PyPSACurtailmentChart,
+  connectionKey,
+  isOverloaded,
 } from '@/features/simulation-charts/pypsa';
 import { useTranslation } from '@spatialhub/i18n';
 import { CLUSTER_COLORS } from '@/components/map-controls/maplibre/maplibre-styles';
@@ -170,6 +174,7 @@ interface LineConnection {
 
 interface GridPanelProps {
   pypsaData: PyPSAModelResults | null;
+  capabilities: Capabilities;
   selectedBus: string | null;
   setSelectedBus: (bus: string) => void;
   selectedVoltage: { timestep: string; v_mag_pu: number }[];
@@ -210,7 +215,7 @@ const computeLoss = (p0Kw: number, p1Kw?: number): number => {
   return Math.abs(Math.abs(p0Kw) - Math.abs(p1Kw));
 };
 
-const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, selectedPower, onTransformerHover, lineConnections = [], highlightedBuildings }: GridPanelProps) => {
+const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selectedVoltage, selectedPower, onTransformerHover, lineConnections = [], highlightedBuildings }: GridPanelProps) => {
   const { t } = useTranslation();
   const isMapLibre3D = useMapStore(s => s.selectedBaseLayerId === 'maplibre_3d');
   const activeClusterPalette = isMapLibre3D ? CLUSTER_COLORS : DARK_CLUSTER_COLORS;
@@ -316,6 +321,19 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       .map(([name, stats]) => ({ name, ...stats }))
       .filter(item => item.hoursOutside > 0 || item.maxDeviationPu > 0);
   }, [voltageArr]);
+
+  // Per-connection peak utilisation, keyed the same way NetworkTopology keys an
+  // edge (connectionKey(bus0, bus1)). Red marking is per wire; a wire with no
+  // loading_percent (e.g. no resolvable rating) simply has no entry.
+  const connectionLoading = useMemo(() => {
+    const byConnection: Record<string, number> = {};
+    lineLoadingArr.forEach(entry => {
+      if (entry.loading_percent === undefined || entry.loading_percent === null) return;
+      const key = connectionKey(entry.bus0, entry.bus1);
+      byConnection[key] = Math.max(byConnection[key] ?? 0, entry.loading_percent);
+    });
+    return byConnection;
+  }, [lineLoadingArr]);
 
   const lineLoadingItems = useMemo(() => {
     const byLine = new Map<string, { peakApparentKva: number; peakLossKw: number; peakLoadingPercent?: number }>();
@@ -468,7 +486,10 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
               locations={pypsaData.locations}
               voltageData={avgVoltageByBus}
               powerData={avgPowerByBus}
+              voltageAvailable={capabilities.voltage}
+              powerAvailable={capabilities.power}
               lineConnections={lineConnections}
+              connectionLoading={connectionLoading}
               clusterColors={clusterColors}
               height={420}
               onTransformerHover={onTransformerHover}
@@ -478,6 +499,12 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
         </div>
 
         <div className="flex flex-col gap-4">
+          <GatedSection
+            requires="convergence"
+            capabilities={capabilities}
+            title="PyPSA Run Status"
+            icon={AlertTriangle}
+          >
           <div className={CHART_CARD_CLASS}>
             <div className="flex items-center justify-between gap-3 mb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -533,6 +560,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
               </div>
             )}
           </div>
+          </GatedSection>
 
           <div className={`flex-1 flex flex-col ${CHART_CARD_CLASS}`}>
             <div className="flex items-center justify-between mb-3 gap-3">
@@ -561,34 +589,46 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
                 <p className="text-xs text-muted-foreground mb-1">{t('results.grid.selected')}</p>
                 <p className="text-xl font-bold text-foreground truncate">{selectedBus || '-'}</p>
               </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">{t('results.grid.avgVoltage')}</p>
-                <p className="text-xl font-bold text-foreground">
-                  {selectedVoltageAvg !== null ? selectedVoltageAvg.toFixed(3) : '-'} <span className="text-sm font-normal">pu</span>
-                </p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">{t('results.grid.avgPower')}</p>
-                <p className="text-xl font-bold text-foreground">
-                  {selectedPowerAvg !== null ? formatPowerValue(selectedPowerAvg) : '-'}
-                </p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">Voltage span</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {selectedVoltageMin !== null && selectedVoltageMax !== null
-                    ? `${selectedVoltageMin.toFixed(3)} - ${selectedVoltageMax.toFixed(3)} pu`
-                    : '-'}
-                </p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">Most loaded transformer</p>
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {busiestTransformer
-                    ? `${busiestTransformer.name} (${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%)`
-                    : 'n/a'}
-                </p>
-              </div>
+              {capabilities.voltage ? (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{t('results.grid.avgVoltage')}</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {selectedVoltageAvg !== null ? selectedVoltageAvg.toFixed(3) : '-'} <span className="text-sm font-normal">pu</span>
+                  </p>
+                </div>
+              ) : SHOW_RESULT_GAPS ? (
+                <GapNote label={t('results.grid.notInResult')} className="p-3 text-[11px] leading-tight" />
+              ) : null}
+              {capabilities.power ? (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">{t('results.grid.avgPower')}</p>
+                  <p className="text-xl font-bold text-foreground">
+                    {selectedPowerAvg !== null ? formatPowerValue(selectedPowerAvg) : '-'}
+                  </p>
+                </div>
+              ) : SHOW_RESULT_GAPS ? (
+                <GapNote label={t('results.grid.notInResult')} className="p-3 text-[11px] leading-tight" />
+              ) : null}
+              {capabilities.voltage && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Voltage span</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedVoltageMin !== null && selectedVoltageMax !== null
+                      ? `${selectedVoltageMin.toFixed(3)} - ${selectedVoltageMax.toFixed(3)} pu`
+                      : '-'}
+                  </p>
+                </div>
+              )}
+              {capabilities.transformers && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Most loaded transformer</p>
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {busiestTransformer
+                      ? `${busiestTransformer.name} (${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%)`
+                      : 'n/a'}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
@@ -597,22 +637,26 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
                 <p className="text-xs font-medium text-foreground">Bottlenecks</p>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-muted-foreground">Busiest line</span>
-                  <span className="text-right font-medium text-foreground">
-                    {busiestLine
-                      ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${busiestLine.peakLoadingPercent.toFixed(1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`
-                      : 'n/a'}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-muted-foreground">Top transformer</span>
-                  <span className="text-right font-medium text-foreground">
-                    {busiestTransformer
-                      ? `${busiestTransformer.name} • ${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%`
-                      : 'n/a'}
-                  </span>
-                </div>
+                {capabilities.lineLoading && (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground">Busiest line</span>
+                    <span className="text-right font-medium text-foreground">
+                      {busiestLine
+                        ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${busiestLine.peakLoadingPercent.toFixed(1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`
+                        : 'n/a'}
+                    </span>
+                  </div>
+                )}
+                {capabilities.transformers && (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground">Top transformer</span>
+                    <span className="text-right font-medium text-foreground">
+                      {busiestTransformer
+                        ? `${busiestTransformer.name} • ${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%`
+                        : 'n/a'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -620,6 +664,7 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GatedSection requires="voltage" capabilities={capabilities} title={`${t('results.grid.voltageProfile')} - ${selectedBus}`}>
         <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
             {t('results.grid.voltageProfile')} - {selectedBus}
@@ -640,7 +685,9 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
             )}
           </ErrorBoundary>
         </div>
+        </GatedSection>
 
+        <GatedSection requires="power" capabilities={capabilities} title={`${t('results.grid.powerFlow')} - ${selectedBus}`}>
         <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
             {t('results.grid.powerFlow')} - {selectedBus}
@@ -662,60 +709,83 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
             )}
           </ErrorBoundary>
         </div>
+        </GatedSection>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={CHART_CARD_CLASS}>
-          <ErrorBoundary label="Voltage Violations">
-            <PyPSAVoltageViolationChart items={voltageViolationItems} height={240} />
-          </ErrorBoundary>
-        </div>
-        <div className={CHART_CARD_CLASS}>
-          <ErrorBoundary label="Line Loading">
-            <PyPSALineLoadingChart items={lineLoadingItems} height={240} />
-          </ErrorBoundary>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={CHART_CARD_CLASS}>
-          <ErrorBoundary label="Transformer Loading">
-            <PyPSATransformerLoadingChart items={transformerLoadingItems} height={240} />
-          </ErrorBoundary>
-        </div>
-        <div className={CHART_CARD_CLASS}>
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Zap className="w-4 h-4 text-primary" />
-            Renewable Curtailment
+        <GatedSection requires="voltage" capabilities={capabilities} title={t('results.grid.voltage')}>
+          <div className={CHART_CARD_CLASS}>
+            <ErrorBoundary label="Voltage Violations">
+              <PyPSAVoltageViolationChart items={voltageViolationItems} height={240} />
+            </ErrorBoundary>
           </div>
-          <ErrorBoundary label="Curtailment Chart">
-            <PyPSACurtailmentChart
-              timestamps={curtailmentTimeline.map(item => item.timestep)}
-              availableKw={curtailmentTimeline.map(item => item.available_kw)}
-              actualKw={curtailmentTimeline.map(item => item.actual_kw)}
-              curtailedKw={curtailmentTimeline.map(item => item.curtailed_kw)}
-              height={220}
-              title=""
-            />
-          </ErrorBoundary>
-        </div>
+        </GatedSection>
+        <GatedSection requires="lineLoading" capabilities={capabilities} title={t('results.grid.loading')}>
+          <div className={CHART_CARD_CLASS}>
+            <ErrorBoundary label="Line Loading">
+              <PyPSALineLoadingChart
+                items={lineLoadingItems}
+                height={240}
+                utilizationOnly={capabilities.utilizationOnly}
+                lossesAvailable={capabilities.losses}
+                title={capabilities.utilizationOnly ? t('results.grid.transmissionUtilization') : undefined}
+              />
+            </ErrorBoundary>
+            {capabilities.utilizationOnly && (
+              <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+                {t('results.grid.loadingPreliminary')}
+              </p>
+            )}
+          </div>
+        </GatedSection>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={CHART_CARD_CLASS}>
-          <ErrorBoundary label="Losses Chart">
-            <PyPSALossesChart
-              timestamps={lossesTimeline.map(item => item.timestamp)}
-              lineLossesKw={lossesTimeline.map(item => item.lineLossesKw)}
-              transformerLossesKw={lossesTimeline.map(item => item.transformerLossesKw)}
-              height={240}
-            />
-          </ErrorBoundary>
-        </div>
+        <GatedSection requires="transformers" capabilities={capabilities} title={t('results.grid.transformer')}>
+          <div className={CHART_CARD_CLASS}>
+            <ErrorBoundary label="Transformer Loading">
+              <PyPSATransformerLoadingChart items={transformerLoadingItems} height={240} />
+            </ErrorBoundary>
+          </div>
+        </GatedSection>
+        <GatedSection requires="curtailment" capabilities={capabilities} title="Renewable Curtailment">
+          <div className={CHART_CARD_CLASS}>
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Zap className="w-4 h-4 text-primary" />
+              Renewable Curtailment
+            </div>
+            <ErrorBoundary label="Curtailment Chart">
+              <PyPSACurtailmentChart
+                timestamps={curtailmentTimeline.map(item => item.timestep)}
+                availableKw={curtailmentTimeline.map(item => item.available_kw)}
+                actualKw={curtailmentTimeline.map(item => item.actual_kw)}
+                curtailedKw={curtailmentTimeline.map(item => item.curtailed_kw)}
+                height={220}
+                title=""
+              />
+            </ErrorBoundary>
+          </div>
+        </GatedSection>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <GatedSection requires="losses" capabilities={capabilities} title={t('results.grid.loading')}>
+          <div className={CHART_CARD_CLASS}>
+            <ErrorBoundary label="Losses Chart">
+              <PyPSALossesChart
+                timestamps={lossesTimeline.map(item => item.timestamp)}
+                lineLossesKw={lossesTimeline.map(item => item.lineLossesKw)}
+                transformerLossesKw={lossesTimeline.map(item => item.transformerLossesKw)}
+                height={240}
+              />
+            </ErrorBoundary>
+          </div>
+        </GatedSection>
 
         <div className={CHART_CARD_CLASS}>
           <h4 className="text-sm font-semibold text-foreground mb-4">Critical Assets</h4>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <GatedSection requires="voltage" capabilities={capabilities} title="Worst Buses" bare>
             <div className="rounded-lg border border-border bg-muted/20 p-3">
               <p className="text-xs font-medium text-foreground mb-3">Worst Buses</p>
               <div className="space-y-2">
@@ -731,24 +801,37 @@ const GridPanel = ({ pypsaData, selectedBus, setSelectedBus, selectedVoltage, se
                 )}
               </div>
             </div>
+            </GatedSection>
 
+            <GatedSection requires="lineLoading" capabilities={capabilities} title="Worst Lines" bare>
             <div className="rounded-lg border border-border bg-muted/20 p-3">
               <p className="text-xs font-medium text-foreground mb-3">Worst Lines</p>
               <div className="space-y-2">
-                {worstLines.length > 0 ? worstLines.map(item => (
-                  <div key={item.name} className="flex items-start justify-between gap-3 text-xs">
-                    <span className="text-muted-foreground truncate">{item.name}</span>
-                    <span className="text-right font-medium text-foreground">
-                      {item.peakLoadingPercent !== undefined
-                        ? `${item.peakLoadingPercent.toFixed(1)}% • ${item.peakLossKw.toFixed(2)} kW`
-                        : `${formatApparentPowerValue(item.peakApparentKva)} • ${item.peakLossKw.toFixed(2)} kW`}
-                    </span>
-                  </div>
-                )) : (
+                {worstLines.length > 0 ? worstLines.map(item => {
+                  const overloaded = isOverloaded(item.peakLoadingPercent);
+                  return (
+                    <div key={item.name} className="flex items-start justify-between gap-3 text-xs">
+                      <span className={`truncate ${overloaded ? 'font-medium text-red-500' : 'text-muted-foreground'}`}>
+                        {item.name}
+                      </span>
+                      <span className={`text-right font-medium ${overloaded ? 'text-red-500' : 'text-foreground'}`}>
+                        {item.peakLoadingPercent !== undefined
+                          ? `${item.peakLoadingPercent.toFixed(1)}%${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`
+                          : `${formatApparentPowerValue(item.peakApparentKva)}${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`}
+                      </span>
+                    </div>
+                  );
+                }) : (
                   <p className="text-xs text-muted-foreground">No line loading data.</p>
                 )}
               </div>
+              {capabilities.utilizationOnly && (
+                <p className="mt-3 text-[10px] leading-snug text-muted-foreground">
+                  {t('results.grid.loadingPreliminary')}
+                </p>
+              )}
             </div>
+            </GatedSection>
           </div>
         </div>
       </div>

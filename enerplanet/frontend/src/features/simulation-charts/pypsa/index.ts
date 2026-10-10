@@ -1,4 +1,5 @@
 export { NetworkTopology } from './NetworkTopology';
+export { connectionKey, isOverloaded, normalizeLocId, OVERLOAD_UTILIZATION_PERCENT } from './chartUtils';
 export { PyPSAPowerChart } from './PyPSAPowerChart';
 export { PyPSAVoltageChart } from './PyPSAVoltageChart';
 export { PyPSAVoltageViolationChart } from './PyPSAVoltageViolationChart';
