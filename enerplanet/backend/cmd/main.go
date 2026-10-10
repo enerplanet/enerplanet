@@ -914,17 +914,19 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	api.POST("/v2/pylovo/move-transformer", handler.MoveTransformer)
 	api.POST("/v2/pylovo/assign-building", handler.AssignBuilding)
 	api.POST("/v2/pylovo/finalize-transformers", handler.FinalizeTransformers)
-	// Pipeline management routes
-	api.POST("/v2/pylovo/pipeline/run", handler.RunPipeline)
-	api.GET("/v2/pylovo/pipeline/status/:job_id", handler.GetPipelineStatus)
-	api.GET("/v2/pylovo/pipeline/regions", handler.GetPipelineRegions)
-	api.GET("/v2/pylovo/pipeline/history", handler.GetPipelineHistory)
-	api.GET("/v2/pylovo/pipeline/states/:country", handler.GetCountryStates)
-	api.DELETE("/v2/pylovo/pipeline/states/:country/:state", handler.DeleteStateData)
-	// Cached region management
+	// The pipeline rebuilds and deletes PyLovo data for every user, and the
+	// cached-region writes change the regions everyone sees: experts only.
+	pipeline := api.Group("/v2/pylovo/pipeline", middleware.RequireExpert())
+	pipeline.POST("/run", handler.RunPipeline)
+	pipeline.GET("/status/:job_id", handler.GetPipelineStatus)
+	pipeline.GET("/regions", handler.GetPipelineRegions)
+	pipeline.GET("/history", handler.GetPipelineHistory)
+	pipeline.GET("/states/:country", handler.GetCountryStates)
+	pipeline.DELETE("/states/:country/:state", handler.DeleteStateData)
 	api.GET("/v2/pylovo/regions/cached", handler.GetCachedRegions)
-	api.PATCH("/v2/pylovo/regions/cached/:id", handler.ToggleCachedRegion)
-	api.DELETE("/v2/pylovo/regions/cached/:id", handler.DeleteCachedRegion)
+	cachedRegions := api.Group("/v2/pylovo/regions/cached", middleware.RequireExpert())
+	cachedRegions.PATCH("/:id", handler.ToggleCachedRegion)
+	cachedRegions.DELETE("/:id", handler.DeleteCachedRegion)
 	// Boundary routes are registered in configurePublicAPI (no auth required)
 }
 
@@ -937,17 +939,20 @@ func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
 	api.POST("/v2/ignis/calculate/:code", handler.Calculate)
 }
 
+// The PyLovo instance list decides where the backend sends PyLovo requests:
+// experts only.
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {
-	api.GET("/pylovo-services", handler.List)
-	api.POST("/pylovo-services", handler.Create)
-	api.GET("/pylovo-services/summary", handler.GetSummary)
-	api.GET("/pylovo-services/:id", handler.GetByID)
-	api.PUT("/pylovo-services/:id", handler.Update)
-	api.DELETE("/pylovo-services/:id", handler.Delete)
-	api.GET("/pylovo-services/:id/ping", handler.Ping)
-	api.POST("/pylovo-services/:id/primary", handler.SetPrimary)
-	api.POST("/pylovo-services/:id/available", handler.MarkAvailable)
-	api.POST("/pylovo-services/:id/unavailable", handler.MarkUnavailable)
+	services := api.Group("/pylovo-services", middleware.RequireExpert())
+	services.GET("", handler.List)
+	services.POST("", handler.Create)
+	services.GET("/summary", handler.GetSummary)
+	services.GET("/:id", handler.GetByID)
+	services.PUT("/:id", handler.Update)
+	services.DELETE("/:id", handler.Delete)
+	services.GET("/:id/ping", handler.Ping)
+	services.POST("/:id/primary", handler.SetPrimary)
+	services.POST("/:id/available", handler.MarkAvailable)
+	services.POST("/:id/unavailable", handler.MarkUnavailable)
 }
 
 func registerLocationRoutes(api *gin.RouterGroup, handler *locationhandler.LocationHandler) {
