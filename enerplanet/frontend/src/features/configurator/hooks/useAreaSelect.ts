@@ -32,7 +32,7 @@ export const useAreaSelect = ({
     const navigate = useNavigate();
     const params = useParams();
     const modelId = editMode ? (existingModelId || Number.parseInt(params.id || '0', 10)) : undefined;
-    const { notification, showSuccess, showError, hide } = useNotification();
+    const { showSuccess, showError } = useNotification();
     const currentWorkspace = useWorkspaceStore(state => state.currentWorkspace);
     const { map } = useMapStore();
     const { mapRef } = useMapProvider();
@@ -183,7 +183,7 @@ export const useAreaSelect = ({
     const state = { modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, allowMultiplePolygons, clearTrigger, cursorPos, isGeneratingGrid, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
     const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleClearAllPolygons, setAllowMultiplePolygons, setIsDrawing, setIncludePublicBuildings, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
 
-    return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { data: notification, showSuccess, showError, hide }, setCursorPos, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
+    return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setCursorPos, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
 };
 
 // ── Helper functions ──

@@ -49,7 +49,6 @@ import {
   TOOLBAR_BUTTON_CLASS,
   TOOLBAR_ICON_BUTTON_CLASS,
 } from "@/components/ui/toolbar";
-import Notification from "@/components/ui/Notification";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import AddParameterModal from "./components/AddParameterModal";
 import AddTechnologyModal from "./components/AddTechnologyModal";
@@ -166,7 +165,7 @@ export default function TechnologiesPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('technologies.title'), " | EnerPlanET");
   const confirm = useConfirm();
-  const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const user = useAuthStore((state) => state.user);
 
   const [technologies, setTechnologies] = useState<Technology[]>([]);
@@ -672,8 +671,6 @@ export default function TechnologiesPage() {
 
   return (
     <div className={PAGE_SHELL_CLASS}>
-        <Notification isOpen={notification.open} message={notification.message} severity={notification.severity} onClose={hideNotification} />
-
         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
 
         <PageHeader

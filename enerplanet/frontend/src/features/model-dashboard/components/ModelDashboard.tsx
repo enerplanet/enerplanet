@@ -50,7 +50,6 @@ import { MoveModelModal } from "@/components/workspace/MoveModelModal";
 import { ShareModelModal } from "@/features/model-dashboard/components/ShareModelModal";
 import { BulkCopyModal } from "@/features/model-dashboard/components/BulkCopyModal";
 import { useNotification } from "@/features/notifications/hooks/useNotification";
-import Notification from "@/components/ui/Notification";
 import { type Workspace, workspaceService } from "@/components/workspace/services/workspaceService";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -154,7 +153,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [isCopyWsOpen, setIsCopyWsOpen] = useState(false);
 	const [wsReloadKey, setWsReloadKey] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+	const { showSuccess, showError } = useNotification();
 
 	useEffect(() => {
 		initializeWorkspace();
@@ -1199,13 +1198,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 				onSuccess={() => {
 					clearSelection();
 				}}
-			/>
-
-			<Notification
-				isOpen={notification.open}
-				message={notification.message}
-				severity={notification.severity}
-				onClose={hideNotification}
 			/>
 		</Fragment>
 	);

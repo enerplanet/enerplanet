@@ -29,7 +29,6 @@ import {
   TOOLBAR_ICON_BUTTON_CLASS,
 } from '@/components/ui/toolbar';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
-import Notification from '@/components/ui/Notification';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 import ModelActionGroup from '@/components/shared/ModelActionGroup';
 import { LocationShareDialog } from './LocationShareDialog';
@@ -126,7 +125,7 @@ const LocationsPage: FC = () => {
   useDocumentTitle(t('locations.title'), ' | EnerPlanET');
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const {
     locations,
     publicLocations,
@@ -284,13 +283,6 @@ const LocationsPage: FC = () => {
 
   return (
     <div className={PAGE_SHELL_CLASS}>
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hideNotification}
-      />
-
       <PageHeader
         icon={MapPinned}
         title={t('locations.title')}
