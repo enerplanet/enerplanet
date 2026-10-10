@@ -61,7 +61,7 @@ func (s *ModelService) prepareModelRun(ctx context.Context, userID string, acces
 		return nil, fmt.Errorf("access denied")
 	}
 
-	if model.Status == models.ModelStatusRunning || model.Status == models.ModelStatusQueue {
+	if model.Status == models.ModelStatusRunning || model.Status == models.ModelStatusQueue || model.Status == models.ModelStatusProcessing {
 		return nil, fmt.Errorf("model calculation already in progress")
 	}
 

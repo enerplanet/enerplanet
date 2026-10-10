@@ -82,3 +82,30 @@ func TestModelStatusConstants(t *testing.T) {
 	require.Equal(t, "completed", commonModels.ModelStatusCompleted)
 	require.Equal(t, "failed", commonModels.ModelStatusFailed)
 }
+
+// Once the MEME bundle is stored the model is 'processing' while Coati reads
+// it, so the UI can tell result reading apart from the solve.
+func TestMarkModelProcessing_setsProcessing(t *testing.T) {
+	db, mock := newStatusMockDB(t)
+	mock.ExpectExec(`UPDATE "models" SET .*WHERE id = .* AND status IN .*`).
+		WithArgs(commonModels.ModelStatusProcessing, sqlmock.AnyArg(), 18,
+			commonModels.ModelStatusQueue, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	markModelProcessing(db, 18)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// The ingest finishes a run that is 'processing', so the guard admits it.
+func TestMarkModelCompleted_fromProcessing(t *testing.T) {
+	db, mock := newStatusMockDB(t)
+	mock.ExpectExec(`UPDATE "models" SET .*WHERE id = .* AND status IN .*`).
+		WithArgs(sqlmock.AnyArg(), commonModels.ModelStatusCompleted, sqlmock.AnyArg(), 18,
+			commonModels.ModelStatusQueue, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	markModelCompleted(db, 18)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
