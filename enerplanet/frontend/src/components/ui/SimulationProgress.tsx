@@ -8,6 +8,7 @@ interface SimulationProgressProps {
 const STAGES = [
   { key: "queued", label: "Queued" },
   { key: "simulating", label: "Simulating" },
+  { key: "processing", label: "Processing results" },
   { key: "done", label: "Done" },
 ] as const;
 
@@ -20,7 +21,7 @@ const getActiveStage = (status: ModelStatus): number => {
     case "running":
       return 1;
     case "processing":
-      return 1;
+      return 2;
     default:
       return -1;
   }
