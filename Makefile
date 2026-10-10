@@ -315,7 +315,7 @@ webservice:
 # pylovo's `make dev` returns before the API answers, so this waits for it.
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/enerplanet-pylovo && test -f .env.docker || cp .env.example .env.docker && make dev
+	@cd dependencies/enerplanet-pylovo && test -s .env.docker || cp .env.example .env.docker && make dev
 	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
 		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
 

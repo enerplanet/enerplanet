@@ -151,7 +151,8 @@ load_pylovo() {
   # path rather than a configured one.
   local dir="$ROOT/dependencies/${PYLOVO_DIR:-enerplanet-pylovo}"
   local envfile="$dir/.env.docker"
-  [ -f "$envfile" ] || envfile="$dir/.env.example"
+  # An empty .env.docker (left by an interrupted setup) counts as missing.
+  [ -s "$envfile" ] || envfile="$dir/.env.example"
   if [ ! -f "$envfile" ]; then
     fail "pylovo: no .env.docker or .env.example under $dir, run 'make setup-repos' first"
     return 0
