@@ -21,6 +21,7 @@ The credit lines, in short:
 | Statistik Austria | Vienna postcodes | Datenquelle: Statistik Austria | CC BY 4.0 |
 | ČSÚ via RCzechia | Brno postcode number | Zdroj: Český statistický úřad (ČSÚ) | CC BY 4.0 |
 | COSMO-REA6 | weather, all sites | Datenbasis: Deutscher Wetterdienst, Ausschnitt, eigene Elemente ergänzt | CC BY 4.0 |
+| MERRA-2 | scenario weather, all sites | Global Modeling and Assimilation Office (GMAO), NASA GES DISC | NASA EOSDIS data use guidance |
 
 How the fixtures were produced, and how to regenerate them, is in
 [docs/enerplanet/test-data.md](../docs/enerplanet/test-data.md).
@@ -63,19 +64,25 @@ run; draw it clear of the line to test on-request processing.
 | `weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | weather-serve | Bremen | hourly 2018 weather, 4×4 cells | `load.sh weather` |
 | `weather/cosmo_rea6/austria/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Vienna | hourly 2018 weather, 4×4 cells | `load.sh weather` |
 | `weather/cosmo_rea6/czech_republic/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Brno | hourly 2018 weather, 4×4 cells | `load.sh weather` |
+| `weather/merra2/<country>/output/percentile/merra2_<p10,p50,p90>_<01..12>_all_attrs.nc` | 2.6 MB per country | weather-serve | all four | low, typical and high solar year scenarios, one MERRA-2 cell per site, 36 files per country | `load.sh weather` |
 | `models/loenen.json`, `models/bremen.json` | 96 kB, 62 kB | backend | Loenen, Bremen | example saved models, development only | `make example-models` (`example_models.sh`) |
 
 ## Weather per provider
 
 A model uses one weather archive for all of its simulations. Each provider
-needs its own cut per site, in the layout weather-serve reads:
-`<provider>/<country>/output/<PROVIDER>_2018_annual_all_attrs.nc`.
+needs its own cut per site, in the layout weather-serve reads: a year archive
+at `<provider>/<country>/output/<PROVIDER>_2018_annual_all_attrs.nc`, scenarios
+at `<provider>/<country>/output/percentile/<provider>_<p10|p50|p90>_<month>_all_attrs.nc`.
+The scenarios p10, p50 and p90 are the low, typical and high solar year,
+ranked on monthly global horizontal irradiance.
 
-| Provider | Loenen (NL) | Bremen (DE) | Vienna (AT) | Brno (CZ) |
-|---|---|---|---|---|
-| `cosmo-rea6` | committed | committed | committed | committed |
-| `era5-land` | not yet | not yet | not yet | not yet |
-| `merra-2` | not yet | not yet | not yet | not yet |
+| Provider | Kind | Loenen (NL) | Bremen (DE) | Vienna (AT) | Brno (CZ) |
+|---|---|---|---|---|---|
+| `cosmo-rea6` | 2018 | committed | committed | committed | committed |
+| `cosmo-rea6` | scenarios | not yet | not yet | not yet | not yet |
+| `era5-land` | 2018 or scenarios | not yet | not yet | not yet | not yet |
+| `merra-2` | 2018 | not yet | not yet | not yet | not yet |
+| `merra-2` | scenarios | committed | committed | committed | committed |
 
 ## Scripts
 

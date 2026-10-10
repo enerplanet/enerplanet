@@ -60,6 +60,33 @@ German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
 Austrian 2018 annual archive, and 4 by 4 cells around Brno, Czechia, from the
 Czech 2018 annual archive. Full year, hourly, 13 variables each.
 
+## fixtures/weather/merra2, the Dutch, German, Austrian and Czech scenario cuts
+
+Covers `merra2_p10_*`, `merra2_p50_*` and `merra2_p90_*` (months 01 to 12)
+under `fixtures/weather/merra2/netherlands/output/percentile/`,
+`.../germany/...`, `.../austria/...` and `.../czech_republic/...`.
+
+MERRA-2 reanalysis by NASA's Global Modeling and Assimilation Office (GMAO),
+distributed by the Goddard Earth Sciences Data and Information Services Center
+(GES DISC) under the NASA EOSDIS data use guidance
+(https://earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance,
+https://disc.gsfc.nasa.gov/data-guidelines). Collections used:
+
+> Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 tavg1_2d_slv_Nx:
+> 2d,1-Hourly,Time-Averaged,Single-Level,Assimilation,Single-Level Diagnostics
+> V5.12.4, Greenbelt, MD, USA, Goddard Earth Sciences Data and Information
+> Services Center (GES DISC), https://doi.org/10.5067/VJAFPLI1CSIV
+
+> Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 tavg1_2d_rad_Nx:
+> 2d,1-Hourly,Time-Averaged,Single-Level,Assimilation,Radiation Diagnostics
+> V5.12.4, Greenbelt, MD, USA, Goddard Earth Sciences Data and Information
+> Services Center (GES DISC), https://doi.org/10.5067/Q9QMY5PBNV1T
+
+Modifications: hourly values from 1980 to 2025 were ranked by monthly global
+horizontal irradiance into 10th, 50th and 90th percentile months (p10, p50,
+p90), reduced to the variables T, GHI, PS, WS_10M, U_10M and V_10M, and cut to
+the one MERRA-2 grid cell covering each fixture site.
+
 ## The TABULA archetypes in the four City2TABULA dumps
 
 The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,

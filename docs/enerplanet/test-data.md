@@ -153,6 +153,7 @@ reprojected at load time, because the join between them is precomputed in
 | `weather/…/germany/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | full-year hourly weather, 4×4 cells, 13 variables | the weather checkout's `data/` |
 | `weather/…/austria/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Vienna, 13 variables | the weather checkout's `data/` |
 | `weather/…/czech_republic/…/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | full-year hourly weather, 4×4 cells around Brno, 13 variables | the weather checkout's `data/` |
+| `weather/merra2/<country>/output/percentile/` | 2.6 MB per country | low, typical and high solar year scenarios (p10, p50, p90), 12 months each, one MERRA-2 cell per site | the weather checkout's `data/` |
 | `pylovo/pylovo_fixture.sql.gz` | 7.8 MB | 221 grids, 9,073 buildings, 17,782 lines, 39 transformers over 11 postcodes, plus their inputs and reference tables | the existing pylovo database |
 
 The pylovo fixture carries its own schema and restores into an empty database.
@@ -466,6 +467,7 @@ included, and must be updated whenever one is added or replaced.
 Sources currently redistributed: 3DBAG, LoD2 Land Bremen, Stadt Wien's
 Generalisiertes Dachmodell, Brno's 3D model budov, Statistik Austria
 municipal boundaries, CBS postcode areas, ČSÚ postcode polygons and
-Deutscher Wetterdienst's COSMO-REA6 (all CC BY 4.0); the TABULA typology
+Deutscher Wetterdienst's COSMO-REA6 (all CC BY 4.0); NASA GMAO's MERRA-2
+(NASA EOSDIS data use guidance, citation requested); the TABULA typology
 (IEE TABULA + EPISCOPE terms of use, attribution required); and
 OpenStreetMap via PyLovo (ODbL 1.0).
