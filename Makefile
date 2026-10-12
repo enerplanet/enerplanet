@@ -158,13 +158,25 @@ update: git-credential-cache setup-repos migrate webservice pylovo
 # PyLovo stops and starts with the platform Postgres: its pooled connections do
 # not survive a Postgres restart, and each worker fails a request before
 # reconnecting.
-up: .env
+up: up-deps
+	@docker compose $(ENERPLANET_COMPOSE) up -d --build energy-backend
+	@echo "$(GREEN)All services started.$(NC)"
+
+.PHONY: up-deps
+# Every service except the backend, for `make dev`, which runs the backend on
+# the host instead.
+up-deps: .env
 	@docker network create spatialhub-net 2>/dev/null || true
 	@docker compose $(PLATFORM_COMPOSE) up -d
 	@$(MAKE) pylovo
 	@$(MAKE) tentacron-stack
-	@docker compose $(ENERPLANET_COMPOSE) up -d --build energy-backend
-	@echo "$(GREEN)All services started.$(NC)"
+
+.PHONY: dev health
+dev:
+	@scripts/dev.sh up
+
+health:
+	@scripts/dev.sh health
 
 .PHONY: down
 down: .env
