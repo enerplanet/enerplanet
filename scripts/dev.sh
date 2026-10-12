@@ -122,8 +122,13 @@ cmd_up() {
   fi
 
   # Pane 0 backend, pane 1 frontend, pane 2 health check, then a shell.
+  # The backend ingests simulation results through the Coati CLI and finds it
+  # only through COATI_BIN or PATH (the backend container sets COATI_BIN itself).
+  local coati="${COATI_BIN:-$ROOT/submodules/Coati/.venv/bin/coati}"
+  [[ -x "$coati" ]] || echo "warning: no Coati CLI at $coati; run 'make coati', or simulation results will not ingest"
+
   tmux new-session -d -s "$SESSION" -n dev -c "$ROOT/enerplanet/backend"
-  tmux send-keys -t "$SESSION:dev.0" "go run cmd/main.go" C-m
+  tmux send-keys -t "$SESSION:dev.0" "COATI_BIN='$coati' go run cmd/main.go" C-m
   tmux split-window -h -t "$SESSION:dev.0" -c "$ROOT/enerplanet/frontend"
   tmux send-keys -t "$SESSION:dev.1" "npm run dev" C-m
   tmux split-window -v -t "$SESSION:dev.1" -c "$ROOT"
