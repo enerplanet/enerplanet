@@ -72,6 +72,17 @@ function specificHeatDemand(fClass: string): number {
 }
 
 /**
+ * The user-entered yearly heat demand on a feature, or undefined when it has
+ * none. Older saved models carry the display estimate in demand_heat with
+ * heat_demand_estimated set; that is not user input.
+ */
+export function explicitHeatDemandKwh(props: Record<string, unknown>): number | undefined {
+  if (props.heat_demand_estimated === true) return undefined;
+  const kwh = Number(props.demand_heat ?? props.yearly_heat_demand_kwh);
+  return Number.isFinite(kwh) && kwh > 0 ? kwh : undefined;
+}
+
+/**
  * Yearly heat demand in kWh for a building.
  * Prefer props.demand_heat (explicit/persisted); fall back to the backend's
  * TABULA-style area × specific estimation.

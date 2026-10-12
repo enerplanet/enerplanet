@@ -20,7 +20,7 @@ import {
 } from '@/features/interactive-map/utils/mapStyleUtils';
 import { loadGridLayers, removeGridLayers, fitToFeatures } from '@/features/configurator/utils/gridLayerUtils';
 import { getFeatureFClasses, getPrimaryFClass } from '@/features/configurator/utils/fClassUtils';
-import { estimateYearlyHeatDemand } from '@/features/configurator/utils/heatDemand';
+import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from '@/features/configurator/utils/heatDemand';
 import { ModelInfo, ModelResults } from '@/features/model-results/types';
 import { BuildingResultData, BusStatusData } from '@/features/model-results/components/map/ResultsMapTypes';
 
@@ -205,7 +205,7 @@ const createTransformerTooltip = (
 const createBuildingTooltip = (pixel: number[], props: any): MapTooltipData => {
   const fClasses = getFeatureFClasses(props);
   const primary = getPrimaryFClass(props) || 'unknown';
-  const heat = estimateYearlyHeatDemand(primary, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
+  const heat = estimateYearlyHeatDemand(primary, props.area, explicitHeatDemandKwh(props));
   return {
     x: pixel[0],
     y: pixel[1],
@@ -508,7 +508,7 @@ export const useModelResultsMap = ({
         let match: CoordinateMatch = { locationId: undefined, techs: [], totalDemand: 0, totalProduction: 0 };
         const yearlyDemandKwh = toFiniteNumber(props.yearly_demand_kwh ?? props.demand_energy);
         const peakLoadKw = toFiniteNumber(props.peak_load_kw ?? props.peak_load);
-        const heat = estimateYearlyHeatDemand(primaryFClass, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
+        const heat = estimateYearlyHeatDemand(primaryFClass, props.area, explicitHeatDemandKwh(props));
 
         if (results?.coordinates) {
           const geom = (clickedFeature as any).getGeometry();

@@ -11,7 +11,7 @@ import {
   extractSelectedFClassFromProps,
 } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
-import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
+import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { parseTechs, extractYearlyDemandCustomOnly } from "@/features/configurator/utils/parsing";
 import { getClusterKeyFromProps } from "@/features/configurator/utils/geometryUtils";
@@ -207,7 +207,7 @@ export const useMapLibre3DHandlers = ({
       const enrichment = extractBuildingEnrichmentFromProps(props);
       const totalDemand = extractYearlyDemandCustomOnly(props);
       const totalPeak = extractPeakLoadFromProps(props);
-      const heat = estimateYearlyHeatDemand(primaryFClass, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
+      const heat = estimateYearlyHeatDemand(primaryFClass, props.area, explicitHeatDemandKwh(props));
       const effectiveFClasses = fClasses.length > 0 ? fClasses : [primaryFClass];
       const selectedFClass = extractSelectedFClassFromProps(
         props,
@@ -291,7 +291,7 @@ export const useMapLibre3DHandlers = ({
       const fClasses = getFeatureFClasses(props);
       const primary = getPrimaryFClass(props) || "unknown";
       const enrichment = extractBuildingEnrichmentFromProps(props);
-      const heat = estimateYearlyHeatDemand(primary, props.area, props.demand_heat ?? props.yearly_heat_demand_kwh);
+      const heat = estimateYearlyHeatDemand(primary, props.area, explicitHeatDemandKwh(props));
       mapInteractions.setBuildingTooltip({
         x: pixel[0],
         y: pixel[1],

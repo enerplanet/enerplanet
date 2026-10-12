@@ -193,9 +193,14 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 	demandProfile := demandProfileForFClass(primaryClass)
 
 	// --- Heat demand ---
-	explicitHeatDemand := getFloatValue(bProps["yearly_heat_demand_kwh"])
-	if explicitHeatDemand <= 0 {
-		explicitHeatDemand = getFloatValue(bProps["demand_heat"])
+	// heat_demand_estimated marks the frontend's display estimate, saved with
+	// the feature; only a value without it is user input.
+	var explicitHeatDemand float64
+	if estimated, _ := bProps["heat_demand_estimated"].(bool); !estimated {
+		explicitHeatDemand = getFloatValue(bProps["yearly_heat_demand_kwh"])
+		if explicitHeatDemand <= 0 {
+			explicitHeatDemand = getFloatValue(bProps["demand_heat"])
+		}
 	}
 
 	fClassHeatDemands, yearlyHeatDemandInt := calculateYearlyHeatDemandPerFClass(

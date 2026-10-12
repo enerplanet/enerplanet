@@ -65,3 +65,36 @@ func TestCreateBuildingFeature_carriesStoredBuemBlock(t *testing.T) {
 
 	assert.Equal(t, stored, props["buem"])
 }
+
+// The frontend saves its display estimate of heat demand with
+// heat_demand_estimated set. That value is not user input, so the payload
+// falls back to its own estimate instead of passing it on as given.
+func TestCreateBuildingFeature_estimatedHeatDemandIsNotExplicit(t *testing.T) {
+	newBuilding := func(props map[string]interface{}) map[string]interface{} {
+		base := map[string]interface{}{"osm_id": "1", "f_class": "office", "area": 100.0}
+		for k, v := range props {
+			base[k] = v
+		}
+		return map[string]interface{}{
+			"geometry":   map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
+			"properties": base,
+		}
+	}
+	heatOf := func(building map[string]interface{}) interface{} {
+		props, _ := createBuildingFeature(building, 1, 99)["properties"].(map[string]interface{})
+		return props["demand_heat"]
+	}
+
+	fallback := heatOf(newBuilding(nil))
+	assert.Equal(t, int64(8000), fallback, "office at 80 kWh/m2 over 100 m2")
+
+	estimated := newBuilding(map[string]interface{}{
+		"demand_heat": 12345.0, "yearly_heat_demand_kwh": 12345.0, "heat_demand_estimated": true,
+	})
+	assert.Equal(t, fallback, heatOf(estimated), "an estimate saved by the frontend must not count as given")
+
+	given := newBuilding(map[string]interface{}{
+		"demand_heat": 12345.0, "yearly_heat_demand_kwh": 12345.0, "heat_demand_estimated": false,
+	})
+	assert.Equal(t, int64(12345), heatOf(given), "a user-entered heat demand is passed on")
+}

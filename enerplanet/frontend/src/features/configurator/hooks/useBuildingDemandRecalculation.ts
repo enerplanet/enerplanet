@@ -254,17 +254,12 @@ export const useBuildingDemandRecalculation = ({
         pylovoLayers.updateBuildingProperty(osmId, "floors", requestedFloors);
         pylovoLayers.updateBuildingProperty(osmId, "floors_3dbag", requestedFloors);
 
-        // Heat demand: infer alongside electricity so it rides the same
-        // payload path (backend reads demand_heat / yearly_heat_demand_kwh).
-        // Explicit props win; otherwise mirror the backend's TABULA estimate.
-        const heat = estimateYearlyHeatDemand(
-          selectedFClass,
-          requestedArea,
-          toFiniteNumber(selectedBuilding.yearlyHeatDemandKwh) ?? undefined
-        );
-        pylovoLayers.updateBuildingProperty(osmId, "demand_heat", heat.kwh);
-        pylovoLayers.updateBuildingProperty(osmId, "yearly_heat_demand_kwh", heat.kwh);
-        pylovoLayers.updateBuildingProperty(osmId, "heat_demand_estimated", heat.estimated);
+        // Only a user-entered heat demand is stored on the feature; an estimate
+        // is recomputed for display, and the backend estimates on its own.
+        const enteredHeat = selectedBuilding.heatDemandEstimated
+          ? undefined
+          : toFiniteNumber(selectedBuilding.yearlyHeatDemandKwh) ?? undefined;
+        const heat = estimateYearlyHeatDemand(selectedFClass, requestedArea, enteredHeat);
         if (shouldUseHouseholdSize) {
           pylovoLayers.updateBuildingProperty(
             osmId,

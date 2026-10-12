@@ -24,6 +24,7 @@ import VectorSource from "ol/source/Vector";
 
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
+import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from "@/features/configurator/utils/heatDemand";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import {
@@ -38,19 +39,9 @@ interface HeatResolutionOptions {
   setIsModified: (v: boolean) => void;
 }
 
-const toFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value.replace(/[\s\u00A0\u202F]/g, ""));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-};
-
-/** Heat demand (kWh/year) from props: prefer explicit `demand_heat`, fall back to `yearly_heat_demand_kwh`. */
+/** Heat demand (kWh/year) for sizing: the user-entered value, otherwise the estimate. */
 function readYearlyHeatDemand(props: Record<string, unknown>): number {
-  const explicit = toFiniteNumber(props.demand_heat ?? props.yearly_heat_demand_kwh);
-  return explicit ?? 0;
+  return estimateYearlyHeatDemand(getPrimaryFClass(props), Number(props.area) || 0, explicitHeatDemandKwh(props)).kwh;
 }
 
 export const useHeatResolution = ({
