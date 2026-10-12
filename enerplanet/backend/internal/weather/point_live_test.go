@@ -10,6 +10,9 @@
 //
 //	TENTACRON_LIVE_URL=http://127.0.0.1:8400 TENTACRON_LIVE_KEY=dev-frontend-key \
 //	  go test -tags manualignis -run TestPointWeatherLive -v ./internal/weather/
+//
+// WEATHER_LIVE_SCENARIO=p50 (with WEATHER_LIVE_PROVIDER=merra-2) queries a
+// scenario instead of the 2018 archive.
 package weather
 
 import (
@@ -49,11 +52,14 @@ func TestPointWeatherLive(t *testing.T) {
 	// WEATHER_LIVE_LON for another point.
 	lat := liveEnvFloat("WEATHER_LIVE_LAT", 52.37)
 	lon := liveEnvFloat("WEATHER_LIVE_LON", 4.90)
-	const year = 2018
+	period := Period{Year: 2018}
+	if scenario := os.Getenv("WEATHER_LIVE_SCENARIO"); scenario != "" {
+		period = Period{Scenario: scenario}
+	}
 	provider := liveEnv("WEATHER_LIVE_PROVIDER", "cosmo-rea6")
 
 	start := time.Now()
-	raw, err := client.GetPointWeather(context.Background(), lat, lon, year, provider)
+	raw, err := client.GetPointWeather(context.Background(), lat, lon, period, provider)
 	if err != nil {
 		t.Fatalf("GetPointWeather: %v", err)
 	}

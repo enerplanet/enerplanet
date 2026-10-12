@@ -11,8 +11,8 @@ package buem
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -53,6 +53,9 @@ func NewHandler(tc *tentacron.Client, provider string) *Handler {
 //	@Description	U-value resolution or archetype default is applied here. The one addition: a block
 //	@Description	that sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.
 //	@Description	weather_provider selects the weather archive; omitted, the backend default applies.
+//	@Description	weather_scenario (p10, p50, p90) or weather_year selects the weather, at most one;
+//	@Description	with neither, p50. The run covers that full calendar year hourly (1900 for a
+//	@Description	scenario); start_date and end_date are ignored.
 //	@Tags			BuEM
 //	@Accept			json
 //	@Produce		json
@@ -77,12 +80,9 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 		return
 	}
 
-	// weather-serve resolves one point per request, and buem-gateway requires a
-	// complete weather block for every building, so the year has to be known
-	// before anything is called.
-	start, err := time.Parse(time.RFC3339, req.StartDate)
+	period, err := requestPeriod(req)
 	if err != nil {
-		httputil.BadRequest(c, "start_date must be an RFC3339 timestamp, got "+req.StartDate)
+		httputil.BadRequest(c, err.Error())
 		return
 	}
 
@@ -103,7 +103,8 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 	lon, lat := (xmin+xmax)/2, (ymin+ymax)/2
 
 	ctx := c.Request.Context()
-	weather, err := h.weather.GetPointWeather(ctx, lat, lon, start.Year(), provider)
+	start, end := period.Range()
+	weather, err := h.weather.GetPointWeather(ctx, lat, lon, period, provider)
 	if err != nil {
 		httputil.BadGateway(c, "weather-serve did not return a series for this building: "+err.Error())
 		return
@@ -114,7 +115,7 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 		Geometry: req.Geometry,
 		Building: req.Building,
 		Solver:   req.Solver,
-	}, weather, req.StartDate, req.EndDate, req.Resolution, req.ModelID)
+	}, weather, start, end, req.Resolution, req.ModelID)
 	if err != nil {
 		// buem-gateway rejecting the body is the caller's envelope being wrong,
 		// which is a 400 they can act on; anything else is the chain being down.
@@ -137,4 +138,23 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 		OSMID: req.OSMID,
 		BUEM:  json.RawMessage(result.BUEM),
 	})
+}
+
+// requestPeriod reads the run's weather from the request: a validation year, a
+// scenario, or the typical scenario when neither is given.
+func requestPeriod(req contracts.BuemBuildingRunRequest) (weatherclient.Period, error) {
+	switch {
+	case req.WeatherScenario != "" && req.WeatherYear != 0:
+		return weatherclient.Period{}, fmt.Errorf("send weather_scenario or weather_year, not both; got %q and %d", req.WeatherScenario, req.WeatherYear)
+	case req.WeatherYear < 0:
+		return weatherclient.Period{}, fmt.Errorf("weather_year must be a positive year, got %d", req.WeatherYear)
+	case req.WeatherYear > 0:
+		return weatherclient.Period{Year: req.WeatherYear}, nil
+	case req.WeatherScenario == "":
+		return weatherclient.DefaultPeriod, nil
+	case !weatherclient.IsScenario(req.WeatherScenario):
+		return weatherclient.Period{}, fmt.Errorf("weather_scenario must be p10, p50 or p90, got %q", req.WeatherScenario)
+	default:
+		return weatherclient.Period{Scenario: req.WeatherScenario}, nil
+	}
 }

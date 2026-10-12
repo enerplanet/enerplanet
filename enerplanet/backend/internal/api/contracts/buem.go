@@ -14,19 +14,25 @@ import "encoding/json"
 // model path, which fills them from a TABULA variant when City2TABULA supplies
 // the envelope.
 type BuemBuildingRunRequest struct {
-	OSMID      string          `json:"osm_id" example:"240054621"`
-	Geometry   json.RawMessage `json:"geometry" swaggertype:"object"`
-	Building   json.RawMessage `json:"building" swaggertype:"object"`
-	StartDate  string          `json:"start_date" example:"2018-01-01T00:00:00Z"`
-	EndDate    string          `json:"end_date" example:"2018-12-31T23:00:00Z"`
-	Resolution int             `json:"resolution,omitempty" example:"60"`
-	ModelID    string          `json:"model_id,omitempty" example:"42"`
+	OSMID    string          `json:"osm_id" example:"240054621"`
+	Geometry json.RawMessage `json:"geometry" swaggertype:"object"`
+	Building json.RawMessage `json:"building" swaggertype:"object"`
+	// StartDate and EndDate are ignored: the run covers the full calendar year
+	// of the weather choice below.
+	StartDate  string `json:"start_date,omitempty" example:"2018-01-01T00:00:00Z"`
+	EndDate    string `json:"end_date,omitempty" example:"2018-12-31T23:00:00Z"`
+	Resolution int    `json:"resolution,omitempty" example:"60"`
+	ModelID    string `json:"model_id,omitempty" example:"42"`
 	// Solver is BuEM's solver block, forwarded as properties.buem.solver;
 	// omitted, BuEM uses its default solver.
 	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
 	// WeatherProvider is the model's weather archive, so the run uses the same
 	// series as the model run; omitted, the backend default applies.
 	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"cosmo-rea6"`
+	// WeatherScenario and WeatherYear are the model's weather: a scenario, or
+	// a real year for validation runs. At most one; with neither, p50.
+	WeatherScenario string `json:"weather_scenario,omitempty" enums:"p10,p50,p90" example:"p50"`
+	WeatherYear     int    `json:"weather_year,omitempty" example:"2019"`
 }
 
 // BuemBuildingRunResponse carries BuEM's result for the building unchanged.

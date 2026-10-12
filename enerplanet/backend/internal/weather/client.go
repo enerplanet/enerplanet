@@ -25,6 +25,38 @@ func IsProvider(name string) bool {
 	return providers[name]
 }
 
+// scenarios are the representative years weather-serve builds per provider:
+// low, typical and high solar.
+var scenarios = map[string]bool{"p10": true, "p50": true, "p90": true}
+
+// IsScenario reports whether name is a weather-serve scenario.
+func IsScenario(name string) bool {
+	return scenarios[name]
+}
+
+// ScenarioYear is the year weather-serve stamps scenario rows with: a stitched
+// year of months from different archive years, not a real calendar year.
+const ScenarioYear = 1900
+
+// Period is the weather a run uses: a scenario or a real archive year, never
+// both. The run always covers that full calendar year, hourly.
+type Period struct {
+	Scenario string
+	Year     int
+}
+
+// DefaultPeriod is the typical scenario, for a model that chose none.
+var DefaultPeriod = Period{Scenario: "p50"}
+
+// Range returns the run's first and last hour as RFC 3339 timestamps.
+func (p Period) Range() (start, end string) {
+	year := p.Year
+	if p.Scenario != "" {
+		year = ScenarioYear
+	}
+	return fmt.Sprintf("%04d-01-01T00:00:00Z", year), fmt.Sprintf("%04d-12-31T23:00:00Z", year)
+}
+
 // Client resolves weather data through TentaCron.
 type Client struct {
 	tc *tentacron.Client
@@ -36,23 +68,27 @@ func NewClient(tc *tentacron.Client) *Client {
 	return &Client{tc: tc}
 }
 
-// GetPointWeather returns the hourly weather timeseries for one location/year,
+// GetPointWeather returns the hourly weather timeseries for one location and period,
 // as raw JSON already shaped {"index": [...], "variables": {name: [...]}} -
 // exactly the shape buem-gateway's buem.weather block expects (see
 // internal/buem/weather_validate.go in buem-gateway), so callers embed it
-// directly without re-parsing. provider selects the weather archive; year
-// selects the archive file. use_case and format are sent explicitly on every
+// directly without re-parsing. provider selects the weather archive; period
+// selects a scenario or an archive year, sent as exactly one of scenario or year. use_case and format are sent explicitly on every
 // call: weather-serve requires one of variables/use_case, solar (T, GHI, DHI,
 // DNI) is buem-gateway's own set, and without format=json weather-serve
 // answers with parquet.
-func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, year int, provider string) (json.RawMessage, error) {
+func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, period Period, provider string) (json.RawMessage, error) {
 	payload := map[string]any{
 		"lat":      lat,
 		"lon":      lon,
-		"year":     year,
 		"provider": provider,
 		"use_case": "solar",
 		"format":   "json",
+	}
+	if period.Scenario != "" {
+		payload["scenario"] = period.Scenario
+	} else {
+		payload["year"] = period.Year
 	}
 	var raw json.RawMessage
 	if err := c.tc.Do(ctx, targetPoint, payload, &raw); err != nil {

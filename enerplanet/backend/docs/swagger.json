@@ -139,7 +139,7 @@
                         "SessionAuth": []
                     }
                 ],
-                "description": "Runs one building through BuEM with the envelope the caller supplies, and returns\nBuEM's block for it including the hourly series. Unlike a model run, the envelope\nis taken from the request rather than looked up in City2TABULA, so a building that\nhas no 3D match, or whose surfaces a user has edited, can still be run. The\nbuilding block is forwarded to buem-gateway as sent and must be complete: no\nU-value resolution or archetype default is applied here. The one addition: a block\nthat sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.\nweather_provider selects the weather archive; omitted, the backend default applies.",
+                "description": "Runs one building through BuEM with the envelope the caller supplies, and returns\nBuEM's block for it including the hourly series. Unlike a model run, the envelope\nis taken from the request rather than looked up in City2TABULA, so a building that\nhas no 3D match, or whose surfaces a user has edited, can still be run. The\nbuilding block is forwarded to buem-gateway as sent and must be complete: no\nU-value resolution or archetype default is applied here. The one addition: a block\nthat sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.\nweather_provider selects the weather archive; omitted, the backend default applies.\nweather_scenario (p10, p50, p90) or weather_year selects the weather, at most one;\nwith neither, p50. The run covers that full calendar year hourly (1900 for a\nscenario); start_date and end_date are ignored.",
                 "consumes": [
                     "application/json"
                 ],
@@ -998,6 +998,7 @@
                     "type": "object"
                 },
                 "start_date": {
+                    "description": "StartDate and EndDate are ignored: the run covers the full calendar year\nof the weather choice below.",
                     "type": "string",
                     "example": "2018-01-01T00:00:00Z"
                 },
@@ -1010,6 +1011,20 @@
                         "merra-2"
                     ],
                     "example": "cosmo-rea6"
+                },
+                "weather_scenario": {
+                    "description": "WeatherScenario and WeatherYear are the model's weather: a scenario, or\na real year for validation runs. At most one; with neither, p50.",
+                    "type": "string",
+                    "enum": [
+                        "p10",
+                        "p50",
+                        "p90"
+                    ],
+                    "example": "p50"
+                },
+                "weather_year": {
+                    "type": "integer",
+                    "example": 2019
                 }
             }
         },

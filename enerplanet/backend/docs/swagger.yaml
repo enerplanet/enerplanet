@@ -120,6 +120,9 @@ definitions:
           omitted, BuEM uses its default solver.
         type: object
       start_date:
+        description: |-
+          StartDate and EndDate are ignored: the run covers the full calendar year
+          of the weather choice below.
         example: "2018-01-01T00:00:00Z"
         type: string
       weather_provider:
@@ -132,6 +135,19 @@ definitions:
         - merra-2
         example: cosmo-rea6
         type: string
+      weather_scenario:
+        description: |-
+          WeatherScenario and WeatherYear are the model's weather: a scenario, or
+          a real year for validation runs. At most one; with neither, p50.
+        enum:
+        - p10
+        - p50
+        - p90
+        example: p50
+        type: string
+      weather_year:
+        example: 2019
+        type: integer
     type: object
   spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse:
     properties:
@@ -775,6 +791,9 @@ paths:
         U-value resolution or archetype default is applied here. The one addition: a block
         that sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.
         weather_provider selects the weather archive; omitted, the backend default applies.
+        weather_scenario (p10, p50, p90) or weather_year selects the weather, at most one;
+        with neither, p50. The run covers that full calendar year hourly (1900 for a
+        scenario); start_date and end_date are ignored.
       parameters:
       - description: Building geometry and BuEM building block
         in: body

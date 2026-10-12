@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
@@ -249,6 +250,23 @@ func modelWeatherProvider(config []byte, fallback string) string {
 		return provider
 	}
 	return fallback
+}
+
+// modelWeatherPeriod reads the model's weather from config: weatherYear, a real
+// archive year for validation runs, when set; otherwise weatherScenario; otherwise
+// the typical scenario. An unknown scenario also falls back to the typical one.
+func modelWeatherPeriod(config []byte) weather.Period {
+	var configMap map[string]interface{}
+	if len(config) == 0 || json.Unmarshal(config, &configMap) != nil {
+		return weather.DefaultPeriod
+	}
+	if year, ok := configMap["weatherYear"].(float64); ok && year > 0 && year == math.Trunc(year) {
+		return weather.Period{Year: int(year)}
+	}
+	if scenario, _ := configMap["weatherScenario"].(string); weather.IsScenario(scenario) {
+		return weather.Period{Scenario: scenario}
+	}
+	return weather.DefaultPeriod
 }
 
 // modelRefurbishmentLevel reads the model-level refurbishment default from

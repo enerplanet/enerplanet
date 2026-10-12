@@ -129,7 +129,8 @@ func ResolveBuemForModel(
 	p payload.CalculationPayload,
 	refurbishmentLevel ignis.RefurbishmentLevel,
 ) (results []buem.BuildingResult, resolved map[string]BuemResolutionMeta, unresolved map[string]string, err error) {
-	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, model, p)
+	period := modelWeatherPeriod(model.Config)
+	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
 
 	country := ""
 	if model.Country != nil {
@@ -152,7 +153,10 @@ func ResolveBuemForModel(
 		return nil, nil, unresolved, nil
 	}
 
-	results, err = buemClient.RunBuildings(ctx, buildings, weatherJSON, p.StartDate, p.EndDate, p.Resolution, p.ModelID)
+	// The BuEM period follows the weather, not the model's dates: a scenario
+	// series is stamped 1900, and BuEM indexes the weather by start_date's year.
+	start, end := period.Range()
+	results, err = buemClient.RunBuildings(ctx, buildings, weatherJSON, start, end, p.Resolution, p.ModelID)
 	if err != nil {
 		return nil, resolved, unresolved, err
 	}
@@ -162,7 +166,7 @@ func ResolveBuemForModel(
 // resolveBuemInputs fetches envelope and weather data for model's area.
 // Both degrade to nil (envelope/weather simply omitted, not a job failure)
 // on any resolution problem, so a building without 3D data still runs.
-func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, json.RawMessage) {
+func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, json.RawMessage) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)
 		return nil, nil
@@ -177,7 +181,7 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 	bbox := city2tabula.Bbox{Xmin: xmin, Ymin: ymin, Xmax: xmax, Ymax: ymax}
 
 	envelope := resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
-	weatherJSON := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), model, bbox)
+	weatherJSON := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), period, bbox)
 	return envelope, weatherJSON
 }
 
@@ -314,11 +318,11 @@ func pollRunStatus(ctx context.Context, c2t *city2tabula.Client, runID string) e
 // building fetch. Buildings in one model's area of interest are close enough
 // that a single point is a reasonable stand-in; splitting per building is a
 // straightforward upgrade if that stops holding.
-func resolveWeather(ctx context.Context, log *logrus.Entry, wx *weather.Client, provider string, model commonModels.Model, bbox city2tabula.Bbox) json.RawMessage {
+func resolveWeather(ctx context.Context, log *logrus.Entry, wx *weather.Client, provider string, period weather.Period, bbox city2tabula.Bbox) json.RawMessage {
 	lat := (bbox.Ymin + bbox.Ymax) / 2
 	lon := (bbox.Xmin + bbox.Xmax) / 2
 
-	body, err := wx.GetPointWeather(ctx, lat, lon, model.FromDate.Year(), provider)
+	body, err := wx.GetPointWeather(ctx, lat, lon, period, provider)
 	if err != nil {
 		log.Warnf("weather-serve request failed, proceeding without weather data: %v", err)
 		return nil

@@ -45,7 +45,7 @@ func TestGetPointWeather_ReturnsRawBodyVerbatim(t *testing.T) {
 	status := `{"state":"completed","result":{"target_status":200,"target_response":` + weatherJSON + `}}`
 	tc, gotPayload := fakeTentacron(t, status)
 
-	raw, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, 2018, "cosmo-rea6")
+	raw, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, Period{Year: 2018}, "cosmo-rea6")
 
 	require.NoError(t, err)
 	assert.JSONEq(t, weatherJSON, string(raw))
@@ -59,7 +59,7 @@ func TestGetPointWeather_UpstreamRejectionSurfacesWeatherMessage(t *testing.T) {
 	status := `{"state":"failed","error":{"code":"target_error","message":"target weather-point: HTTP 422: no servable archive for cosmo-rea6 in 2099"}}`
 	tc, _ := fakeTentacron(t, status)
 
-	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, 2099, "cosmo-rea6")
+	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, Period{Year: 2099}, "cosmo-rea6")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no servable archive for cosmo-rea6 in 2099")
@@ -69,10 +69,33 @@ func TestGetPointWeather_InfraFaultReturnedUnchanged(t *testing.T) {
 	status := `{"state":"failed","error":{"code":"unknown_target","message":"no target weather-point"}}`
 	tc, _ := fakeTentacron(t, status)
 
-	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, 2018, "cosmo-rea6")
+	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, Period{Year: 2018}, "cosmo-rea6")
 
 	require.Error(t, err)
 	te, ok := tentacron.AsTargetError(err)
 	require.True(t, ok)
 	assert.Equal(t, "unknown_target", te.Code)
+}
+
+// A scenario run asks weather-serve for the scenario and no year; it accepts
+// exactly one of the two.
+func TestGetPointWeather_ScenarioSendsScenarioNotYear(t *testing.T) {
+	status := `{"state":"completed","result":{"target_status":200,"target_response":{"index":[],"variables":{}}}}`
+	tc, gotPayload := fakeTentacron(t, status)
+
+	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, Period{Scenario: "p90"}, "merra-2")
+
+	require.NoError(t, err)
+	assert.Equal(t, "p90", (*gotPayload)["scenario"])
+	assert.NotContains(t, *gotPayload, "year")
+}
+
+func TestPeriod_RangeCoversTheFullCalendarYear(t *testing.T) {
+	start, end := Period{Scenario: "p50"}.Range()
+	assert.Equal(t, "1900-01-01T00:00:00Z", start, "scenario rows are stamped 1900")
+	assert.Equal(t, "1900-12-31T23:00:00Z", end)
+
+	start, end = Period{Year: 2019}.Range()
+	assert.Equal(t, "2019-01-01T00:00:00Z", start)
+	assert.Equal(t, "2019-12-31T23:00:00Z", end)
 }

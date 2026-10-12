@@ -11,6 +11,7 @@ import (
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/store/demandprofile"
+	"spatialhub_backend/internal/weather"
 )
 
 // savedProfile is what fakeProfileStore recorded for one osm_id, flattened
@@ -164,4 +165,20 @@ func TestModelWeatherProvider(t *testing.T) {
 	assert.Equal(t, "cosmo-rea6", modelWeatherProvider([]byte(`{"weatherProvider":"dwd-icon"}`), "cosmo-rea6"), "unknown value falls back to the default")
 	assert.Equal(t, "era5-land", modelWeatherProvider([]byte(`{"weatherProvider":"era5-land"}`), "cosmo-rea6"))
 	assert.Equal(t, "merra-2", modelWeatherProvider([]byte(`{"weatherProvider":"merra-2"}`), "cosmo-rea6"))
+}
+
+// A model's weather is a validation year when set, otherwise its scenario,
+// otherwise the typical (p50) scenario.
+func TestModelWeatherPeriod(t *testing.T) {
+	cases := map[string]weather.Period{
+		`{"weatherScenario":"p90"}`:                    {Scenario: "p90"},
+		`{"weatherYear":2019}`:                         {Year: 2019},
+		`{"weatherYear":2019,"weatherScenario":"p90"}`: {Year: 2019},
+		`{}`:                        {Scenario: "p50"},
+		`{"weatherScenario":"p42"}`: {Scenario: "p50"},
+		`not json`:                  {Scenario: "p50"},
+	}
+	for config, want := range cases {
+		assert.Equal(t, want, modelWeatherPeriod([]byte(config)), config)
+	}
 }

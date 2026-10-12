@@ -114,7 +114,8 @@ func TestRunBuilding_SendsTheCallersEnvelopeAndReturnsTheSeries(t *testing.T) {
 	wx := fake.submitted["weather-point"]
 	assert.InDelta(t, 52.10, wx["lat"], 1e-9)
 	assert.InDelta(t, 5.98, wx["lon"], 1e-9)
-	assert.Equal(t, float64(2018), wx["year"], "the year comes from start_date, not from today")
+	assert.Equal(t, "p50", wx["scenario"], "without a weather choice the run uses the typical scenario")
+	assert.NotContains(t, wx, "year")
 	assert.Equal(t, "cosmo-rea6", wx["provider"])
 
 	run := fake.submitted["buem-buildings"]
@@ -136,13 +137,51 @@ func TestRunBuilding_RejectsAMissingBuildingBlock(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "building is required")
 }
 
-func TestRunBuilding_RejectsAnUnparseableStartDate(t *testing.T) {
+// The period follows from the weather choice; start_date and end_date in the
+// request are not used.
+func TestRunBuilding_ValidationYearSetsWeatherAndPeriod(t *testing.T) {
+	tc, fake := newFakeTentacron(t, map[string]string{
+		"weather-point":  sampleWeather,
+		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
+	})
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_year":2019,"start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, float64(2019), fake.submitted["weather-point"]["year"])
+	assert.Equal(t, "2019-01-01T00:00:00Z", fake.submitted["buem-buildings"]["start_date"])
+	assert.Equal(t, "2019-12-31T23:00:00Z", fake.submitted["buem-buildings"]["end_date"])
+}
+
+func TestRunBuilding_ScenarioRunsOnTheScenarioYear(t *testing.T) {
+	tc, fake := newFakeTentacron(t, map[string]string{
+		"weather-point":  sampleWeather,
+		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
+	})
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p90","start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "p90", fake.submitted["weather-point"]["scenario"])
+	assert.Equal(t, "1900-01-01T00:00:00Z", fake.submitted["buem-buildings"]["start_date"])
+}
+
+func TestRunBuilding_RejectsBothScenarioAndYear(t *testing.T) {
 	tc, _ := newFakeTentacron(t, nil)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"),
-		fmt.Sprintf(`{"osm_id":"111","geometry":%s,"building":%s,"start_date":"2018"}`, sampleGeometry, editedBuilding))
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p90","weather_year":2019,"start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "2018", "the rejected value belongs in the message")
+	assert.Contains(t, w.Body.String(), "weather_scenario")
+}
+
+func TestRunBuilding_RejectsAnUnknownScenario(t *testing.T) {
+	tc, _ := newFakeTentacron(t, nil)
+	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p42","start_date"`, 1)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "p42", "the rejected value belongs in the message")
 }
 
 func TestRunBuilding_PerBuildingRejectionIsA400NotAnEmpty200(t *testing.T) {
