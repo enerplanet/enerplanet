@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -53,6 +54,7 @@ import (
 	workspacehandler "spatialhub_backend/internal/workspace/handler"
 
 	"platform.local/common/pkg/constants"
+	httpcheckclient "platform.local/common/pkg/httpclient"
 	"platform.local/common/pkg/httputil"
 	authplatform "platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -143,6 +145,27 @@ func main() {
 
 	platformconfig.SetupTimezone(cfg.AppTimezone, log)
 	serverAddr := fmt.Sprintf("%s:%s", cfg.AppHost, cfg.AppPort)
+
+	// The container HEALTHCHECK runs `/app/server --health-check` as a separate
+	// process inside the running container.
+	if len(os.Args) > 1 && os.Args[1] == "--health-check" {
+		healthy := false
+		if resp, err := httpcheckclient.New(fmt.Sprintf("http://127.0.0.1:%s", cfg.AppPort), httpcheckclient.WithTimeout(5 * time.Second)).DoBytes(context.Background(), "GET", "/api/health", nil, nil); err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+			healthy = true
+		} else if err != nil {
+			log.Printf("health check probe error: %v", err)
+		} else if resp == nil {
+			log.Println("health check probe: no response")
+		} else {
+			log.Printf("health check probe: unexpected status %v", resp.StatusCode)
+		}
+		if !healthy {
+			log.Printf("health check failed: server did not answer /api/health with %v", http.StatusOK)
+			os.Exit(1)
+		}
+		log.Info("health check ok")
+		os.Exit(0)
+	}
 
 	appDeps := initializeInfrastructure(cfg, log)
 	defer appDeps.Close()

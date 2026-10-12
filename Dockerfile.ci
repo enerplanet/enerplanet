@@ -76,6 +76,11 @@ RUN sed -i 's|../../libs/|../libs/|g' vite.config.ts
 # Fix Tailwind @source paths in global.css (../../../../libs/ -> ../../../libs/)
 RUN sed -i 's|../../../../libs/|../../../libs/|g' src/styles/global.css
 
+# Fix the tsconfig.paths @spatialhub/* aliases (../../libs/ -> ../libs/) the same
+# way, or `tsc -b` (moduleResolution: bundler) resolves them to /libs/* and fails
+# with TS2307 for every workspace lib import.
+RUN sed -i 's|../../libs/|../libs/|g' tsconfig.app.json
+
 
 # Passed via --build-arg from CI; sourced from GitLab CI/CD variables.
 ARG VITE_SSO_ENABLED
