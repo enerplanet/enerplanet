@@ -36,7 +36,7 @@ export function getDashboardTabs(t: TranslateFn, canManageUsers: boolean, isExpe
     { label: t('adminDashboard.tabs.overview'), show: true, key: 'overview' },
     { label: t('adminDashboard.tabs.allSimulationModels'), show: canManageUsers, key: 'models' },
     { label: t('adminDashboard.tabs.simulationEngine'), show: true, key: 'webservices' },
-    { label: t('adminDashboard.tabs.gridEngine'), show: true, key: 'pylovo' },
+    { label: t('adminDashboard.tabs.gridEngine'), show: isExpert, key: 'pylovo' },
     { label: t('adminDashboard.tabs.feedback'), show: isExpert, key: 'feedback' },
     { label: t('adminDashboard.tabs.userManagement'), show: canManageUsers, key: 'users' },
   ];
