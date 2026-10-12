@@ -12,8 +12,11 @@ import type { FC } from 'react';
 
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
+import { useModelStore } from '@/features/configurator/store/modelStore';
+
 import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID } from './credits';
 import { configuratorServices } from './heatClient';
+import { modelRunContext } from './runContext';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
@@ -34,6 +37,8 @@ export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited }> = ({ osmId, onExit, onEdited }) => {
   const { building, loading, error, objectId, country, credits } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
+  const fromDate = useModelStore((s) => s.fromDate);
+  const toDate = useModelStore((s) => s.toDate);
 
   if (loading) return <Notice>Loading this building…</Notice>;
   if (error) return <Notice>{error}</Notice>;
@@ -58,6 +63,7 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
         geometry={geometry}
         onExit={exit}
         services={configuratorServices}
+        runContext={modelRunContext(fromDate, toDate)}
       />
       {credits.length > 0 && (
         <div className="bg-card/80 text-muted-foreground pointer-events-auto absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded px-2 py-0.5 text-[11px]">
