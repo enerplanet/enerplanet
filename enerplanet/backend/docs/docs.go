@@ -1013,7 +1013,7 @@ const docTemplate = `{
                         "era5-land",
                         "merra-2"
                     ],
-                    "example": "cosmo-rea6"
+                    "example": "merra-2"
                 },
                 "weather_scenario": {
                     "description": "WeatherScenario and WeatherYear are the model's weather: a scenario, or\na real year for validation runs. At most one; with neither, p50.",

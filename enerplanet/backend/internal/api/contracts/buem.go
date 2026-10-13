@@ -28,7 +28,7 @@ type BuemBuildingRunRequest struct {
 	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
 	// WeatherProvider is the model's weather archive, so the run uses the same
 	// series as the model run; omitted, the backend default applies.
-	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"cosmo-rea6"`
+	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"merra-2"`
 	// WeatherScenario and WeatherYear are the model's weather: a scenario, or
 	// a real year for validation runs. At most one; with neither, p50.
 	WeatherScenario string `json:"weather_scenario,omitempty" enums:"p10,p50,p90" example:"p50"`

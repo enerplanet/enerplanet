@@ -133,7 +133,7 @@ definitions:
         - cosmo-rea6
         - era5-land
         - merra-2
-        example: cosmo-rea6
+        example: merra-2
         type: string
       weather_scenario:
         description: |-
