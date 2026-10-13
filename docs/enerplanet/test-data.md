@@ -198,7 +198,7 @@ source database happened to hold.
 The fixtures follow the deployed layout: one pylovo database holding every
 country, and one City2TABULA database per country, each linked to that single
 pylovo database. Each country's City2TABULA fixture is produced with
-City2TABULA v0.9.0 and citydb-tool 1.3.2, from the box and split line in the
+City2TABULA v0.10.0 and citydb-tool 1.3.2, from the box and split line in the
 table under What is loaded:
 
 1. Run City2TABULA over the site's full 3D source (`-create-db`,
