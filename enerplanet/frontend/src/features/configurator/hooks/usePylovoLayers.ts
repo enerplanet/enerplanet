@@ -182,14 +182,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     }
     if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
 
-    // One-time "how to add heat techs" prompt — fires once after grid data lands
-    // (generation or edit-model load) so the user decides auto-assign vs manual
-    // before hand-picking; never on rebuilds once a choice has been made.
+    // One-time "how to add heat techs" prompt after a new model's first grid.
+    // Not in edit mode: the prompted flag is not persisted, so it would reopen
+    // on every load, and a ?building= link opens the z-[60] building panel over it.
     const storeState = useModelStore.getState();
-    if ((nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
+    if (!editMode && (nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
       storeState.setHeatBootstrapOpen(true);
     }
-  }, [map, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
+  }, [map, editMode, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
 
   // Auto-run power flow debounce
   const lastGridDataRef = useRef(''); const pendingGridDataRef = useRef(''); const pfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

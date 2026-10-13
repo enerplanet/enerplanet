@@ -712,7 +712,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
       <HeatBootstrapDialog
         open={heatBootstrapOpen}
-        onOpenChange={setHeatBootstrapOpen}
+        onOpenChange={(open) => {
+          setHeatBootstrapOpen(open);
+          if (!open) setHeatBootstrapPrompted(true);
+        }}
         onAutoAssign={handleHeatBootstrapAutoAssign}
         onManual={handleHeatBootstrapManual}
       />
