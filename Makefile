@@ -23,14 +23,17 @@ ENERPLANET_COMPOSE := $(ENV_FILE) -f enerplanet/docker-compose.yml -f enerplanet
 BACKEND_RUN := docker compose $(ENERPLANET_COMPOSE) run --rm --build --no-deps --entrypoint
 
 # Runs a bash script from the repo with curl, jq and the docker CLI, so the host
-# needs none of them. Host networking keeps the backend at localhost:8000, the
-# domain its session cookie is scoped to. $(1) is the working directory.
+# needs none of them. $(1) is the working directory. Scripts reach the host via
+# host.docker.internal, as Docker Desktop can have host networking switched off.
 SCRIPTS_IMAGE := enerplanet-scripts
 # The scripts' optional settings, forwarded only when set in the caller's shell.
-SCRIPT_ENV := $(foreach v,SMOKE_SITE KEEP_MODEL POLL_TIMEOUT_S SMOKE_EMAIL SMOKE_PASSWORD SEED_EMAIL SEED_PASSWORD WAIT_S BACKEND_URL TENTACRON_URL TENTACRON_API_KEY,-e $(v))
+SCRIPT_ENV := $(foreach v,SMOKE_SITE KEEP_MODEL POLL_TIMEOUT_S SMOKE_EMAIL SMOKE_PASSWORD SEED_EMAIL SEED_PASSWORD WAIT_S TENTACRON_API_KEY,-e $(v))
 define run_script
 	@printf 'FROM alpine:3.20\nRUN apk add --no-cache bash curl jq docker-cli\n' | docker build -q -t $(SCRIPTS_IMAGE) - >/dev/null
-	@docker run --rm --network host $(SCRIPT_ENV) -v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
+	@docker run --rm --add-host=host.docker.internal:host-gateway $(SCRIPT_ENV) \
+		-e BACKEND_URL="$${BACKEND_URL:-http://host.docker.internal:8000}" \
+		-e TENTACRON_URL="$${TENTACRON_URL:-http://host.docker.internal:$(TENTACRON_PORT)}" \
+		-v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
 endef
 
 .env:
