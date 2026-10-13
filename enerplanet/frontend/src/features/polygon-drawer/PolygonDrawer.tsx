@@ -401,8 +401,24 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         map.addInteraction(modify);
         modify.getOverlay().setZIndex(MODIFY_SKETCH_Z_INDEX);
 
+        // Modify inserts a vertex on pointerdown within pixelTolerance of an edge,
+        // so a plain click near the boundary (e.g. on a building) fires modifyend
+        // without changing the shape. Unchanged areas mean no grid regeneration.
+        const polygonAreas = () =>
+          vectorSource.getFeatures().map((f) => (f.getGeometry() as Polygon | undefined)?.getArea() ?? 0);
+        let areasAtStart: number[] = [];
+        modify.on("modifystart", () => {
+          areasAtStart = polygonAreas();
+        });
+
         // Handle modification end - sync allPolygonsRef and notify parent
         modify.on("modifyend", (_event: ModifyEvent) => {
+          const areas = polygonAreas();
+          // Area equality misses a drag that keeps the area exactly; compare coordinates if that matters.
+          const shapeUnchanged =
+            areas.length === areasAtStart.length &&
+            areas.every((a, i) => Math.abs(a - areasAtStart[i]) <= 1e-9 * Math.max(1, a));
+          if (shapeUnchanged) return;
           // Rebuild allPolygonsRef from current features IMMEDIATELY for visual feedback
           const features = vectorSource.getFeatures();
           const updatedPolygons: [number, number][][] = [];
