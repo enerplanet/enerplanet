@@ -164,10 +164,13 @@ up: up-deps
 
 .PHONY: up-deps
 # Every service except the backend, for `make dev`, which runs the backend on
-# the host instead.
+# the host instead. PLATFORM_SERVICES are the platform-core services started,
+# with their dependencies. The legacy webservice is left out: neither the
+# backend's start nor MEME runs need it.
+PLATFORM_SERVICES ?= redis auth-service
 up-deps: .env
 	@docker network create spatialhub-net 2>/dev/null || true
-	@docker compose $(PLATFORM_COMPOSE) up -d
+	@docker compose $(PLATFORM_COMPOSE) up -d $(PLATFORM_SERVICES)
 	@$(MAKE) pylovo
 	@$(MAKE) tentacron-stack
 
@@ -319,7 +322,7 @@ db-create:
 
 .PHONY: up-services
 up-services: .env
-	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service webservice
+	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service
 
 .PHONY: webservice
 # Cloned here rather than in setup-repos: only the Calliope/PyPSA simulation

@@ -28,9 +28,8 @@ CORE_SERVICES=(
 )
 DOCKER_SERVICES=(
   "${CORE_SERVICES[@]}"
-  "auth-service|http|http://localhost:8001/api/health"
-  "webservice|http|http://localhost:8082/health"
-  "pylovo|http|http://localhost:8086/health"
+  "auth-service|http|http://localhost:${AUTH_SERVICE_PORT}/api/health"
+  "pylovo|http|http://localhost:${PYLOVO_PORT}/health"
   "ignis|http|http://localhost:${IGNIS_PORT}/ignis/health"
   "city2tabula|http|http://localhost:${CITY2TABULA_PORT}/api/v1/health"
   "weather-serve|http|http://localhost:${WEATHER_PORT}/v1/weather/health"
