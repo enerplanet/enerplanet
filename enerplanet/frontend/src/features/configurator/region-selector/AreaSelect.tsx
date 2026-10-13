@@ -49,6 +49,7 @@ import {
   useGridIdToPeakLoad,
   useGridIdToConnectedBuildings,
   useBuildingsInPolygonCount,
+  useBuildingOsmIdsInPolygon,
   usePeakLoadInPolygonKw,
   useCustomTransformers,
 } from "@/features/configurator/region-selector/selectors/gridDataSelectors";
@@ -262,6 +263,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
   const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
   const buildingsInPolygonCount = useBuildingsInPolygonCount(pylovoLayers.pylovoGridData);
+  const buildingOsmIdsInPolygon = useBuildingOsmIdsInPolygon(pylovoLayers.pylovoGridData);
   const peakLoadInPolygonKw = usePeakLoadInPolygonKw(pylovoLayers.pylovoGridData);
   const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
@@ -472,6 +474,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             appliedTechKeys={techOperations.appliedTechKeys}
             gridResultIds={gridResultIds}
             buildingsCount={buildingsInPolygonCount}
+            buildingOsmIds={buildingOsmIdsInPolygon}
             peakLoadKw={peakLoadInPolygonKw}
             regionName={regionName}
             polygonCoordinates={state.allPolygons}

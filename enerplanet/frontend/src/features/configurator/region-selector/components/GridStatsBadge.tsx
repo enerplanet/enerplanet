@@ -7,15 +7,19 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 
 interface GridStatsBadgeProps {
     gridResultIds: number[];
+    /** Selected buildings; the figures are scoped to them when given. */
+    buildingOsmIds?: string[];
     buildingsCount?: number;
     peakLoadKw?: number;
     className?: string;
 }
 
-export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, className }) => {
+export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildingOsmIds, className }) => {
     const { t } = useTranslation();
     const [statistics, setStatistics] = useState<GridStatistics | null>(null);
     const [loading, setLoading] = useState(false);
+    // Joined so a new array with the same ids does not refetch.
+    const selectionKey = buildingOsmIds?.join(",") ?? "";
 
     useEffect(() => {
         if (gridResultIds.length === 0) {
@@ -26,7 +30,10 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
         const fetchStatistics = async () => {
             setLoading(true);
             try {
-                const stats = await pylovoService.getGridStatistics(gridResultIds);
+                const stats = await pylovoService.getGridStatistics(
+                    gridResultIds,
+                    selectionKey ? selectionKey.split(",") : undefined
+                );
                 setStatistics(stats);
             } catch (err) {
                 console.error("Failed to load grid statistics:", err);
@@ -36,7 +43,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
         };
 
         fetchStatistics();
-    }, [gridResultIds]);
+    }, [gridResultIds, selectionKey]);
 
     if (loading) {
         return (
@@ -55,6 +62,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
     const buildingsCountValue = statistics.buildings?.count ?? 0;
     const peakLoadKwValue = statistics.buildings?.total_peak_load_kw ?? 0;
     const simultaneousLoadKwValue = statistics.buildings?.simultaneous_load_kw ?? 0;
+    const wholeGrid = statistics.whole_grid;
 
     return (
         <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
@@ -118,6 +126,14 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                     </TooltipContent>
                 </Tooltip>
             </div>
+
+            {wholeGrid && (
+                <p className="px-3 pb-2 text-[10px] text-muted-foreground">
+                    Selected buildings and the cables connecting them to their transformers.
+                    Whole grid: {wholeGrid.buildings.count} buildings, {wholeGrid.cables.count} cables,{" "}
+                    {wholeGrid.cables.total_length_km.toFixed(1)} km, {wholeGrid.transformers.utilization_percent.toFixed(1)}% utilisation.
+                </p>
+            )}
 
             {/* Load & Utilization */}
             <div className="px-3 py-2 space-y-2 border-t border-border">

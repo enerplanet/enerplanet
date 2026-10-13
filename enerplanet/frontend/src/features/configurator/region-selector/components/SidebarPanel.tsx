@@ -72,6 +72,7 @@ interface SidebarPanelProps {
   onRemoveTechFromAll?: (tech: Technology) => void;
   appliedTechKeys?: string[];
   gridResultIds?: number[];
+  buildingOsmIds?: string[];
   buildingsCount?: number;
   peakLoadKw?: number;
   customLocationsCount?: number;
@@ -102,6 +103,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onRemoveTechFromAll,
   appliedTechKeys = [],
   gridResultIds = [],
+  buildingOsmIds,
   buildingsCount,
   peakLoadKw,
   customLocationsCount = 0,
@@ -235,6 +237,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           <div className="md-fade-in">
             <GridStatsBadge
               gridResultIds={gridResultIds}
+              buildingOsmIds={buildingOsmIds}
               buildingsCount={buildingsCount}
               peakLoadKw={peakLoadKw}
             />

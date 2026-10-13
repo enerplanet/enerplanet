@@ -97,6 +97,16 @@ export const useBuildingsInPolygonCount = (
     return Array.isArray(features) ? features.length : 0;
   }, [pylovoGridData]);
 
+/** OSM ids of the buildings in the current polygon. */
+export const useBuildingOsmIdsInPolygon = (
+  pylovoGridData: PylovoGridData | undefined
+): string[] =>
+  useMemo(() => {
+    const features = pylovoGridData?.buildings?.features;
+    if (!Array.isArray(features)) return [];
+    return features.map((f: any) => f?.properties?.osm_id).filter(Boolean).map(String);
+  }, [pylovoGridData]);
+
 /** Total peak load (kW) across all buildings in the polygon. */
 export const usePeakLoadInPolygonKw = (
   pylovoGridData: PylovoGridData | undefined

@@ -90,6 +90,12 @@ interface GridStatistics {
         voltage_band_low: number;
         voltage_band_high: number;
     };
+    /** Present only when the request named buildings: today's whole-grid figures. */
+    whole_grid?: {
+        buildings: { count: number };
+        cables: { count: number; total_length_km: number };
+        transformers: { utilization_percent: number };
+    };
 }
 
 interface VoltageViolation {
@@ -318,10 +324,11 @@ export const pylovoService = {
         };
     },
 
-    getGridStatistics: async (gridResultIds: number[]): Promise<GridStatistics> => {
+    /** Whole-grid figures, or figures scoped to buildingOsmIds when given (an empty list means no buildings). */
+    getGridStatistics: async (gridResultIds: number[], buildingOsmIds?: string[]): Promise<GridStatistics> => {
         const response = await axios.post<{ data: { statistics: GridStatistics; grid_result_ids: number[] } }>(
             "/v2/pylovo/grid-statistics",
-            { grid_result_ids: gridResultIds },
+            { grid_result_ids: gridResultIds, building_osm_ids: buildingOsmIds },
             { timeout: 0 } // no timeout; large models need unlimited time
         );
         return response.data?.data?.statistics || {} as GridStatistics;
