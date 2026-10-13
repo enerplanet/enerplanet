@@ -343,6 +343,10 @@ pylovo:
 # meme is left out until its translator and parser packages are released; it
 # serves only the simulation step. `make meme` starts it on its own.
 tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
+	@# These services' own compose files set no restart policy, so after a Docker
+	@# restart they stay down. Remove once each pinned version sets one.
+	@docker update --restart unless-stopped tentacron-env-tentacron-1 meme-env-api-1 \
+		city2tabula city2tabula-db >/dev/null
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
