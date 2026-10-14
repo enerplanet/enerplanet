@@ -44,6 +44,7 @@ import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { GridStatsBadge } from "./GridStatsBadge";
+import { EnergyPrices } from "./EnergyPrices";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import type { FC, ChangeEvent } from "react";
@@ -75,8 +76,6 @@ interface SidebarPanelProps {
   buildingOsmIds?: string[];
   buildingsCount?: number;
   peakLoadKw?: number;
-  customLocationsCount?: number;
-  regionName?: string;
   polygonCoordinates?: [number, number][][];
   isModified?: boolean;
 }
@@ -106,8 +105,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   buildingOsmIds,
   buildingsCount,
   peakLoadKw,
-  customLocationsCount = 0,
-  regionName,
   polygonCoordinates = [],
   isModified = false,
 }) => {
@@ -453,49 +450,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           />
         </div>
 
-        <div className="bg-background dark:bg-gray-700 border border-border rounded-lg p-3">
-          <h4 className="text-sm font-semibold text-foreground mb-2">
-            {t("simulation.summary.title")}
-          </h4>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            {regionName && (
-              <div className="flex justify-between">
-                <span>{t("simulation.summary.region")}:</span>
-                <span className="font-medium text-foreground">{regionName}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>{t("simulation.summary.areaDefined")}:</span>
-              <span
-                className={`font-medium ${allPolygonsCount > 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
-              >
-                {allPolygonsCount > 0
-                  ? `✓ ${t("simulation.summary.drawn")}`
-                  : t("simulation.summary.notDrawn")}
-              </span>
-            </div>
-            {customLocationsCount > 0 && (
-              <div className="flex justify-between">
-                <span>{t("simulation.summary.customLocations")}:</span>
-                <span className="font-medium text-purple-600 dark:text-purple-400">
-                  {customLocationsCount} {t("simulation.summary.found")}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>{t("simulation.summary.from")}:</span>
-              <span className="font-medium text-foreground">{state.fromDate}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{t("simulation.summary.to")}:</span>
-              <span className="font-medium text-foreground">{state.toDate}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{t("simulation.summary.resolution")}:</span>
-              <span className="font-medium text-foreground">{state.resolution} min</span>
-            </div>
-          </div>
-        </div>
+        <EnergyPrices
+          value={advancedParams.energy_prices}
+          onChange={prices => onAdvancedParamsChange({ ...advancedParams, energy_prices: prices })}
+        />
 
         <div className="mt-4 p-3 bg-muted dark:bg-gray-700 border border-border rounded-lg">
           <div className="text-xs text-foreground">{t("simulation.tip")}</div>

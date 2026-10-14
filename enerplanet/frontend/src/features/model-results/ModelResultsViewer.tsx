@@ -555,6 +555,19 @@ export const ModelResultsViewer = () => {
     return null;
   }, [model, turbineData]);
 
+  // Timestep duration in hours (validation-year runs are hourly; derive rather
+  // than assume so a different cadence stays correct). Used to monetise losses.
+  const hoursPerTimestep = useMemo(() => {
+    if (!model?.from_date || !model?.to_date) return 1;
+    const from = new Date(model.from_date).getTime();
+    const to = new Date(model.to_date).getTime();
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return 1;
+    const count = structuredResults?.timestep_count || 8760;
+    const totalHours = (to - from) / 3_600_000;
+    const perStep = totalHours / count;
+    return Number.isFinite(perStep) && perStep > 0 ? perStep : 1;
+  }, [model?.from_date, model?.to_date, structuredResults?.timestep_count]);
+
   // PyPSA data for selected bus (memoized to avoid re-filtering on every render)
   const voltageArray = useMemo(() => pypsaData?.voltage || pypsaData?.buses_t_v_mag_pu || [], [pypsaData?.voltage, pypsaData?.buses_t_v_mag_pu]);
   const powerArray = useMemo(() => pypsaData?.power || pypsaData?.buses_t_p || [], [pypsaData?.power, pypsaData?.buses_t_p]);
@@ -670,6 +683,8 @@ export const ModelResultsViewer = () => {
             onTransformerHover={setHighlightedBuildings}
             lineConnections={lineConnections}
             highlightedBuildings={highlightedBuildings}
+            lcoeEurPerKwh={summary?.lcoe_eur_kwh || 0}
+            hoursPerTimestep={hoursPerTimestep}
           />
         );
       case 'system':
@@ -682,7 +697,7 @@ export const ModelResultsViewer = () => {
     capacityData, costBreakdown, energyFlow, avgCapacityFactor,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
-    carrier, capabilities,
+    carrier, capabilities, summary,
   ]);
 
   if (error || (!model && !loading)) {

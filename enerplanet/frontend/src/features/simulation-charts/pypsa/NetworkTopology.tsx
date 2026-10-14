@@ -30,6 +30,8 @@ interface NetworkTopologyProps {
   height?: number;
   onTransformerHover?: (connectedBuildings: string[] | null) => void; // Callback when hovering transformer
   highlightedBuildings?: string[] | null; // Buildings to highlight
+  selectedLocation?: string | null; // The location currently selected for detail views
+  onNodeClick?: (name: string) => void; // Called when a node (transformer/building) is clicked
 }
 
 // Helper to determine if a location is a transformer
@@ -510,6 +512,8 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
   height = 320,
   onTransformerHover,
   highlightedBuildings,
+  selectedLocation = null,
+  onNodeClick,
 }) => {
   const chartRef = useRef<ReactECharts>(null);
   const { t } = useTranslation();
@@ -575,6 +579,25 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
           shadowBlur: 0,
         },
       }));
+    }
+
+    // Visually mark the selected location (ring + glow) so changes driven from
+    // the graph (or an external default) are always visible.
+    if (selectedLocation) {
+      const selectColor = '#3b82f6'
+      nodes = nodes.map(n => n.name === selectedLocation
+        ? {
+            ...n,
+            itemStyle: {
+              ...(n.itemStyle || {}),
+              borderColor: selectColor,
+              borderWidth: (n.itemStyle?.borderWidth ?? 2) + 2,
+              shadowColor: selectColor,
+              shadowBlur: 5,
+            },
+            z: 10,
+          }
+        : n);
     }
 
     const useForceLayout = layoutMode === 'force';
@@ -667,7 +690,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
       },
       trafoToBuildingsMap,
     };
-  }, [networkStructure, voltageData, powerData, clusterColors, connectionLoading, height, themeColors, t, voltageAvailable, powerAvailable]);
+  }, [networkStructure, voltageData, powerData, clusterColors, connectionLoading, height, themeColors, t, voltageAvailable, powerAvailable, selectedLocation]);
 
   // Handle chart events - highlight connected buildings when hovering transformer
   const onEvents = useMemo(() => {
@@ -710,8 +733,13 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
           }
         }
       },
+      click: (params: any) => {
+        if (params.dataType === 'node') {
+          onNodeClick?.(params.name);
+        }
+      },
     };
-  }, [trafoToBuildingsMap, onTransformerHover]);
+  }, [trafoToBuildingsMap, onTransformerHover, onNodeClick]);
 
   // Handle external highlighting (e.g., from map transformer hover)
   useEffect(() => {

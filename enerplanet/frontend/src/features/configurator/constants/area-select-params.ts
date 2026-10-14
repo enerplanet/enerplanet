@@ -1,4 +1,4 @@
-import type { AdvancedParameter, AdvancedParametersState } from "@/features/configurator/types/area-select";
+import type { AdvancedParameter, AdvancedParametersState, EnergyPrices } from "@/features/configurator/types/area-select";
 
 export const ADVANCED_PARAMETERS: AdvancedParameter[] = [
   {
@@ -106,6 +106,17 @@ export const ADVANCED_PARAMETERS: AdvancedParameter[] = [
   },
 ];
 
+export const DEFAULT_ENERGY_PRICES: EnergyPrices = {
+  // EUR/MWh. electricity 300 matches the simulation engine's Calliope-template
+  // transformer supply tariff (the historical hardcoded import.price in T1K),
+  // so a user who never touches these gets the prior behaviour.
+  electricity_eur_mwh: 300,
+  natural_gas_eur_mwh: 35,
+  oil_eur_mwh: 90,
+  biomass_eur_mwh: 25,
+  biogas_eur_mwh: 80,
+};
+
 export const getDefaultAdvancedParameters = (): AdvancedParametersState => {
   const params = ADVANCED_PARAMETERS.reduce((acc, param) => {
     if (param.type === 'range') {
@@ -119,6 +130,7 @@ export const getDefaultAdvancedParameters = (): AdvancedParametersState => {
   }, {} as AdvancedParametersState);
 
   params.pypsa_enabled = true;
+  params.energy_prices = { ...DEFAULT_ENERGY_PRICES };
 
   return params;
 };

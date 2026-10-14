@@ -69,3 +69,68 @@ func TestTranslatePayload_rejectsBrokenInput(t *testing.T) {
 	_, err := TranslatePayload([]byte(`{"topology":`))
 	assert.Error(t, err, "malformed payload surfaces as an error")
 }
+
+// payloadWithPrice is elOnlyPayload plus a pypsa.electricity_price_eur_mwh.
+func payloadWithPrice(t *testing.T, price *float64) []byte {
+	var p map[string]interface{}
+	require.NoError(t, json.Unmarshal(elOnlyPayload(), &p))
+	if price != nil {
+		pypsa := map[string]interface{}{"electricity_price_eur_mwh": *price}
+		p["pypsa"] = pypsa
+	}
+	b, err := json.Marshal(p)
+	require.NoError(t, err)
+	return b
+}
+
+// tradeImportPrice reads model.trade.<any>.import.price from a job.
+func tradeImportPrice(t *testing.T, job []byte) (map[string]float64, bool) {
+	var top map[string]interface{}
+	require.NoError(t, json.Unmarshal(job, &top))
+	model, _ := top["model"].(map[string]interface{})
+	if model == nil {
+		return nil, false
+	}
+	trade, _ := model["trade"].(map[string]interface{})
+	if trade == nil {
+		return nil, false
+	}
+	out := map[string]float64{}
+	for name, raw := range trade {
+		node, _ := raw.(map[string]interface{})
+		if node == nil {
+			continue
+		}
+		imp, _ := node["import"].(map[string]interface{})
+		if imp == nil {
+			continue
+		}
+		if price, ok := imp["price"].(float64); ok {
+			out[name] = price
+		}
+	}
+	return out, len(out) > 0
+}
+
+func TestTranslatePayload_appliesConfiguredElectricityPrice(t *testing.T) {
+	p := 250.0 // EUR/MWh
+	got, err := TranslatePayload(payloadWithPrice(t, &p))
+	require.NoError(t, err)
+
+	prices, ok := tradeImportPrice(t, got.Job)
+	require.True(t, ok, "translated job has a grid trade import.price")
+	for name, price := range prices {
+		assert.InDelta(t, 250, price, 1e-9, "grid trade %s uses configured price", name)
+	}
+}
+
+func TestTranslatePayload_defaultElectricityPriceWhenUnconfigured(t *testing.T) {
+	got, err := TranslatePayload(payloadWithPrice(t, nil))
+	require.NoError(t, err)
+
+	prices, ok := tradeImportPrice(t, got.Job)
+	require.True(t, ok, "translated job has a grid trade import.price")
+	for name, price := range prices {
+		assert.InDelta(t, DefaultElectricityPriceEurMWh, price, 1e-9, "grid trade %s uses default price", name)
+	}
+}

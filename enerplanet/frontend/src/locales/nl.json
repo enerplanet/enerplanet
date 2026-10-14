@@ -462,9 +462,9 @@
       "normalOperation": "Normale werking, voldoende capaciteit",
       "highUtilization": "Hoge benutting, plan upgrades",
       "nearCapacity": "Nabij capaciteit, versterking nodig",
-      "busDetails": "Busdetails",
-      "busDetailsDesc": "Elektrische kenmerken van de geselecteerde bus/transformator in het elektriciteitsnet.",
-      "totalBuses": "Totaal Bussen",
+      "busDetails": "Netdetails",
+      "busDetailsDesc": "Algemene kenmerken van het geselecteerde knooppunt in het elektriciteitsnet.",
+      "totalBuses": "Totaal Knooppunten",
       "totalBusesDesc": "Aantal knooppunten in het net",
       "selected": "Geselecteerd",
       "avgVoltage": "Gem. Spanning",
@@ -1308,6 +1308,14 @@
     "technologies": "Technologieën",
     "parameters": "Parameters",
     "pypsaSimulation": "PyPSA-simulatie",
+    "energyPrices": {
+      "title": "Energieprijzen",
+      "electricity_eur_mwh": "Elektriciteit",
+      "natural_gas_eur_mwh": "Aardgas",
+      "oil_eur_mwh": "Stookolie",
+      "biomass_eur_mwh": "Biomassa",
+      "biogas_eur_mwh": "Biogas"
+    },
     "summary": {
       "title": "Simulatieoverzicht",
       "region": "Regio",

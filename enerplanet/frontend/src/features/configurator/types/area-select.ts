@@ -25,6 +25,20 @@ export interface AdvancedParametersState {
 	line_type_mv: string;
 	trafo_mv_lv_type: string;
 	pypsa_enabled: boolean;
+	// Energy source prices for the simulation, EUR/MWh. Configured in the
+	// configurator; forwarded to the backend and through T1K so a model can set
+	// its own import/fuel tariffs instead of the hardcoded default.
+	energy_prices: EnergyPrices;
+}
+
+// Retail/wholesale-ish energy tariffs (EUR/MWh) exposed in the configurator.
+// Only carriers with realistic household/industry pricing are listed.
+export interface EnergyPrices {
+	electricity_eur_mwh: number;
+	natural_gas_eur_mwh: number;
+	oil_eur_mwh: number;
+	biomass_eur_mwh: number;
+	biogas_eur_mwh: number;
 }
 
 export interface ParameterRangeInputProps {

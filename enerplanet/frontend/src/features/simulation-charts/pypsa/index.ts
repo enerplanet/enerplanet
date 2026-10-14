@@ -1,5 +1,7 @@
 export { NetworkTopology } from './NetworkTopology';
 export { connectionKey, isOverloaded, normalizeLocId, OVERLOAD_UTILIZATION_PERCENT } from './chartUtils';
+export { computeBottlenecks, analyzeBottleneck } from './bottlenecks';
+export type { BottleneckItem, LineLoadingRow } from './bottlenecks';
 export { PyPSAPowerChart } from './PyPSAPowerChart';
 export { PyPSAVoltageChart } from './PyPSAVoltageChart';
 export { PyPSAVoltageViolationChart } from './PyPSAVoltageViolationChart';

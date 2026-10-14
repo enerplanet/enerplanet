@@ -239,6 +239,20 @@ func buildPylovoPayload(payload CalculationPayload, configMap map[string]interfa
 		payload.Pypsa = buildDefaultPypsaConfig(configMap)
 	}
 
+	// Carry the configurator's energy prices (EUR/MWh) into the payload so the
+	// T1K translation can write them to job. UNITS: the frontend stores EUR/MWh
+	// here; the T1K `cost_om_con`->import.price rule multiplies by 1000 but the
+	// transformer rule hardcodes 300 EUR/MWh, and a post-translate pass reads
+	// this same value — keeping it in native EUR/MWh avoids double scaling.
+	if ep, ok := configMap["energy_prices"].(map[string]interface{}); ok {
+		if price, ok := ep["electricity_eur_mwh"].(float64); ok && price > 0 {
+			if payload.Pypsa == nil {
+				payload.Pypsa = map[string]interface{}{}
+			}
+			payload.Pypsa["electricity_price_eur_mwh"] = price
+		}
+	}
+
 	return payload
 }
 

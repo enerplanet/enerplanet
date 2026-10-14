@@ -720,9 +720,9 @@
       "normalOperation": "Normalbetrieb, ausreichende Kapazität",
       "highUtilization": "Hohe Auslastung, Upgrades planen",
       "nearCapacity": "Nahe Kapazitätsgrenze, Verstärkung erforderlich",
-      "busDetails": "Bus-Details",
-      "busDetailsDesc": "Elektrische Eigenschaften des ausgewählten Bus/Transformators im Stromnetz.",
-      "totalBuses": "Gesamte Busse",
+      "busDetails": "Netz-Details",
+      "busDetailsDesc": "Gesamte Netzeigenschaften des ausgewählten Knotens im Stromnetz.",
+      "totalBuses": "Gesamte Knoten",
       "totalBusesDesc": "Anzahl der Knoten im Netz",
       "selected": "Ausgewählt",
       "avgVoltage": "Ø Spannung",
@@ -1586,6 +1586,14 @@
     "technologies": "Technologien",
     "parameters": "Parameter",
     "pypsaSimulation": "PyPSA-Simulation",
+    "energyPrices": {
+      "title": "Energiepreise",
+      "electricity_eur_mwh": "Strom",
+      "natural_gas_eur_mwh": "Erdgas",
+      "oil_eur_mwh": "Heizöl",
+      "biomass_eur_mwh": "Biomasse",
+      "biogas_eur_mwh": "Biogas"
+    },
     "powerFlow": {
       "run": "Lastflussanalyse ausführen",
       "rerun": "Lastfluss erneut ausführen",

@@ -462,9 +462,9 @@
       "normalOperation": "Normalna praca, wystarczająca pojemność",
       "highUtilization": "Wysokie wykorzystanie, planuj modernizacje",
       "nearCapacity": "Blisko pojemności, wymagane wzmocnienie",
-      "busDetails": "Szczegóły Szyny",
-      "busDetailsDesc": "Charakterystyki elektryczne wybranej szyny/transformatora w sieci energetycznej.",
-      "totalBuses": "Łączna Liczba Szyn",
+      "busDetails": "Szczegóły Sieci",
+      "busDetailsDesc": "Ogólne charakterystyki wybranego węzła w sieci energetycznej.",
+      "totalBuses": "Łączna Liczba Węzłów",
       "totalBusesDesc": "Liczba węzłów w sieci",
       "selected": "Wybrano",
       "avgVoltage": "Śr. Napięcie",
@@ -1308,6 +1308,14 @@
     "technologies": "Technologie",
     "parameters": "Parametry",
     "pypsaSimulation": "Symulacja PyPSA",
+    "energyPrices": {
+      "title": "Ceny energii",
+      "electricity_eur_mwh": "Energia elektryczna",
+      "natural_gas_eur_mwh": "Gaz ziemny",
+      "oil_eur_mwh": "Olej opałowy",
+      "biomass_eur_mwh": "Biomasa",
+      "biogas_eur_mwh": "Biogaz"
+    },
     "summary": {
       "title": "Podsumowanie symulacji",
       "region": "Region",

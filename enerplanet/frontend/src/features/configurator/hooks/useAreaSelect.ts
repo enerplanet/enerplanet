@@ -234,6 +234,9 @@ async function saveAreaData(params: any) {
         if (config && advancedParams?.pypsa_enabled !== false) {
             config.pypsa = { trafo_mv_lv_used: true, trafo_mv_lv_type: advancedParams?.trafo_mv_lv_type || "0.4 MVA 20/0.4 kV", line_type_mv: advancedParams?.line_type_mv || "NA2XS2Y 1x185 RM/25 12/20 kV", line_type_lv: advancedParams?.line_type_lv || "NAYY 4x150 SE" };
         } else if (config) { config.pypsa = false; }
+        if (config && advancedParams?.energy_prices) {
+            config.energy_prices = { ...advancedParams.energy_prices };
+        }
         const modelData = { title: areaData.modelName, from_date: areaData.fromDate, to_date: areaData.toDate, resolution: areaData.resolution, workspace_id: workspaceId, coordinates: coords, config };
         if (editMode && modelId) {
             let hasChanges = !originalModel;

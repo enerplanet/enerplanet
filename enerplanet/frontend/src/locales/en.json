@@ -720,9 +720,9 @@
       "normalOperation": "Normal operation, sufficient capacity",
       "highUtilization": "High utilization, plan for upgrades",
       "nearCapacity": "Near capacity, reinforcement needed",
-      "busDetails": "Bus Details",
-      "busDetailsDesc": "Electrical characteristics of the selected bus/transformer in the power grid.",
-      "totalBuses": "Total Buses",
+      "busDetails": "Network Details",
+      "busDetailsDesc": "Overall grid characteristics of the selected node in the network.",
+      "totalBuses": "Total Nodes",
       "totalBusesDesc": "Number of nodes in the grid",
       "selected": "Selected",
       "avgVoltage": "Avg Voltage",
@@ -1586,6 +1586,14 @@
     "technologies": "Technologies",
     "parameters": "Parameters",
     "pypsaSimulation": "PyPSA Simulation",
+    "energyPrices": {
+      "title": "Energy Prices",
+      "electricity_eur_mwh": "Electricity",
+      "natural_gas_eur_mwh": "Natural Gas",
+      "oil_eur_mwh": "Heating Oil",
+      "biomass_eur_mwh": "Biomass",
+      "biogas_eur_mwh": "Biogas"
+    },
     "powerFlow": {
       "run": "Run Power Flow Analysis",
       "rerun": "Re-run Power Flow",

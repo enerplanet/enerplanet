@@ -15,6 +15,7 @@ import {
   PyPSACurtailmentChart,
   connectionKey,
   isOverloaded,
+  computeBottlenecks,
 } from '@/features/simulation-charts/pypsa';
 import { useTranslation } from '@spatialhub/i18n';
 import { CLUSTER_COLORS } from '@/components/map-controls/maplibre/maplibre-styles';
@@ -182,6 +183,9 @@ interface GridPanelProps {
   onTransformerHover?: (connectedBuildings: string[] | null) => void;
   lineConnections?: LineConnection[];
   highlightedBuildings?: string[] | null;
+  // Energy value (€/kWh) and timestep duration (h) — used to monetise loss data.
+  lcoeEurPerKwh?: number;
+  hoursPerTimestep?: number;
 }
 
 const formatPowerValue = (valueKw: number): string => {
@@ -215,7 +219,7 @@ const computeLoss = (p0Kw: number, p1Kw?: number): number => {
   return Math.abs(Math.abs(p0Kw) - Math.abs(p1Kw));
 };
 
-const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selectedVoltage, selectedPower, onTransformerHover, lineConnections = [], highlightedBuildings }: GridPanelProps) => {
+const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selectedVoltage, selectedPower, onTransformerHover, lineConnections = [], highlightedBuildings, lcoeEurPerKwh = 0, hoursPerTimestep = 1 }: GridPanelProps) => {
   const { t } = useTranslation();
   const isMapLibre3D = useMapStore(s => s.selectedBaseLayerId === 'maplibre_3d');
   const activeClusterPalette = isMapLibre3D ? CLUSTER_COLORS : DARK_CLUSTER_COLORS;
@@ -335,6 +339,14 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
     return byConnection;
   }, [lineLoadingArr]);
 
+  // Wire-level bottleneck analysis: wires at/above the loading threshold, their
+  // peak %, measured annual loss cost (Σ loss kWh × LCOE) and a labelled upgrade
+  // estimate. Pure computation (see bottlenecks.ts). Requires pypsa line loading
+  // + loss data; gated by capabilities.lineLoading && capabilities.losses.
+  const bottlenecks = useMemo(() =>
+    computeBottlenecks(lineLoadingArr, lineRatings, lcoeEurPerKwh, hoursPerTimestep),
+  [lineLoadingArr, lineRatings, lcoeEurPerKwh, hoursPerTimestep]);
+
   const lineLoadingItems = useMemo(() => {
     const byLine = new Map<string, { peakApparentKva: number; peakLossKw: number; peakLoadingPercent?: number }>();
 
@@ -418,18 +430,6 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
       .slice(0, 5)
   ), [lineLoadingItems]);
 
-  const busiestLine = useMemo(() =>
-    lineLoadingItems
-      .slice()
-      .sort((a, b) => {
-        if (a.peakLoadingPercent !== undefined && b.peakLoadingPercent !== undefined) {
-          return b.peakLoadingPercent - a.peakLoadingPercent;
-        }
-        return b.peakApparentKva - a.peakApparentKva;
-      })[0],
-    [lineLoadingItems]
-  );
-
   const busiestTransformer = useMemo(() =>
     transformerLoadingItems
       .slice()
@@ -494,6 +494,8 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
               height={420}
               onTransformerHover={onTransformerHover}
               highlightedBuildings={highlightedBuildings}
+              selectedLocation={selectedBus}
+              onNodeClick={setSelectedBus}
             />
           </ErrorBoundary>
         </div>
@@ -563,22 +565,13 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
           </GatedSection>
 
           <div className={`flex-1 flex flex-col ${CHART_CARD_CLASS}`}>
-            <div className="flex items-center justify-between mb-3 gap-3">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Activity className="w-4 h-4 text-primary" />
-                {t('results.grid.busDetails')}
-                <BusDetailsTooltip />
-              </h3>
-              <select
-                value={selectedBus || ''}
-                onChange={e => setSelectedBus(e.target.value)}
-                className="px-2 py-1 text-xs border border-border rounded-lg bg-background text-foreground"
-              >
-                {pypsaData.locations.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
-            </div>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              {t('results.grid.busDetails')}
+              <BusDetailsTooltip />
+            </h3>
+          </div>
 
             <div className="grid grid-cols-2 gap-3 content-start">
               <div className="bg-muted/50 rounded-lg p-3">
@@ -636,28 +629,57 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                 <Gauge className="w-4 h-4 text-primary" />
                 <p className="text-xs font-medium text-foreground">Bottlenecks</p>
               </div>
-              <div className="space-y-2 text-xs">
-                {capabilities.lineLoading && (
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-muted-foreground">Busiest line</span>
-                    <span className="text-right font-medium text-foreground">
-                      {busiestLine
-                        ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${busiestLine.peakLoadingPercent.toFixed(1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`
-                        : 'n/a'}
-                    </span>
-                  </div>
-                )}
-                {capabilities.transformers && (
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-muted-foreground">Top transformer</span>
-                    <span className="text-right font-medium text-foreground">
-                      {busiestTransformer
-                        ? `${busiestTransformer.name} • ${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%`
-                        : 'n/a'}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {(capabilities.lineLoading && capabilities.losses && lcoeEurPerKwh > 0) ? (
+                bottlenecks.length > 0 ? (
+                  <>
+                    <div className="space-y-2 text-xs">
+                      {bottlenecks.map(item => {
+                        const color = item.status === 'overload' ? 'text-red-500' : 'text-amber-600';
+                        return (
+                          <div key={item.line} className="rounded-md border border-border/60 bg-background/40 p-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="text-muted-foreground truncate font-medium">{item.line}</span>
+                              <span className={`text-right font-semibold whitespace-nowrap ${color}`}>
+                                {item.peakLoadingPercent !== null
+                                  ? `${item.peakLoadingPercent.toFixed(1)}%`
+                                  : 'no rating'}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-start justify-between gap-3">
+                              <span className="text-muted-foreground">Peak load</span>
+                              <span className="text-right font-medium text-foreground">
+                                {formatApparentPowerValue(item.peakApparentKva)}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex items-start justify-between gap-3">
+                              <span className="text-muted-foreground">Loss cost (period)</span>
+                              <span className="text-right font-medium text-foreground">
+                                €{item.annualLossCostEur.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                            {item.recommendedRatingMultiplier && (
+                              <div className="mt-1 flex items-start justify-between gap-3">
+                                <span className="text-muted-foreground">Upgrade: re-rate ×{item.recommendedRatingMultiplier.toFixed(1)}</span>
+                                <span className="text-right font-medium text-emerald-600 whitespace-nowrap">
+                                  saves ≈ €{item.estimatedSavingEurPerPeriod.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+                      Upgrade saving is an estimate (loss ∝ loading², running the re-rated cable to 50% loading).
+                      Cable investment cost is not included. Valued at €{lcoeEurPerKwh.toLocaleString(undefined, { maximumFractionDigits: 4 })}/kWh.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No wires near or over rating.</p>
+                )
+              ) : (
+                <p className="text-xs text-muted-foreground">Bottleneck analysis requires line loading + loss results.</p>
+              )}
             </div>
           </div>
         </div>

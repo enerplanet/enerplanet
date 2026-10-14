@@ -462,9 +462,9 @@
       "normalOperation": "Normální provoz, dostatečná kapacita",
       "highUtilization": "Vysoké využití, plánujte upgrady",
       "nearCapacity": "Blízko kapacity, nutné posílení",
-      "busDetails": "Detaily Přípojnice",
-      "busDetailsDesc": "Elektrické charakteristiky vybrané přípojnice/transformátoru v elektrické síti.",
-      "totalBuses": "Celkem Přípojnic",
+      "busDetails": "Detaily Sítě",
+      "busDetailsDesc": "Obecné charakteristiky vybraného uzlu v elektrické síti.",
+      "totalBuses": "Celkem Uzlů",
       "totalBusesDesc": "Počet uzlů v síti",
       "selected": "Vybráno",
       "avgVoltage": "Prům. Napětí",
@@ -1308,6 +1308,14 @@
     "technologies": "Technologie",
     "parameters": "Parametry",
     "pypsaSimulation": "Simulace PyPSA",
+    "energyPrices": {
+      "title": "Ceny energií",
+      "electricity_eur_mwh": "Elektřina",
+      "natural_gas_eur_mwh": "Zemní plyn",
+      "oil_eur_mwh": "Topný olej",
+      "biomass_eur_mwh": "Biomasa",
+      "biogas_eur_mwh": "Bioplyn"
+    },
     "summary": {
       "title": "Souhrn simulace",
       "region": "Region",

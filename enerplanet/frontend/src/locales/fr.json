@@ -704,9 +704,9 @@
       "normalOperation": "Fonctionnement normal, capacité suffisante",
       "highUtilization": "Utilisation élevée, planifier des mises à niveau",
       "nearCapacity": "Proche de la capacité, renforcement nécessaire",
-      "busDetails": "Détails du Bus",
-      "busDetailsDesc": "Caractéristiques électriques du bus/transformateur sélectionné dans le réseau électrique.",
-      "totalBuses": "Total Bus",
+      "busDetails": "Détails du Réseau",
+      "busDetailsDesc": "Caractéristiques globales du nœud sélectionné dans le réseau électrique.",
+      "totalBuses": "Total Nœuds",
       "totalBusesDesc": "Nombre de nœuds dans le réseau",
       "selected": "Sélectionné",
       "avgVoltage": "Tension Moy.",
@@ -1550,6 +1550,14 @@
     "technologies": "Technologies",
     "parameters": "Paramètres",
     "pypsaSimulation": "Simulation PyPSA",
+    "energyPrices": {
+      "title": "Prix de l'énergie",
+      "electricity_eur_mwh": "Électricité",
+      "natural_gas_eur_mwh": "Gaz naturel",
+      "oil_eur_mwh": "Fioul",
+      "biomass_eur_mwh": "Biomasse",
+      "biogas_eur_mwh": "Biogaz"
+    },
     "summary": {
       "title": "Résumé de simulation",
       "region": "Région",
