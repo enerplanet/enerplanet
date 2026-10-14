@@ -4,6 +4,14 @@ import {
   CapacityData,
   EnergyFlowData
 } from '@/features/simulation-charts/types';
+import { getPrimaryFClass, normalizeFClass, formatFClassLabel } from './fClassUtils';
+
+interface CapacityBuildingsSource {
+  features?: Array<{
+    geometry?: unknown;
+    properties?: Record<string, unknown>;
+  }>;
+}
 
 // Technology display names
 const TECH_NAMES: Record<string, string> = {
@@ -92,23 +100,119 @@ function getTechType(tech: string): 'supply' | 'demand' {
 }
 
 /**
- * Transform energy capacity data for the capacity chart
+ * Map each demand node location to its building's primary f_class, via a
+ * spatial join: a building's footprint centre is matched to the nearest result
+ * node (results coordinates are stored as {x: lat, y: lon}, building geometry
+ * is GeoJSON [lon, lat]). Falls back to the raw tech name when a building has
+ * no usable f_class.
  */
-export function transformToCapacityData(results: ModelResults, t?: TranslateFunction): CapacityData[] {
+export function buildLocationToFClass(
+  coordinates: Record<string, { x: number; y: number }>,
+  buildings?: CapacityBuildingsSource,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const feature of buildings?.features ?? []) {
+    const props = feature.properties ?? {};
+    const fClass = getPrimaryFClass(props) || normalizeFClass(String(props.f_class ?? '')) || '';
+    if (!fClass) continue;
+
+    const centre = geometryCentreLonLat(feature.geometry);
+    if (!centre) continue;
+    const [lon, lat] = centre;
+    const nodeId = droppableClosestTo(lon, lat, coordinates);
+    if (!nodeId) continue;
+    if (!map[nodeId]) map[nodeId] = fClass;
+  }
+  return map;
+}
+
+/** Approximate footprint centre in [lon, lat] from a (Multi)Polygon. */
+function geometryCentreLonLat(geometry: unknown): [number, number] | null {
+  if (!geometry || typeof geometry !== 'object') return null;
+  const coords = (geometry as { coordinates?: unknown }).coordinates;
+  const points: Array<[number, number]> = [];
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      if (v.length >= 2 && typeof v[0] === 'number' && typeof v[1] === 'number') {
+        points.push([v[0], v[1]]);
+      } else {
+        v.forEach(walk);
+      }
+    }
+  };
+  walk(coords);
+  if (points.length === 0) return null;
+  const lon = points.reduce((s, p) => s + p[0], 0) / points.length;
+  const lat = points.reduce((s, p) => s + p[1], 0) / points.length;
+  return [lon, lat];
+}
+
+/**
+ * Nearest non-transformer result node to a [lon, lat] point, within a tight
+ * tolerance (degrees). Result coords are stored {x: lat, y: lon}, so the
+ * lon-ly/ lat-x pairing mirrors the map's existing spatial match.
+ */
+function droppableClosestTo(
+  lon: number,
+  lat: number,
+  coordinates: Record<string, { x: number; y: number }>,
+): string | undefined {
+  let bestId: string | undefined;
+  let bestDist = Infinity;
+  for (const [locId, coord] of Object.entries(coordinates)) {
+    if (locId.toLowerCase().includes('trafo')) continue;
+    const dist = Math.hypot(lon - coord.y, lat - coord.x);
+    if (dist < bestDist && dist < 0.001) {
+      bestDist = dist;
+      bestId = locId;
+    }
+  }
+  return bestId;
+}
+
+/**
+ * Transform energy capacity data for the capacity chart.
+ *
+ * Supply techs are grouped by base technology as before. Demand entries are
+ * grouped by the building's f_class (via {@link buildLocationToFClass}) so a
+ * grid with many buildings collapses into a few sector/category bars instead
+ * of one bar per node id. Falls back to the raw demand tech label when no
+ * f_class resolves.
+ */
+export function transformToCapacityData(
+  results: ModelResults,
+  t?: TranslateFunction,
+  buildings?: CapacityBuildingsSource,
+): CapacityData[] {
   if (!results.energy_cap || results.energy_cap.length === 0) {
     return [];
   }
 
-  // Group by technology
-  const techCapacity: Record<string, number> = {};
+  const locationToFClass = buildings ? buildLocationToFClass(results.coordinates ?? {}, buildings) : {};
+
+  // Grouped capacity, keyed by the bar's stable identity: supply uses the tech
+  // name, demand uses the resolved f_class (or the demand tech as fallback).
+  const buckets = new Map<string, { tech: string; isDemand: boolean }>();
+  const bucketCapacity: Record<string, number> = {};
+
+  const demandKeyFor = (location: string, tech: string): string => {
+    const fClass = locationToFClass[location];
+    // Group all buildings of the same f_class into one sector bar; fall back to
+    // the demand tech label when no f_class resolves.
+    if (fClass) return `demand:${fClass}`;
+    return tech;
+  };
 
   results.energy_cap.forEach(cap => {
     const tech = getBaseTech(cap.tech || '');
     if (!isCapacityChartTech(tech)) return;
-    if (!techCapacity[tech]) {
-      techCapacity[tech] = 0;
+    const type = getTechType(tech);
+    const key = type === 'demand' ? demandKeyFor(cap.location || '', tech) : tech;
+
+    if (!buckets.has(key)) {
+      buckets.set(key, { tech, isDemand: type === 'demand' });
     }
-    techCapacity[tech] += cap.value;
+    bucketCapacity[key] = (bucketCapacity[key] ?? 0) + cap.value;
   });
 
   // Get capacity factors for each tech.
@@ -127,14 +231,19 @@ export function transformToCapacityData(results: ModelResults, t?: TranslateFunc
     });
   }
 
-  return Object.entries(techCapacity)
-    .filter(([_, value]) => value > 0)
-    .map(([tech, value]) => {
-      const type = getTechType(tech);
+  return Array.from(buckets.entries())
+    .filter(([key]) => (bucketCapacity[key] ?? 0) > 0)
+    .map(([key, { tech, isDemand }]) => {
+      const value = bucketCapacity[key] ?? 0;
+      const type = isDemand ? 'demand' as const : getTechType(tech);
+      // Demand grouped by f_class: label with the building category name.
+      const technology = isDemand
+        ? techLabelForDemandGroup(key, tech, t)
+        : getTechDisplayName(tech, t);
       const capacityFactor = capacityFactorsExact[tech] ?? capacityFactorsByBaseMax[tech] ?? 0;
 
       return {
-        technology: getTechDisplayName(tech, t),
+        technology,
         installed_capacity_kw: value,
         utilized_capacity_kw: value * capacityFactor,
         capacity_factor: capacityFactor,
@@ -142,6 +251,16 @@ export function transformToCapacityData(results: ModelResults, t?: TranslateFunc
       };
     })
     .sort((a, b) => b.installed_capacity_kw - a.installed_capacity_kw);
+}
+
+/** Human label for a demand f_class group, e.g. "demand:school" -> "school". */
+function techLabelForDemandGroup(groupKey: string, fallbackTech: string, t?: TranslateFunction): string {
+  const fClass = groupKey.split(':', 2)[1];
+  if (fClass) {
+    const normalized = normalizeFClass(fClass);
+    return normalized ? formatFClassLabel(normalized) : getTechDisplayName(fallbackTech, t);
+  }
+  return getTechDisplayName(fallbackTech, t);
 }
 
 /**
@@ -178,9 +297,17 @@ export function transformToCostBreakdown(results: ModelResults): CostBreakdown[]
 
 
 /**
- * Transform data for energy flow sankey diagram
+ * Transform data for energy flow sankey diagram.
+ *
+ * Supply techs are grouped by base technology; demand nodes are grouped by the
+ * building's f_class (via {@link buildLocationToFClass}) so a grid with many
+ * buildings collapses into a few sector nodes instead of one per node id.
  */
-export function transformToEnergyFlow(results: ModelResults, t?: TranslateFunction): EnergyFlowData {
+export function transformToEnergyFlow(
+  results: ModelResults,
+  t?: TranslateFunction,
+  buildings?: CapacityBuildingsSource,
+): EnergyFlowData {
   const nodes: { name: string }[] = [];
   const links: { source: string; target: string; value: number }[] = [];
   const nodeSet = new Set<string>();
@@ -194,8 +321,10 @@ export function transformToEnergyFlow(results: ModelResults, t?: TranslateFuncti
     target[key] = (target[key] || 0) + value;
   };
 
+  const locationToFClass = buildings ? buildLocationToFClass(results.coordinates ?? {}, buildings) : {};
+
   const sourceEnergyByTech: Record<string, number> = {};
-  const demandEnergyByTech: Record<string, number> = {};
+  const demandEnergyByKey: Record<string, number> = {};
 
   // Use energy_cap data for the energy flow diagram
   if (results.energy_cap) {
@@ -203,7 +332,13 @@ export function transformToEnergyFlow(results: ModelResults, t?: TranslateFuncti
       const tech = toBaseTech(cap.tech || '');
       if (!tech) return;
       if (isDemandTech(tech)) {
-        addValue(demandEnergyByTech, getTechDisplayName(tech, t), Math.abs(cap.value));
+        // Group all buildings of the same f_class into one sector node; fall back
+        // to the demand tech label when no f_class resolves.
+        const fClass = locationToFClass[cap.location || ''];
+        const nodeName = fClass
+          ? (normalizeFClass(fClass) ? formatFClassLabel(fClass) : getTechDisplayName(tech, t))
+          : getTechDisplayName(tech, t);
+        addValue(demandEnergyByKey, nodeName, Math.abs(cap.value));
       } else if (!excludedSourceTechs.has(tech)) {
         addValue(sourceEnergyByTech, getTechDisplayName(tech, t), Math.abs(cap.value));
       }
@@ -211,7 +346,7 @@ export function transformToEnergyFlow(results: ModelResults, t?: TranslateFuncti
   }
 
   const sourceEntries = Object.entries(sourceEnergyByTech).filter(([, value]) => value > 0);
-  const demandEntries = Object.entries(demandEnergyByTech).filter(([, value]) => value > 0);
+  const demandEntries = Object.entries(demandEnergyByKey).filter(([, value]) => value > 0);
 
   // If we still have no weighted demand values, derive demand categories from loc_techs.
   if (demandEntries.length === 0 && results.loc_techs) {
@@ -219,14 +354,14 @@ export function transformToEnergyFlow(results: ModelResults, t?: TranslateFuncti
       techs.forEach(tech => {
         if (!isDemandTech(tech)) return;
         const nodeName = getTechDisplayName(toBaseTech(tech), t);
-        if (!(nodeName in demandEnergyByTech)) {
-          demandEnergyByTech[nodeName] = 0;
+        if (!(nodeName in demandEnergyByKey)) {
+          demandEnergyByKey[nodeName] = 0;
         }
       });
     });
   }
 
-  const finalDemandEntries = Object.entries(demandEnergyByTech);
+  const finalDemandEntries = Object.entries(demandEnergyByKey);
 
   sourceEntries.forEach(([nodeName]) => {
     if (!nodeSet.has(nodeName)) {

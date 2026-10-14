@@ -459,14 +459,14 @@ export const ModelResultsViewer = () => {
   }, []);
 
   // Calculate derived data
-  const capacityData = useMemo(() => (results ? transformToCapacityData(results, t) : []), [results, t]);
+  const capacityData = useMemo(() => (results ? transformToCapacityData(results, t, model?.config?.buildings) : []), [results, t, model?.config?.buildings]);
   const costBreakdown = useMemo(() => {
     if (structuredResults?.cost && structuredResults.cost.length > 0) {
       return transformStructuredCostBreakdown(structuredResults);
     }
     return results ? transformToCostBreakdown(results) : [];
   }, [structuredResults, results]);
-  const energyFlow = useMemo(() => (results ? transformToEnergyFlow(results, t) : { nodes: [], links: [] }), [results, t]);
+  const energyFlow = useMemo(() => (results ? transformToEnergyFlow(results, t, model?.config?.buildings) : { nodes: [], links: [] }), [results, t, model?.config?.buildings]);
 
   // Buildings GeoJSON for MapLibre 3D overlay
   const buildingsGeoJSON = useMemo(() => {
