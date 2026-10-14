@@ -348,7 +348,7 @@ pylovo:
 tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
 	@# These services' own compose files set no restart policy, so after a Docker
 	@# restart they stay down. Remove once each pinned version sets one.
-	@docker update --restart unless-stopped tentacron-env-tentacron-1 meme-env-api-1 >/dev/null
+	@docker update --restart unless-stopped tentacron-env-tentacron-1 >/dev/null
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
@@ -378,7 +378,11 @@ buem: tentacron-network
 .PHONY: meme
 meme: tentacron-network
 	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
-	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
+	@# MEME's compose does not join tentacron-net, so the alias is set here: it gives
+	@# TentaCron a name that survives a rename or a second instance. Reconnect only
+	@# when the alias is missing; disconnect fails harmlessly when not yet connected.
+	@docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{if eq $$k "tentacron-net"}}{{$$v.Aliases}}{{end}}{{end}}' meme-env-api-1 | grep -qw meme || \
+		{ docker network disconnect tentacron-net meme-env-api-1 2>/dev/null; docker network connect --alias meme tentacron-net meme-env-api-1; }
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
 # weather and city2tabula pull rather than build: both publish an image, and
