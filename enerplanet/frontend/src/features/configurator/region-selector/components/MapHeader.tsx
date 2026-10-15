@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { Loader2, Globe, Lock, Layers } from "lucide-react";
+import { Loader2, Globe, Lock, Layers, MapPin } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -71,6 +71,7 @@ interface MapHeaderProps {
   onToggleSimulateEV?: (value: boolean) => void;
   availableRegions?: AvailableRegion[];
   onRegionSelect?: (region: AvailableRegion) => void;
+  modelRegionName?: string;
 }
 
 export const MapHeader: FC<MapHeaderProps> = ({
@@ -94,6 +95,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
   // onToggleSimulateEV,
   availableRegions = [],
   onRegionSelect,
+  modelRegionName,
 }) => {
   const { t } = useTranslation();
   // relative z-30: md-fade-in animates with fill-mode both, which creates a
@@ -121,6 +123,15 @@ export const MapHeader: FC<MapHeaderProps> = ({
         )}
         {onRegionSelect && availableRegions.length > 0 && (
           <RegionSelector regions={availableRegions} onRegionSelect={onRegionSelect} />
+        )}
+        {/* A saved model's region is fixed by its polygon, so it is shown, not selectable. */}
+        {modelRegionName && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+            <span className="font-normal text-foreground max-w-[160px] truncate text-sm">{modelRegionName}</span>
+          </div>
         )}
         {isLoadingPreference && (
           <div className="md-fade-in flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">
