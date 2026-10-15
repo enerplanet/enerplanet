@@ -127,7 +127,8 @@ cmd_up() {
   [[ -x "$coati" ]] || echo "warning: no Coati CLI at $coati; run 'make coati', or simulation results will not ingest"
 
   tmux new-session -d -s "$SESSION" -n dev -c "$ROOT/enerplanet/backend"
-  tmux send-keys -t "$SESSION:dev.0" "COATI_BIN='$coati' go run cmd/main.go" C-m
+  # Stored BuEM results are keyed on BUEM_VERSION, so it follows the pinned buem-model.
+  tmux send-keys -t "$SESSION:dev.0" "BUEM_VERSION='$BUEM_MODEL_IMAGE_TAG' COATI_BIN='$coati' go run cmd/main.go" C-m
   tmux split-window -h -t "$SESSION:dev.0" -c "$ROOT/enerplanet/frontend"
   tmux send-keys -t "$SESSION:dev.1" "npm run dev" C-m
   tmux split-window -v -t "$SESSION:dev.1" -c "$ROOT"
