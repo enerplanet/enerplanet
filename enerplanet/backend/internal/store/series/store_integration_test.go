@@ -157,3 +157,38 @@ func TestLinkedSeries_JoinsLinksProfilesAndValues(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, none)
 }
+
+func TestMoveDraft_HandsLinksToTheModel(t *testing.T) {
+	tx := scratchDB(t)
+	s := NewStore(tx)
+	a, err := s.Save(buemProfile("key-a", 1))
+	require.NoError(t, err)
+	b, err := s.Save(buemProfile("key-b", 2))
+	require.NoError(t, err)
+	var modelID uint
+	require.NoError(t, tx.Raw(`INSERT INTO models (user_id, user_email, title, country, from_date, to_date)
+		VALUES ('u', 'u@example.de', 'series test', 'netherlands', now(), now()) RETURNING id`).Scan(&modelID).Error)
+
+	draft, model := Owner{DraftID: "draft-1"}, Owner{ModelID: modelID}
+	require.NoError(t, s.Link(draft, "draft", []Link{
+		{BuildingRef: "268426401", Series: "heating", ProfileID: a, Source: "user"},
+		{BuildingRef: "268426402", Series: "heating", ProfileID: a, Source: "default"},
+	}))
+	require.NoError(t, s.Link(model, "rev-0", []Link{{BuildingRef: "268426402", Series: "heating", ProfileID: b, Source: "default"}}))
+
+	moved, err := s.MoveDraft("draft-1", modelID, "rev-1")
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), moved, "the model's own link for 268426402 wins")
+
+	links, err := s.Links(model)
+	require.NoError(t, err)
+	require.Len(t, links, 2)
+	assert.Equal(t, a, links[0].ProfileID)
+	assert.Equal(t, "rev-1", links[0].Revision)
+	assert.Equal(t, "user", links[0].Source)
+	assert.Equal(t, b, links[1].ProfileID)
+
+	left, err := s.Links(draft)
+	require.NoError(t, err)
+	assert.Empty(t, left)
+}

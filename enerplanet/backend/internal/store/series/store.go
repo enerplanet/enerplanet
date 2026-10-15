@@ -188,6 +188,34 @@ func (s *Store) Link(owner Owner, revision string, links []Link) error {
 	return nil
 }
 
+// MoveDraft hands a draft's links to a model at revision, for the model saved
+// from that draft. A link the model already has for the same building, part
+// and series wins, and the draft's duplicate is dropped. Returns how many
+// links moved.
+func (s *Store) MoveDraft(draftID string, modelID uint, revision string) (int64, error) {
+	if draftID == "" || modelID == 0 {
+		return 0, fmt.Errorf("move draft %q to model %d: both are required", draftID, modelID)
+	}
+	var moved int64
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Exec(`UPDATE series_links AS d
+			SET model_id = ?, draft_id = NULL, revision = ?, linked_at = ?
+			WHERE d.draft_id = ? AND NOT EXISTS (
+				SELECT 1 FROM series_links AS m
+				WHERE m.model_id = ? AND m.building_ref = d.building_ref AND m.part = d.part AND m.series = d.series)`,
+			modelID, revision, time.Now().UTC(), draftID, modelID)
+		if res.Error != nil {
+			return fmt.Errorf("move links of draft %q to model %d: %w", draftID, modelID, res.Error)
+		}
+		moved = res.RowsAffected
+		if err := tx.Exec("DELETE FROM series_links WHERE draft_id = ?", draftID).Error; err != nil {
+			return fmt.Errorf("drop remaining links of draft %q: %w", draftID, err)
+		}
+		return nil
+	})
+	return moved, err
+}
+
 // Links returns every link of owner.
 func (s *Store) Links(owner Owner) ([]models.SeriesLink, error) {
 	if err := owner.validate(); err != nil {
