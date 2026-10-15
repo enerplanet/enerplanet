@@ -1618,18 +1618,6 @@
       "nextStep": "Weiter",
       "finish": "Fertig"
     },
-    "summary": {
-      "title": "Simulationsübersicht",
-      "region": "Region",
-      "areaDefined": "Bereich definiert",
-      "drawn": "Gezeichnet",
-      "notDrawn": "Nicht gezeichnet",
-      "customLocations": "Benutzerdefinierte Standorte",
-      "found": "gefunden",
-      "from": "Von",
-      "to": "Bis",
-      "resolution": "Auflösung"
-    },
     "actions": {
       "saveAndExit": "Speichern & Verlassen",
       "create": "Energiesimulation erstellen",
@@ -1638,7 +1626,6 @@
       "updating": "Simulation wird aktualisiert...",
       "cancel": "Abbrechen"
     },
-    "tip": "Tipp: Klicken Sie auf die Karte, um Ihren interessierenden Bereich zu zeichnen. Das System führt eine Energiesimulation für die ausgewählte Region während des angegebenen Zeitraums durch.",
     "mapHeader": {
       "public": "Öffentlich",
       "myBuildings": "Meine Gebäude",

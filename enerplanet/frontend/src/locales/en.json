@@ -1618,18 +1618,6 @@
       "nextStep": "Next",
       "finish": "Finish"
     },
-    "summary": {
-      "title": "Simulation Summary",
-      "region": "Region",
-      "areaDefined": "Area Defined",
-      "drawn": "Drawn",
-      "notDrawn": "Not drawn",
-      "customLocations": "Custom Locations",
-      "found": "found",
-      "from": "From",
-      "to": "To",
-      "resolution": "Resolution"
-    },
     "actions": {
       "saveAndExit": "Save & Exit",
       "create": "Create Energy Simulation",
@@ -1638,7 +1626,6 @@
       "updating": "Updating Simulation...",
       "cancel": "Cancel"
     },
-    "tip": "Tip: Click on the map to draw your area of interest. The system will run energy simulation for the selected region during the specified time period.",
     "mapHeader": {
       "public": "Public",
       "myBuildings": "My Buildings",

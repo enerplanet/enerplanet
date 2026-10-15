@@ -1308,18 +1308,6 @@
     "technologies": "Tecnologie",
     "parameters": "Parametri",
     "pypsaSimulation": "Simulazione PyPSA",
-    "summary": {
-      "title": "Riepilogo simulazione",
-      "region": "Regione",
-      "areaDefined": "Area definita",
-      "drawn": "Disegnata",
-      "notDrawn": "Non disegnata",
-      "customLocations": "Posizioni personalizzate",
-      "found": "trovate",
-      "from": "Da",
-      "to": "A",
-      "resolution": "Risoluzione"
-    },
     "actions": {
       "saveAndExit": "Salva & Esci",
       "create": "Crea simulazione energetica",
@@ -1328,7 +1316,6 @@
       "updating": "Aggiornamento simulazione...",
       "cancel": "Annulla"
     },
-    "tip": "Suggerimento: Clicca sulla mappa per disegnare la tua area di interesse. Il sistema eseguirà la simulazione energetica per la regione selezionata durante il periodo specificato.",
     "mapHeader": {
       "public": "Pubblico",
       "myBuildings": "I miei edifici",
