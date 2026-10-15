@@ -118,7 +118,8 @@ export const getDefaultAdvancedParameters = (): AdvancedParametersState => {
     return acc;
   }, {} as AdvancedParametersState);
 
-  params.pypsa_enabled = true;
+  // Off until the PyPSA power-flow run works end to end; the toggle is disabled too.
+  params.pypsa_enabled = false;
 
   return params;
 };

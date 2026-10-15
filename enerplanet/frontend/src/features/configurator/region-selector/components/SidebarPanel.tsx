@@ -329,6 +329,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           </div>
           <Switch
             id="pypsa-toggle"
+            disabled
             checked={advancedParams.pypsa_enabled}
             onCheckedChange={(checked) =>
               onAdvancedParamsChange({ ...advancedParams, pypsa_enabled: checked })
