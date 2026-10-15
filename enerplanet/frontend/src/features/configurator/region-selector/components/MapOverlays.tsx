@@ -61,8 +61,8 @@ interface TooltipMvLine {
 
 interface MapOverlaysProps {
     showDrawHint: boolean;
-    /** Shift is held over a drawn polygon, so a click deletes it. */
-    showDeleteHint?: boolean;
+    /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
+    deleteHintKey?: string | null;
     cursorPos: { x: number; y: number } | null;
     transformerTooltip: TooltipTransformer | null;
     buildingTooltip: TooltipBuilding | null;
@@ -76,7 +76,7 @@ interface MapOverlaysProps {
 
 export const MapOverlays: FC<MapOverlaysProps> = ({
     showDrawHint,
-    showDeleteHint = false,
+    deleteHintKey = null,
     cursorPos,
     transformerTooltip,
     buildingTooltip,
@@ -187,18 +187,18 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
             )}
 
             {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
-            {showDeleteHint && cursorPos && (
+            {deleteHintKey && cursorPos && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{ left: cursorPos.x, top: cursorPos.y - 48 }}
                 >
                     <div className="md-fade-in bg-red-600 text-white rounded px-2 py-1 shadow-md text-xs font-medium">
-                        {t("drawing.clickToDelete")}
+                        {t(deleteHintKey)}
                     </div>
                 </div>
             )}
 
-            {transformerTooltip && !showDeleteHint && (
+            {transformerTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -238,7 +238,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {buildingTooltip && !showDeleteHint && (
+            {buildingTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -444,7 +444,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {mvLineTooltip && !showDeleteHint && (
+            {mvLineTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
