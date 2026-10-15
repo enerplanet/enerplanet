@@ -196,8 +196,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     });
   }, [map, defaultRegion, editMode]);
 
-  // Unsaved changes guard — skip when navigating due to session expiry
-  const isDirty = state.allPolygons.length > 0;
+  // Unsaved changes guard, skipped when navigating due to session expiry. A
+  // saved model always has a polygon, so in edit mode only real edits count.
+  const isDirty = editMode ? state.isModified : state.allPolygons.length > 0;
 
   useEffect(() => {
     if (!isDirty || typeof window === "undefined") return;
