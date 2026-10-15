@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -60,6 +61,27 @@ const (
 	errInvalidPayload       = "Invalid request payload"
 	errFailedMarshalPayload = "Failed to marshal payload"
 )
+
+// statusClientClosedRequest is nginx's 499: the caller disconnected before the
+// response, so a cancelled pylovo call is logged as such rather than as a 500.
+const statusClientClosedRequest = 499
+
+// clientGone reports whether the caller cancelled its request. The pylovo call
+// runs on the request's context, so it fails with that cancellation too.
+func clientGone(c *gin.Context) bool {
+	return errors.Is(c.Request.Context().Err(), context.Canceled)
+}
+
+// abortClientGone ends a request whose caller has left.
+func abortClientGone(c *gin.Context, method, path string) {
+	logger.Logger.Infof("Client cancelled request to Pylovo (%s %s)", method, path)
+	c.AbortWithStatus(statusClientClosedRequest)
+}
+
+func isTimeout(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
 
 var (
 	pylovoHTTPClient      = &http.Client{Timeout: constants.HTTPTimeoutPylovo}
@@ -278,8 +300,12 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 
 	body, status, err := forwardPylovoRequest(ctx, h.resolveBaseURL(), method, path, payload)
 	if err != nil {
+		if clientGone(c) {
+			abortClientGone(c, method, path)
+			return
+		}
 		msg := fmt.Sprintf("Error contacting Pylovo (%s %s): %v", method, path, err)
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+		if isTimeout(err) {
 			msg += " — Pylovo service is not responding (stale DB pool / frozen worker). " +
 				"Restart the Pylovo service"
 		} else if strings.Contains(err.Error(), "connection refused") {
@@ -529,6 +555,10 @@ func (h *PylovoHandler) GetAvailableRegions(c *gin.Context) {
 	resolvedURL := h.resolveBaseURL()
 	body, status, err := forwardPylovoRequest(ctx, resolvedURL, http.MethodGet, "/boundary/available", nil)
 	if err != nil {
+		if clientGone(c) {
+			abortClientGone(c, http.MethodGet, "/boundary/available")
+			return
+		}
 		logger.Logger.Errorf("Error contacting Pylovo (GET /boundary/available): %v (baseURL=%s)", err, resolvedURL)
 		httputil.InternalError(c, fmt.Sprintf("Pylovo service unreachable: %v", err))
 		return
