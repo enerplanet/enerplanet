@@ -129,6 +129,32 @@ func ResolveBuemForModel(
 	p payload.CalculationPayload,
 	refurbishmentLevel ignis.RefurbishmentLevel,
 ) (results []buem.BuildingResult, resolved map[string]BuemResolutionMeta, unresolved map[string]string, err error) {
+	run := prepareBuemRun(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, model, p, refurbishmentLevel)
+	if len(run.buildings) == 0 {
+		return nil, nil, run.unresolved, nil
+	}
+	results, err = buemClient.RunBuildings(ctx, run.buildings, run.weather, run.start, run.end, p.Resolution, p.ModelID)
+	if err != nil {
+		return nil, run.resolved, run.unresolved, err
+	}
+	return results, run.resolved, run.unresolved, nil
+}
+
+// buemRun is one model's prepared BuEM input: the buildings ready to send with
+// their resolution metadata, the buildings that could not be prepared and
+// why, and the shared weather and period.
+type buemRun struct {
+	buildings  []buem.Building
+	resolved   map[string]BuemResolutionMeta
+	unresolved map[string]string
+	weather    json.RawMessage
+	start, end string
+}
+
+// prepareBuemRun resolves envelopes, U-values and weather for model. When no
+// building or no weather could be prepared, buildings is empty and every
+// building is in unresolved with the cause.
+func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, weatherProvider string, ignisClient envelopeUValueResolver, model commonModels.Model, p payload.CalculationPayload, refurbishmentLevel ignis.RefurbishmentLevel) buemRun {
 	period := modelWeatherPeriod(model.Config)
 	envelopeByOSMID, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
 
@@ -145,22 +171,16 @@ func ResolveBuemForModel(
 		log.Warnf("model %d: %s, skipping buem-gateway call", model.ID, reason)
 		// Buildings that got as far as resolved never reached BuEM here, and a
 		// caller persisting per-building outcomes reads a resolved building
-		// with no result as a BuEM rejection. Move them across carrying the
-		// real cause.
+		// with no result as a BuEM rejection. Move them across with the cause.
 		for osmID := range resolved {
 			unresolved[osmID] = reason
 		}
-		return nil, nil, unresolved, nil
+		return buemRun{unresolved: unresolved}
 	}
-
 	// The BuEM period follows the weather, not the model's dates: a scenario
 	// series is stamped 1900, and BuEM indexes the weather by start_date's year.
 	start, end := period.Range()
-	results, err = buemClient.RunBuildings(ctx, buildings, weatherJSON, start, end, p.Resolution, p.ModelID)
-	if err != nil {
-		return nil, resolved, unresolved, err
-	}
-	return results, resolved, unresolved, nil
+	return buemRun{buildings: buildings, resolved: resolved, unresolved: unresolved, weather: weatherJSON, start: start, end: end}
 }
 
 // resolveBuemInputs fetches envelope and weather data for model's area.
@@ -559,7 +579,7 @@ func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map
 			return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored solver: %v", err), false
 		}
 	}
-	var meta BuemResolutionMeta
+	meta := BuemResolutionMeta{Customised: true}
 	meta.BuildingType, _ = block["building_type"].(string)
 	return b, meta, "", true
 }
@@ -611,6 +631,9 @@ type BuemResolutionMeta struct {
 	WindowU   float64
 	DoorU     float64
 	WindowGGl float64
+	// Customised is true when the building carries the user's own BuEM block
+	// from the configurator (properties.buem) instead of default parameters.
+	Customised bool
 }
 
 // buildingRefurbishmentLevel returns a building's per-building refurbishment

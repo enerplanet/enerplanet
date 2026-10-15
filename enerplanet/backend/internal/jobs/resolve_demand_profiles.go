@@ -14,9 +14,12 @@ import (
 	"platform.local/platform/logger"
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/contenthash"
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/store/demandprofile"
+	"spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/weather"
 )
 
@@ -41,11 +44,9 @@ type demandProfileStore interface {
 	SaveFailed(modelID uint, osmID, reason string) error
 }
 
-// HandleResolveDemandProfiles resolves and persists every building's BuEM
-// annual energy profile for a model, independent of StartCalculation/
-// run_buem, so a building's profile is ready before the user ever opens its
-// dialog. Reuses ResolveBuemForModel, the same envelope/weather/BuEM
-// resolution HandleRunBuem uses for a full calculation run.
+// HandleResolveDemandProfiles gives each building of a model its BuEM hourly
+// series: stored series are reused by request key, the rest run through BuEM
+// in groups. Series are linked to the model; annual totals go to its rows.
 //
 // A resolution problem (buem-gateway unreachable, no buildings in the
 // topology) is recorded on the affected rows and never fails the job itself
@@ -61,6 +62,8 @@ func HandleResolveDemandProfiles(
 	ignisClient *ignis.Client,
 	buemClient *buem.Client,
 	profileStore demandProfileStore,
+	seriesStore seriesStore,
+	buemVersion string,
 ) (retErr error) {
 	log := logger.ForComponent("job:resolve_demand_profiles")
 
@@ -102,33 +105,96 @@ func HandleResolveDemandProfiles(
 	if err := profileStore.ResetForRun(rp.ModelID, osmIDs, string(refurbLevel)); err != nil {
 		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", rp.ModelID, err)
 	}
-
-	results, resolved, unresolved, err := ResolveBuemForModel(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, buemClient, model, calcPayload, refurbLevel)
+	revision, err := contenthash.Of(model.Config)
 	if err != nil {
-		log.Warnf("model %d: buem-gateway call failed, marking every building failed: %v", rp.ModelID, err)
-		for _, osmID := range osmIDs {
-			if serr := profileStore.SaveFailed(rp.ModelID, osmID, "buem-gateway unavailable"); serr != nil {
-				log.Errorf("model %d osm_id=%s: failed to record failure: %v", rp.ModelID, osmID, serr)
-			}
-		}
+		return fmt.Errorf("hash config of model %d: %w", rp.ModelID, err)
+	}
+	run := prepareBuemRun(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, model, calcPayload, refurbLevel)
+	saveFailures(log, profileStore, rp.ModelID, run.unresolved)
+	if len(run.buildings) == 0 {
 		return nil
 	}
+	if buemVersion == "" {
+		log.Errorf("model %d: BUEM_VERSION is not configured, BuEM results cannot be keyed", rp.ModelID)
+		saveFailures(log, profileStore, rp.ModelID, allFailed(run.buildings, "BUEM_VERSION is not configured on the backend"))
+		return nil
+	}
+	return resolveAndLink(ctx, log, db, rp.ModelID, revision, run, calcPayload, buemVersion, buemClient, profileStore, seriesStore)
+}
 
-	for osmID, reason := range unresolved {
-		if serr := profileStore.SaveFailed(rp.ModelID, osmID, reason); serr != nil {
-			log.Errorf("model %d osm_id=%s: failed to record unresolved building: %v", rp.ModelID, osmID, serr)
+// resolveAndLink stores every building's series, then links them and fills
+// the demand profile rows, unless the model changed while BuEM ran: a newer
+// run then links its own results, and these stay stored for reuse.
+func resolveAndLink(ctx context.Context, log *logrus.Entry, db *gorm.DB, modelID uint, revision string, run buemRun, p payload.CalculationPayload, buemVersion string, runner groupRunner, profileStore demandProfileStore, store seriesStore) error {
+	outcome, err := resolveSeries(ctx, log, run, p.Resolution, p.ModelID, buemVersion, store, runner)
+	if err != nil {
+		log.Warnf("model %d: resolving series failed, marking every building failed: %v", modelID, err)
+		saveFailures(log, profileStore, modelID, allFailed(run.buildings, fmt.Sprintf("BuEM results could not be resolved: %v", err)))
+		return nil
+	}
+	saveFailures(log, profileStore, modelID, outcome.failed)
+
+	changed, err := configChanged(db, modelID, revision)
+	if err != nil {
+		return err
+	}
+	if changed {
+		log.Infof("model %d changed while BuEM ran; the newer run links its results", modelID)
+		return nil
+	}
+	if err := linkSeries(store, modelID, revision, run.resolved, outcome); err != nil {
+		return err
+	}
+	for osmID, id := range outcome.profiles {
+		result := buem.BuildingResult{ID: osmID, BUEM: json.RawMessage(outcome.stored[id].Summary)}
+		saveResolvedProfile(log, profileStore, modelID, osmID, run.resolved[osmID], result)
+	}
+	return nil
+}
+
+// linkSeries links every series of each resolved building's profile to the
+// model at revision, as user when the building carries customised parameters.
+func linkSeries(store seriesStore, modelID uint, revision string, resolved map[string]BuemResolutionMeta, outcome seriesOutcome) error {
+	var links []series.Link
+	for osmID, id := range outcome.profiles {
+		source := models.SeriesSourceDefault
+		if resolved[osmID].Customised {
+			source = models.SeriesSourceUser
+		}
+		for _, name := range outcome.stored[id].SeriesNames {
+			links = append(links, series.Link{BuildingRef: osmID, Series: name, ProfileID: id, Source: source})
 		}
 	}
+	return store.Link(series.Owner{ModelID: modelID}, revision, links)
+}
 
-	byID := make(map[string]buem.BuildingResult, len(results))
-	for _, r := range results {
-		byID[r.ID] = r
+// configChanged reports whether model's config no longer hashes to revision.
+func configChanged(db *gorm.DB, modelID uint, revision string) (bool, error) {
+	var current commonModels.Model
+	if err := db.Select("id", "config").First(&current, modelID).Error; err != nil {
+		return false, fmt.Errorf("re-read config of model %d: %w", modelID, err)
 	}
-	for osmID, meta := range resolved {
-		saveResolvedProfile(log, profileStore, rp.ModelID, osmID, meta, byID[osmID])
+	now, err := contenthash.Of(current.Config)
+	if err != nil {
+		return false, fmt.Errorf("hash config of model %d: %w", modelID, err)
 	}
+	return now != revision, nil
+}
 
-	return nil
+func allFailed(buildings []buem.Building, reason string) map[string]string {
+	failed := make(map[string]string, len(buildings))
+	for _, b := range buildings {
+		failed[b.ID] = reason
+	}
+	return failed
+}
+
+func saveFailures(log *logrus.Entry, profileStore demandProfileStore, modelID uint, failed map[string]string) {
+	for osmID, reason := range failed {
+		if err := profileStore.SaveFailed(modelID, osmID, reason); err != nil {
+			log.Errorf("model %d osm_id=%s: failed to record failure: %v", modelID, osmID, err)
+		}
+	}
 }
 
 // saveResolvedProfile records one building's outcome: a BuEM rejection (no
