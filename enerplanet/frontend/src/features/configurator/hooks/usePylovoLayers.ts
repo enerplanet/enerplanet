@@ -80,6 +80,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     buildings.features.forEach(feature => {
       if (feature.geometry.type === 'Point') coords.push(feature.geometry.coordinates as [number, number]);
       else if (feature.geometry.type === 'Polygon' && feature.geometry.coordinates[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0] as [number, number]);
+      else if (feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates[0]?.[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0][0] as [number, number]);
     });
     if (coords.length === 0) return;
     const centroidLon = coords.reduce((s, c) => s + c[0], 0) / coords.length;
