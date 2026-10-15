@@ -204,6 +204,38 @@ func (s *Store) Links(owner Owner) ([]models.SeriesLink, error) {
 	return links, nil
 }
 
+// StoredProfile is what a caller linking a stored profile needs: the
+// producer's summary and the names of its series.
+type StoredProfile struct {
+	Summary     datatypes.JSON
+	SeriesNames []string
+}
+
+// Profiles returns the summary and series names of each stored profile in ids.
+func (s *Store) Profiles(ids []int64) (map[int64]StoredProfile, error) {
+	out := make(map[int64]StoredProfile, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	var profiles []models.SeriesProfile
+	if err := s.db.Select("id", "summary").Where("id IN ?", ids).Find(&profiles).Error; err != nil {
+		return nil, fmt.Errorf("read %d series profiles: %w", len(ids), err)
+	}
+	for _, p := range profiles {
+		out[p.ID] = StoredProfile{Summary: p.Summary}
+	}
+	var names []models.SeriesValues
+	if err := s.db.Select("profile_id", "series").Where("profile_id IN ?", ids).Order("series").Find(&names).Error; err != nil {
+		return nil, fmt.Errorf("read series names of %d profiles: %w", len(ids), err)
+	}
+	for _, n := range names {
+		p := out[n.ProfileID]
+		p.SeriesNames = append(p.SeriesNames, n.Series)
+		out[n.ProfileID] = p
+	}
+	return out, nil
+}
+
 // Values returns one series of a stored profile.
 func (s *Store) Values(profileID int64, series string) (models.SeriesValues, error) {
 	var v models.SeriesValues
