@@ -117,6 +117,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
+  const [pointerInPolygon, setPointerInPolygon] = useState(false);
+  const [shiftHeld, setShiftHeld] = useState(false);
 
   // Draft ID for scoping user-placed transformers to this model session
   const [draftId, setDraftId] = useState<string | undefined>(() => {
@@ -371,6 +373,20 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     t,
   });
 
+  // Shift turns a click inside a polygon into a delete; the overlay warns about it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Shift") setShiftHeld(e.type === "keydown"); };
+    const onBlur = () => setShiftHeld(false);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
   // ── Mouse tracking for overlays ──────────────────────────────────
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
@@ -431,7 +447,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Drawing helpers ──────────────────────────────────────────────
   const showDrawHint =
     state.cursorPos &&
-    !state.isDrawing;
+    !state.isDrawing &&
+    !pointerInPolygon;
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -510,6 +527,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             )}
             <MapOverlays
               showDrawHint={Boolean(showDrawHint)}
+              showDeleteHint={Boolean(state.cursorPos && pointerInPolygon && shiftHeld && !state.isDrawing)}
               cursorPos={state.cursorPos}
               transformerTooltip={mapInteractions.transformerTooltip}
               buildingTooltip={mapInteractions.buildingTooltip}
@@ -600,6 +618,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDrawingChange={actions.setIsDrawing}
         onPointCountChange={setCurrentPointCount}
         onClearAll={regionSelection.handleClearAllWithModes}
+        onPointerInPolygonChange={setPointerInPolygon}
         allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}

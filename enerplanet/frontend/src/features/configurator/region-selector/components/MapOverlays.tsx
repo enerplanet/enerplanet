@@ -61,6 +61,8 @@ interface TooltipMvLine {
 
 interface MapOverlaysProps {
     showDrawHint: boolean;
+    /** Shift is held over a drawn polygon, so a click deletes it. */
+    showDeleteHint?: boolean;
     cursorPos: { x: number; y: number } | null;
     transformerTooltip: TooltipTransformer | null;
     buildingTooltip: TooltipBuilding | null;
@@ -74,6 +76,7 @@ interface MapOverlaysProps {
 
 export const MapOverlays: FC<MapOverlaysProps> = ({
     showDrawHint,
+    showDeleteHint = false,
     cursorPos,
     transformerTooltip,
     buildingTooltip,
@@ -183,7 +186,19 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {transformerTooltip && (
+            {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
+            {showDeleteHint && cursorPos && (
+                <div
+                    className="absolute pointer-events-none z-30"
+                    style={{ left: cursorPos.x, top: cursorPos.y - 48 }}
+                >
+                    <div className="md-fade-in bg-red-600 text-white rounded px-2 py-1 shadow-md text-xs font-medium">
+                        {t("drawing.clickToDelete")}
+                    </div>
+                </div>
+            )}
+
+            {transformerTooltip && !showDeleteHint && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -223,7 +238,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {buildingTooltip && (
+            {buildingTooltip && !showDeleteHint && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -429,7 +444,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {mvLineTooltip && (
+            {mvLineTooltip && !showDeleteHint && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{

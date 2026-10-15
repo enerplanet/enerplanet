@@ -110,6 +110,7 @@
   },
   "drawing": {
     "clickToDraw": "Click to draw",
+    "clickToDelete": "Click to delete this polygon",
     "clickToClose": "Click to close",
     "start": "Start"
   },

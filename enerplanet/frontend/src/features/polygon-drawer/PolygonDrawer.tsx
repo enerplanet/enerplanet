@@ -22,6 +22,8 @@ interface PolygonDrawerProps {
   onDrawingChange?: (isDrawing: boolean) => void;
   onPointCountChange?: (count: number) => void;
   onClearAll?: () => void;
+  /** Called when the pointer moves into or out of a drawn polygon, while several polygons are allowed. */
+  onPointerInPolygonChange?: (inside: boolean) => void;
   allowMultiple?: boolean;
   clearTrigger?: number;
   initialPolygons?: [number, number][][];
@@ -46,6 +48,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   onDrawingChange,
   onPointCountChange,
   onClearAll,
+  onPointerInPolygonChange,
   allowMultiple = false,
   clearTrigger = 0,
   initialPolygons,
@@ -60,6 +63,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const onDrawingChangeRef = useRef(onDrawingChange);
   const onPointCountChangeRef = useRef(onPointCountChange);
   const onClearAllRef = useRef(onClearAll);
+  const onPointerInPolygonChangeRef = useRef(onPointerInPolygonChange);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const bufferSourceRef = useRef<VectorSource | null>(null);
   const startPointSourceRef = useRef<VectorSource | null>(null);
@@ -86,7 +90,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     onDrawingChangeRef.current = onDrawingChange;
     onPointCountChangeRef.current = onPointCountChange;
     onClearAllRef.current = onClearAll;
-  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll]);
+    onPointerInPolygonChangeRef.current = onPointerInPolygonChange;
+  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerInPolygonChange]);
 
   useEffect(() => {
     if (clearTrigger > 0 && vectorSourceRef.current) {
@@ -254,6 +259,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     let handleContextMenu: ((e: MouseEvent) => void) | null = null;
     let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
     let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
+    let handlePointerMove: ((evt: MapBrowserEvent) => void) | null = null;
 
     // Only add draw interaction if not in readOnly mode
     if (!readOnly) {
@@ -261,8 +267,12 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         source: vectorSource,
         type: "Polygon",
         style: sketchStyle,
-        // Primary button only, so a right-click never adds a vertex or starts a new sketch.
-        condition: (event) => primaryAction(event) && noModifierKeys(event),
+        // Primary button only, so a right-click never adds a vertex or starts a new sketch. With several
+        // polygons allowed, a click inside a drawn polygon selects what is there instead of adding a vertex.
+        condition: (event) =>
+          primaryAction(event) &&
+          noModifierKeys(event) &&
+          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0),
       });
       drawInteractionRef.current = draw;
 
@@ -508,6 +518,21 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         else onPolygonModifiedRef.current?.(remaining);
       };
       map.on("singleclick", handleShiftClick);
+
+      // Inside a drawn polygon the map is for selecting: drawing pauses (hiding its cursor dot) and the
+      // cursor is a hand. Outside, the crosshair shows that a click adds a vertex.
+      let pointerInside = false;
+      handlePointerMove = (evt: MapBrowserEvent) => {
+        if (sketching || !allowMultipleRef.current || evt.dragging) return;
+        const inside = vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0;
+        draw.setActive(!inside);
+        map.getViewport().style.cursor = inside ? "pointer" : "crosshair";
+        if (inside !== pointerInside) {
+          pointerInside = inside;
+          onPointerInPolygonChangeRef.current?.(inside);
+        }
+      };
+      map.on("pointermove", handlePointerMove);
       document.addEventListener("keydown", handleKeyDown);
 
       map.getViewport().addEventListener("contextmenu", handleContextMenu);
@@ -520,6 +545,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       }
       if (handleKeyDown) document.removeEventListener("keydown", handleKeyDown);
       if (handleShiftClick) map.un("singleclick", handleShiftClick);
+      if (handlePointerMove) map.un("pointermove", handlePointerMove);
+      map.getViewport().style.cursor = "";
       if (drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
       }
