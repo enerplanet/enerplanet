@@ -1092,6 +1092,10 @@
     "removeVertexHint": "click on a corner to delete it",
     "removePolygonHint": "click on polygon to delete it",
     "shortcuts": "Shortcuts",
+    "groupDrawing": "Drawing",
+    "groupDeleting": "Deleting",
+    "groupNavigating": "Navigating",
+    "rotate3dDrag": "drag to rotate the 3D view",
     "spacePanHint": "drag to pan the map",
     "rightClickCloseHint": "to close the polygon"
   },

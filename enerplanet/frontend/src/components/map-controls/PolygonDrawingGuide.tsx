@@ -1,5 +1,5 @@
 import { useState, useEffect, type FC } from "react";
-import { X, MousePointer2, CircleDot, Check, Move, Plus, Trash2, Keyboard, Hand, Grid3X3, Building2, Activity, Loader2, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { X, MousePointer2, CircleDot, Check, Keyboard, Grid3X3, Building2, Activity, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
 
@@ -17,6 +17,50 @@ const TransformerIcon: FC<{ className?: string }> = ({ className }) => (
 		<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 	</svg>
 );
+
+/** One gesture in the Shortcuts card: optional key, optional "+", and what it does. */
+type ShortcutRow = { keys?: string; plus?: boolean; action: string };
+
+/** Shortcut groups by what a gesture does: green draws, red deletes, blue moves the view. */
+const buildShortcutGroups = (
+	t: (key: string, fallback: string) => string,
+	isMapLibre3D: boolean,
+): { key: string; title: string; titleClass: string; barClass: string; rows: ShortcutRow[] }[] => {
+	return [
+		{
+			key: 'drawing',
+			title: t('polygon.groupDrawing', 'Drawing'),
+			titleClass: 'text-emerald-600 dark:text-emerald-400',
+			barClass: 'border-emerald-500',
+			rows: [
+				{ action: t('polygon.moveVertex', 'Drag a corner to move it') },
+				{ action: t('polygon.addVertex', 'Drag an edge to add a corner') },
+				{ keys: 'Right-click', action: t('polygon.rightClickCloseHint', 'to close the polygon') },
+				{ keys: 'Esc', action: t('polygon.escToCancel', 'to cancel drawing') },
+			],
+		},
+		{
+			key: 'deleting',
+			title: t('polygon.groupDeleting', 'Deleting'),
+			titleClass: 'text-red-600 dark:text-red-400',
+			barClass: 'border-red-500',
+			rows: [
+				{ keys: 'Alt', plus: true, action: t('polygon.removeVertexHint', 'click on a corner to delete it') },
+				{ keys: 'Shift', plus: true, action: t('polygon.removePolygonHint', 'click on polygon to delete it') },
+			],
+		},
+		{
+			key: 'navigating',
+			title: t('polygon.groupNavigating', 'Navigating'),
+			titleClass: 'text-blue-600 dark:text-blue-400',
+			barClass: 'border-blue-500',
+			rows: [
+				{ keys: 'Space', plus: true, action: t('polygon.spacePanHint', 'drag to pan the map') },
+				...(isMapLibre3D ? [{ keys: 'Right-click', plus: true, action: t('polygon.rotate3dDrag', 'drag to rotate the 3D view') }] : []),
+			],
+		},
+	];
+};
 
 interface PolygonDrawingGuideProps {
 	/** Whether polygon drawing is available (no polygon exists yet or multiple allowed) */
@@ -147,6 +191,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 	// Edit guide (shown when polygon exists)
 	if (isEditGuideVisible) {
+		const shortcutGroups = buildShortcutGroups(t, isMapLibre3D);
 		const workflowSteps = [
 			{
 				key: 'grid' as const,
@@ -488,98 +533,19 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 						</button>
 
 						{isEditExpanded && (
-							<div className="space-y-2 mt-2">
-								{/* Move vertices */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Move className="w-3.5 h-3.5 text-foreground" />
+							<div className="space-y-3 mt-2">
+								{shortcutGroups.map((group) => (
+									<div key={group.key} className="space-y-1">
+										<p className={`text-[10px] font-semibold uppercase tracking-wider ${group.titleClass}`}>{group.title}</p>
+										{group.rows.map((row) => (
+											<p key={row.action} className={`flex flex-wrap items-center gap-1 border-l-2 pl-2 text-xs text-foreground ${group.barClass}`}>
+												{row.keys && <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">{row.keys}</kbd>}
+												{row.keys && row.plus && <span>+</span>}
+												<span>{row.action}</span>
+											</p>
+										))}
 									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">{t('polygon.moveVertex', 'Move corners')}</p>
-									</div>
-								</div>
-
-								{/* Add vertex */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Plus className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">{t('polygon.addVertex', 'Add point')}</p>
-									</div>
-								</div>
-
-								{/* Remove vertex */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Trash2 className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Alt</kbd>
-											<span className="mx-1">+</span>
-											<span>{t('polygon.removeVertexHint', 'click on vertex')}</span>
-										</p>
-									</div>
-								</div>
-
-								{/* Remove polygon */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Trash2 className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Shift</kbd>
-											<span className="mx-1">+</span>
-											<span>{t('polygon.removePolygonHint', 'click on polygon to delete it')}</span>
-										</p>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Hand className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Space</kbd>
-											<span className="mx-1">+</span>
-											<span>{t('polygon.spacePanHint', 'drag to pan the map')}</span>
-										</p>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Check className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Right-click</kbd>
-											<span className="ml-1">{t('polygon.rightClickCloseHint', 'to close the polygon')}</span>
-										</p>
-									</div>
-								</div>
-
-								{/* Escape hint */}
-								<div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
-									<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Esc</kbd>
-									<span>{t('polygon.escToCancel', 'to cancel drawing')}</span>
-								</div>
-
-								{/* 3D rotation hint, shown only when the 3D buildings map is active */}
-								{isMapLibre3D && (
-									<div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-										<div className="flex-shrink-0 w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
-											<RotateCcw className="w-3.5 h-3.5 text-primary" />
-										</div>
-										<div className="flex-1 min-w-0">
-											<p className="text-xs font-semibold text-foreground/90">{t('polygon.rotate3d', '3D View')}</p>
-											<p className="text-[10px] text-muted-foreground">{t('polygon.rotate3dHint', 'Right-click + drag to rotate and see buildings in 3D')}</p>
-										</div>
-									</div>
-								)}
+								))}
 							</div>
 						)}
 				</div>
