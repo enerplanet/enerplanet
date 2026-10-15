@@ -68,6 +68,12 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const modifyInteractionRef = useRef<Modify | null>(null);
   const modifyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sourceReady, setSourceReady] = useState(false);
+  // Read by the draw handlers so toggling multiple polygons does not rebuild the
+  // layers, which would drop every polygon drawn so far.
+  const allowMultipleRef = useRef(allowMultiple);
+  const disableAfterDrawRef = useRef(disableAfterDraw);
+  allowMultipleRef.current = allowMultiple;
+  disableAfterDrawRef.current = disableAfterDraw;
 
   useEffect(() => {
     bufferDistanceRef.current = bufferDistanceMeters;
@@ -88,14 +94,14 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       startPointSourceRef.current?.clear();
       allPolygonsRef.current = [];
       // Re-enable draw interaction when cleared (check for duplicates)
-      if (map && drawInteractionRef.current && disableAfterDraw && !allowMultiple) {
+      if (map && drawInteractionRef.current && disableAfterDrawRef.current && !allowMultipleRef.current) {
         const interactions = map.getInteractions().getArray();
         if (!interactions.includes(drawInteractionRef.current)) {
           map.addInteraction(drawInteractionRef.current);
         }
       }
     }
-  }, [clearTrigger, map, disableAfterDraw, allowMultiple]);
+  }, [clearTrigger, map]);
 
   useEffect(() => {
     if (
@@ -142,13 +148,23 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
       // Disable drawing when initial polygons are loaded (edit mode)
       // Drawing will be re-enabled when user clears all polygons
-      if (disableAfterDraw && !allowMultiple && drawInteractionRef.current) {
+      if (disableAfterDrawRef.current && !allowMultipleRef.current && drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
       }
 
       return () => clearTimeout(timer);
     }
-  }, [initialPolygons, sourceReady, map, disableAfterDraw, allowMultiple]);
+  }, [initialPolygons, sourceReady, map]);
+
+  // Toggling multiple polygons only changes whether another polygon may be drawn.
+  useEffect(() => {
+    const draw = drawInteractionRef.current;
+    if (!map || !draw) return;
+    const onMap = map.getInteractions().getArray().includes(draw);
+    const mayDraw = allowMultiple || !disableAfterDraw || allPolygonsRef.current.length === 0;
+    if (mayDraw && !onMap) map.addInteraction(draw);
+    if (!mayDraw && onMap) map.removeInteraction(draw);
+  }, [map, allowMultiple, disableAfterDraw, sourceReady]);
 
   useEffect(() => {
     if (!map) {
@@ -253,7 +269,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       let isFirstPoint = true;
 
       draw.on("drawstart", (event: DrawEvent) => {
-        if (!allowMultiple) {
+        if (!allowMultipleRef.current) {
           vectorSource.clear();
           bufferSourceRef.current?.clear();
           startPointSourceRef.current?.clear();
@@ -375,7 +391,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         }
 
         // Disable drawing after first polygon if disableAfterDraw is true
-        if (disableAfterDraw && !allowMultiple) {
+        if (disableAfterDrawRef.current && !allowMultipleRef.current) {
           map.removeInteraction(draw);
         }
       });
@@ -518,7 +534,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       allPolygonsRef.current = [];
       setSourceReady(false);
     };
-  }, [map, allowMultiple, disableAfterDraw, readOnly, enableEditing]);
+  }, [map, readOnly, enableEditing]);
 
   const recomputeBuffers = (distanceMeters: number) => {
     const source = bufferSourceRef.current;
