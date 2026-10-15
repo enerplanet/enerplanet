@@ -1,4 +1,4 @@
-package model
+package demand
 
 import (
 	"archive/zip"
@@ -23,7 +23,7 @@ func linked(ref, name, part string, values ...float32) seriesstore.LinkedSeries 
 }
 
 func TestSummariseLinked_CarriesSourceVersionAndPositiveCooling(t *testing.T) {
-	got, err := summariseLinked([]seriesstore.LinkedSeries{
+	got, err := Summaries([]seriesstore.LinkedSeries{
 		linked("268426401", "cooling", "", -1, -3),
 		linked("268426401", "heating", "", 2, 4),
 	})
@@ -39,16 +39,16 @@ func TestSummariseLinked_CarriesSourceVersionAndPositiveCooling(t *testing.T) {
 
 func TestFindSeries_MatchesNameAndPart(t *testing.T) {
 	all := []seriesstore.LinkedSeries{linked("b", "pv", "roof-1", 1), linked("b", "pv", "roof-2", 2)}
-	got, ok := findSeries(all, "pv", "roof-2")
+	got, ok := FindSeries(all, "pv", "roof-2")
 	require.True(t, ok)
 	assert.Equal(t, []float32{2}, []float32(got.Vals))
-	_, ok = findSeries(all, "pv", "")
+	_, ok = FindSeries(all, "pv", "")
 	assert.False(t, ok)
 }
 
 func TestWriteBuildingCSV_NamesRoofFaces(t *testing.T) {
 	var buf bytes.Buffer
-	require.NoError(t, writeBuildingCSV(&buf, []seriesstore.LinkedSeries{
+	require.NoError(t, WriteBuildingCSV(&buf, []seriesstore.LinkedSeries{
 		linked("b", "heating", "", 1), linked("b", "pv", "roof-1", 0.5),
 	}))
 	assert.Equal(t, "timestamp,heating [kW],pv:roof-1 [kW]", strings.SplitN(buf.String(), "\n", 2)[0])
@@ -56,7 +56,7 @@ func TestWriteBuildingCSV_NamesRoofFaces(t *testing.T) {
 
 func TestWriteModelZip_OneCSVPerBuilding(t *testing.T) {
 	var buf bytes.Buffer
-	require.NoError(t, writeModelZip(&buf, 7, []seriesstore.LinkedSeries{
+	require.NoError(t, WriteModelZip(&buf, 7, []seriesstore.LinkedSeries{
 		linked("a", "heating", "", 1), linked("a", "electricity", "", 2), linked("b", "heating", "", 3),
 	}))
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))

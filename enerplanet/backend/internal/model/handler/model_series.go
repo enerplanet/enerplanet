@@ -1,10 +1,8 @@
 package model
 
 import (
-	"archive/zip"
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,6 +15,7 @@ import (
 	"platform.local/platform/logger"
 
 	"spatialhub_backend/internal/api/contracts"
+	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/seriessummary"
 	seriesstore "spatialhub_backend/internal/store/series"
 )
@@ -48,7 +47,7 @@ func (h *ModelHandler) GetBuildingDemandProfile(c *gin.Context) {
 	if !ok {
 		return
 	}
-	summaries, err := summariseLinked(linked)
+	summaries, err := demand.Summaries(linked)
 	if err != nil {
 		httputil.InternalError(c, fmt.Sprintf("failed to summarise series: %v", err))
 		return
@@ -89,12 +88,12 @@ func (h *ModelHandler) GetBuildingSeriesWeek(c *gin.Context) {
 	if !ok {
 		return
 	}
-	ls, found := findSeries(linked, c.Param("series"), c.Query("part"))
+	ls, found := demand.FindSeries(linked, c.Param("series"), c.Query("part"))
 	if !found {
 		httputil.NotFound(c, fmt.Sprintf("series %q is not stored for this building", c.Param("series")))
 		return
 	}
-	s := toSummarySeries(ls)
+	s := demand.ToSeries(ls)
 	values, err := seriessummary.Window(s, week)
 	if err != nil {
 		httputil.BadRequest(c, err.Error())
@@ -134,7 +133,7 @@ func (h *ModelHandler) GetBuildingSeriesCSV(c *gin.Context) {
 	}
 	// Buffered so a failure can still answer with an error instead of a cut-off file.
 	var buf bytes.Buffer
-	if err := writeBuildingCSV(&buf, linked); err != nil {
+	if err := demand.WriteBuildingCSV(&buf, linked); err != nil {
 		httputil.InternalError(c, fmt.Sprintf("failed to write CSV: %v", err))
 		return
 	}
@@ -174,7 +173,7 @@ func (h *ModelHandler) GetModelSeriesZip(c *gin.Context) {
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="model-%d-series.zip"`, model.ID))
 	c.Header("Content-Type", "application/zip")
 	c.Status(http.StatusOK)
-	if err := writeModelZip(c.Writer, model.ID, linked); err != nil {
+	if err := demand.WriteModelZip(c.Writer, model.ID, linked); err != nil {
 		logger.ForComponent("model").Errorf("model %d: series ZIP incomplete: %v", model.ID, err)
 	}
 }
@@ -210,76 +209,4 @@ func (h *ModelHandler) buildingSeries(c *gin.Context, model *models.Model, ref s
 		return nil, false
 	}
 	return linked, true
-}
-
-// toSummarySeries converts a stored series; cooling is reported by magnitude,
-// since BuEM gives it as negative power.
-func toSummarySeries(ls seriesstore.LinkedSeries) seriessummary.Series {
-	return seriessummary.Series{
-		Start: ls.StartTime, ResolutionMinutes: ls.ResolutionMinutes, Unit: ls.Unit,
-		Values: ls.Vals, Magnitude: ls.Series == "cooling",
-	}
-}
-
-func summariseLinked(linked []seriesstore.LinkedSeries) ([]contracts.SeriesSummary, error) {
-	out := make([]contracts.SeriesSummary, 0, len(linked))
-	for _, ls := range linked {
-		summary, err := seriessummary.Summarise(toSummarySeries(ls))
-		if err != nil {
-			return nil, fmt.Errorf("series %s of building %s: %w", ls.Series, ls.BuildingRef, err)
-		}
-		version := ""
-		if ls.ProducerVersion != nil {
-			version = *ls.ProducerVersion
-		}
-		out = append(out, contracts.SeriesSummary{
-			Name: ls.Series, Part: ls.Part, Source: ls.Source, ProducerVersion: version,
-			Start: ls.StartTime.UTC(), ResolutionMinutes: ls.ResolutionMinutes, Summary: summary,
-		})
-	}
-	return out, nil
-}
-
-func findSeries(linked []seriesstore.LinkedSeries, name, part string) (seriesstore.LinkedSeries, bool) {
-	for _, ls := range linked {
-		if ls.Series == name && ls.Part == part {
-			return ls, true
-		}
-	}
-	return seriesstore.LinkedSeries{}, false
-}
-
-// writeBuildingCSV writes one building's series as CSV; a roof-face series is
-// named "<series>:<part>".
-func writeBuildingCSV(w io.Writer, linked []seriesstore.LinkedSeries) error {
-	byName := make(map[string]seriessummary.Series, len(linked))
-	for _, ls := range linked {
-		name := ls.Series
-		if ls.Part != "" {
-			name += ":" + ls.Part
-		}
-		byName[name] = toSummarySeries(ls)
-	}
-	return seriessummary.WriteCSV(w, byName)
-}
-
-// writeModelZip writes one CSV per building into a ZIP; linked is ordered by
-// building.
-func writeModelZip(w io.Writer, modelID uint, linked []seriesstore.LinkedSeries) error {
-	zw := zip.NewWriter(w)
-	for start := 0; start < len(linked); {
-		end := start
-		for end < len(linked) && linked[end].BuildingRef == linked[start].BuildingRef {
-			end++
-		}
-		f, err := zw.Create(fmt.Sprintf("model-%d-%s.csv", modelID, linked[start].BuildingRef))
-		if err != nil {
-			return err
-		}
-		if err := writeBuildingCSV(f, linked[start:end]); err != nil {
-			return fmt.Errorf("building %s: %w", linked[start].BuildingRef, err)
-		}
-		start = end
-	}
-	return zw.Close()
 }
