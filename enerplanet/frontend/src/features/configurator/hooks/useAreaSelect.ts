@@ -19,6 +19,8 @@ import { usePylovoLayers } from '@/features/configurator/hooks/usePylovoLayers';
 import { useTechDragDrop } from '@/features/configurator/hooks/useTechDragDrop';
 import { useMapClickHandlers } from '@/features/configurator/hooks/useMapClickHandlers';
 import { generateUUID } from '@/utils/uuid';
+import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
+import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
@@ -81,7 +83,8 @@ export const useAreaSelect = ({
 
     // ── Load existing model ──
     useEffect(() => { if (editMode && modelId) loadExistingModelData(modelId, { setModelName, setResolution, setFromDate, setToDate, setLoadedCoordinates, setIsLoadingModel, setLoadedConfig }, originalModelRef); }, [editMode, modelId]);
-    useEffect(() => { if (editMode && loadedCoordinates?.length) setAllPolygons(loadedCoordinates); }, [editMode, loadedCoordinates]);
+    // A model saved with several polygons opens with multiple polygons allowed.
+    useEffect(() => { if (editMode && loadedCoordinates?.length) { setAllPolygons(loadedCoordinates); if (loadedCoordinates.length > 1) setAllowMultiplePolygons(true); } }, [editMode, loadedCoordinates, setAllPolygons, setAllowMultiplePolygons]);
     useEffect(() => { checkAndShowAreaSelectTour(editMode, setShowAreaSelectTour); }, [editMode]);
     useEffect(() => { const h = () => setShowAreaSelectTour(true); globalThis.addEventListener('restart-area-select-tour', h); return () => globalThis.removeEventListener('restart-area-select-tour', h); }, []);
     useEffect(() => { if (editMode && !editModeInitializedRef.current && !isLoadingModel && originalModelRef.current) editModeInitializedRef.current = true; }, [editMode, isLoadingModel]);
@@ -115,7 +118,7 @@ export const useAreaSelect = ({
             const count = response.buildings?.features?.length || 0;
             if (buildingLimit > 0 && count > buildingLimit) { showError(t("gridNotifications.buildingLimitExceeded", { count, limit: buildingLimit })); setAllPolygons([]); incrementClearTrigger(); pylovoLayersData.processPylovoData({}); return; }
             if (count > 0) showSuccess(t("gridNotifications.gridGenerated", { count })); else showSuccess(t("gridNotifications.gridCompleteNoBuildings"));
-            pylovoLayersData.processPylovoData(response as PylovoGridData);
+            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
             setIsModified(true);
         } catch { if (genId === gridGenIdRef.current) showError(t("gridNotifications.gridGenerationFailed")); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
@@ -145,7 +148,7 @@ export const useAreaSelect = ({
             });
             if (genId !== gridGenIdRef.current) return;
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
-            pylovoLayersData.processPylovoData(response as PylovoGridData);
+            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
         } catch { if (genId === gridGenIdRef.current) showError(t("gridNotifications.gridRegenerationFailed")); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
