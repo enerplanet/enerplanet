@@ -95,6 +95,10 @@ export interface ModelStore {
   excludedBuildingIds: Set<number>;
   toggleBuildingExclusion: (id: number) => void;
   clearExcludedBuildings: () => void;
+  /** osm_ids picked with Ctrl+click, for acting on several buildings at once. */
+  selectedBuildingIds: Set<string>;
+  toggleBuildingSelection: (osmId: string) => void;
+  clearBuildingSelection: () => void;
 
   // ── Map interactions (dialogs + tooltips) ──
   transformerDialogOpen: boolean;
@@ -212,6 +216,7 @@ const getInitialState = () => ({
   includePublicBuildings: true,
   includePrivateBuildings: true,
   excludedBuildingIds: new Set<number>(),
+  selectedBuildingIds: new Set<string>(),
   transformerDialogOpen: false,
   selectedTransformer: null,
   transformerTooltip: null,
@@ -324,6 +329,15 @@ export const useModelStore = create<ModelStore>((set) => ({
       return { excludedBuildingIds: next };
     }),
   clearExcludedBuildings: () => set({ excludedBuildingIds: new Set() }),
+  selectedBuildingIds: new Set(),
+  toggleBuildingSelection: (osmId) =>
+    set((s) => {
+      const next = new Set(s.selectedBuildingIds);
+      if (next.has(osmId)) next.delete(osmId);
+      else next.add(osmId);
+      return { selectedBuildingIds: next };
+    }),
+  clearBuildingSelection: () => set({ selectedBuildingIds: new Set() }),
 
   // ── Map interactions ──
   transformerDialogOpen: false,

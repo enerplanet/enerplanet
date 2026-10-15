@@ -871,7 +871,13 @@
     "rightClickCloseHint": "zamyka wielokąt",
     "keyRightClick": "Prawy przycisk",
     "keySpace": "Spacja",
-    "dismissGuide": "Zamknij przewodnik"
+    "dismissGuide": "Zamknij przewodnik",
+    "groupBuildings": "Budynki",
+    "disableBuildingHint": "kliknij budynek, aby go wyłączyć lub włączyć",
+    "selectBuildingHint": "kliknij budynki, aby je zaznaczyć",
+    "disableSelectedHint": "wyłącza zaznaczone budynki",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "workflow": {
     "optional": "opcjonalnie",
@@ -1393,7 +1399,8 @@
       "myBuildings": "Moje budynki",
       "clearAll": "Usuń wszystkie wielokąty",
       "togglePublicBuildings": "Przełącz budynki publiczne",
-      "toggleMyBuildings": "Przełącz moje budynki"
+      "toggleMyBuildings": "Przełącz moje budynki",
+      "disableSelected": "Wyłącz zaznaczone budynki"
     },
     "powerFlow": {
       "run": "Uruchom analizę przepływu mocy",
@@ -1480,7 +1487,8 @@
       "normallyOpen": "Normalnie otwarty",
       "length": "Długość",
       "type": "Typ",
-      "bus": "Węzeł"
+      "bus": "Węzeł",
+      "disabled": "Wyłączony"
     },
     "unsavedChanges": {
       "title": "Niezapisane zmiany",
@@ -2229,7 +2237,11 @@
     "clickToDeleteTriangle": "Kliknij, aby usunąć ten wielokąt (minimum to trzy narożniki)",
     "polygonNoArea": "Narożniki tego obszaru leżały na jednej prostej, więc nie został zachowany.",
     "clickToClose": "Kliknij, aby zamknąć",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Kliknij, aby wyłączyć ten budynek",
+    "clickToEnableBuilding": "Kliknij, aby ponownie włączyć ten budynek",
+    "clickToSelectBuilding": "Kliknij, aby zaznaczyć ten budynek",
+    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia"
   },
   "forms": {
     "user": {

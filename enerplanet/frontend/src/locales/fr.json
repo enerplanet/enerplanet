@@ -146,7 +146,11 @@
     "clickToDeleteTriangle": "Cliquez pour supprimer ce polygone (trois coins au minimum)",
     "polygonNoArea": "Les coins de cette zone étaient alignés sur une droite, elle n'a donc pas été conservée.",
     "clickToClose": "Cliquer pour fermer",
-    "start": "Début"
+    "start": "Début",
+    "clickToDisableBuilding": "Cliquez pour désactiver ce bâtiment",
+    "clickToEnableBuilding": "Cliquez pour réactiver ce bâtiment",
+    "clickToSelectBuilding": "Cliquez pour sélectionner ce bâtiment",
+    "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection"
   },
   "gridNotifications": {
     "gridGenerated": "Réseau généré : {{count}} bâtiments trouvés",
@@ -1128,7 +1132,13 @@
     "rightClickCloseHint": "pour fermer le polygone",
     "keyRightClick": "Clic droit",
     "keySpace": "Espace",
-    "dismissGuide": "Masquer le guide"
+    "dismissGuide": "Masquer le guide",
+    "groupBuildings": "Bâtiments",
+    "disableBuildingHint": "cliquer sur un bâtiment pour le désactiver ou le réactiver",
+    "selectBuildingHint": "cliquer sur des bâtiments pour les sélectionner",
+    "disableSelectedHint": "désactive les bâtiments sélectionnés",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Suppr"
   },
   "workflow": {
     "optional": "facultatif",
@@ -1650,7 +1660,8 @@
       "myBuildings": "Mes bâtiments",
       "clearAll": "Supprimer tous les polygones",
       "togglePublicBuildings": "Basculer bâtiments publics",
-      "toggleMyBuildings": "Basculer mes bâtiments"
+      "toggleMyBuildings": "Basculer mes bâtiments",
+      "disableSelected": "Désactiver les bâtiments sélectionnés"
     },
     "powerFlow": {
       "run": "Lancer l'analyse du flux de puissance",
@@ -1737,7 +1748,8 @@
       "normallyOpen": "Normalement ouvert",
       "length": "Longueur",
       "type": "Type",
-      "bus": "Nœud"
+      "bus": "Nœud",
+      "disabled": "Désactivé"
     },
     "unsavedChanges": {
       "title": "Modifications non enregistrées",

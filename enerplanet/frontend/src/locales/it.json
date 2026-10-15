@@ -871,7 +871,13 @@
     "rightClickCloseHint": "per chiudere il poligono",
     "keyRightClick": "Clic destro",
     "keySpace": "Spazio",
-    "dismissGuide": "Chiudi la guida"
+    "dismissGuide": "Chiudi la guida",
+    "groupBuildings": "Edifici",
+    "disableBuildingHint": "clic su un edificio per disattivarlo o riattivarlo",
+    "selectBuildingHint": "clic sugli edifici per selezionarli",
+    "disableSelectedHint": "disattiva gli edifici selezionati",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Canc"
   },
   "workflow": {
     "optional": "facoltativo",
@@ -1393,7 +1399,8 @@
       "myBuildings": "I miei edifici",
       "clearAll": "Rimuovi tutti i poligoni",
       "togglePublicBuildings": "Attiva/disattiva edifici pubblici",
-      "toggleMyBuildings": "Attiva/disattiva i miei edifici"
+      "toggleMyBuildings": "Attiva/disattiva i miei edifici",
+      "disableSelected": "Disattiva gli edifici selezionati"
     },
     "powerFlow": {
       "run": "Esegui analisi flusso di potenza",
@@ -1480,7 +1487,8 @@
       "normallyOpen": "Normalmente aperto",
       "length": "Lunghezza",
       "type": "Tipo",
-      "bus": "Nodo"
+      "bus": "Nodo",
+      "disabled": "Disattivato"
     },
     "unsavedChanges": {
       "title": "Modifiche non salvate",
@@ -2229,7 +2237,11 @@
     "clickToDeleteTriangle": "Fai clic per eliminare questo poligono (il minimo è tre vertici)",
     "polygonNoArea": "I vertici di quest'area erano su una linea retta, quindi non è stata mantenuta.",
     "clickToClose": "Clicca per chiudere",
-    "start": "Inizia"
+    "start": "Inizia",
+    "clickToDisableBuilding": "Fai clic per disattivare questo edificio",
+    "clickToEnableBuilding": "Fai clic per riattivare questo edificio",
+    "clickToSelectBuilding": "Fai clic per selezionare questo edificio",
+    "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione"
   },
   "forms": {
     "user": {

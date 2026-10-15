@@ -871,7 +871,13 @@
     "rightClickCloseHint": "om de polygoon te sluiten",
     "keyRightClick": "Rechtermuisklik",
     "keySpace": "Spatie",
-    "dismissGuide": "Handleiding sluiten"
+    "dismissGuide": "Handleiding sluiten",
+    "groupBuildings": "Gebouwen",
+    "disableBuildingHint": "klik op een gebouw om het uit of in te schakelen",
+    "selectBuildingHint": "klik op gebouwen om ze te selecteren",
+    "disableSelectedHint": "schakelt de geselecteerde gebouwen uit",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "workflow": {
     "optional": "optioneel",
@@ -1393,7 +1399,8 @@
       "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
       "togglePublicBuildings": "Openbare gebouwen aan/uit",
-      "toggleMyBuildings": "Mijn gebouwen aan/uit"
+      "toggleMyBuildings": "Mijn gebouwen aan/uit",
+      "disableSelected": "Geselecteerde gebouwen uitschakelen"
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",
@@ -1480,7 +1487,8 @@
       "normallyOpen": "Normaal open",
       "length": "Lengte",
       "type": "Type",
-      "bus": "Knooppunt"
+      "bus": "Knooppunt",
+      "disabled": "Uitgeschakeld"
     },
     "unsavedChanges": {
       "title": "Niet-opgeslagen wijzigingen",
@@ -2229,7 +2237,11 @@
     "clickToDeleteTriangle": "Klik om deze polygoon te verwijderen (minimaal drie hoeken)",
     "polygonNoArea": "De hoeken van dit gebied lagen op één rechte lijn, daarom is het niet bewaard.",
     "clickToClose": "Klik om te sluiten",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Klik om dit gebouw uit te schakelen",
+    "clickToEnableBuilding": "Klik om dit gebouw weer in te schakelen",
+    "clickToSelectBuilding": "Klik om dit gebouw te selecteren",
+    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen"
   },
   "forms": {
     "user": {
