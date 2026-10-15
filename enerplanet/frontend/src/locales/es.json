@@ -1040,8 +1040,7 @@
     "addVertex": "Añadir punto",
     "addVertexHint": "Haz clic en cualquier arista",
     "removeVertex": "Eliminar punto",
-    "removeVertexHint": "clic en un vértice",
-    "escToClear": "para borrar el polígono"
+    "removeVertexHint": "clic en un vértice"
   },
   "workflow": {
     "title": "Flujo de trabajo",

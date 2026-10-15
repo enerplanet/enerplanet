@@ -1081,7 +1081,7 @@
     "addVertexHint": "Click on any edge",
     "removeVertex": "Remove point",
     "removeVertexHint": "click on vertex",
-    "escToClear": "to clear polygon"
+    "removePolygonHint": "click on polygon to delete it"
   },
   "workflow": {
     "title": "Workflow",

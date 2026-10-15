@@ -807,8 +807,7 @@
     "addVertex": "Aggiungi punto",
     "addVertexHint": "Clicca su qualsiasi bordo",
     "removeVertex": "Rimuovi punto",
-    "removeVertexHint": "clicca su un vertice",
-    "escToClear": "per cancellare il poligono"
+    "removeVertexHint": "clicca su un vertice"
   },
   "workflow": {
     "title": "Flusso di lavoro",
