@@ -113,6 +113,20 @@ func TestEnvelopeElements_MultipleSurfaces(t *testing.T) {
 	assert.Equal(t, "r1", got[1].ID)
 }
 
+func TestEnvelopeElements_dropsSurfacesWithoutThermalArea(t *testing.T) {
+	building := Building{Surfaces: []Surface{
+		{ID: "sliver", Type: "WallSurface", AreaSqm: ptrF(0), Azimuth: ptrF(90), Tilt: ptrF(0), AreaBelowPrecision: ptrB(true)},
+		{ID: "zero", Type: "WallSurface", AreaSqm: ptrF(0), Azimuth: ptrF(180), Tilt: ptrF(0)},
+		{ID: "flagged", Type: "RoofSurface", AreaSqm: ptrF(0.01), Azimuth: ptrF(-1), Tilt: ptrF(90), AreaBelowPrecision: ptrB(true)},
+		{ID: "w1", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(270), Tilt: ptrF(0), AreaBelowPrecision: ptrB(false)},
+	}}
+
+	got := EnvelopeElements(building)
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "w1", got[0].ID)
+}
+
 func TestEnvelopeElements_partyWallGetsZeroBTransmission(t *testing.T) {
 	building := Building{Surfaces: []Surface{
 		{ID: "w1", Type: "WallSurface", AreaSqm: ptrF(30), Azimuth: ptrF(90), Tilt: ptrF(0), IsPartyWall: ptrB(true)},

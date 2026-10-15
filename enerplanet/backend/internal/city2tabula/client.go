@@ -171,6 +171,10 @@ type Surface struct {
 	// IsPartyWall marks a wall piece City2TABULA found shared with a
 	// neighbouring building (City2TABULA v0.9.0 and later).
 	IsPartyWall *bool `json:"is_party_wall,omitempty"`
+	// AreaBelowPrecision is true when the area rounds to 0.00 m2, as for the
+	// sliver faces where walls meet. City2TABULA documents that such a surface
+	// must not be used as a thermal area (v0.9.0 and later).
+	AreaBelowPrecision *bool `json:"area_below_precision,omitempty"`
 }
 
 // normalizeCountry adapts the backend's country vocabulary (geo.NormalizeCountry,
