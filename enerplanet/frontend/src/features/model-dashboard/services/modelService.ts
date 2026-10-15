@@ -238,6 +238,12 @@ class ModelService {
     return response.data;
   }
 
+  // Moves the BuEM series stored for an unsaved model's draft to the saved model.
+  async claimDraftSeries(id: number, draftId: string): Promise<{ moved: number }> {
+    const response = await axios.post(`/models/${id}/series/claim-draft`, { draft_id: draftId });
+    return response.data;
+  }
+
   // Dispatch the model to MEME (via TentaCron).
   async runMeme(id: number): Promise<ModelResponse> {
     const response = await axios.post(`/models/${id}/run-meme`);
