@@ -97,8 +97,8 @@ export const useMapClickHandlers = ({
     if (suppressMapInteractions) { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
 
     const handleClick = (evt: any) => {
-      // Shift+click is the polygon drawer's delete gesture, not a building or transformer click.
-      if (isDrawing || suppressDialogOnClickRef?.current || evt.originalEvent?.shiftKey) return;
+      // Shift+click and Alt+click are the polygon drawer's delete gestures, not building or transformer clicks.
+      if (isDrawing || suppressDialogOnClickRef?.current || evt.originalEvent?.shiftKey || evt.originalEvent?.altKey) return;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building') return f; return null; });
       if (!feature) return;
       const type = feature.get('feature_type');
