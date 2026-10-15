@@ -49,12 +49,14 @@ func indexTransformersByGrid(transformers []interface{}) map[int]map[string]inte
 	return result
 }
 
-// indexBuildingsByGrid indexes buildings by their grid_result_id
+// indexBuildingsByGrid indexes buildings by their grid_result_id, leaving out
+// buildings the user disabled.
 func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interface{} {
 	log := logger.ForComponent("payload")
 	result := make(map[int][]map[string]interface{})
 	skippedCount := 0
 	missingAreaCount := 0
+	disabledCount := 0
 
 	for i, bld := range buildings {
 		bMap, ok := bld.(map[string]interface{})
@@ -67,6 +69,11 @@ func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interfac
 		if !ok {
 			log.Warnf("Building at index %d: missing or invalid properties", i)
 			skippedCount++
+			continue
+		}
+		// The configurator marks a building the user disabled with activated: false.
+		if activated, ok := props["activated"].(bool); ok && !activated {
+			disabledCount++
 			continue
 		}
 
@@ -96,9 +103,9 @@ func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interfac
 		totalBuildings += len(buildings)
 	}
 
-	if skippedCount > 0 || missingAreaCount > 0 {
-		log.Infof("Indexed %d buildings across %d grids, %d standalone buildings, %d with missing area",
-			totalBuildings, len(result), skippedCount, missingAreaCount)
+	if skippedCount > 0 || missingAreaCount > 0 || disabledCount > 0 {
+		log.Infof("Indexed %d buildings across %d grids, %d standalone buildings, %d with missing area, %d disabled",
+			totalBuildings, len(result), skippedCount, missingAreaCount, disabledCount)
 	}
 	return result
 }
