@@ -9,6 +9,7 @@ import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
 import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -87,6 +88,10 @@ interface AreaSelectProps {
   editMode?: boolean;
   existingModelId?: number;
 }
+
+/** pylovo gives user-placed transformers an osm_id of the form "user/<timestamp>". */
+const hasUserTransformer = (grid: PylovoGridData | undefined): boolean =>
+  (grid?.transformers?.features ?? []).some((f) => String(f.properties?.osm_id ?? "").startsWith("user/"));
 
 /** Translation key of the warning for a click that the held modifier turns into a delete. */
 const deleteHintKey = (target: PointerTarget, keys: { shift: boolean; alt: boolean }, pointerOnMap: boolean): string | null => {
@@ -561,6 +566,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
                 isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
                 hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
               />
             )}
             <GridActionBar
