@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { Activity } from "lucide-react";
+import { useTranslation } from "@spatialhub/i18n";
 import { ColorConfig } from "@/constants/color-config";
 
 interface CustomTransformer {
@@ -15,11 +16,11 @@ interface PowerFlowLegendProps {
 }
 
 const loadUtilizationSteps = [
-  { label: "0–40%", color: ColorConfig.load_utilization_low, description: "Low" },
-  { label: "40–60%", color: ColorConfig.load_utilization_moderate, description: "Moderate" },
-  { label: "60–80%", color: ColorConfig.load_utilization_medium, description: "Medium" },
-  { label: "80–100%", color: ColorConfig.load_utilization_high, description: "High" },
-  { label: ">100%", color: ColorConfig.load_utilization_critical, description: "Overloaded" },
+  { label: "0–40%", color: ColorConfig.load_utilization_low, description: "low" },
+  { label: "40–60%", color: ColorConfig.load_utilization_moderate, description: "moderate" },
+  { label: "60–80%", color: ColorConfig.load_utilization_medium, description: "medium" },
+  { label: "80–100%", color: ColorConfig.load_utilization_high, description: "high" },
+  { label: ">100%", color: ColorConfig.load_utilization_critical, description: "overloaded" },
 ];
 
 export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
@@ -27,6 +28,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
   customTransformers = [],
   onTransformerClick,
 }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -36,7 +38,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
         {customTransformers.length > 0 && (
           <div className="space-y-1.5 mb-3 pb-3 border-b border-border">
             <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-              Custom Transformers
+              {t("powerFlowLegend.customTransformers")}
             </div>
             <div className="space-y-1 max-h-24 overflow-y-auto">
               {customTransformers.map((transformer, index) => (
@@ -47,7 +49,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
                 >
                   <img
                     src="/images/transformer-icon.svg"
-                    alt="Transformer"
+                    alt=""
                     className="w-4 h-4"
                     style={{
                       filter:
@@ -55,10 +57,10 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
                     }}
                   />
                   <span className="text-[10px] text-foreground flex-1">
-                    Transformer {index + 1}
+                    {t("powerFlowLegend.transformer", { number: index + 1 })}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {transformer.buildingCount} bldg{transformer.buildingCount !== 1 ? "s" : ""}
+                    {t("powerFlowLegend.buildingCount", { count: transformer.buildingCount })}
                   </span>
                 </button>
               ))}
@@ -68,7 +70,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
 
         <div className="flex items-center gap-1.5 mb-2">
           <Activity className="w-3.5 h-3.5 text-orange-500" />
-          <span className="text-xs font-semibold text-foreground">Load Utilization</span>
+          <span className="text-xs font-semibold text-foreground">{t("powerFlowLegend.loadUtilization")}</span>
         </div>
 
         {/* Cable Lines color scale */}
@@ -79,7 +81,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
                 key={step.label}
                 className="flex-1"
                 style={{ backgroundColor: step.color }}
-                title={`${step.description} (${step.label})`}
+                title={`${t(`powerFlowLegend.${step.description}`)} (${step.label})`}
               />
             ))}
           </div>
@@ -102,7 +104,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
                 boxShadow: `0 0 6px ${ColorConfig.power_line_medium_voltage}`,
               }}
             />
-            <span className="text-[10px] text-foreground">MV Lines</span>
+            <span className="text-[10px] text-foreground">{t("powerFlowLegend.mvLines")}</span>
           </div>
         </div>
       </div>

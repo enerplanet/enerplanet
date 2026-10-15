@@ -1,6 +1,7 @@
 import { useState, useEffect, type FC } from 'react';
 import { InfoIcon } from '@/components/ui/InfoTooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@spatialhub/ui';
+import { useTranslation } from '@spatialhub/i18n';
 import type {
     AdvancedParameterOption,
     AdvancedParametersState,
@@ -44,6 +45,7 @@ const ParameterRangeInput: FC<ParameterRangeInputProps> = ({
     value,
     onChange,
 }) => {
+    const { t } = useTranslation();
     const handleMinChange = (newMin: number) => {
         const clampedMin = Math.max(parameter.min!, Math.min(value.max, newMin));
         onChange({ ...value, min: clampedMin });
@@ -76,14 +78,14 @@ const ParameterRangeInput: FC<ParameterRangeInputProps> = ({
 
             <div className="grid grid-cols-2 gap-2">
                 <div>
-                    <label htmlFor={`${parameter.id}-min`} className="text-xs text-muted-foreground mb-1 block">Minimum</label>
+                    <label htmlFor={`${parameter.id}-min`} className="text-xs text-muted-foreground mb-1 block">{t('parameters.advanced.minimum')}</label>
                     <div className="flex items-center border border-border rounded-md bg-background dark:bg-gray-700">
                         <button
                             type="button"
                             onClick={() => handleMinChange(value.min - parameter.step!)}
                             className="px-1.5 py-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-shrink-0 text-sm"
                             style={{ minWidth: '24px', height: '28px' }}
-                            aria-label="Decrease minimum value"
+                            aria-label={t('parameters.advanced.decreaseMinimum')}
                         >
                             −
                         </button>
@@ -108,7 +110,7 @@ const ParameterRangeInput: FC<ParameterRangeInputProps> = ({
                             onClick={() => handleMinChange(value.min + parameter.step!)}
                             className="px-1.5 py-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-shrink-0 text-sm"
                             style={{ minWidth: '24px', height: '28px' }}
-                            aria-label="Increase minimum value"
+                            aria-label={t('parameters.advanced.increaseMinimum')}
                         >
                             +
                         </button>
@@ -116,14 +118,14 @@ const ParameterRangeInput: FC<ParameterRangeInputProps> = ({
                 </div>
 
                 <div>
-                    <label htmlFor={`${parameter.id}-max`} className="text-xs text-muted-foreground mb-1 block">Maximum</label>
+                    <label htmlFor={`${parameter.id}-max`} className="text-xs text-muted-foreground mb-1 block">{t('parameters.advanced.maximum')}</label>
                     <div className="flex items-center border border-border rounded-md bg-background dark:bg-gray-700">
                         <button
                             type="button"
                             onClick={() => handleMaxChange(value.max - parameter.step!)}
                             className="px-1.5 py-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-shrink-0 text-sm"
                             style={{ minWidth: '24px', height: '28px' }}
-                            aria-label="Decrease maximum value"
+                            aria-label={t('parameters.advanced.decreaseMaximum')}
                         >
                             −
                         </button>
@@ -148,7 +150,7 @@ const ParameterRangeInput: FC<ParameterRangeInputProps> = ({
                             onClick={() => handleMaxChange(value.max + parameter.step!)}
                             className="px-1.5 py-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-shrink-0 text-sm"
                             style={{ minWidth: '24px', height: '28px' }}
-                            aria-label="Increase maximum value"
+                            aria-label={t('parameters.advanced.increaseMaximum')}
                         >
                             +
                         </button>
@@ -164,6 +166,7 @@ const ParameterSelectInput: FC<ParameterSelectInputProps> = ({
     value,
     onChange,
 }) => {
+    const { t } = useTranslation();
     return (
         <div className="space-y-2">
             <label className="flex items-center text-sm font-medium text-foreground">
@@ -174,7 +177,7 @@ const ParameterSelectInput: FC<ParameterSelectInputProps> = ({
             </label>
             <Select value={value} onValueChange={onChange}>
                 <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select option" />
+                    <SelectValue placeholder={t('parameters.advanced.selectOption')} />
                 </SelectTrigger>
                 <SelectContent>
                     {parameter.options?.map((option: AdvancedParameterOption) => (
@@ -195,6 +198,7 @@ export const AdvancedParametersDrawer: FC<AdvancedParametersDrawerProps> = ({
     onParametersChange,
     onReset,
 }) => {
+    const { t } = useTranslation();
     const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
@@ -251,7 +255,7 @@ export const AdvancedParametersDrawer: FC<AdvancedParametersDrawerProps> = ({
             }`}>
                 <div className="px-3 pt-4 pb-3 border-b border-border">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold text-foreground">Advanced Parameters</h3>
+                        <h3 className="text-base font-semibold text-foreground">{t('parameters.advanced.title')}</h3>
                         <button
                             onClick={handleClose}
                             className="p-1.5 hover:bg-muted rounded-lg transition-colors text-foreground"
@@ -262,7 +266,7 @@ export const AdvancedParametersDrawer: FC<AdvancedParametersDrawerProps> = ({
                         </button>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                        Configure advanced parameters for your Energy assessment
+                        {t('parameters.advanced.description')}
                     </div>
                 </div>
 
@@ -317,13 +321,13 @@ export const AdvancedParametersDrawer: FC<AdvancedParametersDrawerProps> = ({
                             disabled={!hasNonDefaultValues()}
                             className="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400"
                         >
-                            Reset to Defaults
+                            {t('parameters.advanced.resetToDefaults')}
                         </button>
                         <button
                             onClick={handleClose}
                             className="flex-1 px-3 py-2 bg-gradient-to-br from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 dark:from-gray-600 dark:to-gray-800 dark:hover:from-gray-500 dark:hover:to-gray-700 text-white rounded-lg text-sm font-medium transition-colors border-0"
                         >
-                            Apply Changes
+                            {t('parameters.advanced.applyChanges')}
                         </button>
                     </div>
                 </div>

@@ -90,7 +90,20 @@
     "monetary_inv_cost_storage_cap": "Investitionskosten pro Einheit Speicherkapazität.",
     "monetary_purchase_cost_sum": "Gesamtanschaffungskosten einschließlich aller Komponenten.",
     "monetary_sale_cost_sum": "Gesamteinnahmen aus dem Verkauf von Energie oder Dienstleistungen.",
-    "defaultDescription": "{{alias}} - Konfigurieren Sie diesen Parameter basierend auf Ihren Anforderungen."
+    "defaultDescription": "{{alias}} - Konfigurieren Sie diesen Parameter basierend auf Ihren Anforderungen.",
+    "advanced": {
+      "title": "Erweiterte Parameter",
+      "description": "Konfigurieren Sie erweiterte Parameter für Ihre Energiebewertung",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Mindestwert verringern",
+      "increaseMinimum": "Mindestwert erhöhen",
+      "decreaseMaximum": "Höchstwert verringern",
+      "increaseMaximum": "Höchstwert erhöhen",
+      "selectOption": "Option auswählen",
+      "resetToDefaults": "Auf Standardwerte zurücksetzen",
+      "applyChanges": "Änderungen übernehmen"
+    }
   },
   "gridStats": {
     "title": "Netzanalyse",
@@ -106,10 +119,32 @@
     "estCost": "Gesch. Kosten",
     "cablesLabel": "Kabel",
     "trafosLabel": "Trafos",
-    "costDescription": "Infrastrukturkosten inkl. Kabel & Transformatoren"
+    "costDescription": "Infrastrukturkosten inkl. Kabel & Transformatoren",
+    "buildingsTooltip": "Alle Gebäude aus OpenStreetMap im ausgewählten Gebiet. Den Energiebedarf jedes Gebäudes schätzt PyLoVo anhand von Fläche, Geschossen, Haushaltsgröße und Energieausweis.",
+    "trafosTooltip": "Von PyLoVo auf die Gleichzeitigkeitslast ausgelegte Transformatoren. Standardgrößen (100 bis 630 kVA) stammen aus deutschen Gerätekatalogen. Die Kosten je Größe kommen aus Preisen installierter Anlagen.",
+    "cablesTooltip": "Von PyLoVo verlegte NS-Verteilkabel zwischen Gebäuden und Transformatoren. Kosten sind Länge (m) mal Preis pro Meter (€/m) aus dem Gerätekatalog, je nach Kabeltyp.",
+    "lengthTooltip": "Gesamtlänge aller NS-Kabel im Netz. Die Trasse folgt dem kürzesten Weg zwischen Gebäudeanschlüssen und Transformatorstandorten.",
+    "selectionNote": "Ausgewählte Gebäude und die Kabel zu ihren Transformatoren. Gesamtes Netz: {{buildings}} Gebäude, {{cables}} Kabel, {{km}} km, {{utilisation}} % Auslastung.",
+    "simultaneousLoad": "Gleichzeitigkeitslast",
+    "peakLoadTooltip": "Summe der elektrischen Spitzenlasten aller Gebäude (kW), abgeleitet aus dem geschätzten Jahresbedarf jedes Gebäudes mit Standardlastprofilen (VDI 3807 / DIN 18599).",
+    "simultaneousLoadTooltip": "Realistische gleichzeitige Last mit einem Gleichzeitigkeitsfaktor, wobei n die Anzahl der Gebäude ist. Nicht alle Gebäude erreichen ihre Spitzenlast zur selben Zeit.",
+    "capacityTooltip": "Gesamte Nennleistung aller Transformatoren (kVA). Transformatoren werden aus deutschen NS-Standardgrößen gewählt, um die Gleichzeitigkeitslast mit Sicherheitsreserve zu decken.",
+    "utilizationTooltip": "Transformatorauslastung = Gleichzeitigkeitslast ÷ Gesamtkapazität × 100 %. Werte über 80 % können auf zusätzlichen Transformatorbedarf hinweisen.",
+    "cableCostTooltip": "Kabelkosten nach Kabeltyp und Länge. Preise aus deutschen NS-Gerätekatalogen enthalten Material, Tiefbau und Verlegung (€/m).",
+    "trafoCostTooltip": "Kosten für Beschaffung und Installation der Transformatoren. Preise je kVA-Größe aus deutschen Katalogen für Verteilnetzgeräte, zugeordnet zur nächsten Größe.",
+    "sourceNote": "Geschätzt von der PyLoVo-Netzberechnung. Kosten aus deutschen NS-Gerätekatalogen. Auslastung auf Basis der Gleichzeitigkeitslast."
   },
   "drawing": {
     "clickToDraw": "Klicken zum Zeichnen",
+    "secondCorner": "Klicken, um die zweite Ecke zu setzen",
+    "thirdCorner": "Klicken, um die dritte Ecke zu setzen",
+    "rightClickToFinish": "Rechtsklick, um die Fläche abzuschließen",
+    "needThreeCorners": "Eine Fläche braucht mindestens drei Ecken.",
+    "cornersInLine": "Diese Ecken liegen auf einer geraden Linie. Setzen Sie eine Ecke abseits der Linie, um eine Fläche zu bilden.",
+    "clickToDelete": "Klicken, um dieses Polygon zu löschen",
+    "clickToDeleteCorner": "Klicken, um diese Ecke zu löschen",
+    "clickToDeleteTriangle": "Klicken, um dieses Polygon zu löschen (mindestens drei Ecken)",
+    "polygonNoArea": "Die Ecken dieser Fläche lagen auf einer geraden Linie, daher wurde sie nicht übernommen.",
     "clickToClose": "Klicken zum Schließen",
     "start": "Start"
   },
@@ -127,7 +162,9 @@
     "techRemovedFromAll": "{{tech}} von {{count}} Gebäuden entfernt",
     "techRemovedFromBuilding": "{{tech}} vom Gebäude entfernt",
     "techNotFound": "Technologie {{tech}} nicht gefunden",
-    "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung"
+    "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
+    "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
+    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}"
   },
   "common": {
     "save": "Speichern",
@@ -1075,14 +1112,26 @@
     "escToCancel": "um das Zeichnen abzubrechen",
     "pointsAdded": "{{count}} hinzugefügt",
     "editPolygon": "Polygon bearbeiten",
-    "moveVertex": "Ecken verschieben",
+    "moveVertex": "Ecke ziehen, um sie zu verschieben",
     "moveVertexHint": "Ziehen Sie einen Eckpunkt zum Anpassen",
-    "addVertex": "Punkt hinzufügen",
+    "addVertex": "Kante ziehen, um eine Ecke hinzuzufügen",
     "addVertexHint": "Klicken Sie auf eine Kante",
     "removeVertex": "Punkt entfernen",
-    "removeVertexHint": "Klicken Sie auf einen Eckpunkt"
+    "removeVertexHint": "auf eine Ecke klicken, um sie zu löschen",
+    "removePolygonHint": "auf ein Polygon klicken, um es zu löschen",
+    "shortcuts": "Tastenkürzel",
+    "groupDrawing": "Zeichnen",
+    "groupDeleting": "Löschen",
+    "groupNavigating": "Navigieren",
+    "rotate3dDrag": "ziehen, um die 3D-Ansicht zu drehen",
+    "spacePanHint": "ziehen, um die Karte zu verschieben",
+    "rightClickCloseHint": "schließt das Polygon",
+    "keyRightClick": "Rechtsklick",
+    "keySpace": "Leertaste",
+    "dismissGuide": "Anleitung ausblenden"
   },
   "workflow": {
+    "optional": "optional",
     "title": "Arbeitsablauf",
     "gridGeneration": "Netzerstellung",
     "gridGenerationHint": "Gebäude analysieren & Netz erstellen",
@@ -1103,7 +1152,11 @@
     "assignBuildingsAction": "Gebäude zuweisen",
     "runPowerFlowAction": "Lastfluss",
     "rerunPowerFlowAction": "Erneut berechnen",
-    "resolveHeatAction": "Wärme zuweisen"
+    "resolveHeatAction": "Wärme zuweisen",
+    "auto": "automatisch",
+    "clickAddTransformer": "Auf die Schaltfläche in der unteren Leiste klicken",
+    "clickOnMapInPolygon": "In die Karte innerhalb des Polygons klicken",
+    "clickToSelectBuilding": "Klicken, um ein Gebäude auszuwählen"
   },
   "time": {
     "justNow": "Gerade eben",
@@ -1576,6 +1629,10 @@
     "technologies": "Technologien",
     "parameters": "Parameter",
     "pypsaSimulation": "PyPSA-Simulation",
+    "prepare3d": {
+      "pending": "Warten auf die Vorbereitung der 3D-Gebäudedaten für dieses Gebiet...",
+      "running": "3D-Gebäudedaten für dieses Gebiet werden vorbereitet..."
+    },
     "powerFlow": {
       "run": "Lastflussanalyse ausführen",
       "rerun": "Lastfluss erneut ausführen",
@@ -1600,7 +1657,20 @@
       "clickToCancel": "Klicken Sie, um das Hinzufügen abzubrechen",
       "clickToMove": "Klicken zum Verschieben",
       "movingSuccess": "Transformator erfolgreich verschoben",
-      "movingFailed": "Transformator konnte nicht verschoben werden"
+      "movingFailed": "Transformator konnte nicht verschoben werden",
+      "userPlaced": "Vom Nutzer platziert",
+      "dialogDescription": "Transformatoreinstellungen anzeigen und ändern. Änderungen wirken sich auf angeschlossene Gebäude aus.",
+      "gridId": "Netz-ID",
+      "voltageTransformation": "Spannungsumwandlung",
+      "mediumVoltage": "Mittelspannung",
+      "lowVoltage": "Niederspannung",
+      "mvShort": "MS",
+      "lvShort": "NS",
+      "mvDescription": "Mittelspannung aus dem Umspannwerk des Netzbetreibers, dreiphasiger Wechselstrom, verteilt über Erdkabel oder Freileitungen",
+      "lvDescription": "Niederspannungsausgang: 400 V zwischen den Phasen (dreiphasig) oder 230 V zwischen Phase und Neutralleiter (einphasig) für Wohn- und Gewerbegebäude",
+      "stepDownNote": "Dieser Transformator senkt die Spannung für eine sichere Verteilung in Gebäuden, ohne die Leistung zu verringern.",
+      "ratedPower": "Nennleistung",
+      "selectKva": "kVA wählen"
     },
     "building": {
       "assignSuccess": "Gebäude dem Transformator zugewiesen",
@@ -1615,7 +1685,8 @@
       "assignPartialSuccess": "{{success}} von {{total}} Gebäuden zugewiesen",
       "cancelAssign": "Abbrechen",
       "nextStep": "Weiter",
-      "finish": "Fertig"
+      "finish": "Fertig",
+      "back": "Zurück"
     },
     "actions": {
       "saveAndExit": "Speichern & Verlassen",
@@ -1628,10 +1699,49 @@
     "mapHeader": {
       "public": "Öffentlich",
       "myBuildings": "Meine Gebäude",
-      "clearAll": "Alle löschen",
+      "clearAll": "Alle Polygone entfernen",
       "togglePublicBuildings": "Öffentliche Gebäude umschalten",
       "toggleMyBuildings": "Meine Gebäude umschalten"
-    }
+    },
+    "mapOverlay": {
+      "analyzingArea": "Gebiet wird analysiert",
+      "canHostChargers": "Mögliche Ladepunkte: {{count}}",
+      "limitedChargers": "Begrenzt, Ladepunkte: {{count}}",
+      "connectedBuildings": "Angeschlossene Gebäude",
+      "types": "Typen",
+      "moreCount": "+{{count}} weitere",
+      "clickForDetails": "Klicken Sie für weitere Details",
+      "class": "Klasse",
+      "estimatedShort": "geschätzt",
+      "floors": "Geschosse",
+      "height": "Höhe",
+      "heightMedian": "Höhe (Median)",
+      "built": "Baujahr",
+      "label": "Label",
+      "energyIndex": "Energieindex",
+      "labelDate": "Label-Datum",
+      "population": "Einwohner",
+      "households": "Haushalte",
+      "avgHouseholdSize": "Durchschn. Haushaltsgröße",
+      "cbsNote": "CBS-Werte sind Statistiken für das Postleitzahlgebiet (bevorzugt PC6, ersatzweise PC4), keine Werte einzelner Gebäude.",
+      "source": "Quelle: {{source}}.",
+      "sourcesNl": "Quellen: {{epOnline}} (Nutzungsbedingungen gelten) und {{cbs}}.",
+      "technologiesCount": "Technologien ({{count}})",
+      "dropToAddTech": "Loslassen, um Technologie hinzuzufügen",
+      "clickToEdit": "Klicken Sie, um Details zu bearbeiten",
+      "mvLine": "MS-Leitung",
+      "normallyOpen": "Normal offen",
+      "length": "Länge",
+      "type": "Typ",
+      "bus": "Knoten"
+    },
+    "unsavedChanges": {
+      "title": "Ungespeicherte Änderungen",
+      "description": "Sie haben ungespeicherte Änderungen in diesem Modell. Bitte speichern Sie manuell, bevor Sie die Seite verlassen, oder verwerfen Sie Ihre Änderungen.",
+      "continueEditing": "Weiter bearbeiten",
+      "discard": "Änderungen verwerfen"
+    },
+    "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version"
   },
   "mapLayers": {
     "title": "Kartenebenen",
@@ -1643,7 +1753,11 @@
       "osmHumanitarian": "Humanitärer Stil OpenStreetMap",
       "cartoPositron": "Helles Thema Basiskarte von CartoDB",
       "cartoVoyager": "Detaillierte Basiskarte von CartoDB",
-      "openTopoMap": "Topografische Stilkarte"
+      "openTopoMap": "Topografische Stilkarte",
+      "maplibreDark": "Dunkle Vektor-Grundkarte",
+      "maplibreVoyager": "Detaillierte Vektor-Grundkarte (Voyager)",
+      "cartoDark": "Dunkle Raster-Grundkarte von CartoDB",
+      "maplibre3d": "3D-Gebäude auf Satellitenbildern"
     },
     "dataLayers": {
       "title": "Datenebenen",
@@ -2117,6 +2231,40 @@
         "name": "Nicht-Haushaltsverbraucher",
         "description": "Energieverbrauchsprofil für Gewerbe und Industrie"
       }
+    },
+    "heatBootstrap": {
+      "title": "Wärmetechnologien",
+      "description": "Wählen Sie, wie Wärmetechnologien zu den Gebäuden hinzugefügt werden.",
+      "prompt": "Den Gebäuden wurde ein Wärmebedarf zugewiesen. Wie möchten Sie Heiztechnologien hinzufügen?",
+      "autoAssign": "Automatisch zuweisen",
+      "autoAssignDescription": "Jedem Gebäude wird die zu seinem Typ passende Heiztechnologie zugewiesen (z. B. Wärmepumpe für Häuser, Gaskessel für Wohnungen, KWK für Industrie). Sie können jede Zuweisung anschließend ändern.",
+      "manual": "Manuell",
+      "manualDescription": "Technologien leer lassen. Die Heiztechnologie jedes Gebäudes wählen Sie anschließend selbst aus."
+    },
+    "addToAllBuildings": "Zu allen Gebäuden hinzufügen",
+    "removeFromAllBuildings": "Von allen Gebäuden entfernen",
+    "paramCount": "Parameter: {{count}}",
+    "paramDialog": {
+      "description": "Konfigurieren Sie die Technologieparameter für dieses Gebäude",
+      "turbineSummary": "{{power}} kW · Rotor {{diameter}} m",
+      "selectPlaceholder": "Auswählen...",
+      "searchTurbines": "Windkraftanlagen suchen...",
+      "noTurbinesMatch": "Keine Anlagen entsprechen der Suche",
+      "noTurbinesAvailable": "Keine Anlagen verfügbar",
+      "turbinesShown": "Angezeigte Anlagen: {{shown}} von {{total}}",
+      "selectHeight": "Höhe auswählen",
+      "required": "Erforderlich",
+      "minValue": "Min: {{value}}",
+      "maxValue": "Max: {{value}}",
+      "infinity": "Unbegrenzt",
+      "applyingTo": "Wird angewendet auf:",
+      "allBuildings": "Alle Gebäude",
+      "osmId": "(OSM: {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (Standardpreis für externen Brennstoff)",
+      "totalCount": "Gesamt: {{count}}",
+      "constraints": "Beschränkungen",
+      "applyToAllBuildings": "Auf alle Gebäude anwenden",
+      "applyTechnology": "Technologie anwenden"
     }
   },
   "locations": {
@@ -2562,7 +2710,57 @@
     "coverageHigh": "Hohe Datenabdeckung",
     "coverageMedium": "Mittlere Datenabdeckung",
     "coverageLow": "Geringe Datenabdeckung",
-    "summaryFooter": "{{countries}} Länder · {{regions}} Regionen · {{grids}} Raster"
+    "summaryFooter": "{{countries}} Länder · {{regions}} Regionen · {{grids}} Raster",
+    "3dBuildingData": "LiDAR-3D-Gebäudehöhen verfügbar",
+    "buildingDialog": {
+      "title": "Gebäudedetails",
+      "description": "Details des ausgewählten Gebäudes anzeigen und bearbeiten, einschließlich Typ, Energiebedarf und Technologien.",
+      "classLabel": "Klasse:",
+      "buildingType": "Gebäudetyp (fClass)",
+      "selectType": "Typ auswählen",
+      "detected": "Erkannt",
+      "allTypes": "Alle Typen",
+      "geometry": "Gebäudegeometrie",
+      "floorArea": "Grundfläche",
+      "floors": "Geschosse",
+      "householdSize": "Haushaltsgröße",
+      "peopleShort": "Pers.",
+      "constructionYearShort": "Baujahr",
+      "sourceHeights": "Höhen aus {{source}}",
+      "buildingHeights": "Gebäudehöhen",
+      "heightMedian": "Höhe (Median)",
+      "heightMax": "Höhe (Maximum)",
+      "heightGround": "Geländehöhe",
+      "energyLabel": "Energielabel",
+      "detectedLabel": "(erkannt: {{label}})",
+      "energyIndex": "Energieindex:",
+      "electricHotWater": "Elektrische Warmwasserbereitung",
+      "recalculating": "Wird neu berechnet...",
+      "recalculateDemand": "Bedarf neu berechnen",
+      "totalFloorArea": "{{floors}} Gesch. × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "Noch keine Technologien hinzugefügt.",
+      "parameterCount": "Parameter: {{count}}",
+      "editParameters": "Parameter bearbeiten",
+      "removeTechnology": "Technologie entfernen",
+      "availableTechnologies": "Verfügbare Technologien",
+      "added": "Hinzugefügt",
+      "labelDate": "Label-Datum:",
+      "cbsPostcodeData": "CBS- / Postleitzahl-Daten",
+      "population": "Bevölkerung",
+      "households": "Haushalte",
+      "avgHouseholdSize": "Durchschn. Haushaltsgröße",
+      "heightsFrom": "Höhen aus",
+      "attributionBy": "von {{name}}",
+      "energyLabelsFrom": "Energielabels aus",
+      "demographicsFrom": "Demografische Daten aus",
+      "cuzkName": "Tschechisches Amt für Landesvermessung und Kataster",
+      "enrichedWith": "Gebäudedaten ergänzt mit",
+      "licensedUnder": "Lizenziert unter",
+      "include": "Einbeziehen",
+      "exclude": "Ausschließen",
+      "includeTooltip": "Dieses benutzerdefinierte Gebäude in das Netz einbeziehen (erfordert Neugenerierung)",
+      "excludeTooltip": "Dieses benutzerdefinierte Gebäude aus dem Netz ausschließen (erfordert Neugenerierung)"
+    }
   },
   "landing": {
     "nav": {
@@ -2753,5 +2951,28 @@
       "thirdPartyLicenses": "Drittanbieter-Lizenzen",
       "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. Dieses Projekt wurde von der Europäischen Union gefördert. Die geäußerten Ansichten und Meinungen sind ausschließlich die der Autoren und spiegeln nicht unbedingt die der Europäischen Union wider."
     }
+  },
+  "transformer": {
+    "onlyInsidePolygon": "Transformatoren können nur innerhalb des ausgewählten Gebiets platziert werden"
+  },
+  "powerFlowLegend": {
+    "customTransformers": "Eigene Transformatoren",
+    "transformer": "Transformator {{number}}",
+    "buildingCount": "Gebäude: {{count}}",
+    "loadUtilization": "Auslastung",
+    "low": "Niedrig",
+    "moderate": "Mäßig",
+    "medium": "Mittel",
+    "high": "Hoch",
+    "overloaded": "Überlastet",
+    "mvLines": "MS-Leitungen"
+  },
+  "buildingConfig": {
+    "backToMap": "Zurück zur Karte",
+    "preparing": "Die 3D-Daten dieses Gebäudes werden vorbereitet. City2TABULA extrahiert und verknüpft die Gebäude des Gebiets. Beim ersten Aufruf eines Gebiets kann das einige Minuten dauern. Das Gebäude öffnet sich hier, sobald es bereit ist.",
+    "loading": "Gebäude wird geladen…",
+    "noGeometry": "City2TABULA enthält die 3D-Geometrie dieses Gebäudes nicht mehr.",
+    "credit3dData": "3D-Daten",
+    "modifiedBy": "geändert durch {{name}}"
   }
 }

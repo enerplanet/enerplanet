@@ -157,7 +157,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                         </TooltipTrigger>
                         <TooltipContent side="right">
                             <p className="text-xs">
-                                {isApplied ? "Remove from all buildings" : "Add to all buildings"}
+                                {isApplied ? t("technologies.removeFromAllBuildings") : t("technologies.addToAllBuildings")}
                             </p>
                         </TooltipContent>
                     </Tooltip>
@@ -183,7 +183,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 </span>
                             )}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">{tech.constraints.length} params</div>
+                        <div className="text-[10px] text-muted-foreground">{t("technologies.paramCount", { count: tech.constraints.length })}</div>
                     </div>
                     <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </button>

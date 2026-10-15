@@ -7,6 +7,7 @@ import {
 } from "@spatialhub/ui";
 import { Flame, Sparkles, Hand } from "lucide-react";
 import { useRef, useState, type FC } from "react";
+import { useTranslation } from "@spatialhub/i18n";
 
 interface HeatBootstrapDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ export const HeatBootstrapDialog: FC<HeatBootstrapDialogProps> = ({
   onAutoAssign,
   onManual,
 }) => {
+  const { t } = useTranslation();
   const [running, setRunning] = useState(false);
   const autoAssignRef = useRef<HTMLButtonElement>(null);
   const manualRef = useRef<HTMLButtonElement>(null);
@@ -58,16 +60,15 @@ export const HeatBootstrapDialog: FC<HeatBootstrapDialogProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
-            Heat technologies
+            {t("technologies.heatBootstrap.title")}
           </AlertDialogTitle>
           <AlertDialogDescription className="sr-only">
-            Choose how to add heat technologies to the buildings.
+            {t("technologies.heatBootstrap.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Heat demand has been assigned to the buildings. How do you want to add
-          heating technologies?
+          {t("technologies.heatBootstrap.prompt")}
         </p>
 
         <div className="grid gap-2" onKeyDown={handleKeyDown}>
@@ -81,12 +82,10 @@ export const HeatBootstrapDialog: FC<HeatBootstrapDialogProps> = ({
             <Sparkles className="h-5 w-5 text-primary mt-0.5 shrink-0" />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Auto-assign
+                {t("technologies.heatBootstrap.autoAssign")}
               </span>
               <span className="block text-xs text-muted-foreground mt-0.5">
-                Give every building the expected-fit heating tech for its type
-                (e.g. heat pump for houses, gas boiler for apartments, CHP for
-                industrial). You can override any assignment afterwards.
+                {t("technologies.heatBootstrap.autoAssignDescription")}
               </span>
             </span>
           </button>
@@ -100,11 +99,10 @@ export const HeatBootstrapDialog: FC<HeatBootstrapDialogProps> = ({
             <Hand className="h-5 w-5 text-primary mt-0.5 shrink-0" />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Manual
+                {t("technologies.heatBootstrap.manual")}
               </span>
               <span className="block text-xs text-muted-foreground mt-0.5">
-                Leave technologies empty — pick each building's heating tech by
-                hand afterwards.
+                {t("technologies.heatBootstrap.manualDescription")}
               </span>
             </span>
           </button>

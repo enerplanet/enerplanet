@@ -202,10 +202,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
   value,
   options,
   onChange,
-  placeholder = "Select...",
+  placeholder,
   error = false,
   turbineData,
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -258,11 +259,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
                   {selectedTurbineName}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {turbineInfo.nominal_power} kW · {turbineInfo.rotor_diameter}m rotor
+                  {t("technologies.paramDialog.turbineSummary", { power: turbineInfo.nominal_power, diameter: turbineInfo.rotor_diameter })}
                 </span>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground">{placeholder}</span>
+              <span className="text-sm text-muted-foreground">{placeholder ?? t("technologies.paramDialog.selectPlaceholder")}</span>
             )}
           </div>
           <ChevronDown
@@ -280,7 +281,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search wind turbines..."
+              placeholder={t("technologies.paramDialog.searchTurbines")}
               className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder-muted-foreground text-foreground"
               autoFocus
             />
@@ -291,7 +292,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
         <div className="max-h-[220px] overflow-y-auto p-1.5">
           {filteredOptions.length === 0 ? (
             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-              {searchTerm ? "No turbines match your search" : "No turbines available"}
+              {searchTerm ? t("technologies.paramDialog.noTurbinesMatch") : t("technologies.paramDialog.noTurbinesAvailable")}
             </div>
           ) : (
             <div className="space-y-0.5">
@@ -353,7 +354,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
 
         <div className="px-3 py-2 border-t border-border bg-muted/30 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {filteredOptions.length} of {options.length} turbines
+            {t("technologies.paramDialog.turbinesShown", { shown: filteredOptions.length, total: options.length })}
           </span>
         </div>
       </DropdownMenuContent>
@@ -370,6 +371,7 @@ interface HubHeightSelectProps {
 }
 
 const HubHeightSelect: FC<HubHeightSelectProps> = ({ value, options, onChange, error = false }) => {
+  const { t } = useTranslation();
   return (
     <Select value={String(value)} onValueChange={(val) => onChange(Number(val))}>
       <SelectTrigger
@@ -387,7 +389,7 @@ const HubHeightSelect: FC<HubHeightSelectProps> = ({ value, options, onChange, e
           </svg>
         </div>
         <div className="flex-1 text-left">
-          <SelectValue placeholder="Select height" />
+          <SelectValue placeholder={t("technologies.paramDialog.selectHeight")} />
         </div>
       </SelectTrigger>
       <SelectContent>
@@ -451,13 +453,10 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       if (staticDescriptions[paramKey]) return staticDescriptions[paramKey];
       if (parameterDescriptionKeys[paramKey]) {
         return t(parameterDescriptionKeys[paramKey], {
-          defaultValue: `${alias} - Configure this parameter based on your requirements.`,
+          defaultValue: t("parameters.defaultDescription", { alias }),
         });
       }
-      return t("parameters.defaultDescription", {
-        alias,
-        defaultValue: `${alias} - Configure this parameter based on your requirements.`,
-      });
+      return t("parameters.defaultDescription", { alias });
     },
     [t]
   );
@@ -634,19 +633,19 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     const numValue = typeof value === "string" ? Number.parseFloat(value) : value;
 
     if (constraint.required && (value === "" || value === null || value === undefined)) {
-      return `Required`;
+      return t("technologies.paramDialog.required");
     }
 
     if (typeof numValue === "number" && !Number.isNaN(numValue)) {
       if (constraint.min !== null && numValue < constraint.min) {
-        return `Min: ${constraint.min}`;
+        return t("technologies.paramDialog.minValue", { value: constraint.min });
       }
       if (
         constraint.max !== null &&
         constraint.max !== "INF" &&
         numValue > Number(constraint.max)
       ) {
-        return `Max: ${constraint.max}`;
+        return t("technologies.paramDialog.maxValue", { value: constraint.max });
       }
     }
 
@@ -798,7 +797,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   if (!technology) return null;
 
   const IconComponent = iconMap[technology.icon] || Settings2;
-  const buildingType = building?.get("type") || "Unknown";
+  const buildingType = building?.get("type") || t("common.unknown");
   const buildingOsmId = building?.get("osm_id") || "";
 
   // Categorize constraints
@@ -883,7 +882,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             <SelectTrigger
               className={`w-full h-8 px-2 bg-background border rounded text-xs text-foreground focus:ring-1 focus:ring-ring ${error ? "border-red-500" : "border-border"}`}
             >
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t("technologies.paramDialog.selectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {options?.map((opt) => (
@@ -901,7 +900,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <input
           type={typeof constraint.default_value === "number" ? "number" : "text"}
           value={displayValue ?? ""}
-          placeholder={isInfinityField ? "Infinity" : ""}
+          placeholder={isInfinityField ? t("technologies.paramDialog.infinity") : ""}
           disabled={isDisabled}
           onChange={(e) => {
             const raw = e.target.value;
@@ -989,16 +988,16 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             <thead>
               <tr className="bg-muted/50">
                 <th className="px-3 py-2 text-left text-[11px] font-semibold text-foreground">
-                  Parameter
+                  {t("technologies.form.parameter")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-32">
-                  Value
+                  {t("results.chartLabels.value")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-20">
-                  Unit
+                  {t("technologies.form.unit")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-24">
-                  Range
+                  {t("technologies.form.range")}
                 </th>
               </tr>
             </thead>
@@ -1021,7 +1020,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     >
       <AlertDialogContent ref={contentRef} className="sm:max-w-2xl p-5">
         <AlertDialogDescription className="sr-only">
-          Configure technology parameters for this building
+          {t("technologies.paramDialog.description")}
         </AlertDialogDescription>
         <Button
           ref={closeButtonRef}
@@ -1044,15 +1043,15 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
           <AlertDialogDescription className="mt-1">
             {technology.description}
             <span className="block text-xs mt-1.5 text-muted-foreground/70">
-              Applying to:{" "}
-              <span className="font-medium">{showApplyToAll ? "All Buildings" : buildingType}</span>{" "}
-              {showApplyToAll ? "" : `(OSM: ${buildingOsmId})`}
+              {t("technologies.paramDialog.applyingTo")}{" "}
+              <span className="font-medium">{showApplyToAll ? t("technologies.paramDialog.allBuildings") : buildingType}</span>{" "}
+              {showApplyToAll ? "" : t("technologies.paramDialog.osmId", { id: buildingOsmId })}
             </span>
             {fuelCarrier && (
               <span className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground/70">
                 <Flame className="w-3 h-3 text-amber-500" />
                 <span className="font-medium text-foreground">{fuelCarrier}</span>
-                <span>@ {carrierPrice(fuelCarrier)} €/MWh (external fuel default)</span>
+                <span>{t("technologies.paramDialog.fuelPrice", { price: carrierPrice(fuelCarrier) })}</span>
               </span>
             )}
           </AlertDialogDescription>
@@ -1061,15 +1060,15 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <div className="relative max-h-[55dvh] overflow-visible border-y border-border py-4">
           <div className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Parameters</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("technologies.parameters")}</h3>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                {technology.constraints.length} total
+                {t("technologies.paramDialog.totalCount", { count: technology.constraints.length })}
               </span>
             </div>
 
-            {renderSection("Configuration", configConstraints)}
-            {renderSection("Constraints", contConstraints)}
-            {renderSection("Costs", costConstraints)}
+            {renderSection(t("results.configuration"), configConstraints)}
+            {renderSection(t("technologies.paramDialog.constraints"), contConstraints)}
+            {renderSection(t("results.buildingDetail.costs"), costConstraints)}
           </div>
         </div>
 
@@ -1080,7 +1079,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             onClick={handleClose}
             className="rounded-xl cursor-pointer text-sm h-10 px-5 font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="default"
@@ -1090,7 +1089,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
           >
             {(() => {
               if (isSaving) return <Loader2 className="w-4 h-4 animate-spin" />;
-              return showApplyToAll ? "Apply to All Buildings" : "Apply Technology";
+              return showApplyToAll ? t("technologies.paramDialog.applyToAllBuildings") : t("technologies.paramDialog.applyTechnology");
             })()}
           </Button>
         </AlertDialogFooter>

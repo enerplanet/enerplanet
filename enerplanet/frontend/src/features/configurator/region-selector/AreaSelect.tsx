@@ -360,9 +360,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     await heatResolution.resolveAllBuildingsHeat();
     setHeatBootstrapPrompted(true);
     setHeatBootstrapOpen(false);
-    notification.showSuccess(
-      t("gridNotifications.heatResolved") || "Heat technologies auto-assigned."
-    );
+    notification.showSuccess(t("gridNotifications.heatAutoAssigned"));
   }, [setHeatResolutionMode, heatResolution, setHeatBootstrapPrompted,
     setHeatBootstrapOpen, notification, t]);
 
@@ -379,10 +377,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     setIsResolvingHeat(true);
     try {
       const count = await heatResolution.resolveAllBuildingsHeat();
-      notification.showSuccess(
-        t("gridNotifications.heatResolved", { count }) ||
-          `${count} building${count === 1 ? "" : "s"} heat-resolved.`
-      );
+      notification.showSuccess(t("gridNotifications.heatResolved", { count }));
     } finally {
       setIsResolvingHeat(false);
     }
