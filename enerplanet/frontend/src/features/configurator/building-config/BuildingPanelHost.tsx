@@ -8,7 +8,7 @@
  * here.
  */
 
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
@@ -19,6 +19,7 @@ import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID } from './credits';
 import { configuratorServices } from './heatClient';
 import { modelRunContext } from './runContext';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
+import { usePreparationStepText } from './useAreaPreparation';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useConfiguratorParams } from './useConfiguratorParams';
@@ -27,7 +28,7 @@ import { useConfiguratorParams } from './useConfiguratorParams';
  * Centred message for the states where there is no view to show. The view's
  * own header holds the back button, so each message carries one instead.
  */
-const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack }) => {
+const Notice: FC<{ children: ReactNode; onBack: () => void }> = ({ children, onBack }) => {
   const { t } = useTranslation();
   return (
     <div className="inset-0 flex h-full items-center justify-center">
@@ -54,11 +55,13 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
   const { t } = useTranslation();
+  const preparationStep = usePreparationStepText();
 
   if (preparing) {
     return (
       <Notice onBack={onExit}>
         {t('buildingConfig.preparing')}
+        {preparationStep && <span className="text-foreground mt-2 block font-medium">{preparationStep}</span>}
       </Notice>
     );
   }

@@ -1641,7 +1641,13 @@
     "pypsaSimulation": "PyPSA-Simulation",
     "prepare3d": {
       "pending": "Warten auf die Vorbereitung der 3D-Gebäudedaten für dieses Gebiet...",
-      "running": "3D-Gebäudedaten für dieses Gebiet werden vorbereitet..."
+      "running": "3D-Gebäudedaten für dieses Gebiet werden vorbereitet...",
+      "step": "Schritt {{index}} von {{count}}: {{label}}",
+      "stages": {
+        "import": "3D-Gebäudedaten werden geladen",
+        "extract_features": "Dächer, Wände und Böden werden vermessen",
+        "link_buildings": "3D-Gebäude werden der Karte zugeordnet"
+      }
     },
     "powerFlow": {
       "run": "Lastflussanalyse ausführen",

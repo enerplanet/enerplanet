@@ -1641,7 +1641,13 @@
     "pypsaSimulation": "PyPSA Simulation",
     "prepare3d": {
       "pending": "Waiting to prepare 3D building data for this area...",
-      "running": "Preparing 3D building data for this area..."
+      "running": "Preparing 3D building data for this area...",
+      "step": "Step {{index}} of {{count}}: {{label}}",
+      "stages": {
+        "import": "Loading 3D building data",
+        "extract_features": "Measuring roofs, walls and floors",
+        "link_buildings": "Matching 3D buildings to the map"
+      }
     },
     "powerFlow": {
       "run": "Run Power Flow Analysis",

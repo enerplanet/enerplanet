@@ -1645,7 +1645,13 @@
     "pypsaSimulation": "Simulation PyPSA",
     "prepare3d": {
       "pending": "En attente de la préparation des données 3D des bâtiments de cette zone...",
-      "running": "Préparation des données 3D des bâtiments de cette zone..."
+      "running": "Préparation des données 3D des bâtiments de cette zone...",
+      "step": "Étape {{index}} sur {{count}} : {{label}}",
+      "stages": {
+        "import": "Chargement des données 3D des bâtiments",
+        "extract_features": "Mesure des toits, murs et sols",
+        "link_buildings": "Association des bâtiments 3D à la carte"
+      }
     },
     "actions": {
       "saveAndExit": "Enregistrer & Quitter",

@@ -1,6 +1,6 @@
 import { Building, Loader2 } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
-import { isPreparing, useAreaPreparationStore } from "@/features/configurator/building-config/useAreaPreparation";
+import { isPreparing, useAreaPreparationStore, usePreparationStepText } from "@/features/configurator/building-config/useAreaPreparation";
 
 interface MapInteractionBannersProps {
   isAddTransformerMode: boolean;
@@ -29,6 +29,7 @@ export const MapInteractionBanners = ({
 }: MapInteractionBannersProps) => {
   const { t } = useTranslation();
   const preparation = useAreaPreparationStore((s) => s.status);
+  const preparationStep = usePreparationStepText();
 
   return (
     <>
@@ -152,7 +153,7 @@ export const MapInteractionBanners = ({
           <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             <span className="text-sm font-medium text-foreground whitespace-nowrap">
-              {t(`simulation.prepare3d.${preparation}`)}
+              {preparationStep ?? t(`simulation.prepare3d.${preparation}`)}
             </span>
           </div>
         </div>

@@ -1384,7 +1384,13 @@
     "pypsaSimulation": "Simulace PyPSA",
     "prepare3d": {
       "pending": "Čeká se na přípravu 3D dat budov pro tuto oblast...",
-      "running": "Připravují se 3D data budov pro tuto oblast..."
+      "running": "Připravují se 3D data budov pro tuto oblast...",
+      "step": "Krok {{index}} z {{count}}: {{label}}",
+      "stages": {
+        "import": "Načítání 3D dat budov",
+        "extract_features": "Měření střech, stěn a podlah",
+        "link_buildings": "Přiřazování 3D budov k mapě"
+      }
     },
     "actions": {
       "saveAndExit": "Uložit & Odejít",
