@@ -207,6 +207,16 @@ definitions:
         example: DE.N.SFH.05.Gen.ReEx.001.001
         type: string
     type: object
+  spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse:
+    properties:
+      building_ref:
+        example: "268426401"
+        type: string
+      series:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.SeriesSummary'
+        type: array
+    type: object
   spatialhub_backend_internal_api_contracts.EnrichBbox:
     properties:
       xmax:
@@ -595,6 +605,89 @@ definitions:
         example: 1
         type: integer
     type: object
+  spatialhub_backend_internal_api_contracts.SeriesSummary:
+    properties:
+      daily:
+        description: |-
+          Daily holds one value per calendar day from Start, Monthly one per
+          calendar month. Weekly holds one per seven days from Start, the last
+          possibly shorter.
+        items:
+          type: number
+        type: array
+      energy_unit:
+        description: EnergyUnit is the unit of Total, Daily, Weekly and Monthly (kWh
+          for kW).
+        type: string
+      monthly:
+        items:
+          type: number
+        type: array
+      name:
+        description: 'name is the series: heating, cooling, electricity, hot_water,
+          kitchen.'
+        example: heating
+        type: string
+      part:
+        description: part is the roof face for a PV series, empty for a whole-building
+          series.
+        type: string
+      peak:
+        type: number
+      peak_time:
+        type: string
+      peak_unit:
+        type: string
+      producer_version:
+        example: 6.10.0+21f79d7ce08016a6df43e81aaad6aa7493c40c25
+        type: string
+      resolution_minutes:
+        example: 60
+        type: integer
+      source:
+        enum:
+        - default
+        - user
+        - uploaded
+        example: default
+        type: string
+      start:
+        example: "1900-01-01T00:00:00Z"
+        type: string
+      total:
+        type: number
+      weekly:
+        items:
+          type: number
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.SeriesWindowResponse:
+    properties:
+      building_ref:
+        example: "268426401"
+        type: string
+      part:
+        type: string
+      resolution_minutes:
+        example: 60
+        type: integer
+      series:
+        example: heating
+        type: string
+      start:
+        example: "1900-01-01T00:00:00Z"
+        type: string
+      unit:
+        example: kW
+        type: string
+      values:
+        items:
+          type: number
+        type: array
+      week:
+        example: 0
+        type: integer
+    type: object
   spatialhub_backend_internal_city2tabula.BuildingGeometry:
     properties:
       dataset_id:
@@ -739,6 +832,138 @@ paths:
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
+  /models/{id}/buildings/{building_ref}/demand-profile:
+    get:
+      description: |-
+        Returns, for each series linked to the building, its total, peak and daily, weekly
+        and monthly energy. Full series are not returned; use the week endpoint or the CSV
+        download. 404 when the building has no stored series in this model yet.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one building's demand profile summary
+      tags:
+      - EnerPlanET
+  /models/{id}/buildings/{building_ref}/series.csv:
+    get:
+      description: |-
+        One row per time step: a UTC timestamp, then one column per series named
+        "<series> [<unit>]". Cooling is written positive. 404 when the building has no
+        stored series in this model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Download one building's series as CSV
+      tags:
+      - EnerPlanET
+  /models/{id}/buildings/{building_ref}/series/{series}:
+    get:
+      description: |-
+        Returns the power values of one week of a series, for the hourly chart. week 0 is
+        the first seven days from the series' start. 400 for a week outside the series,
+        404 when the building or series is not stored in this model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Series name, for example heating
+        in: path
+        name: series
+        required: true
+        type: string
+      - description: Week from the start, default 0
+        in: query
+        name: week
+        type: integer
+      - description: Roof face, for a PV series
+        in: query
+        name: part
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.SeriesWindowResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one week of a building's series
+      tags:
+      - EnerPlanET
   /models/{id}/demand-profiles:
     get:
       description: |-
@@ -776,6 +1001,37 @@ paths:
       security:
       - SessionAuth: []
       summary: Get a model's per-building BuEM energy profiles
+      tags:
+      - EnerPlanET
+  /models/{id}/series.zip:
+    get:
+      description: |-
+        One CSV per building, in the format of the per-building CSV download. 404 when
+        no building of the model has stored series yet.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Download every building's series of a model as a ZIP of CSV files
       tags:
       - EnerPlanET
   /v1/buem/building:

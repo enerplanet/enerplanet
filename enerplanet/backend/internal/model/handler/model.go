@@ -14,6 +14,7 @@ import (
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/store/demandprofile"
 	modelstore "spatialhub_backend/internal/store/model"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/webservice"
 
 	"platform.local/common/pkg/constants"
@@ -77,6 +78,7 @@ type ModelHandler struct {
 	keycloakCache *cache.KeycloakCacheService
 	syncCache     *cache.SyncCacheService
 	profileStore  *demandprofile.Store
+	seriesStore   *seriesstore.Store
 }
 
 func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminTokenProvider *pkgauth.AdminTokenProvider, keycloakBaseURL, realm string, wsClient *webservice.Client, keycloakCache *cache.KeycloakCacheService, syncCache *cache.SyncCacheService) *ModelHandler {
@@ -88,6 +90,7 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 		keycloakCache: keycloakCache,
 		syncCache:     syncCache,
 		profileStore:  demandprofile.NewStore(db),
+		seriesStore:   seriesstore.NewStore(db),
 	}
 }
 
