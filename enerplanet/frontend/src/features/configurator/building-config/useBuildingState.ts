@@ -26,6 +26,7 @@ import { useModelStore } from '@/features/configurator/store/modelStore';
 import { creditsFor, type DatasetCredit } from './credits';
 import { configuratorServices } from './heatClient';
 import { fromStoredBuem, storedBuemOf } from './storedBuem';
+import { isPreparing, useAreaPreparationStore, type PreparationStatus } from './useAreaPreparation';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -49,6 +50,8 @@ export interface BuildingStateResult {
   loading: boolean;
   /** Set when the building resolved to nothing the configurator can show. */
   error: string | null;
+  /** True while City2TABULA is still linking this building in the area's preparation run. */
+  preparing: boolean;
   /**
    * The City2TABULA object_id the envelope came from. The surface geometry is
    * fetched by this, and it has to be the id this same enrich answered with:
@@ -61,7 +64,7 @@ export interface BuildingStateResult {
   credits: DatasetCredit[];
 }
 
-const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, objectId: null, country: null, credits: [] };
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [] };
 
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
 
@@ -92,6 +95,7 @@ async function resolveBuilding(
     building: building ?? null,
     loading: false,
     error: null,
+    preparing: false,
     objectId: entry?.object_id ?? null,
     country: res.data.country ?? null,
     credits: creditsFor(
@@ -120,6 +124,12 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
     return features.find((f) => String(f.properties?.osm_id) === osmId) ?? null;
   }, [osmId, pylovoGridData]);
 
+  // Only a building the area's preparation run is still linking follows the run;
+  // for every other building this stays 'ready', so the run finishing does not
+  // re-resolve it and discard edits in progress.
+  const runState = useAreaPreparationStore((s): PreparationStatus | 'ready' =>
+    osmId !== null && s.missing.has(osmId) ? s.status : 'ready');
+
   // Guards a resolve that finishes after the user has moved to another
   // building, which would otherwise show them the wrong one.
   const currentOsmId = useRef<string | null>(null);
@@ -130,6 +140,9 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
     if (!feature) return setResult(failed('This building is not in the loaded grid.'));
     const box = bboxOf(feature.geometry);
     if (!box) return setResult(failed('This building has no usable footprint.'));
+    if (runState !== 'ready' && isPreparing(runState)) return setResult({ ...EMPTY, preparing: true });
+    if (runState === 'no_data') return setResult(failed('City2TABULA has no 3D data for this building.'));
+    if (runState === 'failed') return setResult(failed('City2TABULA could not prepare the 3D data for this building.'));
 
     setResult({ ...EMPTY, loading: true });
     resolveBuilding(osmId, feature, box)
@@ -141,7 +154,7 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
         console.error('[configurator] could not resolve building', osmId, err);
         setResult(failed('This building could not be loaded.'));
       });
-  }, [osmId, feature]);
+  }, [osmId, feature, runState]);
 
   return result;
 }
