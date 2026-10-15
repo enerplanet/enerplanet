@@ -60,7 +60,8 @@ interface TooltipMvLine {
 }
 
 interface MapOverlaysProps {
-    showDrawHint: boolean;
+    /** Translation key of the drawing hint beside the cursor, or null for none. */
+    drawHintKey?: string | null;
     /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
     deleteHintKey?: string | null;
     cursorPos: { x: number; y: number } | null;
@@ -75,7 +76,7 @@ interface MapOverlaysProps {
 }
 
 export const MapOverlays: FC<MapOverlaysProps> = ({
-    showDrawHint,
+    drawHintKey = null,
     deleteHintKey = null,
     cursorPos,
     transformerTooltip,
@@ -175,13 +176,13 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {showDrawHint && cursorPos && (
+            {drawHintKey && cursorPos && (
                 <div
                     className="absolute pointer-events-none z-20"
                     style={{ left: cursorPos.x, top: cursorPos.y }}
                 >
                     <div className="md-fade-in bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
-                        {t("drawing.clickToDraw")}
+                        {t(drawHintKey)}
                     </div>
                 </div>
             )}

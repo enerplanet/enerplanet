@@ -110,10 +110,15 @@
   },
   "drawing": {
     "clickToDraw": "Click to draw",
+    "secondCorner": "Click to place the second corner",
+    "thirdCorner": "Click to place the third corner",
+    "rightClickToFinish": "Right-click to finish the area",
+    "needThreeCorners": "An area needs at least three corners.",
+    "cornersInLine": "These corners are on one straight line. Add a corner off the line to make an area.",
     "clickToDelete": "Click to delete this polygon",
     "clickToDeleteCorner": "Click to delete this corner",
     "clickToDeleteTriangle": "Click to delete this polygon (three corners is the minimum)",
-    "polygonNoArea": "A polygon needs an area, so its corners cannot all lie on one line. It was not kept.",
+    "polygonNoArea": "The corners of this area were on one straight line, so it was not kept.",
     "clickToClose": "Click to close",
     "start": "Start"
   },

@@ -36,6 +36,8 @@ interface PolygonDrawerProps {
   suspended?: boolean;
   /** Called when a drawn or edited polygon is discarded for having no area. */
   onPolygonRejected?: () => void;
+  /** Called when a right-click cannot close the sketch: too few corners, or all on one line. */
+  onSketchCannotClose?: (reason: "too-few-corners" | "corners-in-line") => void;
   /** Called when the pointer moves onto a polygon corner, into a polygon, or out to empty map. */
   onPointerTargetChange?: (target: PointerTarget) => void;
   allowMultiple?: boolean;
@@ -64,6 +66,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   onClearAll,
   onPointerTargetChange,
   onPolygonRejected,
+  onSketchCannotClose,
   suspended = false,
   allowMultiple = false,
   clearTrigger = 0,
@@ -81,6 +84,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const onClearAllRef = useRef(onClearAll);
   const onPointerTargetChangeRef = useRef(onPointerTargetChange);
   const onPolygonRejectedRef = useRef(onPolygonRejected);
+  const onSketchCannotCloseRef = useRef(onSketchCannotClose);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const bufferSourceRef = useRef<VectorSource | null>(null);
   const startPointSourceRef = useRef<VectorSource | null>(null);
@@ -111,7 +115,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     onClearAllRef.current = onClearAll;
     onPointerTargetChangeRef.current = onPointerTargetChange;
     onPolygonRejectedRef.current = onPolygonRejected;
-  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerTargetChange, onPolygonRejected]);
+    onSketchCannotCloseRef.current = onSketchCannotClose;
+  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerTargetChange, onPolygonRejected, onSketchCannotClose]);
 
   useEffect(() => {
     if (clearTrigger > 0 && vectorSourceRef.current) {
@@ -523,6 +528,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       // While sketching: right-click closes a polygon of three or more vertices, Escape abandons it.
       let sketching = false;
       let currentPointCount = 0;
+      let sketchGeom: Polygon | null = null;
       const endSketch = () => {
         sketching = false;
         currentPointCount = 0;
@@ -536,7 +542,17 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         if (!sketching) return;
         e.preventDefault();
         e.stopPropagation();
-        if (currentPointCount >= 3) drawInteractionRef.current?.finishDrawing();
+        if (currentPointCount < 3 || !sketchGeom) {
+          onSketchCannotCloseRef.current?.("too-few-corners");
+          return;
+        }
+        // The sketch ring ends with the cursor position and the closing vertex.
+        const placed = sketchGeom.getCoordinates()[0].slice(0, -2);
+        if (hasNoArea(new OLPolygon([[...placed, placed[0]]]))) {
+          onSketchCannotCloseRef.current?.("corners-in-line");
+          return;
+        }
+        drawInteractionRef.current?.finishDrawing();
       };
       handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape" && sketching) drawInteractionRef.current?.abortDrawing();
@@ -547,6 +563,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         syncPan();
         applyCursor();
         const geom = evt.feature.getGeometry() as Polygon;
+        sketchGeom = geom;
         geom.on("change", () => {
           currentPointCount = sketchVertexCount(geom);
         });
