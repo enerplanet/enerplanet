@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import Draw, { type DrawEvent } from "ol/interaction/Draw";
 import Modify, { type ModifyEvent } from "ol/interaction/Modify";
+import DragPan from "ol/interaction/DragPan";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import { toLonLat, fromLonLat } from "ol/proj";
@@ -271,6 +272,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     });
 
     const hasNoArea = (geom: Polygon) => getArea(geom, { projection: map.getView().getProjection() }) < MIN_POLYGON_AREA_M2;
+    let spaceHeld = false;
+    let removePanHandlers: (() => void) | null = null;
     let handleContextMenu: ((e: MouseEvent) => void) | null = null;
     let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
     let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
@@ -287,6 +290,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         condition: (event) =>
           primaryAction(event) &&
           noModifierKeys(event) &&
+          !spaceHeld &&
           !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0),
       });
       drawInteractionRef.current = draw;
@@ -503,6 +507,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         map.getViewport().style.cursor = "";
         onPointCountChangeRef.current?.(0);
         onDrawingChangeRef.current?.(false);
+        syncPan();
       };
       handleContextMenu = (e: MouseEvent) => {
         if (!sketching) return;
@@ -516,6 +521,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       draw.on("drawstart", (evt: DrawEvent) => {
         sketching = true;
         currentPointCount = 0;
+        syncPan();
         const geom = evt.feature.getGeometry() as Polygon;
         geom.on("change", () => {
           currentPointCount = sketchVertexCount(geom);
@@ -524,8 +530,62 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       draw.on("drawend", () => {
         sketching = false;
         currentPointCount = 0;
+        syncPan();
       });
       draw.on("drawabort", endSketch);
+
+      // While sketching, the map pans only with Space held, so a slip while placing a vertex cannot move
+      // it. Space shows an open hand, a pan a closed fist. Space is taken only with the pointer on the map.
+      const dragPans = map.getInteractions().getArray().filter((i): i is DragPan => i instanceof DragPan);
+      const viewport = map.getViewport();
+      let pointerOverMap = false;
+      let buttonDown = false;
+      function syncPan() {
+        dragPans.forEach((p) => p.setActive(!sketching || spaceHeld));
+      }
+      const restCursor = () => {
+        viewport.style.cursor = sketching ? "crosshair" : "";
+      };
+      const onSpace = (e: KeyboardEvent) => {
+        if (e.code !== "Space" || (e.type === "keydown" && !pointerOverMap)) return;
+        if (pointerOverMap) e.preventDefault();
+        const down = e.type === "keydown";
+        if (down === spaceHeld) return;
+        spaceHeld = down;
+        syncPan();
+        if (down) viewport.style.cursor = "grab";
+        else restCursor();
+      };
+      const onEnter = () => { pointerOverMap = true; };
+      const onLeave = () => { pointerOverMap = false; };
+      const onDown = () => { buttonDown = true; };
+      const onUp = () => { buttonDown = false; };
+      const onMoveStart = () => {
+        if (buttonDown && (!sketching || spaceHeld)) viewport.style.cursor = "grabbing";
+      };
+      const onMoveEnd = () => {
+        if (spaceHeld) viewport.style.cursor = "grab";
+        else restCursor();
+      };
+      document.addEventListener("keydown", onSpace);
+      document.addEventListener("keyup", onSpace);
+      viewport.addEventListener("pointerenter", onEnter);
+      viewport.addEventListener("pointerleave", onLeave);
+      viewport.addEventListener("pointerdown", onDown);
+      document.addEventListener("pointerup", onUp);
+      map.on("movestart", onMoveStart);
+      map.on("moveend", onMoveEnd);
+      removePanHandlers = () => {
+        document.removeEventListener("keydown", onSpace);
+        document.removeEventListener("keyup", onSpace);
+        viewport.removeEventListener("pointerenter", onEnter);
+        viewport.removeEventListener("pointerleave", onLeave);
+        viewport.removeEventListener("pointerdown", onDown);
+        document.removeEventListener("pointerup", onUp);
+        map.un("movestart", onMoveStart);
+        map.un("moveend", onMoveEnd);
+        dragPans.forEach((p) => p.setActive(true));
+      };
 
       // Shift+click deletes the finished polygon under the cursor. Alt+click deletes a corner (Modify's
       // deleteCondition), except on a triangle, which Modify keeps: there it deletes the whole polygon.
@@ -569,7 +629,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         outside: "crosshair",
       };
       handlePointerMove = (evt: MapBrowserEvent) => {
-        if (sketching || evt.dragging) return;
+        if (sketching || evt.dragging || spaceHeld) return;
         let target: PointerTarget = "outside";
         onTriangleCorner = false;
         targetFeature = cornerFeatureAt(evt.pixel);
@@ -601,6 +661,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (handleKeyDown) document.removeEventListener("keydown", handleKeyDown);
       if (handleShiftClick) map.un("singleclick", handleShiftClick);
       if (handlePointerMove) map.un("pointermove", handlePointerMove);
+      removePanHandlers?.();
       map.getViewport().style.cursor = "";
       if (drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
