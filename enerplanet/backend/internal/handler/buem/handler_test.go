@@ -105,7 +105,7 @@ func TestRunBuilding_SendsTheCallersEnvelopeAndReturnsTheSeries(t *testing.T) {
 		"weather-point":  sampleWeather,
 		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{"timeseries":{"heating":[1,2,3]}}}}]`,
 	})
-	w, resp := post(t, NewHandler(tc, "cosmo-rea6"), postBody("111"))
+	w, resp := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), postBody("111"))
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, "111", resp.OSMID)
@@ -130,7 +130,7 @@ func TestRunBuilding_SendsTheCallersEnvelopeAndReturnsTheSeries(t *testing.T) {
 
 func TestRunBuilding_RejectsAMissingBuildingBlock(t *testing.T) {
 	tc, _ := newFakeTentacron(t, nil)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"),
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil),
 		`{"osm_id":"111","geometry":`+sampleGeometry+`,"start_date":"2018-01-01T00:00:00Z"}`)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -145,7 +145,7 @@ func TestRunBuilding_ValidationYearSetsWeatherAndPeriod(t *testing.T) {
 		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
 	})
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_year":2019,"start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, float64(2019), fake.submitted["weather-point"]["year"])
@@ -159,7 +159,7 @@ func TestRunBuilding_ScenarioRunsOnTheScenarioYear(t *testing.T) {
 		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
 	})
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p90","start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, "p90", fake.submitted["weather-point"]["scenario"])
@@ -169,7 +169,7 @@ func TestRunBuilding_ScenarioRunsOnTheScenarioYear(t *testing.T) {
 func TestRunBuilding_RejectsBothScenarioAndYear(t *testing.T) {
 	tc, _ := newFakeTentacron(t, nil)
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p90","weather_year":2019,"start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "weather_scenario")
@@ -178,7 +178,7 @@ func TestRunBuilding_RejectsBothScenarioAndYear(t *testing.T) {
 func TestRunBuilding_RejectsAnUnknownScenario(t *testing.T) {
 	tc, _ := newFakeTentacron(t, nil)
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_scenario":"p42","start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "p42", "the rejected value belongs in the message")
@@ -189,7 +189,7 @@ func TestRunBuilding_PerBuildingRejectionIsA400NotAnEmpty200(t *testing.T) {
 		"weather-point":  sampleWeather,
 		"buem-buildings": `[{"id":"111","error":"building.envelope is required"}]`,
 	})
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), postBody("111"))
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), postBody("111"))
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "building.envelope is required")
@@ -199,7 +199,7 @@ func TestRunBuilding_WeatherFailureIsABadGateway(t *testing.T) {
 	tc, _ := newFakeTentacron(t, map[string]string{
 		"buem-buildings": `[{"id":"111","buem":{}}]`,
 	})
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), postBody("111"))
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), postBody("111"))
 
 	assert.Equal(t, http.StatusBadGateway, w.Code,
 		"buem-gateway requires a complete weather block, so there is no useful result without one")
@@ -213,7 +213,7 @@ func TestRunBuilding_ForwardsTheSolver(t *testing.T) {
 		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
 	})
 	body := strings.Replace(postBody("111"), `"start_date"`, `"solver":{"use_milp":true},"start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	buildings := fake.submitted["buem-buildings"]["buildings"].([]any)
@@ -228,7 +228,7 @@ func TestRunBuilding_UsesTheRequestedWeatherProvider(t *testing.T) {
 		"buem-buildings": `[{"id":"111","buem":{"thermal_load_profile":{}}}]`,
 	})
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_provider":"era5-land","start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, "era5-land", fake.submitted["weather-point"]["provider"])
@@ -237,7 +237,7 @@ func TestRunBuilding_UsesTheRequestedWeatherProvider(t *testing.T) {
 func TestRunBuilding_RejectsAnUnknownWeatherProvider(t *testing.T) {
 	tc, _ := newFakeTentacron(t, nil)
 	body := strings.Replace(postBody("111"), `"start_date"`, `"weather_provider":"dwd-icon","start_date"`, 1)
-	w, _ := post(t, NewHandler(tc, "cosmo-rea6"), body)
+	w, _ := post(t, NewHandler(tc, "cosmo-rea6", nil, "", nil), body)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "dwd-icon", "the rejected value belongs in the message")

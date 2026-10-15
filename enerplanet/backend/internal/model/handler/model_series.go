@@ -15,6 +15,7 @@ import (
 	"platform.local/platform/logger"
 
 	"spatialhub_backend/internal/api/contracts"
+	"spatialhub_backend/internal/contenthash"
 	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/seriessummary"
 	seriesstore "spatialhub_backend/internal/store/series"
@@ -209,4 +210,54 @@ func (h *ModelHandler) buildingSeries(c *gin.Context, model *models.Model, ref s
 		return nil, false
 	}
 	return linked, true
+}
+
+// EditableModel loads the model with id and checks the caller may edit it,
+// answering the request itself when not. Used by the BuEM handler's runs.
+func (h *ModelHandler) EditableModel(c *gin.Context, id string) (*models.Model, bool) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return nil, false
+	}
+	return h.fetchModelWithEditPermission(c, userCtx.UserID, id)
+}
+
+// ClaimDraftSeries godoc
+//
+//	@Summary		Move an unsaved model's stored series to the saved model
+//	@Description	Links stored for the draft id the frontend created before the model's first save
+//	@Description	move to the model; a link the model already has for the same building and series
+//	@Description	is kept. Call once after creating the model. Needs edit permission on the model.
+//	@Tags			EnerPlanET
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int								true	"Model ID"
+//	@Param			request	body		contracts.ClaimDraftSeriesRequest	true	"Draft id"
+//	@Success		200	{object}	contracts.ClaimDraftSeriesResponse
+//	@Failure		400	{object}	contracts.ErrorResponse
+//	@Failure		403	{object}	contracts.ErrorResponse
+//	@Failure		404	{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/models/{id}/series/claim-draft [post]
+func (h *ModelHandler) ClaimDraftSeries(c *gin.Context) {
+	var req contracts.ClaimDraftSeriesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httputil.BadRequest(c, "draft_id is required")
+		return
+	}
+	model, ok := h.EditableModel(c, c.Param("id"))
+	if !ok {
+		return
+	}
+	revision, err := contenthash.Of(model.Config)
+	if err != nil {
+		httputil.InternalError(c, fmt.Sprintf("failed to hash the config of model %d: %v", model.ID, err))
+		return
+	}
+	moved, err := h.seriesStore.MoveDraft(req.DraftID, model.ID, revision)
+	if err != nil {
+		httputil.InternalError(c, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, contracts.ClaimDraftSeriesResponse{Moved: moved})
 }

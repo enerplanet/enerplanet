@@ -47,6 +47,7 @@ import (
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
@@ -705,7 +706,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
 
-	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider)
+	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider, seriesstore.NewStore(deps.DB), deps.Cfg.BuemVersion, modelHandler)
 	registerBuemRoutes(protectedAPI, buemHandler)
 
 	locationHandler := locationhandler.NewLocationHandler(deps.DB)
@@ -858,6 +859,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/buildings/:building_ref/series/:series", modelHandler.GetBuildingSeriesWeek)
 	api.GET(routeModelByID+"/buildings/:building_ref/series.csv", modelHandler.GetBuildingSeriesCSV)
 	api.GET(routeModelByID+"/series.zip", modelHandler.GetModelSeriesZip)
+	api.POST(routeModelByID+"/series/claim-draft", modelHandler.ClaimDraftSeries)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
@@ -932,6 +934,8 @@ func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.H
 // caller rather than from City2TABULA.
 func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
 	api.POST("/v1/buem/building", handler.RunBuilding)
+	api.POST("/models/:id/buildings/:building_ref/buem", handler.RunModelBuilding)
+	api.POST("/drafts/:draft_id/buildings/:building_ref/buem", handler.RunDraftBuilding)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {

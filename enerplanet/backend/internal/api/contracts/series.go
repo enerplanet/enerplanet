@@ -43,3 +43,13 @@ type SeriesWindowResponse struct {
 	ResolutionMinutes int       `json:"resolution_minutes" example:"60"`
 	Values            []float32 `json:"values"`
 }
+
+// ClaimDraftSeriesRequest is the body of POST /models/{id}/series/claim-draft.
+type ClaimDraftSeriesRequest struct {
+	DraftID string `json:"draft_id" binding:"required" example:"3f6c2a1e-8b1d-4c2e-9a7f-1e2d3c4b5a69"`
+}
+
+// ClaimDraftSeriesResponse reports how many series links moved to the model.
+type ClaimDraftSeriesResponse struct {
+	Moved int64 `json:"moved" example:"24"`
+}

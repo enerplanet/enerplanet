@@ -217,6 +217,20 @@ definitions:
           $ref: '#/definitions/spatialhub_backend_internal_api_contracts.SeriesSummary'
         type: array
     type: object
+  spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest:
+    properties:
+      draft_id:
+        example: 3f6c2a1e-8b1d-4c2e-9a7f-1e2d3c4b5a69
+        type: string
+    required:
+    - draft_id
+    type: object
+  spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse:
+    properties:
+      moved:
+        example: 24
+        type: integer
+    type: object
   spatialhub_backend_internal_api_contracts.EnrichBbox:
     properties:
       xmax:
@@ -786,6 +800,50 @@ info:
   title: EnerPlanET API
   version: "1.0"
 paths:
+  /drafts/{draft_id}/buildings/{building_ref}/buem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        As the model route, for a model not saved yet. The result is linked to the draft
+        and moves to the model when it is saved (POST /models/{id}/series/claim-draft).
+      parameters:
+      - description: Draft id the frontend created for the unsaved model
+        in: path
+        name: draft_id
+        required: true
+        type: string
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Building geometry and BuEM building block; model_id is ignored
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for one building of an unsaved model and store the result
+      tags:
+      - BuEM
   /models:
     get:
       consumes:
@@ -832,6 +890,60 @@ paths:
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
+  /models/{id}/buildings/{building_ref}/buem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs the building with the block the caller supplies, as POST /v1/buem/building
+        does, then stores the result once under its request key and links it to the
+        building as source user. A request whose key is already stored makes no BuEM call.
+        Returns the building's demand summary. Needs edit permission on the model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Building geometry and BuEM building block; model_id is ignored
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for one building of a model and store the result
+      tags:
+      - BuEM
   /models/{id}/buildings/{building_ref}/demand-profile:
     get:
       description: |-
@@ -1032,6 +1144,50 @@ paths:
       security:
       - SessionAuth: []
       summary: Download every building's series of a model as a ZIP of CSV files
+      tags:
+      - EnerPlanET
+  /models/{id}/series/claim-draft:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Links stored for the draft id the frontend created before the model's first save
+        move to the model; a link the model already has for the same building and series
+        is kept. Call once after creating the model. Needs edit permission on the model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Draft id
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Move an unsaved model's stored series to the saved model
       tags:
       - EnerPlanET
   /v1/buem/building:
