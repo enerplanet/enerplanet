@@ -871,7 +871,13 @@
     "rightClickCloseHint": "uzavře polygon",
     "keyRightClick": "Pravé tlačítko",
     "keySpace": "Mezerník",
-    "dismissGuide": "Zavřít průvodce"
+    "dismissGuide": "Zavřít průvodce",
+    "groupBuildings": "Budovy",
+    "disableBuildingHint": "kliknutím budovu vypnete nebo zapnete",
+    "selectBuildingHint": "kliknutím budovy vyberete",
+    "disableSelectedHint": "vypne vybrané budovy",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "workflow": {
     "optional": "volitelné",
@@ -1393,7 +1399,8 @@
       "myBuildings": "Moje budovy",
       "clearAll": "Odstranit všechny polygony",
       "togglePublicBuildings": "Přepnout veřejné budovy",
-      "toggleMyBuildings": "Přepnout moje budovy"
+      "toggleMyBuildings": "Přepnout moje budovy",
+      "disableSelected": "Vypnout vybrané budovy"
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",
@@ -1480,7 +1487,8 @@
       "normallyOpen": "Normálně rozepnuto",
       "length": "Délka",
       "type": "Typ",
-      "bus": "Uzel"
+      "bus": "Uzel",
+      "disabled": "Vypnuto"
     },
     "unsavedChanges": {
       "title": "Neuložené změny",
@@ -2229,7 +2237,11 @@
     "clickToDeleteTriangle": "Kliknutím smažete tento polygon (minimum jsou tři rohy)",
     "polygonNoArea": "Rohy této oblasti ležely na jedné přímce, proto nebyla uložena.",
     "clickToClose": "Klikněte pro uzavření",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Kliknutím budovu vypnete",
+    "clickToEnableBuilding": "Kliknutím budovu znovu zapnete",
+    "clickToSelectBuilding": "Kliknutím budovu vyberete",
+    "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru"
   },
   "forms": {
     "user": {

@@ -146,7 +146,11 @@
     "clickToDeleteTriangle": "Haga clic para eliminar este polígono (el mínimo son tres esquinas)",
     "polygonNoArea": "Las esquinas de esta área estaban en una línea recta, por lo que no se ha conservado.",
     "clickToClose": "Clic para cerrar",
-    "start": "Inicio"
+    "start": "Inicio",
+    "clickToDisableBuilding": "Haga clic para desactivar este edificio",
+    "clickToEnableBuilding": "Haga clic para volver a activar este edificio",
+    "clickToSelectBuilding": "Haga clic para seleccionar este edificio",
+    "clickToDeselectBuilding": "Haga clic para quitar este edificio de la selección"
   },
   "gridNotifications": {
     "gridGenerated": "Red generada: {{count}} edificios encontrados",
@@ -1128,7 +1132,13 @@
     "rightClickCloseHint": "para cerrar el polígono",
     "keyRightClick": "Clic derecho",
     "keySpace": "Espacio",
-    "dismissGuide": "Cerrar la guía"
+    "dismissGuide": "Cerrar la guía",
+    "groupBuildings": "Edificios",
+    "disableBuildingHint": "clic en un edificio para desactivarlo o activarlo",
+    "selectBuildingHint": "clic en edificios para seleccionarlos",
+    "disableSelectedHint": "desactiva los edificios seleccionados",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Supr"
   },
   "workflow": {
     "optional": "opcional",
@@ -1650,7 +1660,8 @@
       "myBuildings": "Mis edificios",
       "clearAll": "Eliminar todos los polígonos",
       "togglePublicBuildings": "Alternar edificios públicos",
-      "toggleMyBuildings": "Alternar mis edificios"
+      "toggleMyBuildings": "Alternar mis edificios",
+      "disableSelected": "Desactivar los edificios seleccionados"
     },
     "powerFlow": {
       "run": "Ejecutar análisis de flujo de potencia",
@@ -1737,7 +1748,8 @@
       "normallyOpen": "Normalmente abierto",
       "length": "Longitud",
       "type": "Tipo",
-      "bus": "Nodo"
+      "bus": "Nodo",
+      "disabled": "Desactivado"
     },
     "unsavedChanges": {
       "title": "Cambios sin guardar",

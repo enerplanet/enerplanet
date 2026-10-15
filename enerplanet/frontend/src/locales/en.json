@@ -146,7 +146,11 @@
     "clickToDeleteTriangle": "Click to delete this polygon (three corners is the minimum)",
     "polygonNoArea": "The corners of this area were on one straight line, so it was not kept.",
     "clickToClose": "Click to close",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Click to disable this building",
+    "clickToEnableBuilding": "Click to enable this building again",
+    "clickToSelectBuilding": "Click to select this building",
+    "clickToDeselectBuilding": "Click to remove this building from the selection"
   },
   "gridNotifications": {
     "gridGenerated": "Grid generated: {{count}} buildings found",
@@ -1128,7 +1132,13 @@
     "rightClickCloseHint": "to close the polygon",
     "keyRightClick": "Right-click",
     "keySpace": "Space",
-    "dismissGuide": "Dismiss guide"
+    "dismissGuide": "Dismiss guide",
+    "groupBuildings": "Buildings",
+    "disableBuildingHint": "click a building to disable or enable it",
+    "selectBuildingHint": "click buildings to select them",
+    "disableSelectedHint": "disables the selected buildings",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "workflow": {
     "optional": "optional",
@@ -1701,7 +1711,8 @@
       "myBuildings": "My Buildings",
       "clearAll": "Remove all polygons",
       "togglePublicBuildings": "Toggle public buildings",
-      "toggleMyBuildings": "Toggle my buildings"
+      "toggleMyBuildings": "Toggle my buildings",
+      "disableSelected": "Disable selected buildings"
     },
     "mapOverlay": {
       "analyzingArea": "Analyzing area",
@@ -1733,7 +1744,8 @@
       "normallyOpen": "Normally Open",
       "length": "Length",
       "type": "Type",
-      "bus": "Bus"
+      "bus": "Bus",
+      "disabled": "Disabled"
     },
     "unsavedChanges": {
       "title": "Unsaved changes",

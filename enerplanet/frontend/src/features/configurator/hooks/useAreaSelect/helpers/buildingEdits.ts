@@ -4,7 +4,7 @@ import type { Geometry } from "ol/geom";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 
 /** Building properties the user sets in the configurator, rather than pylovo. */
-const USER_BUILDING_KEYS = ["techs", "heat_supplier", "buem"] as const;
+const USER_BUILDING_KEYS = ["techs", "heat_supplier", "buem", "activated"] as const;
 
 /**
  * Copies the user's per-building edits from the buildings on the map onto a

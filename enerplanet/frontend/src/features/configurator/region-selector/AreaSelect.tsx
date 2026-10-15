@@ -35,6 +35,7 @@ import {
   useMoveTransformerMode,
 } from "@/features/configurator/hooks/useTransformerMode";
 import { useBuildingAssignMode } from "@/features/configurator/hooks/useBuildingAssignMode";
+import { useBuildingSelection } from "@/features/configurator/hooks/useBuildingSelection";
 import { useMultiEditMode } from "@/features/configurator/hooks/useMultiEditMode";
 import { useBuildingDemandRecalculation } from "@/features/configurator/hooks/useBuildingDemandRecalculation";
 import { useRegionSelection } from "@/features/configurator/hooks/useRegion";
@@ -102,11 +103,24 @@ const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, p
   return "drawing.rightClickToFinish";
 };
 
-/** Translation key of the warning for a click that the held modifier turns into a delete. */
-const deleteHintKey = (target: PointerTarget, keys: { shift: boolean; alt: boolean }, pointerOnMap: boolean): string | null => {
+interface HeldKeys { shift: boolean; alt: boolean; ctrl: boolean }
+
+/** The building under the pointer, as far as the modifier hints need it. */
+interface HoveredBuilding { disabled: boolean; selected: boolean }
+
+const isCorner = (target: PointerTarget): boolean => target === "corner" || target === "triangle-corner";
+
+/** The hovered building's state, from the map tooltip and the current selection. */
+const hoveredBuildingOf = (tooltip: { osmId?: string; disabled?: boolean } | null, selected: ReadonlySet<string>): HoveredBuilding | null =>
+  tooltip ? { disabled: tooltip.disabled === true, selected: selected.has(tooltip.osmId ?? "") } : null;
+
+/** Translation key of the hint for what a click does with the held modifier: delete, disable or select. */
+const deleteHintKey = (target: PointerTarget, keys: HeldKeys, building: HoveredBuilding | null, pointerOnMap: boolean): string | null => {
   if (!pointerOnMap) return null;
   if (target === "corner" && keys.alt) return "drawing.clickToDeleteCorner";
   if (target === "triangle-corner" && keys.alt) return "drawing.clickToDeleteTriangle";
+  if (building && keys.alt) return building.disabled ? "drawing.clickToEnableBuilding" : "drawing.clickToDisableBuilding";
+  if (building && keys.ctrl) return building.selected ? "drawing.clickToDeselectBuilding" : "drawing.clickToSelectBuilding";
   if (target === "polygon" && keys.shift) return "drawing.clickToDelete";
   return null;
 };
@@ -142,7 +156,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
   const [pointerTarget, setPointerTarget] = useState<PointerTarget>("outside");
-  const [heldKeys, setHeldKeys] = useState({ shift: false, alt: false });
+  const [heldKeys, setHeldKeys] = useState<HeldKeys>({ shift: false, alt: false, ctrl: false });
+  const cornerUnderPointerRef = useRef(false);
+  cornerUnderPointerRef.current = isCorner(pointerTarget);
 
   // Draft ID for scoping user-placed transformers to this model session
   const [draftId, setDraftId] = useState<string | undefined>(() => {
@@ -300,6 +316,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const activeMode = useModelStore((s) => s.activeMode);
   suppressDialogOnClickRef.current = activeMode !== null;
 
+  const markModified = useCallback(() => setIsModified(true), [setIsModified]);
+  const buildingSelection = useBuildingSelection({
+    map,
+    pylovoLayersRef: pylovoLayers.pylovoLayersRef,
+    isDrawing: state.isDrawing,
+    cornerUnderPointerRef,
+    onBuildingsChanged: markModified,
+  });
+  const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
+
   // ── Heat-add bootstrap (one-time "auto-assign vs manual" prompt) ──
   const heatBootstrapOpen = useModelStore((s) => s.heatBootstrapOpen);
   const setHeatBootstrapOpen = useModelStore((s) => s.setHeatBootstrapOpen);
@@ -392,10 +418,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     t,
   });
 
-  // Shift+click deletes a polygon and Alt+click a corner; the overlay warns before the click.
+  // Modified clicks delete (Shift, Alt on a corner), disable (Alt) or select (Ctrl); the overlay says which before the click.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => setHeldKeys({ shift: e.shiftKey, alt: e.altKey });
-    const onBlur = () => setHeldKeys({ shift: false, alt: false });
+    const onKey = (e: KeyboardEvent) => setHeldKeys({ shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey || e.metaKey });
+    const onBlur = () => setHeldKeys({ shift: false, alt: false, ctrl: false });
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     window.addEventListener("blur", onBlur);
@@ -466,7 +492,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Drawing helpers ──────────────────────────────────────────────
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.cursorPos !== null && activeMode === null);
 
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing && activeMode === null);
+  const hoveredBuilding = hoveredBuildingOf(mapInteractions.buildingTooltip, selectedBuildingIds);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.cursorPos !== null && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -604,6 +631,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            selectedBuildingCount={buildingSelection.selectedCount}
+            onDisableSelectedBuildings={buildingSelection.disableSelected}
             isLoadingPreference={isLoadingPreference}
             currentWorkspace={currentWorkspace}
             preferredWorkspaceId={preferredWorkspaceId ?? undefined}

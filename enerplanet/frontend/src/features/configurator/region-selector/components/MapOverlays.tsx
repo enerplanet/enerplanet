@@ -22,6 +22,7 @@ interface TechData {
 }
 
 interface TooltipBuilding {
+    disabled?: boolean;
     x: number;
     y: number;
     type: string;
@@ -251,6 +252,11 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5" />
                             {t("results.building")}
+                            {buildingTooltip.disabled && (
+                                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                    {t("simulation.mapOverlay.disabled")}
+                                </span>
+                            )}
                         </div>
                         <div className="text-muted-foreground mt-1">
                             <span className="font-medium text-foreground">{formatFClassLabel(buildingTooltip.type)}</span>

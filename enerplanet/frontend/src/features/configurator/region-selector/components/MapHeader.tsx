@@ -53,6 +53,8 @@ const ModernToggle: FC<ModernToggleProps> = ({
 interface MapHeaderProps {
   allPolygonsCount: number;
   onClearAllPolygons: () => void;
+  selectedBuildingCount?: number;
+  onDisableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
   wsReloadKey?: number;
   currentWorkspace: Workspace | null;
@@ -75,6 +77,8 @@ interface MapHeaderProps {
 export const MapHeader: FC<MapHeaderProps> = ({
   allPolygonsCount,
   onClearAllPolygons,
+  selectedBuildingCount = 0,
+  onDisableSelectedBuildings,
   isLoadingPreference,
   wsReloadKey,
   currentWorkspace,
@@ -138,6 +142,16 @@ export const MapHeader: FC<MapHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {selectedBuildingCount > 0 && onDisableSelectedBuildings && (
+          <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
+            <button
+              onClick={onDisableSelectedBuildings}
+              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {t("simulation.mapHeader.disableSelected")} ({selectedBuildingCount})
+            </button>
+          </div>
+        )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
             <button

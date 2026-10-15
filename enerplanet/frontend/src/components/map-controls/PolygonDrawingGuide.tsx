@@ -49,6 +49,18 @@ const buildShortcutGroups = (
 				{ keys: 'Shift', plus: true, action: t('polygon.removePolygonHint', 'click on polygon to delete it') },
 			],
 		},
+		// Building gestures are handled on the 2D map only.
+		...(isMapLibre3D ? [] : [{
+			key: 'buildings',
+			title: t('polygon.groupBuildings', 'Buildings'),
+			titleClass: 'text-amber-600 dark:text-amber-400',
+			barClass: 'border-amber-500',
+			rows: [
+				{ keys: 'Alt', plus: true, action: t('polygon.disableBuildingHint', 'click a building to disable or enable it') },
+				{ keys: t('polygon.keyCtrl', 'Ctrl'), plus: true, action: t('polygon.selectBuildingHint', 'click buildings to select them') },
+				{ keys: t('polygon.keyDelete', 'Delete'), action: t('polygon.disableSelectedHint', 'disables the selected buildings') },
+			],
+		}]),
 		{
 			key: 'navigating',
 			title: t('polygon.groupNavigating', 'Navigating'),

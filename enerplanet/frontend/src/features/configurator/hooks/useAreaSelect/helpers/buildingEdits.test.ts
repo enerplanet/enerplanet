@@ -29,6 +29,14 @@ describe("carryOverBuildingEdits", () => {
         expect(props[2]).toEqual({ osm_id: "4", f_class: "house" });
     });
 
+    it("keeps a building disabled across regeneration", () => {
+        const next = carryOverBuildingEdits([new Feature({ osm_id: "1", activated: false })], grid("1", "2"));
+        expect(next.buildings!.features.map((f) => f.properties)).toEqual([
+            { osm_id: "1", f_class: "house", activated: false },
+            { osm_id: "2", f_class: "house" },
+        ]);
+    });
+
     it("returns the grid unchanged when nothing was edited", () => {
         const next = grid("1");
         expect(carryOverBuildingEdits([new Feature({ osm_id: "1" })], next)).toBe(next);

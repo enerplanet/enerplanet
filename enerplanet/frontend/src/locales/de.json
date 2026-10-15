@@ -146,7 +146,11 @@
     "clickToDeleteTriangle": "Klicken, um dieses Polygon zu löschen (mindestens drei Ecken)",
     "polygonNoArea": "Die Ecken dieser Fläche lagen auf einer geraden Linie, daher wurde sie nicht übernommen.",
     "clickToClose": "Klicken zum Schließen",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Klicken, um dieses Gebäude zu deaktivieren",
+    "clickToEnableBuilding": "Klicken, um dieses Gebäude wieder zu aktivieren",
+    "clickToSelectBuilding": "Klicken, um dieses Gebäude auszuwählen",
+    "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",
@@ -1128,7 +1132,13 @@
     "rightClickCloseHint": "schließt das Polygon",
     "keyRightClick": "Rechtsklick",
     "keySpace": "Leertaste",
-    "dismissGuide": "Anleitung ausblenden"
+    "dismissGuide": "Anleitung ausblenden",
+    "groupBuildings": "Gebäude",
+    "disableBuildingHint": "auf ein Gebäude klicken, um es zu deaktivieren oder zu aktivieren",
+    "selectBuildingHint": "auf Gebäude klicken, um sie auszuwählen",
+    "disableSelectedHint": "deaktiviert die ausgewählten Gebäude",
+    "keyCtrl": "Strg",
+    "keyDelete": "Entf"
   },
   "workflow": {
     "optional": "optional",
@@ -1701,7 +1711,8 @@
       "myBuildings": "Meine Gebäude",
       "clearAll": "Alle Polygone entfernen",
       "togglePublicBuildings": "Öffentliche Gebäude umschalten",
-      "toggleMyBuildings": "Meine Gebäude umschalten"
+      "toggleMyBuildings": "Meine Gebäude umschalten",
+      "disableSelected": "Ausgewählte Gebäude deaktivieren"
     },
     "mapOverlay": {
       "analyzingArea": "Gebiet wird analysiert",
@@ -1733,7 +1744,8 @@
       "normallyOpen": "Normal offen",
       "length": "Länge",
       "type": "Typ",
-      "bus": "Knoten"
+      "bus": "Knoten",
+      "disabled": "Deaktiviert"
     },
     "unsavedChanges": {
       "title": "Ungespeicherte Änderungen",
