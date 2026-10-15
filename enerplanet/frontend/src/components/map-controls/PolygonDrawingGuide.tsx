@@ -244,10 +244,24 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 									</div>
 								</div>
 
+								{/* Remove polygon */}
+								<div className="flex items-center gap-2">
+									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
+										<Trash2 className="w-3.5 h-3.5 text-foreground" />
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-xs font-medium text-foreground">
+											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Shift</kbd>
+											<span className="mx-1">+</span>
+											<span>{t('polygon.removePolygonHint', 'click on polygon to delete it')}</span>
+										</p>
+									</div>
+								</div>
+
 								{/* Escape hint */}
 								<div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
 									<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">Esc</kbd>
-									<span>{t('polygon.escToClear', 'to clear polygon')}</span>
+									<span>{t('polygon.escToCancel', 'to cancel drawing')}</span>
 								</div>
 
 								{/* 3D rotation hint — only when 3D buildings map is active */}

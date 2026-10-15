@@ -807,8 +807,7 @@
     "addVertex": "Dodaj punkt",
     "addVertexHint": "Kliknij na dowolną krawędź",
     "removeVertex": "Usuń punkt",
-    "removeVertexHint": "kliknij na wierzchołek",
-    "escToClear": "aby wyczyścić wielokąt"
+    "removeVertexHint": "kliknij na wierzchołek"
   },
   "workflow": {
     "title": "Przebieg pracy",

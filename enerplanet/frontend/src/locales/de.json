@@ -1080,8 +1080,7 @@
     "addVertex": "Punkt hinzufügen",
     "addVertexHint": "Klicken Sie auf eine Kante",
     "removeVertex": "Punkt entfernen",
-    "removeVertexHint": "Klicken Sie auf einen Eckpunkt",
-    "escToClear": "um Polygon zu löschen"
+    "removeVertexHint": "Klicken Sie auf einen Eckpunkt"
   },
   "workflow": {
     "title": "Arbeitsablauf",

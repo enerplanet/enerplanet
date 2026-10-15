@@ -10,7 +10,8 @@ import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
 import { Feature } from "ol";
 import { Polygon as OLPolygon, Point } from "ol/geom";
-import { platformModifierKeyOnly } from "ol/events/condition";
+import { noModifierKeys, platformModifierKeyOnly, primaryAction, shiftKeyOnly } from "ol/events/condition";
+import type MapBrowserEvent from "ol/MapBrowserEvent";
 import buffer from "@turf/buffer";
 import type { Feature as GeoJSONFeature, Polygon as GeoJSONPolygon, Position } from "geojson";
 
@@ -250,8 +251,9 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       image: new CircleStyle({ radius: 4, fill: new Fill({ color: "#000000" }) }),
     });
 
-    // Track keydown handler so cleanup can remove it
     let handleContextMenu: ((e: MouseEvent) => void) | null = null;
+    let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
+    let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
 
     // Only add draw interaction if not in readOnly mode
     if (!readOnly) {
@@ -259,6 +261,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         source: vectorSource,
         type: "Polygon",
         style: sketchStyle,
+        // Primary button only, so a right-click never adds a vertex or starts a new sketch.
+        condition: (event) => primaryAction(event) && noModifierKeys(event),
       });
       drawInteractionRef.current = draw;
 
@@ -286,8 +290,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
         geom.on("change", () => {
           const coords = geom.getCoordinates()[0];
-          // Report point count (subtract 1 because last point is cursor position)
-          const pointCount = Math.max(0, coords.length - 1);
+          const pointCount = sketchVertexCount(geom);
           if (onPointCountChangeRef.current) {
             onPointCountChangeRef.current(pointCount);
           }
@@ -305,8 +308,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           }
 
           // Check if cursor is near start point (need at least 3 points to close)
-          if (startCoord && coords.length > 3) {
-            const cursorCoord = coords[coords.length - 1];
+          if (startCoord && sketchVertexCount(geom) >= 3) {
+            const cursorCoord = coords[coords.length - 2];
             const startPixel = map.getPixelFromCoordinate(startCoord);
             const cursorPixel = map.getPixelFromCoordinate(cursorCoord);
 
@@ -435,31 +438,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
             areas.length === areasAtStart.length &&
             areas.every((a, i) => Math.abs(a - areasAtStart[i]) <= 1e-9 * Math.max(1, a));
           if (shapeUnchanged) return;
-          // Rebuild allPolygonsRef from current features IMMEDIATELY for visual feedback
-          const features = vectorSource.getFeatures();
-          const updatedPolygons: [number, number][][] = [];
-
-          for (const feature of features) {
-            const geom = feature.getGeometry() as Polygon;
-            if (geom) {
-              const coords = geom.getCoordinates()[0];
-              let lonLatCoords = coords.map((coord: Coordinate) => {
-                const [lon, lat] = toLonLat(coord);
-                return [lon, lat] as [number, number];
-              });
-
-              // Remove duplicate closing point if present
-              if (
-                lonLatCoords.length > 2 &&
-                lonLatCoords[0][0] === lonLatCoords.at(-1)?.[0] &&
-                lonLatCoords[0][1] === lonLatCoords.at(-1)?.[1]
-              ) {
-                lonLatCoords = lonLatCoords.slice(0, -1);
-              }
-
-              updatedPolygons.push(lonLatCoords);
-            }
-          }
+          const updatedPolygons = polygonsFromSource(vectorSource);
 
           // Update local state immediately
           allPolygonsRef.current = updatedPolygons;
@@ -482,28 +461,54 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         });
       }
 
-      // Right-click to finish and close polygon (need at least 3 vertices)
+      // While sketching: right-click closes a polygon of three or more vertices, Escape abandons it.
+      let sketching = false;
       let currentPointCount = 0;
-      handleContextMenu = (e: MouseEvent) => {
-        if (currentPointCount >= 3 && drawInteractionRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          drawInteractionRef.current.finishDrawing();
-        }
+      const endSketch = () => {
+        sketching = false;
+        currentPointCount = 0;
+        startPointSourceRef.current?.clear();
+        map.getViewport().style.cursor = "";
+        onPointCountChangeRef.current?.(0);
+        onDrawingChangeRef.current?.(false);
       };
-
-      // Track point count from geometry change events for the right-click handler
+      handleContextMenu = (e: MouseEvent) => {
+        if (!sketching) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentPointCount >= 3) drawInteractionRef.current?.finishDrawing();
+      };
+      handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && sketching) drawInteractionRef.current?.abortDrawing();
+      };
       draw.on("drawstart", (evt: DrawEvent) => {
+        sketching = true;
         currentPointCount = 0;
         const geom = evt.feature.getGeometry() as Polygon;
         geom.on("change", () => {
-          const coords = geom.getCoordinates()[0];
-          currentPointCount = Math.max(0, coords.length - 1);
+          currentPointCount = sketchVertexCount(geom);
         });
       });
       draw.on("drawend", () => {
+        sketching = false;
         currentPointCount = 0;
       });
+      draw.on("drawabort", endSketch);
+
+      // Shift+click deletes the finished polygon under the cursor.
+      handleShiftClick = (evt: MapBrowserEvent) => {
+        if (sketching || !shiftKeyOnly(evt)) return;
+        const hit = vectorSource.getFeaturesAtCoordinate(evt.coordinate)[0];
+        if (!hit) return;
+        vectorSource.removeFeature(hit);
+        const remaining = polygonsFromSource(vectorSource);
+        allPolygonsRef.current = remaining;
+        recomputeBuffers(bufferDistanceRef.current);
+        if (remaining.length === 0) onClearAllRef.current?.();
+        else onPolygonModifiedRef.current?.(remaining);
+      };
+      map.on("singleclick", handleShiftClick);
+      document.addEventListener("keydown", handleKeyDown);
 
       map.getViewport().addEventListener("contextmenu", handleContextMenu);
     }
@@ -513,6 +518,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (handleContextMenu) {
         map.getViewport().removeEventListener("contextmenu", handleContextMenu);
       }
+      if (handleKeyDown) document.removeEventListener("keydown", handleKeyDown);
+      if (handleShiftClick) map.un("singleclick", handleShiftClick);
       if (drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
       }
@@ -560,6 +567,22 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   }, [bufferDistanceMeters]);
 
   return null;
+};
+
+/** Vertices the user has placed: the sketch ring also holds the cursor position and the closing vertex. */
+const sketchVertexCount = (geom: Polygon): number => Math.max(0, geom.getCoordinates()[0].length - 2);
+
+/** The source's polygons as lon/lat rings, without the repeated closing vertex. */
+const polygonsFromSource = (source: VectorSource): [number, number][][] => {
+  const polygons: [number, number][][] = [];
+  for (const feature of source.getFeatures()) {
+    const geom = feature.getGeometry() as Polygon | undefined;
+    if (!geom) continue;
+    let ring = geom.getCoordinates()[0].map((coord: Coordinate) => toLonLat(coord) as [number, number]);
+    if (ring.length > 2 && ring[0][0] === ring.at(-1)?.[0] && ring[0][1] === ring.at(-1)?.[1]) ring = ring.slice(0, -1);
+    polygons.push(ring);
+  }
+  return polygons;
 };
 
 const processPolygonBuffer = (

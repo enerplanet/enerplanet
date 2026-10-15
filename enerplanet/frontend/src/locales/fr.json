@@ -1040,8 +1040,7 @@
     "addVertex": "Ajouter un point",
     "addVertexHint": "Cliquez sur une arête",
     "removeVertex": "Supprimer un point",
-    "removeVertexHint": "cliquez sur un sommet",
-    "escToClear": "pour effacer le polygone"
+    "removeVertexHint": "cliquez sur un sommet"
   },
   "workflow": {
     "title": "Flux de travail",

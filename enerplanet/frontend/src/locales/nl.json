@@ -807,8 +807,7 @@
     "addVertex": "Punt toevoegen",
     "addVertexHint": "Klik op een rand",
     "removeVertex": "Punt verwijderen",
-    "removeVertexHint": "klik op een hoekpunt",
-    "escToClear": "om polygoon te wissen"
+    "removeVertexHint": "klik op een hoekpunt"
   },
   "workflow": {
     "title": "Werkstroom",

@@ -807,8 +807,7 @@
     "addVertex": "Přidat bod",
     "addVertexHint": "Klikněte na libovolnou hranu",
     "removeVertex": "Odstranit bod",
-    "removeVertexHint": "klikněte na vrchol",
-    "escToClear": "pro vymazání polygonu"
+    "removeVertexHint": "klikněte na vrchol"
   },
   "workflow": {
     "title": "Pracovní postup",
