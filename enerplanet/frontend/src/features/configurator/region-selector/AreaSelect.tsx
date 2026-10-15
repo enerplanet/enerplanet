@@ -431,8 +431,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Drawing helpers ──────────────────────────────────────────────
   const showDrawHint =
     state.cursorPos &&
-    !state.isDrawing &&
-    (state.allowMultiplePolygons || state.allPolygons.length === 0);
+    !state.isDrawing;
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -523,7 +522,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             />
             {!editMode && (
               <PolygonDrawingGuide
-                canDraw={state.allowMultiplePolygons || state.allPolygons.length === 0}
+                canDraw
                 isDrawing={state.isDrawing}
                 polygonCount={state.allPolygons.length}
                 currentPointCount={currentPointCount}
@@ -567,8 +566,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         mapHeader={
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
-            allowMultiplePolygons={state.allowMultiplePolygons}
-            onToggleAllowMultiplePolygons={actions.setAllowMultiplePolygons}
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
             isLoadingPreference={isLoadingPreference}
             currentWorkspace={currentWorkspace}
@@ -603,10 +600,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDrawingChange={actions.setIsDrawing}
         onPointCountChange={setCurrentPointCount}
         onClearAll={regionSelection.handleClearAllWithModes}
-        allowMultiple={state.allowMultiplePolygons}
+        allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}
-        disableAfterDraw={!state.allowMultiplePolygons}
         enableEditing={true}
         labels={{
           clickToClose: t("drawing.clickToClose"),

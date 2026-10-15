@@ -49,8 +49,6 @@ export interface ModelStore {
   setAllPolygons: (polygons: [number, number][][]) => void;
   isDrawing: boolean;
   setIsDrawing: (drawing: boolean) => void;
-  allowMultiplePolygons: boolean;
-  setAllowMultiplePolygons: (allow: boolean) => void;
   clearTrigger: number;
   incrementClearTrigger: () => void;
   cursorPos: { x: number; y: number } | null;
@@ -197,7 +195,6 @@ const getInitialState = () => ({
   powerFlowResults: new Map<number, any>(),
   allPolygons: [] as [number, number][][],
   isDrawing: false,
-  allowMultiplePolygons: false,
   clearTrigger: 0,
   cursorPos: null as { x: number; y: number } | null,
   modelName: "",
@@ -275,8 +272,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   setAllPolygons: (polygons) => set({ allPolygons: polygons }),
   isDrawing: false,
   setIsDrawing: (drawing) => set({ isDrawing: drawing }),
-  allowMultiplePolygons: false,
-  setAllowMultiplePolygons: (allow) => set({ allowMultiplePolygons: allow }),
   clearTrigger: 0,
   incrementClearTrigger: () => set((s) => ({ clearTrigger: s.clearTrigger + 1 })),
   cursorPos: null,

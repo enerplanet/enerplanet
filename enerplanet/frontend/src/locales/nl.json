@@ -1318,11 +1318,9 @@
     "mapHeader": {
       "public": "Openbaar",
       "myBuildings": "Mijn gebouwen",
-      "multiplePolygons": "Meerdere polygonen",
       "clearAll": "Alles wissen",
       "togglePublicBuildings": "Openbare gebouwen aan/uit",
-      "toggleMyBuildings": "Mijn gebouwen aan/uit",
-      "toggleMultiplePolygons": "Meerdere polygonen aan/uit"
+      "toggleMyBuildings": "Mijn gebouwen aan/uit"
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",
@@ -2276,11 +2274,6 @@
     "costDescription": "Infrastructuurkosten incl. kabels & transformatoren"
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Meerdere Polygonen",
-      "description": "Schakel deze optie in om meerdere aparte gebieden op de kaart te tekenen voor uw energiebeoordeling. Indien uitgeschakeld, zal het tekenen van een nieuwe polygoon de vorige vervangen. Indien ingeschakeld, kunt u meerdere afzonderlijke gebieden definiëren die allemaal in de analyse worden opgenomen.",
-      "example": "Gebruik dit om energiesimulaties over meerdere niet-aaneengesloten gebieden tegelijkertijd te analyseren."
-    },
     "publicBuildings": {
       "title": "Openbare Aangepaste Gebouwen",
       "description": "Neem gebouwen op die door andere gebruikers zijn gedeeld in de netwerkberekening. Dit zijn aangepaste gebouwen die andere gebruikers openbaar beschikbaar hebben gemaakt.",

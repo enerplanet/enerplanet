@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { Loader2, Globe, Lock, Layers, MapPin } from "lucide-react";
+import { Loader2, Globe, Lock, MapPin } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -52,8 +52,6 @@ const ModernToggle: FC<ModernToggleProps> = ({
 
 interface MapHeaderProps {
   allPolygonsCount: number;
-  allowMultiplePolygons: boolean;
-  onToggleAllowMultiplePolygons: (value: boolean) => void;
   onClearAllPolygons: () => void;
   isLoadingPreference: boolean;
   wsReloadKey?: number;
@@ -76,8 +74,6 @@ interface MapHeaderProps {
 
 export const MapHeader: FC<MapHeaderProps> = ({
   allPolygonsCount,
-  allowMultiplePolygons,
-  onToggleAllowMultiplePolygons,
   onClearAllPolygons,
   isLoadingPreference,
   wsReloadKey,
@@ -198,20 +194,6 @@ export const MapHeader: FC<MapHeaderProps> = ({
                     <TooltipContent>EV Simulation will be available in a future release</TooltipContent>
                 </Tooltip>
                 */}
-
-        <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-          <span className="text-xs font-medium text-foreground flex items-center gap-1">
-            {t("simulation.mapHeader.multiplePolygons")}
-            <InfoIcon tooltipKey="multiplePolygons" position="bottom" />
-          </span>
-          <ModernToggle
-            checked={allowMultiplePolygons}
-            onCheckedChange={onToggleAllowMultiplePolygons}
-            icon={<Layers className="w-full h-full" />}
-            activeColorClass="text-blue-600"
-            ariaLabel={t("simulation.mapHeader.toggleMultiplePolygons")}
-          />
-        </div>
       </div>
     </div>
   );

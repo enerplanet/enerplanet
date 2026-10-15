@@ -63,7 +63,6 @@ export const useAreaSelect = ({
     const showAreaSelectTour = useModelStore((s) => s.showAreaSelectTour); const setShowAreaSelectTour = useModelStore((s) => s.setShowAreaSelectTour);
     const allPolygons = useModelStore((s) => s.allPolygons); const setAllPolygons = useModelStore((s) => s.setAllPolygons);
     const isDrawing = useModelStore((s) => s.isDrawing); const setIsDrawing = useModelStore((s) => s.setIsDrawing);
-    const allowMultiplePolygons = useModelStore((s) => s.allowMultiplePolygons); const setAllowMultiplePolygons = useModelStore((s) => s.setAllowMultiplePolygons);
     const clearTrigger = useModelStore((s) => s.clearTrigger); const incrementClearTrigger = useModelStore((s) => s.incrementClearTrigger);
     const cursorPos = useModelStore((s) => s.cursorPos); const setCursorPos = useModelStore((s) => s.setCursorPos);
     const showAdvancedParams = useModelStore((s) => s.showAdvancedParams); const setShowAdvancedParams = useModelStore((s) => s.setShowAdvancedParams);
@@ -83,8 +82,7 @@ export const useAreaSelect = ({
 
     // ── Load existing model ──
     useEffect(() => { if (editMode && modelId) loadExistingModelData(modelId, { setModelName, setResolution, setFromDate, setToDate, setLoadedCoordinates, setIsLoadingModel, setLoadedConfig }, originalModelRef); }, [editMode, modelId]);
-    // A model saved with several polygons opens with multiple polygons allowed.
-    useEffect(() => { if (editMode && loadedCoordinates?.length) { setAllPolygons(loadedCoordinates); if (loadedCoordinates.length > 1) setAllowMultiplePolygons(true); } }, [editMode, loadedCoordinates, setAllPolygons, setAllowMultiplePolygons]);
+    useEffect(() => { if (editMode && loadedCoordinates?.length) setAllPolygons(loadedCoordinates); }, [editMode, loadedCoordinates, setAllPolygons]);
     useEffect(() => { checkAndShowAreaSelectTour(editMode, setShowAreaSelectTour); }, [editMode]);
     useEffect(() => { const h = () => setShowAreaSelectTour(true); globalThis.addEventListener('restart-area-select-tour', h); return () => globalThis.removeEventListener('restart-area-select-tour', h); }, []);
     useEffect(() => { if (editMode && !editModeInitializedRef.current && !isLoadingModel && originalModelRef.current) editModeInitializedRef.current = true; }, [editMode, isLoadingModel]);
@@ -183,8 +181,8 @@ export const useAreaSelect = ({
     const handleUnsavedDiscard = useCallback(() => { setShowUnsavedDialog(false); setIsModified(false); const url = pendingNavigationUrl; setPendingNavigationUrl(null); if (url) { isInternalNavRef.current = true; navigate(url); } else if (onCancel) onCancel(); else { isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); } }, [navigate, onCancel, pendingNavigationUrl, setShowUnsavedDialog, setIsModified]);
 
     // ── Build return values ──
-    const state = { modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, allowMultiplePolygons, clearTrigger, cursorPos, isGeneratingGrid, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
-    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleClearAllPolygons, setAllowMultiplePolygons, setIsDrawing, setIncludePublicBuildings, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
+    const state = { modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, cursorPos, isGeneratingGrid, includePublicBuildings, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
+    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleClearAllPolygons, setIsDrawing, setIncludePublicBuildings, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
 
     return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setCursorPos, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
 };
