@@ -582,6 +582,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onToggleSimulateEV={setSimulateEV}
             availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
             onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
+            modelRegionName={editMode ? pylovoLayers.regionBoundary?.name : undefined}
           />
         }
         showSidebar={true}
