@@ -301,6 +301,18 @@ definitions:
       run_id:
         example: a1b2c3d4
         type: string
+      stage:
+        example: extract_features
+        type: string
+      stage_count:
+        example: 3
+        type: integer
+      stage_index:
+        example: 2
+        type: integer
+      stage_label:
+        example: Extracting building features
+        type: string
       status:
         example: completed
         type: string

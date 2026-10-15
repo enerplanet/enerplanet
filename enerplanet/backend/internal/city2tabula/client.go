@@ -103,6 +103,16 @@ type Run struct {
 	Country string `json:"country"`
 	Status  string `json:"status"`
 	Error   string `json:"error,omitempty"`
+	RunStage
+}
+
+// RunStage is the pipeline step a run is in: import, extract_features or
+// link_buildings, numbered 1 to 3. It is empty while the run is pending.
+type RunStage struct {
+	Stage      string `json:"stage,omitempty" example:"extract_features"`
+	StageLabel string `json:"stage_label,omitempty" example:"Extracting building features"`
+	StageIndex int    `json:"stage_index,omitempty" example:"2"`
+	StageCount int    `json:"stage_count,omitempty" example:"3"`
 }
 
 // Building is one LOD2 building's thematic (non-geometric) 3D attributes, as

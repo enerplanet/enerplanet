@@ -156,6 +156,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 
 	resp.Status = "running"
 	resp.RunID = run.RunID
+	resp.RunStage = run.RunStage
 	c.JSON(http.StatusAccepted, resp)
 }
 
@@ -200,6 +201,7 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	resp := contracts.EnrichResponse{
 		Status:       run.Status,
 		RunID:        run.RunID,
+		RunStage:     run.RunStage,
 		Data:         map[string]contracts.EnrichedBuilding{},
 		Attributions: []c2t.DatasetCredit{},
 	}

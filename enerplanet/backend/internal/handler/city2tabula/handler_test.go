@@ -43,6 +43,7 @@ type fakeC2T struct {
 	buildingsJSON       string // target_response for c2t-buildings
 	buildingsBadRequest bool   // c2t-buildings fails as an upstream 400 (unsupported country)
 	runStatus           string // status field returned by c2t-run-status
+	runStatusJSON       string // whole c2t-run-status body; overrides runStatus when set
 	runNotFound         bool   // c2t-run-status fails as an upstream 404
 	triggerFails        bool   // c2t-trigger-run fails as an upstream 500
 	triggeredRuns       int
@@ -128,6 +129,9 @@ func (f *fakeC2T) envelope(target string) string {
 	case "c2t-run-status":
 		if f.runNotFound {
 			return fail(http.StatusNotFound, "run not found")
+		}
+		if f.runStatusJSON != "" {
+			return ok(f.runStatusJSON)
 		}
 		return ok(`{"run_id":"run-1","country":"germany","status":"` + f.runStatus + `"}`)
 	default:
@@ -250,6 +254,47 @@ func TestEnrichStatus_Running_ReturnsStatusOnly(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "running", resp.Status)
 	assert.Empty(t, resp.Data)
+}
+
+// The run's pipeline step reaches the client, so the area-preparation notice
+// can say how far the run is.
+func TestEnrichStatus_Running_PassesTheStageThrough(t *testing.T) {
+	fake := &fakeC2T{runStatusJSON: `{"run_id":"run-1","country":"germany","status":"running",` +
+		`"stage":"extract_features","stage_label":"Extracting building features","stage_index":2,"stage_count":3}`}
+	h := &Handler{client: fake.client(t)}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/city2tabula/enrich/run-1", nil)
+	c.Params = gin.Params{{Key: "run_id", Value: "run-1"}}
+	h.EnrichStatus(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "extract_features", resp["stage"])
+	assert.Equal(t, "Extracting building features", resp["stage_label"])
+	assert.Equal(t, float64(2), resp["stage_index"])
+	assert.Equal(t, float64(3), resp["stage_count"])
+}
+
+// A pending run has no stage yet; the fields stay out of the response.
+func TestEnrichStatus_Pending_OmitsTheStage(t *testing.T) {
+	fake := &fakeC2T{runStatus: "pending"}
+	h := &Handler{client: fake.client(t)}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/city2tabula/enrich/run-1", nil)
+	c.Params = gin.Params{{Key: "run_id", Value: "run-1"}}
+	h.EnrichStatus(c)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	for _, key := range []string{"stage", "stage_label", "stage_index", "stage_count"} {
+		assert.NotContains(t, resp, key)
+	}
 }
 
 func TestEnrich_UnsupportedCountry_Returns400(t *testing.T) {

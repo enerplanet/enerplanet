@@ -1681,6 +1681,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4"
                 },
+                "stage": {
+                    "type": "string",
+                    "example": "extract_features"
+                },
+                "stage_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "stage_index": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "stage_label": {
+                    "type": "string",
+                    "example": "Extracting building features"
+                },
                 "status": {
                     "type": "string",
                     "example": "completed"
