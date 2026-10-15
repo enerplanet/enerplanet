@@ -92,15 +92,6 @@
     "monetary_sale_cost_sum": "Total revenue from selling energy or services.",
     "defaultDescription": "{{alias}} - Configure this parameter based on your requirements."
   },
-  "areaStats": {
-    "title": "Area Overview",
-    "area": "Area",
-    "perimeter": "Perimeter",
-    "solarPotential": "Solar Potential",
-    "estGeneration": "Est. Generation",
-    "co2Offset": "CO₂ Offset",
-    "regions": "Regions"
-  },
   "gridStats": {
     "title": "Grid Analysis",
     "analyzing": "Analyzing grid...",

@@ -92,15 +92,6 @@
     "monetary_sale_cost_sum": "Ingresos totales por venta de energía o servicios.",
     "defaultDescription": "{{alias}} - Configure este parámetro según sus requisitos."
   },
-  "areaStats": {
-    "title": "Resumen del área",
-    "area": "Área",
-    "perimeter": "Perímetro",
-    "solarPotential": "Potencial Solar",
-    "estGeneration": "Gen. Estimada",
-    "co2Offset": "Comp. CO₂",
-    "regions": "Regiones"
-  },
   "gridStats": {
     "title": "Análisis de Red",
     "analyzing": "Analizando red...",

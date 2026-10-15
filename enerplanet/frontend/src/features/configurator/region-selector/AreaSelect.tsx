@@ -478,7 +478,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             buildingOsmIds={buildingOsmIdsInPolygon}
             peakLoadKw={peakLoadInPolygonKw}
             regionName={regionName}
-            polygonCoordinates={state.allPolygons}
             isModified={state.isModified}
           />
         }

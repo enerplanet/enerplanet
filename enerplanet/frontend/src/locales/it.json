@@ -2056,15 +2056,6 @@
     "deny": "Rifiuta",
     "accept": "Accetta"
   },
-  "areaStats": {
-    "title": "Panoramica area",
-    "area": "Area",
-    "perimeter": "Perimetro",
-    "solarPotential": "Potenziale Solare",
-    "estGeneration": "Generazione Stimata",
-    "co2Offset": "Compensazione CO₂",
-    "regions": "Regioni"
-  },
   "drawing": {
     "clickToDraw": "Clicca per disegnare",
     "clickToClose": "Clicca per chiudere",
