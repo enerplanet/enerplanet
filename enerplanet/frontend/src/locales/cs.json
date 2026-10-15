@@ -2056,15 +2056,6 @@
     "deny": "Odmítnout",
     "accept": "Přijmout"
   },
-  "areaStats": {
-    "title": "Přehled oblasti",
-    "area": "Plocha",
-    "perimeter": "Obvod",
-    "solarPotential": "Solární Potenciál",
-    "estGeneration": "Odhadovaná Výroba",
-    "co2Offset": "Kompenzace CO₂",
-    "regions": "Regiony"
-  },
   "drawing": {
     "clickToDraw": "Klikněte pro kreslení",
     "clickToClose": "Klikněte pro uzavření",

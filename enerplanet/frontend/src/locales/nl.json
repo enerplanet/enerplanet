@@ -2056,15 +2056,6 @@
     "deny": "Weigeren",
     "accept": "Accepteren"
   },
-  "areaStats": {
-    "title": "Gebiedsoverzicht",
-    "area": "Oppervlakte",
-    "perimeter": "Omtrek",
-    "solarPotential": "Zonnepotentieel",
-    "estGeneration": "Geschatte Opwekking",
-    "co2Offset": "CO₂ Compensatie",
-    "regions": "Regio's"
-  },
   "drawing": {
     "clickToDraw": "Klik om te tekenen",
     "clickToClose": "Klik om te sluiten",

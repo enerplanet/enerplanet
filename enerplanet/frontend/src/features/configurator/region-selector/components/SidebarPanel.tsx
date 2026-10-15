@@ -30,16 +30,7 @@ import {
   Loader2,
   CircuitBoard,
   Activity,
-  Ruler,
-  Sun,
-  Leaf,
-  Zap,
-  MapPin,
 } from "lucide-react";
-import { useMemo } from "react";
-import area from "@turf/area";
-import length from "@turf/length";
-import { polygon, lineString } from "@turf/helpers";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
@@ -77,7 +68,6 @@ interface SidebarPanelProps {
   peakLoadKw?: number;
   customLocationsCount?: number;
   regionName?: string;
-  polygonCoordinates?: [number, number][][];
   isModified?: boolean;
 }
 
@@ -108,60 +98,9 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   peakLoadKw,
   customLocationsCount = 0,
   regionName,
-  polygonCoordinates = [],
   isModified = false,
 }) => {
   const { t } = useTranslation();
-
-  // Calculate polygon area stats
-  const areaStats = useMemo(() => {
-    if (polygonCoordinates.length === 0) return null;
-
-    const { totalArea, totalPerimeter } = polygonCoordinates.reduce(
-      (acc, coords) => {
-        if (!coords || coords.length < 3) return acc;
-        try {
-          const closed = [...coords, coords[0]];
-          const poly = polygon([closed]);
-          const areaM2 = area(poly);
-          const perimeterKm = length(lineString(closed), { units: "kilometers" });
-          return {
-            totalArea: acc.totalArea + areaM2,
-            totalPerimeter: acc.totalPerimeter + perimeterKm * 1000,
-          };
-        } catch {
-          return acc;
-        }
-      },
-      { totalArea: 0, totalPerimeter: 0 }
-    );
-
-    if (totalArea === 0) return null;
-
-    const formatArea = (areaM2: number) => {
-      if (areaM2 >= 1000000) return `${(areaM2 / 1000000).toFixed(2)} km²`;
-      if (areaM2 >= 10000) return `${(areaM2 / 10000).toFixed(2)} ha`;
-      return `${areaM2.toFixed(0)} m²`;
-    };
-
-    const formatPerimeter = (m: number) => {
-      if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-      return `${m.toFixed(0)} m`;
-    };
-
-    const solarKWp = Number((totalArea * 0.15 * 0.2).toFixed(0));
-    const genMWh = Number((solarKWp * 1.1).toFixed(0));
-    const co2Tonnes = (genMWh * 0.4).toFixed(1);
-
-    return {
-      area: formatArea(totalArea),
-      perimeter: formatPerimeter(totalPerimeter),
-      solarKWp,
-      genMWh,
-      co2Tonnes,
-      regions: polygonCoordinates.length,
-    };
-  }, [polygonCoordinates]);
 
   return (
     <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -241,58 +180,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               buildingsCount={buildingsCount}
               peakLoadKw={peakLoadKw}
             />
-          </div>
-        )}
-
-        {/* Area Statistics */}
-        {areaStats && (
-          <div className="md-row-in rounded-lg border border-border bg-card overflow-hidden transition-shadow duration-200 hover:shadow-sm">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
-              <MapPin className="w-3.5 h-3.5 text-foreground" />
-              <span className="text-xs font-semibold text-foreground">{t("areaStats.title")}</span>
-              {areaStats.regions > 1 && (
-                <span className="text-[10px] text-foreground/70 font-medium px-1.5 py-0.5 bg-muted rounded ml-auto">
-                  {areaStats.regions} {t("areaStats.regions")}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 px-3 py-2.5 text-xs">
-              <div className="flex items-center gap-1.5">
-                <Ruler className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("areaStats.area")}</span>
-              </div>
-              <span className="font-medium text-foreground text-right">{areaStats.area}</span>
-
-              <div className="flex items-center gap-1.5">
-                <Ruler className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("areaStats.perimeter")}</span>
-              </div>
-              <span className="font-medium text-foreground text-right">{areaStats.perimeter}</span>
-
-              <div className="flex items-center gap-1.5">
-                <Sun className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("areaStats.solarPotential")}</span>
-              </div>
-              <span className="font-medium text-foreground text-right">
-                ~{areaStats.solarKWp} kWp
-              </span>
-
-              <div className="flex items-center gap-1.5">
-                <Zap className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("areaStats.estGeneration")}</span>
-              </div>
-              <span className="font-medium text-foreground text-right">
-                ~{areaStats.genMWh} MWh/yr
-              </span>
-
-              <div className="flex items-center gap-1.5">
-                <Leaf className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t("areaStats.co2Offset")}</span>
-              </div>
-              <span className="font-medium text-foreground text-right">
-                ~{areaStats.co2Tonnes} t/yr
-              </span>
-            </div>
           </div>
         )}
 

@@ -92,15 +92,6 @@
     "monetary_sale_cost_sum": "Gesamteinnahmen aus dem Verkauf von Energie oder Dienstleistungen.",
     "defaultDescription": "{{alias}} - Konfigurieren Sie diesen Parameter basierend auf Ihren Anforderungen."
   },
-  "areaStats": {
-    "title": "Gebietsübersicht",
-    "area": "Fläche",
-    "perimeter": "Umfang",
-    "solarPotential": "Solarpotenzial",
-    "estGeneration": "Gesch. Erzeugung",
-    "co2Offset": "CO₂-Einsparung",
-    "regions": "Regionen"
-  },
   "gridStats": {
     "title": "Netzanalyse",
     "analyzing": "Netz wird analysiert...",
