@@ -18,7 +18,7 @@ export { useMapResize, useReassignmentLine, useMapLibre3DHandlers } from "./useM
 export { useMultiEditMode } from "./useMultiEditMode";
 export type { MultiEditModeState } from "./useMultiEditMode";
 
-export { useRegionName, useRegionSelection } from "./useRegion";
+export { useRegionSelection } from "./useRegion";
 
 export { useTechDialogFlow } from "./useTechDialogFlow";
 

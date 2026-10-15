@@ -1308,18 +1308,6 @@
     "technologies": "Technologieën",
     "parameters": "Parameters",
     "pypsaSimulation": "PyPSA-simulatie",
-    "summary": {
-      "title": "Simulatieoverzicht",
-      "region": "Regio",
-      "areaDefined": "Gebied gedefinieerd",
-      "drawn": "Getekend",
-      "notDrawn": "Niet getekend",
-      "customLocations": "Aangepaste locaties",
-      "found": "gevonden",
-      "from": "Van",
-      "to": "Tot",
-      "resolution": "Resolutie"
-    },
     "actions": {
       "saveAndExit": "Opslaan & Afsluiten",
       "create": "Energiesimulatie maken",
@@ -1328,7 +1316,6 @@
       "updating": "Simulatie wordt bijgewerkt...",
       "cancel": "Annuleren"
     },
-    "tip": "Tip: Klik op de kaart om uw interessegebied te tekenen. Het systeem voert de energiesimulatie uit voor de geselecteerde regio gedurende de opgegeven periode.",
     "mapHeader": {
       "public": "Openbaar",
       "myBuildings": "Mijn gebouwen",

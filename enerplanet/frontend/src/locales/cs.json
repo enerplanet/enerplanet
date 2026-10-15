@@ -1308,18 +1308,6 @@
     "technologies": "Technologie",
     "parameters": "Parametry",
     "pypsaSimulation": "Simulace PyPSA",
-    "summary": {
-      "title": "Souhrn simulace",
-      "region": "Region",
-      "areaDefined": "Definovaná oblast",
-      "drawn": "Nakresleno",
-      "notDrawn": "Nenakresleno",
-      "customLocations": "Vlastní lokace",
-      "found": "nalezeno",
-      "from": "Od",
-      "to": "Do",
-      "resolution": "Rozlišení"
-    },
     "actions": {
       "saveAndExit": "Uložit & Odejít",
       "create": "Vytvořit energetickou simulaci",
@@ -1328,7 +1316,6 @@
       "updating": "Aktualizace simulace...",
       "cancel": "Zrušit"
     },
-    "tip": "Tip: Klikněte na mapu a nakreslete oblast vašeho zájmu. Systém spustí energetickou simulaci pro vybranou oblast během stanoveného období.",
     "mapHeader": {
       "public": "Veřejné",
       "myBuildings": "Moje budovy",

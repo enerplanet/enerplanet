@@ -35,7 +35,7 @@ import {
 import { useBuildingAssignMode } from "@/features/configurator/hooks/useBuildingAssignMode";
 import { useMultiEditMode } from "@/features/configurator/hooks/useMultiEditMode";
 import { useBuildingDemandRecalculation } from "@/features/configurator/hooks/useBuildingDemandRecalculation";
-import { useRegionName, useRegionSelection } from "@/features/configurator/hooks/useRegion";
+import { useRegionSelection } from "@/features/configurator/hooks/useRegion";
 import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
@@ -290,7 +290,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, []);
 
   // ── Reverse geocode polygon centroid to get region name ──────────
-  const regionName = useRegionName(state.allPolygons);
 
   // ── Map resize handling ──────────────────────────────────────────
   useMapResize(map, mapRef);
@@ -477,7 +476,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             buildingsCount={buildingsInPolygonCount}
             buildingOsmIds={buildingOsmIdsInPolygon}
             peakLoadKw={peakLoadInPolygonKw}
-            regionName={regionName}
             isModified={state.isModified}
           />
         }
