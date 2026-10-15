@@ -38,11 +38,13 @@ var envelopeTypeByClassname = map[string]string{
 // EnvelopeElements builds BuEM's envelope_element list from a building's
 // City2TABULA surface attributes (area, azimuth, tilt per surface). BuEM needs
 // only these attributes, never the surface polygons. A surface is left out
-// only when its type has no BuEM mapping or its area, azimuth or tilt is
-// missing: BuEM's schema requires all three on every element. The IsValid and
-// IsPlanar flags are not a gate (see Surface): on real LOD2 data they are
-// false for nearly every wall and roof while the area and angle are still
-// correct, so gating on them left envelopes with a floor and nothing else.
+// only when its type has no BuEM mapping, its area, azimuth or tilt is
+// missing (BuEM's schema requires all three on every element), or its area is
+// not positive or flagged below precision (BuEM rejects the whole building for
+// one such element). The IsValid and IsPlanar flags are not a gate (see
+// Surface): on real LOD2 data they are false for nearly every wall and roof
+// while the area and angle are still correct, so gating on them left
+// envelopes with a floor and nothing else.
 //
 // Filtering here does not affect 3D rendering. The surface polygons for
 // visualisation are a separate, unfiltered City2TABULA response
@@ -65,6 +67,9 @@ func EnvelopeElements(building Building) []EnvelopeElement {
 			continue
 		}
 		if s.AreaSqm == nil || s.Azimuth == nil || s.Tilt == nil {
+			continue
+		}
+		if *s.AreaSqm <= 0 || (s.AreaBelowPrecision != nil && *s.AreaBelowPrecision) {
 			continue
 		}
 
