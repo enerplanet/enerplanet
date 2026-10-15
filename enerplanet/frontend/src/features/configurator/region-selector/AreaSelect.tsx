@@ -463,9 +463,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const showDrawHint =
     state.cursorPos &&
     !state.isDrawing &&
+    activeMode === null &&
     pointerTarget === "outside";
 
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -638,6 +639,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onClearAll={regionSelection.handleClearAllWithModes}
         onPointerTargetChange={setPointerTarget}
         onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
+        suspended={activeMode !== null}
         allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}

@@ -32,6 +32,8 @@ interface PolygonDrawerProps {
   onDrawingChange?: (isDrawing: boolean) => void;
   onPointCountChange?: (count: number) => void;
   onClearAll?: () => void;
+  /** True while another map tool owns clicks and the cursor; the drawer then does nothing. */
+  suspended?: boolean;
   /** Called when a drawn or edited polygon is discarded for having no area. */
   onPolygonRejected?: () => void;
   /** Called when the pointer moves onto a polygon corner, into a polygon, or out to empty map. */
@@ -62,6 +64,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   onClearAll,
   onPointerTargetChange,
   onPolygonRejected,
+  suspended = false,
   allowMultiple = false,
   clearTrigger = 0,
   initialPolygons,
@@ -93,6 +96,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const disableAfterDrawRef = useRef(disableAfterDraw);
   allowMultipleRef.current = allowMultiple;
   disableAfterDrawRef.current = disableAfterDraw;
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
 
   useEffect(() => {
     bufferDistanceRef.current = bufferDistanceMeters;
@@ -176,6 +181,13 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [initialPolygons, sourceReady, map]);
+
+  // While another tool is active the drawer releases the cursor it set and stops drawing.
+  useEffect(() => {
+    if (!map || !suspended) return;
+    drawInteractionRef.current?.setActive(false);
+    map.getViewport().style.cursor = "";
+  }, [map, suspended]);
 
   // Toggling multiple polygons only changes whether another polygon may be drawn.
   useEffect(() => {
@@ -304,6 +316,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           primaryAction(event) &&
           noModifierKeys(event) &&
           !spaceHeld &&
+          !suspendedRef.current &&
           !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0),
       });
       drawInteractionRef.current = draw;
@@ -560,6 +573,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       // One place sets the cursor, so it always names the tool a click or drag would use: Space pans,
       // Alt picks a corner and Shift a polygon; otherwise drawing, or whatever is under the pointer.
       function applyCursor() {
+        if (suspendedRef.current) return;
         let cursor = "";
         if (panning) cursor = "grabbing";
         else if (spaceHeld) cursor = "grab";
@@ -640,7 +654,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       let targetFeature: Feature | undefined;
       let onTriangleCorner = false;
       handleShiftClick = (evt: MapBrowserEvent) => {
-        if (sketching) return;
+        if (sketching || suspendedRef.current) return;
         if (shiftKeyOnly(evt)) {
           const hit = vectorSource.getFeaturesAtCoordinate(evt.coordinate)[0];
           if (hit) removePolygon(hit);
@@ -659,7 +673,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         outside: "crosshair",
       };
       handlePointerMove = (evt: MapBrowserEvent) => {
-        if (sketching || evt.dragging || spaceHeld) return;
+        if (sketching || evt.dragging || spaceHeld || suspendedRef.current) return;
         let target: PointerTarget = "outside";
         onTriangleCorner = false;
         targetFeature = cornerFeatureAt(evt.pixel);
