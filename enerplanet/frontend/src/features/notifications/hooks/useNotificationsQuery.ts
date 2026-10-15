@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import axios from "@/lib/axios";
-import { config } from "@/configuration/app";
-import { useAuthStore } from "@/store/auth-store";
+import { subscribeNotifications } from "@/features/notifications/notificationStream";
 
 export interface Notification {
 	id: number | string;
@@ -35,18 +34,12 @@ const notificationKeys = {
 		[...notificationKeys.lists(), params] as const,
 };
 
-let eventSource: EventSource | null = null;
+let unsubscribe: (() => void) | null = null;
 
-// Close the event source connection (call on logout)
+// Stop this tab's notification updates (call on logout)
 export function closeNotificationStream() {
-	if (eventSource) {
-		try {
-			eventSource.close();
-		} catch {
-			// Ignore close errors
-		}
-		eventSource = null;
-	}
+	unsubscribe?.();
+	unsubscribe = null;
 }
 
 export const useNotificationsQuery = (params?: { last30Days?: boolean }) => {
@@ -66,63 +59,15 @@ export const useNotificationsQuery = (params?: { last30Days?: boolean }) => {
 		refetchOnWindowFocus: false,
 	});
 
-	// SSE subscription (singleton per tab)
-	const mountedRef = useRef(false);
+	// One subscription per tab, kept across hook mounts until logout.
 	useEffect(() => {
-		if (mountedRef.current) return;
-		mountedRef.current = true;
-
-		if (!eventSource) {
-			initializeEventSource(queryClient);
+		if (!unsubscribe) {
+			unsubscribe = subscribeNotifications((ev) => handleIncomingNotification(ev, queryClient));
 		}
-
-		return () => {
-			// Do not close eventSource to keep singleton across hook mounts
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [queryClient]);
 
 	return query;
 };
-
-// Helper function to build SSE stream URL
-function buildStreamUrl(): string {
-	const base = config.api.baseUrl || '/api';
-	const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-	return `${normalizedBase}/notifications/stream`;
-}
-
-// Helper function to initialize SSE connection
-function initializeEventSource(queryClient: QueryClient) {
-	if (eventSource) {
-		return;
-	}
-	
-	// Don't connect if user is not authenticated
-	const user = useAuthStore.getState().user;
-	if (!user) {
-		return;
-	}
-	
-	try {
-		const streamUrl = buildStreamUrl();
-		const options: EventSourceInit = { withCredentials: true };
-		eventSource = new EventSource(streamUrl, options);
-
-		eventSource.onopen = () => {
-		};
-
-		eventSource.addEventListener("notification", (ev: MessageEvent) => {
-			handleIncomingNotification(ev, queryClient);
-		});
-
-		eventSource.onerror = () => {
-			handleEventSourceError(queryClient);
-		};
-	} catch {
-		// Ignore connection errors
-	}
-}
 
 // Handle incoming notification from SSE
 function handleIncomingNotification(ev: MessageEvent, queryClient: QueryClient) {
@@ -154,31 +99,6 @@ function updateNotificationsList(incoming: Notification, queryClient: QueryClien
 			return { ...old, notifications: next.slice(0, 50) };
 		}
 	);
-}
-
-// Handle SSE error with reconnection
-function handleEventSourceError(queryClient: QueryClient) {
-	try {
-		eventSource?.close();
-	} catch {
-		// Ignore close errors
-	}
-	eventSource = null;
-	
-	// Only attempt to reconnect if user is still authenticated
-	const user = useAuthStore.getState().user;
-	if (!user) {
-		return;
-	}
-	
-	// Attempt to reconnect after 5 seconds
-	setTimeout(() => {
-		// Double-check user is still authenticated before reconnecting
-		const currentUser = useAuthStore.getState().user;
-		if (currentUser) {
-			initializeEventSource(queryClient);
-		}
-	}, 5000);
 }
 
 // Mark single notification as read
