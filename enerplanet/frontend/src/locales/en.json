@@ -111,6 +111,9 @@
   "drawing": {
     "clickToDraw": "Click to draw",
     "clickToDelete": "Click to delete this polygon",
+    "clickToDeleteCorner": "Click to delete this corner",
+    "clickToDeleteTriangle": "Click to delete this polygon (three corners is the minimum)",
+    "polygonNoArea": "A polygon needs an area, so its corners cannot all lie on one line. It was not kept.",
     "clickToClose": "Click to close",
     "start": "Start"
   },
@@ -1081,7 +1084,7 @@
     "addVertex": "Add point",
     "addVertexHint": "Click on any edge",
     "removeVertex": "Remove point",
-    "removeVertexHint": "click on vertex",
+    "removeVertexHint": "click on a corner to delete it",
     "removePolygonHint": "click on polygon to delete it"
   },
   "workflow": {
@@ -1634,7 +1637,7 @@
     "mapHeader": {
       "public": "Public",
       "myBuildings": "My Buildings",
-      "clearAll": "Clear All",
+      "clearAll": "Remove all polygons",
       "togglePublicBuildings": "Toggle public buildings",
       "toggleMyBuildings": "Toggle my buildings"
     }

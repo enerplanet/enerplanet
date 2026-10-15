@@ -10,10 +10,19 @@ import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
 import { Feature } from "ol";
 import { Polygon as OLPolygon, Point } from "ol/geom";
-import { noModifierKeys, platformModifierKeyOnly, primaryAction, shiftKeyOnly } from "ol/events/condition";
+import { altKeyOnly, noModifierKeys, primaryAction, shiftKeyOnly } from "ol/events/condition";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
+import { getArea } from "ol/sphere";
 import buffer from "@turf/buffer";
 import type { Feature as GeoJSONFeature, Polygon as GeoJSONPolygon, Position } from "geojson";
+
+/** What a click at the pointer would act on: a polygon corner (of a triangle), a polygon's inside, or empty map. */
+export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "outside";
+
+// Modify's default pixelTolerance: the distance at which it picks up a vertex.
+const CORNER_TOLERANCE_PX = 10;
+// Below this a polygon covers nothing, e.g. corners that all lie on one line.
+const MIN_POLYGON_AREA_M2 = 1;
 
 interface PolygonDrawerProps {
   map: Map | null;
@@ -22,8 +31,10 @@ interface PolygonDrawerProps {
   onDrawingChange?: (isDrawing: boolean) => void;
   onPointCountChange?: (count: number) => void;
   onClearAll?: () => void;
-  /** Called when the pointer moves into or out of a drawn polygon, while several polygons are allowed. */
-  onPointerInPolygonChange?: (inside: boolean) => void;
+  /** Called when a drawn or edited polygon is discarded for having no area. */
+  onPolygonRejected?: () => void;
+  /** Called when the pointer moves onto a polygon corner, into a polygon, or out to empty map. */
+  onPointerTargetChange?: (target: PointerTarget) => void;
   allowMultiple?: boolean;
   clearTrigger?: number;
   initialPolygons?: [number, number][][];
@@ -48,7 +59,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   onDrawingChange,
   onPointCountChange,
   onClearAll,
-  onPointerInPolygonChange,
+  onPointerTargetChange,
+  onPolygonRejected,
   allowMultiple = false,
   clearTrigger = 0,
   initialPolygons,
@@ -63,7 +75,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const onDrawingChangeRef = useRef(onDrawingChange);
   const onPointCountChangeRef = useRef(onPointCountChange);
   const onClearAllRef = useRef(onClearAll);
-  const onPointerInPolygonChangeRef = useRef(onPointerInPolygonChange);
+  const onPointerTargetChangeRef = useRef(onPointerTargetChange);
+  const onPolygonRejectedRef = useRef(onPolygonRejected);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const bufferSourceRef = useRef<VectorSource | null>(null);
   const startPointSourceRef = useRef<VectorSource | null>(null);
@@ -90,8 +103,9 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     onDrawingChangeRef.current = onDrawingChange;
     onPointCountChangeRef.current = onPointCountChange;
     onClearAllRef.current = onClearAll;
-    onPointerInPolygonChangeRef.current = onPointerInPolygonChange;
-  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerInPolygonChange]);
+    onPointerTargetChangeRef.current = onPointerTargetChange;
+    onPolygonRejectedRef.current = onPolygonRejected;
+  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerTargetChange, onPolygonRejected]);
 
   useEffect(() => {
     if (clearTrigger > 0 && vectorSourceRef.current) {
@@ -256,6 +270,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       image: new CircleStyle({ radius: 4, fill: new Fill({ color: "#000000" }) }),
     });
 
+    const hasNoArea = (geom: Polygon) => getArea(geom, { projection: map.getView().getProjection() }) < MIN_POLYGON_AREA_M2;
     let handleContextMenu: ((e: MouseEvent) => void) | null = null;
     let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
     let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
@@ -376,6 +391,14 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         const polygon = event.feature.getGeometry() as Polygon;
         const coords = polygon.getCoordinates()[0];
 
+        // Draw adds the feature to the source right after drawend, so it is removed once added.
+        if (hasNoArea(polygon)) {
+          vectorSource.once("addfeature", (e) => { if (e.feature) vectorSource.removeFeature(e.feature); });
+          onDrawingChangeRef.current?.(false);
+          onPolygonRejectedRef.current?.();
+          return;
+        }
+
         let lonLatCoords = coords.map((coord: Coordinate) => {
           const [lon, lat] = toLonLat(coord);
           return [lon, lat] as [number, number];
@@ -413,10 +436,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (enableEditing) {
         const modify = new Modify({
           source: vectorSource,
-          // Alt+click to delete vertices
-          deleteCondition: (event) => {
-            return platformModifierKeyOnly(event) && event.type === "singleclick";
-          },
+          deleteCondition: (event) => altKeyOnly(event) && event.type === "singleclick",
           // Style for vertices during editing
           style: new Style({
             image: new CircleStyle({
@@ -448,6 +468,9 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
             areas.length === areasAtStart.length &&
             areas.every((a, i) => Math.abs(a - areasAtStart[i]) <= 1e-9 * Math.max(1, a));
           if (shapeUnchanged) return;
+          const flattened = vectorSource.getFeatures().filter((f) => hasNoArea(f.getGeometry() as Polygon));
+          flattened.forEach((f) => vectorSource.removeFeature(f));
+          if (flattened.length > 0) onPolygonRejectedRef.current?.();
           const updatedPolygons = polygonsFromSource(vectorSource);
 
           // Update local state immediately
@@ -464,9 +487,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           }
 
           modifyDebounceRef.current = setTimeout(() => {
-            if (onPolygonModifiedRef.current) {
-              onPolygonModifiedRef.current([...updatedPolygons]);
-            }
+            if (updatedPolygons.length === 0) onClearAllRef.current?.();
+            else onPolygonModifiedRef.current?.([...updatedPolygons]);
           }, 300); // 300ms debounce for API call only
         });
       }
@@ -505,31 +527,64 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       });
       draw.on("drawabort", endSketch);
 
-      // Shift+click deletes the finished polygon under the cursor.
-      handleShiftClick = (evt: MapBrowserEvent) => {
-        if (sketching || !shiftKeyOnly(evt)) return;
-        const hit = vectorSource.getFeaturesAtCoordinate(evt.coordinate)[0];
-        if (!hit) return;
-        vectorSource.removeFeature(hit);
+      // Shift+click deletes the finished polygon under the cursor. Alt+click deletes a corner (Modify's
+      // deleteCondition), except on a triangle, which Modify keeps: there it deletes the whole polygon.
+      const removePolygon = (feature: Feature) => {
+        vectorSource.removeFeature(feature);
         const remaining = polygonsFromSource(vectorSource);
         allPolygonsRef.current = remaining;
         recomputeBuffers(bufferDistanceRef.current);
         if (remaining.length === 0) onClearAllRef.current?.();
         else onPolygonModifiedRef.current?.(remaining);
       };
+      const cornerFeatureAt = (pixel: number[]) =>
+        enableEditing
+          ? vectorSource.getFeatures().find((f) =>
+              (f.getGeometry() as Polygon).getCoordinates()[0].some((c) => {
+                const p = map.getPixelFromCoordinate(c);
+                return p && Math.hypot(p[0] - pixel[0], p[1] - pixel[1]) <= CORNER_TOLERANCE_PX;
+              })
+            )
+          : undefined;
+      let pointerTarget: PointerTarget = "outside";
+      let targetFeature: Feature | undefined;
+      let onTriangleCorner = false;
+      handleShiftClick = (evt: MapBrowserEvent) => {
+        if (sketching) return;
+        if (shiftKeyOnly(evt)) {
+          const hit = vectorSource.getFeaturesAtCoordinate(evt.coordinate)[0];
+          if (hit) removePolygon(hit);
+        } else if (altKeyOnly(evt) && onTriangleCorner && targetFeature) {
+          removePolygon(targetFeature);
+        }
+      };
       map.on("singleclick", handleShiftClick);
 
-      // Inside a drawn polygon the map is for selecting: drawing pauses (hiding its cursor dot) and the
-      // cursor is a hand. Outside, the crosshair shows that a click adds a vertex.
-      let pointerInside = false;
+      // Near a corner the cursor shows it can be moved. Inside a polygon the map is for selecting:
+      // drawing pauses (hiding its cursor dot) and the cursor is a hand. Outside, a crosshair.
+      const cursorFor: Record<PointerTarget, string> = {
+        corner: "move",
+        "triangle-corner": "move",
+        polygon: "pointer",
+        outside: "crosshair",
+      };
       handlePointerMove = (evt: MapBrowserEvent) => {
-        if (sketching || !allowMultipleRef.current || evt.dragging) return;
-        const inside = vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0;
-        draw.setActive(!inside);
-        map.getViewport().style.cursor = inside ? "pointer" : "crosshair";
-        if (inside !== pointerInside) {
-          pointerInside = inside;
-          onPointerInPolygonChangeRef.current?.(inside);
+        if (sketching || evt.dragging) return;
+        let target: PointerTarget = "outside";
+        onTriangleCorner = false;
+        targetFeature = cornerFeatureAt(evt.pixel);
+        if (targetFeature) {
+          const corners = (targetFeature.getGeometry() as Polygon).getCoordinates()[0].length - 1;
+          onTriangleCorner = corners <= 3;
+          target = onTriangleCorner ? "triangle-corner" : "corner";
+        } else if (vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0) {
+          target = "polygon";
+        }
+        if (allowMultipleRef.current) draw.setActive(target === "outside");
+        map.getViewport().style.cursor = allowMultipleRef.current || targetFeature ? cursorFor[target] : "";
+        if (target !== pointerTarget) {
+          pointerTarget = target;
+          onPointerTargetChangeRef.current?.(target);
         }
       };
       map.on("pointermove", handlePointerMove);

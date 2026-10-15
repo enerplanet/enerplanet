@@ -8,6 +8,7 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
+import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -87,6 +88,15 @@ interface AreaSelectProps {
   existingModelId?: number;
 }
 
+/** Translation key of the warning for a click that the held modifier turns into a delete. */
+const deleteHintKey = (target: PointerTarget, keys: { shift: boolean; alt: boolean }, pointerOnMap: boolean): string | null => {
+  if (!pointerOnMap) return null;
+  if (target === "corner" && keys.alt) return "drawing.clickToDeleteCorner";
+  if (target === "triangle-corner" && keys.alt) return "drawing.clickToDeleteTriangle";
+  if (target === "polygon" && keys.shift) return "drawing.clickToDelete";
+  return null;
+};
+
 export const AreaSelect: FC<AreaSelectProps> = ({
   onAreaSelected,
   onCancel,
@@ -117,8 +127,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
-  const [pointerInPolygon, setPointerInPolygon] = useState(false);
-  const [shiftHeld, setShiftHeld] = useState(false);
+  const [pointerTarget, setPointerTarget] = useState<PointerTarget>("outside");
+  const [heldKeys, setHeldKeys] = useState({ shift: false, alt: false });
 
   // Draft ID for scoping user-placed transformers to this model session
   const [draftId, setDraftId] = useState<string | undefined>(() => {
@@ -373,10 +383,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     t,
   });
 
-  // Shift turns a click inside a polygon into a delete; the overlay warns about it.
+  // Shift+click deletes a polygon and Alt+click a corner; the overlay warns before the click.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Shift") setShiftHeld(e.type === "keydown"); };
-    const onBlur = () => setShiftHeld(false);
+    const onKey = (e: KeyboardEvent) => setHeldKeys({ shift: e.shiftKey, alt: e.altKey });
+    const onBlur = () => setHeldKeys({ shift: false, alt: false });
     window.addEventListener("keydown", onKey);
     window.addEventListener("keyup", onKey);
     window.addEventListener("blur", onBlur);
@@ -448,7 +458,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const showDrawHint =
     state.cursorPos &&
     !state.isDrawing &&
-    !pointerInPolygon;
+    pointerTarget === "outside";
+
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -527,7 +539,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             )}
             <MapOverlays
               showDrawHint={Boolean(showDrawHint)}
-              showDeleteHint={Boolean(state.cursorPos && pointerInPolygon && shiftHeld && !state.isDrawing)}
+              deleteHintKey={deleteHint}
               cursorPos={state.cursorPos}
               transformerTooltip={mapInteractions.transformerTooltip}
               buildingTooltip={mapInteractions.buildingTooltip}
@@ -618,7 +630,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDrawingChange={actions.setIsDrawing}
         onPointCountChange={setCurrentPointCount}
         onClearAll={regionSelection.handleClearAllWithModes}
-        onPointerInPolygonChange={setPointerInPolygon}
+        onPointerTargetChange={setPointerTarget}
+        onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
         allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}
