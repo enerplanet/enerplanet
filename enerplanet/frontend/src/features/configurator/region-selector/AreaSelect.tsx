@@ -9,6 +9,7 @@ import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
 import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -87,6 +88,19 @@ interface AreaSelectProps {
   editMode?: boolean;
   existingModelId?: number;
 }
+
+/** pylovo gives user-placed transformers an osm_id of the form "user/<timestamp>". */
+const hasUserTransformer = (grid: PylovoGridData | undefined): boolean =>
+  (grid?.transformers?.features ?? []).some((f) => String(f.properties?.osm_id ?? "").startsWith("user/"));
+
+/** Translation key of the hint beside the cursor: where to click next while drawing an area. */
+const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, pointerOnMap: boolean): string | null => {
+  if (!pointerOnMap) return null;
+  if (!drawing) return target === "outside" ? "drawing.clickToDraw" : null;
+  if (corners <= 1) return "drawing.secondCorner";
+  if (corners === 2) return "drawing.thirdCorner";
+  return "drawing.rightClickToFinish";
+};
 
 /** Translation key of the warning for a click that the held modifier turns into a delete. */
 const deleteHintKey = (target: PointerTarget, keys: { shift: boolean; alt: boolean }, pointerOnMap: boolean): string | null => {
@@ -455,12 +469,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [pylovoLayers, notification, t]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const showDrawHint =
-    state.cursorPos &&
-    !state.isDrawing &&
-    pointerTarget === "outside";
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.cursorPos !== null && activeMode === null);
 
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, state.cursorPos !== null && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -538,7 +549,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               />
             )}
             <MapOverlays
-              showDrawHint={Boolean(showDrawHint)}
+              drawHintKey={drawHint}
               deleteHintKey={deleteHint}
               cursorPos={state.cursorPos}
               transformerTooltip={mapInteractions.transformerTooltip}
@@ -561,6 +572,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
                 isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
                 hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
               />
             )}
             <GridActionBar
@@ -632,6 +644,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onClearAll={regionSelection.handleClearAllWithModes}
         onPointerTargetChange={setPointerTarget}
         onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
+        onSketchCannotClose={(reason) => notification.showError(t(reason === "too-few-corners" ? "drawing.needThreeCorners" : "drawing.cornersInLine"))}
+        suspended={activeMode !== null}
         allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={editMode ? state.loadedCoordinates : undefined}
