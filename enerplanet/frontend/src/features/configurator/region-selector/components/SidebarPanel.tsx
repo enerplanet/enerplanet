@@ -109,7 +109,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
             <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              Unsaved changes
+              {t("simulation.unsavedChanges.title")}
             </span>
             <Button
               onClick={actions.handleCancel}
@@ -289,7 +289,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                     </SelectItem>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>30-minute resolution coming in a future release</TooltipContent>
+                <TooltipContent>{t("simulation.resolutionComingSoon")}</TooltipContent>
               </Tooltip>
               <SelectItem value="60">60 {t("simulation.minutes")}</SelectItem>
             </SelectContent>

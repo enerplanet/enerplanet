@@ -90,7 +90,20 @@
     "monetary_inv_cost_storage_cap": "Investiční náklady na jednotku kapacity úložiště.",
     "monetary_purchase_cost_sum": "Celkové nákupní náklady včetně všech komponent.",
     "monetary_sale_cost_sum": "Celkové příjmy z prodeje energie nebo služeb.",
-    "defaultDescription": "{{alias}} - Nakonfigurujte tento parametr podle vašich požadavků."
+    "defaultDescription": "{{alias}} - Nakonfigurujte tento parametr podle vašich požadavků.",
+    "advanced": {
+      "title": "Pokročilé parametry",
+      "description": "Nastavte pokročilé parametry pro své energetické hodnocení",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Snížit minimální hodnotu",
+      "increaseMinimum": "Zvýšit minimální hodnotu",
+      "decreaseMaximum": "Snížit maximální hodnotu",
+      "increaseMaximum": "Zvýšit maximální hodnotu",
+      "selectOption": "Vyberte možnost",
+      "resetToDefaults": "Obnovit výchozí hodnoty",
+      "applyChanges": "Použít změny"
+    }
   },
   "common": {
     "save": "Uložit",
@@ -266,6 +279,11 @@
     "unableToLoad": "Nelze načíst výsledky",
     "modelNotFound": "Model nenalezen",
     "backToDashboard": "Zpět na Dashboard",
+    "carrier": {
+      "toggleLabel": "Nosič energie",
+      "electricity": "Elektřina",
+      "heat": "Teplo"
+    },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
     "loadingModels": "Načítání modelů...",
@@ -339,6 +357,9 @@
       "industryG2": "Průmysl G2",
       "g3Demand": "Poptávka G3",
       "gridConnection": "Připojení k Síti",
+      "gridElectricity": "Nákup elektřiny ze sítě",
+      "householdSupply": "Dodávka pro domácnosti",
+      "nonHouseholdSupply": "Dodávka mimo domácnosti",
       "windTurbine": "Větrná Turbína",
       "powerLines": "Elektrické Vedení",
       "sfhDemand": "Poptávka rodinný dům",
@@ -566,12 +587,44 @@
       "transmission": "Přenos",
       "investmentCost": "Investice (CAPEX)",
       "operatingCost": "Provoz (OPEX)",
-      "systemLCOE": "LCOE Systému"
+      "systemLCOE": "LCOE Systému",
+      "simulationPeriod": "Období simulace",
+      "simulationPeriodCost": "Náklady za období simulace",
+      "annualizedCost": "Roční náklady (odhad)",
+      "perLocation": "na lokalitu",
+      "locations": "Lokality",
+      "capex": "Zařízení a instalace",
+      "opex": "Provozní náklady",
+      "costPerKw": "Náklady na kW za rok",
+      "costPerKwh": "Náklady na kWh",
+      "costSplit": "Zařízení / provoz",
+      "energyProduced": "Vyrobená energie",
+      "cheaperThanAvg": "levnější než průměr systému",
+      "moreExpensiveThanAvg": "dražší než průměr",
+      "days": "dní",
+      "hours": "hodin"
+    },
+    "costInfo": {
+      "simulationPeriodNote": "Zobrazené náklady platí pro simulované období {{days}} dní ({{hours}} hodin). Pro celoroční náklady spusťte roční simulaci (8 760 hodin).",
+      "simulationPeriodShort": "Období simulace {{days}} dní",
+      "costBreakdownTooltip": "Zobrazené náklady pokrývají jen simulované období, ne celý rok. Náklady na zařízení jsou rozloženy na jeho životnost, provozní náklady (např. nákup elektřiny ze sítě) odpovídají skutečné spotřebě v daném období. V krátkých simulacích proto technologie s vysokými provozními náklady vypadají poměrně větší.",
+      "annualProjection": "Odhad za rok: {{value}}",
+      "equipmentCostNote": "Náklady na zařízení jsou rozloženy na jeho životnost; zobrazen je jen podíl za toto období simulace.",
+      "equipmentCostDesc": "Solární panely, baterie a další zařízení. Pořizovací cena je rozložena na životnost zařízení (např. 25 let u fotovoltaiky).",
+      "runningCostDesc": "Elektřina nakoupená ze sítě, údržba a další průběžné výdaje závislé na spotřebě.",
+      "systemCostSummaryDesc": "Ukazuje průměrnou cenu energie (ct/kWh) a rozdělení celkových nákladů na zařízení a provoz. Nižší ct/kWh znamená celkově levnější energii.",
+      "lcoeComparisonDesc": "Porovnává cenu energie z jednotlivých zdrojů v ct/kWh. Slunce a vítr jsou levné, protože sluneční svit a vítr nic nestojí; platíte jen za zařízení. Přerušovaná čára ukazuje průměr celého systému.",
+      "investmentBreakdownDesc": "Ukazuje náklady jednotlivých technologií rozdělené na zařízení (jednorázový nákup rozložený na životnost) a provoz (elektřina ze sítě, údržba). Obnovitelné zdroje mají obvykle jen náklady na zařízení."
     },
     "buildingDetail": {
       "building": "Budova",
       "production": "Výroba",
       "demand": "Poptávka",
+      "electricityDemand": "Elektřina",
+      "heatDemand": "Teplo",
+      "yearlyElectricityDemand": "Roční spotřeba elektřiny",
+      "yearlyHeatDemand": "Roční potřeba tepla",
+      "estimated": "odhad",
       "balance": "Bilance",
       "energyProfile": "Energetický Profil",
       "costs": "Náklady",
@@ -802,14 +855,26 @@
     "escToCancel": "pro zrušení kreslení",
     "pointsAdded": "Přidáno {{count}}",
     "editPolygon": "Upravit polygon",
-    "moveVertex": "Přesunout rohy",
+    "moveVertex": "Tažením rohu jej přesunete",
     "moveVertexHint": "Přetáhněte libovolný vrchol pro úpravu",
-    "addVertex": "Přidat bod",
+    "addVertex": "Tažením hrany přidáte roh",
     "addVertexHint": "Klikněte na libovolnou hranu",
     "removeVertex": "Odstranit bod",
-    "removeVertexHint": "klikněte na vrchol"
+    "removeVertexHint": "kliknutím na roh jej smažete",
+    "removePolygonHint": "kliknutím na polygon jej smažete",
+    "shortcuts": "Zkratky",
+    "groupDrawing": "Kreslení",
+    "groupDeleting": "Mazání",
+    "groupNavigating": "Navigace",
+    "rotate3dDrag": "tažením otočíte 3D pohled",
+    "spacePanHint": "tažením posunete mapu",
+    "rightClickCloseHint": "uzavře polygon",
+    "keyRightClick": "Pravé tlačítko",
+    "keySpace": "Mezerník",
+    "dismissGuide": "Zavřít průvodce"
   },
   "workflow": {
+    "optional": "volitelné",
     "title": "Pracovní postup",
     "gridGeneration": "Generování sítě",
     "gridGenerationHint": "Analýza budov a tvorba sítě",
@@ -830,7 +895,11 @@
     "assignBuildingsAction": "Přiřadit budovy",
     "runPowerFlowAction": "Analýza výkonu",
     "rerunPowerFlowAction": "Přepočítat",
-    "resolveHeatAction": "Vyřešit teplo"
+    "resolveHeatAction": "Vyřešit teplo",
+    "auto": "auto",
+    "clickAddTransformer": "Klikněte na tlačítko ve spodní liště",
+    "clickOnMapInPolygon": "Klikněte do mapy uvnitř polygonu",
+    "clickToSelectBuilding": "Kliknutím vyberete budovu"
   },
   "time": {
     "justNow": "Právě teď",
@@ -1307,6 +1376,10 @@
     "technologies": "Technologie",
     "parameters": "Parametry",
     "pypsaSimulation": "Simulace PyPSA",
+    "prepare3d": {
+      "pending": "Čeká se na přípravu 3D dat budov pro tuto oblast...",
+      "running": "Připravují se 3D data budov pro tuto oblast..."
+    },
     "actions": {
       "saveAndExit": "Uložit & Odejít",
       "create": "Vytvořit energetickou simulaci",
@@ -1318,7 +1391,7 @@
     "mapHeader": {
       "public": "Veřejné",
       "myBuildings": "Moje budovy",
-      "clearAll": "Smazat vše",
+      "clearAll": "Odstranit všechny polygony",
       "togglePublicBuildings": "Přepnout veřejné budovy",
       "toggleMyBuildings": "Přepnout moje budovy"
     },
@@ -1346,7 +1419,20 @@
       "clickToCancel": "Klikněte pro zrušení přidání transformátoru",
       "clickToMove": "Klikněte pro přesun",
       "movingSuccess": "Transformátor úspěšně přesunut",
-      "movingFailed": "Přesun transformátoru selhal"
+      "movingFailed": "Přesun transformátoru selhal",
+      "userPlaced": "Umístěno uživatelem",
+      "dialogDescription": "Zobrazte a upravte nastavení transformátoru. Změny ovlivní připojené budovy.",
+      "gridId": "ID sítě",
+      "voltageTransformation": "Transformace napětí",
+      "mediumVoltage": "Vysoké napětí",
+      "lowVoltage": "Nízké napětí",
+      "mvShort": "VN",
+      "lvShort": "NN",
+      "mvDescription": "Vysoké napětí z rozvodny distributora, třífázový střídavý proud rozváděný podzemními kabely nebo venkovním vedením",
+      "lvDescription": "Výstup nízkého napětí: 400 V mezi fázemi (třífázově) nebo 230 V mezi fází a nulovým vodičem (jednofázově) pro obytné a komerční budovy",
+      "stepDownNote": "Tento transformátor snižuje napětí pro bezpečný rozvod v budovách a zachovává přitom výkon.",
+      "ratedPower": "Jmenovitý výkon",
+      "selectKva": "Vyberte kVA"
     },
     "building": {
       "assignSuccess": "Budova přiřazena k transformátoru",
@@ -1361,8 +1447,48 @@
       "assignPartialSuccess": "{{success}} z {{total}} budov přiřazeno",
       "cancelAssign": "Zrušit",
       "nextStep": "Další",
-      "finish": "Dokončit"
-    }
+      "finish": "Dokončit",
+      "back": "Zpět"
+    },
+    "mapOverlay": {
+      "analyzingArea": "Analýza oblasti",
+      "canHostChargers": "Možný počet nabíječek: {{count}}",
+      "limitedChargers": "Omezeno, nabíječky: {{count}}",
+      "connectedBuildings": "Připojené budovy",
+      "types": "Typy",
+      "moreCount": "+{{count}} další",
+      "clickForDetails": "Klikněte pro více podrobností",
+      "class": "Třída",
+      "estimatedShort": "odh.",
+      "floors": "Podlaží",
+      "height": "Výška",
+      "heightMedian": "Výška (medián)",
+      "built": "Postaveno",
+      "label": "Štítek",
+      "energyIndex": "Energetický index",
+      "labelDate": "Datum štítku",
+      "population": "Počet obyvatel",
+      "households": "Domácnosti",
+      "avgHouseholdSize": "Prům. velikost domácnosti",
+      "cbsNote": "Hodnoty CBS jsou statistiky za oblast PSČ (přednostně PC6, jinak PC4), nikoli hodnoty jednotlivých budov.",
+      "source": "Zdroj: {{source}}.",
+      "sourcesNl": "Zdroje: {{epOnline}} (platí podmínky užití) a {{cbs}}.",
+      "technologiesCount": "Technologie ({{count}})",
+      "dropToAddTech": "Pusťte pro přidání technologie",
+      "clickToEdit": "Klikněte pro úpravu podrobností",
+      "mvLine": "Vedení VN",
+      "normallyOpen": "Normálně rozepnuto",
+      "length": "Délka",
+      "type": "Typ",
+      "bus": "Uzel"
+    },
+    "unsavedChanges": {
+      "title": "Neuložené změny",
+      "description": "V tomto modelu máte neuložené změny. Před odchodem je ručně uložte, nebo je zahoďte.",
+      "continueEditing": "Pokračovat v úpravách",
+      "discard": "Zahodit změny"
+    },
+    "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi"
   },
   "mapLayers": {
     "title": "Mapové vrstvy",
@@ -1374,7 +1500,11 @@
       "osmHumanitarian": "Humanitární styl OpenStreetMap",
       "cartoPositron": "Světlá základní mapa od CartoDB",
       "cartoVoyager": "Podrobná základní mapa od CartoDB",
-      "openTopoMap": "Topografická stylová mapa"
+      "openTopoMap": "Topografická stylová mapa",
+      "maplibreDark": "Tmavá vektorová podkladová mapa",
+      "maplibreVoyager": "Podrobná vektorová podkladová mapa (Voyager)",
+      "cartoDark": "Tmavá rastrová podkladová mapa od CartoDB",
+      "maplibre3d": "3D budovy na satelitních snímcích"
     },
     "dataLayers": {
       "title": "Datové vrstvy",
@@ -1709,10 +1839,57 @@
     },
     "dragInstruction": "Přetáhněte technologie sem pro přidání do modelu",
     "noTechnologies": "Žádné technologie přidány",
+    "carrierToggleLabel": "Nosič technologie",
+    "carriers": {
+      "electricity": "Elektřina",
+      "heat": "Teplo"
+    },
+    "heatSourceHint": "Tepelné technologie pocházejí z OpenTech-DB a optimalizuje je Calliope.",
+    "noHeatTechnologies": "Nejsou k dispozici žádné tepelné technologie",
+    "searchPlaceholder": "Hledat technologie…",
+    "noSearchResults": "Hledání neodpovídá žádná technologie",
+    "otdbElectricityHint": "Doplňky z OpenTech-DB: jejich výkon optimalizuje Calliope.",
     "categories": {
       "supply": "Výroba",
       "storage": "Úložiště",
-      "other": "Ostatní"
+      "other": "Ostatní",
+      "conversion": "Přeměna",
+      "networks": "Sítě",
+      "otdbAdditions": "Doplňky z OpenTech-DB"
+    },
+    "heatBootstrap": {
+      "title": "Tepelné technologie",
+      "description": "Zvolte, jak přidat tepelné technologie k budovám.",
+      "prompt": "Budovám byla přiřazena potřeba tepla. Jak chcete přidat technologie vytápění?",
+      "autoAssign": "Přiřadit automaticky",
+      "autoAssignDescription": "Každé budově přiřadí technologii vytápění, která nejlépe odpovídá jejímu typu (např. tepelné čerpadlo pro domy, plynový kotel pro byty, KVET pro průmysl). Každé přiřazení můžete později změnit.",
+      "manual": "Ručně",
+      "manualDescription": "Ponechat technologie prázdné. Technologii vytápění pro každou budovu vyberete později ručně."
+    },
+    "addToAllBuildings": "Přidat ke všem budovám",
+    "removeFromAllBuildings": "Odebrat ze všech budov",
+    "paramCount": "Parametry: {{count}}",
+    "paramDialog": {
+      "description": "Nastavte parametry technologie pro tuto budovu",
+      "turbineSummary": "{{power}} kW · rotor {{diameter}} m",
+      "selectPlaceholder": "Vyberte...",
+      "searchTurbines": "Hledat větrné turbíny...",
+      "noTurbinesMatch": "Hledání neodpovídá žádná turbína",
+      "noTurbinesAvailable": "Nejsou k dispozici žádné turbíny",
+      "turbinesShown": "Zobrazené turbíny: {{shown}} z {{total}}",
+      "selectHeight": "Vyberte výšku",
+      "required": "Povinné",
+      "minValue": "Min: {{value}}",
+      "maxValue": "Max: {{value}}",
+      "infinity": "Nekonečno",
+      "applyingTo": "Použije se na:",
+      "allBuildings": "Všechny budovy",
+      "osmId": "(OSM: {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (výchozí cena externího paliva)",
+      "totalCount": "Celkem: {{count}}",
+      "constraints": "Omezení",
+      "applyToAllBuildings": "Použít na všechny budovy",
+      "applyTechnology": "Použít technologii"
     }
   },
   "locations": {
@@ -2042,6 +2219,15 @@
   },
   "drawing": {
     "clickToDraw": "Klikněte pro kreslení",
+    "secondCorner": "Klikněte a umístěte druhý roh",
+    "thirdCorner": "Klikněte a umístěte třetí roh",
+    "rightClickToFinish": "Kliknutím pravým tlačítkem oblast dokončíte",
+    "needThreeCorners": "Oblast potřebuje alespoň tři rohy.",
+    "cornersInLine": "Tyto rohy leží na jedné přímce. Přidejte roh mimo přímku, aby vznikla oblast.",
+    "clickToDelete": "Kliknutím smažete tento polygon",
+    "clickToDeleteCorner": "Kliknutím smažete tento roh",
+    "clickToDeleteTriangle": "Kliknutím smažete tento polygon (minimum jsou tři rohy)",
+    "polygonNoArea": "Rohy této oblasti ležely na jedné přímce, proto nebyla uložena.",
     "clickToClose": "Klikněte pro uzavření",
     "start": "Start"
   },
@@ -2255,7 +2441,9 @@
     "techRemovedFromAll": "{{tech}} odebráno z {{count}} budov",
     "techRemovedFromBuilding": "{{tech}} odebráno z budovy",
     "techNotFound": "Technologie {{tech}} nenalezena",
-    "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu"
+    "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu",
+    "heatAutoAssigned": "Tepelné technologie byly přiřazeny automaticky.",
+    "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}"
   },
   "gridStats": {
     "title": "Analýza Sítě",
@@ -2271,7 +2459,20 @@
     "estCost": "Odhadované Náklady",
     "cablesLabel": "Kabely",
     "trafosLabel": "Transformátory",
-    "costDescription": "Náklady na infrastrukturu včetně kabelů a transformátorů"
+    "costDescription": "Náklady na infrastrukturu včetně kabelů a transformátorů",
+    "buildingsTooltip": "Počet budov z OpenStreetMap ve vybrané oblasti. Spotřebu energie každé budovy odhaduje PyLoVo podle plochy, počtu podlaží, velikosti domácnosti a energetického štítku.",
+    "trafosTooltip": "Transformátory dimenzované nástrojem PyLoVo na souběžné zatížení. Standardní velikosti (100 až 630 kVA) se vybírají z německých katalogů zařízení. Cena se určuje podle velikosti z cen instalovaných zařízení.",
+    "cablesTooltip": "Rozvodné kabely NN vedené nástrojem PyLoVo mezi budovami a transformátory. Cena je délka (m) krát cena za metr (€/m) z katalogu zařízení, podle typu kabelu.",
+    "lengthTooltip": "Celková délka všech kabelů NN v síti. Trasa vede nejkratší cestou mezi přípojkami budov a polohami transformátorů.",
+    "selectionNote": "Vybrané budovy a kabely, které je spojují s jejich transformátory. Celá síť: budovy {{buildings}}, kabely {{cables}}, {{km}} km, vytížení {{utilisation}} %.",
+    "simultaneousLoad": "Souběžné zatížení",
+    "peakLoadTooltip": "Součet špičkových elektrických zatížení všech budov (kW), odvozený z odhadované roční spotřeby každé budovy pomocí standardních zátěžových profilů (VDI 3807 / DIN 18599).",
+    "simultaneousLoadTooltip": "Realistické souběžné zatížení s koeficientem soudobosti, kde n je počet budov. Ne všechny budovy odebírají špičkový výkon ve stejnou chvíli.",
+    "capacityTooltip": "Celkový jmenovitý výkon všech transformátorů (kVA). Transformátory se vybírají ze standardních německých velikostí NN tak, aby pokryly souběžné zatížení s rezervou.",
+    "utilizationTooltip": "Vytížení transformátorů = souběžné zatížení ÷ celkový výkon × 100 %. Hodnoty nad 80 % mohou znamenat potřebu dalšího výkonu transformátorů.",
+    "cableCostTooltip": "Náklady na instalaci kabelů podle typu a délky kabelu. Ceny z německých katalogů zařízení NN zahrnují materiál, výkop a instalaci (€/m).",
+    "trafoCostTooltip": "Náklady na pořízení a instalaci transformátorů. Ceny podle velikosti v kVA pocházejí z německých katalogů distribučních zařízení, přiřazené k nejbližší velikosti.",
+    "sourceNote": "Odhad nástroje PyLoVo. Ceny z německých katalogů zařízení NN. Vytížení vychází ze souběžného zatížení."
   },
   "tooltips": {
     "publicBuildings": {
@@ -2519,7 +2720,57 @@
     "coverageHigh": "Vysoké pokrytí dat",
     "coverageMedium": "Střední pokrytí dat",
     "coverageLow": "Nízké pokrytí dat",
-    "summaryFooter": "{{countries}} zemí · {{regions}} regionů · {{grids}} mřížek"
+    "summaryFooter": "{{countries}} zemí · {{regions}} regionů · {{grids}} mřížek",
+    "3dBuildingData": "K dispozici jsou výšky budov z 3D LiDARu",
+    "buildingDialog": {
+      "title": "Podrobnosti o budově",
+      "description": "Zobrazte a upravte údaje o vybrané budově, včetně typu, energetické potřeby a technologií.",
+      "classLabel": "Třída:",
+      "buildingType": "Typ budovy (fClass)",
+      "selectType": "Vyberte typ",
+      "detected": "Zjištěno",
+      "allTypes": "Všechny typy",
+      "geometry": "Geometrie budovy",
+      "floorArea": "Podlahová plocha",
+      "floors": "Podlaží",
+      "householdSize": "Velikost domácnosti",
+      "peopleShort": "os.",
+      "constructionYearShort": "Rok výst.",
+      "sourceHeights": "Výšky {{source}}",
+      "buildingHeights": "Výšky budovy",
+      "heightMedian": "Medián výšky",
+      "heightMax": "Maximální výška",
+      "heightGround": "Výška terénu",
+      "energyLabel": "Energetický štítek",
+      "detectedLabel": "(zjištěno: {{label}})",
+      "energyIndex": "Energetický index:",
+      "electricHotWater": "Elektrický ohřev vody",
+      "recalculating": "Přepočítávání...",
+      "recalculateDemand": "Přepočítat potřebu",
+      "totalFloorArea": "{{floors}} podl. × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "Zatím nebyly přidány žádné technologie.",
+      "parameterCount": "Parametry: {{count}}",
+      "editParameters": "Upravit parametry",
+      "removeTechnology": "Odebrat technologii",
+      "availableTechnologies": "Dostupné technologie",
+      "added": "Přidáno",
+      "labelDate": "Datum štítku:",
+      "cbsPostcodeData": "Data CBS / PSČ",
+      "population": "Počet obyvatel",
+      "households": "Domácnosti",
+      "avgHouseholdSize": "Prům. velikost domácnosti",
+      "heightsFrom": "Výšky z",
+      "attributionBy": "od {{name}}",
+      "energyLabelsFrom": "Energetické štítky z",
+      "demographicsFrom": "Demografické údaje z",
+      "cuzkName": "Český úřad zeměměřický a katastrální",
+      "enrichedWith": "Údaje o budovách doplněny z",
+      "licensedUnder": "Licencováno pod",
+      "include": "Zahrnout",
+      "exclude": "Vyloučit",
+      "includeTooltip": "Zahrnout tuto vlastní budovu do sítě (vyžaduje nové vygenerování)",
+      "excludeTooltip": "Vyloučit tuto vlastní budovu ze sítě (vyžaduje nové vygenerování)"
+    }
   },
   "landing": {
     "nav": {
@@ -2710,5 +2961,28 @@
       "thirdPartyLicenses": "Licence třetích stran",
       "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. Tento projekt byl financován Evropskou unií. Vyjádřené názory a stanoviska jsou pouze názory autorů a nemusí nutně odrážet názory Evropské unie."
     }
+  },
+  "transformer": {
+    "onlyInsidePolygon": "Transformátory lze umístit jen uvnitř vybrané oblasti"
+  },
+  "powerFlowLegend": {
+    "customTransformers": "Vlastní transformátory",
+    "transformer": "Transformátor {{number}}",
+    "buildingCount": "Budovy: {{count}}",
+    "loadUtilization": "Vytížení",
+    "low": "Nízké",
+    "moderate": "Mírné",
+    "medium": "Střední",
+    "high": "Vysoké",
+    "overloaded": "Přetížené",
+    "mvLines": "Vedení VN"
+  },
+  "buildingConfig": {
+    "backToMap": "Zpět na mapu",
+    "preparing": "Připravují se 3D data této budovy. City2TABULA extrahuje a propojuje budovy v oblasti, což může při prvním použití oblasti trvat několik minut. Budova se zde otevře, jakmile bude připravena.",
+    "loading": "Načítání budovy…",
+    "noGeometry": "City2TABULA již neobsahuje 3D geometrii této budovy.",
+    "credit3dData": "3D data",
+    "modifiedBy": "upraveno pomocí {{name}}"
   }
 }

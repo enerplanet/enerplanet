@@ -90,7 +90,20 @@
     "monetary_inv_cost_storage_cap": "Investment cost per unit of storage capacity.",
     "monetary_purchase_cost_sum": "Total purchase cost including all components.",
     "monetary_sale_cost_sum": "Total revenue from selling energy or services.",
-    "defaultDescription": "{{alias}} - Configure this parameter based on your requirements."
+    "defaultDescription": "{{alias}} - Configure this parameter based on your requirements.",
+    "advanced": {
+      "title": "Advanced Parameters",
+      "description": "Configure advanced parameters for your Energy assessment",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Decrease minimum value",
+      "increaseMinimum": "Increase minimum value",
+      "decreaseMaximum": "Decrease maximum value",
+      "increaseMaximum": "Increase maximum value",
+      "selectOption": "Select option",
+      "resetToDefaults": "Reset to Defaults",
+      "applyChanges": "Apply Changes"
+    }
   },
   "gridStats": {
     "title": "Grid Analysis",
@@ -106,7 +119,20 @@
     "estCost": "Est. Cost",
     "cablesLabel": "Cables",
     "trafosLabel": "Trafos",
-    "costDescription": "Infrastructure costs incl. cables & transformers"
+    "costDescription": "Infrastructure costs incl. cables & transformers",
+    "buildingsTooltip": "Total buildings detected from OpenStreetMap within the selected area. Each building's energy demand is estimated by PyLoVo using area, floors, household size and energy label.",
+    "trafosTooltip": "Transformers sized by PyLoVo to handle the simultaneous load. Standard sizes (100 to 630 kVA) are selected from German equipment catalogues. Cost is looked up per size from installed equipment prices.",
+    "cablesTooltip": "LV distribution cables routed by PyLoVo between buildings and transformers. Cost is length (m) times cost per metre (€/m) from the equipment catalogue, varying by cable type.",
+    "lengthTooltip": "Total length of all LV cables in the grid. Routing follows the shortest path between building connection points and transformer positions.",
+    "selectionNote": "Selected buildings and the cables connecting them to their transformers. Whole grid: {{buildings}} buildings, {{cables}} cables, {{km}} km, {{utilisation}}% utilisation.",
+    "simultaneousLoad": "Simult. load",
+    "peakLoadTooltip": "Sum of all building peak electrical loads (kW), derived from each building's estimated annual demand using standard load profiles (VDI 3807 / DIN 18599).",
+    "simultaneousLoadTooltip": "Realistic concurrent load using a simultaneity factor, where n is the number of buildings. Not all buildings draw their peak load at the same time.",
+    "capacityTooltip": "Total rated power of all transformers (kVA). Transformers are selected from standard German LV sizes to cover the simultaneous load with a safety margin.",
+    "utilizationTooltip": "Transformer utilisation = simultaneous load ÷ total capacity × 100%. Values above 80% may mean more transformer capacity is needed.",
+    "cableCostTooltip": "Cable installation cost based on cable type and length. Prices from German LV equipment catalogues include material, trenching and installation (€/m).",
+    "trafoCostTooltip": "Transformer purchase and installation cost. Prices per kVA size come from German distribution equipment catalogues, matched to the nearest size.",
+    "sourceNote": "Estimated by the PyLoVo grid engine. Costs from German LV equipment catalogues. Utilisation based on simultaneous load."
   },
   "drawing": {
     "clickToDraw": "Click to draw",
@@ -136,7 +162,9 @@
     "techRemovedFromAll": "{{tech}} removed from {{count}} buildings",
     "techRemovedFromBuilding": "{{tech}} removed from building",
     "techNotFound": "Technology {{tech}} not found",
-    "techLoadFailed": "Failed to load technology for editing"
+    "techLoadFailed": "Failed to load technology for editing",
+    "heatAutoAssigned": "Heat technologies assigned automatically.",
+    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}"
   },
   "common": {
     "save": "Save",
@@ -1097,7 +1125,10 @@
     "groupNavigating": "Navigating",
     "rotate3dDrag": "drag to rotate the 3D view",
     "spacePanHint": "drag to pan the map",
-    "rightClickCloseHint": "to close the polygon"
+    "rightClickCloseHint": "to close the polygon",
+    "keyRightClick": "Right-click",
+    "keySpace": "Space",
+    "dismissGuide": "Dismiss guide"
   },
   "workflow": {
     "optional": "optional",
@@ -1121,7 +1152,11 @@
     "assignBuildingsAction": "Assign Buildings",
     "runPowerFlowAction": "Power Flow",
     "rerunPowerFlowAction": "Re-run Flow",
-    "resolveHeatAction": "Resolve heat"
+    "resolveHeatAction": "Resolve heat",
+    "auto": "auto",
+    "clickAddTransformer": "Click the button in the bottom bar",
+    "clickOnMapInPolygon": "Click on the map inside the polygon",
+    "clickToSelectBuilding": "Click to select a building"
   },
   "time": {
     "justNow": "Just now",
@@ -1622,7 +1657,20 @@
       "clickToCancel": "Click to cancel adding transformer",
       "clickToMove": "Click to move",
       "movingSuccess": "Transformer moved successfully",
-      "movingFailed": "Failed to move transformer"
+      "movingFailed": "Failed to move transformer",
+      "userPlaced": "User Placed",
+      "dialogDescription": "View and modify transformer settings. Changes affect connected buildings.",
+      "gridId": "Grid ID",
+      "voltageTransformation": "Voltage Transformation",
+      "mediumVoltage": "Medium Voltage",
+      "lowVoltage": "Low Voltage",
+      "mvShort": "MV",
+      "lvShort": "LV",
+      "mvDescription": "Medium voltage from utility substation, 3-phase AC power distributed through underground cables or overhead lines",
+      "lvDescription": "Low voltage output - 400V between phases (3-phase) or 230V phase-to-neutral (single-phase) for residential and commercial buildings",
+      "stepDownNote": "This transformer steps down voltage for safe building distribution while maintaining power capacity.",
+      "ratedPower": "Rated Power",
+      "selectKva": "Select kVA"
     },
     "building": {
       "assignSuccess": "Building assigned to transformer",
@@ -1637,7 +1685,8 @@
       "assignPartialSuccess": "{{success}} of {{total}} buildings assigned",
       "cancelAssign": "Cancel",
       "nextStep": "Next",
-      "finish": "Finish"
+      "finish": "Finish",
+      "back": "Back"
     },
     "actions": {
       "saveAndExit": "Save & Exit",
@@ -1653,7 +1702,46 @@
       "clearAll": "Remove all polygons",
       "togglePublicBuildings": "Toggle public buildings",
       "toggleMyBuildings": "Toggle my buildings"
-    }
+    },
+    "mapOverlay": {
+      "analyzingArea": "Analyzing area",
+      "canHostChargers": "Chargers it can host: {{count}}",
+      "limitedChargers": "Limited, chargers: {{count}}",
+      "connectedBuildings": "Connected buildings",
+      "types": "Types",
+      "moreCount": "+{{count}} more",
+      "clickForDetails": "Click for more details",
+      "class": "Class",
+      "estimatedShort": "est.",
+      "floors": "Floors",
+      "height": "Height",
+      "heightMedian": "Height (median)",
+      "built": "Built",
+      "label": "Label",
+      "energyIndex": "Energy Index",
+      "labelDate": "Label date",
+      "population": "Population",
+      "households": "Households",
+      "avgHouseholdSize": "Avg household size",
+      "cbsNote": "CBS values are postcode-area statistics (PC6 preferred, PC4 fallback), not single-building values.",
+      "source": "Source: {{source}}.",
+      "sourcesNl": "Sources: {{epOnline}} (terms apply) and {{cbs}}.",
+      "technologiesCount": "Technologies ({{count}})",
+      "dropToAddTech": "Drop to add technology",
+      "clickToEdit": "Click to edit details",
+      "mvLine": "MV Line",
+      "normallyOpen": "Normally Open",
+      "length": "Length",
+      "type": "Type",
+      "bus": "Bus"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved changes",
+      "description": "You have unsaved changes in this model. Please save manually before leaving or discard your changes.",
+      "continueEditing": "Continue editing",
+      "discard": "Discard changes"
+    },
+    "resolutionComingSoon": "30-minute resolution coming in a future release"
   },
   "mapLayers": {
     "title": "Map Layers",
@@ -1667,7 +1755,9 @@
       "cartoVoyager": "Detailed raster base map by CartoDB",
       "openTopoMap": "Topographic style map",
       "maplibreDark": "Dark vector basemap",
-      "maplibreVoyager": "Detailed vector basemap (Voyager)"
+      "maplibreVoyager": "Detailed vector basemap (Voyager)",
+      "cartoDark": "Dark raster base map by CartoDB",
+      "maplibre3d": "3D buildings on satellite imagery"
     },
     "dataLayers": {
       "title": "Data Layers",
@@ -2141,6 +2231,40 @@
         "name": "Non-Households consumers supply",
         "description": "Commercial and industrial energy consumption profile"
       }
+    },
+    "heatBootstrap": {
+      "title": "Heat technologies",
+      "description": "Choose how to add heat technologies to the buildings.",
+      "prompt": "Heat demand has been assigned to the buildings. How do you want to add heating technologies?",
+      "autoAssign": "Auto-assign",
+      "autoAssignDescription": "Give every building the expected-fit heating tech for its type (e.g. heat pump for houses, gas boiler for apartments, CHP for industrial). You can override any assignment afterwards.",
+      "manual": "Manual",
+      "manualDescription": "Leave technologies empty. Pick each building's heating tech by hand afterwards."
+    },
+    "addToAllBuildings": "Add to all buildings",
+    "removeFromAllBuildings": "Remove from all buildings",
+    "paramCount": "Parameters: {{count}}",
+    "paramDialog": {
+      "description": "Configure technology parameters for this building",
+      "turbineSummary": "{{power}} kW · {{diameter}}m rotor",
+      "selectPlaceholder": "Select...",
+      "searchTurbines": "Search wind turbines...",
+      "noTurbinesMatch": "No turbines match your search",
+      "noTurbinesAvailable": "No turbines available",
+      "turbinesShown": "Turbines shown: {{shown}} of {{total}}",
+      "selectHeight": "Select height",
+      "required": "Required",
+      "minValue": "Min: {{value}}",
+      "maxValue": "Max: {{value}}",
+      "infinity": "Infinity",
+      "applyingTo": "Applying to:",
+      "allBuildings": "All Buildings",
+      "osmId": "(OSM: {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (external fuel default)",
+      "totalCount": "Total: {{count}}",
+      "constraints": "Constraints",
+      "applyToAllBuildings": "Apply to All Buildings",
+      "applyTechnology": "Apply Technology"
     }
   },
   "locations": {
@@ -2586,7 +2710,57 @@
     "coverageHigh": "High data coverage",
     "coverageMedium": "Medium data coverage",
     "coverageLow": "Low data coverage",
-    "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids"
+    "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids",
+    "3dBuildingData": "LiDAR 3D building heights available",
+    "buildingDialog": {
+      "title": "Building Details",
+      "description": "View and edit details for the selected building, including type, energy demand, and technologies.",
+      "classLabel": "Class:",
+      "buildingType": "Building Type (fClass)",
+      "selectType": "Select type",
+      "detected": "Detected",
+      "allTypes": "All Types",
+      "geometry": "Building Geometry",
+      "floorArea": "Floor Area",
+      "floors": "Floors",
+      "householdSize": "Household Size",
+      "peopleShort": "ppl",
+      "constructionYearShort": "Constr. Year",
+      "sourceHeights": "{{source}} Heights",
+      "buildingHeights": "Building Heights",
+      "heightMedian": "Height Median",
+      "heightMax": "Height Max",
+      "heightGround": "Height Ground",
+      "energyLabel": "Energy Label",
+      "detectedLabel": "(detected: {{label}})",
+      "energyIndex": "Energy Index:",
+      "electricHotWater": "Electric Hot Water",
+      "recalculating": "Recalculating...",
+      "recalculateDemand": "Recalculate Demand",
+      "totalFloorArea": "{{floors}} fl × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "No technologies added yet.",
+      "parameterCount": "Parameters: {{count}}",
+      "editParameters": "Edit parameters",
+      "removeTechnology": "Remove technology",
+      "availableTechnologies": "Available Technologies",
+      "added": "Added",
+      "labelDate": "Label Date:",
+      "cbsPostcodeData": "CBS / Postcode Data",
+      "population": "Population",
+      "households": "Households",
+      "avgHouseholdSize": "Avg household size",
+      "heightsFrom": "Heights from",
+      "attributionBy": "by {{name}}",
+      "energyLabelsFrom": "Energy labels from",
+      "demographicsFrom": "Demographics from",
+      "cuzkName": "Czech Office for Surveying, Mapping and Cadastre",
+      "enrichedWith": "Building data enriched with",
+      "licensedUnder": "Licensed under",
+      "include": "Include",
+      "exclude": "Exclude",
+      "includeTooltip": "Include this custom building in the grid (requires regeneration)",
+      "excludeTooltip": "Exclude this custom building from the grid (requires regeneration)"
+    }
   },
   "landing": {
     "nav": {
@@ -2777,5 +2951,28 @@
       "thirdPartyLicenses": "Third-Party Licenses",
       "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. This project has received funding from the European Union. Views and opinions expressed are those of the author(s) only and do not necessarily reflect those of the European Union."
     }
+  },
+  "transformer": {
+    "onlyInsidePolygon": "Transformers can only be placed inside the selected area"
+  },
+  "powerFlowLegend": {
+    "customTransformers": "Custom transformers",
+    "transformer": "Transformer {{number}}",
+    "buildingCount": "Buildings: {{count}}",
+    "loadUtilization": "Load utilisation",
+    "low": "Low",
+    "moderate": "Moderate",
+    "medium": "Medium",
+    "high": "High",
+    "overloaded": "Overloaded",
+    "mvLines": "MV lines"
+  },
+  "buildingConfig": {
+    "backToMap": "Back to map",
+    "preparing": "Preparing this building's 3D data. City2TABULA is extracting and linking the area's buildings, which can take a few minutes the first time an area is used. The building opens here when it is ready.",
+    "loading": "Loading this building…",
+    "noGeometry": "City2TABULA no longer holds this building's 3D geometry.",
+    "credit3dData": "3D data",
+    "modifiedBy": "modified by {{name}}"
   }
 }

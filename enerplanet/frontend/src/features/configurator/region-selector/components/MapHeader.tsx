@@ -114,7 +114,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent>Select or create a workspace to organize your models</TooltipContent>
+            <TooltipContent>{t("model.selectWorkspace")}</TooltipContent>
           </Tooltip>
         )}
         {onRegionSelect && availableRegions.length > 0 && (
@@ -132,7 +132,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
         {isLoadingPreference && (
           <div className="md-fade-in flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-            <span className="font-medium text-foreground">Loading workspace...</span>
+            <span className="font-medium text-foreground">{t("model.loadingWorkspace")}</span>
           </div>
         )}
       </div>

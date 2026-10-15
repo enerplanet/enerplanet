@@ -35,7 +35,7 @@ const buildShortcutGroups = (
 			rows: [
 				{ action: t('polygon.moveVertex', 'Drag a corner to move it') },
 				{ action: t('polygon.addVertex', 'Drag an edge to add a corner') },
-				{ keys: 'Right-click', action: t('polygon.rightClickCloseHint', 'to close the polygon') },
+				{ keys: t('polygon.keyRightClick', 'Right-click'), action: t('polygon.rightClickCloseHint', 'to close the polygon') },
 				{ keys: 'Esc', action: t('polygon.escToCancel', 'to cancel drawing') },
 			],
 		},
@@ -55,8 +55,8 @@ const buildShortcutGroups = (
 			titleClass: 'text-blue-600 dark:text-blue-400',
 			barClass: 'border-blue-500',
 			rows: [
-				{ keys: 'Space', plus: true, action: t('polygon.spacePanHint', 'drag to pan the map') },
-				...(isMapLibre3D ? [{ keys: 'Right-click', plus: true, action: t('polygon.rotate3dDrag', 'drag to rotate the 3D view') }] : []),
+				{ keys: t('polygon.keySpace', 'Space'), plus: true, action: t('polygon.spacePanHint', 'drag to pan the map') },
+				...(isMapLibre3D ? [{ keys: t('polygon.keyRightClick', 'Right-click'), plus: true, action: t('polygon.rotate3dDrag', 'drag to rotate the 3D view') }] : []),
 			],
 		},
 	];
@@ -98,6 +98,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 	hasAddedTransformer = false,
 }) => {
 	const { t } = useTranslation();
+	const stepLabel = (step: number) => t('workflow.illustrationStep', { step });
 	const [isDrawGuideVisible, setIsDrawGuideVisible] = useState(true);
 	const [isDrawGuideDismissed, setIsDrawGuideDismissed] = useState(false);
 	const [isEditGuideVisible, setIsEditGuideVisible] = useState(false);
@@ -239,7 +240,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 					<button
 						onClick={handleDismissEditGuide}
 						className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground z-10 bg-card/80"
-						aria-label="Dismiss guide"
+						aria-label={t('polygon.dismissGuide')}
 					>
 						<X className="w-3.5 h-3.5" />
 					</button>
@@ -307,7 +308,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 													}`}>
 														{step.title}
 														{step.auto && status === 'active' && (
-															<span className="ml-1 text-[10px] text-amber-500 animate-pulse">auto</span>
+															<span className="ml-1 text-[10px] text-amber-500 animate-pulse">{t('workflow.auto')}</span>
 														)}
 														{'optional' in step && step.optional && (
 															<span className="ml-1 text-[10px] font-normal text-muted-foreground">{t('workflow.optional', 'optional')}</span>
@@ -339,7 +340,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 																	<rect x="15.5" y="3" width="1.5" height="5" rx="0.5" fill="currentColor"/>
 																	<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 																</svg>
-																Step 1: {t('workflow.clickAddTransformer', 'Click button in bottom bar')}
+																{stepLabel(1)}: {t('workflow.clickAddTransformer', 'Click button in bottom bar')}
 															</p>
 															<div className="flex justify-center">
 																<div className="flex items-center gap-1.5 bg-card border border-border rounded-full px-2 py-1 shadow-sm">
@@ -373,7 +374,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 																	<rect x="15.5" y="3" width="1.5" height="5" rx="0.5" fill="currentColor"/>
 																	<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 																</svg>
-																Step 2: {t('workflow.clickOnMapInPolygon', 'Click on map inside polygon')}
+																{stepLabel(2)}: {t('workflow.clickOnMapInPolygon', 'Click on map inside polygon')}
 															</p>
 															<svg width="100%" height="55" viewBox="0 0 180 55" className="text-foreground">
 																{/* Map area */}
@@ -422,7 +423,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 													<div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-300 space-y-2 bg-muted/30 rounded-lg p-2">
 														{/* Step 1: Click buildings */}
 														<div className="space-y-1.5">
-															<p className="text-[10px] font-semibold text-primary">Step 1: {t('workflow.clickToSelectBuilding', 'Click to select a building')}</p>
+															<p className="text-[10px] font-semibold text-primary">{stepLabel(1)}: {t('workflow.clickToSelectBuilding', 'Click to select a building')}</p>
 															<svg width="100%" height="55" viewBox="0 0 140 45" className="text-foreground">
 																{/* Building 1 — selected */}
 																<rect x="15" y="5" width="35" height="28" rx="4" className="fill-blue-500/25 stroke-blue-500" strokeWidth="2">
@@ -459,7 +460,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 														{/* Step 2: Click transformer */}
 														<div className="space-y-1.5">
-															<p className="text-[10px] font-semibold text-amber-500">Step 2: {t('workflow.clickTransformer', 'Click transformer')}</p>
+															<p className="text-[10px] font-semibold text-amber-500">{stepLabel(2)}: {t('workflow.clickTransformer', 'Click transformer')}</p>
 															<svg width="100%" height="55" viewBox="0 0 140 50" className="text-foreground">
 																{/* Buildings on left side */}
 																<rect x="5" y="5" width="22" height="16" rx="2" className="fill-primary/15 stroke-primary/40" strokeWidth="1" />
@@ -538,9 +539,9 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 									<div key={group.key} className="space-y-1">
 										<p className={`text-[10px] font-semibold uppercase tracking-wider ${group.titleClass}`}>{group.title}</p>
 										{group.rows.map((row) => (
-											<p key={row.action} className={`flex flex-wrap items-center gap-1 border-l-2 pl-2 text-xs text-foreground ${group.barClass}`}>
-												{row.keys && <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">{row.keys}</kbd>}
-												{row.keys && row.plus && <span>+</span>}
+											<p key={row.action} className={`flex items-baseline gap-1 border-l-2 pl-2 text-xs text-foreground ${group.barClass}`}>
+												{row.keys && <kbd className="shrink-0 px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">{row.keys}</kbd>}
+												{row.keys && row.plus && <span className="shrink-0">+</span>}
 												<span>{row.action}</span>
 											</p>
 										))}
@@ -569,7 +570,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 				<button
 					onClick={handleDismissDrawGuide}
 					className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
-					aria-label="Dismiss guide"
+					aria-label={t('polygon.dismissGuide')}
 				>
 					<X className="w-3.5 h-3.5" />
 				</button>

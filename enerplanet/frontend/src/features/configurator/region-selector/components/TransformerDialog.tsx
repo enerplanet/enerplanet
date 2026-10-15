@@ -14,6 +14,7 @@ import {
 } from "@spatialhub/ui";
 import { useState, type FC } from "react";
 import { Loader2, Trash2, Move } from "lucide-react";
+import { useTranslation } from "@spatialhub/i18n";
 
 interface TransformerDialogProps {
     open: boolean;
@@ -42,6 +43,7 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
     onMoveTransformer,
     isUserPlaced = false
 }) => {
+    const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
 
     const handleDeleteTransformer = async () => {
@@ -68,15 +70,15 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <img src="/images/transformer-icon-dark.svg" alt="" className="w-5 h-5 dark:invert" />
-            Transformer
+            {t("results.grid.transformer")}
             {isUserPlaced && (
               <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                User Placed
+                {t("simulation.transformer.userPlaced")}
               </span>
             )}
           </AlertDialogTitle>
           <AlertDialogDescription className="sr-only">
-            View and modify transformer settings. Changes affect connected buildings.
+            {t("simulation.transformer.dialogDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -84,7 +86,7 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
               <span>
-                <span className="text-muted-foreground">Grid ID:</span>{" "}
+                <span className="text-muted-foreground">{t("simulation.transformer.gridId")}:</span>{" "}
                 <span className="font-medium">{selectedTransformer.gridResultId}</span>
               </span>
               {selectedTransformer.osmId && (
@@ -97,43 +99,42 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
 
             <div className="pt-2 border-t">
               <div className="bg-muted/50 rounded-md p-3 text-xs space-y-2">
-                <div className="font-medium text-sm text-foreground">Voltage Transformation</div>
+                <div className="font-medium text-sm text-foreground">{t("simulation.transformer.voltageTransformation")}</div>
                 <div className="flex items-center justify-center gap-3 py-2">
                   <div className="text-center">
                     <div className="font-bold text-sm text-foreground">20 kV</div>
-                    <div className="text-muted-foreground text-[10px]">Medium Voltage</div>
+                    <div className="text-muted-foreground text-[10px]">{t("simulation.transformer.mediumVoltage")}</div>
                   </div>
                   <div className="text-muted-foreground text-lg">{"\u2192"}</div>
                   <div className="text-center">
                     <div className="font-bold text-sm text-foreground">0.4 kV</div>
-                    <div className="text-muted-foreground text-[10px]">Low Voltage</div>
+                    <div className="text-muted-foreground text-[10px]">{t("simulation.transformer.lowVoltage")}</div>
                   </div>
                 </div>
                 <div className="text-muted-foreground pt-2 border-t border-border/50 space-y-1">
                   <div>
-                    <strong>20 kV (MV):</strong> Medium voltage from utility substation, 3-phase AC
-                    power distributed through underground cables or overhead lines
+                    <strong>20 kV ({t("simulation.transformer.mvShort")}):</strong>{" "}
+                    {t("simulation.transformer.mvDescription")}
                   </div>
                   <div>
-                    <strong>0.4 kV (LV):</strong> Low voltage output - 400V between phases (3-phase)
-                    or 230V phase-to-neutral (single-phase) for residential and commercial buildings
+                    <strong>0.4 kV ({t("simulation.transformer.lvShort")}):</strong>{" "}
+                    {t("simulation.transformer.lvDescription")}
                   </div>
                   <div className="pt-1 text-[10px]">
-                    This transformer steps down voltage for safe building distribution while
-                    maintaining power capacity.
+                    {t("simulation.transformer.stepDownNote")}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="pt-2 border-t">
-              <label className="block text-sm text-muted-foreground mb-1">Rated Power</label>
+              <label className="block text-sm text-muted-foreground mb-1">{t("simulation.transformer.ratedPower")}</label>
               <Select
                 value={String(selectedTransformer.ratedPowerKva)}
                 onValueChange={(val) => onChangeKva(Number(val))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select kVA" />
+                  <SelectValue placeholder={t("simulation.transformer.selectKva")} />
                 </SelectTrigger>
                 <SelectContent>
                   {transformerSizes.map((item) => (
@@ -156,7 +157,7 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
               disabled={isLoading}
             >
               <Move className="w-3.5 h-3.5 mr-1.5" />
-              Move
+              {t("model.move")}
             </Button>
           )}
           {isUserPlaced && onDeleteTransformer && selectedTransformer && (
@@ -172,13 +173,13 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
               ) : (
                 <>
                   <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Delete
+                  {t("common.delete")}
                 </>
               )}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
-            Close
+            {t("common.close")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

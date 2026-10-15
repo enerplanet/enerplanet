@@ -90,7 +90,20 @@
     "monetary_inv_cost_storage_cap": "Coût d'investissement par unité de capacité de stockage.",
     "monetary_purchase_cost_sum": "Coût d'achat total incluant tous les composants.",
     "monetary_sale_cost_sum": "Revenus totaux de la vente d'énergie ou de services.",
-    "defaultDescription": "{{alias}} - Configurez ce paramètre selon vos exigences."
+    "defaultDescription": "{{alias}} - Configurez ce paramètre selon vos exigences.",
+    "advanced": {
+      "title": "Paramètres avancés",
+      "description": "Configurez les paramètres avancés de votre évaluation énergétique",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Diminuer la valeur minimale",
+      "increaseMinimum": "Augmenter la valeur minimale",
+      "decreaseMaximum": "Diminuer la valeur maximale",
+      "increaseMaximum": "Augmenter la valeur maximale",
+      "selectOption": "Sélectionnez une option",
+      "resetToDefaults": "Rétablir les valeurs par défaut",
+      "applyChanges": "Appliquer les modifications"
+    }
   },
   "gridStats": {
     "title": "Analyse du Réseau",
@@ -106,10 +119,32 @@
     "estCost": "Coût Est.",
     "cablesLabel": "Câbles",
     "trafosLabel": "Trafos",
-    "costDescription": "Coûts d'infrastructure incl. câbles et transformateurs"
+    "costDescription": "Coûts d'infrastructure incl. câbles et transformateurs",
+    "buildingsTooltip": "Nombre total de bâtiments OpenStreetMap dans la zone sélectionnée. PyLoVo estime la demande d'énergie de chaque bâtiment à partir de la surface, des étages, de la taille du ménage et de l'étiquette énergétique.",
+    "trafosTooltip": "Transformateurs dimensionnés par PyLoVo pour la charge simultanée. Les tailles standard (100 à 630 kVA) proviennent de catalogues d'équipements allemands. Le coût par taille est tiré des prix d'équipements installés.",
+    "cablesTooltip": "Câbles de distribution BT tracés par PyLoVo entre les bâtiments et les transformateurs. Le coût est la longueur (m) multipliée par le coût au mètre (€/m) du catalogue, selon le type de câble.",
+    "lengthTooltip": "Longueur totale de tous les câbles BT du réseau. Le tracé suit le plus court chemin entre les points de raccordement des bâtiments et les transformateurs.",
+    "selectionNote": "Bâtiments sélectionnés et câbles qui les relient à leurs transformateurs. Réseau entier : {{buildings}} bâtiments, {{cables}} câbles, {{km}} km, {{utilisation}} % d'utilisation.",
+    "simultaneousLoad": "Charge simultanée",
+    "peakLoadTooltip": "Somme des charges électriques de pointe de tous les bâtiments (kW), déduite de la demande annuelle estimée de chaque bâtiment avec des profils de charge standard (VDI 3807 / DIN 18599).",
+    "simultaneousLoadTooltip": "Charge concurrente réaliste avec un facteur de foisonnement, où n est le nombre de bâtiments. Tous les bâtiments n'atteignent pas leur pointe en même temps.",
+    "capacityTooltip": "Puissance nominale totale de tous les transformateurs (kVA). Les transformateurs sont choisis parmi les tailles BT standard allemandes pour couvrir la charge simultanée avec une marge de sécurité.",
+    "utilizationTooltip": "Utilisation des transformateurs = charge simultanée ÷ capacité totale × 100 %. Au-delà de 80 %, une capacité supplémentaire peut être nécessaire.",
+    "cableCostTooltip": "Coût d'installation des câbles selon le type et la longueur. Les prix des catalogues BT allemands incluent matériel, tranchée et pose (€/m).",
+    "trafoCostTooltip": "Coût d'achat et d'installation des transformateurs. Les prix par taille en kVA proviennent de catalogues allemands d'équipements de distribution, au plus proche de la taille.",
+    "sourceNote": "Estimé par le moteur de réseau PyLoVo. Coûts issus de catalogues BT allemands. Utilisation basée sur la charge simultanée."
   },
   "drawing": {
     "clickToDraw": "Cliquer pour dessiner",
+    "secondCorner": "Cliquez pour placer le deuxième coin",
+    "thirdCorner": "Cliquez pour placer le troisième coin",
+    "rightClickToFinish": "Clic droit pour terminer la zone",
+    "needThreeCorners": "Une zone doit avoir au moins trois coins.",
+    "cornersInLine": "Ces coins sont alignés sur une droite. Ajoutez un coin hors de la ligne pour former une zone.",
+    "clickToDelete": "Cliquez pour supprimer ce polygone",
+    "clickToDeleteCorner": "Cliquez pour supprimer ce coin",
+    "clickToDeleteTriangle": "Cliquez pour supprimer ce polygone (trois coins au minimum)",
+    "polygonNoArea": "Les coins de cette zone étaient alignés sur une droite, elle n'a donc pas été conservée.",
     "clickToClose": "Cliquer pour fermer",
     "start": "Début"
   },
@@ -127,7 +162,9 @@
     "techRemovedFromAll": "{{tech}} supprimé de {{count}} bâtiments",
     "techRemovedFromBuilding": "{{tech}} supprimé du bâtiment",
     "techNotFound": "Technologie {{tech}} non trouvée",
-    "techLoadFailed": "Échec du chargement de la technologie pour modification"
+    "techLoadFailed": "Échec du chargement de la technologie pour modification",
+    "heatAutoAssigned": "Les technologies de chaleur ont été attribuées automatiquement.",
+    "heatResolved": "Technologies de chaleur attribuées. Bâtiments mis à jour : {{count}}"
   },
   "common": {
     "save": "Enregistrer",
@@ -499,6 +536,11 @@
     "unableToLoad": "Impossible de charger les résultats",
     "modelNotFound": "Modèle non trouvé",
     "backToDashboard": "Retour au Tableau de Bord",
+    "carrier": {
+      "toggleLabel": "Vecteur énergétique",
+      "electricity": "Électricité",
+      "heat": "Chaleur"
+    },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
     "loadingModels": "Chargement des modèles...",
@@ -572,6 +614,9 @@
       "industryG2": "Industrie G2",
       "g3Demand": "Demande G3",
       "gridConnection": "Connexion Réseau",
+      "gridElectricity": "Achat d'électricité au réseau",
+      "householdSupply": "Approvisionnement des ménages",
+      "nonHouseholdSupply": "Approvisionnement hors ménages",
       "windTurbine": "Éolienne",
       "powerLines": "Lignes Électriques",
       "sfhDemand": "Demande maison individuelle",
@@ -799,12 +844,44 @@
       "transmission": "Transmission",
       "investmentCost": "Investissement (CAPEX)",
       "operatingCost": "Exploitation (OPEX)",
-      "systemLCOE": "LCOE Système"
+      "systemLCOE": "LCOE Système",
+      "simulationPeriod": "Période de simulation",
+      "simulationPeriodCost": "Coût pour la période de simulation",
+      "annualizedCost": "Coût annuel (projeté)",
+      "perLocation": "par emplacement",
+      "locations": "Emplacements",
+      "capex": "Équipements et installation",
+      "opex": "Coûts d'exploitation",
+      "costPerKw": "Coût par kW/an",
+      "costPerKwh": "Coût par kWh",
+      "costSplit": "Équipements / exploitation",
+      "energyProduced": "Énergie produite",
+      "cheaperThanAvg": "moins cher que la moyenne du système",
+      "moreExpensiveThanAvg": "plus cher que la moyenne",
+      "days": "jours",
+      "hours": "heures"
+    },
+    "costInfo": {
+      "simulationPeriodNote": "Les coûts affichés portent sur la période simulée de {{days}} jours ({{hours}} heures). Pour les coûts annuels complets, lancez une simulation sur 1 an (8 760 heures).",
+      "simulationPeriodShort": "Période de simulation de {{days}} jours",
+      "costBreakdownTooltip": "Les coûts affichés couvrent uniquement la période simulée, pas une année entière. Les coûts d'équipement sont répartis sur leur durée de vie, tandis que les coûts d'exploitation (p. ex. l'achat d'électricité au réseau) reflètent l'usage réel sur la période. Dans les simulations courtes, les technologies à coûts d'exploitation élevés paraissent donc proportionnellement plus importantes.",
+      "annualProjection": "Estimation annuelle : {{value}}",
+      "equipmentCostNote": "Le coût d'équipement est réparti sur sa durée de vie ; seule la part de cette période de simulation est affichée.",
+      "equipmentCostDesc": "Panneaux solaires, batteries et autres équipements. Le coût d'achat est réparti sur la durée de vie de l'équipement (p. ex. 25 ans pour le solaire).",
+      "runningCostDesc": "Électricité achetée au réseau, maintenance et autres dépenses courantes qui dépendent de l'usage.",
+      "systemCostSummaryDesc": "Montre le coût moyen de l'énergie (ct/kWh) et la répartition des coûts totaux entre équipement et exploitation. Moins de ct/kWh signifie une énergie globalement moins chère.",
+      "lcoeComparisonDesc": "Compare le coût de l'énergie de chaque source en ct/kWh. Le solaire et l'éolien sont peu coûteux car le soleil et le vent sont gratuits ; seul l'équipement est payé. La ligne pointillée indique la moyenne du système.",
+      "investmentBreakdownDesc": "Montre le coût de chaque technologie, réparti entre équipement (achat unique étalé sur la durée de vie) et exploitation (électricité du réseau, maintenance). Les renouvelables n'ont généralement que des coûts d'équipement."
     },
     "buildingDetail": {
       "building": "Bâtiment",
       "production": "Production",
       "demand": "Demande",
+      "electricityDemand": "Électricité",
+      "heatDemand": "Chaleur",
+      "yearlyElectricityDemand": "Demande annuelle d'électricité",
+      "yearlyHeatDemand": "Demande annuelle de chaleur",
+      "estimated": "estimé",
       "balance": "Bilan",
       "energyProfile": "Profil Énergétique",
       "costs": "Coûts",
@@ -1035,14 +1112,26 @@
     "escToCancel": "pour annuler le dessin",
     "pointsAdded": "{{count}} ajoutés",
     "editPolygon": "Modifier le polygone",
-    "moveVertex": "Déplacer les coins",
+    "moveVertex": "Faites glisser un coin pour le déplacer",
     "moveVertexHint": "Faites glisser un sommet pour ajuster",
-    "addVertex": "Ajouter un point",
+    "addVertex": "Faites glisser un côté pour ajouter un coin",
     "addVertexHint": "Cliquez sur une arête",
     "removeVertex": "Supprimer un point",
-    "removeVertexHint": "cliquez sur un sommet"
+    "removeVertexHint": "cliquer sur un coin pour le supprimer",
+    "removePolygonHint": "cliquer sur un polygone pour le supprimer",
+    "shortcuts": "Raccourcis",
+    "groupDrawing": "Dessin",
+    "groupDeleting": "Suppression",
+    "groupNavigating": "Navigation",
+    "rotate3dDrag": "faire glisser pour pivoter la vue 3D",
+    "spacePanHint": "faire glisser pour déplacer la carte",
+    "rightClickCloseHint": "pour fermer le polygone",
+    "keyRightClick": "Clic droit",
+    "keySpace": "Espace",
+    "dismissGuide": "Masquer le guide"
   },
   "workflow": {
+    "optional": "facultatif",
     "title": "Flux de travail",
     "gridGeneration": "Génération du réseau",
     "gridGenerationHint": "Analyse des bâtiments & création du réseau",
@@ -1063,7 +1152,11 @@
     "assignBuildingsAction": "Affecter bâtiments",
     "runPowerFlowAction": "Flux de puissance",
     "rerunPowerFlowAction": "Relancer flux",
-    "resolveHeatAction": "Résoudre la chaleur"
+    "resolveHeatAction": "Résoudre la chaleur",
+    "auto": "auto",
+    "clickAddTransformer": "Cliquez sur le bouton de la barre du bas",
+    "clickOnMapInPolygon": "Cliquez sur la carte à l'intérieur du polygone",
+    "clickToSelectBuilding": "Cliquez pour sélectionner un bâtiment"
   },
   "time": {
     "justNow": "À l'instant",
@@ -1540,6 +1633,10 @@
     "technologies": "Technologies",
     "parameters": "Paramètres",
     "pypsaSimulation": "Simulation PyPSA",
+    "prepare3d": {
+      "pending": "En attente de la préparation des données 3D des bâtiments de cette zone...",
+      "running": "Préparation des données 3D des bâtiments de cette zone..."
+    },
     "actions": {
       "saveAndExit": "Enregistrer & Quitter",
       "create": "Créer une simulation énergétique",
@@ -1551,7 +1648,7 @@
     "mapHeader": {
       "public": "Public",
       "myBuildings": "Mes bâtiments",
-      "clearAll": "Tout effacer",
+      "clearAll": "Supprimer tous les polygones",
       "togglePublicBuildings": "Basculer bâtiments publics",
       "toggleMyBuildings": "Basculer mes bâtiments"
     },
@@ -1579,7 +1676,20 @@
       "clickToCancel": "Cliquez pour annuler l'ajout du transformateur",
       "clickToMove": "Cliquez pour déplacer",
       "movingSuccess": "Transformateur déplacé avec succès",
-      "movingFailed": "Échec du déplacement du transformateur"
+      "movingFailed": "Échec du déplacement du transformateur",
+      "userPlaced": "Placé par l'utilisateur",
+      "dialogDescription": "Afficher et modifier les paramètres du transformateur. Les modifications concernent les bâtiments raccordés.",
+      "gridId": "ID du réseau",
+      "voltageTransformation": "Transformation de tension",
+      "mediumVoltage": "Haute tension A",
+      "lowVoltage": "Basse tension",
+      "mvShort": "HTA",
+      "lvShort": "BT",
+      "mvDescription": "Haute tension A issue du poste source du gestionnaire de réseau, courant alternatif triphasé distribué par câbles souterrains ou lignes aériennes",
+      "lvDescription": "Sortie basse tension : 400 V entre phases (triphasé) ou 230 V entre phase et neutre (monophasé) pour les bâtiments résidentiels et commerciaux",
+      "stepDownNote": "Ce transformateur abaisse la tension pour une distribution sûre vers les bâtiments tout en conservant la puissance.",
+      "ratedPower": "Puissance nominale",
+      "selectKva": "Choisir les kVA"
     },
     "building": {
       "assignSuccess": "Bâtiment assigné au transformateur",
@@ -1594,8 +1704,48 @@
       "assignPartialSuccess": "{{success}} sur {{total}} bâtiments assignés",
       "cancelAssign": "Annuler",
       "nextStep": "Suivant",
-      "finish": "Terminer"
-    }
+      "finish": "Terminer",
+      "back": "Retour"
+    },
+    "mapOverlay": {
+      "analyzingArea": "Analyse de la zone",
+      "canHostChargers": "Bornes possibles : {{count}}",
+      "limitedChargers": "Limité, bornes : {{count}}",
+      "connectedBuildings": "Bâtiments raccordés",
+      "types": "Types",
+      "moreCount": "+{{count}} de plus",
+      "clickForDetails": "Cliquez pour plus de détails",
+      "class": "Classe",
+      "estimatedShort": "est.",
+      "floors": "Étages",
+      "height": "Hauteur",
+      "heightMedian": "Hauteur (médiane)",
+      "built": "Construit",
+      "label": "Étiquette",
+      "energyIndex": "Indice énergétique",
+      "labelDate": "Date de l'étiquette",
+      "population": "Population",
+      "households": "Ménages",
+      "avgHouseholdSize": "Taille moyenne des ménages",
+      "cbsNote": "Les valeurs CBS sont des statistiques par zone de code postal (PC6 de préférence, sinon PC4), et non des valeurs par bâtiment.",
+      "source": "Source : {{source}}.",
+      "sourcesNl": "Sources : {{epOnline}} (conditions applicables) et {{cbs}}.",
+      "technologiesCount": "Technologies ({{count}})",
+      "dropToAddTech": "Déposez pour ajouter la technologie",
+      "clickToEdit": "Cliquez pour modifier les détails",
+      "mvLine": "Ligne HTA",
+      "normallyOpen": "Normalement ouvert",
+      "length": "Longueur",
+      "type": "Type",
+      "bus": "Nœud"
+    },
+    "unsavedChanges": {
+      "title": "Modifications non enregistrées",
+      "description": "Vous avez des modifications non enregistrées dans ce modèle. Enregistrez-les manuellement avant de quitter ou abandonnez vos modifications.",
+      "continueEditing": "Continuer la modification",
+      "discard": "Abandonner les modifications"
+    },
+    "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version"
   },
   "mapLayers": {
     "title": "Couches de carte",
@@ -1607,7 +1757,11 @@
       "osmHumanitarian": "Style humanitaire OpenStreetMap",
       "cartoPositron": "Carte de base claire par CartoDB",
       "cartoVoyager": "Carte de base détaillée par CartoDB",
-      "openTopoMap": "Carte de style topographique"
+      "openTopoMap": "Carte de style topographique",
+      "maplibreDark": "Fond de carte vectoriel sombre",
+      "maplibreVoyager": "Fond de carte vectoriel détaillé (Voyager)",
+      "cartoDark": "Fond de carte raster sombre de CartoDB",
+      "maplibre3d": "Bâtiments 3D sur imagerie satellite"
     },
     "dataLayers": {
       "title": "Couches de données",
@@ -1943,10 +2097,23 @@
     },
     "dragInstruction": "Faites glisser une technologie sur un bâtiment de la carte",
     "noTechnologies": "Aucune technologie disponible",
+    "carrierToggleLabel": "Vecteur de la technologie",
+    "carriers": {
+      "electricity": "Électricité",
+      "heat": "Chaleur"
+    },
+    "heatSourceHint": "Les technologies de chaleur proviennent d'OpenTech-DB et sont optimisées par Calliope.",
+    "noHeatTechnologies": "Aucune technologie de chaleur disponible",
+    "searchPlaceholder": "Rechercher des technologies…",
+    "noSearchResults": "Aucune technologie ne correspond à la recherche",
+    "otdbElectricityHint": "Ajouts OpenTech-DB : Calliope optimise leur capacité.",
     "categories": {
       "supply": "Approvisionnement",
       "storage": "Stockage",
-      "other": "Autres"
+      "other": "Autres",
+      "conversion": "Conversion",
+      "networks": "Réseaux",
+      "otdbAdditions": "Ajouts OpenTech-DB"
     },
     "form": {
       "key": "Clé",
@@ -2068,6 +2235,40 @@
         "name": "Alimentation consommateurs non-résidentiels",
         "description": "Profil de consommation d'énergie commerciale et industrielle"
       }
+    },
+    "heatBootstrap": {
+      "title": "Technologies de chaleur",
+      "description": "Choisissez comment ajouter des technologies de chaleur aux bâtiments.",
+      "prompt": "La demande de chaleur a été attribuée aux bâtiments. Comment souhaitez-vous ajouter les technologies de chauffage ?",
+      "autoAssign": "Attribuer automatiquement",
+      "autoAssignDescription": "Attribue à chaque bâtiment la technologie de chauffage la plus adaptée à son type (par ex. pompe à chaleur pour les maisons, chaudière à gaz pour les appartements, cogénération pour l'industrie). Vous pouvez modifier chaque attribution ensuite.",
+      "manual": "Manuel",
+      "manualDescription": "Laisser les technologies vides. Choisissez ensuite vous-même la technologie de chauffage de chaque bâtiment."
+    },
+    "addToAllBuildings": "Ajouter à tous les bâtiments",
+    "removeFromAllBuildings": "Retirer de tous les bâtiments",
+    "paramCount": "Paramètres : {{count}}",
+    "paramDialog": {
+      "description": "Configurez les paramètres de la technologie pour ce bâtiment",
+      "turbineSummary": "{{power}} kW · rotor de {{diameter}} m",
+      "selectPlaceholder": "Sélectionner...",
+      "searchTurbines": "Rechercher des éoliennes...",
+      "noTurbinesMatch": "Aucune éolienne ne correspond à la recherche",
+      "noTurbinesAvailable": "Aucune éolienne disponible",
+      "turbinesShown": "Éoliennes affichées : {{shown}} sur {{total}}",
+      "selectHeight": "Sélectionnez la hauteur",
+      "required": "Obligatoire",
+      "minValue": "Min : {{value}}",
+      "maxValue": "Max : {{value}}",
+      "infinity": "Infini",
+      "applyingTo": "S'applique à :",
+      "allBuildings": "Tous les bâtiments",
+      "osmId": "(OSM : {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (prix par défaut du combustible externe)",
+      "totalCount": "Total : {{count}}",
+      "constraints": "Contraintes",
+      "applyToAllBuildings": "Appliquer à tous les bâtiments",
+      "applyTechnology": "Appliquer la technologie"
     }
   },
   "locations": {
@@ -2513,7 +2714,57 @@
     "coverageHigh": "Couverture de données élevée",
     "coverageMedium": "Couverture de données moyenne",
     "coverageLow": "Couverture de données faible",
-    "summaryFooter": "{{countries}} pays · {{regions}} régions · {{grids}} grilles"
+    "summaryFooter": "{{countries}} pays · {{regions}} régions · {{grids}} grilles",
+    "3dBuildingData": "Hauteurs 3D des bâtiments par LiDAR disponibles",
+    "buildingDialog": {
+      "title": "Détails du bâtiment",
+      "description": "Afficher et modifier les détails du bâtiment sélectionné, y compris le type, la demande d'énergie et les technologies.",
+      "classLabel": "Classe :",
+      "buildingType": "Type de bâtiment (fClass)",
+      "selectType": "Sélectionner un type",
+      "detected": "Détecté",
+      "allTypes": "Tous les types",
+      "geometry": "Géométrie du bâtiment",
+      "floorArea": "Surface au sol",
+      "floors": "Étages",
+      "householdSize": "Taille du ménage",
+      "peopleShort": "pers.",
+      "constructionYearShort": "Année constr.",
+      "sourceHeights": "Hauteurs {{source}}",
+      "buildingHeights": "Hauteurs du bâtiment",
+      "heightMedian": "Hauteur médiane",
+      "heightMax": "Hauteur maximale",
+      "heightGround": "Hauteur du sol",
+      "energyLabel": "Étiquette énergétique",
+      "detectedLabel": "(détecté : {{label}})",
+      "energyIndex": "Indice énergétique :",
+      "electricHotWater": "Eau chaude électrique",
+      "recalculating": "Recalcul en cours...",
+      "recalculateDemand": "Recalculer la demande",
+      "totalFloorArea": "{{floors}} ét. × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "Aucune technologie ajoutée pour le moment.",
+      "parameterCount": "Paramètres : {{count}}",
+      "editParameters": "Modifier les paramètres",
+      "removeTechnology": "Supprimer la technologie",
+      "availableTechnologies": "Technologies disponibles",
+      "added": "Ajoutée",
+      "labelDate": "Date de l'étiquette :",
+      "cbsPostcodeData": "Données CBS / code postal",
+      "population": "Population",
+      "households": "Ménages",
+      "avgHouseholdSize": "Taille moyenne des ménages",
+      "heightsFrom": "Hauteurs issues de",
+      "attributionBy": "par {{name}}",
+      "energyLabelsFrom": "Étiquettes énergétiques issues de",
+      "demographicsFrom": "Données démographiques issues de",
+      "cuzkName": "Office tchèque de topographie, de cartographie et du cadastre",
+      "enrichedWith": "Données du bâtiment enrichies avec",
+      "licensedUnder": "Sous licence",
+      "include": "Inclure",
+      "exclude": "Exclure",
+      "includeTooltip": "Inclure ce bâtiment personnalisé dans le réseau (nécessite une régénération)",
+      "excludeTooltip": "Exclure ce bâtiment personnalisé du réseau (nécessite une régénération)"
+    }
   },
   "landing": {
     "nav": {
@@ -2704,5 +2955,28 @@
       "thirdPartyLicenses": "Licences tierces",
       "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. Ce projet a bénéficié d'un financement de l'Union européenne. Les points de vue et opinions exprimés n'engagent que leur(s) auteur(s) et ne reflètent pas nécessairement ceux de l'Union européenne."
     }
+  },
+  "transformer": {
+    "onlyInsidePolygon": "Les transformateurs ne peuvent être placés qu'à l'intérieur de la zone sélectionnée"
+  },
+  "powerFlowLegend": {
+    "customTransformers": "Transformateurs personnalisés",
+    "transformer": "Transformateur {{number}}",
+    "buildingCount": "Bâtiments : {{count}}",
+    "loadUtilization": "Taux de charge",
+    "low": "Faible",
+    "moderate": "Modérée",
+    "medium": "Moyenne",
+    "high": "Élevée",
+    "overloaded": "Surchargée",
+    "mvLines": "Lignes HTA"
+  },
+  "buildingConfig": {
+    "backToMap": "Retour à la carte",
+    "preparing": "Préparation des données 3D de ce bâtiment. City2TABULA extrait et relie les bâtiments de la zone, ce qui peut prendre quelques minutes la première fois qu'une zone est utilisée. Le bâtiment s'ouvrira ici dès qu'il sera prêt.",
+    "loading": "Chargement du bâtiment…",
+    "noGeometry": "City2TABULA ne contient plus la géométrie 3D de ce bâtiment.",
+    "credit3dData": "Données 3D",
+    "modifiedBy": "modifié par {{name}}"
   }
 }

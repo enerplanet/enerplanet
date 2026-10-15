@@ -10,6 +10,7 @@
 
 import type { FC } from 'react';
 
+import { useTranslation } from '@spatialhub/i18n';
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { useModelStore } from '@/features/configurator/store/modelStore';
@@ -26,20 +27,23 @@ import { useConfiguratorParams } from './useConfiguratorParams';
  * Centred message for the states where there is no view to show. The view's
  * own header holds the back button, so each message carries one instead.
  */
-const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack }) => (
-  <div className="inset-0 flex h-full items-center justify-center">
-    <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
-      <p className="max-w-md text-center">{children}</p>
-      <button
-        type="button"
-        onClick={onBack}
-        className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:opacity-90"
-      >
-        Back to map
-      </button>
+const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="inset-0 flex h-full items-center justify-center">
+      <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
+        <p className="max-w-md text-center">{children}</p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:opacity-90"
+        >
+          {t('buildingConfig.backToMap')}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** Receives a building the user changed, as the model should store it. */
 export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
@@ -49,18 +53,19 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
+  const { t } = useTranslation();
 
   if (preparing) {
     return (
       <Notice onBack={onExit}>
-        Preparing this building's 3D data. City2TABULA is extracting and linking the area's buildings, which can take a few minutes the first time an area is used. The building opens here when it is ready.
+        {t('buildingConfig.preparing')}
       </Notice>
     );
   }
-  if (loading) return <Notice onBack={onExit}>Loading this building…</Notice>;
+  if (loading) return <Notice onBack={onExit}>{t('buildingConfig.loading')}</Notice>;
   if (error) return <Notice onBack={onExit}>{error}</Notice>;
   if (!building) return null;
-  if (!objectId) return <Notice onBack={onExit}>City2TABULA no longer holds this building's 3D geometry.</Notice>;
+  if (!objectId) return <Notice onBack={onExit}>{t('buildingConfig.noGeometry')}</Notice>;
 
   // The view hands back the building it was given when nothing changed, and a
   // new object when something did.
@@ -88,7 +93,7 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
             const isTabula = c.dataset_id === TABULA_DATASET_ID;
             return (
               <div key={c.dataset_id}>
-                {isTabula ? 'Building type' : '3D data'}:{' '}
+                {isTabula ? t('tooltips.buildingType.title') : t('buildingConfig.credit3dData')}:{' '}
                 <a
                   href={c.credit_url ?? c.terms_url ?? c.licence_url}
                   title={isTabula ? c.changes : undefined}
@@ -109,7 +114,7 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
                       rel="noopener noreferrer"
                       className="underline decoration-dotted"
                     >
-                      modified by City2TABULA
+                      {t('buildingConfig.modifiedBy', { name: 'City2TABULA' })}
                     </a>
                   </>
                 )}
