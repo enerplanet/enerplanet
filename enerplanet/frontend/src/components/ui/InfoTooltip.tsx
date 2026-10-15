@@ -61,12 +61,13 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 	const computeAnchoredPosition = useCallback(() => {
 		if (!triggerRef.current) return;
 		const rect = triggerRef.current.getBoundingClientRect();
-		const tooltipWidth = TOOLTIP_WIDTH_PX;
 		const gap = TOOLTIP_GAP_PX;
 		const top = rect.top + rect.height / 2;
 		let left = 0;
+		// The left-anchored tooltip is placed by its right edge (-translate-x-full), since
+		// its rendered width follows the root font size rather than TOOLTIP_WIDTH_PX.
 		if (position === FIXED_LEFT_ANCHORED) {
-			left = rect.left - tooltipWidth - gap;
+			left = rect.left - gap;
 		} else {
 			left = rect.right + gap;
 		}
@@ -180,6 +181,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 			case FIXED_LEFT:
 				return `${FIXED_POS} left-4 top-1/2 ${TRANSFORM_CENTER_Y} ${Z_INDEX_TOOLTIP}`;
 			case FIXED_LEFT_ANCHORED:
+				return `${FIXED_POS} -translate-x-full ${TRANSFORM_CENTER_Y} ${Z_INDEX_TOOLTIP}`;
 			case FIXED_RIGHT_ANCHORED:
 				return `${FIXED_POS} ${TRANSFORM_CENTER_Y} ${Z_INDEX_TOOLTIP}`;
 			default:
@@ -196,9 +198,9 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const getTooltipClasses = () => {
 		if (isFixedMode || isPortalFloating) {
-			return `w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+			return `pointer-events-none w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 		}
-		return `absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+		return `pointer-events-none absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 	};
 
 	return (
