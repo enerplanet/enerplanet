@@ -10,7 +10,7 @@ import type Polygon from "ol/geom/Polygon";
 import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
 import { Feature } from "ol";
-import { Polygon as OLPolygon, Point } from "ol/geom";
+import { MultiPoint, Polygon as OLPolygon, Point } from "ol/geom";
 import { altKeyOnly, noModifierKeys, primaryAction, shiftKeyOnly } from "ol/events/condition";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import { getArea } from "ol/sphere";
@@ -198,15 +198,29 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
     const vectorLayer = new VectorLayer({
       source: vectorSource,
-      style: new Style({
-        fill: new Fill({
-          color: "transparent",
+      style: [
+        new Style({
+          fill: new Fill({
+            color: "transparent",
+          }),
+          stroke: new Stroke({
+            color: "#000000",
+            width: 2.5,
+          }),
         }),
-        stroke: new Stroke({
-          color: "#000000",
-          width: 2.5,
+        // A marker on every corner shows where the polygon can be grabbed.
+        new Style({
+          geometry: (feature) => {
+            const ring = (feature.getGeometry() as Polygon).getCoordinates()[0];
+            return new MultiPoint(ring.slice(0, -1));
+          },
+          image: new CircleStyle({
+            radius: 4,
+            fill: new Fill({ color: "#ffffff" }),
+            stroke: new Stroke({ color: "#111827", width: 1.5 }),
+          }),
         }),
-      }),
+      ],
       zIndex: 2000, // High z-index to ensure polygon stays on top of all grid layers
     });
 
@@ -268,7 +282,6 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     const sketchStyle = new Style({
       fill: new Fill({ color: "rgba(0, 0, 0, 0.05)" }),
       stroke: new Stroke({ color: "#000000", width: 2, lineDash: [4, 4] }),
-      image: new CircleStyle({ radius: 4, fill: new Fill({ color: "#000000" }) }),
     });
 
     const hasNoArea = (geom: Polygon) => getArea(geom, { projection: map.getView().getProjection() }) < MIN_POLYGON_AREA_M2;
@@ -358,20 +371,11 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
                   features[0].set("isNearStart", isNearStartPoint);
                 }
 
-                // Change cursor style
-                const viewport = map.getViewport();
-                if (isNearStartPoint) {
-                  viewport.style.cursor = "pointer";
-                } else {
-                  viewport.style.cursor = "crosshair";
-                }
+                applyCursor();
               }
             }
           }
         });
-
-        // Set crosshair cursor when drawing starts
-        map.getViewport().style.cursor = "crosshair";
 
         if (onDrawingChangeRef.current) {
           onDrawingChangeRef.current(true);
@@ -383,9 +387,6 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         startPointSourceRef.current?.clear();
         startCoord = null;
         isNearStartPoint = false;
-
-        // Reset cursor
-        map.getViewport().style.cursor = "";
 
         // Reset point count
         if (onPointCountChangeRef.current) {
@@ -454,14 +455,20 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         map.addInteraction(modify);
         modify.getOverlay().setZIndex(MODIFY_SKETCH_Z_INDEX);
 
-        // Modify inserts a vertex on pointerdown within pixelTolerance of an edge,
-        // so a plain click near the boundary (e.g. on a building) fires modifyend
-        // without changing the shape. Unchanged areas mean no grid regeneration.
+        // Modify inserts a vertex on pointerdown within pixelTolerance of an edge, so a press near the
+        // boundary that is not dragged leaves an extra corner with the shape unchanged. Such a press is
+        // undone: a corner made from an edge stays only once it is dragged.
         const polygonAreas = () =>
           vectorSource.getFeatures().map((f) => (f.getGeometry() as Polygon | undefined)?.getArea() ?? 0);
+        const cornerTotal = () =>
+          vectorSource.getFeatures().reduce((n, f) => n + (f.getGeometry() as Polygon).getCoordinates()[0].length, 0);
         let areasAtStart: number[] = [];
+        let cornersAtStart = 0;
+        let ringsAtStart: { feature: Feature; coords: Coordinate[][] }[] = [];
         modify.on("modifystart", () => {
           areasAtStart = polygonAreas();
+          cornersAtStart = cornerTotal();
+          ringsAtStart = vectorSource.getFeatures().map((f) => ({ feature: f, coords: (f.getGeometry() as Polygon).getCoordinates() }));
         });
 
         // Handle modification end - sync allPolygonsRef and notify parent
@@ -471,7 +478,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           const shapeUnchanged =
             areas.length === areasAtStart.length &&
             areas.every((a, i) => Math.abs(a - areasAtStart[i]) <= 1e-9 * Math.max(1, a));
-          if (shapeUnchanged) return;
+          if (shapeUnchanged) {
+            if (cornerTotal() > cornersAtStart) ringsAtStart.forEach(({ feature, coords }) => (feature.getGeometry() as Polygon).setCoordinates(coords));
+            return;
+          }
           const flattened = vectorSource.getFeatures().filter((f) => hasNoArea(f.getGeometry() as Polygon));
           flattened.forEach((f) => vectorSource.removeFeature(f));
           if (flattened.length > 0) onPolygonRejectedRef.current?.();
@@ -504,10 +514,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         sketching = false;
         currentPointCount = 0;
         startPointSourceRef.current?.clear();
-        map.getViewport().style.cursor = "";
         onPointCountChangeRef.current?.(0);
         onDrawingChangeRef.current?.(false);
         syncPan();
+        applyCursor();
       };
       handleContextMenu = (e: MouseEvent) => {
         if (!sketching) return;
@@ -522,6 +532,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         sketching = true;
         currentPointCount = 0;
         syncPan();
+        applyCursor();
         const geom = evt.feature.getGeometry() as Polygon;
         geom.on("change", () => {
           currentPointCount = sketchVertexCount(geom);
@@ -531,6 +542,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         sketching = false;
         currentPointCount = 0;
         syncPan();
+        applyCursor();
       });
       draw.on("drawabort", endSketch);
 
@@ -540,35 +552,52 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       const viewport = map.getViewport();
       let pointerOverMap = false;
       let buttonDown = false;
+      let panning = false;
+      let modifierHeld = false;
       function syncPan() {
         dragPans.forEach((p) => p.setActive(!sketching || spaceHeld));
       }
-      const restCursor = () => {
-        viewport.style.cursor = sketching ? "crosshair" : "";
+      // One place sets the cursor, so it always names the tool a click or drag would use: Space pans,
+      // Alt picks a corner and Shift a polygon; otherwise drawing, or whatever is under the pointer.
+      function applyCursor() {
+        let cursor = "";
+        if (panning) cursor = "grabbing";
+        else if (spaceHeld) cursor = "grab";
+        else if (modifierHeld) cursor = "pointer";
+        else if (sketching) cursor = isNearStartPoint ? "pointer" : "crosshair";
+        else if (allowMultipleRef.current || targetFeature) cursor = cursorFor[pointerTarget];
+        viewport.style.cursor = cursor;
+      }
+      const onKey = (e: KeyboardEvent) => {
+        modifierHeld = e.altKey || e.shiftKey;
+        if (e.code === "Space" && (e.type === "keyup" || pointerOverMap)) {
+          if (pointerOverMap) e.preventDefault();
+          spaceHeld = e.type === "keydown";
+          syncPan();
+        }
+        applyCursor();
       };
-      const onSpace = (e: KeyboardEvent) => {
-        if (e.code !== "Space" || (e.type === "keydown" && !pointerOverMap)) return;
-        if (pointerOverMap) e.preventDefault();
-        const down = e.type === "keydown";
-        if (down === spaceHeld) return;
-        spaceHeld = down;
+      const onBlur = () => {
+        spaceHeld = false;
+        modifierHeld = false;
         syncPan();
-        if (down) viewport.style.cursor = "grab";
-        else restCursor();
+        applyCursor();
       };
       const onEnter = () => { pointerOverMap = true; };
       const onLeave = () => { pointerOverMap = false; };
       const onDown = () => { buttonDown = true; };
       const onUp = () => { buttonDown = false; };
       const onMoveStart = () => {
-        if (buttonDown && (!sketching || spaceHeld)) viewport.style.cursor = "grabbing";
+        panning = buttonDown && (!sketching || spaceHeld);
+        applyCursor();
       };
       const onMoveEnd = () => {
-        if (spaceHeld) viewport.style.cursor = "grab";
-        else restCursor();
+        panning = false;
+        applyCursor();
       };
-      document.addEventListener("keydown", onSpace);
-      document.addEventListener("keyup", onSpace);
+      document.addEventListener("keydown", onKey);
+      document.addEventListener("keyup", onKey);
+      window.addEventListener("blur", onBlur);
       viewport.addEventListener("pointerenter", onEnter);
       viewport.addEventListener("pointerleave", onLeave);
       viewport.addEventListener("pointerdown", onDown);
@@ -576,8 +605,9 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       map.on("movestart", onMoveStart);
       map.on("moveend", onMoveEnd);
       removePanHandlers = () => {
-        document.removeEventListener("keydown", onSpace);
-        document.removeEventListener("keyup", onSpace);
+        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("keyup", onKey);
+        window.removeEventListener("blur", onBlur);
         viewport.removeEventListener("pointerenter", onEnter);
         viewport.removeEventListener("pointerleave", onLeave);
         viewport.removeEventListener("pointerdown", onDown);
@@ -620,8 +650,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       };
       map.on("singleclick", handleShiftClick);
 
-      // Near a corner the cursor shows it can be moved. Inside a polygon the map is for selecting:
-      // drawing pauses (hiding its cursor dot) and the cursor is a hand. Outside, a crosshair.
+      // Near a corner the cursor shows it can be moved. Inside a polygon the map is for selecting, so
+      // drawing pauses and the cursor is a hand. Outside, a crosshair.
       const cursorFor: Record<PointerTarget, string> = {
         corner: "move",
         "triangle-corner": "move",
@@ -641,11 +671,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           target = "polygon";
         }
         if (allowMultipleRef.current) draw.setActive(target === "outside");
-        map.getViewport().style.cursor = allowMultipleRef.current || targetFeature ? cursorFor[target] : "";
-        if (target !== pointerTarget) {
-          pointerTarget = target;
-          onPointerTargetChangeRef.current?.(target);
-        }
+        const changed = target !== pointerTarget;
+        pointerTarget = target;
+        applyCursor();
+        if (changed) onPointerTargetChangeRef.current?.(target);
       };
       map.on("pointermove", handlePointerMove);
       document.addEventListener("keydown", handleKeyDown);
