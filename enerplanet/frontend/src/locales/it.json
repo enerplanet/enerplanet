@@ -1318,11 +1318,9 @@
     "mapHeader": {
       "public": "Pubblico",
       "myBuildings": "I miei edifici",
-      "multiplePolygons": "Poligoni multipli",
       "clearAll": "Cancella tutto",
       "togglePublicBuildings": "Attiva/disattiva edifici pubblici",
-      "toggleMyBuildings": "Attiva/disattiva i miei edifici",
-      "toggleMultiplePolygons": "Attiva/disattiva poligoni multipli"
+      "toggleMyBuildings": "Attiva/disattiva i miei edifici"
     },
     "powerFlow": {
       "run": "Esegui analisi flusso di potenza",
@@ -2276,11 +2274,6 @@
     "costDescription": "Costi infrastruttura incl. cavi e trasformatori"
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Poligoni Multipli",
-      "description": "Abilita questa opzione per disegnare più aree separate sulla mappa per la valutazione energetica. Se disabilitata, disegnare un nuovo poligono sostituirà il precedente. Se abilitata, puoi definire più aree distinte che saranno tutte incluse nell'analisi.",
-      "example": "Usa questa funzione per analizzare simulazioni energetiche su più aree non contigue simultaneamente."
-    },
     "publicBuildings": {
       "title": "Edifici Personalizzati Pubblici",
       "description": "Includi edifici condivisi da altri utenti nel calcolo della rete. Questi sono edifici personalizzati che altri utenti hanno reso pubblicamente disponibili.",

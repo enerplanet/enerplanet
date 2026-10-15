@@ -125,7 +125,6 @@ export interface AreaSelectState {
 	advancedParams: AdvancedParametersState;
 	showAdvancedParams: boolean;
 	isDrawing: boolean;
-	allowMultiplePolygons: boolean;
 	clearTrigger: number;
 	cursorPos: { x: number; y: number } | null;
 	isGeneratingGrid: boolean;
@@ -154,7 +153,6 @@ export interface AreaSelectActions {
 	handlePolygonDrawn: (coordinates: [number, number][], allPolygons: [number, number][][]) => Promise<void>;
 	handlePolygonModified: (allPolygons: [number, number][][]) => Promise<void>;
 	handleClearAllPolygons: () => void;
-	setAllowMultiplePolygons: (allow: boolean) => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions
 	setIncludePublicBuildings: (include: boolean) => void;

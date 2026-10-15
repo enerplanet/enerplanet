@@ -1551,11 +1551,9 @@
     "mapHeader": {
       "public": "Público",
       "myBuildings": "Mis edificios",
-      "multiplePolygons": "Polígonos múltiples",
       "clearAll": "Borrar todo",
       "togglePublicBuildings": "Alternar edificios públicos",
-      "toggleMyBuildings": "Alternar mis edificios",
-      "toggleMultiplePolygons": "Alternar polígonos múltiples"
+      "toggleMyBuildings": "Alternar mis edificios"
     },
     "powerFlow": {
       "run": "Ejecutar análisis de flujo de potencia",
@@ -1788,11 +1786,6 @@
     }
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Múltiples Polígonos",
-      "description": "Active esta opción para dibujar múltiples áreas separadas en el mapa para su evaluación energética. Cuando está desactivado, dibujar un nuevo polígono reemplazará el anterior. Cuando está activado, puede definir múltiples áreas distintas que se incluirán en el análisis.",
-      "example": "Use esto para analizar simulaciones energéticas en múltiples áreas no contiguas simultáneamente."
-    },
     "publicBuildings": {
       "title": "Edificios Personalizados Públicos",
       "description": "Incluya edificios compartidos por otros usuarios en el cálculo de la red. Estos son edificios personalizados que otros usuarios han hecho públicamente disponibles.",

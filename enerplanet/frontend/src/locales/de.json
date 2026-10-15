@@ -1628,11 +1628,9 @@
     "mapHeader": {
       "public": "Öffentlich",
       "myBuildings": "Meine Gebäude",
-      "multiplePolygons": "Mehrere Polygone",
       "clearAll": "Alle löschen",
       "togglePublicBuildings": "Öffentliche Gebäude umschalten",
-      "toggleMyBuildings": "Meine Gebäude umschalten",
-      "toggleMultiplePolygons": "Mehrere Polygone umschalten"
+      "toggleMyBuildings": "Meine Gebäude umschalten"
     }
   },
   "mapLayers": {
@@ -1824,11 +1822,6 @@
     }
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Mehrere Polygone",
-      "description": "Aktivieren Sie diese Option, um mehrere separate Bereiche auf der Karte für Ihre Energiebewertung zu zeichnen. Bei Deaktivierung ersetzt ein neues Polygon das vorherige. Bei Aktivierung können Sie mehrere verschiedene Bereiche definieren, die alle in die Analyse einbezogen werden.",
-      "example": "Verwenden Sie dies, um Energiesimulationen über mehrere nicht zusammenhängende Bereiche gleichzeitig zu analysieren."
-    },
     "publicBuildings": {
       "title": "Öffentliche benutzerdefinierte Gebäude",
       "description": "Schließen Sie von anderen Benutzern freigegebene Gebäude in die Netzberechnung ein. Dies sind benutzerdefinierte Gebäude, die andere Benutzer öffentlich zugänglich gemacht haben.",

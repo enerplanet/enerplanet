@@ -1318,11 +1318,9 @@
     "mapHeader": {
       "public": "Veřejné",
       "myBuildings": "Moje budovy",
-      "multiplePolygons": "Více polygonů",
       "clearAll": "Smazat vše",
       "togglePublicBuildings": "Přepnout veřejné budovy",
-      "toggleMyBuildings": "Přepnout moje budovy",
-      "toggleMultiplePolygons": "Přepnout více polygonů"
+      "toggleMyBuildings": "Přepnout moje budovy"
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",
@@ -2276,11 +2274,6 @@
     "costDescription": "Náklady na infrastrukturu včetně kabelů a transformátorů"
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Více Polygonů",
-      "description": "Povolte tuto možnost pro kreslení více oddělených oblastí na mapě pro hodnocení energie. Při vypnutí kreslení nového polygonu nahradí předchozí. Při povolení můžete definovat více odlišných oblastí, které budou všechny zahrnuty do analýzy.",
-      "example": "Použijte pro současnou analýzu energetických simulací ve více nesouvislých oblastech."
-    },
     "publicBuildings": {
       "title": "Veřejné Vlastní Budovy",
       "description": "Zahrňte budovy sdílené jinými uživateli do výpočtu sítě. Jedná se o vlastní budovy, které jiní uživatelé veřejně zpřístupnili.",

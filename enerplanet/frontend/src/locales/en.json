@@ -1633,11 +1633,9 @@
     "mapHeader": {
       "public": "Public",
       "myBuildings": "My Buildings",
-      "multiplePolygons": "Multiple Polygons",
       "clearAll": "Clear All",
       "togglePublicBuildings": "Toggle public buildings",
-      "toggleMyBuildings": "Toggle my buildings",
-      "toggleMultiplePolygons": "Toggle multiple polygons"
+      "toggleMyBuildings": "Toggle my buildings"
     }
   },
   "mapLayers": {
@@ -1831,11 +1829,6 @@
     }
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Multiple Polygons",
-      "description": "Enable this option to draw multiple separate areas on the map for your Energy assessment. When disabled, drawing a new polygon will replace the previous one. When enabled, you can define multiple distinct areas that will all be included in the analysis.",
-      "example": "Use this to analyze energy simulation across multiple non-contiguous areas simultaneously."
-    },
     "publicBuildings": {
       "title": "Public Custom Buildings",
       "description": "Include buildings shared by other users in the grid calculation. These are custom buildings that other users have made publicly available.",

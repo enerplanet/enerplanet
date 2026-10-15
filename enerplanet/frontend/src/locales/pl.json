@@ -1318,11 +1318,9 @@
     "mapHeader": {
       "public": "Publiczne",
       "myBuildings": "Moje budynki",
-      "multiplePolygons": "Wiele wielokątów",
       "clearAll": "Wyczyść wszystko",
       "togglePublicBuildings": "Przełącz budynki publiczne",
-      "toggleMyBuildings": "Przełącz moje budynki",
-      "toggleMultiplePolygons": "Przełącz wiele wielokątów"
+      "toggleMyBuildings": "Przełącz moje budynki"
     },
     "powerFlow": {
       "run": "Uruchom analizę przepływu mocy",
@@ -2276,11 +2274,6 @@
     "costDescription": "Koszty infrastruktury w tym kable i transformatory"
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Wiele Wielokątów",
-      "description": "Włącz tę opcję, aby rysować wiele oddzielnych obszarów na mapie do oceny energetycznej. Po wyłączeniu, rysowanie nowego wielokąta zastąpi poprzedni. Po włączeniu możesz zdefiniować wiele odrębnych obszarów, które wszystkie zostaną uwzględnione w analizie.",
-      "example": "Użyj tego do jednoczesnej analizy symulacji energetycznych w wielu nieciągłych obszarach."
-    },
     "publicBuildings": {
       "title": "Publiczne Budynki Niestandardowe",
       "description": "Uwzględnij budynki udostępnione przez innych użytkowników w obliczeniach sieci. Są to niestandardowe budynki, które inni użytkownicy udostępnili publicznie.",

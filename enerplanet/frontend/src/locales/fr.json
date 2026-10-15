@@ -1551,11 +1551,9 @@
     "mapHeader": {
       "public": "Public",
       "myBuildings": "Mes bâtiments",
-      "multiplePolygons": "Polygones multiples",
       "clearAll": "Tout effacer",
       "togglePublicBuildings": "Basculer bâtiments publics",
-      "toggleMyBuildings": "Basculer mes bâtiments",
-      "toggleMultiplePolygons": "Basculer polygones multiples"
+      "toggleMyBuildings": "Basculer mes bâtiments"
     },
     "powerFlow": {
       "run": "Lancer l'analyse du flux de puissance",
@@ -1788,11 +1786,6 @@
     }
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Polygones Multiples",
-      "description": "Activez cette option pour dessiner plusieurs zones séparées sur la carte pour votre évaluation énergétique. Lorsque désactivé, dessiner un nouveau polygone remplacera le précédent. Lorsque activé, vous pouvez définir plusieurs zones distinctes qui seront toutes incluses dans l'analyse.",
-      "example": "Utilisez ceci pour analyser des simulations énergétiques sur plusieurs zones non contiguës simultanément."
-    },
     "publicBuildings": {
       "title": "Bâtiments Personnalisés Publics",
       "description": "Incluez les bâtiments partagés par d'autres utilisateurs dans le calcul du réseau. Ce sont des bâtiments personnalisés que d'autres utilisateurs ont rendus publiquement disponibles.",
