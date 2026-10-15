@@ -27,7 +27,7 @@ import { useConfiguratorParams } from './useConfiguratorParams';
  * own header holds the back button, so each message carries one instead.
  */
 const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack }) => (
-  <div className="flex h-full items-center justify-center">
+  <div className="inset-0 flex h-full items-center justify-center">
     <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
       <p>{children}</p>
       <button
@@ -120,13 +120,11 @@ export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited }> = ({
 
   if (!isOpen || buildingId === null) return null;
 
-  // Building3DView's root is `fixed inset-0 z-20`: left alone it renders
-  // beneath the top bar and sidebar rail (z-[51]) and loses its header, which
-  // holds the back button. Forcing the child to `absolute` makes its inset-0
-  // resolve against this element, so the chrome stays usable. This reaches into
-  // the package's positioning and must follow it if its root element changes.
+  // Building3DView's root (`fixed inset-0`) is forced to `absolute` here; follow the package if it changes.
+  // z-50 matches Radix dialogs: appended to <body> later, they paint above the panel,
+  // while the map's z-50 controls come earlier in the DOM and paint below it.
   return (
-    <div className="bg-background fixed right-0 bottom-0 z-[60] top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
+    <div className="bg-background fixed right-0 bottom-0 z-50 top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
       <PanelBody osmId={buildingId} onExit={close} onEdited={onBuildingEdited} />
     </div>
   );
