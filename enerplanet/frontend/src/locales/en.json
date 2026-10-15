@@ -1577,6 +1577,10 @@
     "technologies": "Technologies",
     "parameters": "Parameters",
     "pypsaSimulation": "PyPSA Simulation",
+    "prepare3d": {
+      "pending": "Waiting to prepare 3D building data for this area...",
+      "running": "Preparing 3D building data for this area..."
+    },
     "powerFlow": {
       "run": "Run Power Flow Analysis",
       "rerun": "Re-run Power Flow",

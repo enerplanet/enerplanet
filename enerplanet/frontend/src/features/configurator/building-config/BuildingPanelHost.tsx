@@ -29,7 +29,7 @@ import { useConfiguratorParams } from './useConfiguratorParams';
 const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack }) => (
   <div className="inset-0 flex h-full items-center justify-center">
     <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
-      <p>{children}</p>
+      <p className="max-w-md text-center">{children}</p>
       <button
         type="button"
         onClick={onBack}
@@ -45,11 +45,18 @@ const Notice: FC<{ children: string; onBack: () => void }> = ({ children, onBack
 export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 
 const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited }> = ({ osmId, onExit, onEdited }) => {
-  const { building, loading, error, objectId, country, credits } = useBuildingState(osmId);
+  const { building, loading, error, preparing, objectId, country, credits } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
 
+  if (preparing) {
+    return (
+      <Notice onBack={onExit}>
+        Preparing this building's 3D data. City2TABULA is extracting and linking the area's buildings, which can take a few minutes the first time an area is used. The building opens here when it is ready.
+      </Notice>
+    );
+  }
   if (loading) return <Notice onBack={onExit}>Loading this building…</Notice>;
   if (error) return <Notice onBack={onExit}>{error}</Notice>;
   if (!building) return null;

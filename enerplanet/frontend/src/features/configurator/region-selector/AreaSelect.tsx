@@ -69,6 +69,7 @@ import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost } from "@/features/configurator/building-config";
+import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
 const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
 
@@ -177,6 +178,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     suppressDialogOnClickRef,
     draftId,
   });
+  useAreaPreparation();
 
   // Fly to default region immediately when map is ready (before saved map location kicks in)
   const hasAppliedDefaultRegion = useRef(false);
