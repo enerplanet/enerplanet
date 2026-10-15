@@ -154,30 +154,10 @@ func (c *Client) RunBuilding(ctx context.Context, b Building, weather json.RawMe
 // leave the hourly values on each result; it defaults to false there, so the
 // field is only sent when set (buem-gateway v6.2.0 and later).
 func (c *Client) run(ctx context.Context, buildings []Building, weather json.RawMessage, startDate, endDate string, resolution int, modelID string, keepTimeseries bool, timeout time.Duration) ([]BuildingResult, error) {
-	if resolution <= 0 {
-		resolution = defaultResolution
+	payload, err := batchPayload(buildings, weather, startDate, endDate, resolution, modelID, keepTimeseries)
+	if err != nil {
+		return nil, err
 	}
-	sent := make([]Building, len(buildings))
-	for i, b := range buildings {
-		block, err := withDefaultComfortBand(b.Building)
-		if err != nil {
-			return nil, fmt.Errorf("building %s: %w", b.ID, err)
-		}
-		b.Building = block
-		sent[i] = b
-	}
-	payload := map[string]any{
-		"start_date": startDate,
-		"end_date":   endDate,
-		"resolution": resolution,
-		"model_id":   modelID,
-		"weather":    weather,
-		"buildings":  sent,
-	}
-	if keepTimeseries {
-		payload["keep_timeseries"] = true
-	}
-
 	var results []BuildingResult
 	if err := c.tc.DoTimeout(ctx, targetBuildings, payload, &results, timeout); err != nil {
 		return nil, asBuemError(err)
