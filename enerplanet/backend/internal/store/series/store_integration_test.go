@@ -127,3 +127,33 @@ func TestSave_OwnerMatchesOrigin(t *testing.T) {
 	_, err = s.Save(generated)
 	assert.Error(t, err, "a generated profile has no owner")
 }
+
+func TestLinkedSeries_JoinsLinksProfilesAndValues(t *testing.T) {
+	s := NewStore(scratchDB(t))
+	id, err := s.Save(buemProfile("key-a", 1.5, 2.25))
+	require.NoError(t, err)
+	draft := Owner{DraftID: "draft-1"}
+	require.NoError(t, s.Link(draft, "rev-1", []Link{
+		{BuildingRef: "268426401", Series: "heating", ProfileID: id, Source: "default"},
+		{BuildingRef: "268426401", Series: "electricity", ProfileID: id, Source: "default"},
+		{BuildingRef: "268426402", Series: "heating", ProfileID: id, Source: "user"},
+	}))
+
+	one, err := s.LinkedSeries(draft, "268426401")
+	require.NoError(t, err)
+	require.Len(t, one, 2)
+	assert.Equal(t, "electricity", one[0].Series)
+	assert.Equal(t, []float32{0.25, 0.5}, []float32(one[0].Vals))
+	assert.Equal(t, "heating", one[1].Series)
+	assert.Equal(t, []float32{1.5, 2.25}, []float32(one[1].Vals))
+	assert.Equal(t, 60, one[1].ResolutionMinutes)
+	assert.Equal(t, "kWh", one[1].Unit)
+
+	all, err := s.LinkedSeries(draft, "")
+	require.NoError(t, err)
+	assert.Len(t, all, 3)
+
+	none, err := s.LinkedSeries(draft, "missing")
+	require.NoError(t, err)
+	assert.Empty(t, none)
+}

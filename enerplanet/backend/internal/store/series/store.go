@@ -236,6 +236,46 @@ func (s *Store) Profiles(ids []int64) (map[int64]StoredProfile, error) {
 	return out, nil
 }
 
+// LinkedSeries is one series linked to a building of a draft or model, with
+// the values and timing of the profile it points to.
+type LinkedSeries struct {
+	BuildingRef       string
+	Part              string
+	Series            string
+	Source            string
+	ProducerVersion   *string
+	StartTime         time.Time
+	ResolutionMinutes int
+	Unit              string
+	// The type tag makes GORM scan the real[] column; without one it skips it.
+	Vals pq.Float32Array `gorm:"type:real[]"`
+}
+
+// LinkedSeries returns every series linked to owner, or to one building of it
+// when buildingRef is not empty, ordered by building, part and series.
+func (s *Store) LinkedSeries(owner Owner, buildingRef string) ([]LinkedSeries, error) {
+	if err := owner.validate(); err != nil {
+		return nil, err
+	}
+	q := s.db.Table("series_links AS l").
+		Select("l.building_ref, l.part, l.series, l.source, p.producer_version, p.start_time, p.resolution_minutes, v.unit, v.vals").
+		Joins("JOIN series_profiles AS p ON p.id = l.profile_id").
+		Joins("JOIN series_values AS v ON v.profile_id = l.profile_id AND v.series = l.series")
+	if owner.ModelID != 0 {
+		q = q.Where("l.model_id = ?", owner.ModelID)
+	} else {
+		q = q.Where("l.draft_id = ?", owner.DraftID)
+	}
+	if buildingRef != "" {
+		q = q.Where("l.building_ref = ?", buildingRef)
+	}
+	var out []LinkedSeries
+	if err := q.Order("l.building_ref, l.part, l.series").Scan(&out).Error; err != nil {
+		return nil, fmt.Errorf("read linked series for %+v building %q: %w", owner, buildingRef, err)
+	}
+	return out, nil
+}
+
 // Values returns one series of a stored profile.
 func (s *Store) Values(profileID int64, series string) (models.SeriesValues, error) {
 	var v models.SeriesValues
