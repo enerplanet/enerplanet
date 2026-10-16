@@ -109,6 +109,7 @@ func HandleDispatchMeme(
 	db *gorm.DB,
 	tc *tentacronclient.Client,
 	runs memeRunStore,
+	seriesReader demandSeriesReader,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
 ) (retErr error) {
@@ -144,6 +145,9 @@ func HandleDispatchMeme(
 	built, err := payload.BuildCalculationPayload(&model)
 	if err != nil {
 		return fmt.Errorf("build calculation payload for model %d: %w", p.ModelID, err)
+	}
+	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
+		return err
 	}
 	calcBytes, err := json.Marshal(built)
 	if err != nil {

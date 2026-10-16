@@ -97,7 +97,7 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, seriesstore.NewStore(p.db), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:
