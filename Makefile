@@ -121,7 +121,7 @@ dev-bg:
 	@tmux has-session -t $(SESSION_NAME) 2>/dev/null && \
 		(echo "Error: Session '$(SESSION_NAME)' is already running. Run 'make clean-bg' first.") || \
 		(tmux new-session -d -s $(SESSION_NAME) -n frontend "cd $(FRONT_DIR) && npm run dev" && \
-		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && go run cmd/main.go" && \
+		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && BUEM_VERSION='$(BUEM_MODEL_IMAGE_TAG)' go run cmd/main.go" && \
 		 echo "Services started successfully!" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Access Frontend:  http://localhost:3000" && \
