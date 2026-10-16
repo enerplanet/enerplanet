@@ -70,6 +70,7 @@ import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
+import { LargeModelWarning } from "./components/LargeModelWarning";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
@@ -93,6 +94,10 @@ interface AreaSelectProps {
 /** pylovo gives user-placed transformers an osm_id of the form "user/<timestamp>". */
 const hasUserTransformer = (grid: PylovoGridData | undefined): boolean =>
   (grid?.transformers?.features ?? []).some((f) => String(f.properties?.osm_id ?? "").startsWith("user/"));
+
+/** Buildings of the grid that take part in the model: disabled ones do not. */
+const activeBuildingCount = (grid: PylovoGridData | undefined): number =>
+  (grid?.buildings?.features ?? []).filter((f) => f.properties?.activated !== false).length;
 
 /** Translation key of the hint beside the cursor: where to click next while drawing an area. */
 const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, pointerOnMap: boolean): string | null => {
@@ -625,6 +630,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
+            <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />
           </>
         }
         mapHeader={

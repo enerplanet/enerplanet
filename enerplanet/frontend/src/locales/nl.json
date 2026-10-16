@@ -1506,6 +1506,10 @@
       "electric": "Elektrisch",
       "gas": "Gas",
       "hint": "Bij gas wordt het koken in de gebouwen een gasvraag uit een gaslevering"
+    },
+    "largeModel": {
+      "title": "Dit model heeft {{count}} gebouwen",
+      "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
     }
   },
   "mapLayers": {

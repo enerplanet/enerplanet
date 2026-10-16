@@ -1767,6 +1767,10 @@
       "electric": "Électrique",
       "gas": "Gaz",
       "hint": "Au gaz, la cuisson des bâtiments devient une demande de gaz achetée à un fournisseur de gaz"
+    },
+    "largeModel": {
+      "title": "Ce modèle compte {{count}} bâtiments",
+      "description": "Les modèles de plus de {{limit}} bâtiments demandent nettement plus de temps de calcul : chaque bâtiment passe par BuEM et Calliope résout la demande horaire de chaque bâtiment. Une année complète peut prendre des dizaines de minutes. Vous pouvez quand même l'enregistrer et le lancer."
     }
   },
   "mapLayers": {
