@@ -86,7 +86,7 @@ func (h *Handler) RunBuilding(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, ok := h.run(c, p, p.req.ModelID)
+	result, ok := h.run(c, p, "")
 	if !ok {
 		return
 	}
@@ -144,7 +144,7 @@ func (h *Handler) prepare(c *gin.Context) (prepared, bool) {
 		httputil.BadGateway(c, "weather-serve did not return a series for this building: "+err.Error())
 		return prepared{}, false
 	}
-	b := buemclient.Building{ID: req.OSMID, Geometry: req.Geometry, Building: req.Building, Solver: req.Solver}
+	b := buemclient.Building{ID: req.OSMID, Geometry: req.Geometry, Building: req.Building, Solver: req.Solver, Outputs: req.Outputs}
 	return prepared{req: req, building: b, weather: weather, start: start, end: end}, true
 }
 

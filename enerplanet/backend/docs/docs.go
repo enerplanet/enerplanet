@@ -49,7 +49,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Building geometry and BuEM building block; model_id is ignored",
+                        "description": "Building geometry and BuEM building block",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -182,7 +182,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Building geometry and BuEM building block; model_id is ignored",
+                        "description": "Building geometry and BuEM building block",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -1426,13 +1426,13 @@ const docTemplate = `{
                 "geometry": {
                     "type": "object"
                 },
-                "model_id": {
-                    "type": "string",
-                    "example": "42"
-                },
                 "osm_id": {
                     "type": "string",
                     "example": "240054621"
+                },
+                "outputs": {
+                    "description": "Outputs selects the load profiles to compute (heating, cooling,\nelectricity, hot_water, kitchen: none, summary or series), forwarded as\nproperties.buem.outputs; omitted, BuEM computes its default set.",
+                    "type": "object"
                 },
                 "resolution": {
                     "type": "integer",

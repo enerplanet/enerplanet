@@ -22,10 +22,13 @@ type BuemBuildingRunRequest struct {
 	StartDate  string `json:"start_date,omitempty" example:"2018-01-01T00:00:00Z"`
 	EndDate    string `json:"end_date,omitempty" example:"2018-12-31T23:00:00Z"`
 	Resolution int    `json:"resolution,omitempty" example:"60"`
-	ModelID    string `json:"model_id,omitempty" example:"42"`
 	// Solver is BuEM's solver block, forwarded as properties.buem.solver;
 	// omitted, BuEM uses its default solver.
 	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
+	// Outputs selects the load profiles to compute (heating, cooling,
+	// electricity, hot_water, kitchen: none, summary or series), forwarded as
+	// properties.buem.outputs; omitted, BuEM computes its default set.
+	Outputs json.RawMessage `json:"outputs,omitempty" swaggertype:"object"`
 	// WeatherProvider is the model's weather archive, so the run uses the same
 	// series as the model run; omitted, the backend default applies.
 	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"merra-2"`
