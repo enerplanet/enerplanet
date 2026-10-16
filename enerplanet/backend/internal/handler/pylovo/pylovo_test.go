@@ -56,3 +56,23 @@ func TestForwardToPylovo_pylovoTimeoutIsAServerError(t *testing.T) {
 		t.Fatalf("status = %d, want 500 when pylovo times out", got)
 	}
 }
+
+// Custom locations are private to their owner, so a grid request never asks
+// pylovo for other users' public buildings, whatever the client sends.
+func TestCopyBuildingFilterOptions_dropsPublicBuildings(t *testing.T) {
+	src := map[string]interface{}{
+		"include_public_buildings":  true,
+		"include_private_buildings": true,
+		"excluded_building_ids":     []interface{}{"custom_1"},
+	}
+	dst := map[string]interface{}{}
+
+	copyBuildingFilterOptions(src, dst)
+
+	if _, ok := dst["include_public_buildings"]; ok {
+		t.Errorf("include_public_buildings forwarded to pylovo: %v", dst)
+	}
+	if dst["include_private_buildings"] != true || dst["excluded_building_ids"] == nil {
+		t.Errorf("private filter options not forwarded: %v", dst)
+	}
+}

@@ -166,7 +166,7 @@ func buildGeomPayload(payload map[string]interface{}) map[string]interface{} {
 }
 
 func copyBuildingFilterOptions(src, dst map[string]interface{}) {
-	filterKeys := []string{"include_public_buildings", "include_private_buildings", "excluded_building_ids", "model_id", "draft_id"}
+	filterKeys := []string{"include_private_buildings", "excluded_building_ids", "model_id", "draft_id"}
 	for _, key := range filterKeys {
 		if val, ok := src[key]; ok {
 			dst[key] = val

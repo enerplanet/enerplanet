@@ -1401,10 +1401,8 @@
       "cancel": "Anuluj"
     },
     "mapHeader": {
-      "public": "Publiczne",
       "myBuildings": "Moje budynki",
       "clearAll": "Usuń wszystkie wielokąty",
-      "togglePublicBuildings": "Przełącz budynki publiczne",
       "toggleMyBuildings": "Przełącz moje budynki",
       "disableSelected": "Wyłącz zaznaczone budynki"
     },
@@ -1919,55 +1917,15 @@
     "newLocation": "Nowa Lokalizacja",
     "newLocationTooltip": "Utwórz nową niestandardową lokalizację",
     "searchPlaceholder": "Szukaj lokalizacji...",
-    "tabs": {
-      "my": "Moje Lokalizacje",
-      "public": "Publiczne"
-    },
     "stats": {
       "total": "Łącznie",
       "totalArea": "Całkowita Powierzchnia",
       "totalDemand": "Całkowite Zapotrzebowanie",
-      "public": "Publiczne",
       "private": "Prywatne"
     },
     "empty": {
       "title": "Nie znaleziono lokalizacji",
-      "description": "Utwórz swoją pierwszą niestandardową lokalizację, aby rozpocząć",
-      "publicTitle": "Brak publicznych lokalizacji",
-      "publicDescription": "Publiczne lokalizacje udostępnione przez innych użytkowników pojawią się tutaj. Przełącz lokalizację na publiczną, aby ją udostępnić."
-    },
-    "toggle": {
-      "makePublic": "Prywatna - Kliknij aby upublicznić",
-      "makePrivate": "Publiczna - Kliknij aby uczynić prywatną",
-      "nowPublic": "Lokalizacja jest teraz publiczna",
-      "nowPrivate": "Lokalizacja jest teraz prywatna"
-    },
-    "share": {
-      "title": "Udostępnij lokalizację",
-      "description": "Udostępnij \"{{name}}\" użytkownikom, przestrzeniom roboczym lub grupom",
-      "tabs": {
-        "users": "Użytkownicy",
-        "workspaces": "Przestrzenie robocze",
-        "groups": "Grupy"
-      },
-      "userEmail": "E-mail użytkownika",
-      "selectWorkspace": "Wybierz przestrzeń roboczą",
-      "selectGroup": "Wybierz grupę",
-      "addUser": "Udostępnij użytkownikowi",
-      "addWorkspace": "Udostępnij przestrzeni roboczej",
-      "addGroup": "Udostępnij grupie",
-      "sharedWithUsers": "Udostępnione użytkownikom",
-      "sharedWithWorkspaces": "Udostępnione przestrzeniom roboczym",
-      "sharedWithGroups": "Udostępnione grupom",
-      "noUsersYet": "Jeszcze nie udostępniono użytkownikom",
-      "noWorkspacesYet": "Jeszcze nie udostępniono przestrzeniom roboczym",
-      "noGroupsYet": "Jeszcze nie udostępniono grupom",
-      "removeAccess": "Usuń dostęp",
-      "totalShares": "{{count}} udostępnienie/ń łącznie",
-      "alreadySharedWithUser": "Ta lokalizacja jest już udostępniona temu użytkownikowi",
-      "alreadySharedWithWorkspace": "Ta lokalizacja jest już udostępniona tej przestrzeni roboczej",
-      "alreadySharedWithGroup": "Ta lokalizacja jest już udostępniona tej grupie",
-      "failedToShare": "Udostępnianie nie powiodło się. Spróbuj ponownie."
+      "description": "Utwórz swoją pierwszą niestandardową lokalizację, aby rozpocząć"
     }
   },
   "weather": {
@@ -2499,11 +2457,6 @@
     "sourceNote": "Szacunek silnika sieci PyLoVo. Koszty z niemieckich katalogów nN. Wykorzystanie na podstawie obciążenia jednoczesnego."
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Publiczne Budynki Niestandardowe",
-      "description": "Uwzględnij budynki udostępnione przez innych użytkowników w obliczeniach sieci. Są to niestandardowe budynki, które inni użytkownicy udostępnili publicznie.",
-      "example": "Możesz także wykluczyć poszczególne budynki, klikając na nie na mapie."
-    },
     "privateBuildings": {
       "title": "Moje Budynki Niestandardowe",
       "description": "Uwzględnij Twoje prywatne budynki niestandardowe w obliczeniach sieci. Są to budynki, które utworzyłeś i zapisałeś na swoim koncie.",

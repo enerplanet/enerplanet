@@ -639,9 +639,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             normalizedWorkspaceId={normalizedWorkspaceId}
             onWorkspaceChange={handleWorkspaceChange}
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
-            includePublicBuildings={state.includePublicBuildings}
             includePrivateBuildings={state.includePrivateBuildings}
-            onTogglePublicBuildings={actions.setIncludePublicBuildings}
             onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}

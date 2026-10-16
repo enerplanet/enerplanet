@@ -1401,10 +1401,8 @@
       "cancel": "Annulla"
     },
     "mapHeader": {
-      "public": "Pubblico",
       "myBuildings": "I miei edifici",
       "clearAll": "Rimuovi tutti i poligoni",
-      "togglePublicBuildings": "Attiva/disattiva edifici pubblici",
       "toggleMyBuildings": "Attiva/disattiva i miei edifici",
       "disableSelected": "Disattiva gli edifici selezionati"
     },
@@ -1919,55 +1917,15 @@
     "newLocation": "Nuova Posizione",
     "newLocationTooltip": "Crea una nuova posizione personalizzata",
     "searchPlaceholder": "Cerca posizioni...",
-    "tabs": {
-      "my": "Le Mie Posizioni",
-      "public": "Pubbliche"
-    },
     "stats": {
       "total": "Totale",
       "totalArea": "Area Totale",
       "totalDemand": "Domanda Totale",
-      "public": "Pubblico",
       "private": "Privato"
     },
     "empty": {
       "title": "Nessuna posizione trovata",
-      "description": "Crea la tua prima posizione personalizzata per iniziare",
-      "publicTitle": "Nessuna posizione pubblica",
-      "publicDescription": "Le posizioni pubbliche condivise da altri utenti appariranno qui. Imposta una posizione come pubblica per condividerla."
-    },
-    "toggle": {
-      "makePublic": "Privata - Clicca per rendere pubblica",
-      "makePrivate": "Pubblica - Clicca per rendere privata",
-      "nowPublic": "La posizione è ora pubblica",
-      "nowPrivate": "La posizione è ora privata"
-    },
-    "share": {
-      "title": "Condividi posizione",
-      "description": "Condividi \"{{name}}\" con utenti, spazi di lavoro o gruppi",
-      "tabs": {
-        "users": "Utenti",
-        "workspaces": "Spazi di lavoro",
-        "groups": "Gruppi"
-      },
-      "userEmail": "Email utente",
-      "selectWorkspace": "Seleziona spazio di lavoro",
-      "selectGroup": "Seleziona gruppo",
-      "addUser": "Condividi con utente",
-      "addWorkspace": "Condividi con spazio di lavoro",
-      "addGroup": "Condividi con gruppo",
-      "sharedWithUsers": "Condiviso con utenti",
-      "sharedWithWorkspaces": "Condiviso con spazi di lavoro",
-      "sharedWithGroups": "Condiviso con gruppi",
-      "noUsersYet": "Non ancora condiviso con utenti",
-      "noWorkspacesYet": "Non ancora condiviso con spazi di lavoro",
-      "noGroupsYet": "Non ancora condiviso con gruppi",
-      "removeAccess": "Rimuovi accesso",
-      "totalShares": "{{count}} condivisione/i in totale",
-      "alreadySharedWithUser": "Questa posizione è già condivisa con questo utente",
-      "alreadySharedWithWorkspace": "Questa posizione è già condivisa con questo spazio di lavoro",
-      "alreadySharedWithGroup": "Questa posizione è già condivisa con questo gruppo",
-      "failedToShare": "Condivisione fallita. Riprova."
+      "description": "Crea la tua prima posizione personalizzata per iniziare"
     }
   },
   "weather": {
@@ -2499,11 +2457,6 @@
     "sourceNote": "Stimato dal motore di rete PyLoVo. Costi da cataloghi BT tedeschi. Utilizzo basato sul carico contemporaneo."
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Edifici Personalizzati Pubblici",
-      "description": "Includi edifici condivisi da altri utenti nel calcolo della rete. Questi sono edifici personalizzati che altri utenti hanno reso pubblicamente disponibili.",
-      "example": "Puoi anche escludere singoli edifici cliccandoli sulla mappa."
-    },
     "privateBuildings": {
       "title": "I Miei Edifici Personalizzati",
       "description": "Includi i tuoi edifici personalizzati privati nel calcolo della rete. Questi sono edifici che hai creato e salvato nel tuo account.",

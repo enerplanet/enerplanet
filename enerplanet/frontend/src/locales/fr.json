@@ -1662,10 +1662,8 @@
       "cancel": "Annuler"
     },
     "mapHeader": {
-      "public": "Public",
       "myBuildings": "Mes bâtiments",
       "clearAll": "Supprimer tous les polygones",
-      "togglePublicBuildings": "Basculer bâtiments publics",
       "toggleMyBuildings": "Basculer mes bâtiments",
       "disableSelected": "Désactiver les bâtiments sélectionnés"
     },
@@ -1964,11 +1962,6 @@
     }
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Bâtiments Personnalisés Publics",
-      "description": "Incluez les bâtiments partagés par d'autres utilisateurs dans le calcul du réseau. Ce sont des bâtiments personnalisés que d'autres utilisateurs ont rendus publiquement disponibles.",
-      "example": "Vous pouvez également exclure des bâtiments individuels en cliquant dessus sur la carte."
-    },
     "privateBuildings": {
       "title": "Mes Bâtiments Personnalisés",
       "description": "Incluez vos bâtiments personnalisés privés dans le calcul du réseau. Ce sont des bâtiments que vous avez créés et enregistrés dans votre compte.",
@@ -2302,55 +2295,15 @@
     "newLocation": "Nouvel Emplacement",
     "newLocationTooltip": "Créer un nouvel emplacement personnalisé",
     "searchPlaceholder": "Rechercher des emplacements...",
-    "tabs": {
-      "my": "Mes Emplacements",
-      "public": "Publics"
-    },
     "stats": {
       "total": "Total",
       "totalArea": "Surface Totale",
       "totalDemand": "Demande Totale",
-      "public": "Public",
       "private": "Privé"
     },
     "empty": {
       "title": "Aucun emplacement trouvé",
-      "description": "Créez votre premier emplacement personnalisé pour commencer",
-      "publicTitle": "Aucun emplacement public",
-      "publicDescription": "Les emplacements publics partagés par d'autres utilisateurs apparaîtront ici. Basculez un emplacement en public pour le partager."
-    },
-    "toggle": {
-      "makePublic": "Privé - Cliquez pour rendre public",
-      "makePrivate": "Public - Cliquez pour rendre privé",
-      "nowPublic": "L'emplacement est maintenant public",
-      "nowPrivate": "L'emplacement est maintenant privé"
-    },
-    "share": {
-      "title": "Partager le lieu",
-      "description": "Partager \"{{name}}\" avec des utilisateurs, espaces de travail ou groupes",
-      "tabs": {
-        "users": "Utilisateurs",
-        "workspaces": "Espaces de travail",
-        "groups": "Groupes"
-      },
-      "userEmail": "E-mail de l'utilisateur",
-      "selectWorkspace": "Sélectionner un espace de travail",
-      "selectGroup": "Sélectionner un groupe",
-      "addUser": "Partager avec un utilisateur",
-      "addWorkspace": "Partager avec un espace de travail",
-      "addGroup": "Partager avec un groupe",
-      "sharedWithUsers": "Partagé avec les utilisateurs",
-      "sharedWithWorkspaces": "Partagé avec les espaces de travail",
-      "sharedWithGroups": "Partagé avec les groupes",
-      "noUsersYet": "Pas encore partagé avec des utilisateurs",
-      "noWorkspacesYet": "Pas encore partagé avec des espaces de travail",
-      "noGroupsYet": "Pas encore partagé avec des groupes",
-      "removeAccess": "Retirer l'accès",
-      "totalShares": "{{count}} partage(s) au total",
-      "alreadySharedWithUser": "Ce lieu est déjà partagé avec cet utilisateur",
-      "alreadySharedWithWorkspace": "Ce lieu est déjà partagé avec cet espace de travail",
-      "alreadySharedWithGroup": "Ce lieu est déjà partagé avec ce groupe",
-      "failedToShare": "Échec du partage. Veuillez réessayer."
+      "description": "Créez votre premier emplacement personnalisé pour commencer"
     }
   },
   "weather": {

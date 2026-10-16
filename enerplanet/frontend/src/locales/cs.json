@@ -1401,10 +1401,8 @@
       "cancel": "Zrušit"
     },
     "mapHeader": {
-      "public": "Veřejné",
       "myBuildings": "Moje budovy",
       "clearAll": "Odstranit všechny polygony",
-      "togglePublicBuildings": "Přepnout veřejné budovy",
       "toggleMyBuildings": "Přepnout moje budovy",
       "disableSelected": "Vypnout vybrané budovy"
     },
@@ -1919,55 +1917,15 @@
     "newLocation": "Nová Poloha",
     "newLocationTooltip": "Vytvořit novou vlastní polohu",
     "searchPlaceholder": "Hledat polohy...",
-    "tabs": {
-      "my": "Moje Polohy",
-      "public": "Veřejné"
-    },
     "stats": {
       "total": "Celkem",
       "totalArea": "Celková Plocha",
       "totalDemand": "Celková Poptávka",
-      "public": "Veřejné",
       "private": "Soukromé"
     },
     "empty": {
       "title": "Nebyly nalezeny žádné polohy",
-      "description": "Vytvořte svou první vlastní polohu pro začátek",
-      "publicTitle": "Žádné veřejné polohy",
-      "publicDescription": "Veřejné polohy sdílené ostatními uživateli se zobrazí zde. Přepněte polohu na veřejnou pro sdílení."
-    },
-    "toggle": {
-      "makePublic": "Soukromá - Klikněte pro zveřejnění",
-      "makePrivate": "Veřejná - Klikněte pro změnu na soukromou",
-      "nowPublic": "Poloha je nyní veřejná",
-      "nowPrivate": "Poloha je nyní soukromá"
-    },
-    "share": {
-      "title": "Sdílet místo",
-      "description": "Sdílet \"{{name}}\" s uživateli, pracovními prostory nebo skupinami",
-      "tabs": {
-        "users": "Uživatelé",
-        "workspaces": "Pracovní prostory",
-        "groups": "Skupiny"
-      },
-      "userEmail": "E-mail uživatele",
-      "selectWorkspace": "Vybrat pracovní prostor",
-      "selectGroup": "Vybrat skupinu",
-      "addUser": "Sdílet s uživatelem",
-      "addWorkspace": "Sdílet s pracovním prostorem",
-      "addGroup": "Sdílet se skupinou",
-      "sharedWithUsers": "Sdíleno s uživateli",
-      "sharedWithWorkspaces": "Sdíleno s pracovními prostory",
-      "sharedWithGroups": "Sdíleno se skupinami",
-      "noUsersYet": "Zatím nesdíleno s uživateli",
-      "noWorkspacesYet": "Zatím nesdíleno s pracovními prostory",
-      "noGroupsYet": "Zatím nesdíleno se skupinami",
-      "removeAccess": "Odebrat přístup",
-      "totalShares": "{{count}} sdílení celkem",
-      "alreadySharedWithUser": "Toto místo je již s tímto uživatelem sdíleno",
-      "alreadySharedWithWorkspace": "Toto místo je již s tímto pracovním prostorem sdíleno",
-      "alreadySharedWithGroup": "Toto místo je již s touto skupinou sdíleno",
-      "failedToShare": "Sdílení se nezdařilo. Zkuste to prosím znovu."
+      "description": "Vytvořte svou první vlastní polohu pro začátek"
     }
   },
   "weather": {
@@ -2499,11 +2457,6 @@
     "sourceNote": "Odhad nástroje PyLoVo. Ceny z německých katalogů zařízení NN. Vytížení vychází ze souběžného zatížení."
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Veřejné Vlastní Budovy",
-      "description": "Zahrňte budovy sdílené jinými uživateli do výpočtu sítě. Jedná se o vlastní budovy, které jiní uživatelé veřejně zpřístupnili.",
-      "example": "Jednotlivé budovy můžete také vyloučit kliknutím na ně na mapě."
-    },
     "privateBuildings": {
       "title": "Moje Vlastní Budovy",
       "description": "Zahrňte své soukromé vlastní budovy do výpočtu sítě. Jedná se o budovy, které jste vytvořili a uložili do svého účtu.",

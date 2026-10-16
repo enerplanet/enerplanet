@@ -129,7 +129,6 @@ export interface AreaSelectState {
 	cursorPos: { x: number; y: number } | null;
 	isGeneratingGrid: boolean;
 	// Custom building filters
-	includePublicBuildings: boolean;
 	includePrivateBuildings: boolean;
 	excludedBuildingIds: Set<number>;
 	// Unsaved changes tracking
@@ -155,7 +154,6 @@ export interface AreaSelectActions {
 	handleClearAllPolygons: () => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions
-	setIncludePublicBuildings: (include: boolean) => void;
 	setIncludePrivateBuildings: (include: boolean) => void;
 	toggleBuildingExclusion: (buildingId: number) => void;
 	clearExcludedBuildings: () => void;
