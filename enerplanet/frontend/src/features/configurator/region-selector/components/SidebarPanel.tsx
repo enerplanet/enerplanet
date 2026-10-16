@@ -35,6 +35,7 @@ import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { GridStatsBadge } from "./GridStatsBadge";
+import { useModelStore, type CookingCarrier } from "@/features/configurator/store/modelStore";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import type { FC, ChangeEvent } from "react";
@@ -97,6 +98,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   isModified = false,
 }) => {
   const { t } = useTranslation();
+  const cookingCarrier = useModelStore((s) => s.cookingCarrier);
+  const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
 
   return (
     <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -295,6 +298,22 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </SelectContent>
           </Select>
           <div className="text-xs text-muted-foreground mt-1">{t("simulation.resolutionHint")}</div>
+        </div>
+
+        <div className="relative">
+          <label htmlFor="cooking-select" className="block text-sm font-medium text-foreground mb-2">
+            {t("simulation.cooking.label")}
+          </label>
+          <Select value={cookingCarrier} onValueChange={(value: string) => setCookingCarrier(value as CookingCarrier)}>
+            <SelectTrigger id="cooking-select" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="electric">{t("simulation.cooking.electric")}</SelectItem>
+              <SelectItem value="gas">{t("simulation.cooking.gas")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-muted-foreground mt-1">{t("simulation.cooking.hint")}</div>
         </div>
 
         <div className="flex gap-2" data-tour="technologies-parameters">

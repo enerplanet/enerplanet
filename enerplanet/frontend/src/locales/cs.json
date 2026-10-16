@@ -1496,7 +1496,13 @@
       "continueEditing": "Pokračovat v úpravách",
       "discard": "Zahodit změny"
     },
-    "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi"
+    "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi",
+    "cooking": {
+      "label": "Vaření",
+      "electric": "Elektřina",
+      "gas": "Plyn",
+      "hint": "Při plynu se vaření v budovách stává poptávkou po plynu z dodávky plynu"
+    }
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

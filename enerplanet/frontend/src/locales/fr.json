@@ -1757,7 +1757,13 @@
       "continueEditing": "Continuer la modification",
       "discard": "Abandonner les modifications"
     },
-    "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version"
+    "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version",
+    "cooking": {
+      "label": "Cuisson",
+      "electric": "Électrique",
+      "gas": "Gaz",
+      "hint": "Au gaz, la cuisson des bâtiments devient une demande de gaz achetée à un fournisseur de gaz"
+    }
   },
   "mapLayers": {
     "title": "Couches de carte",
