@@ -21,6 +21,7 @@ import (
 	"gorm.io/gorm"
 
 	"spatialhub_backend/internal/models"
+	"spatialhub_backend/internal/store/series"
 
 	tentacronclient "spatialhub_backend/internal/tentacron"
 )
@@ -185,7 +186,7 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	store := NewFilesystemResultZipStore(base)
 	enq := &fakeIngestMemeEnqueuer{}
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, store, enq)
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, store, enq)
 	require.NoError(t, err)
 
 	// The T1K job (as a generic object) reached the Calliope-only target, with an
@@ -240,7 +241,7 @@ func TestHandleDispatchMeme_retryResumesByIDNoResubmit(t *testing.T) {
 	runs := &fakeMemeRuns{t: t}
 	require.NoError(t, runs.Save(modelID, "job-42", "running"))
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.NoError(t, err)
 	require.EqualValues(t, 0, fake.submitted.Load(), "retry resumes by id, never resubmits (no duplicate MEME job)")
 	require.Equal(t, "running", runs.rec.Status, "a resumed run stays running; the ingest owns the terminal completed/failed transition")
@@ -266,7 +267,7 @@ func TestHandleDispatchMeme_terminalRunResubmitsFreshWithRunScopedKey(t *testing
 	runs := &fakeMemeRuns{t: t}
 	require.NoError(t, runs.Save(modelID, "job-42-v1", "failed"))
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.NoError(t, err)
 
 	// A fresh MEME solve was submitted, keyed run-scoped by CalculationStartedAt
@@ -292,7 +293,38 @@ func TestHandleDispatchMeme_missingCountryIsAnError(t *testing.T) {
 			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), []byte(`{}`))
 	db, _ := newDispatchMockDB(t, rows)
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "country", "missing-country surfaces clearly")
+}
+
+// noDemandSeries is a model without stored BuEM series.
+type noDemandSeries struct{}
+
+func (noDemandSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) {
+	return nil, nil
+}
+
+// failingDemandSeries is a series store that cannot be read.
+type failingDemandSeries struct{}
+
+func (failingDemandSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) {
+	return nil, errors.New("connection refused")
+}
+
+// The stored BuEM series decide what reaches the solver, so a failed read
+// stops the dispatch instead of running the model on yearly numbers.
+func TestHandleDispatchMeme_seriesReadFailureStopsTheDispatch(t *testing.T) {
+	const modelID = uint(42)
+	fake := newFakeMemeTentacron(t, "job-42", []byte("PK\x03\x04zip\x00ff"))
+	rows := sqlmock.NewRows([]string{"id", "user_id", "user_email", "title", "country", "region", "from_date", "to_date", "resolution", "config"}).
+		AddRow(int64(modelID), "u1", "a@b.c", "Test model", "netherlands", nil,
+			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), 60, []byte(memeTopologyConfig))
+	db, _ := newDispatchMockDB(t, rows)
+
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), &fakeMemeRuns{t: t}, failingDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "model 42")
+	assert.Contains(t, err.Error(), "connection refused")
+	assert.EqualValues(t, 0, fake.submitted.Load(), "nothing is submitted to MEME")
 }

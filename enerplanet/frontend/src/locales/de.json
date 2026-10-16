@@ -1759,7 +1759,13 @@
       "continueEditing": "Weiter bearbeiten",
       "discard": "Änderungen verwerfen"
     },
-    "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version"
+    "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version",
+    "cooking": {
+      "label": "Kochen",
+      "electric": "Elektrisch",
+      "gas": "Gas",
+      "hint": "Bei Gas wird das Kochen in den Gebäuden zu einem Gasbedarf aus einer Gasversorgung"
+    }
   },
   "mapLayers": {
     "title": "Kartenebenen",

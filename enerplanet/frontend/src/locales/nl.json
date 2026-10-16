@@ -1502,7 +1502,13 @@
       "continueEditing": "Doorgaan met bewerken",
       "discard": "Wijzigingen verwerpen"
     },
-    "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie"
+    "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
+    "cooking": {
+      "label": "Koken",
+      "electric": "Elektrisch",
+      "gas": "Gas",
+      "hint": "Bij gas wordt het koken in de gebouwen een gasvraag uit een gaslevering"
+    }
   },
   "mapLayers": {
     "title": "Kaartlagen",

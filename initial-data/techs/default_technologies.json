@@ -885,6 +885,87 @@
                     "max": null
                 }
             ]
+        },
+        {
+            "key": "air_conditioner",
+            "alias": "Air Conditioner",
+            "icon": "snowflake",
+            "description": "Split or room air conditioner that turns electricity into cooling, rated by its seasonal energy efficiency ratio (SEER)",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Seasonal energy efficiency ratio (SEER)",
+                    "default_value": 4.6,
+                    "unit": "SEER",
+                    "min": 1,
+                    "max": 12
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 12,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 450,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.1,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                }
+            ]
+        },
+        {
+            "key": "gas_supply",
+            "alias": "Gas supply",
+            "icon": "flame",
+            "description": "Natural gas bought at the building at a fixed price, for gas boilers and gas cooking",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null,
+                    "required": false
+                },
+                {
+                    "key": "cost_om_con",
+                    "alias": "Carrier consumption cost",
+                    "default_value": 0.04,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                }
+            ]
         }
     ]
 }

@@ -475,6 +475,7 @@ func extractAndTransformTechs(bProps map[string]interface{}) interface{} {
 	}
 
 	if len(transformedTechs) > 0 {
+		fillTechnologyDefaults(transformedTechs)
 		return transformedTechs
 	}
 	return nil
