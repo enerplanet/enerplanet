@@ -24,7 +24,7 @@ import axios from '@/lib/axios';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 
 import { creditsFor, type DatasetCredit } from './credits';
-import { configuratorServices } from './heatClient';
+import { variantLookups } from './heatClient';
 import { fromStoredBuem, storedBuemOf } from './storedBuem';
 import { isPreparing, useAreaPreparationStore, type PreparationStatus } from './useAreaPreparation';
 
@@ -92,7 +92,7 @@ async function resolveBuilding(
 
   const building = stored
     ? fromStoredBuem(osmId, feature.geometry, stored)
-    : (await buildBuildingStates(configuratorServices, { features: [feature] }, res.data.data))[osmId];
+    : (await buildBuildingStates(variantLookups, { features: [feature] }, res.data.data))[osmId];
   return {
     building: building ?? null,
     loading: false,

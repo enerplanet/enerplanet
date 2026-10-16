@@ -8,21 +8,23 @@
  * here.
  */
 
-import type { FC, ReactNode } from 'react';
+import { useMemo, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
-import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
+import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
+import { config } from '@/configuration/app';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 
-import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID } from './credits';
-import { configuratorServices } from './heatClient';
+import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID, type DatasetCredit } from './credits';
+import { configuratorServicesFor } from './heatClient';
 import { modelRunContext } from './runContext';
-import { editsDetached, toStoredBuem, type StoredBuem } from './storedBuem';
+import { toStoredBuem, type StoredBuem } from './storedBuem';
 import { usePreparationStepText } from './useAreaPreparation';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
+import { useDemandProfile } from './useDemandProfile';
 import { useConfiguratorParams } from './useConfiguratorParams';
 
 /**
@@ -82,9 +84,63 @@ const ResetNotice: FC<{ onReset: () => void }> = ({ onReset }) => {
   );
 };
 
-const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited; onReset?: OnBuildingReset }> = ({ osmId, onExit, onEdited, onReset }) => {
+/** The licence credits of the building's 3D dataset and TABULA type, for the view's attribution corner. */
+const Credits: FC<{ credits: DatasetCredit[] }> = ({ credits }) => {
+  const { t } = useTranslation();
+  return (
+    <>
+      {credits.map((c) => {
+        const isTabula = c.dataset_id === TABULA_DATASET_ID;
+        return (
+          <div key={c.dataset_id}>
+            {isTabula ? t('tooltips.buildingType.title') : t('buildingConfig.credit3dData')}:{' '}
+            <a
+              href={c.credit_url ?? c.terms_url ?? c.licence_url}
+              title={isTabula ? c.changes : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              {c.credit}
+            </a>
+            , {c.licence}
+            {!isTabula && (
+              <>
+                ,{' '}
+                <a
+                  href={CHANGE_STATEMENT_URL}
+                  title={c.changes}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-dotted"
+                >
+                  {t('buildingConfig.modifiedBy', { name: 'City2TABULA' })}
+                </a>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
+interface PanelBodyProps {
+  osmId: string;
+  /** A saved model's id; without it the building belongs to the draft. */
+  modelId: number | undefined;
+  /** Whose stored results the runs belong to: "models/<id>" or "drafts/<id>". */
+  ownerPath: string;
+  onExit: () => void;
+  onEdited?: OnBuildingEdited;
+  onReset?: OnBuildingReset;
+}
+
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
+  const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
+  const services = useMemo(() => configuratorServicesFor(ownerPath, setDemandProfile), [ownerPath, setDemandProfile]);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
   const { t } = useTranslation();
@@ -114,7 +170,12 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice onBack={onExit}>{geometryError}</Notice>;
 
-  const detached = edited && geometry !== null && editsDetached(building, geometry.surfaces);
+  const detached = edited && geometry !== null
+    && isEnvelopeDetached(geometry.surfaces, new Set(Object.keys(building.envelope)));
+  // Only a saved model's building with stored series has a CSV to download.
+  const seriesCsvUrl = modelId && demandProfile
+    ? `${config.api.baseUrl}/models/${modelId}/buildings/${encodeURIComponent(osmId)}/series.csv`
+    : undefined;
 
   return (
     <>
@@ -122,61 +183,39 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
         building={building}
         geometry={geometry}
         onExit={exit}
-        services={configuratorServices}
+        services={services}
         runContext={modelRunContext(fromDate, toDate)}
+        demandProfile={demandProfile}
+        seriesCsvUrl={seriesCsvUrl}
+        attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
-      {credits.length > 0 && (
-        <div className="bg-card/80 text-muted-foreground pointer-events-auto absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded px-2 py-0.5 text-[11px]">
-          {credits.map((c) => {
-            const isTabula = c.dataset_id === TABULA_DATASET_ID;
-            return (
-              <div key={c.dataset_id}>
-                {isTabula ? t('tooltips.buildingType.title') : t('buildingConfig.credit3dData')}:{' '}
-                <a
-                  href={c.credit_url ?? c.terms_url ?? c.licence_url}
-                  title={isTabula ? c.changes : undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  {c.credit}
-                </a>
-                , {c.licence}
-                {!isTabula && (
-                  <>
-                    ,{' '}
-                    <a
-                      href={CHANGE_STATEMENT_URL}
-                      title={c.changes}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline decoration-dotted"
-                    >
-                      {t('buildingConfig.modifiedBy', { name: 'City2TABULA' })}
-                    </a>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
     </>
   );
 };
 
-export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited; onBuildingReset?: OnBuildingReset }> = ({ onBuildingEdited, onBuildingReset }) => {
+interface BuildingPanelHostProps {
+  /** The saved model the building belongs to; absent for a model not saved yet. */
+  modelId?: number;
+  /** The unsaved model's draft id, used when there is no modelId. */
+  draftId?: string;
+  onBuildingEdited?: OnBuildingEdited;
+  onBuildingReset?: OnBuildingReset;
+}
+
+export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset }) => {
   const { buildingId, isOpen, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
+  const ownerPath = modelId ? `models/${modelId}` : draftId ? `drafts/${draftId}` : null;
+  if (!ownerPath) return null;
 
   // Building3DView's root (`fixed inset-0`) is forced to `absolute` here; follow the package if it changes.
   // z-50 matches Radix dialogs: appended to <body> later, they paint above the panel,
   // while the map's z-50 controls come earlier in the DOM and paint below it.
   return (
     <div className="bg-background fixed right-0 bottom-0 z-50 top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
-      <PanelBody osmId={buildingId} onExit={close} onEdited={onBuildingEdited} onReset={onBuildingReset} />
+      <PanelBody osmId={buildingId} modelId={modelId} ownerPath={ownerPath} onExit={close} onEdited={onBuildingEdited} onReset={onBuildingReset} />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptBuemFeature, type TechnologyState } from "@thd-spatial-ai/building-configurator";
 
-import { editsDetached, fromStoredBuem, storedBuemOf, toStoredBuem } from "./storedBuem";
+import { fromStoredBuem, storedBuemOf, toStoredBuem } from "./storedBuem";
 
 const footprint = {
   type: "Polygon",
@@ -30,16 +30,24 @@ describe("stored BuEM", () => {
     expect(reopened.technologyState).toBe(technologyState);
   });
 
+  it("keeps the construction year beside the block across save and reopen", () => {
+    const withYear = adaptBuemFeature({
+      type: "Feature",
+      id: "268425674",
+      geometry: footprint,
+      properties: { buem: { building: { building_type: "SFH", envelope: { elements: [wall] } }, construction_year: 1968 } },
+    });
+
+    const stored = toStoredBuem(withYear);
+    const reopened = toStoredBuem(fromStoredBuem("268425674", footprint, stored));
+
+    expect(stored.construction_year).toBe(1968);
+    expect(stored.building).not.toHaveProperty("construction_period");
+    expect(reopened.construction_year).toBe(1968);
+  });
+
   it("finds nothing stored on a building nobody edited", () => {
     expect(storedBuemOf({ osm_id: "1", f_class: "house" })).toBeNull();
     expect(storedBuemOf(undefined)).toBeNull();
-  });
-
-  it("finds edits detached only when no surface matches a stored element", () => {
-    const surface = (id: string) => ({ id, type: "WallSurface", coordinates: [] });
-
-    expect(editsDetached(opened, [surface("new-1"), surface("new-2")])).toBe(true);
-    expect(editsDetached(opened, [surface("w1"), surface("closure-1")])).toBe(false);
-    expect(editsDetached(opened, [])).toBe(false);
   });
 });
