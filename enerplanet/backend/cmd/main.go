@@ -27,7 +27,6 @@ import (
 	grouphandler "spatialhub_backend/internal/handler/group"
 	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	"spatialhub_backend/internal/handler/ignis"
-	locationhandler "spatialhub_backend/internal/handler/location"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
 	"spatialhub_backend/internal/handler/pylovo"
 	"spatialhub_backend/internal/handler/render"
@@ -712,12 +711,6 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider, seriesstore.NewStore(deps.DB), deps.Cfg.BuemVersion, modelHandler)
 	registerBuemRoutes(protectedAPI, buemHandler)
 
-	locationHandler := locationhandler.NewLocationHandler(deps.DB)
-	registerLocationRoutes(protectedAPI, locationHandler)
-
-	locationShareHandler := locationhandler.NewLocationShareHandler(deps.DB)
-	registerLocationShareRoutes(protectedAPI, locationShareHandler)
-
 	// Energy demand is calculated dynamically based on building area and type
 }
 
@@ -1001,31 +994,6 @@ func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.Manage
 	services.POST("/:id/primary", handler.SetPrimary)
 	services.POST("/:id/available", handler.MarkAvailable)
 	services.POST("/:id/unavailable", handler.MarkUnavailable)
-}
-
-func registerLocationRoutes(api *gin.RouterGroup, handler *locationhandler.LocationHandler) {
-	locations := api.Group("/locations")
-	locations.GET("", handler.GetUserLocations)
-	locations.GET("/public", handler.GetPublicLocations)
-	locations.GET("/all", handler.GetAllAccessibleLocations)
-	locations.GET("/geojson", handler.GetUserLocationsGeoJSON)
-	locations.POST("", handler.CreateLocation)
-	locations.GET("/:id", handler.GetLocation)
-	locations.PUT("/:id", handler.UpdateLocation)
-	locations.DELETE("/:id", handler.DeleteLocation)
-	locations.POST("/:id/copy", handler.CopyLocation)
-}
-
-func registerLocationShareRoutes(api *gin.RouterGroup, handler *locationhandler.LocationShareHandler) {
-	locations := api.Group("/locations")
-	// Share routes
-	locations.GET("/:id/shares", handler.GetShares)
-	locations.POST("/:id/share/user", handler.ShareWithUser)
-	locations.POST("/:id/share/workspace", handler.ShareWithWorkspace)
-	locations.POST("/:id/share/group", handler.ShareWithGroup)
-	locations.DELETE("/:id/share/user/:shareId", handler.RemoveUserShare)
-	locations.DELETE("/:id/share/workspace/:shareId", handler.RemoveWorkspaceShare)
-	locations.DELETE("/:id/share/group/:shareId", handler.RemoveGroupShare)
 }
 
 func startFeedbackCleanup(db *gorm.DB, log *logrus.Logger) {
