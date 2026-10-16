@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptBuemFeature, type TechnologyState } from "@thd-spatial-ai/building-configurator";
 
-import { fromStoredBuem, storedBuemOf, toStoredBuem } from "./storedBuem";
+import { editsDetached, fromStoredBuem, storedBuemOf, toStoredBuem } from "./storedBuem";
 
 const footprint = {
   type: "Polygon",
@@ -33,5 +33,13 @@ describe("stored BuEM", () => {
   it("finds nothing stored on a building nobody edited", () => {
     expect(storedBuemOf({ osm_id: "1", f_class: "house" })).toBeNull();
     expect(storedBuemOf(undefined)).toBeNull();
+  });
+
+  it("finds edits detached only when no surface matches a stored element", () => {
+    const surface = (id: string) => ({ id, type: "WallSurface", coordinates: [] });
+
+    expect(editsDetached(opened, [surface("new-1"), surface("new-2")])).toBe(true);
+    expect(editsDetached(opened, [surface("w1"), surface("closure-1")])).toBe(false);
+    expect(editsDetached(opened, [])).toBe(false);
   });
 });

@@ -2954,6 +2954,12 @@
     "loading": "Cargando este edificio…",
     "noGeometry": "City2TABULA ya no contiene la geometría 3D de este edificio.",
     "credit3dData": "Datos 3D",
-    "modifiedBy": "modificado por {{name}}"
+    "modifiedBy": "modificado por {{name}}",
+    "reset": {
+      "notice": "Las ediciones guardadas de este edificio pertenecen a una versión anterior de sus datos 3D, por lo que sus superficies no se pueden mostrar.",
+      "action": "Restablecer con los datos 3D actuales",
+      "confirmTitle": "¿Descartar las ediciones guardadas?",
+      "confirmDescription": "Se eliminan las ediciones guardadas de la envolvente de este edificio y se carga desde los datos 3D actuales. Al guardar el modelo, el cambio es definitivo."
+    }
   }
 }

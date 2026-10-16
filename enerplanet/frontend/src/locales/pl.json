@@ -2960,6 +2960,12 @@
     "loading": "Wczytywanie budynku…",
     "noGeometry": "City2TABULA nie zawiera już geometrii 3D tego budynku.",
     "credit3dData": "Dane 3D",
-    "modifiedBy": "zmodyfikowano przez {{name}}"
+    "modifiedBy": "zmodyfikowano przez {{name}}",
+    "reset": {
+      "notice": "Zapisane zmiany tego budynku należą do starszej wersji jego danych 3D, więc nie można wyświetlić jego powierzchni.",
+      "action": "Przywróć aktualne dane 3D",
+      "confirmTitle": "Odrzucić zapisane zmiany?",
+      "confirmDescription": "Zapisane zmiany przegród budynku zostaną usunięte, a budynek zostanie wczytany z aktualnych danych 3D. Zapisanie modelu utrwali tę zmianę."
+    }
   }
 }

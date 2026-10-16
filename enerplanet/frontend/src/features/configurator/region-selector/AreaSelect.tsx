@@ -776,6 +776,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
       <BuildingPanelHost
         onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
+        onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
       />
 
       <HeatBootstrapDialog

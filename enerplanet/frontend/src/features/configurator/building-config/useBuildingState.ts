@@ -62,9 +62,11 @@ export interface BuildingStateResult {
   country: string | null;
   /** Credits for the building's 3D dataset and, when it has one, its TABULA type. */
   credits: DatasetCredit[];
+  /** True when the building opened from edits saved in the model rather than from City2TABULA. */
+  edited: boolean;
 }
 
-const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [] };
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [], edited: false };
 
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
 
@@ -103,6 +105,7 @@ async function resolveBuilding(
       (entry as { dataset_id?: string } | undefined)?.dataset_id ?? null,
       Boolean(entry?.tabula_variant_code),
     ),
+    edited: stored !== null,
   };
 }
 

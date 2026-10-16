@@ -2954,6 +2954,12 @@
     "loading": "Chargement du bâtiment…",
     "noGeometry": "City2TABULA ne contient plus la géométrie 3D de ce bâtiment.",
     "credit3dData": "Données 3D",
-    "modifiedBy": "modifié par {{name}}"
+    "modifiedBy": "modifié par {{name}}",
+    "reset": {
+      "notice": "Les modifications enregistrées de ce bâtiment correspondent à une version antérieure de ses données 3D, ses surfaces ne peuvent donc pas être affichées.",
+      "action": "Réinitialiser avec les données 3D actuelles",
+      "confirmTitle": "Supprimer les modifications enregistrées ?",
+      "confirmDescription": "Les modifications enregistrées de l'enveloppe de ce bâtiment sont supprimées et il est chargé depuis les données 3D actuelles. L'enregistrement du modèle rend ce changement définitif."
+    }
   }
 }

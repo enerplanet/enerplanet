@@ -2960,6 +2960,12 @@
     "loading": "Gebouw laden…",
     "noGeometry": "City2TABULA bevat de 3D-geometrie van dit gebouw niet meer.",
     "credit3dData": "3D-gegevens",
-    "modifiedBy": "gewijzigd door {{name}}"
+    "modifiedBy": "gewijzigd door {{name}}",
+    "reset": {
+      "notice": "De opgeslagen wijzigingen van dit gebouw horen bij een oudere versie van de 3D-gegevens, dus de vlakken kunnen niet worden getoond.",
+      "action": "Terugzetten naar actuele 3D-gegevens",
+      "confirmTitle": "Opgeslagen wijzigingen verwijderen?",
+      "confirmDescription": "De opgeslagen wijzigingen aan de gebouwschil worden verwijderd en het gebouw wordt geladen uit de actuele 3D-gegevens. Door het model op te slaan wordt dit definitief."
+    }
   }
 }

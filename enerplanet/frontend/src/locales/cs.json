@@ -2960,6 +2960,12 @@
     "loading": "Načítání budovy…",
     "noGeometry": "City2TABULA již neobsahuje 3D geometrii této budovy.",
     "credit3dData": "3D data",
-    "modifiedBy": "upraveno pomocí {{name}}"
+    "modifiedBy": "upraveno pomocí {{name}}",
+    "reset": {
+      "notice": "Uložené úpravy této budovy patří ke starší verzi jejích 3D dat, proto nelze zobrazit její plochy.",
+      "action": "Obnovit podle aktuálních 3D dat",
+      "confirmTitle": "Zahodit uložené úpravy?",
+      "confirmDescription": "Uložené úpravy obálky budovy budou odstraněny a budova se načte z aktuálních 3D dat. Uložením modelu se změna stane trvalou."
+    }
   }
 }
