@@ -136,7 +136,7 @@ func TestResolveSeries_RunsMissesInGroupsAndReusesStoredOnes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, first.profiles, 25)
 	assert.Empty(t, first.failed)
-	assert.Len(t, runner.submitted, 3, "25 buildings in groups of 10")
+	assert.Len(t, runner.submitted, 7, "25 buildings in groups of 4")
 	assert.ElementsMatch(t, []string{"electricity", "heating"}, first.stored[first.profiles["b00"]].SeriesNames)
 
 	runner.submitted = nil
