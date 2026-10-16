@@ -1,5 +1,5 @@
 import { useState, useEffect, type FC } from "react";
-import { Battery, Sun, Wind, Leaf, Flame, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, type LucideIcon } from "lucide-react";
+import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, type LucideIcon } from "lucide-react";
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import technologyService, { type Technology } from "@/features/technologies/services/technologyService";
 import { fetchOpenTechHeatTechnologies, fetchOpenTechElectricityTechnologies } from "@/features/configurator/services/opentechdbService";
@@ -11,6 +11,7 @@ const iconMap: Record<string, LucideIcon> = {
     wind: Wind,
     leaf: Leaf,
     flame: Flame,
+    snowflake: Snowflake,
     droplets: Droplets,
     home: Home,
     "building-2": Building2,
