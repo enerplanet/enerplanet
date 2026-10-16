@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,4 +92,52 @@ func TestBatchPayload_OutputsOnlyForOneBuilding(t *testing.T) {
 	two, err := batchPayload([]Building{b, building("2", testBlock)}, json.RawMessage(testWeather), "", "", 60, "", true)
 	require.NoError(t, err)
 	assert.NotContains(t, two, "outputs")
+}
+
+func TestBatchSpans_StayWithinBudgetAndItemLimit(t *testing.T) {
+	assert.Equal(t, [][2]int{{0, 2}, {2, 4}, {4, 5}}, batchSpans([]int{4, 4, 4, 4, 4}, 10, 100), "two items of 4 fit a budget of 10")
+	assert.Equal(t, [][2]int{{0, 1}, {1, 2}}, batchSpans([]int{20, 3}, 10, 100), "an item over budget goes alone")
+	assert.Equal(t, [][2]int{{0, 2}, {2, 3}}, batchSpans([]int{1, 1, 1}, 100, 2), "the item limit splits too")
+	assert.Empty(t, batchSpans(nil, 10, 100))
+}
+
+// Every group repeats the model's weather, so a large model's groups must not
+// travel in one request over TentaCron's body limit.
+func TestSubmitGroups_SplitsRequestsByEncodedSize(t *testing.T) {
+	var requests [][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Requests []struct {
+				IdempotencyKey string `json:"idempotency_key"`
+			} `json:"requests"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		keys := make([]string, len(body.Requests))
+		answer := make([]map[string]any, len(body.Requests))
+		for i, it := range body.Requests {
+			keys[i] = it.IdempotencyKey
+			answer[i] = map[string]any{"id": it.IdempotencyKey}
+		}
+		requests = append(requests, keys)
+		w.WriteHeader(http.StatusAccepted)
+		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"items": answer}))
+	}))
+	t.Cleanup(srv.Close)
+	var groups []Group
+	for i := range 5 {
+		id := fmt.Sprintf("b%d", i)
+		groups = append(groups, Group{Buildings: []Building{{ID: id, Building: json.RawMessage(`{}`)}}, Keys: []string{"k" + id}})
+	}
+	weather := json.RawMessage(`{"T": [` + strings.Repeat("1.5,", 999) + `1.5]}`)
+
+	jobs, err := NewClient(tentacron.New(srv.URL, "key")).submitGroups(context.Background(), groups, weather,
+		"1900-01-01T00:00:00Z", "1900-12-31T23:00:00Z", 60, "7", 9000)
+	require.NoError(t, err)
+
+	assert.Len(t, requests, 3, "about 4 KB per group against a 9 KB budget: two per request")
+	require.Len(t, jobs, 5)
+	for i, j := range jobs {
+		assert.Equal(t, groups[i].Buildings[0].ID, j.Group.Buildings[0].ID, "jobs keep the order of the groups")
+		assert.NotEmpty(t, j.ID)
+	}
 }
