@@ -305,6 +305,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeIngestMemePyPSAResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
+	go startOrphanedRunSweep(db, jobs.AsynqLiveTasks{Inspector: asynq.NewInspector(asynqRedisOpt), Queues: []string{"buem", "results"}}, log)
+
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
 			log.Fatalf("Failed to run Asynq server: %v", err)
@@ -994,6 +996,22 @@ func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.Manage
 	services.POST("/:id/primary", handler.SetPrimary)
 	services.POST("/:id/available", handler.MarkAvailable)
 	services.POST("/:id/unavailable", handler.MarkUnavailable)
+}
+
+// startOrphanedRunSweep fails, at startup and every five minutes, the models
+// a stopped backend left in a run status with no task to finish them.
+func startOrphanedRunSweep(db *gorm.DB, live jobs.AsynqLiveTasks, log *logrus.Logger) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		failed, err := jobs.FailOrphanedRuns(db, live, time.Now().UTC())
+		if err != nil {
+			log.Errorf("orphaned run sweep failed: %v", err)
+		} else if len(failed) > 0 {
+			log.Warnf("orphaned run sweep: marked models %v failed, their runs had no task left", failed)
+		}
+		<-ticker.C
+	}
 }
 
 func startFeedbackCleanup(db *gorm.DB, log *logrus.Logger) {
