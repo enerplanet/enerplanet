@@ -12,6 +12,7 @@ import {
   adaptBuemFeature,
   toBuem,
   type BuildingState,
+  type SurfacePolygon,
   type TechnologyState,
 } from '@thd-spatial-ai/building-configurator';
 
@@ -36,4 +37,13 @@ export function fromStoredBuem(osmId: string, geometry: unknown, stored: StoredB
   const { technology_state: technologyState, ...buem } = stored;
   const state = adaptBuemFeature({ type: 'Feature', id: osmId, geometry, properties: { buem } });
   return technologyState ? { ...state, technologyState } : state;
+}
+
+/**
+ * True when not one surface resolves to an element of the stored envelope: the
+ * edits were saved against surface ids City2TABULA no longer serves. A partial
+ * miss is normal, since a ClosureSurface never has an element.
+ */
+export function editsDetached(building: BuildingState, surfaces: SurfacePolygon[]): boolean {
+  return surfaces.length > 0 && !surfaces.some((s) => Object.hasOwn(building.envelope, s.id));
 }

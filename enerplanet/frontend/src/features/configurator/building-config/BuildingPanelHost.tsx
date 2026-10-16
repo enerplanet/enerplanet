@@ -14,11 +14,12 @@ import { useTranslation } from '@spatialhub/i18n';
 import { Building3DView, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { useModelStore } from '@/features/configurator/store/modelStore';
+import { useConfirm } from '@/hooks/useConfirmDialog';
 
 import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID } from './credits';
 import { configuratorServices } from './heatClient';
 import { modelRunContext } from './runContext';
-import { toStoredBuem, type StoredBuem } from './storedBuem';
+import { editsDetached, toStoredBuem, type StoredBuem } from './storedBuem';
 import { usePreparationStepText } from './useAreaPreparation';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
@@ -49,8 +50,40 @@ const Notice: FC<{ children: ReactNode; onBack: () => void }> = ({ children, onB
 /** Receives a building the user changed, as the model should store it. */
 export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 
-const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited }> = ({ osmId, onExit, onEdited }) => {
-  const { building, loading, error, preparing, objectId, country, credits } = useBuildingState(osmId);
+/** Receives a building whose saved edits the user chose to discard. */
+export type OnBuildingReset = (osmId: string) => void;
+
+/**
+ * Offered over the view when the building's saved edits match none of its
+ * current surfaces, which the view then cannot draw. Saving again would keep
+ * the old element ids, so the only way back to a 3D view is to start over.
+ */
+const ResetNotice: FC<{ onReset: () => void }> = ({ onReset }) => {
+  const { t } = useTranslation();
+  const confirm = useConfirm();
+  const reset = () => confirm({
+    type: 'warning',
+    title: t('buildingConfig.reset.confirmTitle'),
+    description: t('buildingConfig.reset.confirmDescription'),
+    confirmLabel: t('buildingConfig.reset.action'),
+    onConfirm: async () => onReset(),
+  });
+  return (
+    <div className="bg-card pointer-events-auto absolute top-16 left-1/2 z-40 flex w-max max-w-xl -translate-x-1/2 items-center gap-3 rounded-lg px-4 py-3 text-sm shadow-lg">
+      <p className="text-muted-foreground">{t('buildingConfig.reset.notice')}</p>
+      <button
+        type="button"
+        onClick={reset}
+        className="bg-primary text-primary-foreground shrink-0 rounded-md px-3 py-1.5 text-sm font-medium hover:opacity-90"
+      >
+        {t('buildingConfig.reset.action')}
+      </button>
+    </div>
+  );
+};
+
+const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEdited; onReset?: OnBuildingReset }> = ({ osmId, onExit, onEdited, onReset }) => {
+  const { building, loading, error, preparing, objectId, country, credits, edited } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
@@ -81,6 +114,8 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice onBack={onExit}>{geometryError}</Notice>;
 
+  const detached = edited && geometry !== null && editsDetached(building, geometry.surfaces);
+
   return (
     <>
       <Building3DView
@@ -90,6 +125,7 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
         services={configuratorServices}
         runContext={modelRunContext(fromDate, toDate)}
       />
+      {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
       {credits.length > 0 && (
         <div className="bg-card/80 text-muted-foreground pointer-events-auto absolute bottom-2 left-1/2 z-30 -translate-x-1/2 rounded px-2 py-0.5 text-[11px]">
           {credits.map((c) => {
@@ -130,7 +166,7 @@ const PanelBody: FC<{ osmId: string; onExit: () => void; onEdited?: OnBuildingEd
   );
 };
 
-export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited }> = ({ onBuildingEdited }) => {
+export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited; onBuildingReset?: OnBuildingReset }> = ({ onBuildingEdited, onBuildingReset }) => {
   const { buildingId, isOpen, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
@@ -140,7 +176,7 @@ export const BuildingPanelHost: FC<{ onBuildingEdited?: OnBuildingEdited }> = ({
   // while the map's z-50 controls come earlier in the DOM and paint below it.
   return (
     <div className="bg-background fixed right-0 bottom-0 z-50 top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
-      <PanelBody osmId={buildingId} onExit={close} onEdited={onBuildingEdited} />
+      <PanelBody osmId={buildingId} onExit={close} onEdited={onBuildingEdited} onReset={onBuildingReset} />
     </div>
   );
 };

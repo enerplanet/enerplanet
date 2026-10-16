@@ -2950,6 +2950,12 @@
     "loading": "Loading this building…",
     "noGeometry": "City2TABULA no longer holds this building's 3D geometry.",
     "credit3dData": "3D data",
-    "modifiedBy": "modified by {{name}}"
+    "modifiedBy": "modified by {{name}}",
+    "reset": {
+      "notice": "The saved edits of this building belong to an older version of its 3D data, so its surfaces cannot be shown.",
+      "action": "Reset to current 3D data",
+      "confirmTitle": "Discard the saved edits?",
+      "confirmDescription": "This building's saved envelope edits are removed and it loads from the current 3D data. Saving the model makes this permanent."
+    }
   }
 }
