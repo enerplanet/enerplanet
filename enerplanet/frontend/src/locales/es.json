@@ -1767,6 +1767,10 @@
       "electric": "Eléctrica",
       "gas": "Gas",
       "hint": "Con gas, la cocina de los edificios pasa a ser una demanda de gas comprada a un suministro de gas"
+    },
+    "largeModel": {
+      "title": "Este modelo tiene {{count}} edificios",
+      "description": "Los modelos con más de {{limit}} edificios tardan bastante más en calcularse: cada edificio pasa por BuEM y Calliope resuelve la demanda horaria de cada edificio. Un año completo puede tardar decenas de minutos. Aun así puede guardarlo y ejecutarlo."
     }
   },
   "mapLayers": {

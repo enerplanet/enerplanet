@@ -1763,6 +1763,10 @@
       "electric": "Elektrisch",
       "gas": "Gas",
       "hint": "Bei Gas wird das Kochen in den Gebäuden zu einem Gasbedarf aus einer Gasversorgung"
+    },
+    "largeModel": {
+      "title": "Dieses Modell hat {{count}} Gebäude",
+      "description": "Modelle mit mehr als {{limit}} Gebäuden brauchen deutlich länger: Jedes Gebäude läuft durch BuEM, und Calliope löst den stündlichen Bedarf jedes Gebäudes. Ein ganzes Jahr kann Dutzende Minuten dauern. Sie können es trotzdem speichern und ausführen."
     }
   },
   "mapLayers": {

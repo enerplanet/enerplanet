@@ -1506,6 +1506,10 @@
       "electric": "Elektřina",
       "gas": "Plyn",
       "hint": "Při plynu se vaření v budovách stává poptávkou po plynu z dodávky plynu"
+    },
+    "largeModel": {
+      "title": "Tento model má {{count}} budov",
+      "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
     }
   },
   "mapLayers": {
