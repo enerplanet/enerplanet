@@ -23,8 +23,9 @@ type TranslatedJob struct {
 }
 
 // TranslatePayload converts a calculation payload (as JSON) into a MEME job
-// via T1K. Electricity only: the enerplanet-to-meme mapping emits no heat
-// vector or heat pump.
+// via T1K. The enerplanet-to-meme mapping carries per-step electricity, heat,
+// cooling and gas demand from properties.demand_series and the buildings'
+// heat, cooling and gas technologies.
 //
 // T1K's default mapping sets experiment.allow_unmet_demand, which MEME's PyPSA
 // target rejects. It is removed so one job body serves both the meme-calliope
