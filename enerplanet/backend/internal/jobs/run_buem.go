@@ -751,6 +751,7 @@ func mergeBuemResults(log *logrus.Entry, topology []interface{}, results []buem.
 	for _, r := range results {
 		if r.Error != "" || len(r.BUEM) == 0 {
 			failed++
+			log.Warnf("buem-gateway: building %s has no result: %s", r.ID, r.Error)
 			continue
 		}
 		byID[r.ID] = r
