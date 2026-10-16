@@ -61,31 +61,68 @@ func batchPayload(buildings []Building, weather json.RawMessage, startDate, endD
 	return payload, nil
 }
 
-// SubmitGroups submits every group, with series kept, in one TentaCron batch.
-// Each group's idempotency key covers its buildings' request keys and the
-// model id, so a restarted run gets the same jobs back.
+// batchBodyBudget caps the encoded payloads of one TentaCron batch request at
+// half of TentaCron's server.max_body_bytes default (10 MiB). Every group
+// carries the model's weather, so a large model's groups need several requests.
+const batchBodyBudget = 5 << 20
+
+// SubmitGroups submits every group, with series kept, in as many TentaCron
+// batch requests as batchBodyBudget needs. Each group's idempotency key covers
+// its buildings' request keys and the model id, so a restarted run gets the
+// same jobs back.
 func (c *Client) SubmitGroups(ctx context.Context, groups []Group, weather json.RawMessage, startDate, endDate string, resolution int, modelID string) ([]GroupJob, error) {
+	return c.submitGroups(ctx, groups, weather, startDate, endDate, resolution, modelID, batchBodyBudget)
+}
+
+func (c *Client) submitGroups(ctx context.Context, groups []Group, weather json.RawMessage, startDate, endDate string, resolution int, modelID string, budget int) ([]GroupJob, error) {
 	items := make([]tentacron.BatchItem, len(groups))
+	sizes := make([]int, len(groups))
 	for i, g := range groups {
 		payload, err := batchPayload(g.Buildings, weather, startDate, endDate, resolution, modelID, true)
 		if err != nil {
 			return nil, err
 		}
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("group %d payload: %w", i, err)
+		}
 		key, err := contenthash.Of(map[string]any{"model_id": modelID, "keys": g.Keys})
 		if err != nil {
 			return nil, fmt.Errorf("group %d idempotency key: %w", i, err)
 		}
-		items[i] = tentacron.BatchItem{Target: targetBuildings, Payload: payload, IdempotencyKey: key}
+		items[i] = tentacron.BatchItem{Target: targetBuildings, Payload: json.RawMessage(encoded), IdempotencyKey: key}
+		sizes[i] = len(encoded)
 	}
-	results, err := c.tc.SubmitBatch(ctx, items)
-	if err != nil {
-		return nil, err
-	}
-	jobs := make([]GroupJob, len(groups))
-	for i, r := range results {
-		jobs[i] = GroupJob{Group: groups[i], ID: r.ID, Err: r.Err}
+	jobs := make([]GroupJob, 0, len(groups))
+	for _, span := range batchSpans(sizes, budget, tentacron.MaxBatchItems) {
+		results, err := c.tc.SubmitBatch(ctx, items[span[0]:span[1]])
+		if err != nil {
+			return nil, err
+		}
+		for i, r := range results {
+			jobs = append(jobs, GroupJob{Group: groups[span[0]+i], ID: r.ID, Err: r.Err})
+		}
 	}
 	return jobs, nil
+}
+
+// batchSpans splits items of the given sizes, in order, into [start, end)
+// spans of at most maxItems whose sizes sum to at most budget. An item larger
+// than budget gets a span of its own.
+func batchSpans(sizes []int, budget, maxItems int) [][2]int {
+	var spans [][2]int
+	start, total := 0, 0
+	for i, size := range sizes {
+		if i > start && (total+size > budget || i-start == maxItems) {
+			spans = append(spans, [2]int{start, i})
+			start, total = i, 0
+		}
+		total += size
+	}
+	if start < len(sizes) {
+		spans = append(spans, [2]int{start, len(sizes)})
+	}
+	return spans
 }
 
 // AwaitGroup waits for a submitted group and returns one result per building.

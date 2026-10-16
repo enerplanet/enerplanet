@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// maxBatchItems is TentaCron's limit on POST /v1/requests/batch.
-const maxBatchItems = 100
+// MaxBatchItems is TentaCron's limit on POST /v1/requests/batch.
+const MaxBatchItems = 100
 
 // BatchItem is one request of a batch submission.
 type BatchItem struct {
@@ -44,8 +44,8 @@ type batchResponse struct {
 // result per item, in order. Each item is stored independently; an item whose
 // idempotency key is already stored returns that job instead of a new one.
 func (c *Client) SubmitBatch(ctx context.Context, items []BatchItem) ([]BatchResult, error) {
-	if len(items) == 0 || len(items) > maxBatchItems {
-		return nil, fmt.Errorf("tentacron batch: %d items, want 1 to %d", len(items), maxBatchItems)
+	if len(items) == 0 || len(items) > MaxBatchItems {
+		return nil, fmt.Errorf("tentacron batch: %d items, want 1 to %d", len(items), MaxBatchItems)
 	}
 	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/v1/requests/batch",
 		map[string]any{"requests": items}, c.authHeader())
