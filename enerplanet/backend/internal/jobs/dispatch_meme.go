@@ -86,6 +86,12 @@ type DispatchMemePayload struct {
 	Target string `json:"target,omitempty"`
 }
 
+// modelDemandResolver resolves a model's BuEM series; DemandResolver
+// implements it.
+type modelDemandResolver interface {
+	Resolve(ctx context.Context, modelID uint) error
+}
+
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
 // seam (electricity only; heat carriers are not translated),
@@ -109,6 +115,7 @@ func HandleDispatchMeme(
 	db *gorm.DB,
 	tc *tentacronclient.Client,
 	runs memeRunStore,
+	resolver modelDemandResolver,
 	seriesReader demandSeriesReader,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
@@ -141,7 +148,12 @@ func HandleDispatchMeme(
 		return fmt.Errorf("failed to fetch model %d: %w", p.ModelID, err)
 	}
 
-	// 1. Build the calculation payload from the stored model.
+	// 1. Build the calculation payload from the stored model, with the BuEM
+	//    series of its current config: a save resolves them in the background,
+	//    and a run started before that finishes would read none.
+	if err := resolver.Resolve(ctx, model.ID); err != nil {
+		return fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err)
+	}
 	built, err := payload.BuildCalculationPayload(&model)
 	if err != nil {
 		return fmt.Errorf("build calculation payload for model %d: %w", p.ModelID, err)
