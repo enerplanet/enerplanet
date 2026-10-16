@@ -82,3 +82,15 @@ func TestRequestKey_RequiresVersion(t *testing.T) {
 	_, err = RequestKey(building("268426401", testBlock), SharedInputs{})
 	assert.Error(t, err)
 }
+
+// Results stored before outputs existed must keep matching: a building
+// without outputs hashes exactly as it did then.
+func TestRequestKey_OutputsKeyOnlyWhenSet(t *testing.T) {
+	s := sharedInputs(t, testWeather, "6.9.0")
+	plain := building("268426401", testBlock)
+	withOutputs := plain
+	withOutputs.Outputs = json.RawMessage(`{"cooling": "none"}`)
+
+	assert.Equal(t, "d4990d957bb4f100d6ccb6f5be74bd2b562c4ea1ba7c1b164db6c3bd980b3874", key(t, plain, s))
+	assert.NotEqual(t, key(t, plain, s), key(t, withOutputs, s))
+}

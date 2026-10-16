@@ -4,8 +4,9 @@
  * CSRF header and the token refresh on 401. Paths are relative to the API root,
  * which axios's baseURL already supplies.
  *
- * Module constant, not built per render: the package keys its effects on these
- * functions, so a new identity on every render would re-run them.
+ * The lookups are a module constant and the full services are built once per
+ * model or draft: the package keys its effects on these functions, so a new
+ * identity on every render would re-run them.
  */
 
 import type {
@@ -27,7 +28,7 @@ interface Enveloped<T> {
   data: T;
 }
 
-export const configuratorServices: ConfiguratorServices = {
+export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
   async fetchMatchingVariants(countryIso2, typeCode, constructionYear) {
     const res = await axios.get<Enveloped<IgnisMatchResponse>>(
       `/v2/ignis/variants/${encodeURIComponent(countryIso2)}/match`,
@@ -55,9 +56,27 @@ export const configuratorServices: ConfiguratorServices = {
     );
     return res.data.data;
   },
-
-  async runBuemBuilding(request) {
-    const res = await axios.post<BuemBuildingRunResponse>('/v1/buem/building', request);
-    return res.data;
-  },
 };
+
+/**
+ * The services for a building of one model or draft. ownerPath is
+ * "models/<id>" or "drafts/<id>"; a BuEM run goes to that owner's stored
+ * route, which keeps the result and answers with the building's demand summary,
+ * also handed to onStored.
+ */
+export function configuratorServicesFor(
+  ownerPath: string,
+  onStored: (profile: BuemBuildingRunResponse) => void,
+): ConfiguratorServices {
+  return {
+    ...variantLookups,
+    async runBuemBuilding(request) {
+      const res = await axios.post<BuemBuildingRunResponse>(
+        `/${ownerPath}/buildings/${encodeURIComponent(request.osm_id)}/buem`,
+        request,
+      );
+      onStored(res.data);
+      return res.data;
+    },
+  };
+}

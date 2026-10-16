@@ -63,7 +63,7 @@ func RequestKey(b Building, s SharedInputs) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("building %s: %w", b.ID, err)
 	}
-	return contenthash.Of(map[string]any{
+	inputs := map[string]any{
 		"recipe":       requestKeyRecipe,
 		"buem_version": s.buemVersion,
 		"start_date":   s.startDate,
@@ -74,5 +74,11 @@ func RequestKey(b Building, s SharedInputs) (string, error) {
 		"geometry":     b.Geometry,
 		"building":     block,
 		"solver":       b.Solver,
-	})
+	}
+	// Added only when set, so a building without outputs keeps the key it was
+	// stored under before outputs existed.
+	if len(b.Outputs) > 0 {
+		inputs["outputs"] = b.Outputs
+	}
+	return contenthash.Of(inputs)
 }

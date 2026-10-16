@@ -55,6 +55,9 @@ func batchPayload(buildings []Building, weather json.RawMessage, startDate, endD
 	if keepTimeseries {
 		payload["keep_timeseries"] = true
 	}
+	if len(buildings) == 1 && len(buildings[0].Outputs) > 0 {
+		payload["outputs"] = buildings[0].Outputs
+	}
 	return payload, nil
 }
 

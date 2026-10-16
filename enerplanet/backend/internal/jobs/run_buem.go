@@ -440,7 +440,7 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 // the TABULA variant/refurbishment level that produced its U-values.
 func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
 	if stored, ok := storedBuemBlock(props); ok {
-		return storedBuildingForBuem(node, osmID, stored)
+		return storedBuildingForBuem(node, osmID, stored, buildingCookingSettings(props, defaultCooking).Carrier)
 	}
 	cityBuilding, ok := envelopeByOSMID[osmID]
 	if !ok {
@@ -562,13 +562,14 @@ func storedBuemBlock(props map[string]interface{}) (map[string]interface{}, bool
 
 // storedBuildingForBuem sends a stored block as it is. The configurator built
 // it complete, the same block its own per-building BuEM run sends, so no
-// City2TABULA envelope, U-value resolution or archetype default applies.
-func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map[string]interface{}) (buem.Building, BuemResolutionMeta, string, bool) {
+// City2TABULA envelope, U-value resolution or archetype default applies. The
+// one addition is cooking: a block that names no carrier gets the model's.
+func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map[string]interface{}, cooking CookingCarrier) (buem.Building, BuemResolutionMeta, string, bool) {
 	geometry, err := json.Marshal(node["geometry"])
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal geometry: %v", err), false
 	}
-	block := stored["building"].(map[string]interface{})
+	block := withCookingCarrier(stored["building"].(map[string]interface{}), cooking)
 	buildingBlock, err := json.Marshal(block)
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored building block: %v", err), false
@@ -582,6 +583,20 @@ func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map
 	meta := BuemResolutionMeta{Customised: true}
 	meta.BuildingType, _ = block["building_type"].(string)
 	return b, meta, "", true
+}
+
+// withCookingCarrier returns block with cooking_carrier set to carrier when it
+// names none, leaving the stored block itself unchanged.
+func withCookingCarrier(block map[string]interface{}, carrier CookingCarrier) map[string]interface{} {
+	if _, set := block["cooking_carrier"]; set {
+		return block
+	}
+	out := make(map[string]interface{}, len(block)+1)
+	for k, v := range block {
+		out[k] = v
+	}
+	out["cooking_carrier"] = carrier
+	return out
 }
 
 // buildingConstructionYear reads properties.construction_year, set only once
@@ -736,6 +751,7 @@ func mergeBuemResults(log *logrus.Entry, topology []interface{}, results []buem.
 	for _, r := range results {
 		if r.Error != "" || len(r.BUEM) == 0 {
 			failed++
+			log.Warnf("buem-gateway: building %s has no result: %s", r.ID, r.Error)
 			continue
 		}
 		byID[r.ID] = r

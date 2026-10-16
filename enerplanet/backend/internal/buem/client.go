@@ -91,6 +91,9 @@ type Building struct {
 	Building json.RawMessage `json:"building"`
 	// Solver is BuEM's solver block (use_milp); omitted when not set.
 	Solver json.RawMessage `json:"solver,omitempty"`
+	// Outputs selects BuEM's load profiles. buem-gateway takes outputs once
+	// per request, so it is sent only for a request of this one building.
+	Outputs json.RawMessage `json:"-"`
 }
 
 // BuildingResult is one building's outcome from RunBuildings. Exactly one of

@@ -77,3 +77,18 @@ func TestSubmitGroups_KeepsSeriesAndKeysEachGroup(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, first["idempotency_key"], (*got)[0]["idempotency_key"], "another model gets another key")
 }
+
+// buem-gateway takes outputs once per request, so only a one-building
+// request carries them.
+func TestBatchPayload_OutputsOnlyForOneBuilding(t *testing.T) {
+	b := building("1", testBlock)
+	b.Outputs = json.RawMessage(`{"cooling": "none"}`)
+
+	one, err := batchPayload([]Building{b}, json.RawMessage(testWeather), "", "", 60, "", true)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"cooling": "none"}`, string(one["outputs"].(json.RawMessage)))
+
+	two, err := batchPayload([]Building{b, building("2", testBlock)}, json.RawMessage(testWeather), "", "", 60, "", true)
+	require.NoError(t, err)
+	assert.NotContains(t, two, "outputs")
+}

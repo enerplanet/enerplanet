@@ -105,12 +105,15 @@ definitions:
         type: string
       geometry:
         type: object
-      model_id:
-        example: "42"
-        type: string
       osm_id:
         example: "240054621"
         type: string
+      outputs:
+        description: |-
+          Outputs selects the load profiles to compute (heating, cooling,
+          electricity, hot_water, kitchen: none, summary or series), forwarded as
+          properties.buem.outputs; omitted, BuEM computes its default set.
+        type: object
       resolution:
         example: 60
         type: integer
@@ -830,7 +833,7 @@ paths:
         name: building_ref
         required: true
         type: string
-      - description: Building geometry and BuEM building block; model_id is ignored
+      - description: Building geometry and BuEM building block
         in: body
         name: request
         required: true
@@ -922,7 +925,7 @@ paths:
         name: building_ref
         required: true
         type: string
-      - description: Building geometry and BuEM building block; model_id is ignored
+      - description: Building geometry and BuEM building block
         in: body
         name: request
         required: true

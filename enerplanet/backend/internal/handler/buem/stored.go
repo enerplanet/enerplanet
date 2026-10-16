@@ -32,7 +32,7 @@ const draftRevision = "draft"
 //	@Produce		json
 //	@Param			id				path		int									true	"Model ID"
 //	@Param			building_ref	path		string								true	"Building OSM id, or c2t:<object_id>"
-//	@Param			request			body		contracts.BuemBuildingRunRequest	true	"Building geometry and BuEM building block; model_id is ignored"
+//	@Param			request			body		contracts.BuemBuildingRunRequest	true	"Building geometry and BuEM building block"
 //	@Success		200	{object}	contracts.BuildingDemandProfileResponse
 //	@Failure		400	{object}	contracts.ErrorResponse
 //	@Failure		403	{object}	contracts.ErrorResponse
@@ -63,7 +63,7 @@ func (h *Handler) RunModelBuilding(c *gin.Context) {
 //	@Produce		json
 //	@Param			draft_id		path		string								true	"Draft id the frontend created for the unsaved model"
 //	@Param			building_ref	path		string								true	"Building OSM id, or c2t:<object_id>"
-//	@Param			request			body		contracts.BuemBuildingRunRequest	true	"Building geometry and BuEM building block; model_id is ignored"
+//	@Param			request			body		contracts.BuemBuildingRunRequest	true	"Building geometry and BuEM building block"
 //	@Success		200	{object}	contracts.BuildingDemandProfileResponse
 //	@Failure		400	{object}	contracts.ErrorResponse
 //	@Failure		502	{object}	contracts.ErrorResponse
