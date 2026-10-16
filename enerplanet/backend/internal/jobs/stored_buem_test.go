@@ -34,7 +34,7 @@ func TestBuildingsForBuem_storedBlockNeedsNoEnvelope(t *testing.T) {
 		map[string]city2tabula.Building{}, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 1, "a stored block is BuEM input on its own; no City2TABULA envelope is needed")
-	assert.JSONEq(t, `{"building_type":"MFH","envelope":{"elements":[]}}`, string(buildings[0].Building))
+	assert.JSONEq(t, `{"building_type":"MFH","envelope":{"elements":[]},"cooking_carrier":"gas"}`, string(buildings[0].Building))
 	assert.Equal(t, "MFH", resolved["777"].BuildingType)
 	assert.NotContains(t, unresolved, "777")
 }
@@ -51,8 +51,8 @@ func TestBuildingsForBuem_storedBlockWinsOverEnvelope(t *testing.T) {
 		envelope, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 1)
-	assert.JSONEq(t, `{"building_type":"MFH","n_air_infiltration":0.2}`, string(buildings[0].Building),
-		"the user's edited block is sent verbatim, not rebuilt from City2TABULA")
+	assert.JSONEq(t, `{"building_type":"MFH","n_air_infiltration":0.2,"cooking_carrier":"gas"}`, string(buildings[0].Building),
+		"the user's edited block is sent as stored, not rebuilt from City2TABULA")
 }
 
 func TestMergeBuemResults_keepsTheStoredBuildingBlock(t *testing.T) {
@@ -78,4 +78,20 @@ func TestBuildingsForBuem_storedSolverTravelsBesideTheBlock(t *testing.T) {
 
 	require.Len(t, buildings, 1)
 	assert.JSONEq(t, `{"use_milp":true}`, string(buildings[0].Solver))
+}
+
+func TestBuildingsForBuem_storedCookingCarrierWinsOverTheModel(t *testing.T) {
+	own := map[string]interface{}{"building_type": "SFH", "cooking_carrier": "electric"}
+	unset := map[string]interface{}{"building_type": "SFH"}
+	topology := []interface{}{storedBuemNode("1", own), storedBuemNode("2", unset)}
+
+	buildings, _, _ := buildingsForBuem(context.Background(), nil, "germany", topology,
+		map[string]city2tabula.Building{}, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
+
+	require.Len(t, buildings, 2)
+	assert.JSONEq(t, `{"building_type":"SFH","cooking_carrier":"electric"}`, string(buildings[0].Building),
+		"a carrier the user chose for the building stays")
+	assert.JSONEq(t, `{"building_type":"SFH","cooking_carrier":"gas"}`, string(buildings[1].Building),
+		"a building without its own carrier gets the model's")
+	assert.NotContains(t, unset, "cooking_carrier", "the saved block itself is left as it was")
 }
