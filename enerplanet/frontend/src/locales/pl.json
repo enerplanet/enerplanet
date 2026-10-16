@@ -1384,7 +1384,13 @@
     "pypsaSimulation": "Symulacja PyPSA",
     "prepare3d": {
       "pending": "Oczekiwanie na przygotowanie danych 3D budynków dla tego obszaru...",
-      "running": "Przygotowywanie danych 3D budynków dla tego obszaru..."
+      "running": "Przygotowywanie danych 3D budynków dla tego obszaru...",
+      "step": "Krok {{index}} z {{count}}: {{label}}",
+      "stages": {
+        "import": "Wczytywanie danych 3D budynków",
+        "extract_features": "Pomiar dachów, ścian i podłóg",
+        "link_buildings": "Dopasowywanie budynków 3D do mapy"
+      }
     },
     "actions": {
       "saveAndExit": "Zapisz & Wyjdź",

@@ -161,4 +161,6 @@ type EnrichResponse struct {
 	// Attributions credits every dataset the buildings in data come from, and
 	// TABULA when any of them carries a TABULA type, as City2TABULA returns them.
 	Attributions []city2tabula.DatasetCredit `json:"attributions"`
+	// The run's pipeline step while it runs; absent while pending.
+	city2tabula.RunStage
 }

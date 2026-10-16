@@ -1384,7 +1384,13 @@
     "pypsaSimulation": "PyPSA-simulatie",
     "prepare3d": {
       "pending": "Wachten op het voorbereiden van 3D-gebouwgegevens voor dit gebied...",
-      "running": "3D-gebouwgegevens voor dit gebied worden voorbereid..."
+      "running": "3D-gebouwgegevens voor dit gebied worden voorbereid...",
+      "step": "Stap {{index}} van {{count}}: {{label}}",
+      "stages": {
+        "import": "3D-gebouwgegevens laden",
+        "extract_features": "Daken, muren en vloeren opmeten",
+        "link_buildings": "3D-gebouwen aan de kaart koppelen"
+      }
     },
     "actions": {
       "saveAndExit": "Opslaan & Afsluiten",
