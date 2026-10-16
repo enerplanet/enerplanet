@@ -144,6 +144,9 @@ func main() {
 		return
 	}
 
+	if err := config.ValidateBuemVersion(cfg.BuemVersion); err != nil {
+		log.Errorf("%v", err)
+	}
 	platformconfig.SetupTimezone(cfg.AppTimezone, log)
 	serverAddr := fmt.Sprintf("%s:%s", cfg.AppHost, cfg.AppPort)
 

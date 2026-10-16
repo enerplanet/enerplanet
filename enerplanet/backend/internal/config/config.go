@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 
 	"platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -97,4 +99,21 @@ func normalizeWebserviceURL(raw string) string {
 		return defaultWebserviceURL
 	}
 	return raw
+}
+
+// buemReleaseVersion is the form BuEM reports as model_version for a release
+// image (buem-model:6.10.0 reports "6.10.0"); other tags report other strings.
+var buemReleaseVersion = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// ValidateBuemVersion reports why v cannot key stored BuEM results: a result
+// is stored only when BuEM's model_version equals it, so it must be the
+// release version of the deployed buem-model image.
+func ValidateBuemVersion(v string) error {
+	if v == "" {
+		return fmt.Errorf("BUEM_VERSION is not set; set it to the buem-model release in repos.conf (BUEM_MODEL_IMAGE_TAG), or no BuEM result is stored")
+	}
+	if !buemReleaseVersion.MatchString(v) {
+		return fmt.Errorf("BUEM_VERSION %q is not a release version X.Y.Z; BuEM reports X.Y.Z only for release images, so no BuEM result would be stored", v)
+	}
+	return nil
 }
