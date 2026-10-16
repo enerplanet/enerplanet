@@ -10,9 +10,9 @@ import (
 )
 
 // GroupSize is how many buildings one BuEM job carries when series are kept.
-// One building-year of series measures ~666 KB against TentaCron's 10 MiB
-// response cap, so ten leave headroom.
-const GroupSize = 10
+// With all five load series one building-year measures ~1.08 MB, so four stay
+// under half of TentaCron's 10 MiB response cap.
+const GroupSize = 4
 
 // Group is one set of buildings submitted as one TentaCron job, with the
 // request key of each building in the same order.
