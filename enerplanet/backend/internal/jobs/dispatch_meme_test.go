@@ -186,7 +186,7 @@ func TestHandleDispatchMeme_endToEndStoresZip(t *testing.T) {
 	store := NewFilesystemResultZipStore(base)
 	enq := &fakeIngestMemeEnqueuer{}
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, store, enq)
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, resolvedDemand{}, noDemandSeries{}, store, enq)
 	require.NoError(t, err)
 
 	// The T1K job (as a generic object) reached the Calliope-only target, with an
@@ -241,7 +241,7 @@ func TestHandleDispatchMeme_retryResumesByIDNoResubmit(t *testing.T) {
 	runs := &fakeMemeRuns{t: t}
 	require.NoError(t, runs.Save(modelID, "job-42", "running"))
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, resolvedDemand{}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.NoError(t, err)
 	require.EqualValues(t, 0, fake.submitted.Load(), "retry resumes by id, never resubmits (no duplicate MEME job)")
 	require.Equal(t, "running", runs.rec.Status, "a resumed run stays running; the ingest owns the terminal completed/failed transition")
@@ -267,7 +267,7 @@ func TestHandleDispatchMeme_terminalRunResubmitsFreshWithRunScopedKey(t *testing
 	runs := &fakeMemeRuns{t: t}
 	require.NoError(t, runs.Save(modelID, "job-42-v1", "failed"))
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, resolvedDemand{}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.NoError(t, err)
 
 	// A fresh MEME solve was submitted, keyed run-scoped by CalculationStartedAt
@@ -293,9 +293,27 @@ func TestHandleDispatchMeme_missingCountryIsAnError(t *testing.T) {
 			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), []byte(`{}`))
 	db, _ := newDispatchMockDB(t, rows)
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(srv.URL, "k"), &fakeMemeRuns{t: t}, resolvedDemand{}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "country", "missing-country surfaces clearly")
+}
+
+// resolvedDemand is a model whose BuEM series need no resolving.
+type resolvedDemand struct{}
+
+func (resolvedDemand) Resolve(context.Context, uint) error { return nil }
+
+// orderedDemand records whether the series were resolved before they were read.
+type orderedDemand struct{ resolved, readAfterResolve bool }
+
+func (o *orderedDemand) Resolve(context.Context, uint) error {
+	o.resolved = true
+	return nil
+}
+
+func (o *orderedDemand) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) {
+	o.readAfterResolve = o.resolved
+	return nil, nil
 }
 
 // noDemandSeries is a model without stored BuEM series.
@@ -322,9 +340,44 @@ func TestHandleDispatchMeme_seriesReadFailureStopsTheDispatch(t *testing.T) {
 			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), 60, []byte(memeTopologyConfig))
 	db, _ := newDispatchMockDB(t, rows)
 
-	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), &fakeMemeRuns{t: t}, failingDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), &fakeMemeRuns{t: t}, resolvedDemand{}, failingDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "model 42")
 	assert.Contains(t, err.Error(), "connection refused")
 	assert.EqualValues(t, 0, fake.submitted.Load(), "nothing is submitted to MEME")
 }
+
+// A save resolves the series in the background; a run started before that
+// finishes must resolve them itself, or every building is sent a constant load.
+func TestHandleDispatchMeme_resolvesSeriesBeforeReadingThem(t *testing.T) {
+	const modelID = uint(42)
+	fake := newFakeMemeTentacron(t, "job-42", []byte("PK\x03\x04zip\x00ff"))
+	rows := sqlmock.NewRows([]string{"id", "user_id", "user_email", "title", "country", "region", "from_date", "to_date", "resolution", "config"}).
+		AddRow(int64(modelID), "u1", "a@b.c", "Test model", "netherlands", nil,
+			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), 60, []byte(memeTopologyConfig))
+	db, _ := newDispatchMockDB(t, rows)
+	demand := &orderedDemand{}
+
+	_ = HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), &fakeMemeRuns{t: t}, demand, demand, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+
+	assert.True(t, demand.readAfterResolve, "the series are read only after the model's series were resolved")
+}
+
+func TestHandleDispatchMeme_resolveFailureStopsTheDispatch(t *testing.T) {
+	const modelID = uint(42)
+	fake := newFakeMemeTentacron(t, "job-42", []byte("PK\x03\x04zip\x00ff"))
+	rows := sqlmock.NewRows([]string{"id", "user_id", "user_email", "title", "country", "region", "from_date", "to_date", "resolution", "config"}).
+		AddRow(int64(modelID), "u1", "a@b.c", "Test model", "netherlands", nil,
+			time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC), 60, []byte(memeTopologyConfig))
+	db, _ := newDispatchMockDB(t, rows)
+
+	err := HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New(fake.URL(), "k"), &fakeMemeRuns{t: t}, failingResolve{}, noDemandSeries{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "resolve BuEM series of model 42")
+	assert.EqualValues(t, 0, fake.submitted.Load(), "nothing is submitted to MEME")
+}
+
+// failingResolve is a resolution that cannot reach its store.
+type failingResolve struct{}
+
+func (failingResolve) Resolve(context.Context, uint) error { return errors.New("connection refused") }

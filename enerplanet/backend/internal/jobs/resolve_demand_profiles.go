@@ -44,33 +44,36 @@ type demandProfileStore interface {
 	SaveFailed(modelID uint, osmID, reason string) error
 }
 
-// HandleResolveDemandProfiles gives each building of a model its BuEM hourly
-// series: stored series are reused by request key, the rest run through BuEM
-// in groups. Series are linked to the model; annual totals go to its rows.
+// DemandResolver gives each building of a model its BuEM hourly series:
+// stored series are reused by request key, the rest run through BuEM in
+// groups. Series are linked to the model; annual totals go to its rows.
+// resolve_demand_profiles runs it after a save, and dispatch_meme before it
+// reads the series, so a run never starts from series not yet stored.
+type DemandResolver struct {
+	DB              *gorm.DB
+	C2T             *city2tabula.Client
+	C2TRuns         city2tabulaRunStore
+	Weather         *weather.Client
+	WeatherProvider string
+	Ignis           *ignis.Client
+	BuEM            *buem.Client
+	Profiles        demandProfileStore
+	Series          seriesStore
+	BuemVersion     string
+}
+
+// HandleResolveDemandProfiles runs r for the model in t's payload.
 //
 // A resolution problem (buem-gateway unreachable, no buildings in the
 // topology) is recorded on the affected rows and never fails the job itself
 // - there is no model status for this job to leave stuck, unlike run_buem.
-func HandleResolveDemandProfiles(
-	ctx context.Context,
-	t *asynq.Task,
-	db *gorm.DB,
-	c2t *city2tabula.Client,
-	c2tRuns city2tabulaRunStore,
-	wx *weather.Client,
-	weatherProvider string,
-	ignisClient *ignis.Client,
-	buemClient *buem.Client,
-	profileStore demandProfileStore,
-	seriesStore seriesStore,
-	buemVersion string,
-) (retErr error) {
+func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandResolver) (retErr error) {
 	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	defer func() {
-		if r := recover(); r != nil {
-			log.Errorf("PANIC in HandleResolveDemandProfiles: %v", r)
-			retErr = fmt.Errorf("panic in resolve_demand_profiles: %v", r)
+		if rec := recover(); rec != nil {
+			log.Errorf("PANIC in HandleResolveDemandProfiles: %v", rec)
+			retErr = fmt.Errorf("panic in resolve_demand_profiles: %v", rec)
 		}
 	}()
 
@@ -78,48 +81,54 @@ func HandleResolveDemandProfiles(
 	if err := json.Unmarshal(t.Payload(), &rp); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
+	return r.Resolve(ctx, rp.ModelID)
+}
+
+// Resolve resolves and links the series of every building of model modelID.
+func (r DemandResolver) Resolve(ctx context.Context, modelID uint) error {
+	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	var model commonModels.Model
-	if err := db.First(&model, rp.ModelID).Error; err != nil {
-		return fmt.Errorf("failed to fetch model %d: %w", rp.ModelID, err)
+	if err := r.DB.First(&model, modelID).Error; err != nil {
+		return fmt.Errorf("failed to fetch model %d: %w", modelID, err)
 	}
 
 	if ModelHeatSource(model.Config) == HeatSourceEstimate {
-		log.Debugf("model %d: heatSource=estimate, no demand profiles to resolve", rp.ModelID)
+		log.Debugf("model %d: heatSource=estimate, no demand profiles to resolve", modelID)
 		return nil
 	}
 
 	calcPayload, err := buildCalculationPayload(&model)
 	if err != nil {
-		log.Debugf("model %d: cannot build calculation payload, nothing to resolve: %v", rp.ModelID, err)
+		log.Debugf("model %d: cannot build calculation payload, nothing to resolve: %v", modelID, err)
 		return nil
 	}
 
 	osmIDs := buildingOSMIDs(calcPayload.Topology)
 	if len(osmIDs) == 0 {
-		log.Debugf("model %d: no buildings in topology, nothing to resolve", rp.ModelID)
+		log.Debugf("model %d: no buildings in topology, nothing to resolve", modelID)
 		return nil
 	}
 
 	refurbLevel := modelRefurbishmentLevel(model.Config)
-	if err := profileStore.ResetForRun(rp.ModelID, osmIDs, string(refurbLevel)); err != nil {
-		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", rp.ModelID, err)
+	if err := r.Profiles.ResetForRun(modelID, osmIDs, string(refurbLevel)); err != nil {
+		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", modelID, err)
 	}
 	revision, err := contenthash.Of(model.Config)
 	if err != nil {
-		return fmt.Errorf("hash config of model %d: %w", rp.ModelID, err)
+		return fmt.Errorf("hash config of model %d: %w", modelID, err)
 	}
-	run := prepareBuemRun(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, model, calcPayload, refurbLevel)
-	saveFailures(log, profileStore, rp.ModelID, run.unresolved)
+	run := prepareBuemRun(ctx, log, r.C2T, r.C2TRuns, r.Weather, r.WeatherProvider, r.Ignis, model, calcPayload, refurbLevel)
+	saveFailures(log, r.Profiles, modelID, run.unresolved)
 	if len(run.buildings) == 0 {
 		return nil
 	}
-	if buemVersion == "" {
-		log.Errorf("model %d: BUEM_VERSION is not configured, BuEM results cannot be keyed", rp.ModelID)
-		saveFailures(log, profileStore, rp.ModelID, allFailed(run.buildings, "BUEM_VERSION is not configured on the backend"))
+	if r.BuemVersion == "" {
+		log.Errorf("model %d: BUEM_VERSION is not configured, BuEM results cannot be keyed", modelID)
+		saveFailures(log, r.Profiles, modelID, allFailed(run.buildings, "BUEM_VERSION is not configured on the backend"))
 		return nil
 	}
-	return resolveAndLink(ctx, log, db, rp.ModelID, revision, run, calcPayload, buemVersion, buemClient, profileStore, seriesStore)
+	return resolveAndLink(ctx, log, r.DB, modelID, revision, run, calcPayload, r.BuemVersion, r.BuEM, r.Profiles, r.Series)
 }
 
 // resolveAndLink stores every building's series, then links them and fills

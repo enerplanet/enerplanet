@@ -82,6 +82,16 @@ func NewTaskProcessor(
 	}
 }
 
+// demandResolver is the BuEM series resolution resolve_demand_profiles and
+// dispatch_meme share.
+func (p *TaskProcessor) demandResolver() jobs.DemandResolver {
+	return jobs.DemandResolver{
+		DB: p.db, C2T: p.city2tabulaClient, C2TRuns: p.c2tRuns, Weather: p.weatherClient,
+		WeatherProvider: p.weatherProvider, Ignis: p.ignisClient, BuEM: p.buemClient,
+		Profiles: p.profileStore, Series: p.seriesStore, BuemVersion: p.buemVersion,
+	}
+}
+
 func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	log := logger.ForComponent("asynq_worker")
 
@@ -93,11 +103,11 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeRunBuem:
 		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.buemClient, p.ignisClient, p.asynqClient, p.notificationService)
 	case jobs.TypeResolveDemandProfiles:
-		return jobs.HandleResolveDemandProfiles(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.ignisClient, p.buemClient, p.profileStore, p.seriesStore, p.buemVersion)
+		return jobs.HandleResolveDemandProfiles(ctx, t, p.demandResolver())
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, seriesstore.NewStore(p.db), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:
