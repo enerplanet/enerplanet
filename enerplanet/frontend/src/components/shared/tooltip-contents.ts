@@ -1,6 +1,5 @@
 // Tooltip keys for translation lookup
 export const TOOLTIP_KEYS = {
-  publicBuildings: 'tooltips.publicBuildings',
   privateBuildings: 'tooltips.privateBuildings',
   simulateEV: 'tooltips.simulateEV',
   gridConstrained: 'tooltips.gridConstrained',
@@ -42,11 +41,6 @@ export type TooltipKey = keyof typeof TOOLTIP_KEYS;
 
 // Fallback content (English) - used when translations are not available
 export const TOOLTIP_CONTENTS = {
-  publicBuildings: {
-    title: 'Public Custom Buildings',
-    description: 'Include buildings shared by other users in the grid calculation. These are custom buildings that other users have made publicly available.',
-    example: 'You can also exclude individual buildings by clicking on them on the map.'
-  },
   privateBuildings: {
     title: 'My Custom Buildings',
     description: 'Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.',

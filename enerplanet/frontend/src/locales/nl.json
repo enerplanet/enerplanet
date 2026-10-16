@@ -1401,10 +1401,8 @@
       "cancel": "Annuleren"
     },
     "mapHeader": {
-      "public": "Openbaar",
       "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
-      "togglePublicBuildings": "Openbare gebouwen aan/uit",
       "toggleMyBuildings": "Mijn gebouwen aan/uit",
       "disableSelected": "Geselecteerde gebouwen uitschakelen"
     },
@@ -1919,55 +1917,15 @@
     "newLocation": "Nieuwe Locatie",
     "newLocationTooltip": "Maak een nieuwe aangepaste locatie",
     "searchPlaceholder": "Zoek locaties...",
-    "tabs": {
-      "my": "Mijn Locaties",
-      "public": "Openbaar"
-    },
     "stats": {
       "total": "Totaal",
       "totalArea": "Totale Oppervlakte",
       "totalDemand": "Totale Vraag",
-      "public": "Openbaar",
       "private": "Privé"
     },
     "empty": {
       "title": "Geen locaties gevonden",
-      "description": "Maak uw eerste aangepaste locatie om te beginnen",
-      "publicTitle": "Geen openbare locaties",
-      "publicDescription": "Openbare locaties gedeeld door andere gebruikers verschijnen hier. Zet een locatie op openbaar om te delen."
-    },
-    "toggle": {
-      "makePublic": "Privé - Klik om openbaar te maken",
-      "makePrivate": "Openbaar - Klik om privé te maken",
-      "nowPublic": "Locatie is nu openbaar",
-      "nowPrivate": "Locatie is nu privé"
-    },
-    "share": {
-      "title": "Locatie delen",
-      "description": "\"{{name}}\" delen met gebruikers, werkruimtes of groepen",
-      "tabs": {
-        "users": "Gebruikers",
-        "workspaces": "Werkruimtes",
-        "groups": "Groepen"
-      },
-      "userEmail": "E-mail gebruiker",
-      "selectWorkspace": "Werkruimte selecteren",
-      "selectGroup": "Groep selecteren",
-      "addUser": "Delen met gebruiker",
-      "addWorkspace": "Delen met werkruimte",
-      "addGroup": "Delen met groep",
-      "sharedWithUsers": "Gedeeld met gebruikers",
-      "sharedWithWorkspaces": "Gedeeld met werkruimtes",
-      "sharedWithGroups": "Gedeeld met groepen",
-      "noUsersYet": "Nog niet gedeeld met gebruikers",
-      "noWorkspacesYet": "Nog niet gedeeld met werkruimtes",
-      "noGroupsYet": "Nog niet gedeeld met groepen",
-      "removeAccess": "Toegang verwijderen",
-      "totalShares": "{{count}} deling(en) in totaal",
-      "alreadySharedWithUser": "Deze locatie is al gedeeld met deze gebruiker",
-      "alreadySharedWithWorkspace": "Deze locatie is al gedeeld met deze werkruimte",
-      "alreadySharedWithGroup": "Deze locatie is al gedeeld met deze groep",
-      "failedToShare": "Delen mislukt. Probeer het opnieuw."
+      "description": "Maak uw eerste aangepaste locatie om te beginnen"
     }
   },
   "weather": {
@@ -2499,11 +2457,6 @@
     "sourceNote": "Geschat door de PyLoVo-netberekening. Kosten uit Duitse LS-catalogi. Benutting op basis van gelijktijdige last."
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Openbare Aangepaste Gebouwen",
-      "description": "Neem gebouwen op die door andere gebruikers zijn gedeeld in de netwerkberekening. Dit zijn aangepaste gebouwen die andere gebruikers openbaar beschikbaar hebben gemaakt.",
-      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
-    },
     "privateBuildings": {
       "title": "Mijn Aangepaste Gebouwen",
       "description": "Neem uw privé aangepaste gebouwen op in de netwerkberekening. Dit zijn gebouwen die u hebt gemaakt en opgeslagen in uw account.",

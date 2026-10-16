@@ -45,13 +45,8 @@ export const useCustomLocationLayers = (map: OLMap | null, allPolygons: [number,
   useEffect(() => {
     const loadCustomLocations = async () => {
       try {
-        const [userResponse, publicResponse] = await Promise.all([
-          customLocationService.getUserLocations({ per_page: 100 }),
-          customLocationService.getPublicLocations({ per_page: 100 }),
-        ]);
-        const userLocationIds = new Set(userResponse.data.map(l => l.id));
-        const uniquePublic = publicResponse.data.filter(loc => !userLocationIds.has(loc.id));
-        setCustomLocations([...userResponse.data, ...uniquePublic]);
+        const response = await customLocationService.getUserLocations({ per_page: 100 });
+        setCustomLocations(response.data);
       } catch (error) {
         console.error('Failed to load custom locations:', error);
       }

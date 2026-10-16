@@ -1713,10 +1713,8 @@
       "cancel": "Abbrechen"
     },
     "mapHeader": {
-      "public": "Öffentlich",
       "myBuildings": "Meine Gebäude",
       "clearAll": "Alle Polygone entfernen",
-      "togglePublicBuildings": "Öffentliche Gebäude umschalten",
       "toggleMyBuildings": "Meine Gebäude umschalten",
       "disableSelected": "Ausgewählte Gebäude deaktivieren"
     },
@@ -1960,11 +1958,6 @@
     }
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Öffentliche benutzerdefinierte Gebäude",
-      "description": "Schließen Sie von anderen Benutzern freigegebene Gebäude in die Netzberechnung ein. Dies sind benutzerdefinierte Gebäude, die andere Benutzer öffentlich zugänglich gemacht haben.",
-      "example": "Sie können auch einzelne Gebäude ausschließen, indem Sie sie auf der Karte anklicken."
-    },
     "privateBuildings": {
       "title": "Meine benutzerdefinierten Gebäude",
       "description": "Schließen Sie Ihre privaten benutzerdefinierten Gebäude in die Netzberechnung ein. Dies sind Gebäude, die Sie erstellt und in Ihrem Konto gespeichert haben.",
@@ -2298,55 +2291,15 @@
     "newLocation": "Neuer Standort",
     "newLocationTooltip": "Neuen benutzerdefinierten Standort erstellen",
     "searchPlaceholder": "Standorte suchen...",
-    "tabs": {
-      "my": "Meine Standorte",
-      "public": "Öffentlich"
-    },
     "stats": {
       "total": "Gesamt",
       "totalArea": "Gesamtfläche",
       "totalDemand": "Gesamtbedarf",
-      "public": "Öffentlich",
       "private": "Privat"
     },
     "empty": {
       "title": "Keine Standorte gefunden",
-      "description": "Erstellen Sie Ihren ersten benutzerdefinierten Standort",
-      "publicTitle": "Keine öffentlichen Standorte",
-      "publicDescription": "Öffentliche Standorte von anderen Nutzern werden hier angezeigt. Schalten Sie einen Standort auf öffentlich um ihn zu teilen."
-    },
-    "toggle": {
-      "makePublic": "Privat - Klicken um öffentlich zu machen",
-      "makePrivate": "Öffentlich - Klicken um privat zu machen",
-      "nowPublic": "Standort ist jetzt öffentlich",
-      "nowPrivate": "Standort ist jetzt privat"
-    },
-    "share": {
-      "title": "Standort teilen",
-      "description": "\"{{name}}\" mit Benutzern, Arbeitsbereichen oder Gruppen teilen",
-      "tabs": {
-        "users": "Benutzer",
-        "workspaces": "Arbeitsbereiche",
-        "groups": "Gruppen"
-      },
-      "userEmail": "Benutzer-E-Mail",
-      "selectWorkspace": "Arbeitsbereich auswählen",
-      "selectGroup": "Gruppe auswählen",
-      "addUser": "Mit Benutzer teilen",
-      "addWorkspace": "Mit Arbeitsbereich teilen",
-      "addGroup": "Mit Gruppe teilen",
-      "sharedWithUsers": "Mit Benutzern geteilt",
-      "sharedWithWorkspaces": "Mit Arbeitsbereichen geteilt",
-      "sharedWithGroups": "Mit Gruppen geteilt",
-      "noUsersYet": "Noch nicht mit Benutzern geteilt",
-      "noWorkspacesYet": "Noch nicht mit Arbeitsbereichen geteilt",
-      "noGroupsYet": "Noch nicht mit Gruppen geteilt",
-      "removeAccess": "Zugriff entfernen",
-      "totalShares": "{{count}} Freigabe(n) insgesamt",
-      "alreadySharedWithUser": "Dieser Standort wird bereits mit diesem Benutzer geteilt",
-      "alreadySharedWithWorkspace": "Dieser Standort wird bereits mit diesem Arbeitsbereich geteilt",
-      "alreadySharedWithGroup": "Dieser Standort wird bereits mit dieser Gruppe geteilt",
-      "failedToShare": "Standort konnte nicht geteilt werden. Bitte versuchen Sie es erneut."
+      "description": "Erstellen Sie Ihren ersten benutzerdefinierten Standort"
     }
   },
   "weather": {

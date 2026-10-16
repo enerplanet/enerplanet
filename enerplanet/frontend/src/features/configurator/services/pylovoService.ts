@@ -214,7 +214,6 @@ export const pylovoService = {
         user_id?: string;
         model_id?: number;  // Model ID for filtering user-placed transformers (existing models)
         draft_id?: string;  // Draft ID for new models before saving
-        include_public_buildings?: boolean;
         include_private_buildings?: boolean;
         excluded_building_ids?: number[];
     }): Promise<PylovoGridResponse> => {
@@ -224,7 +223,6 @@ export const pylovoService = {
             user_id?: string;
             model_id?: number;
             draft_id?: string;
-            include_public_buildings?: boolean;
             include_private_buildings?: boolean;
             excluded_building_ids?: number[];
         };
@@ -280,9 +278,6 @@ export const pylovoService = {
         }
 
         // Include custom building filter options
-        if (payload.include_public_buildings !== undefined) {
-            requestPayload.include_public_buildings = payload.include_public_buildings;
-        }
         if (payload.include_private_buildings !== undefined) {
             requestPayload.include_private_buildings = payload.include_private_buildings;
         }
@@ -364,7 +359,6 @@ export const pylovoService = {
         demand_energy: number;
         geometry: GeoJSON.Point;
         geometry_area: GeoJSON.Polygon;
-        is_public?: boolean;
         icon?: string;
     }): Promise<{ building_id: number; message: string }> => {
         const response = await axios.post<{ data: { building: { id: number }; status: string } }>(
@@ -782,7 +776,6 @@ export interface CustomBuilding {
     demand_energy: number;
     geometry: GeoJSON.Point;
     geometry_area: GeoJSON.Polygon;
-    is_public: boolean;
     is_owner: boolean;
     icon: string;
     created_at: string;

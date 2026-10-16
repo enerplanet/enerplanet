@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { Loader2, Globe, Lock, MapPin } from "lucide-react";
+import { Loader2, Lock, MapPin } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -63,9 +63,7 @@ interface MapHeaderProps {
   onWorkspaceChange: (workspace: Workspace | null) => void;
   onOpenCreateWorkspace: () => void;
   // Custom building filters
-  includePublicBuildings?: boolean;
   includePrivateBuildings?: boolean;
-  onTogglePublicBuildings?: (value: boolean) => void;
   onTogglePrivateBuildings?: (value: boolean) => void;
   simulateEV?: boolean;
   onToggleSimulateEV?: (value: boolean) => void;
@@ -86,9 +84,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
   normalizedWorkspaceId,
   onWorkspaceChange,
   onOpenCreateWorkspace,
-  includePublicBuildings = true,
   includePrivateBuildings = true,
-  onTogglePublicBuildings,
   onTogglePrivateBuildings,
   // EV simulation temporarily disabled
   // simulateEV = false,
@@ -164,22 +160,6 @@ export const MapHeader: FC<MapHeaderProps> = ({
         )}
 
         {/* Custom Building Filters */}
-        {onTogglePublicBuildings && (
-          <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1">
-              {t("simulation.mapHeader.public")}
-              <InfoIcon tooltipKey="publicBuildings" position="bottom" />
-            </span>
-            <ModernToggle
-              checked={includePublicBuildings}
-              onCheckedChange={onTogglePublicBuildings}
-              icon={<Globe className="w-full h-full" />}
-              activeColorClass="text-green-600"
-              ariaLabel={t("simulation.mapHeader.togglePublicBuildings")}
-            />
-          </div>
-        )}
-
         {onTogglePrivateBuildings && (
           <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
             <span className="text-xs font-medium text-foreground flex items-center gap-1">

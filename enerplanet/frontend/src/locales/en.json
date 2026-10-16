@@ -1713,10 +1713,8 @@
       "cancel": "Cancel"
     },
     "mapHeader": {
-      "public": "Public",
       "myBuildings": "My Buildings",
       "clearAll": "Remove all polygons",
-      "togglePublicBuildings": "Toggle public buildings",
       "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings"
     },
@@ -1960,11 +1958,6 @@
     }
   },
   "tooltips": {
-    "publicBuildings": {
-      "title": "Public Custom Buildings",
-      "description": "Include buildings shared by other users in the grid calculation. These are custom buildings that other users have made publicly available.",
-      "example": "You can also exclude individual buildings by clicking on them on the map."
-    },
     "privateBuildings": {
       "title": "My Custom Buildings",
       "description": "Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.",
@@ -2298,55 +2291,15 @@
     "newLocation": "New Location",
     "newLocationTooltip": "Create a new custom location",
     "searchPlaceholder": "Search locations...",
-    "tabs": {
-      "my": "My Locations",
-      "public": "Public"
-    },
     "stats": {
       "total": "Total",
       "totalArea": "Total Area",
       "totalDemand": "Total Demand",
-      "public": "Public",
       "private": "Private"
     },
     "empty": {
       "title": "No locations found",
-      "description": "Create your first custom location to get started",
-      "publicTitle": "No public locations",
-      "publicDescription": "Public locations shared by other users will appear here. Toggle a location to public to share it."
-    },
-    "toggle": {
-      "makePublic": "Private - Click to make public",
-      "makePrivate": "Public - Click to make private",
-      "nowPublic": "Location is now public",
-      "nowPrivate": "Location is now private"
-    },
-    "share": {
-      "title": "Share Location",
-      "description": "Share \"{{name}}\" with users, workspaces, or groups",
-      "tabs": {
-        "users": "Users",
-        "workspaces": "Workspaces",
-        "groups": "Groups"
-      },
-      "userEmail": "User Email",
-      "selectWorkspace": "Select Workspace",
-      "selectGroup": "Select Group",
-      "addUser": "Share with User",
-      "addWorkspace": "Share with Workspace",
-      "addGroup": "Share with Group",
-      "sharedWithUsers": "Shared with Users",
-      "sharedWithWorkspaces": "Shared with Workspaces",
-      "sharedWithGroups": "Shared with Groups",
-      "noUsersYet": "Not shared with any users yet",
-      "noWorkspacesYet": "Not shared with any workspaces yet",
-      "noGroupsYet": "Not shared with any groups yet",
-      "removeAccess": "Remove access",
-      "totalShares": "{{count}} share(s) total",
-      "alreadySharedWithUser": "This location is already shared with this user",
-      "alreadySharedWithWorkspace": "This location is already shared with this workspace",
-      "alreadySharedWithGroup": "This location is already shared with this group",
-      "failedToShare": "Failed to share location. Please try again."
+      "description": "Create your first custom location to get started"
     }
   },
   "weather": {

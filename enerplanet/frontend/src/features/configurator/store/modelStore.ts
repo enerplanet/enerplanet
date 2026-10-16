@@ -94,8 +94,6 @@ export interface ModelStore {
   resetAdvancedParams: () => void;
 
   // ── Building filters ──
-  includePublicBuildings: boolean;
-  setIncludePublicBuildings: (v: boolean) => void;
   includePrivateBuildings: boolean;
   setIncludePrivateBuildings: (v: boolean) => void;
   excludedBuildingIds: Set<number>;
@@ -220,7 +218,6 @@ const getInitialState = () => ({
   showAreaSelectTour: false,
   showAdvancedParams: false,
   advancedParams: getDefaultAdvancedParameters(),
-  includePublicBuildings: true,
   includePrivateBuildings: true,
   excludedBuildingIds: new Set<number>(),
   selectedBuildingIds: new Set<string>(),
@@ -325,8 +322,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   resetAdvancedParams: () => set({ advancedParams: getDefaultAdvancedParameters() }),
 
   // ── Building filters ──
-  includePublicBuildings: true,
-  setIncludePublicBuildings: (v) => set({ includePublicBuildings: v }),
   includePrivateBuildings: true,
   setIncludePrivateBuildings: (v) => set({ includePrivateBuildings: v }),
   excludedBuildingIds: new Set(),
