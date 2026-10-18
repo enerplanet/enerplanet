@@ -53,6 +53,8 @@ import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import { useTranslation } from "@spatialhub/i18n";
 import { FUEL_BY_TYPE } from "@/features/technologies/catalogue";
+import { useModelStore } from "@/features/configurator/store/modelStore";
+import { OPERATE_SIZE_FIELDS, isFiniteValue } from "@/features/configurator/utils/operateSizes";
 import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
 
 // Wind turbine data structure
@@ -434,6 +436,13 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
   const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
+  const runMode = useModelStore((s) => s.runMode);
+  // In operate mode, bring the first size operate needs into view.
+  useEffect(() => {
+    if (!open || runMode !== "operate") return;
+    const timer = setTimeout(() => contentRef.current?.querySelector("[data-operate-missing]")?.scrollIntoView({ block: "center" }), 150);
+    return () => clearTimeout(timer);
+  }, [open, runMode, technology]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get translated parameter name/alias
@@ -811,6 +820,8 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     const description = getDescription(constraint.key, translatedName, constraint.description);
     const isDisabled = disabledFields.has(constraint.key);
     const isInfinityField = infinityFields.has(constraint.key);
+    const operateFields = OPERATE_SIZE_FIELDS[technology.type || technology.key] ?? [];
+    const needsSize = runMode === "operate" && operateFields.includes(constraint.key) && !isFiniteValue(value);
 
     // Check if it's a dropdown (use dynamic options if available)
     const options = dynamicOptions[constraint.key] || constraint.options;
@@ -916,7 +927,11 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     };
 
     return (
-      <tr key={constraint.key} className="hover:bg-muted/30 transition-colors">
+      <tr
+        key={constraint.key}
+        data-operate-missing={needsSize || undefined}
+        className={needsSize ? "bg-red-50 ring-2 ring-inset ring-red-500 dark:bg-red-950/40" : "hover:bg-muted/30 transition-colors"}
+      >
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
             <div>
@@ -955,6 +970,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <td className="px-3 py-2.5">
           {renderControl()}
           {error && <p className="text-[10px] text-red-500 text-right mt-0.5">{error}</p>}
+          {needsSize && <p className="text-[10px] font-medium text-red-600 text-right mt-0.5">{t("simulation.runMode.fieldNeeded")}</p>}
         </td>
         <td className="px-3 py-2.5 text-right">
           <span className="text-xs text-muted-foreground">{constraint.unit || "—"}</span>

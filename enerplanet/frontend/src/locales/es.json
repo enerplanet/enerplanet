@@ -1781,7 +1781,8 @@
       "fields": {
         "cont_energy_cap_max": "tamaño máximo",
         "cont_storage_cap_max": "tamaño de almacenamiento"
-      }
+      },
+      "fieldNeeded": "El modo de operación necesita aquí un tamaño finito"
     },
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",

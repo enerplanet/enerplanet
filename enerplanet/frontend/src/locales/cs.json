@@ -1520,7 +1520,8 @@
       "fields": {
         "cont_energy_cap_max": "maximální velikost",
         "cont_storage_cap_max": "velikost úložiště"
-      }
+      },
+      "fieldNeeded": "Režim provozu zde potřebuje konečnou velikost"
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",

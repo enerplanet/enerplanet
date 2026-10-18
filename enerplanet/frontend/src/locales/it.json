@@ -1520,7 +1520,8 @@
       "fields": {
         "cont_energy_cap_max": "dimensione massima",
         "cont_storage_cap_max": "dimensione di accumulo"
-      }
+      },
+      "fieldNeeded": "La modalità di esercizio richiede qui una dimensione finita"
     },
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",

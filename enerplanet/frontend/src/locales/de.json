@@ -1777,7 +1777,8 @@
       "fields": {
         "cont_energy_cap_max": "maximale Größe",
         "cont_storage_cap_max": "Speichergröße"
-      }
+      },
+      "fieldNeeded": "Der Betriebsmodus braucht hier eine endliche Größe"
     },
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
