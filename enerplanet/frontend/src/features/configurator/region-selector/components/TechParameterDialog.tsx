@@ -52,7 +52,7 @@ import {
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import { useTranslation } from "@spatialhub/i18n";
-import { fetchOpenTechTechBySlug } from "@/features/configurator/services/opentechdbService";
+import { FUEL_BY_TYPE } from "@/features/technologies/catalogue";
 import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
 
 // Wind turbine data structure
@@ -531,13 +531,8 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   }, [technology]);
 
   useEffect(() => {
-    if (!technology) { setFuelCarrier(undefined); return; }
-    // Resolve the priced input carrier for OTDB-sourced techs (fuel in for
-    // boilers/CHP etc.). Simulator techs have no carrier metadata — no price line.
-
-    const bridge = fetchOpenTechTechBySlug(technology.key);
-    if (bridge?.carrierIn?.length) setFuelCarrier(pricedFuelCarrier(bridge.carrierIn));
-    else setFuelCarrier(undefined);
+    const fuels = technology ? FUEL_BY_TYPE[technology.key] : undefined;
+    setFuelCarrier(fuels ? pricedFuelCarrier(fuels) : undefined);
   }, [technology]);
 
   // Handle turbine type selection change

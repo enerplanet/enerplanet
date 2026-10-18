@@ -1714,6 +1714,25 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Fotowoltaika",
+      "battery_storage": "Magazyn energii",
+      "air_source_heat_pump": "Powietrzna pompa ciepła",
+      "ground_source_heat_pump": "Gruntowa pompa ciepła",
+      "electric_boilers": "Kocioł elektryczny",
+      "gas_boiler": "Kocioł gazowy",
+      "air_conditioner": "Klimatyzator"
+    },
+    "products": {
+      "title": "Wybierz produkt: {{type}}",
+      "applyToBuilding": "Wybierz produkt dla tego budynku. Jego parametry zostaną przejęte; „Zdefiniuj własny” pozwala je zmienić.",
+      "applyToAll": "Wybierz produkt dla wszystkich budynków. Jego parametry zostaną przejęte; „Zdefiniuj własny” pozwala je zmienić.",
+      "efficiency": "Sprawność {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} lat",
+      "defineOwn": "Zdefiniuj własny",
+      "count": "Produkty: {{count}}"
+    },
     "title": "Technologie",
     "subtitle": "Technologie energetyczne do symulacji",
     "loading": "Ładowanie technologii...",

@@ -16,6 +16,7 @@ export const useTechDialogFlow = ({
   const setSelectedTechForDialog = useModelStore((s) => s.setSelectedTechForDialog);
   const setSelectedBuildingForTech = useModelStore((s) => s.setSelectedBuildingForTech);
   const setTechDialogOpen = useModelStore((s) => s.setTechDialogOpen);
+  const setTechDialogStep = useModelStore((s) => s.setTechDialogStep);
 
   const handleAddTechFromDialog = useCallback(
     (tech: Technology) => {
@@ -24,9 +25,10 @@ export const useTechDialogFlow = ({
       setBuildingDialogOpen(false);
       setSelectedTechForDialog(tech);
       setSelectedBuildingForTech(selectedBuildingFeature);
+      setTechDialogStep("pick");
       setTechDialogOpen(true);
     },
-    [selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen]
+    [selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]
   );
 
   const handleApplyTechToSelected = useCallback(
@@ -37,10 +39,11 @@ export const useTechDialogFlow = ({
         setBuildingDialogOpen(false);
         setSelectedTechForDialog(tech);
         setSelectedBuildingForTech(selectedBuildingFeature);
+        setTechDialogStep("pick");
         setTechDialogOpen(true);
       }
     },
-    [multiEditSelectedIds, selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen]
+    [multiEditSelectedIds, selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]
   );
 
   return {

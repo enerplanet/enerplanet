@@ -472,7 +472,7 @@ func extractAndTransformTechs(bProps map[string]interface{}) interface{} {
 	transformedTechs := make(map[string]interface{})
 	for techName, techData := range tMap {
 		techObj, ok := techData.(map[string]interface{})
-		if !ok {
+		if !ok || !IsSupportedTechnology(techName) {
 			continue
 		}
 		if newTechObj := transformTechObject(techObj); len(newTechObj) > 0 {

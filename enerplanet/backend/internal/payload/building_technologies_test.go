@@ -46,6 +46,25 @@ func TestDefaultTechnology_leavesOutTheSourceNote(t *testing.T) {
 	assert.Equal(t, 0.9, techs["gas_boiler"].(map[string]interface{})["cont_energy_eff"])
 }
 
+func TestExtractAndTransformTechs_dropsUnsupportedTechnologies(t *testing.T) {
+	props := map[string]interface{}{"techs": map[string]interface{}{
+		"wind_onshore":      map[string]interface{}{"cont_energy_cap_max": 50.0},
+		"households_supply": map[string]interface{}{"cost_om_con": 0.39},
+		"battery_storage":   map[string]interface{}{"cont_energy_cap_max": 5.0},
+	}}
+
+	techs := extractAndTransformTechs(props).(map[string]interface{})
+	assert.Equal(t, []string{"battery_storage"}, keys(techs))
+}
+
+func keys(m map[string]interface{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
 func TestExtractAndTransformTechs_keepsPVArrays(t *testing.T) {
 	arrays := []interface{}{map[string]interface{}{"surface_id": "r1", "usable_share": 0.8}}
 	props := map[string]interface{}{"techs": map[string]interface{}{

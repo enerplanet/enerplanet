@@ -7,6 +7,7 @@ import type { Technology } from "@/features/technologies/services/technologyServ
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import { asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
 
 interface TechDragDropOptions {
@@ -28,6 +29,8 @@ export const useTechDragDrop = ({
   const setDraggingTech = useModelStore((s) => s.setDraggingTech);
   const techDialogOpen = useModelStore((s) => s.techDialogOpen);
   const setTechDialogOpen = useModelStore((s) => s.setTechDialogOpen);
+  const techDialogStep = useModelStore((s) => s.techDialogStep);
+  const setTechDialogStep = useModelStore((s) => s.setTechDialogStep);
   const selectedTechForDialog = useModelStore((s) => s.selectedTechForDialog);
   const setSelectedTechForDialog = useModelStore((s) => s.setSelectedTechForDialog);
   const selectedBuildingForTech = useModelStore((s) => s.selectedBuildingForTech);
@@ -50,11 +53,11 @@ export const useTechDragDrop = ({
       const rect = mapElement.getBoundingClientRect();
       const pixel = [e.clientX - rect.left, e.clientY - rect.top];
       const feature = map.forEachFeatureAtPixel(pixel, (f: any) => f.get('feature_type') === 'building' ? f : null);
-      if (feature) { setSelectedTechForDialog(draggingTech); setSelectedBuildingForTech(feature); setTechDialogOpen(true); }
+      if (feature) { setSelectedTechForDialog(draggingTech); setSelectedBuildingForTech(feature); setTechDialogStep("pick"); setTechDialogOpen(true); }
       else showError(t("gridNotifications.dropOnBuilding"));
     } catch (error) { console.error("Error handling tech drop:", error); }
     finally { setDraggingTech(null); }
-  }, [map, draggingTech, mapRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setDraggingTech]);
+  }, [map, draggingTech, mapRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep, setDraggingTech]);
 
   const handleMapDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -65,8 +68,10 @@ export const useTechDragDrop = ({
     // Highlight is handled inline via the feature's own style
   }, [map, draggingTech, mapRef]);
 
-  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false) => {
-    if (!selectedBuildingForTech || !selectedTechForDialog) return;
+  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false, product?: Technology) => {
+    const source = product ?? selectedTechForDialog;
+    if (!selectedBuildingForTech || !source) return;
+    const entry = { alias: source.alias, icon: source.icon, constraints, ...(source.product && { product: source.product }) };
     if (applyToAll) {
       let count = 0;
       pylovoLayersRef.current.forEach((layer: any) => {
@@ -74,7 +79,7 @@ export const useTechDragDrop = ({
         if (src) src.getFeatures().forEach((f: Feature<Geometry>) => {
           if (f.get('feature_type') === 'building') {
             const existing = f.get("techs") || {};
-            existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints };
+            existing[techKey] = { ...entry };
             f.set("techs", existing);
             f.setStyle(createBuildingStyleFunction(true, false));
             count++;
@@ -82,15 +87,15 @@ export const useTechDragDrop = ({
         });
       });
       setAppliedTechKeys((prev) => prev.includes(techKey) ? prev : [...prev, techKey]);
-      showSuccess(t("gridNotifications.techAddedToAll", { tech: selectedTechForDialog.alias, count }));
+      showSuccess(t("gridNotifications.techAddedToAll", { tech: source.alias, count }));
     } else {
       const existing = selectedBuildingForTech.get("techs") || {};
       // Arrays chosen in PV mode outlive a later edit of the parameters.
       const arrays = existing[techKey]?.arrays;
-      existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints, ...(arrays && { arrays }) };
+      existing[techKey] = { ...entry, ...(arrays && { arrays }) };
       selectedBuildingForTech.set("techs", existing);
       selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
-      showSuccess(t("gridNotifications.techAddedToBuilding", { tech: selectedTechForDialog.alias }));
+      showSuccess(t("gridNotifications.techAddedToBuilding", { tech: source.alias }));
       // PV on one building continues in the 3D view, where its surfaces are chosen.
       if (techKey === "pv_supply") openBuilding(String(selectedBuildingForTech.get("osm_id")), { pv: true });
     }
@@ -111,9 +116,9 @@ export const useTechDragDrop = ({
       firstBuilding = src.getFeatures().find((f: Feature<Geometry>) => f.get('feature_type') === 'building');
       if (firstBuilding) break;
     }
-    if (firstBuilding) { setSelectedBuildingForTech(firstBuilding); setTechDialogOpen(true); }
+    if (firstBuilding) { setSelectedBuildingForTech(firstBuilding); setTechDialogStep("pick"); setTechDialogOpen(true); }
     else { showError(t("gridNotifications.noBuildingsFound")); setIsAddingTechToAll(false); }
-  }, [showError, pylovoLayersRef, t, setSelectedTechForDialog, setIsAddingTechToAll, setSelectedBuildingForTech, setTechDialogOpen]);
+  }, [showError, pylovoLayersRef, t, setSelectedTechForDialog, setIsAddingTechToAll, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]);
 
   const handleRemoveTechFromAll = useCallback((tech: Technology) => {
     let count = 0;
@@ -142,12 +147,13 @@ export const useTechDragDrop = ({
 
   const handleEditTechFromDialog = useCallback(async (techKey: string, buildingFeature: Feature<Geometry>) => {
     try {
-      const techs = await import("@/features/technologies/services/technologyService").then(m => m.default.getAll());
-      const tech = techs.find((t: Technology) => t.key === techKey);
-      if (tech) { setSelectedTechForDialog(tech); setSelectedBuildingForTech(buildingFeature); setTechDialogOpen(true); }
+      const catalogue = await loadCatalogue();
+      const stored = buildingFeature.get("techs")?.[techKey]?.product;
+      const tech = catalogue.find((p: Technology) => p.key === stored) ?? defaultProduct(catalogue, techKey);
+      if (tech) { setSelectedTechForDialog(asBuildingTechnology(tech)); setSelectedBuildingForTech(buildingFeature); setTechDialogStep("define"); setTechDialogOpen(true); }
       else showError(t("gridNotifications.techNotFound", { tech: techKey }));
     } catch { showError(t("gridNotifications.techLoadFailed")); }
-  }, [showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen]);
+  }, [showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]);
 
   const handleRemoveTechFromDialog = useCallback((techKey: string, buildingFeature: Feature<Geometry>) => {
     const current = buildingFeature.get("techs") || {};
@@ -163,7 +169,7 @@ export const useTechDragDrop = ({
 
   return {
     showTechDrawer, setShowTechDrawer, draggingTech, handleTechDragStart, handleTechDragEnd,
-    handleMapDrop, handleMapDragOver, techDialogOpen, setTechDialogOpen,
+    handleMapDrop, handleMapDragOver, techDialogOpen, setTechDialogOpen, techDialogStep, setTechDialogStep,
     selectedTechForDialog, selectedBuildingForTech, setSelectedBuildingForTech,
     handleSaveTechToBuildingBulk, isAddingTechToAll, setIsAddingTechToAll,
     handleAddTechToAll, handleRemoveTechFromAll, appliedTechKeys,

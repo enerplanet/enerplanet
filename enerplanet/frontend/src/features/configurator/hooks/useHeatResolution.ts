@@ -32,7 +32,6 @@ import {
   resolveHeatTechAssignment,
   resolveHeatTechForBuilding,
 } from "@/features/configurator/utils/heatResolution";
-import { fetchOpenTechHeatTechnologies } from "@/features/configurator/services/opentechdbService";
 
 interface HeatResolutionOptions {
   pylovoLayersRef: React.RefObject<VectorLayer<VectorSource>[]>;
@@ -51,12 +50,6 @@ export const useHeatResolution = ({
   const heatResolutionMode = useModelStore((s) => s.heatResolutionMode);
   const setHeatResolutionMode = useModelStore((s) => s.setHeatResolutionMode);
 
-  const warmCatalog = async () => {
-    // fetchOpenTechHeatTechnologies warms the FULL module-level catalog cache
-    // (it calls fetchOpenTechCatalog), so mixed-output heat techs (CHP /
-    // biomass_CHP, mapped carrier_out=electricity by the bridge) are reachable too.
-    await fetchOpenTechHeatTechnologies();
-  };
 
   /**
    * Resolve a single building's missing heat tech (expected mode). Returns true
@@ -74,12 +67,10 @@ export const useHeatResolution = ({
     // Producer heat-link already wired (step 3) — resolves it; don't stomp.
     if (feature.get("heat_supplier")) return false;
 
-    await warmCatalog();
     const tech = await resolveHeatTechAssignment(resolution.techKey);
     if (!tech) return false; // not in catalog (or cache still cold) → blocking validator picks it up
 
-    // Same shape a fresh manual save produces: every constraint carrying its
-    // default_value, including the OTDB carrier-out marker used by hasHeatTech.
+    // Same shape a fresh manual save produces: every constraint carrying its default_value.
     const constraints = (tech.constraints ?? []).map((c) => ({
       key: c.key,
       value: c.default_value,
@@ -90,6 +81,7 @@ export const useHeatResolution = ({
       alias: tech.alias ?? resolution.techKey,
       icon: tech.icon,
       constraints,
+      product: tech.product,
     };
     feature.set("techs", techs);
     feature.setStyle(createBuildingStyleFunction(true, false));
@@ -101,7 +93,6 @@ export const useHeatResolution = ({
   /** Iterate every building and auto-resolve the unresolved ones; returns how many it assigned. */
   const resolveAllBuildingsHeat = async (): Promise<number> => {
     if (heatResolutionMode !== "expected") return 0;
-    await warmCatalog();
     let count = 0;
     for (const feature of collectBuildingsFromLayers(pylovoLayersRef.current)) {
       if (await resolveBuildingHeat(feature)) count += 1;
