@@ -850,6 +850,70 @@
                 }
             }
         },
+        "/v1/city2tabula/pv-surfaces": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Roof and wall surfaces of a building for PV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OSM id of the building",
+                        "name": "osm_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country name or ISO2 code; resolved from lon and lat when absent",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building longitude (WGS84), when country is absent",
+                        "name": "lon",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building latitude (WGS84), when country is absent",
+                        "name": "lat",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/heat-demand/resolve": {
             "post": {
                 "security": [
@@ -2121,6 +2185,17 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.PVSurfacesResponse": {
+            "type": "object",
+            "properties": {
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_pv.Surface"
+                    }
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.SeriesSummary": {
             "type": "object",
             "properties": {
@@ -2361,6 +2436,38 @@
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_pv.Surface": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "type": "number"
+                },
+                "azimuth": {
+                    "type": "number"
+                },
+                "capacity_kw": {
+                    "type": "number"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "qualifies": {
+                    "type": "boolean"
+                },
+                "suggested": {
+                    "type": "boolean"
+                },
+                "surface_id": {
+                    "type": "string"
+                },
+                "tilt": {
+                    "type": "number"
+                },
+                "usable_share": {
+                    "type": "number"
                 }
             }
         }

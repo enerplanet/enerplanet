@@ -2969,6 +2969,10 @@
       "action": "Auf aktuelle 3D-Daten zurücksetzen",
       "confirmTitle": "Gespeicherte Änderungen verwerfen?",
       "confirmDescription": "Die gespeicherten Änderungen an der Gebäudehülle werden entfernt und das Gebäude wird aus den aktuellen 3D-Daten geladen. Mit dem Speichern des Modells wird dies endgültig."
+    },
+    "pv": {
+      "shadingNotice": "Die Simulation berücksichtigt keine Verschattung durch Bäume oder Nachbargebäude.",
+      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden."
     }
   }
 }

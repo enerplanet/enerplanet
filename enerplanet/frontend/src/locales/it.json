@@ -2979,6 +2979,10 @@
       "action": "Ripristina dai dati 3D attuali",
       "confirmTitle": "Scartare le modifiche salvate?",
       "confirmDescription": "Le modifiche salvate all'involucro di questo edificio vengono rimosse e l'edificio viene caricato dai dati 3D attuali. Salvando il modello la modifica diventa definitiva."
+    },
+    "pv": {
+      "shadingNotice": "La simulazione non considera l'ombreggiamento di alberi o edifici vicini.",
+      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio."
     }
   }
 }

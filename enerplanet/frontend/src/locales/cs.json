@@ -2979,6 +2979,10 @@
       "action": "Obnovit podle aktuálních 3D dat",
       "confirmTitle": "Zahodit uložené úpravy?",
       "confirmDescription": "Uložené úpravy obálky budovy budou odstraněny a budova se načte z aktuálních 3D dat. Uložením modelu se změna stane trvalou."
+    },
+    "pv": {
+      "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
     }
   }
 }

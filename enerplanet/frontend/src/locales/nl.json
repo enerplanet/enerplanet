@@ -2979,6 +2979,10 @@
       "action": "Terugzetten naar actuele 3D-gegevens",
       "confirmTitle": "Opgeslagen wijzigingen verwijderen?",
       "confirmDescription": "De opgeslagen wijzigingen aan de gebouwschil worden verwijderd en het gebouw wordt geladen uit de actuele 3D-gegevens. Door het model op te slaan wordt dit definitief."
+    },
+    "pv": {
+      "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
     }
   }
 }

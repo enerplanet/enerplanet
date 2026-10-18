@@ -7,6 +7,7 @@ import type { Technology } from "@/features/technologies/services/technologyServ
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
 
 interface TechDragDropOptions {
   map: any;
@@ -35,6 +36,7 @@ export const useTechDragDrop = ({
   const setIsAddingTechToAll = useModelStore((s) => s.setIsAddingTechToAll);
   const appliedTechKeys = useModelStore((s) => s.appliedTechKeys);
   const setAppliedTechKeys = useModelStore((s) => s.setAppliedTechKeys);
+  const { openBuilding } = useConfiguratorParams();
 
   const handleTechDragStart = useCallback((tech: Technology) => { setDraggingTech(tech); }, [setDraggingTech]);
   const handleTechDragEnd = useCallback(() => { setDraggingTech(null); }, [setDraggingTech]);
@@ -83,17 +85,21 @@ export const useTechDragDrop = ({
       showSuccess(t("gridNotifications.techAddedToAll", { tech: selectedTechForDialog.alias, count }));
     } else {
       const existing = selectedBuildingForTech.get("techs") || {};
-      existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints };
+      // Arrays chosen in PV mode outlive a later edit of the parameters.
+      const arrays = existing[techKey]?.arrays;
+      existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints, ...(arrays && { arrays }) };
       selectedBuildingForTech.set("techs", existing);
       selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
       showSuccess(t("gridNotifications.techAddedToBuilding", { tech: selectedTechForDialog.alias }));
+      // PV on one building continues in the 3D view, where its surfaces are chosen.
+      if (techKey === "pv_supply") openBuilding(String(selectedBuildingForTech.get("osm_id")), { pv: true });
     }
     setTechDialogOpen(false);
     setSelectedTechForDialog(null);
     setSelectedBuildingForTech(null);
     setIsAddingTechToAll(false);
     setIsModified(true);
-  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, setAppliedTechKeys]);
+  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, setAppliedTechKeys, openBuilding]);
 
   const handleAddTechToAll = useCallback((tech: Technology) => {
     setSelectedTechForDialog(tech);

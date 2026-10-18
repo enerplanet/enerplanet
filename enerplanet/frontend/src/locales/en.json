@@ -2969,6 +2969,10 @@
       "action": "Reset to current 3D data",
       "confirmTitle": "Discard the saved edits?",
       "confirmDescription": "This building's saved envelope edits are removed and it loads from the current 3D data. Saving the model makes this permanent."
+    },
+    "pv": {
+      "shadingNotice": "The simulation does not consider shading from trees or neighbouring buildings.",
+      "unavailable": "The building's PV surfaces could not be loaded."
     }
   }
 }
