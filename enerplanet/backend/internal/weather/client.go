@@ -78,11 +78,24 @@ func NewClient(tc *tentacron.Client) *Client {
 // DNI) is buem-gateway's own set, and without format=json weather-serve
 // answers with parquet.
 func (c *Client) GetPointWeather(ctx context.Context, lat, lon float64, period Period, provider string) (json.RawMessage, error) {
+	return c.point(ctx, lat, lon, period, provider, "use_case", "solar")
+}
+
+// pvVariables are the PV service's inputs; wind sets the cell temperature.
+const pvVariables = "T,DHI,DNI,WS_10M"
+
+// GetPVWeather is GetPointWeather with pvVariables.
+func (c *Client) GetPVWeather(ctx context.Context, lat, lon float64, period Period, provider string) (json.RawMessage, error) {
+	return c.point(ctx, lat, lon, period, provider, "variables", pvVariables)
+}
+
+// point queries weather-serve with selector "use_case" or "variables".
+func (c *Client) point(ctx context.Context, lat, lon float64, period Period, provider, selector, value string) (json.RawMessage, error) {
 	payload := map[string]any{
 		"lat":      lat,
 		"lon":      lon,
 		"provider": provider,
-		"use_case": "solar",
+		selector:   value,
 		"format":   "json",
 	}
 	if period.Scenario != "" {
