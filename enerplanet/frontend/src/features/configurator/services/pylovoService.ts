@@ -1,5 +1,6 @@
 import axios from "@/lib/axios";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
+import type { SiteStation } from "@/features/configurator/utils/siteStations";
 
 /** The pylovo site and generated revision a site grid's statistics and power flow must name. */
 export interface SiteScope {
@@ -384,7 +385,11 @@ export const pylovoService = {
      */
     generateSiteGrid: async (name: string, polygons: number[][][]): Promise<PylovoGridResponse> => {
         const created = await axios.post<{ data: { site_id: number } }>("/v2/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
-        const siteId = created.data.data.site_id;
+        return pylovoService.regenerateSiteGrid(created.data.data.site_id);
+    },
+
+    /** Generates the site's current revision and returns its grid; rejects with the job's error when generation fails. */
+    regenerateSiteGrid: async (siteId: number): Promise<PylovoGridResponse> => {
         const queued = await axios.post<{ data: SiteJob }>(`/v2/pylovo/sites/${siteId}/generate`);
         let job = queued.data.data;
         while (job.status !== "succeeded") {
@@ -394,6 +399,17 @@ export const pylovoService = {
         }
         const grid = await axios.get<{ data: PylovoGridResponse }>(`/v2/pylovo/sites/${siteId}/grid`, { timeout: 0 });
         return grid.data.data;
+    },
+
+    /** The site's stored stations with their fixed building assignments. */
+    getSiteTransformers: async (siteId: number): Promise<SiteStation[]> => {
+        const response = await axios.get<{ data: SiteStation[] }>(`/v2/pylovo/sites/${siteId}/transformers`);
+        return response.data.data;
+    },
+
+    /** Replaces the site's stations and fixed assignments; the grid is stale until the site is regenerated. */
+    putSiteTransformers: async (siteId: number, stations: SiteStation[]): Promise<void> => {
+        await axios.put(`/v2/pylovo/sites/${siteId}/transformers`, stations);
     },
 
     getEquipmentCosts: async (): Promise<EquipmentCosts> => {
