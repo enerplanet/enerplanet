@@ -2972,6 +2972,10 @@
       "action": "Przywróć aktualne dane 3D",
       "confirmTitle": "Odrzucić zapisane zmiany?",
       "confirmDescription": "Zapisane zmiany przegród budynku zostaną usunięte, a budynek zostanie wczytany z aktualnych danych 3D. Zapisanie modelu utrwali tę zmianę."
+    },
+    "pv": {
+      "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
+      "unavailable": "Nie udało się wczytać powierzchni PV budynku."
     }
   }
 }

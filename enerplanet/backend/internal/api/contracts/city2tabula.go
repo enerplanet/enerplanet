@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/pv"
 )
 
 // --- City2TABULA enrich endpoint ---
@@ -163,4 +164,9 @@ type EnrichResponse struct {
 	Attributions []city2tabula.DatasetCredit `json:"attributions"`
 	// The run's pipeline step while it runs; absent while pending.
 	city2tabula.RunStage
+}
+
+// PVSurfacesResponse lists a building's roof and wall surfaces for PV.
+type PVSurfacesResponse struct {
+	Surfaces []pv.Surface `json:"surfaces"`
 }

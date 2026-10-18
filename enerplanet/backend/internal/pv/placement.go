@@ -27,33 +27,73 @@ func (a Array) MaxCapacityKW() float64 {
 	return a.AreaSqm * a.UsableShare * KWPerSqm
 }
 
-// RoofArrays places an array on every roof of at least 10 m2, tilt up to 60 and facing east to west; flat roofs always.
+// Surface is a roof or wall in PV orientation. Qualifies marks a roof that RoofArrays
+// places an array on; Suggested marks a surface worth offering, walls included.
+type Surface struct {
+	Array
+	Kind      string `json:"kind"`
+	Qualifies bool   `json:"qualifies"`
+	Suggested bool   `json:"suggested"`
+}
+
+// Surfaces returns every roof and outer wall with an area and angles. A roof qualifies
+// at least 10 m2, tilt up to 60 and facing east to west, or flat; a wall never
+// qualifies and is suggested at the same area and orientation.
+func Surfaces(surfaces []city2tabula.Surface) []Surface {
+	var out []Surface
+	for _, s := range surfaces {
+		if !hasShape(s) {
+			continue
+		}
+		switch s.Type {
+		case "RoofSurface":
+			out = append(out, roof(s))
+		case "WallSurface":
+			if s.IsPartyWall == nil || !*s.IsPartyWall {
+				out = append(out, wall(s))
+			}
+		}
+	}
+	return out
+}
+
+// RoofArrays returns the arrays on the qualifying roofs.
 func RoofArrays(surfaces []city2tabula.Surface) []Array {
 	var arrays []Array
-	for _, s := range surfaces {
-		if a, ok := roofArray(s); ok {
-			arrays = append(arrays, a)
+	for _, s := range Surfaces(surfaces) {
+		if s.Qualifies {
+			arrays = append(arrays, s.Array)
 		}
 	}
 	return arrays
 }
 
-func roofArray(s city2tabula.Surface) (Array, bool) {
-	if s.Type != "RoofSurface" || s.AreaSqm == nil || s.Tilt == nil || s.Azimuth == nil {
-		return Array{}, false
-	}
-	if *s.AreaSqm < minRoofAreaSqm || (s.AreaBelowPrecision != nil && *s.AreaBelowPrecision) {
-		return Array{}, false
-	}
+func hasShape(s city2tabula.Surface) bool {
+	below := s.AreaBelowPrecision != nil && *s.AreaBelowPrecision
+	return s.AreaSqm != nil && s.Tilt != nil && s.Azimuth != nil && !below
+}
+
+func roof(s city2tabula.Surface) Surface {
+	big := *s.AreaSqm >= minRoofAreaSqm
 	// City2TABULA tilt 90 is flat; azimuth -1 marks a near-horizontal surface.
 	if *s.Azimuth < 0 {
-		return FlatRoofArray(s.ID, *s.AreaSqm), true
+		return Surface{Array: FlatRoofArray(s.ID, *s.AreaSqm), Kind: "roof", Qualifies: big, Suggested: big}
 	}
-	tilt := 90 - *s.Tilt
-	if tilt > maxRoofTiltDeg || *s.Azimuth < 90 || *s.Azimuth > 270 {
-		return Array{}, false
-	}
-	return Array{SurfaceID: s.ID, Tilt: tilt, Azimuth: *s.Azimuth, AreaSqm: *s.AreaSqm, UsableShare: DefaultUsableShare}, true
+	ok := big && facesEastToWest(*s.Azimuth) && 90-*s.Tilt <= maxRoofTiltDeg
+	return Surface{Array: tilted(s), Kind: "roof", Qualifies: ok, Suggested: ok}
+}
+
+func wall(s city2tabula.Surface) Surface {
+	ok := *s.AreaSqm >= minRoofAreaSqm && *s.Azimuth >= 0 && facesEastToWest(*s.Azimuth)
+	return Surface{Array: tilted(s), Kind: "wall", Suggested: ok}
+}
+
+func tilted(s city2tabula.Surface) Array {
+	return Array{SurfaceID: s.ID, Tilt: 90 - *s.Tilt, Azimuth: *s.Azimuth, AreaSqm: *s.AreaSqm, UsableShare: DefaultUsableShare}
+}
+
+func facesEastToWest(azimuth float64) bool {
+	return azimuth >= 90 && azimuth <= 270
 }
 
 // FlatRoofArray is a south-facing racked array on a flat roof.

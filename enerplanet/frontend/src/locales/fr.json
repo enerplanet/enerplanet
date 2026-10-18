@@ -2966,6 +2966,10 @@
       "action": "Réinitialiser avec les données 3D actuelles",
       "confirmTitle": "Supprimer les modifications enregistrées ?",
       "confirmDescription": "Les modifications enregistrées de l'enveloppe de ce bâtiment sont supprimées et il est chargé depuis les données 3D actuelles. L'enregistrement du modèle rend ce changement définitif."
+    },
+    "pv": {
+      "shadingNotice": "La simulation ne tient pas compte de l'ombrage des arbres ni des bâtiments voisins.",
+      "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées."
     }
   }
 }

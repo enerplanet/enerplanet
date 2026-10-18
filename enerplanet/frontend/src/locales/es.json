@@ -2966,6 +2966,10 @@
       "action": "Restablecer con los datos 3D actuales",
       "confirmTitle": "¿Descartar las ediciones guardadas?",
       "confirmDescription": "Se eliminan las ediciones guardadas de la envolvente de este edificio y se carga desde los datos 3D actuales. Al guardar el modelo, el cambio es definitivo."
+    },
+    "pv": {
+      "shadingNotice": "La simulación no tiene en cuenta la sombra de árboles ni de edificios vecinos.",
+      "unavailable": "No se pudieron cargar las superficies FV del edificio."
     }
   }
 }
