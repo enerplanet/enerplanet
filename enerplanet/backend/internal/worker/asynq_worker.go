@@ -12,6 +12,7 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
+	"spatialhub_backend/internal/pv"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/store/c2trun"
@@ -92,6 +93,14 @@ func (p *TaskProcessor) demandResolver() jobs.DemandResolver {
 	}
 }
 
+// pvResolver is dispatch_meme's PV step.
+func (p *TaskProcessor) pvResolver() jobs.PVResolver {
+	return jobs.PVResolver{
+		C2T: p.city2tabulaClient, Weather: p.weatherClient,
+		WeatherProvider: p.weatherProvider, PV: pv.NewClient(p.tentacronClient),
+	}
+}
+
 func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	log := logger.ForComponent("asynq_worker")
 
@@ -107,7 +116,7 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:
