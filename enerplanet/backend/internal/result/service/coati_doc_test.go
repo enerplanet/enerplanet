@@ -42,9 +42,9 @@ func TestMapCoatiDocument_MapsSmallTables(t *testing.T) {
 	parsed, err := mapCoatiDocument(&doc)
 	require.NoError(t, err)
 
-	// Coordinates -> loc -> [x, y]
-	assert.Equal(t, Coordinate{X: 48.8, Y: 12.9}, parsed.Coordinates["n1"])
-	assert.Equal(t, Coordinate{X: 49.0, Y: 13.2}, parsed.Coordinates["n2"])
+	// Coati coordinates are [lat, lon]; X is longitude.
+	assert.Equal(t, Coordinate{X: 12.9, Y: 48.8}, parsed.Coordinates["n1"])
+	assert.Equal(t, Coordinate{X: 13.2, Y: 49.0}, parsed.Coordinates["n2"])
 
 	// capacities + storage capacities -> results_energy_cap, and every key
 	// registers the loc-tech pair. POWER capacities (flow_cap, MW) are scaled
