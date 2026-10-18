@@ -1778,7 +1778,8 @@
         "cont_energy_cap_max": "maximum size",
         "cont_storage_cap_max": "storage size"
       },
-      "fieldNeeded": "Operate mode needs a finite size here"
+      "fieldNeeded": "Operate mode needs a finite size here",
+      "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "largeModel": {
       "title": "This model has {{count}} buildings",

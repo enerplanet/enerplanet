@@ -1521,7 +1521,8 @@
         "cont_energy_cap_max": "maksymalna wielkość",
         "cont_storage_cap_max": "wielkość magazynu"
       },
-      "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości"
+      "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości",
+      "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",

@@ -37,6 +37,7 @@ import {
   SolarPanel,
   Fan,
   ChevronDown,
+  ChevronUp,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -437,6 +438,28 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
   const runMode = useModelStore((s) => s.runMode);
+  // Flagged size fields scrolled out of view; a hint below the list points to them.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hiddenFlagged, setHiddenFlagged] = useState({ count: 0, above: false });
+  const flaggedOutOfView = useCallback((): Element[] => {
+    const box = scrollRef.current;
+    if (!box) return [];
+    const view = box.getBoundingClientRect();
+    return [...box.querySelectorAll("[data-operate-missing]")].filter((row) => {
+      const r = row.getBoundingClientRect();
+      return r.top < view.top || r.bottom > view.bottom;
+    });
+  }, []);
+  const updateHiddenFlagged = useCallback(() => {
+    const hidden = flaggedOutOfView();
+    const above = hidden.length > 0 && hidden[0].getBoundingClientRect().top < (scrollRef.current?.getBoundingClientRect().top ?? 0);
+    setHiddenFlagged((prev) => (prev.count === hidden.length && prev.above === above ? prev : { count: hidden.length, above }));
+  }, [flaggedOutOfView]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(updateHiddenFlagged);
+    return () => cancelAnimationFrame(frame);
+  });
+
   // In operate mode, bring the first size operate needs into view.
   useEffect(() => {
     if (!open || runMode !== "operate") return;
@@ -1071,7 +1094,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         </AlertDialogHeader>
 
         <div className="relative max-h-[55dvh] overflow-visible border-y border-border py-4">
-          <div className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
+          <div ref={scrollRef} onScroll={updateHiddenFlagged} className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-foreground">{t("technologies.parameters")}</h3>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
@@ -1083,6 +1106,16 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             {renderSection(t("technologies.paramDialog.constraints"), contConstraints)}
             {renderSection(t("results.buildingDetail.costs"), costConstraints)}
           </div>
+          {hiddenFlagged.count > 0 && (
+            <button
+              type="button"
+              onClick={() => flaggedOutOfView()[0]?.scrollIntoView({ block: "center", behavior: "smooth" })}
+              className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white shadow-md hover:bg-red-700"
+            >
+              {t("simulation.runMode.moreFieldsNeeded", { count: hiddenFlagged.count })}
+              {hiddenFlagged.above ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
 
         <AlertDialogFooter className="pt-4 gap-3">

@@ -1782,7 +1782,8 @@
         "cont_energy_cap_max": "taille maximale",
         "cont_storage_cap_max": "taille de stockage"
       },
-      "fieldNeeded": "Le mode exploitation exige ici une taille finie"
+      "fieldNeeded": "Le mode exploitation exige ici une taille finie",
+      "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",
