@@ -915,6 +915,7 @@ func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler
 	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
 	api.POST("/v1/city2tabula/enrich/area", handler.EnrichArea)
 	api.GET("/v1/city2tabula/geometry", handler.Geometry)
+	api.GET("/v1/city2tabula/pv-roofs", handler.PVRoofs)
 	api.GET("/v1/heat/availability", handler.Availability)
 }
 
