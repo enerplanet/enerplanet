@@ -634,6 +634,13 @@ definitions:
         example: 1
         type: integer
     type: object
+  spatialhub_backend_internal_api_contracts.PVRoofsResponse:
+    properties:
+      roofs:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_pv.Roof'
+        type: array
+    type: object
   spatialhub_backend_internal_api_contracts.SeriesSummary:
     properties:
       daily:
@@ -805,6 +812,23 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  spatialhub_backend_internal_pv.Roof:
+    properties:
+      area:
+        type: number
+      azimuth:
+        type: number
+      capacity_kw:
+        type: number
+      qualifies:
+        type: boolean
+      surface_id:
+        type: string
+      tilt:
+        type: number
+      usable_share:
+        type: number
     type: object
 host: localhost:8000
 info:
@@ -1408,6 +1432,50 @@ paths:
       security:
       - SessionAuth: []
       summary: Envelope surface geometry for a building
+      tags:
+      - City2TABULA
+  /v1/city2tabula/pv-roofs:
+    get:
+      description: |-
+        Returns every roof surface of the building with its area, tilt from horizontal
+        and azimuth clockwise from north, and whether automatic PV placement uses it.
+        Empty when City2TABULA has no 3D data for the building.
+      parameters:
+      - description: OSM id of the building
+        in: query
+        name: osm_id
+        required: true
+        type: string
+      - description: Country name or ISO2 code; resolved from lon and lat when absent
+        in: query
+        name: country
+        type: string
+      - description: Building longitude (WGS84), when country is absent
+        in: query
+        name: lon
+        type: number
+      - description: Building latitude (WGS84), when country is absent
+        in: query
+        name: lat
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVRoofsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Roof surfaces of a building for PV
       tags:
       - City2TABULA
   /v1/heat-demand/resolve:
