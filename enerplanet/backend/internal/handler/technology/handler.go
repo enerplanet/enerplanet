@@ -10,6 +10,7 @@ import (
 
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
+	"spatialhub_backend/internal/payload"
 	techstore "spatialhub_backend/internal/store/technology"
 )
 
@@ -237,12 +238,18 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 
-	dtos := make([]TechnologyDTO, len(technologies))
-	for i, tech := range technologies {
-		dtos[i] = toTechnologyDTO(&tech)
-	}
+	httputil.SuccessResponse(c, supportedDTOs(technologies))
+}
 
-	httputil.SuccessResponse(c, dtos)
+// supportedDTOs returns the technologies the simulation models, as DTOs.
+func supportedDTOs(technologies []techstore.Technology) []TechnologyDTO {
+	dtos := make([]TechnologyDTO, 0, len(technologies))
+	for _, tech := range technologies {
+		if payload.IsSupportedTechnology(tech.Key) {
+			dtos = append(dtos, toTechnologyDTO(&tech))
+		}
+	}
+	return dtos
 }
 
 func (h *Handler) GetByID(c *gin.Context) {
