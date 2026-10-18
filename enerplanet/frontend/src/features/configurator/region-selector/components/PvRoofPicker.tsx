@@ -47,9 +47,9 @@ export const PvRoofPicker: FC<PvRoofPickerProps> = ({ osmId, lonLat, value, onCh
     };
   }, [osmId, lonLat]);
 
-  const selected = value ?? roofs?.filter((r) => r.qualifies) ?? [];
-  const arrayOf = (id: string) => selected.find((a) => a.surface_id === id);
   const toArray = (r: PvRoof): PvArray => ({ surface_id: r.surface_id, tilt: r.tilt, azimuth: r.azimuth, area: r.area, usable_share: r.usable_share });
+  const selected = value ?? roofs?.filter((r) => r.qualifies).map(toArray) ?? [];
+  const arrayOf = (id: string) => selected.find((a) => a.surface_id === id);
 
   const toggle = (roof: PvRoof, on: boolean) =>
     onChange(on ? [...selected, toArray(roof)] : selected.filter((a) => a.surface_id !== roof.surface_id));
@@ -100,7 +100,12 @@ export const PvRoofPicker: FC<PvRoofPickerProps> = ({ osmId, lonLat, value, onCh
                     />
                   </td>
                   <td className="px-3 py-2 w-12 text-right">
-                    <Switch checked={!!array} onCheckedChange={(on) => toggle(roof, on)} aria-label={t("technologies.pvRoofs.use")} />
+                    <Switch
+                      checked={!!array}
+                      onCheckedChange={(on) => toggle(roof, on)}
+                      aria-label={t("technologies.pvRoofs.use")}
+                      className="cursor-pointer data-[state=unchecked]:bg-muted-foreground/30"
+                    />
                   </td>
                 </tr>
               );
