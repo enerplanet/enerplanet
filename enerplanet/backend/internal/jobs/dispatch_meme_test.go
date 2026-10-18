@@ -336,7 +336,9 @@ func (buildingSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries,
 // noPV is a PV step with nothing to do.
 type noPV struct{}
 
-func (noPV) Attach(context.Context, *commonModels.Model, payload.CalculationPayload) error { return nil }
+func (noPV) Attach(context.Context, *commonModels.Model, payload.CalculationPayload) error {
+	return nil
+}
 
 // failingDemandSeries is a series store that cannot be read.
 type failingDemandSeries struct{}
