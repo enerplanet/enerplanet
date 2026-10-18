@@ -94,6 +94,6 @@ func checkOperateSizes(topology []interface{}) error {
 		more = fmt.Sprintf(" and %d more", len(ids)-shown)
 		ids = ids[:shown]
 	}
-	return fmt.Errorf("operate mode needs a size for every technology: %d buildings have %s without one (buildings %s%s); open the model to see them marked, set the sizes or switch to plan mode",
-		len(unsized), strings.Join(techList, ", "), strings.Join(ids, ", "), more)
+	return fmt.Errorf("operate mode needs a size for every technology; %s have none on %d of the model's buildings (%s%s); open the model to see them marked, set the sizes or switch to plan mode",
+		strings.Join(techList, ", "), len(unsized), strings.Join(ids, ", "), more)
 }

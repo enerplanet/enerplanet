@@ -36,6 +36,6 @@ func TestUnsizedBuildings(t *testing.T) {
 
 	err := checkOperateSizes(topology)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "1 buildings have air_source_heat_pump, battery_storage without one (buildings b1)")
+	assert.Contains(t, err.Error(), "air_source_heat_pump, battery_storage have none on 1 of the model's buildings (b1)")
 	assert.NoError(t, checkOperateSizes(topology[1:]))
 }

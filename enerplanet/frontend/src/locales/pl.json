@@ -1515,7 +1515,7 @@
       "operate": "Eksploatacja",
       "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
       "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę",
-      "unsized": "{{count}} budynków wymaga wielkości w trybie eksploatacji. Kliknij wpis, aby ją ustawić.",
+      "unsized": "Budynki wymagające wielkości w trybie eksploatacji: {{count}}. Kliknij wpis, aby ją ustawić.",
       "unsizedEntry": "Budynek {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maksymalna wielkość",

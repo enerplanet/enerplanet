@@ -1776,7 +1776,7 @@
       "operate": "Operar",
       "planHint": "Elegir el tamaño de cada tecnología al menor coste",
       "operateHint": "Mantener cada tecnología en su tamaño máximo y optimizar solo su uso",
-      "unsized": "{{count}} edificios necesitan un tamaño para el modo de operación. Haga clic en una entrada para fijarlo.",
+      "unsized": "Edificios que necesitan un tamaño para el modo de operación: {{count}}. Haga clic en una entrada para fijarlo.",
       "unsizedEntry": "Edificio {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "tamaño máximo",
