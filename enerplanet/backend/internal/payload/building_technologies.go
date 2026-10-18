@@ -25,6 +25,19 @@ func mustParseBuildingTechnologies(data []byte) map[string]map[string]interface{
 	return out
 }
 
+// supportedTechnologies are the technologies the simulation models; any other
+// stored on a building is left out of the payload.
+var supportedTechnologies = map[string]bool{
+	"pv_supply": true, "battery_storage": true,
+	"air_source_heat_pump": true, "ground_source_heat_pump": true, "electric_boilers": true,
+	"gas_boiler": true, "air_conditioner": true, "gas_supply": true,
+}
+
+// IsSupportedTechnology reports whether the simulation models the technology key.
+func IsSupportedTechnology(key string) bool {
+	return supportedTechnologies[key]
+}
+
 // DefaultTechnology returns a copy of the default parameters of the named
 // technology, or nil when it has none.
 func DefaultTechnology(name string) map[string]interface{} {
