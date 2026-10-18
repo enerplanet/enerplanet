@@ -76,6 +76,8 @@ func TestPVResolverPlacesSimulatesAndWindowsArrays(t *testing.T) {
 		map[string]interface{}{"from": pvFeature("1", 12.0, 48.0, 100, module), "to": pvFeature("2", 13.0, 49.0, 50, stored)},
 		map[string]interface{}{"from": pvFeature("3", 14.0, 50.0, 80, module)},
 	}
+	// A centroid computed by the payload is a []float64.
+	topology[1].(map[string]interface{})["from"].(map[string]interface{})["geometry"] = map[string]interface{}{"type": "Point", "coordinates": []float64{14.0, 50.0}}
 	country := "germany"
 	model := &commonModels.Model{ID: 7, Country: &country,
 		FromDate: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC), ToDate: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)}

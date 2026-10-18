@@ -43,6 +43,7 @@ type pvBuilding struct {
 	techs    map[string]interface{}
 	module   map[string]interface{}
 	lon, lat float64
+	located  bool
 	area     float64
 	arrays   []pv.Array
 }
@@ -71,6 +72,9 @@ func (r PVResolver) Attach(ctx context.Context, model *commonModels.Model, calc 
 			setPVArrays(b, nil, seriesWindow{})
 		}
 		return nil
+	}
+	if loc == (pv.Location{}) {
+		return fmt.Errorf("PV of model %d: no building with PV has coordinates", model.ID)
 	}
 	period := modelWeatherPeriod(model.Config)
 	provider := modelWeatherProvider(model.Config, r.WeatherProvider)
@@ -102,7 +106,7 @@ func pvBuildings(topology []interface{}) []*pvBuilding {
 		b := &pvBuilding{osmID: fmt.Sprint(props["osm_id"]), techs: techs, module: module}
 		b.area, _ = props["area"].(float64)
 		if coords, ok := featureCoordinates(feature); ok {
-			b.lon, b.lat = coords[0], coords[1]
+			b.lon, b.lat, b.located = coords[0], coords[1], true
 		}
 		b.arrays = storedArrays(module)
 		out = append(out, b)
@@ -127,16 +131,23 @@ func storedArrays(module map[string]interface{}) []pv.Array {
 	return arrays
 }
 
-// featureCoordinates returns a Point feature's [lon, lat].
+// featureCoordinates returns a Point feature's [lon, lat]; a centroid the
+// payload computed is a []float64, one copied from the config a []interface{}.
 func featureCoordinates(feature map[string]interface{}) ([2]float64, bool) {
 	geom, _ := feature["geometry"].(map[string]interface{})
-	coords, _ := geom["coordinates"].([]interface{})
-	if len(coords) < 2 {
-		return [2]float64{}, false
+	switch coords := geom["coordinates"].(type) {
+	case []float64:
+		if len(coords) >= 2 {
+			return [2]float64{coords[0], coords[1]}, true
+		}
+	case []interface{}:
+		if len(coords) >= 2 {
+			lon, okLon := coords[0].(float64)
+			lat, okLat := coords[1].(float64)
+			return [2]float64{lon, lat}, okLon && okLat
+		}
 	}
-	lon, okLon := coords[0].(float64)
-	lat, okLat := coords[1].(float64)
-	return [2]float64{lon, lat}, okLon && okLat
+	return [2]float64{}, false
 }
 
 // placeArrays fills arrays for buildings without stored ones.
@@ -190,7 +201,7 @@ func pvRequests(buildings []*pvBuilding) ([]pv.ArrayRequest, pv.Location) {
 				ModuleType:         moduleType(b.module["module_type"]),
 			})
 		}
-		if len(b.arrays) > 0 {
+		if len(b.arrays) > 0 && b.located {
 			loc.Lat += b.lat
 			loc.Lon += b.lon
 			n++
