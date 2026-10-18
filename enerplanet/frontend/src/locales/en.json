@@ -1766,6 +1766,13 @@
       "gas": "Gas",
       "hint": "With gas, the buildings' cooking becomes a gas demand bought from a gas supply"
     },
+    "runMode": {
+      "label": "Run mode",
+      "plan": "Plan",
+      "operate": "Operate",
+      "planHint": "Choose the size of each technology at least cost",
+      "operateHint": "Keep each technology at its maximum size and optimise only its use"
+    },
     "largeModel": {
       "title": "This model has {{count}} buildings",
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
