@@ -21,6 +21,7 @@ import { useMapClickHandlers } from '@/features/configurator/hooks/useMapClickHa
 import { generateUUID } from '@/utils/uuid';
 import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
 import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
+import { settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
@@ -98,7 +99,8 @@ export const useAreaSelect = ({
     const handleResetAdvancedParams = useCallback(() => setAdvancedParams(getDefaultAdvancedParameters()), [setAdvancedParams]);
 
     // Detect metadata changes
-    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (modelName !== o.title || fromDate !== o.from_date || toDate !== o.to_date || resolution !== o.resolution) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, setIsModified]);
+    const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode);
+    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
         setAllPolygons(polygons);
@@ -241,7 +243,7 @@ async function saveAreaData(params: any) {
         const modelData = { title: areaData.modelName, from_date: areaData.fromDate, to_date: areaData.toDate, resolution: areaData.resolution, workspace_id: workspaceId, coordinates: coords, config };
         if (editMode && modelId) {
             let hasChanges = !originalModel;
-            if (originalModel) hasChanges = originalModel.title !== areaData.modelName || originalModel.from_date !== areaData.fromDate || originalModel.to_date !== areaData.toDate || originalModel.resolution !== areaData.resolution;
+            if (originalModel) { const { cookingCarrier, runMode } = useModelStore.getState(); hasChanges = settingsChanged(originalModel, { title: areaData.modelName, fromDate: areaData.fromDate, toDate: areaData.toDate, resolution: areaData.resolution, cookingCarrier, runMode }); }
             await updateModelMutation.mutateAsync({ id: modelId, data: hasChanges ? { ...modelData, status: 'modified' } : modelData });
         } else {
             const newModel = await createModelMutation.mutateAsync(modelData);
