@@ -205,7 +205,7 @@ func (h *PylovoHandler) GetConsumerCategories(c *gin.Context) {
 }
 
 func (h *PylovoHandler) GetGridStatistics(c *gin.Context) {
-	h.bindAndForward(c, http.MethodPost, "/grid-statistics")
+	h.bindSiteScopedAndForward(c, "/grid-statistics")
 }
 
 func (h *PylovoHandler) GetCableCosts(c *gin.Context) {
@@ -213,7 +213,33 @@ func (h *PylovoHandler) GetCableCosts(c *gin.Context) {
 }
 
 func (h *PylovoHandler) RunPowerFlow(c *gin.Context) {
-	h.bindAndForward(c, http.MethodPost, "/power-flow")
+	h.bindSiteScopedAndForward(c, "/power-flow")
+}
+
+// bindSiteScopedAndForward forwards a POST whose payload may name a site_id,
+// after checking that the caller owns that site.
+func (h *PylovoHandler) bindSiteScopedAndForward(c *gin.Context, path string) {
+	var payload map[string]interface{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		httputil.BadRequest(c, errInvalidPayload)
+		return
+	}
+	if raw, ok := payload["site_id"]; ok && raw != nil {
+		siteID, ok := raw.(float64)
+		if !ok || siteID != float64(int(siteID)) {
+			httputil.BadRequest(c, fmt.Sprintf("invalid site_id %v", raw))
+			return
+		}
+		if _, ok := h.requireSiteOwner(c, int(siteID)); !ok {
+			return
+		}
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		httputil.InternalError(c, errFailedMarshalPayload)
+		return
+	}
+	h.forwardToPylovo(c, http.MethodPost, path, jsonData)
 }
 
 func (h *PylovoHandler) GetCableTypes(c *gin.Context) {

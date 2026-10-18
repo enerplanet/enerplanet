@@ -697,6 +697,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
+	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient))
 
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
@@ -972,6 +973,18 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	cachedRegions.PATCH("/:id", handler.ToggleCachedRegion)
 	cachedRegions.DELETE("/:id", handler.DeleteCachedRegion)
 	// Boundary routes are registered in configurePublicAPI (no auth required)
+}
+
+// registerSiteRoutes registers the site-mode routes; each checks the site's owner.
+func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
+	sites := api.Group("/v2/pylovo/sites")
+	sites.POST("", handler.CreateSite)
+	sites.GET("", handler.ListSites)
+	sites.GET("/:id", handler.GetSite)
+	sites.DELETE("/:id", handler.DeleteSite)
+	sites.POST("/:id/generate", handler.GenerateSite)
+	sites.GET("/:id/jobs/:job_id", handler.GetSiteJob)
+	sites.GET("/:id/grid", handler.GetSiteGrid)
 }
 
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
