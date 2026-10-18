@@ -65,7 +65,8 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
         <div className="max-h-[55dvh] overflow-auto border-y border-border py-2">
           {!products && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mx-auto my-6" />}
           {products?.map((product) => {
-            const efficiency = constraintValue(product, "cont_energy_eff");
+            // A PV product's yield comes from its module type, not cont_energy_eff.
+            const efficiency = type === "pv_supply" ? undefined : constraintValue(product, "cont_energy_eff");
             const cost = constraintValue(product, "cost_energy_cap");
             const lifetime = constraintValue(product, "cont_lifetime");
             return (
