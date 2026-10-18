@@ -542,6 +542,7 @@ export default function TechnologiesPage() {
     try {
       const newTech = await technologyService.create({
         key: copyKey,
+        type: techToCopy.type ?? techToCopy.key,
         alias: copyAlias,
         icon: techToCopy.icon,
         description: techToCopy.description,
