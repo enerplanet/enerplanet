@@ -122,15 +122,11 @@ func mapCoatiDocument(doc *CoatiResultsDocument) (*ParsedResults, error) {
 		LocTechs:    make(map[string][]string),
 	}
 
-	for loc, xy := range doc.Coordinates {
-		c := Coordinate{}
-		if len(xy) > 0 {
-			c.X = xy[0]
+	// Coati writes [lat, lon]; Coordinate.X is longitude, as in the legacy CSV.
+	for loc, latLon := range doc.Coordinates {
+		if len(latLon) == 2 {
+			out.Coordinates[loc] = Coordinate{X: latLon[1], Y: latLon[0]}
 		}
-		if len(xy) > 1 {
-			c.Y = xy[1]
-		}
-		out.Coordinates[loc] = c
 	}
 
 	// Installed capacities (and storage capacity) -> results_energy_cap, and

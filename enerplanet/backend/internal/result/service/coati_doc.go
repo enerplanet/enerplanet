@@ -22,7 +22,7 @@ type CoatiResultsDocument struct {
 	Timestamps             []string                      `json:"timestamps"`
 	Capacities             map[string]float64            `json:"capacities"`         // "loc::tech" -> installed capacity
 	StorageCapacities      map[string]float64            `json:"storage_capacities"` // "loc::tech" -> energy capacity
-	Coordinates            map[string][]float64          `json:"coordinates"`        // "loc" -> [x, y]
+	Coordinates            map[string][]float64          `json:"coordinates"`        // "loc" -> [lat, lon]
 	CostsByLocation        map[string]map[string]float64 `json:"costs_by_location"`  // "loc" -> { "tech": cost }
 	CostsByTech            map[string]float64            `json:"costs_by_tech"`      // "tech" -> cost (systemwide)
 	TotalUnmetDemand       *float64                      `json:"total_unmet_demand"`
