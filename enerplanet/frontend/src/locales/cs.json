@@ -1507,6 +1507,13 @@
       "gas": "Plyn",
       "hint": "Při plynu se vaření v budovách stává poptávkou po plynu z dodávky plynu"
     },
+    "runMode": {
+      "label": "Režim výpočtu",
+      "plan": "Plánování",
+      "operate": "Provoz",
+      "planHint": "Zvolit velikost každé technologie při nejnižších nákladech",
+      "operateHint": "Ponechat každou technologii v maximální velikosti a optimalizovat jen její provoz"
+    },
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."

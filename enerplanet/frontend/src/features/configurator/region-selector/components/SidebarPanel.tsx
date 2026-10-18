@@ -35,7 +35,7 @@ import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { GridStatsBadge } from "./GridStatsBadge";
-import { useModelStore, type CookingCarrier } from "@/features/configurator/store/modelStore";
+import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import type { FC, ChangeEvent } from "react";
@@ -100,6 +100,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const { t } = useTranslation();
   const cookingCarrier = useModelStore((s) => s.cookingCarrier);
   const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
+  const runMode = useModelStore((s) => s.runMode);
+  const setRunMode = useModelStore((s) => s.setRunMode);
 
   return (
     <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -314,6 +316,22 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </SelectContent>
           </Select>
           <div className="text-xs text-muted-foreground mt-1">{t("simulation.cooking.hint")}</div>
+        </div>
+
+        <div className="relative">
+          <label htmlFor="run-mode-select" className="block text-sm font-medium text-foreground mb-2">
+            {t("simulation.runMode.label")}
+          </label>
+          <Select value={runMode} onValueChange={(value: string) => setRunMode(value as RunMode)}>
+            <SelectTrigger id="run-mode-select" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="plan">{t("simulation.runMode.plan")}</SelectItem>
+              <SelectItem value="operate">{t("simulation.runMode.operate")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-muted-foreground mt-1">{t(`simulation.runMode.${runMode}Hint`)}</div>
         </div>
 
         <div className="flex gap-2" data-tour="technologies-parameters">
