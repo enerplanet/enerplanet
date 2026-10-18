@@ -1530,6 +1530,11 @@
       "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
+    "siteMode": {
+      "label": "Locatiemodus",
+      "hint": "Genereert het net alleen voor dit gebied en slaat het apart op van de gedeelde netten. Alleen gebouwen met 3D-gegevens worden meegenomen, maximaal 150.",
+      "locked": "Wis het getekende gebied om de modus te wijzigen."
+    },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
       "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."

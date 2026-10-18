@@ -1791,6 +1791,11 @@
       "fieldNeeded": "El modo de operación necesita aquí un tamaño finito",
       "moreFieldsNeeded": "Campos que necesitan un tamaño: {{count}}"
     },
+    "siteMode": {
+      "label": "Modo emplazamiento",
+      "hint": "Genera la red solo para esta zona y la guarda aparte de las redes compartidas. Solo se incluyen edificios con datos 3D, hasta 150.",
+      "locked": "Borre la zona dibujada para cambiar el modo."
+    },
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",
       "description": "Los modelos con más de {{limit}} edificios tardan bastante más en calcularse: cada edificio pasa por BuEM y Calliope resuelve la demanda horaria de cada edificio. Un año completo puede tardar decenas de minutos. Aun así puede guardarlo y ejecutarlo."

@@ -1791,6 +1791,11 @@
       "fieldNeeded": "Le mode exploitation exige ici une taille finie",
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
+    "siteMode": {
+      "label": "Mode site",
+      "hint": "Génère le réseau pour cette seule zone et le conserve à part des réseaux partagés. Seuls les bâtiments disposant de données 3D sont inclus, jusqu'à 150.",
+      "locked": "Effacez la zone dessinée pour changer de mode."
+    },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",
       "description": "Les modèles de plus de {{limit}} bâtiments demandent nettement plus de temps de calcul : chaque bâtiment passe par BuEM et Calliope résout la demande horaire de chaque bâtiment. Une année complète peut prendre des dizaines de minutes. Vous pouvez quand même l'enregistrer et le lancer."

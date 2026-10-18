@@ -1787,6 +1787,11 @@
       "fieldNeeded": "Der Betriebsmodus braucht hier eine endliche Größe",
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
+    "siteMode": {
+      "label": "Standortmodus",
+      "hint": "Erzeugt das Netz nur für dieses Gebiet und speichert es getrennt von den gemeinsamen Netzen. Nur Gebäude mit 3D-Daten werden aufgenommen, höchstens 150.",
+      "locked": "Entfernen Sie das gezeichnete Gebiet, um den Modus zu ändern."
+    },
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
       "description": "Modelle mit mehr als {{limit}} Gebäuden brauchen deutlich länger: Jedes Gebäude läuft durch BuEM, und Calliope löst den stündlichen Bedarf jedes Gebäudes. Ein ganzes Jahr kann Dutzende Minuten dauern. Sie können es trotzdem speichern und ausführen."
