@@ -5,11 +5,13 @@
             "alias": "Battery Storage",
             "icon": "battery",
             "description": "Energy storage system using batteries for load balancing and backup power",
+            "type": "battery_storage",
+            "source": "Residential battery, 10 kW / 20 kWh; Fraunhofer ISE, Stromgestehungskosten Erneuerbare Energien (2024), Tab. 1-2; HTW Berlin, Stromspeicher-Inspektion (2025); NREL ATB (2025), residential battery storage. 750 EUR/kWh total split as 600 EUR/kWh + 300 EUR/kW; 90 % round trip as 0.949 per direction",
             "constraints": [
                 {
                     "key": "cont_energy_cap_max",
                     "alias": "Maximum installed energy capacity",
-                    "default_value": 8715,
+                    "default_value": 10,
                     "unit": "kW",
                     "min": null,
                     "max": null
@@ -41,7 +43,7 @@
                 {
                     "key": "cont_energy_eff",
                     "alias": "Energy efficiency, conversion efficiency",
-                    "default_value": 0.97,
+                    "default_value": 0.949,
                     "unit": "%",
                     "min": 0,
                     "max": 1
@@ -57,7 +59,7 @@
                 {
                     "key": "cont_lifetime",
                     "alias": "Technology lifetime",
-                    "default_value": 11,
+                    "default_value": 15,
                     "unit": "years",
                     "min": null,
                     "max": null
@@ -65,7 +67,7 @@
                 {
                     "key": "cont_storage_cap_max",
                     "alias": "Maximum storage capacity",
-                    "default_value": 8889.3,
+                    "default_value": 20,
                     "unit": "kWh",
                     "min": null,
                     "max": null
@@ -97,7 +99,7 @@
                 {
                     "key": "cont_storage_loss",
                     "alias": "Rate of storage loss per hour",
-                    "default_value": 0,
+                    "default_value": 4e-05,
                     "unit": "%/hour",
                     "min": 0,
                     "max": 1
@@ -105,7 +107,7 @@
                 {
                     "key": "cost_energy_cap",
                     "alias": "Cost of energy capacity",
-                    "default_value": 1028,
+                    "default_value": 300,
                     "unit": "EUR/kW",
                     "min": null,
                     "max": null
@@ -129,7 +131,7 @@
                 {
                     "key": "cost_om_annual",
                     "alias": "Yearly O&M costs",
-                    "default_value": 25.19,
+                    "default_value": 30,
                     "unit": "EUR/kW",
                     "min": null,
                     "max": null
@@ -153,7 +155,7 @@
                 {
                     "key": "cost_storage_cap",
                     "alias": "Cost of storage capacity",
-                    "default_value": 1007.93,
+                    "default_value": 600,
                     "unit": "EUR/kWh",
                     "min": null,
                     "max": null
@@ -430,6 +432,302 @@
                     "unit": "EUR/kWh",
                     "min": null,
                     "max": null
+                }
+            ]
+        },
+        {
+            "key": "air_source_heat_pump",
+            "type": "air_source_heat_pump",
+            "alias": "Air-source heat pump (default)",
+            "icon": "flame",
+            "description": "Default air-source heat pump for a household.",
+            "source": "enerplanet/conversion-technologies cb1abca, heat_pump electric household; COP = 0.45 x 318.15 / (318.15 - 275.15) at 2/45 C",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency",
+                    "default_value": 3.33,
+                    "unit": "",
+                    "min": 0,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 18,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 900,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Production O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.1,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                }
+            ]
+        },
+        {
+            "key": "ground_source_heat_pump",
+            "type": "ground_source_heat_pump",
+            "alias": "Ground-source heat pump (default)",
+            "icon": "flame",
+            "description": "Default ground-source heat pump for a household.",
+            "source": "enerplanet/conversion-technologies cb1abca, heat_pump geothermal household; COP = 0.50 x 318.15 / (318.15 - 283.15) at 10/45 C",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency",
+                    "default_value": 4.55,
+                    "unit": "",
+                    "min": 0,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 25,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 1800,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Production O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.1,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                }
+            ]
+        },
+        {
+            "key": "electric_boilers",
+            "type": "electric_boilers",
+            "alias": "Electric boiler (default)",
+            "icon": "flame",
+            "description": "Default electric boiler for a household.",
+            "source": "enerplanet/conversion-technologies cb1abca, boiler electric household",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency",
+                    "default_value": 0.99,
+                    "unit": "",
+                    "min": 0,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 20,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 150,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Production O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.1,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
+                }
+            ]
+        },
+        {
+            "key": "gas_boiler",
+            "type": "gas_boiler",
+            "alias": "Gas boiler (default)",
+            "icon": "flame",
+            "description": "Default gas boiler for a household.",
+            "source": "enerplanet/conversion-technologies cb1abca, boiler gas household",
+            "constraints": [
+                {
+                    "key": "cont_energy_cap_max",
+                    "alias": "Maximum installed energy capacity",
+                    "default_value": "INF",
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_cap_min",
+                    "alias": "Minimum installed energy capacity",
+                    "default_value": 0,
+                    "unit": "kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cont_energy_eff",
+                    "alias": "Energy efficiency",
+                    "default_value": 0.9,
+                    "unit": "",
+                    "min": 0,
+                    "max": null
+                },
+                {
+                    "key": "cont_lifetime",
+                    "alias": "Technology lifetime",
+                    "default_value": 18,
+                    "unit": "years",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_energy_cap",
+                    "alias": "Cost of energy capacity",
+                    "default_value": 100,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_annual",
+                    "alias": "Yearly O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kW",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_om_prod",
+                    "alias": "Production O&M costs",
+                    "default_value": 0,
+                    "unit": "EUR/kWh",
+                    "min": null,
+                    "max": null
+                },
+                {
+                    "key": "cost_interest_rate",
+                    "alias": "Interest rate",
+                    "default_value": 0.1,
+                    "unit": "%",
+                    "min": 0,
+                    "max": 1
                 }
             ]
         }

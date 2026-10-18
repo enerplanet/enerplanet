@@ -74,13 +74,18 @@ func checkModifyPermission(c *gin.Context, tech *techstore.Technology, userID, a
 }
 
 type TechnologyDTO struct {
-	ID          uint             `json:"id,omitempty"`
-	Key         string           `json:"key"`
-	Alias       string           `json:"alias"`
-	Icon        string           `json:"icon"`
-	Description string           `json:"description"`
-	UserID      *string          `json:"user_id,omitempty"`
-	Constraints []ConstraintDTO  `json:"constraints"`
+	ID           uint            `json:"id,omitempty"`
+	Key          string          `json:"key"`
+	Type         string          `json:"type"`
+	Manufacturer *string         `json:"manufacturer,omitempty"`
+	Model        *string         `json:"model,omitempty"`
+	DatasheetURL *string         `json:"datasheet_url,omitempty"`
+	Source       *string         `json:"source,omitempty"`
+	Alias        string          `json:"alias"`
+	Icon         string          `json:"icon"`
+	Description  string          `json:"description"`
+	UserID       *string         `json:"user_id,omitempty"`
+	Constraints  []ConstraintDTO `json:"constraints"`
 }
 
 type ConstraintDTO struct {
@@ -98,11 +103,16 @@ type ConstraintDTO struct {
 
 func toTechnologyDTO(tech *techstore.Technology) TechnologyDTO {
 	dto := TechnologyDTO{
-		ID:          tech.ID,
-		Key:         tech.Key,
-		Alias:       tech.Alias,
-		UserID:      tech.UserID,
-		Constraints: make([]ConstraintDTO, len(tech.Constraints)),
+		ID:           tech.ID,
+		Key:          tech.Key,
+		Type:         tech.Type,
+		Manufacturer: tech.Manufacturer,
+		Model:        tech.Model,
+		DatasheetURL: tech.DatasheetURL,
+		Source:       tech.Source,
+		Alias:        tech.Alias,
+		UserID:       tech.UserID,
+		Constraints:  make([]ConstraintDTO, len(tech.Constraints)),
 	}
 
 	if tech.Icon != nil {
@@ -160,11 +170,19 @@ func toConstraintDTO(c *techstore.TechnologyConstraint) ConstraintDTO {
 
 func fromTechnologyDTO(dto *TechnologyDTO, userID string) *techstore.Technology {
 	tech := &techstore.Technology{
-		Key:         dto.Key,
-		Alias:       dto.Alias,
-		Constraints: make([]techstore.TechnologyConstraint, len(dto.Constraints)),
+		Key:          dto.Key,
+		Type:         dto.Type,
+		Manufacturer: dto.Manufacturer,
+		Model:        dto.Model,
+		DatasheetURL: dto.DatasheetURL,
+		Source:       dto.Source,
+		Alias:        dto.Alias,
+		Constraints:  make([]techstore.TechnologyConstraint, len(dto.Constraints)),
 	}
 
+	if tech.Type == "" {
+		tech.Type = dto.Key
+	}
 	if dto.Icon != "" {
 		tech.Icon = &dto.Icon
 	}
@@ -241,11 +259,11 @@ func (h *Handler) GetAll(c *gin.Context) {
 	httputil.SuccessResponse(c, supportedDTOs(technologies))
 }
 
-// supportedDTOs returns the technologies the simulation models, as DTOs.
+// supportedDTOs returns the products of the technologies the simulation models, as DTOs.
 func supportedDTOs(technologies []techstore.Technology) []TechnologyDTO {
 	dtos := make([]TechnologyDTO, 0, len(technologies))
 	for _, tech := range technologies {
-		if payload.IsSupportedTechnology(tech.Key) {
+		if payload.IsSupportedTechnology(tech.Type) {
 			dtos = append(dtos, toTechnologyDTO(&tech))
 		}
 	}
@@ -359,6 +377,18 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	if dto.Description != "" {
 		tech.Description = &dto.Description
+	}
+	if dto.Manufacturer != nil {
+		tech.Manufacturer = dto.Manufacturer
+	}
+	if dto.Model != nil {
+		tech.Model = dto.Model
+	}
+	if dto.DatasheetURL != nil {
+		tech.DatasheetURL = dto.DatasheetURL
+	}
+	if dto.Source != nil {
+		tech.Source = dto.Source
 	}
 
 	if err := h.store.Update(tech); err != nil {

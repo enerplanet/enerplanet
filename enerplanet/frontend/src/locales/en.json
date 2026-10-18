@@ -2079,6 +2079,25 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Photovoltaics",
+      "battery_storage": "Battery storage",
+      "air_source_heat_pump": "Air-source heat pump",
+      "ground_source_heat_pump": "Ground-source heat pump",
+      "electric_boilers": "Electric boiler",
+      "gas_boiler": "Gas boiler",
+      "air_conditioner": "Air conditioner"
+    },
+    "products": {
+      "title": "Choose a product: {{type}}",
+      "applyToBuilding": "Pick a product for this building. Its parameters come with it; use \"Define my own\" to change them.",
+      "applyToAll": "Pick a product for all buildings. Its parameters come with it; use \"Define my own\" to change them.",
+      "efficiency": "Efficiency {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} years",
+      "defineOwn": "Define my own",
+      "count": "Products: {{count}}"
+    },
     "title": "Technologies",
     "subtitle": "Energy technologies for your simulations",
     "loading": "Loading technologies...",

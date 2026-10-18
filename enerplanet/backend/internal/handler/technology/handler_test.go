@@ -9,11 +9,16 @@ import (
 )
 
 func TestSupportedDTOsLeavesOutUnsupportedTechnologies(t *testing.T) {
-	dtos := supportedDTOs([]techstore.Technology{{Key: "pv_supply"}, {Key: "wind_onshore"}, {Key: "battery_storage"}, {Key: "households_supply"}})
+	dtos := supportedDTOs([]techstore.Technology{
+		{Key: "pv_supply", Type: "pv_supply"},
+		{Key: "wind_onshore", Type: "wind_onshore"},
+		{Key: "pv_topcon_8kw", Type: "pv_supply"},
+		{Key: "households_supply", Type: "households_supply"},
+	})
 
 	keys := make([]string, len(dtos))
 	for i, d := range dtos {
 		keys[i] = d.Key
 	}
-	assert.Equal(t, []string{"pv_supply", "battery_storage"}, keys)
+	assert.Equal(t, []string{"pv_supply", "pv_topcon_8kw"}, keys)
 }

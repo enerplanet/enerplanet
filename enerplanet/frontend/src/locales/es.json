@@ -2083,6 +2083,25 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Fotovoltaica",
+      "battery_storage": "Batería",
+      "air_source_heat_pump": "Bomba de calor aerotérmica",
+      "ground_source_heat_pump": "Bomba de calor geotérmica",
+      "electric_boilers": "Caldera eléctrica",
+      "gas_boiler": "Caldera de gas",
+      "air_conditioner": "Aire acondicionado"
+    },
+    "products": {
+      "title": "Elija un producto: {{type}}",
+      "applyToBuilding": "Elija un producto para este edificio. Sus parámetros se aplican con él; use «Definir el mío» para cambiarlos.",
+      "applyToAll": "Elija un producto para todos los edificios. Sus parámetros se aplican con él; use «Definir el mío» para cambiarlos.",
+      "efficiency": "Eficiencia {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} años",
+      "defineOwn": "Definir el mío",
+      "count": "Productos: {{count}}"
+    },
     "title": "Tecnologías",
     "subtitle": "Tecnologías energéticas para sus simulaciones",
     "loading": "Cargando tecnologías...",

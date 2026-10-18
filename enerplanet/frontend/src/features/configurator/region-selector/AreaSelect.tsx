@@ -66,6 +66,8 @@ import { TransformerDialog } from "./components/TransformerDialog";
 import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
+import { ProductPickerDialog } from "./components/ProductPickerDialog";
+import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
 import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
@@ -509,6 +511,25 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
+  const closeTechDialog = () => {
+    techOperations.setTechDialogOpen(false);
+    techOperations.setSelectedTechForDialog(null);
+    techOperations.setSelectedBuildingForTech(null);
+    techOperations.setIsAddingTechToAll(false);
+    if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
+      techDialogFlow.techAddedFromBuildingDialogRef.current = false;
+      const feat = mapInteractions.selectedBuildingFeature;
+      if (feat) {
+        const updatedTechs = feat.get("techs") || {};
+        mapInteractions.setSelectedBuilding(
+          (prev: typeof mapInteractions.selectedBuilding) =>
+            prev ? { ...prev, techs: { ...updatedTechs } } : null
+        );
+      }
+      mapInteractions.setBuildingDialogOpen(true);
+    }
+  };
+
   // ── Render ───────────────────────────────────────────────────────
   return (
     <Fragment>
@@ -806,30 +827,30 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         }}
       />
 
+      <ProductPickerDialog
+        open={techOperations.techDialogOpen && techOperations.techDialogStep === "pick"}
+        type={techOperations.selectedTechForDialog?.key ?? null}
+        current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
+        applyToAll={techOperations.isAddingTechToAll}
+        onPick={(product) => {
+          const tech = asBuildingTechnology(product);
+          techOperations.handleSaveTechToBuildingBulk(tech.key, defaultConstraints(product), techOperations.isAddingTechToAll, tech);
+          closeTechDialog();
+        }}
+        onDefineOwn={(product) => {
+          techOperations.setSelectedTechForDialog(asBuildingTechnology(product));
+          techOperations.setTechDialogStep("define");
+        }}
+        onClose={closeTechDialog}
+      />
+
       <TechParameterDialog
-        open={techOperations.techDialogOpen}
+        open={techOperations.techDialogOpen && techOperations.techDialogStep === "define"}
         onOpenChange={techOperations.setTechDialogOpen}
         technology={techOperations.selectedTechForDialog}
         building={techOperations.selectedBuildingForTech}
         onSave={techOperations.handleSaveTechToBuildingBulk}
-        onClose={() => {
-          techOperations.setTechDialogOpen(false);
-          techOperations.setSelectedTechForDialog(null);
-          techOperations.setSelectedBuildingForTech(null);
-          techOperations.setIsAddingTechToAll(false);
-          if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
-            techDialogFlow.techAddedFromBuildingDialogRef.current = false;
-            const feat = mapInteractions.selectedBuildingFeature;
-            if (feat) {
-              const updatedTechs = feat.get("techs") || {};
-              mapInteractions.setSelectedBuilding(
-                (prev: typeof mapInteractions.selectedBuilding) =>
-                  prev ? { ...prev, techs: { ...updatedTechs } } : null
-              );
-            }
-            mapInteractions.setBuildingDialogOpen(true);
-          }
-        }}
+        onClose={closeTechDialog}
         showApplyToAll={techOperations.isAddingTechToAll}
       />
 

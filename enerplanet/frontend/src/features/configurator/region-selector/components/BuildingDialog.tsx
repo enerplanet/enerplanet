@@ -25,9 +25,8 @@ import {
   isResidentialFClass,
   normalizeFClass,
 } from "@/features/configurator/utils/fClassUtils";
-import { fetchOpenTechHeatTechnologies, fetchOpenTechElectricityTechnologies } from "@/features/configurator/services/opentechdbService";
+import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import technologyService from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
 
 interface TechData {
@@ -335,7 +334,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   const [showTechPicker, setShowTechPicker] = useState(false);
   const [availableTechs, setAvailableTechs] = useState<Technology[]>([]);
   const [availableHeatTechs, setAvailableHeatTechs] = useState<Technology[]>([]);
-  const [availableOtdbElectricityTechs, setAvailableOtdbElectricityTechs] = useState<Technology[]>([]);
   const [isLoadingTechs, setIsLoadingTechs] = useState(false);
   const [pickerCarrier, setPickerCarrier] = useState<"electricity" | "heat">("electricity");
   const [pickerSearch, setPickerSearch] = useState("");
@@ -346,20 +344,20 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
     if (availableTechs.length > 0 && availableHeatTechs.length > 0) return;
     setIsLoadingTechs(true);
     try {
-      const [techs, heatTechs, otdbElek] = await Promise.all([
-        technologyService.getAll(),
-        fetchOpenTechHeatTechnologies(),
-        fetchOpenTechElectricityTechnologies(),
-      ]);
-      setAvailableTechs(techs);
-      setAvailableHeatTechs(heatTechs as unknown as Technology[]);
-      setAvailableOtdbElectricityTechs(otdbElek as unknown as Technology[]);
+      const catalogue = await loadCatalogue();
+      const typeCards = (types: string[]) =>
+        types.flatMap((type) => {
+          const product = defaultProduct(catalogue, type);
+          return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
+        });
+      setAvailableTechs(typeCards(ELECTRICITY_TYPES));
+      setAvailableHeatTechs(typeCards(HEAT_TYPES));
     } catch (err) {
       console.error("Failed to load technologies:", err);
     } finally {
       setIsLoadingTechs(false);
     }
-  }, [availableTechs.length, availableHeatTechs.length]);
+  }, [availableTechs.length, availableHeatTechs.length, t]);
 
   // Country-specific metadata
   const isNL = selectedBuilding?.countryCode === "NL";
@@ -778,7 +776,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                         />
                       </div>
                     </div>
-                    {/* Carrier toggle: electricity (simulator) / heat (OpenTech-DB) */}
+                    {/* Carrier toggle: electricity / heat */}
                     <div className="sticky top-0 z-10 flex items-center gap-0.5 bg-background px-2 pt-1 pb-1 border-b border-border">
                       {([
                         ["electricity", "technologies.carriers.electricity", Zap],
@@ -809,7 +807,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       </div>
                     ) : (
                       (() => {
-                        const pool = pickerCarrier === "heat" ? availableHeatTechs : [...availableTechs, ...availableOtdbElectricityTechs];
+                        const pool = pickerCarrier === "heat" ? availableHeatTechs : availableTechs;
                         const q = pickerSearch.trim().toLowerCase();
                         const filtered = q === "" ? pool : pool.filter((tech) =>
                           tech.alias.toLowerCase().includes(q) || tech.key.toLowerCase().includes(q)
@@ -823,7 +821,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                         }
                         return filtered.map((tech) => {
                         const alreadyAdded = techs[tech.key] !== undefined;
-                        const isOtdb = (tech as { source?: string }).source === "opentechdb";
                         return (
                           <button
                             key={tech.key}
@@ -839,11 +836,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                               {(tech.alias || tech.key).charAt(0).toUpperCase()}
                             </span>
                             <span className="flex-1 truncate">{tech.alias}</span>
-                            {isOtdb && (
-                              <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-medium">
-                                OTDB
-                              </span>
-                            )}
                             {alreadyAdded && (
                               <span className="text-[10px] text-muted-foreground">{t("regionSelector.buildingDialog.added")}</span>
                             )}
