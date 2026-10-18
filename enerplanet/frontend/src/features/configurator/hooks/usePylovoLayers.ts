@@ -4,7 +4,7 @@ import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -120,7 +120,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const results = new Map<number, any>();
     try {
       for (const gid of Array.from(gridResultIds)) {
-        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
+        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid), siteScope(pylovoGridData)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
       }
       setPowerFlowResults(results);
       pylovoLayersRef.current.forEach(layer => {

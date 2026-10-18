@@ -1530,6 +1530,11 @@
       "fieldNeeded": "La modalità di esercizio richiede qui una dimensione finita",
       "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
+    "siteMode": {
+      "label": "Modalità sito",
+      "hint": "Genera la rete solo per quest'area e la conserva separata dalle reti condivise. Include solo edifici con dati 3D, fino a 150.",
+      "locked": "Cancella l'area disegnata per cambiare modalità."
+    },
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",
       "description": "I modelli con più di {{limit}} edifici richiedono molto più tempo di calcolo: ogni edificio passa per BuEM e Calliope risolve la domanda oraria di ciascun edificio. Un anno intero può richiedere decine di minuti. Puoi comunque salvarlo ed eseguirlo."

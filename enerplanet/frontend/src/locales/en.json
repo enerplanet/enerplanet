@@ -1787,6 +1787,11 @@
       "fieldNeeded": "Operate mode needs a finite size here",
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
+    "siteMode": {
+      "label": "Site mode",
+      "hint": "Generates the grid for this area alone and stores it separately from the shared grids. Only buildings with 3D data are included, up to 150.",
+      "locked": "Clear the drawn area to change the mode."
+    },
     "largeModel": {
       "title": "This model has {{count}} buildings",
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."

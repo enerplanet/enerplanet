@@ -12,7 +12,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { useMapProvider } from '@/providers/map-context';
 import { getDefaultAdvancedParameters } from '@/features/configurator/constants/area-select-params';
-import { pylovoService } from '@/features/configurator/services/pylovoService';
+import { pylovoService, siteScope } from '@/features/configurator/services/pylovoService';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 import { useCustomLocationLayers } from '@/features/configurator/hooks/useCustomLocationLayers';
 import { usePylovoLayers } from '@/features/configurator/hooks/usePylovoLayers';
@@ -100,6 +100,7 @@ export const useAreaSelect = ({
 
     // Detect metadata changes
     const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode);
+    const siteMode = useModelStore((s) => s.siteMode);
     useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
@@ -108,7 +109,7 @@ export const useAreaSelect = ({
         const genId = ++gridGenIdRef.current;
         try {
             const user = useAuthStore.getState().user;
-            const response = await pylovoService.generateGrid({
+            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', polygons) : await pylovoService.generateGrid({
                 polygon: coords, polygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
@@ -119,9 +120,9 @@ export const useAreaSelect = ({
             if (count > 0) showSuccess(t("gridNotifications.gridGenerated", { count })); else showSuccess(t("gridNotifications.gridCompleteNoBuildings"));
             pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
             setIsModified(true);
-        } catch { if (genId === gridGenIdRef.current) showError(t("gridNotifications.gridGenerationFailed")); }
+        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridGenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger, siteMode, modelName]);
 
     const handleClearAllPolygons = useCallback(() => {
         gridGenIdRef.current++;
@@ -140,7 +141,7 @@ export const useAreaSelect = ({
         const genId = ++gridGenIdRef.current;
         try {
             const user = useAuthStore.getState().user;
-            const response = await pylovoService.generateGrid({
+            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
                 polygons: updatedPolygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
@@ -148,10 +149,10 @@ export const useAreaSelect = ({
             if (genId !== gridGenIdRef.current) return;
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
             pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
-        } catch { if (genId === gridGenIdRef.current) showError(t("gridNotifications.gridRegenerationFailed")); }
+        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, siteMode, modelName]);
 
     // ── Save ──
     const getUpdatedPylovoData = useCallback(() => {
@@ -205,6 +206,7 @@ async function loadExistingModelData(modelId: number, setters: any, originalRef:
             }
             if (m.config?.cookingCarrier === 'gas' || m.config?.cookingCarrier === 'electric') useModelStore.getState().setCookingCarrier(m.config.cookingCarrier);
             useModelStore.getState().setRunMode(m.config?.mode === 'operate' ? 'operate' : 'plan');
+            useModelStore.getState().setSiteMode((m.config?.site as { mode?: string } | undefined)?.mode === 'site');
             if (m.config) {
                 const cfg: any = {};
                 if (m.config.buildings) cfg.buildings = m.config.buildings;
@@ -212,6 +214,7 @@ async function loadExistingModelData(modelId: number, setters: any, originalRef:
                 if (m.config.mv_lines) cfg.mv_lines = m.config.mv_lines;
                 if (m.config.transformers) cfg.transformers = m.config.transformers;
                 if (m.config.grids) cfg.grids = m.config.grids;
+                if (m.config.meta) cfg.meta = m.config.meta;
                 if (Object.keys(cfg).length > 0) setters.setLoadedConfig(cfg);
             }
             if (originalRef) originalRef.current = { title: m.title || '', from_date: m.from_date ? new Date(m.from_date).toISOString().split('T')[0] : '', to_date: m.to_date ? new Date(m.to_date).toISOString().split('T')[0] : '', resolution: m.resolution ?? 0, config: m.config || null, status: m.status || 'draft' };
@@ -223,6 +226,13 @@ async function loadExistingModelData(modelId: number, setters: any, originalRef:
 async function checkAndShowAreaSelectTour(editMode: boolean, setShow: (v: boolean) => void) {
     if (editMode) return;
     try { const { data } = await axios.get('/settings'); if (data.success && data.data && !data.data.area_select_tour_completed) setTimeout(() => setShow(true), 1000); } catch { /* ignore */ }
+}
+
+/** A site refusal (no 3D-linked buildings, over the limit) carries a message the user can act on; other failures keep the generic one. */
+function gridErrorMessage(err: unknown, siteMode: boolean, fallback: string): string {
+    if (!siteMode) return fallback;
+    const e = err as { response?: { data?: { error?: string } }; message?: string };
+    return e.response?.data?.error || e.message || fallback;
 }
 
 async function saveAreaData(params: any) {
@@ -240,6 +250,8 @@ async function saveAreaData(params: any) {
         } else if (config) { config.pypsa = false; }
         if (config) config.cookingCarrier = useModelStore.getState().cookingCarrier;
         if (config) config.mode = useModelStore.getState().runMode;
+        const site = siteScope(pylovoData);
+        if (config && site) config.site = { mode: 'site', ...site };
         const modelData = { title: areaData.modelName, from_date: areaData.fromDate, to_date: areaData.toDate, resolution: areaData.resolution, workspace_id: workspaceId, coordinates: coords, config };
         if (editMode && modelId) {
             let hasChanges = !originalModel;

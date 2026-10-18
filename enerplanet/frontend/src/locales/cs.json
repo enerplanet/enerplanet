@@ -1530,6 +1530,11 @@
       "fieldNeeded": "Režim provozu zde potřebuje konečnou velikost",
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
+    "siteMode": {
+      "label": "Režim lokality",
+      "hint": "Vytvoří síť pouze pro tuto oblast a uloží ji odděleně od sdílených sítí. Zahrnuje jen budovy s 3D daty, nejvýše 150.",
+      "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
+    },
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."

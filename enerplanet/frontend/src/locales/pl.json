@@ -1530,6 +1530,11 @@
       "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości",
       "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
+    "siteMode": {
+      "label": "Tryb lokalizacji",
+      "hint": "Generuje sieć tylko dla tego obszaru i przechowuje ją oddzielnie od wspólnych sieci. Uwzględnia tylko budynki z danymi 3D, maksymalnie 150.",
+      "locked": "Usuń narysowany obszar, aby zmienić tryb."
+    },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
       "description": "Modele z ponad {{limit}} budynkami liczą się znacznie dłużej: każdy budynek przechodzi przez BuEM, a Calliope rozwiązuje godzinowe zapotrzebowanie każdego budynku. Cały rok może trwać kilkadziesiąt minut. Nadal możesz go zapisać i uruchomić."
