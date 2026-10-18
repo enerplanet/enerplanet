@@ -129,6 +129,9 @@ export interface ModelStore {
   setDraggingTech: (v: Technology | null) => void;
   techDialogOpen: boolean;
   setTechDialogOpen: (v: boolean) => void;
+  /** pick: choose a catalogue product; define: edit its parameters. */
+  techDialogStep: "pick" | "define";
+  setTechDialogStep: (v: "pick" | "define") => void;
   selectedTechForDialog: Technology | null;
   setSelectedTechForDialog: (v: Technology | null) => void;
   selectedBuildingForTech: any;
@@ -232,6 +235,7 @@ const getInitialState = () => ({
   showTechDrawer: false,
   draggingTech: null,
   techDialogOpen: false,
+  techDialogStep: "pick" as const,
   selectedTechForDialog: null,
   selectedBuildingForTech: null,
   isAddingTechToAll: false,
@@ -376,6 +380,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setDraggingTech: (v) => set({ draggingTech: v }),
   techDialogOpen: false,
   setTechDialogOpen: (v) => set({ techDialogOpen: v }),
+  techDialogStep: "pick",
+  setTechDialogStep: (v) => set({ techDialogStep: v }),
   selectedTechForDialog: null,
   setSelectedTechForDialog: (v) => set({ selectedTechForDialog: v }),
   selectedBuildingForTech: null,

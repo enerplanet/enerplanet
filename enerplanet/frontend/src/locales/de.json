@@ -2079,6 +2079,25 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Photovoltaik",
+      "battery_storage": "Batteriespeicher",
+      "air_source_heat_pump": "Luft-Wärmepumpe",
+      "ground_source_heat_pump": "Erdwärmepumpe",
+      "electric_boilers": "Elektrokessel",
+      "gas_boiler": "Gaskessel",
+      "air_conditioner": "Klimaanlage"
+    },
+    "products": {
+      "title": "Produkt wählen: {{type}}",
+      "applyToBuilding": "Wählen Sie ein Produkt für dieses Gebäude. Seine Parameter werden übernommen; mit „Eigenes definieren“ lassen sie sich ändern.",
+      "applyToAll": "Wählen Sie ein Produkt für alle Gebäude. Seine Parameter werden übernommen; mit „Eigenes definieren“ lassen sie sich ändern.",
+      "efficiency": "Wirkungsgrad {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} Jahre",
+      "defineOwn": "Eigenes definieren",
+      "count": "Produkte: {{count}}"
+    },
     "title": "Technologien",
     "subtitle": "Energietechnologien für Ihre Simulationen",
     "loading": "Technologien werden geladen...",

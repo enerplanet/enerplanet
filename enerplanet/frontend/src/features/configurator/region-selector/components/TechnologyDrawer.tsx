@@ -1,8 +1,8 @@
 import { useState, useEffect, type FC } from "react";
 import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, type LucideIcon } from "lucide-react";
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
-import technologyService, { type Technology } from "@/features/technologies/services/technologyService";
-import { fetchOpenTechHeatTechnologies, fetchOpenTechElectricityTechnologies } from "@/features/configurator/services/opentechdbService";
+import type { Technology } from "@/features/technologies/services/technologyService";
+import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue, productType } from "@/features/technologies/catalogue";
 import { useTranslation } from "@spatialhub/i18n";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -41,18 +41,13 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     appliedTechKeys = [],
 }) => {
     const { t } = useTranslation();
-    const [technologies, setTechnologies] = useState<Technology[]>([]);
-    const [heatTechnologies, setHeatTechnologies] = useState<Technology[]>([]);
-    const [otdbElectricity, setOtdbElectricity] = useState<Technology[]>([]);
+    const [catalogue, setCatalogue] = useState<Technology[]>([]);
     const [loading, setLoading] = useState(true);
     // Client-side search across the active carrier's techs (catalog is small
     // and cached — no server-side filtering needed).
     const [search, setSearch] = useState("");
     const [isAnimating, setIsAnimating] = useState(false);
     const [draggedTech, setDraggedTech] = useState<Technology | null>(null);
-    // Carrier view: electricity = simulator techs (DB table), heat = OpenTech-DB.
-    // Heat is always available for now; the energyVectors gate arrives with the
-    // model-builder.
     const [carrierView, setCarrierView] = useState<CarrierView>("electricity");
 
     useEffect(() => {
@@ -63,32 +58,9 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     }, [isOpen]);
 
     const loadTechnologies = async () => {
-        try {
-            setLoading(true);
-            const [data, heatTechs, otdbElek] = await Promise.all([
-                technologyService.getAll(),
-                fetchOpenTechHeatTechnologies(),
-                fetchOpenTechElectricityTechnologies(),
-            ]);
-            setTechnologies(data || []);
-            setHeatTechnologies(heatTechs || []);
-            setOtdbElectricity(otdbElek || []);
-        } catch (error) {
-            console.error("Failed to load technologies:", error);
-            // Simulator fallback: static JSON. Heat list degrades to its own
-            // fallback inside the service, so nothing else needed here.
-            try {
-                const response = await fetch("/initial-data/techs/default_technologies.json");
-                if (response.ok) {
-                    const data = await response.json();
-                    setTechnologies(data.technologies || []);
-                }
-            } catch {
-                // Ignore fallback errors
-            }
-        } finally {
-            setLoading(false);
-        }
+        setLoading(true);
+        setCatalogue(await loadCatalogue());
+        setLoading(false);
     };
 
     const handleClose = () => {
@@ -116,7 +88,8 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
       tech.alias.toLowerCase().includes(q) ||
       tech.key.toLowerCase().includes(q);
 
-    const renderTechCard = (tech: Technology, isOtdb = false) => {
+    const renderTechCard = (tech: Technology) => {
+        const productCount = catalogue.filter((p) => productType(p) === tech.key).length;
         const IconComponent = iconMap[tech.icon] || CircuitBoard;
         const isDragged = draggedTech?.key === tech.key;
         const isApplied = appliedTechKeys.includes(tech.key);
@@ -178,13 +151,8 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                             <span className="font-medium text-sm text-foreground truncate">{tech.alias}</span>
-                            {isOtdb && (
-                                <span className="flex-shrink-0 text-[9px] px-1 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-medium">
-                                    OTDB
-                                </span>
-                            )}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">{t("technologies.paramCount", { count: tech.constraints.length })}</div>
+                        <div className="text-[10px] text-muted-foreground">{t("technologies.products.count", { count: productCount })}</div>
                     </div>
                     <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </button>
@@ -192,7 +160,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
         );
     };
 
-    const renderSection = (title: string, techs: Technology[], isOtdb = false) => {
+    const renderSection = (title: string, techs: Technology[]) => {
         if (techs.length === 0) return null;
 
         return (
@@ -201,36 +169,21 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     {title}
                 </h4>
                 <div className="space-y-2">
-                    {techs.map((tech) => renderTechCard(tech, isOtdb))}
+                    {techs.map((tech) => renderTechCard(tech))}
                 </div>
             </div>
         );
     };
 
-    // Simulator techs grouped by category (electricity view)
-    const supplyTechs = technologies.filter(t =>
-        (t.key.includes("supply") ||
-        t.key.includes("pv_") ||
-        t.key.includes("wind_") ||
-        t.key.includes("geothermal") ||
-        t.key.includes("biomass") ||
-        t.key.includes("water_") ||
-        t.key.includes("_onshore") ||
-        t.key.includes("_offshore")) && matches(t)
-    );
-    const storageTechs = technologies.filter(t => t.key.includes("storage") && matches(t));
-    const otherTechs = technologies.filter(t =>
-        !supplyTechs.includes(t) && !storageTechs.includes(t) && matches(t)
-    );
-
-    // OpenTech-DB heat techs grouped by category (heat view)
-    const otdbConversion = heatTechnologies.filter(t => (t as { otdbCategory?: string }).otdbCategory === "conversion" && matches(t));
-    const otdbStorage = heatTechnologies.filter(t => (t as { otdbCategory?: string }).otdbCategory === "storage" && matches(t));
-    const otdbOther = heatTechnologies.filter((t) => {
-        const cat = (t as { otdbCategory?: string }).otdbCategory;
-        return cat !== "conversion" && cat !== "storage" && matches(t);
-    });
-    const otdbElekFiltered = otdbElectricity.filter(matches);
+    // One card per technology type; dropping it asks which product to use.
+    const typeCards = (types: string[]): Technology[] =>
+        types.flatMap((type) => {
+            const product = defaultProduct(catalogue, type);
+            return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
+        }).filter(matches);
+    const supplyTechs = typeCards(ELECTRICITY_TYPES.filter((type) => type !== "battery_storage"));
+    const storageTechs = typeCards(["battery_storage"]);
+    const heatTechs = typeCards(HEAT_TYPES);
 
     return (
         <>
@@ -275,7 +228,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                         />
                     </div>
 
-                    {/* Carrier toggle: electricity (simulator) / heat (OpenTech-DB) */}
+                    {/* Carrier toggle: electricity / heat */}
                     <div
                         className="mt-3 flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5"
                         role="tablist"
@@ -317,8 +270,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                         }
                         const noSearchResults =
                             search.trim() !== "" &&
-                            supplyTechs.length === 0 && storageTechs.length === 0 && otherTechs.length === 0 &&
-                            otdbConversion.length === 0 && otdbStorage.length === 0 && otdbOther.length === 0;
+                            supplyTechs.length === 0 && storageTechs.length === 0 && heatTechs.length === 0;
                         if (noSearchResults) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-12">
@@ -328,7 +280,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                             );
                         }
                         if (carrierView === "heat") {
-                            if (heatTechnologies.length === 0) {
+                            if (heatTechs.length === 0) {
                                 return (
                                     <div className="flex flex-col items-center justify-center py-12">
                                         <Flame className="w-8 h-8 text-muted-foreground mb-2" />
@@ -337,17 +289,10 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 );
                             }
                             return (
-                                <>
-                                    <p className="text-[10px] text-muted-foreground px-1">
-                                        {t("technologies.heatSourceHint")}
-                                    </p>
-                                    {renderSection(t("technologies.categories.conversion"), otdbConversion, true)}
-                                    {renderSection(t("technologies.categories.storage"), otdbStorage, true)}
-                                    {renderSection(t("technologies.categories.networks"), otdbOther, true)}
-                                </>
+                                renderSection(t("technologies.categories.conversion"), heatTechs)
                             );
                         }
-                        if (technologies.length === 0) {
+                        if (supplyTechs.length === 0 && storageTechs.length === 0) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <CircuitBoard className="w-8 h-8 text-muted-foreground mb-2" />
@@ -359,15 +304,6 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                             <>
                                 {renderSection(t("technologies.categories.supply"), supplyTechs)}
                                 {renderSection(t("technologies.categories.storage"), storageTechs)}
-                                {renderSection(t("technologies.categories.other"), otherTechs)}
-                                {otdbElectricity.length > 0 && (
-                                    <div className="pt-2 border-t border-border">
-                                        <p className="text-[10px] text-muted-foreground px-1 mb-2">
-                                            {t("technologies.otdbElectricityHint")}
-                                        </p>
-                                        {renderSection(t("technologies.categories.otdbAdditions"), otdbElekFiltered, true)}
-                                    </div>
-                                )}
                             </>
                         );
                     })()}

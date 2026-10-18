@@ -1705,6 +1705,25 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Fotovoltaika",
+      "battery_storage": "Bateriové úložiště",
+      "air_source_heat_pump": "Tepelné čerpadlo vzduch-voda",
+      "ground_source_heat_pump": "Tepelné čerpadlo země-voda",
+      "electric_boilers": "Elektrokotel",
+      "gas_boiler": "Plynový kotel",
+      "air_conditioner": "Klimatizace"
+    },
+    "products": {
+      "title": "Vyberte produkt: {{type}}",
+      "applyToBuilding": "Vyberte produkt pro tuto budovu. Jeho parametry se převezmou; pomocí „Definovat vlastní“ je lze změnit.",
+      "applyToAll": "Vyberte produkt pro všechny budovy. Jeho parametry se převezmou; pomocí „Definovat vlastní“ je lze změnit.",
+      "efficiency": "Účinnost {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} let",
+      "defineOwn": "Definovat vlastní",
+      "count": "Produkty: {{count}}"
+    },
     "title": "Technologie",
     "subtitle": "Energetické technologie pro vaše simulace",
     "loading": "Načítání technologií...",
