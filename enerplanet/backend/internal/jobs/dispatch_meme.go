@@ -179,6 +179,11 @@ func HandleDispatchMeme(
 		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
 			return err
 		}
+		if calc.Mode == "operate" {
+			if err := checkOperateSizes(calc.Topology); err != nil {
+				return fmt.Errorf("model %d: %w", p.ModelID, err)
+			}
+		}
 	}
 	calcBytes, err := json.Marshal(built)
 	if err != nil {
