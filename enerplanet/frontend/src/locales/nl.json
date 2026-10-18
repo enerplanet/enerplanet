@@ -831,6 +831,8 @@
     "parent": "Bovenliggend",
     "anotherModel": "een ander model",
     "failedDefaultMessage": "Berekening mislukt - webservice niet beschikbaar of time-out",
+    "demandFallbackTitle": "Sommige gebouwen gebruiken een constante vraag",
+    "demandFallbackWarning": "{{fallback}} van {{total}} gebouwen hadden geen uurlijks vraagprofiel (geen 3D-gegevens) en gebruiken hun jaarvraag gelijk verdeeld over het jaar.",
     "waiting": "Wachtend",
     "queuedTooltip": "Uw model staat in de wachtrij - de simulatie-engine verwerkt andere berekeningen",
     "compareRequires2Completed": "Selecteer precies 2 voltooide modellen om te vergelijken",

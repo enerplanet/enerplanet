@@ -831,6 +831,8 @@
     "parent": "Nadřazený",
     "anotherModel": "jiného modelu",
     "failedDefaultMessage": "Výpočet selhal - webová služba nedostupná nebo vypršel časový limit",
+    "demandFallbackTitle": "Některé budovy mají konstantní spotřebu",
+    "demandFallbackWarning": "{{fallback}} z {{total}} budov nemělo hodinový profil spotřeby (chybí 3D data) a používá roční spotřebu rovnoměrně rozloženou do celého roku.",
     "waiting": "Čekání",
     "queuedTooltip": "Váš model je ve frontě - simulační engine zpracovává jiné výpočty",
     "compareRequires2Completed": "Vyberte přesně 2 dokončené modely k porovnání",

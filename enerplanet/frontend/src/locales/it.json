@@ -831,6 +831,8 @@
     "parent": "Principale",
     "anotherModel": "un altro modello",
     "failedDefaultMessage": "Calcolo fallito - servizio web non disponibile o timeout",
+    "demandFallbackTitle": "Alcuni edifici usano una domanda costante",
+    "demandFallbackWarning": "{{fallback}} edifici su {{total}} non avevano un profilo orario della domanda (nessun dato 3D) e usano la domanda annua distribuita uniformemente sull'anno.",
     "waiting": "In attesa",
     "queuedTooltip": "Il tuo modello è in coda - il motore di simulazione sta elaborando altri calcoli",
     "compareRequires2Completed": "Seleziona esattamente 2 modelli completati per confrontare",

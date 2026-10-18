@@ -1099,6 +1099,8 @@
     "parent": "Parent",
     "anotherModel": "another model",
     "failedDefaultMessage": "Calculation failed - webservice unavailable or timeout",
+    "demandFallbackTitle": "Some buildings use constant demand",
+    "demandFallbackWarning": "{{fallback}} of {{total}} buildings had no hourly demand profile (no 3D data) and use their yearly demand spread evenly over the year.",
     "waiting": "Waiting",
     "queuedTooltip": "Your model is in the queue - the simulation engine is processing other calculations",
     "compareRequires2Completed": "Select exactly 2 completed models to compare"

@@ -1094,6 +1094,8 @@
     "parent": "Parent",
     "anotherModel": "un autre modèle",
     "failedDefaultMessage": "Calcul échoué - service web indisponible ou délai dépassé",
+    "demandFallbackTitle": "Certains bâtiments utilisent une demande constante",
+    "demandFallbackWarning": "{{fallback}} bâtiments sur {{total}} n'avaient pas de profil de demande horaire (pas de données 3D) et utilisent leur demande annuelle répartie uniformément sur l'année.",
     "waiting": "En attente",
     "queuedTooltip": "Votre modèle est en file d'attente - le moteur de simulation traite d'autres calculs",
     "compareRequires2Completed": "Sélectionnez exactement 2 modèles terminés pour comparer",
