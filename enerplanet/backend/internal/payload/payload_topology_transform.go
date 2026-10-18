@@ -444,12 +444,18 @@ func extractConstraintsFromMap(techObj map[string]interface{}) map[string]interf
 	return result
 }
 
-// transformTechObject transforms a single technology object
+// transformTechObject transforms a single technology object, keeping PV arrays.
 func transformTechObject(techObj map[string]interface{}) map[string]interface{} {
+	var result map[string]interface{}
 	if constraints, ok := techObj["constraints"].([]interface{}); ok {
-		return extractConstraintsFromArray(constraints)
+		result = extractConstraintsFromArray(constraints)
+	} else {
+		result = extractConstraintsFromMap(techObj)
 	}
-	return extractConstraintsFromMap(techObj)
+	if arrays, ok := techObj["arrays"].([]interface{}); ok {
+		result["arrays"] = arrays
+	}
+	return result
 }
 
 func extractAndTransformTechs(bProps map[string]interface{}) interface{} {

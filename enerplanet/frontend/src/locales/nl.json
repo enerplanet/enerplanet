@@ -831,6 +831,8 @@
     "parent": "Bovenliggend",
     "anotherModel": "een ander model",
     "failedDefaultMessage": "Berekening mislukt - webservice niet beschikbaar of time-out",
+    "demandFallbackTitle": "Sommige gebouwen gebruiken een constante vraag",
+    "demandFallbackWarning": "{{fallback}} van {{total}} gebouwen hadden geen uurlijks vraagprofiel (geen 3D-gegevens) en gebruiken hun jaarvraag gelijk verdeeld over het jaar.",
     "waiting": "Wachtend",
     "queuedTooltip": "Uw model staat in de wachtrij - de simulatie-engine verwerkt andere berekeningen",
     "compareRequires2Completed": "Selecteer precies 2 voltooide modellen om te vergelijken",
@@ -1506,6 +1508,13 @@
       "electric": "Elektrisch",
       "gas": "Gas",
       "hint": "Bij gas wordt het koken in de gebouwen een gasvraag uit een gaslevering"
+    },
+    "runMode": {
+      "label": "Rekenmodus",
+      "plan": "Plannen",
+      "operate": "Bedrijven",
+      "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
+      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren"
     },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
@@ -2989,6 +2998,10 @@
       "action": "Terugzetten naar actuele 3D-gegevens",
       "confirmTitle": "Opgeslagen wijzigingen verwijderen?",
       "confirmDescription": "De opgeslagen wijzigingen aan de gebouwschil worden verwijderd en het gebouw wordt geladen uit de actuele 3D-gegevens. Door het model op te slaan wordt dit definitief."
+    },
+    "pv": {
+      "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
     }
   }
 }

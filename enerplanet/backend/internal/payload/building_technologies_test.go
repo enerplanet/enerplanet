@@ -64,3 +64,17 @@ func keys(m map[string]interface{}) []string {
 	}
 	return out
 }
+
+func TestExtractAndTransformTechs_keepsPVArrays(t *testing.T) {
+	arrays := []interface{}{map[string]interface{}{"surface_id": "r1", "usable_share": 0.8}}
+	props := map[string]interface{}{"techs": map[string]interface{}{
+		"pv_supply": map[string]interface{}{
+			"constraints": []interface{}{map[string]interface{}{"key": "cost_energy_cap", "value": 575.0}},
+			"arrays":      arrays,
+		},
+	}}
+
+	pv := extractAndTransformTechs(props).(map[string]interface{})["pv_supply"].(map[string]interface{})
+	assert.Equal(t, 575.0, pv["cost_energy_cap"])
+	assert.Equal(t, arrays, pv["arrays"])
+}

@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Copy, FileEdit, Users, Clock, Star } from "lucide-react";
+import { Copy, FileEdit, Users, Clock, Star, AlertTriangle } from "lucide-react";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
@@ -23,6 +23,13 @@ const getErrorMessage = (error: unknown): string => {
     return JSON.stringify(error);
   }
   return String(error);
+};
+
+// Set by dispatch_meme when some buildings ran without a BuEM series.
+const getDemandFallback = (results: Model["results"]): { fallback: number; total: number } | null => {
+  const warning = results?.warning as { code?: string; fallback?: number; total?: number } | undefined;
+  if (warning?.code !== "demand_fallback") return null;
+  return { fallback: warning.fallback ?? 0, total: warning.total ?? 0 };
 };
 
 type CompletionInfo = { startTime: string; endTime: string; totalSeconds: number };
@@ -278,6 +285,17 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             <StatusBadge status={model.status} size="small" />
           )}
 
+          {model.status === "completed" && getDemandFallback(model.results) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertTriangle className="h-4 w-4 text-amber-500" aria-label={t("model.demandFallbackTitle")} />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("model.demandFallbackWarning", getDemandFallback(model.results) ?? undefined)}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {model.status === "running" && calculationStartTimes[model.id] && (
             <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md">
               <ElapsedTimer
@@ -384,7 +402,8 @@ const modelSnapshotEqual = (
   prev.parent_model_id === next.parent_model_id &&
   prev.level === next.level &&
   modelSharesSnapshot(prev) === modelSharesSnapshot(next) &&
-  getErrorMessage(prev.results?.error) === getErrorMessage(next.results?.error);
+  getErrorMessage(prev.results?.error) === getErrorMessage(next.results?.error) &&
+  JSON.stringify(prev.results?.warning) === JSON.stringify(next.results?.warning);
 
 const modelSharesSnapshot = (model: Model): string =>
   (model.shares ?? [])

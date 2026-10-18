@@ -8,7 +8,7 @@
  * here.
  */
 
-import { useMemo, type FC, type ReactNode } from 'react';
+import { useCallback, useMemo, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
 import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
@@ -25,6 +25,7 @@ import { usePreparationStepText } from './useAreaPreparation';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useDemandProfile } from './useDemandProfile';
+import { usePvMode, type BuildingPv, type PvArray } from './usePvMode';
 import { useConfiguratorParams } from './useConfiguratorParams';
 
 /**
@@ -54,6 +55,9 @@ export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 
 /** Receives a building whose saved edits the user chose to discard. */
 export type OnBuildingReset = (osmId: string) => void;
+
+/** Receives a building's PV arrays after each change in PV mode. */
+export type OnPvArrays = (osmId: string, arrays: PvArray[]) => void;
 
 /**
  * Offered over the view when the building's saved edits match none of its
@@ -134,9 +138,12 @@ interface PanelBodyProps {
   onExit: () => void;
   onEdited?: OnBuildingEdited;
   onReset?: OnBuildingReset;
+  /** The building's PV in PV mode, otherwise null. */
+  pv: BuildingPv | null;
+  onPvArrays?: OnPvArrays;
 }
 
-const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset }) => {
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
@@ -145,6 +152,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const toDate = useModelStore((s) => s.toDate);
   const { t } = useTranslation();
   const preparationStep = usePreparationStepText();
+  const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
+  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays);
 
   if (preparing) {
     return (
@@ -169,6 +178,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   // A geometry failure is reported rather than passed on as null, which the
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice onBack={onExit}>{geometryError}</Notice>;
+  if (pv && pvMode.failed) return <Notice onBack={onExit}>{t('buildingConfig.pv.unavailable')}</Notice>;
+  if (pv && !pvMode.pv) return <Notice onBack={onExit}>{t('buildingConfig.loading')}</Notice>;
 
   const detached = edited && geometry !== null
     && isEnvelopeDetached(geometry.surfaces, new Set(Object.keys(building.envelope)));
@@ -188,6 +199,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         demandProfile={demandProfile}
         seriesCsvUrl={seriesCsvUrl}
         attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
+        pv={pvMode.pv}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
     </>
@@ -201,10 +213,13 @@ interface BuildingPanelHostProps {
   draftId?: string;
   onBuildingEdited?: OnBuildingEdited;
   onBuildingReset?: OnBuildingReset;
+  /** The building's PV technology, or null when it has none. */
+  pvFor?: (osmId: string) => BuildingPv | null;
+  onPvArrays?: OnPvArrays;
 }
 
-export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset }) => {
-  const { buildingId, isOpen, close } = useConfiguratorParams();
+export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays }) => {
+  const { buildingId, isOpen, pvMode, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
   const ownerPath = modelId ? `models/${modelId}` : draftId ? `drafts/${draftId}` : null;
@@ -215,7 +230,17 @@ export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId
   // while the map's z-50 controls come earlier in the DOM and paint below it.
   return (
     <div className="bg-background fixed right-0 bottom-0 z-50 top-[var(--topbar-height)] left-[var(--sidebar-width)] [&>div]:!absolute">
-      <PanelBody osmId={buildingId} modelId={modelId} ownerPath={ownerPath} onExit={close} onEdited={onBuildingEdited} onReset={onBuildingReset} />
+      <PanelBody
+        key={`${buildingId}:${pvMode}`}
+        osmId={buildingId}
+        modelId={modelId}
+        ownerPath={ownerPath}
+        onExit={close}
+        onEdited={onBuildingEdited}
+        onReset={onBuildingReset}
+        pv={pvMode ? pvFor?.(buildingId) ?? null : null}
+        onPvArrays={onPvArrays}
+      />
     </div>
   );
 };

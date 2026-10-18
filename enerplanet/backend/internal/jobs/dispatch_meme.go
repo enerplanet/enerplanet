@@ -92,6 +92,11 @@ type modelDemandResolver interface {
 	Resolve(ctx context.Context, modelID uint) error
 }
 
+// modelPVResolver is implemented by PVResolver.
+type modelPVResolver interface {
+	Attach(ctx context.Context, model *commonModels.Model, calc payload.CalculationPayload) error
+}
+
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
 // seam (electricity only; heat carriers are not translated),
@@ -117,6 +122,7 @@ func HandleDispatchMeme(
 	runs memeRunStore,
 	resolver modelDemandResolver,
 	seriesReader demandSeriesReader,
+	pvResolver modelPVResolver,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
 ) (retErr error) {
@@ -160,6 +166,19 @@ func HandleDispatchMeme(
 	}
 	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
 		return err
+	}
+	if calc, ok := built.(payload.CalculationPayload); ok {
+		warning, err := checkDemandCoverage(calc.Topology)
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		if warning != nil {
+			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)
+		}
+		setModelWarning(db, p.ModelID, warning)
+		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
+			return err
+		}
 	}
 	calcBytes, err := json.Marshal(built)
 	if err != nil {

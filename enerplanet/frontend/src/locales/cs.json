@@ -831,6 +831,8 @@
     "parent": "Nadřazený",
     "anotherModel": "jiného modelu",
     "failedDefaultMessage": "Výpočet selhal - webová služba nedostupná nebo vypršel časový limit",
+    "demandFallbackTitle": "Některé budovy mají konstantní spotřebu",
+    "demandFallbackWarning": "{{fallback}} z {{total}} budov nemělo hodinový profil spotřeby (chybí 3D data) a používá roční spotřebu rovnoměrně rozloženou do celého roku.",
     "waiting": "Čekání",
     "queuedTooltip": "Váš model je ve frontě - simulační engine zpracovává jiné výpočty",
     "compareRequires2Completed": "Vyberte přesně 2 dokončené modely k porovnání",
@@ -1506,6 +1508,13 @@
       "electric": "Elektřina",
       "gas": "Plyn",
       "hint": "Při plynu se vaření v budovách stává poptávkou po plynu z dodávky plynu"
+    },
+    "runMode": {
+      "label": "Režim výpočtu",
+      "plan": "Plánování",
+      "operate": "Provoz",
+      "planHint": "Zvolit velikost každé technologie při nejnižších nákladech",
+      "operateHint": "Ponechat každou technologii v maximální velikosti a optimalizovat jen její provoz"
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",
@@ -2989,6 +2998,10 @@
       "action": "Obnovit podle aktuálních 3D dat",
       "confirmTitle": "Zahodit uložené úpravy?",
       "confirmDescription": "Uložené úpravy obálky budovy budou odstraněny a budova se načte z aktuálních 3D dat. Uložením modelu se změna stane trvalou."
+    },
+    "pv": {
+      "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
     }
   }
 }

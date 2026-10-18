@@ -1094,6 +1094,8 @@
     "parent": "Parent",
     "anotherModel": "un autre modèle",
     "failedDefaultMessage": "Calcul échoué - service web indisponible ou délai dépassé",
+    "demandFallbackTitle": "Certains bâtiments utilisent une demande constante",
+    "demandFallbackWarning": "{{fallback}} bâtiments sur {{total}} n'avaient pas de profil de demande horaire (pas de données 3D) et utilisent leur demande annuelle répartie uniformément sur l'année.",
     "waiting": "En attente",
     "queuedTooltip": "Votre modèle est en file d'attente - le moteur de simulation traite d'autres calculs",
     "compareRequires2Completed": "Sélectionnez exactement 2 modèles terminés pour comparer",
@@ -1767,6 +1769,13 @@
       "electric": "Électrique",
       "gas": "Gaz",
       "hint": "Au gaz, la cuisson des bâtiments devient une demande de gaz achetée à un fournisseur de gaz"
+    },
+    "runMode": {
+      "label": "Mode de calcul",
+      "plan": "Planifier",
+      "operate": "Exploiter",
+      "planHint": "Choisir la taille de chaque technologie au moindre coût",
+      "operateHint": "Garder chaque technologie à sa taille maximale et optimiser uniquement son utilisation"
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",
@@ -2983,6 +2992,10 @@
       "action": "Réinitialiser avec les données 3D actuelles",
       "confirmTitle": "Supprimer les modifications enregistrées ?",
       "confirmDescription": "Les modifications enregistrées de l'enveloppe de ce bâtiment sont supprimées et il est chargé depuis les données 3D actuelles. L'enregistrement du modèle rend ce changement définitif."
+    },
+    "pv": {
+      "shadingNotice": "La simulation ne tient pas compte de l'ombrage des arbres ni des bâtiments voisins.",
+      "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées."
     }
   }
 }

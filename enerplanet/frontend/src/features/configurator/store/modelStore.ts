@@ -22,6 +22,8 @@ export type AssignStep = "select-buildings" | "select-transformer";
 
 /** BuEM's cooking carriers that EnerPlanET offers. */
 export type CookingCarrier = "electric" | "gas";
+/** "plan" sizes every technology; "operate" keeps each at its maximum and optimises only the dispatch. */
+export type RunMode = "plan" | "operate";
 
 export interface ModelStore {
   // ── Active mode (unified) ──
@@ -69,6 +71,9 @@ export interface ModelStore {
   /** What households cook with; gas cooking adds BuEM's kitchen profile as a gas demand. Saved as config.cookingCarrier. */
   cookingCarrier: CookingCarrier;
   setCookingCarrier: (carrier: CookingCarrier) => void;
+  /** Saved as config.mode. */
+  runMode: RunMode;
+  setRunMode: (mode: RunMode) => void;
 
   // ── Loading / saving ──
   isSaving: boolean;
@@ -213,6 +218,7 @@ const getInitialState = () => ({
   toDate: "",
   resolution: 60,
   cookingCarrier: "electric" as CookingCarrier,
+  runMode: "plan" as RunMode,
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
@@ -301,6 +307,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setResolution: (res) => set({ resolution: res }),
   cookingCarrier: "electric",
   setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
+  runMode: "plan",
+  setRunMode: (mode) => set({ runMode: mode }),
 
   // ── Loading / saving ──
   isSaving: false,

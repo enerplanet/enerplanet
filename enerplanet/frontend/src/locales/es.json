@@ -1094,6 +1094,8 @@
     "parent": "Principal",
     "anotherModel": "otro modelo",
     "failedDefaultMessage": "Cálculo fallido - servicio web no disponible o tiempo agotado",
+    "demandFallbackTitle": "Algunos edificios usan una demanda constante",
+    "demandFallbackWarning": "{{fallback}} de {{total}} edificios no tenían perfil horario de demanda (sin datos 3D) y usan su demanda anual repartida por igual a lo largo del año.",
     "waiting": "Esperando",
     "queuedTooltip": "Su modelo está en la cola - el motor de simulación está procesando otros cálculos",
     "compareRequires2Completed": "Seleccione exactamente 2 modelos completados para comparar",
@@ -1767,6 +1769,13 @@
       "electric": "Eléctrica",
       "gas": "Gas",
       "hint": "Con gas, la cocina de los edificios pasa a ser una demanda de gas comprada a un suministro de gas"
+    },
+    "runMode": {
+      "label": "Modo de cálculo",
+      "plan": "Planificar",
+      "operate": "Operar",
+      "planHint": "Elegir el tamaño de cada tecnología al menor coste",
+      "operateHint": "Mantener cada tecnología en su tamaño máximo y optimizar solo su uso"
     },
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",
@@ -2983,6 +2992,10 @@
       "action": "Restablecer con los datos 3D actuales",
       "confirmTitle": "¿Descartar las ediciones guardadas?",
       "confirmDescription": "Se eliminan las ediciones guardadas de la envolvente de este edificio y se carga desde los datos 3D actuales. Al guardar el modelo, el cambio es definitivo."
+    },
+    "pv": {
+      "shadingNotice": "La simulación no tiene en cuenta la sombra de árboles ni de edificios vecinos.",
+      "unavailable": "No se pudieron cargar las superficies FV del edificio."
     }
   }
 }

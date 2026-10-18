@@ -832,6 +832,8 @@
     "parent": "Nadrzędny",
     "anotherModel": "innego modelu",
     "failedDefaultMessage": "Obliczenie nieudane - usługa internetowa niedostępna lub przekroczono limit czasu",
+    "demandFallbackTitle": "Niektóre budynki mają stałe zapotrzebowanie",
+    "demandFallbackWarning": "{{fallback}} z {{total}} budynków nie miało godzinowego profilu zapotrzebowania (brak danych 3D) i używa rocznego zapotrzebowania rozłożonego równomiernie na cały rok.",
     "waiting": "Oczekiwanie",
     "queuedTooltip": "Twój model jest w kolejce - silnik symulacji przetwarza inne obliczenia",
     "compareRequires2Completed": "Wybierz dokładnie 2 ukończone modele do porównania",
@@ -1506,6 +1508,13 @@
       "electric": "Elektryczne",
       "gas": "Gaz",
       "hint": "Przy gazie gotowanie w budynkach staje się zapotrzebowaniem na gaz kupowany z dostawy gazu"
+    },
+    "runMode": {
+      "label": "Tryb obliczeń",
+      "plan": "Planowanie",
+      "operate": "Eksploatacja",
+      "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
+      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę"
     },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
@@ -2989,6 +2998,10 @@
       "action": "Przywróć aktualne dane 3D",
       "confirmTitle": "Odrzucić zapisane zmiany?",
       "confirmDescription": "Zapisane zmiany przegród budynku zostaną usunięte, a budynek zostanie wczytany z aktualnych danych 3D. Zapisanie modelu utrwali tę zmianę."
+    },
+    "pv": {
+      "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
+      "unavailable": "Nie udało się wczytać powierzchni PV budynku."
     }
   }
 }

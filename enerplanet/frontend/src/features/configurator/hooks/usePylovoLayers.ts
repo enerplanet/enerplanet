@@ -20,6 +20,8 @@ import { extractPeakLoadFromProps } from "@/features/configurator/utils/building
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
+import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import type { BuildingPv, PvArray } from "@/features/configurator/building-config/usePvMode";
 
 // Local aliases matching original useAreaSelect.ts
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -221,6 +223,19 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       return { ...prev, buildings: { ...prev.buildings, features } };
     });
   }, [setPylovoGridData]);
+  const findBuilding = useCallback((osmId: string) => collectBuildingsFromLayers(pylovoLayersRef.current).find((f) => String(f.get('osm_id')) === osmId), []);
+  /** The building's PV technology, or null when it has none. */
+  const buildingPv = useCallback((osmId: string): BuildingPv | null => {
+    const tech = findBuilding(osmId)?.get('techs')?.pv_supply;
+    return tech ? { typeLabel: tech.alias, arrays: tech.arrays ?? null } : null;
+  }, [findBuilding]);
+  /** Stores the arrays chosen in PV mode on the building's PV technology. */
+  const storePvArrays = useCallback((osmId: string, arrays: PvArray[]) => {
+    const feature = findBuilding(osmId);
+    const techs = feature?.get('techs');
+    if (!feature || !techs?.pv_supply) return;
+    feature.set('techs', { ...techs, pv_supply: { ...techs.pv_supply, arrays } });
+  }, [findBuilding]);
   const updateBuildingProperty = useCallback((osmId: string, key: string, val: unknown) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) f.set(key, val); }); }); }, []);
   const updateBuildingFClassDemand = useCallback((osmId: string, fClass: string, newDemand: number) => {
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
@@ -229,12 +244,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

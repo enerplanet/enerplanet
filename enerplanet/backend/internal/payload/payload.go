@@ -22,6 +22,7 @@ type CalculationPayload struct {
 	StartDate              string                 `json:"start_date"`
 	EndDate                string                 `json:"end_date"`
 	Resolution             int                    `json:"resolution"`
+	Mode                   string                 `json:"mode,omitempty"`
 	EnergyVectors          []string               `json:"energy_vectors,omitempty"`
 	CustomDemandTimeSeries []interface{}          `json:"custom_demand_time_series,omitempty"`
 	Topology               []interface{}          `json:"topology,omitempty"`
@@ -62,6 +63,7 @@ func BuildCalculationPayload(model *models.Model) (interface{}, error) {
 	// Parse config
 	var configMap map[string]interface{}
 	if len(model.Config) > 0 && json.Unmarshal(model.Config, &configMap) == nil {
+		payload.Mode = runMode(configMap)
 		// Extract energy vectors from config (default: ["electricity"])
 		if vectors, ok := configMap["energyVectors"].([]interface{}); ok {
 			for _, v := range vectors {
@@ -84,6 +86,16 @@ func BuildCalculationPayload(model *models.Model) (interface{}, error) {
 	}
 
 	return buildLegacyPayload(model, payload, configMap), nil
+}
+
+// runMode returns the model's run mode, "plan" or "operate". Operate keeps every
+// technology at its maximum size and optimises only the dispatch. Any other
+// value is dropped, which leaves the run in plan mode.
+func runMode(configMap map[string]interface{}) string {
+	if mode, ok := configMap["mode"].(string); ok && (mode == "plan" || mode == "operate") {
+		return mode
+	}
+	return ""
 }
 
 func buildCallbackURL(modelID uint) string {
