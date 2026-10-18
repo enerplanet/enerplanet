@@ -65,6 +65,20 @@ func TestTranslatePayload_emitsElectricityJob(t *testing.T) {
 	assert.NotContains(t, exp, "allow_unmet_demand", "MEME PyPSA target rejects allow_unmet_demand")
 }
 
+func TestTranslatePayload_carriesOperateMode(t *testing.T) {
+	var in map[string]interface{}
+	require.NoError(t, json.Unmarshal(elOnlyPayload(), &in))
+	in["mode"] = "operate"
+	payload, err := json.Marshal(in)
+	require.NoError(t, err)
+
+	got, err := TranslatePayload(payload)
+	require.NoError(t, err)
+	var job map[string]interface{}
+	require.NoError(t, json.Unmarshal(got.Job, &job))
+	assert.Equal(t, "operate", job["experiment"].(map[string]interface{})["mode"])
+}
+
 func TestTranslatePayload_rejectsBrokenInput(t *testing.T) {
 	_, err := TranslatePayload([]byte(`{"topology":`))
 	assert.Error(t, err, "malformed payload surfaces as an error")
