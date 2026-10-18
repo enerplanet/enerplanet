@@ -2271,6 +2271,16 @@
     "addToAllBuildings": "Añadir a todos los edificios",
     "removeFromAllBuildings": "Quitar de todos los edificios",
     "paramCount": "Parámetros: {{count}}",
+    "pvRoofs": {
+      "title": "Superficies de cubierta",
+      "automatic": "Usar colocación automática",
+      "unavailable": "No se pudieron cargar las superficies de cubierta; la FV se coloca automáticamente.",
+      "noRoofs": "Sin superficies de cubierta en 3D; la FV se coloca sobre la huella.",
+      "roof": "Cubierta {{number}}",
+      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
+      "usableShare": "Superficie útil (%)",
+      "use": "FV en esta cubierta"
+    },
     "paramDialog": {
       "description": "Configure los parámetros de la tecnología para este edificio",
       "turbineSummary": "{{power}} kW · rotor de {{diameter}} m",

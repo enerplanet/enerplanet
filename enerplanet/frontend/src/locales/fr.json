@@ -2271,6 +2271,16 @@
     "addToAllBuildings": "Ajouter à tous les bâtiments",
     "removeFromAllBuildings": "Retirer de tous les bâtiments",
     "paramCount": "Paramètres : {{count}}",
+    "pvRoofs": {
+      "title": "Pans de toiture",
+      "automatic": "Utiliser le placement automatique",
+      "unavailable": "Les pans de toiture n'ont pas pu être chargés ; le PV est placé automatiquement.",
+      "noRoofs": "Aucun pan de toiture en 3D ; le PV est placé sur l'emprise au sol.",
+      "roof": "Toit {{number}}",
+      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
+      "usableShare": "Surface utile (%)",
+      "use": "PV sur ce toit"
+    },
     "paramDialog": {
       "description": "Configurez les paramètres de la technologie pour ce bâtiment",
       "turbineSummary": "{{power}} kW · rotor de {{diameter}} m",

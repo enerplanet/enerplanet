@@ -2267,6 +2267,16 @@
     "addToAllBuildings": "Zu allen Gebäuden hinzufügen",
     "removeFromAllBuildings": "Von allen Gebäuden entfernen",
     "paramCount": "Parameter: {{count}}",
+    "pvRoofs": {
+      "title": "Dachflächen",
+      "automatic": "Automatische Platzierung verwenden",
+      "unavailable": "Dachflächen konnten nicht geladen werden; PV wird automatisch platziert.",
+      "noRoofs": "Keine 3D-Dachflächen; PV wird auf der Grundfläche platziert.",
+      "roof": "Dach {{number}}",
+      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
+      "usableShare": "Nutzbare Fläche (%)",
+      "use": "PV auf diesem Dach"
+    },
     "paramDialog": {
       "description": "Konfigurieren Sie die Technologieparameter für dieses Gebäude",
       "turbineSummary": "{{power}} kW · Rotor {{diameter}} m",

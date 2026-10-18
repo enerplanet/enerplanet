@@ -1893,6 +1893,16 @@
     "addToAllBuildings": "Aan alle gebouwen toevoegen",
     "removeFromAllBuildings": "Van alle gebouwen verwijderen",
     "paramCount": "Parameters: {{count}}",
+    "pvRoofs": {
+      "title": "Dakvlakken",
+      "automatic": "Automatische plaatsing gebruiken",
+      "unavailable": "Dakvlakken konden niet worden geladen; PV wordt automatisch geplaatst.",
+      "noRoofs": "Geen 3D-dakvlakken; PV wordt op de footprint geplaatst.",
+      "roof": "Dak {{number}}",
+      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
+      "usableShare": "Bruikbaar oppervlak (%)",
+      "use": "PV op dit dak"
+    },
     "paramDialog": {
       "description": "Stel de technologieparameters voor dit gebouw in",
       "turbineSummary": "{{power}} kW · rotor {{diameter}} m",

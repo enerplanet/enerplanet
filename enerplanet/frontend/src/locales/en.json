@@ -2267,6 +2267,16 @@
     "addToAllBuildings": "Add to all buildings",
     "removeFromAllBuildings": "Remove from all buildings",
     "paramCount": "Parameters: {{count}}",
+    "pvRoofs": {
+      "title": "Roof surfaces",
+      "automatic": "Use automatic placement",
+      "unavailable": "Roof surfaces could not be loaded; PV is placed automatically.",
+      "noRoofs": "No 3D roof surfaces; PV is placed on the footprint.",
+      "roof": "Roof {{number}}",
+      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
+      "usableShare": "Usable area (%)",
+      "use": "PV on this roof"
+    },
     "paramDialog": {
       "description": "Configure technology parameters for this building",
       "turbineSummary": "{{power}} kW · {{diameter}}m rotor",

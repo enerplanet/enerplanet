@@ -7,6 +7,7 @@ import type { Technology } from "@/features/technologies/services/technologyServ
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import type { PvArray } from "@/features/configurator/region-selector/components/PvRoofPicker";
 
 interface TechDragDropOptions {
   map: any;
@@ -63,7 +64,7 @@ export const useTechDragDrop = ({
     // Highlight is handled inline via the feature's own style
   }, [map, draggingTech, mapRef]);
 
-  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false) => {
+  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false, pvArrays?: PvArray[]) => {
     if (!selectedBuildingForTech || !selectedTechForDialog) return;
     if (applyToAll) {
       let count = 0;
@@ -83,7 +84,7 @@ export const useTechDragDrop = ({
       showSuccess(t("gridNotifications.techAddedToAll", { tech: selectedTechForDialog.alias, count }));
     } else {
       const existing = selectedBuildingForTech.get("techs") || {};
-      existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints };
+      existing[techKey] = { alias: selectedTechForDialog.alias, icon: selectedTechForDialog.icon, constraints, ...(pvArrays && { arrays: pvArrays }) };
       selectedBuildingForTech.set("techs", existing);
       selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
       showSuccess(t("gridNotifications.techAddedToBuilding", { tech: selectedTechForDialog.alias }));
