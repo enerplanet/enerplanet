@@ -1094,6 +1094,8 @@
     "parent": "Principal",
     "anotherModel": "otro modelo",
     "failedDefaultMessage": "Cálculo fallido - servicio web no disponible o tiempo agotado",
+    "demandFallbackTitle": "Algunos edificios usan una demanda constante",
+    "demandFallbackWarning": "{{fallback}} de {{total}} edificios no tenían perfil horario de demanda (sin datos 3D) y usan su demanda anual repartida por igual a lo largo del año.",
     "waiting": "Esperando",
     "queuedTooltip": "Su modelo está en la cola - el motor de simulación está procesando otros cálculos",
     "compareRequires2Completed": "Seleccione exactamente 2 modelos completados para comparar",

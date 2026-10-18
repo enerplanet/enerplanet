@@ -161,6 +161,16 @@ func HandleDispatchMeme(
 	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
 		return err
 	}
+	if calc, ok := built.(payload.CalculationPayload); ok {
+		warning, err := checkDemandCoverage(calc.Topology)
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		if warning != nil {
+			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)
+		}
+		setModelWarning(db, p.ModelID, warning)
+	}
 	calcBytes, err := json.Marshal(built)
 	if err != nil {
 		return fmt.Errorf("marshal calculation payload for model %d: %w", p.ModelID, err)
