@@ -1514,7 +1514,13 @@
       "plan": "Planowanie",
       "operate": "Eksploatacja",
       "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
-      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę"
+      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę",
+      "unsized": "{{count}} budynków wymaga wielkości w trybie eksploatacji. Kliknij wpis, aby ją ustawić.",
+      "unsizedEntry": "Budynek {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maksymalna wielkość",
+        "cont_storage_cap_max": "wielkość magazynu"
+      }
     },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",

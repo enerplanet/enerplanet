@@ -1771,7 +1771,13 @@
       "plan": "Planen",
       "operate": "Betreiben",
       "planHint": "Die Größe jeder Technologie zu minimalen Kosten wählen",
-      "operateHint": "Jede Technologie bei ihrer maximalen Größe halten und nur ihren Einsatz optimieren"
+      "operateHint": "Jede Technologie bei ihrer maximalen Größe halten und nur ihren Einsatz optimieren",
+      "unsized": "{{count}} Gebäude brauchen eine Größe für den Betriebsmodus. Klicken Sie auf einen Eintrag, um sie festzulegen.",
+      "unsizedEntry": "Gebäude {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximale Größe",
+        "cont_storage_cap_max": "Speichergröße"
+      }
     },
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
