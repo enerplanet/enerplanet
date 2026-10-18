@@ -41,3 +41,16 @@ func TestRoofArraysPicksQualifyingRoofs(t *testing.T) {
 func TestMaxCapacityKW(t *testing.T) {
 	assert.InDelta(t, 6.4, Array{AreaSqm: 40, UsableShare: 0.8}.MaxCapacityKW(), 1e-9)
 }
+
+func TestRoofsMarksWhichQualify(t *testing.T) {
+	roofs := Roofs([]city2tabula.Surface{
+		surface("south", "RoofSurface", 40, 55, 180),
+		surface("north", "RoofSurface", 40, 55, 0),
+		surface("wall", "WallSurface", 80, 0, 180),
+	})
+
+	assert.Equal(t, []Roof{
+		{Array: Array{SurfaceID: "south", Tilt: 35, Azimuth: 180, AreaSqm: 40, UsableShare: 0.8}, Qualifies: true},
+		{Array: Array{SurfaceID: "north", Tilt: 35, Azimuth: 0, AreaSqm: 40, UsableShare: 0.8}, Qualifies: false},
+	}, roofs)
+}

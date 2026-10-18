@@ -27,33 +27,51 @@ func (a Array) MaxCapacityKW() float64 {
 	return a.AreaSqm * a.UsableShare * KWPerSqm
 }
 
-// RoofArrays places an array on every roof of at least 10 m2, tilt up to 60 and facing east to west; flat roofs always.
+// Roof is a roof surface in PV orientation, and whether RoofArrays places an array on it.
+type Roof struct {
+	Array
+	Qualifies bool `json:"qualifies"`
+}
+
+// Roofs returns every roof surface with an area and angles; Qualifies marks those of
+// at least 10 m2, tilt up to 60 and facing east to west, and flat roofs always.
+func Roofs(surfaces []city2tabula.Surface) []Roof {
+	var roofs []Roof
+	for _, s := range surfaces {
+		if r, ok := roof(s); ok {
+			roofs = append(roofs, r)
+		}
+	}
+	return roofs
+}
+
+// RoofArrays returns the arrays on the qualifying roofs.
 func RoofArrays(surfaces []city2tabula.Surface) []Array {
 	var arrays []Array
-	for _, s := range surfaces {
-		if a, ok := roofArray(s); ok {
-			arrays = append(arrays, a)
+	for _, r := range Roofs(surfaces) {
+		if r.Qualifies {
+			arrays = append(arrays, r.Array)
 		}
 	}
 	return arrays
 }
 
-func roofArray(s city2tabula.Surface) (Array, bool) {
+func roof(s city2tabula.Surface) (Roof, bool) {
 	if s.Type != "RoofSurface" || s.AreaSqm == nil || s.Tilt == nil || s.Azimuth == nil {
-		return Array{}, false
+		return Roof{}, false
 	}
-	if *s.AreaSqm < minRoofAreaSqm || (s.AreaBelowPrecision != nil && *s.AreaBelowPrecision) {
-		return Array{}, false
+	if s.AreaBelowPrecision != nil && *s.AreaBelowPrecision {
+		return Roof{}, false
 	}
+	big := *s.AreaSqm >= minRoofAreaSqm
 	// City2TABULA tilt 90 is flat; azimuth -1 marks a near-horizontal surface.
 	if *s.Azimuth < 0 {
-		return FlatRoofArray(s.ID, *s.AreaSqm), true
+		return Roof{Array: FlatRoofArray(s.ID, *s.AreaSqm), Qualifies: big}, true
 	}
 	tilt := 90 - *s.Tilt
-	if tilt > maxRoofTiltDeg || *s.Azimuth < 90 || *s.Azimuth > 270 {
-		return Array{}, false
-	}
-	return Array{SurfaceID: s.ID, Tilt: tilt, Azimuth: *s.Azimuth, AreaSqm: *s.AreaSqm, UsableShare: DefaultUsableShare}, true
+	faces := *s.Azimuth >= 90 && *s.Azimuth <= 270
+	a := Array{SurfaceID: s.ID, Tilt: tilt, Azimuth: *s.Azimuth, AreaSqm: *s.AreaSqm, UsableShare: DefaultUsableShare}
+	return Roof{Array: a, Qualifies: big && faces && tilt <= maxRoofTiltDeg}, true
 }
 
 // FlatRoofArray is a south-facing racked array on a flat roof.
