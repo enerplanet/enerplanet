@@ -1,5 +1,4 @@
 import { useEffect, useState, type FC } from "react";
-import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -30,27 +29,34 @@ const constraintValue = (product: Technology, key: string): number | undefined =
   return typeof value === "number" ? value : undefined;
 };
 
-/** Lists the catalogue products of one technology type to choose from. */
+/** Lists the catalogue products of one technology type to choose from; a type's only product is applied without asking. */
 export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, current, applyToAll, onPick, onDefineOwn, onClose }) => {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Technology[] | null>(null);
   const [selected, setSelected] = useState<string | undefined>(current);
 
   useEffect(() => {
+    setProducts(null);
     if (!open || !type) return;
     let cancelled = false;
     loadCatalogue().then((all) => {
       if (cancelled) return;
       const ofType = productsOfType(all, type);
+      if (ofType.length === 1) {
+        onPick(ofType[0]);
+        return;
+      }
       setProducts(ofType);
       setSelected(current && ofType.some((p) => p.key === current) ? current : ofType[0]?.key);
     });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onPick is a new function every render
   }, [open, type, current]);
 
   const chosen = products?.find((p) => p.key === selected);
+  if (!products) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -63,8 +69,7 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
         </AlertDialogHeader>
 
         <div className="max-h-[55dvh] overflow-auto border-y border-border py-2">
-          {!products && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground mx-auto my-6" />}
-          {products?.map((product) => {
+          {products.map((product) => {
             // A PV product's yield comes from its module type, not cont_energy_eff.
             const efficiency = type === "pv_supply" ? undefined : constraintValue(product, "cont_energy_eff");
             const cost = constraintValue(product, "cost_energy_cap");
