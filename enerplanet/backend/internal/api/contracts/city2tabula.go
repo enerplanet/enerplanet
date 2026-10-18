@@ -166,7 +166,7 @@ type EnrichResponse struct {
 	city2tabula.RunStage
 }
 
-// PVRoofsResponse lists a building's roof surfaces for PV.
-type PVRoofsResponse struct {
-	Roofs []pv.Roof `json:"roofs"`
+// PVSurfacesResponse lists a building's roof and wall surfaces for PV.
+type PVSurfacesResponse struct {
+	Surfaces []pv.Surface `json:"surfaces"`
 }

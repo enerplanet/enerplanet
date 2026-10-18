@@ -634,11 +634,11 @@ definitions:
         example: 1
         type: integer
     type: object
-  spatialhub_backend_internal_api_contracts.PVRoofsResponse:
+  spatialhub_backend_internal_api_contracts.PVSurfacesResponse:
     properties:
-      roofs:
+      surfaces:
         items:
-          $ref: '#/definitions/spatialhub_backend_internal_pv.Roof'
+          $ref: '#/definitions/spatialhub_backend_internal_pv.Surface'
         type: array
     type: object
   spatialhub_backend_internal_api_contracts.SeriesSummary:
@@ -813,7 +813,7 @@ definitions:
       type:
         type: string
     type: object
-  spatialhub_backend_internal_pv.Roof:
+  spatialhub_backend_internal_pv.Surface:
     properties:
       area:
         type: number
@@ -821,7 +821,11 @@ definitions:
         type: number
       capacity_kw:
         type: number
+      kind:
+        type: string
       qualifies:
+        type: boolean
+      suggested:
         type: boolean
       surface_id:
         type: string
@@ -1434,11 +1438,12 @@ paths:
       summary: Envelope surface geometry for a building
       tags:
       - City2TABULA
-  /v1/city2tabula/pv-roofs:
+  /v1/city2tabula/pv-surfaces:
     get:
       description: |-
-        Returns every roof surface of the building with its area, tilt from horizontal
-        and azimuth clockwise from north, and whether automatic PV placement uses it.
+        Returns every roof and outer wall of the building with its area, tilt from horizontal
+        and azimuth clockwise from north, whether automatic PV placement uses it (roofs only)
+        and whether it is suggested for PV.
         Empty when City2TABULA has no 3D data for the building.
       parameters:
       - description: OSM id of the building
@@ -1464,7 +1469,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVRoofsResponse'
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse'
         "400":
           description: Bad Request
           schema:
@@ -1475,7 +1480,7 @@ paths:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
       security:
       - SessionAuth: []
-      summary: Roof surfaces of a building for PV
+      summary: Roof and wall surfaces of a building for PV
       tags:
       - City2TABULA
   /v1/heat-demand/resolve:

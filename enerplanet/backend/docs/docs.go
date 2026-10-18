@@ -853,21 +853,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/city2tabula/pv-roofs": {
+        "/v1/city2tabula/pv-surfaces": {
             "get": {
                 "security": [
                     {
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns every roof surface of the building with its area, tilt from horizontal\nand azimuth clockwise from north, and whether automatic PV placement uses it.\nEmpty when City2TABULA has no 3D data for the building.",
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "City2TABULA"
                 ],
-                "summary": "Roof surfaces of a building for PV",
+                "summary": "Roof and wall surfaces of a building for PV",
                 "parameters": [
                     {
                         "type": "string",
@@ -899,7 +899,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.PVRoofsResponse"
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse"
                         }
                     },
                     "400": {
@@ -2188,13 +2188,13 @@ const docTemplate = `{
                 }
             }
         },
-        "spatialhub_backend_internal_api_contracts.PVRoofsResponse": {
+        "spatialhub_backend_internal_api_contracts.PVSurfacesResponse": {
             "type": "object",
             "properties": {
-                "roofs": {
+                "surfaces": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/spatialhub_backend_internal_pv.Roof"
+                        "$ref": "#/definitions/spatialhub_backend_internal_pv.Surface"
                     }
                 }
             }
@@ -2442,7 +2442,7 @@ const docTemplate = `{
                 }
             }
         },
-        "spatialhub_backend_internal_pv.Roof": {
+        "spatialhub_backend_internal_pv.Surface": {
             "type": "object",
             "properties": {
                 "area": {
@@ -2454,7 +2454,13 @@ const docTemplate = `{
                 "capacity_kw": {
                     "type": "number"
                 },
+                "kind": {
+                    "type": "string"
+                },
                 "qualifies": {
+                    "type": "boolean"
+                },
+                "suggested": {
                     "type": "boolean"
                 },
                 "surface_id": {

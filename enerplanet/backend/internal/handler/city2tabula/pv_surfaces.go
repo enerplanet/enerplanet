@@ -16,11 +16,12 @@ import (
 	"spatialhub_backend/internal/pv"
 )
 
-// PVRoofs godoc
+// PVSurfaces godoc
 //
-//	@Summary		Roof surfaces of a building for PV
-//	@Description	Returns every roof surface of the building with its area, tilt from horizontal
-//	@Description	and azimuth clockwise from north, and whether automatic PV placement uses it.
+//	@Summary		Roof and wall surfaces of a building for PV
+//	@Description	Returns every roof and outer wall of the building with its area, tilt from horizontal
+//	@Description	and azimuth clockwise from north, whether automatic PV placement uses it (roofs only)
+//	@Description	and whether it is suggested for PV.
 //	@Description	Empty when City2TABULA has no 3D data for the building.
 //	@Tags			City2TABULA
 //	@Produce		json
@@ -28,12 +29,12 @@ import (
 //	@Param			country	query		string	false	"Country name or ISO2 code; resolved from lon and lat when absent"
 //	@Param			lon		query		number	false	"Building longitude (WGS84), when country is absent"
 //	@Param			lat		query		number	false	"Building latitude (WGS84), when country is absent"
-//	@Success		200		{object}	contracts.PVRoofsResponse
+//	@Success		200		{object}	contracts.PVSurfacesResponse
 //	@Failure		400		{object}	contracts.ErrorResponse
 //	@Failure		502		{object}	contracts.ErrorResponse
 //	@Security		SessionAuth
-//	@Router			/v1/city2tabula/pv-roofs [get]
-func (h *Handler) PVRoofs(c *gin.Context) {
+//	@Router			/v1/city2tabula/pv-surfaces [get]
+func (h *Handler) PVSurfaces(c *gin.Context) {
 	osmID := strings.TrimSpace(c.Query("osm_id"))
 	if osmID == "" {
 		httputil.BadRequest(c, "osm_id is required")
@@ -51,11 +52,11 @@ func (h *Handler) PVRoofs(c *gin.Context) {
 		return
 	}
 
-	roofs := []pv.Roof{}
+	surfaces := []pv.Surface{}
 	for _, b := range result.Buildings {
-		roofs = append(roofs, pv.Roofs(b.Surfaces)...)
+		surfaces = append(surfaces, pv.Surfaces(b.Surfaces)...)
 	}
-	c.JSON(http.StatusOK, contracts.PVRoofsResponse{Roofs: roofs})
+	c.JSON(http.StatusOK, contracts.PVSurfacesResponse{Surfaces: surfaces})
 }
 
 // pointCountry returns the country query parameter, or resolves it from lon and lat.
