@@ -1893,16 +1893,6 @@
     "addToAllBuildings": "Přidat ke všem budovám",
     "removeFromAllBuildings": "Odebrat ze všech budov",
     "paramCount": "Parametry: {{count}}",
-    "pvRoofs": {
-      "title": "Střešní plochy",
-      "automatic": "Použít automatické umístění",
-      "unavailable": "Střešní plochy se nepodařilo načíst; FV se umístí automaticky.",
-      "noRoofs": "Žádné 3D střešní plochy; FV se umístí na půdorys.",
-      "roof": "Střecha {{number}}",
-      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
-      "usableShare": "Využitelná plocha (%)",
-      "use": "FV na této střeše"
-    },
     "paramDialog": {
       "description": "Nastavte parametry technologie pro tuto budovu",
       "turbineSummary": "{{power}} kW · rotor {{diameter}} m",
@@ -2982,6 +2972,10 @@
       "action": "Obnovit podle aktuálních 3D dat",
       "confirmTitle": "Zahodit uložené úpravy?",
       "confirmDescription": "Uložené úpravy obálky budovy budou odstraněny a budova se načte z aktuálních 3D dat. Uložením modelu se změna stane trvalou."
+    },
+    "pv": {
+      "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
     }
   }
 }

@@ -51,12 +51,9 @@ import {
 } from "./parameterDescriptions";
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
-import { getCenter } from "ol/extent";
-import { toLonLat } from "ol/proj";
 import { useTranslation } from "@spatialhub/i18n";
 import { fetchOpenTechTechBySlug } from "@/features/configurator/services/opentechdbService";
 import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
-import { PvRoofPicker, type PvArray } from "./PvRoofPicker";
 
 // Wind turbine data structure
 interface WindTurbineData {
@@ -413,7 +410,7 @@ interface TechParameterDialogProps {
   onOpenChange: (open: boolean) => void;
   technology: Technology | null;
   building: Feature<Geometry> | null;
-  onSave: (techKey: string, constraints: ConstraintValue[], applyToAll?: boolean, pvArrays?: PvArray[]) => void;
+  onSave: (techKey: string, constraints: ConstraintValue[], applyToAll?: boolean) => void;
   onClose: () => void;
   showApplyToAll?: boolean;
 }
@@ -436,11 +433,6 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [hubHeightOptions, setHubHeightOptions] = useState<number[]>([]);
   const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
   const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
-  const [pvArrays, setPvArrays] = useState<PvArray[] | null>(null);
-  const buildingLonLat = useMemo<[number, number] | null>(() => {
-    const extent = building?.getGeometry()?.getExtent();
-    return extent ? (toLonLat(getCenter(extent)) as [number, number]) : null;
-  }, [building]);
   const contentRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -509,7 +501,6 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       }
 
       setConstraintValues(initialValues);
-      setPvArrays(building.get("techs")?.[technology.key]?.arrays ?? null);
       setErrors({});
       setDynamicOptions({}); // Reset dynamic options
     }
@@ -763,7 +754,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       constraints.push({ key: "carrier_price_eur_mwh", value: carrierPrice(fuelCarrier) });
     }
 
-    onSave(technology.key, constraints, false, pvArrays ?? undefined);
+    onSave(technology.key, constraints, false);
     setIsSaving(false);
     onClose();
   };
@@ -810,7 +801,6 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const IconComponent = iconMap[technology.icon] || Settings2;
   const buildingType = building?.get("type") || t("common.unknown");
   const buildingOsmId = building?.get("osm_id") || "";
-  const showRoofPicker = technology.key === "pv_supply" && !showApplyToAll && buildingOsmId !== "";
 
   // Categorize constraints
   const configConstraints = technology.constraints.filter(
@@ -1081,9 +1071,6 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             {renderSection(t("results.configuration"), configConstraints)}
             {renderSection(t("technologies.paramDialog.constraints"), contConstraints)}
             {renderSection(t("results.buildingDetail.costs"), costConstraints)}
-            {showRoofPicker && (
-              <PvRoofPicker osmId={String(buildingOsmId)} lonLat={buildingLonLat} value={pvArrays} onChange={setPvArrays} />
-            )}
           </div>
         </div>
 

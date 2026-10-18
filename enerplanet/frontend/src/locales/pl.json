@@ -1893,16 +1893,6 @@
     "addToAllBuildings": "Dodaj do wszystkich budynków",
     "removeFromAllBuildings": "Usuń ze wszystkich budynków",
     "paramCount": "Parametry: {{count}}",
-    "pvRoofs": {
-      "title": "Połacie dachu",
-      "automatic": "Użyj automatycznego rozmieszczenia",
-      "unavailable": "Nie udało się wczytać połaci dachu; PV zostanie rozmieszczone automatycznie.",
-      "noRoofs": "Brak połaci dachu 3D; PV zostanie umieszczone na obrysie.",
-      "roof": "Dach {{number}}",
-      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
-      "usableShare": "Powierzchnia użytkowa (%)",
-      "use": "PV na tym dachu"
-    },
     "paramDialog": {
       "description": "Skonfiguruj parametry technologii dla tego budynku",
       "turbineSummary": "{{power}} kW · wirnik {{diameter}} m",
@@ -2982,6 +2972,10 @@
       "action": "Przywróć aktualne dane 3D",
       "confirmTitle": "Odrzucić zapisane zmiany?",
       "confirmDescription": "Zapisane zmiany przegród budynku zostaną usunięte, a budynek zostanie wczytany z aktualnych danych 3D. Zapisanie modelu utrwali tę zmianę."
+    },
+    "pv": {
+      "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
+      "unavailable": "Nie udało się wczytać powierzchni PV budynku."
     }
   }
 }

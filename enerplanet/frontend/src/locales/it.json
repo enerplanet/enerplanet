@@ -1893,16 +1893,6 @@
     "addToAllBuildings": "Aggiungi a tutti gli edifici",
     "removeFromAllBuildings": "Rimuovi da tutti gli edifici",
     "paramCount": "Parametri: {{count}}",
-    "pvRoofs": {
-      "title": "Falde del tetto",
-      "automatic": "Usa il posizionamento automatico",
-      "unavailable": "Impossibile caricare le falde del tetto; il FV viene posizionato automaticamente.",
-      "noRoofs": "Nessuna falda 3D; il FV viene posizionato sull'impronta.",
-      "roof": "Tetto {{number}}",
-      "details": "{{area}} m² · {{tilt}}° · {{direction}}",
-      "usableShare": "Superficie utile (%)",
-      "use": "FV su questo tetto"
-    },
     "paramDialog": {
       "description": "Configura i parametri della tecnologia per questo edificio",
       "turbineSummary": "{{power}} kW · rotore da {{diameter}} m",
@@ -2982,6 +2972,10 @@
       "action": "Ripristina dai dati 3D attuali",
       "confirmTitle": "Scartare le modifiche salvate?",
       "confirmDescription": "Le modifiche salvate all'involucro di questo edificio vengono rimosse e l'edificio viene caricato dai dati 3D attuali. Salvando il modello la modifica diventa definitiva."
+    },
+    "pv": {
+      "shadingNotice": "La simulazione non considera l'ombreggiamento di alberi o edifici vicini.",
+      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio."
     }
   }
 }
