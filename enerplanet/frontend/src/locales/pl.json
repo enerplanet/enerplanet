@@ -1406,7 +1406,13 @@
       "myBuildings": "Moje budynki",
       "clearAll": "Usuń wszystkie wielokąty",
       "toggleMyBuildings": "Przełącz moje budynki",
-      "disableSelected": "Wyłącz zaznaczone budynki"
+      "disableSelected": "Wyłącz zaznaczone budynki",
+      "importArea": "Importuj obszar",
+      "importAreaError": {
+        "invalid": "Plik nie jest prawidłowym GeoJSON.",
+        "noPolygon": "Plik nie zawiera wielokąta.",
+        "unknownCrs": "Układ współrzędnych {{detail}} nie jest obsługiwany; wyeksportuj obszar w EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Uruchom analizę przepływu mocy",

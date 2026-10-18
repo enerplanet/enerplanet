@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { Loader2, Lock, MapPin } from "lucide-react";
+import { FileUp, Loader2, Lock, MapPin } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -53,6 +53,8 @@ const ModernToggle: FC<ModernToggleProps> = ({
 interface MapHeaderProps {
   allPolygonsCount: number;
   onClearAllPolygons: () => void;
+  /** Imports a GeoJSON file as the model area; absent where an area cannot be replaced. */
+  onImportArea?: (file: File) => void;
   selectedBuildingCount?: number;
   onDisableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
@@ -75,6 +77,7 @@ interface MapHeaderProps {
 export const MapHeader: FC<MapHeaderProps> = ({
   allPolygonsCount,
   onClearAllPolygons,
+  onImportArea,
   selectedBuildingCount = 0,
   onDisableSelectedBuildings,
   isLoadingPreference,
@@ -147,6 +150,22 @@ export const MapHeader: FC<MapHeaderProps> = ({
               {t("simulation.mapHeader.disableSelected")} ({selectedBuildingCount})
             </button>
           </div>
+        )}
+        {onImportArea && (
+          <label className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+            <FileUp className="w-3.5 h-3.5" />
+            {t("simulation.mapHeader.importArea")}
+            <input
+              type="file"
+              accept=".geojson,.json,application/geo+json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onImportArea(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
         )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">

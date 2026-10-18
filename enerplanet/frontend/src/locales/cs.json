@@ -1406,7 +1406,13 @@
       "myBuildings": "Moje budovy",
       "clearAll": "Odstranit všechny polygony",
       "toggleMyBuildings": "Přepnout moje budovy",
-      "disableSelected": "Vypnout vybrané budovy"
+      "disableSelected": "Vypnout vybrané budovy",
+      "importArea": "Importovat oblast",
+      "importAreaError": {
+        "invalid": "Soubor není platný GeoJSON.",
+        "noPolygon": "Soubor neobsahuje žádný polygon.",
+        "unknownCrs": "Souřadnicový systém {{detail}} není podporován; exportujte oblast v EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",

@@ -44,6 +44,7 @@ import { useTransformerActions } from "@/features/configurator/hooks/useTransfor
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { AreaImportError, areaRingsFromGeoJSON } from "@/features/configurator/utils/areaGeoJSON";
 import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 
 // Extracted selectors
@@ -518,6 +519,19 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     await actions.handlePolygonDrawn(coordinates, allPolygons);
   };
 
+  // An imported area replaces the drawn ones and is handled like a finished drawing.
+  const [importedPolygons, setImportedPolygons] = useState<[number, number][][]>();
+  const handleImportArea = async (file: File) => {
+    try {
+      const rings = areaRingsFromGeoJSON(await file.text());
+      setImportedPolygons(rings);
+      await handlePolygonDrawnWithLimit(rings[rings.length - 1], rings);
+    } catch (error) {
+      const reason = error instanceof AreaImportError ? error.reason : "invalid";
+      notification.showError(t(`simulation.mapHeader.importAreaError.${reason}`, { detail: error instanceof AreaImportError ? error.detail : "" }));
+    }
+  };
+
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
   const closeTechDialog = () => {
@@ -669,6 +683,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            onImportArea={handleImportArea}
             selectedBuildingCount={buildingSelection.selectedCount}
             onDisableSelectedBuildings={buildingSelection.disableSelected}
             isLoadingPreference={isLoadingPreference}
@@ -708,7 +723,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         suspended={activeMode !== null}
         allowMultiple
         clearTrigger={state.clearTrigger}
-        initialPolygons={editMode ? state.loadedCoordinates : undefined}
+        initialPolygons={importedPolygons ?? (editMode ? state.loadedCoordinates : undefined)}
         enableEditing={true}
         labels={{
           clickToClose: t("drawing.clickToClose"),

@@ -1718,7 +1718,13 @@
       "myBuildings": "Meine Gebäude",
       "clearAll": "Alle Polygone entfernen",
       "toggleMyBuildings": "Meine Gebäude umschalten",
-      "disableSelected": "Ausgewählte Gebäude deaktivieren"
+      "disableSelected": "Ausgewählte Gebäude deaktivieren",
+      "importArea": "Gebiet importieren",
+      "importAreaError": {
+        "invalid": "Die Datei ist kein gültiges GeoJSON.",
+        "noPolygon": "Die Datei enthält kein Polygon.",
+        "unknownCrs": "Das Koordinatensystem {{detail}} wird nicht unterstützt; exportieren Sie das Gebiet in EPSG:4326."
+      }
     },
     "mapOverlay": {
       "analyzingArea": "Gebiet wird analysiert",

@@ -1406,7 +1406,13 @@
       "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
       "toggleMyBuildings": "Mijn gebouwen aan/uit",
-      "disableSelected": "Geselecteerde gebouwen uitschakelen"
+      "disableSelected": "Geselecteerde gebouwen uitschakelen",
+      "importArea": "Gebied importeren",
+      "importAreaError": {
+        "invalid": "Het bestand is geen geldige GeoJSON.",
+        "noPolygon": "Het bestand bevat geen polygoon.",
+        "unknownCrs": "Het coördinatenstelsel {{detail}} wordt niet ondersteund; exporteer het gebied in EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",

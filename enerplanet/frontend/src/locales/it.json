@@ -1406,7 +1406,13 @@
       "myBuildings": "I miei edifici",
       "clearAll": "Rimuovi tutti i poligoni",
       "toggleMyBuildings": "Attiva/disattiva i miei edifici",
-      "disableSelected": "Disattiva gli edifici selezionati"
+      "disableSelected": "Disattiva gli edifici selezionati",
+      "importArea": "Importa area",
+      "importAreaError": {
+        "invalid": "Il file non è un GeoJSON valido.",
+        "noPolygon": "Il file non contiene alcun poligono.",
+        "unknownCrs": "Il sistema di coordinate {{detail}} non è supportato; esportare l'area in EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Esegui analisi flusso di potenza",
