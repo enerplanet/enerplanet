@@ -312,14 +312,15 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
         <div className="relative" ref={dropdownRef}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <button
+            <button
+                        type="button"
                         onClick={() => setIsOpen(!isOpen)}
-                        className="group flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg hover:border-muted-foreground/50 hover:shadow-sm transition-all duration-200"
+                        className="group flex items-center gap-2.5 px-3 py-1.5 bg-card border border-border rounded-lg hover:border-muted-foreground/50 hover:shadow-sm transition-all duration-200"
                     >
-                        <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+                        <div className="flex items-center justify-center w-5 h-5 bg-muted rounded">
                             <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                         </div>
-                        <span className="font-normal text-foreground max-w-[120px] truncate text-sm">
+                        <span className="font-normal text-foreground max-w-30 truncate text-sm">
                             {selectedRegion?.name || t('regionSelector.goToRegion', 'Go to region')}
                         </span>
                         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
