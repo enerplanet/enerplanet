@@ -10,12 +10,12 @@ import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import {
-  transformerStyleFunction, cableStyleFunction, mvLineStyleFunction,
+  cableStyleFunction, mvLineStyleFunction,
   parsePoiClass, createBuildingStyleFunction,
 } from "@/features/interactive-map/utils/mapStyleUtils";
 import { normalizeFClass, getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { normalizeFClassToken } from "@/features/configurator/utils/buildingFeatureExtraction";
-import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers } from "@/features/configurator/utils/gridLayerUtils";
+import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers, createTransformerLayers } from "@/features/configurator/utils/gridLayerUtils";
 import { extractPeakLoadFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
@@ -180,8 +180,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       const src = new VectorSource(); const fmt = new GeoJSON();
       const feats = fmt.readFeatures(nd.transformers, { dataProjection: getDataProjection(nd.transformers), featureProjection: map.getView().getProjection() });
       feats.forEach((f: Feature<Geometry>) => { f.set('feature_type', 'transformer'); setFeatureColorIndex(f, colorMap); }); src.addFeatures(feats);
-      const layer = new VectorLayer({ source: src, style: (f, r) => transformerStyleFunction(f as Feature<Geometry>, r), zIndex: 102 });
-      map.addLayer(layer); pylovoLayersRef.current.push(layer);
+      createTransformerLayers(src).forEach(layer => { map.addLayer(layer); pylovoLayersRef.current.push(layer); });
     }
     if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
 
