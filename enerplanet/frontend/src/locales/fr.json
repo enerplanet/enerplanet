@@ -3023,6 +3023,7 @@
     "pv": {
       "shadingNotice": "La simulation ne tient pas compte de l'ombrage des arbres ni des bâtiments voisins.",
       "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées."
-    }
+    },
+    "sharedOutline": "Ce contour couvre {{count}} bâtiments 3D. Affiché et modifiable : le plus grand. La demande de chaleur est calculée pour chacun et additionnée."
   }
 }

@@ -3019,6 +3019,7 @@
     "pv": {
       "shadingNotice": "The simulation does not consider shading from trees or neighbouring buildings.",
       "unavailable": "The building's PV surfaces could not be loaded."
-    }
+    },
+    "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed."
   }
 }

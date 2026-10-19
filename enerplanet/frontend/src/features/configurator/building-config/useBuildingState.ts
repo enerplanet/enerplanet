@@ -64,9 +64,15 @@ export interface BuildingStateResult {
   credits: DatasetCredit[];
   /** True when the building opened from edits saved in the model rather than from City2TABULA. */
   edited: boolean;
+  /**
+   * How many 3D buildings this OSM outline covers, as a terraced row mapped as
+   * one outline does. The view shows the largest; heat demand is computed for
+   * each and summed.
+   */
+  buildingCount: number;
 }
 
-const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [], edited: false };
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [], edited: false, buildingCount: 1 };
 
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
 
@@ -106,6 +112,7 @@ async function resolveBuilding(
       Boolean(entry?.tabula_variant_code),
     ),
     edited: stored !== null,
+    buildingCount: (entry as { building_count?: number } | undefined)?.building_count ?? 1,
   };
 }
 
