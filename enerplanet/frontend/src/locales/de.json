@@ -2345,6 +2345,12 @@
       "constraints": "Beschränkungen",
       "applyToAllBuildings": "Auf alle Gebäude anwenden",
       "applyTechnology": "Technologie anwenden"
+    },
+    "heatScope": {
+      "title": "{{tech}} allen Gebäuden hinzufügen?",
+      "description": "Ein Gebäude hat eine Wärmeversorgung. {{withHeat}} Gebäude haben bereits eine, {{without}} haben keine.",
+      "missing": "Nur Gebäude ohne Wärmeversorgung ({{count}})",
+      "replace": "Bei allen Gebäuden ersetzen ({{count}})"
     }
   },
   "locations": {

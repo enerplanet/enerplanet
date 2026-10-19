@@ -1970,6 +1970,12 @@
       "constraints": "Beperkingen",
       "applyToAllBuildings": "Op alle gebouwen toepassen",
       "applyTechnology": "Technologie toepassen"
+    },
+    "heatScope": {
+      "title": "{{tech}} aan alle gebouwen toevoegen?",
+      "description": "Een gebouw heeft één warmtevoorziening. {{withHeat}} gebouwen hebben er al een, {{without}} hebben er geen.",
+      "missing": "Alleen gebouwen zonder warmtevoorziening ({{count}})",
+      "replace": "Op alle gebouwen vervangen ({{count}})"
     }
   },
   "locations": {

@@ -2345,6 +2345,12 @@
       "constraints": "Constraints",
       "applyToAllBuildings": "Apply to All Buildings",
       "applyTechnology": "Apply Technology"
+    },
+    "heatScope": {
+      "title": "Add {{tech}} to all buildings?",
+      "description": "A building has one heat supply. {{withHeat}} buildings already have one, {{without}} have none.",
+      "missing": "Only buildings without heat supply ({{count}})",
+      "replace": "Replace on all buildings ({{count}})"
     }
   },
   "locations": {

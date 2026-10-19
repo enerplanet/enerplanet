@@ -1970,6 +1970,12 @@
       "constraints": "Omezení",
       "applyToAllBuildings": "Použít na všechny budovy",
       "applyTechnology": "Použít technologii"
+    },
+    "heatScope": {
+      "title": "Přidat {{tech}} ke všem budovám?",
+      "description": "Budova má jeden zdroj tepla. {{withHeat}} budov už jeden má, {{without}} nemá žádný.",
+      "missing": "Jen budovy bez zdroje tepla ({{count}})",
+      "replace": "Nahradit u všech budov ({{count}})"
     }
   },
   "locations": {

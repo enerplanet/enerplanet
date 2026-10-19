@@ -1970,6 +1970,12 @@
       "constraints": "Ograniczenia",
       "applyToAllBuildings": "Zastosuj do wszystkich budynków",
       "applyTechnology": "Zastosuj technologię"
+    },
+    "heatScope": {
+      "title": "Dodać {{tech}} do wszystkich budynków?",
+      "description": "Budynek ma jedno źródło ciepła. {{withHeat}} budynków już je ma, {{without}} nie ma żadnego.",
+      "missing": "Tylko budynki bez źródła ciepła ({{count}})",
+      "replace": "Zastąp we wszystkich budynkach ({{count}})"
     }
   },
   "locations": {
