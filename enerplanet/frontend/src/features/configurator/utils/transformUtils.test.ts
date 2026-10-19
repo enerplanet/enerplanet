@@ -12,6 +12,11 @@ const buildings = {
   ],
 };
 
+// The same two buildings with OSM building=yes: usage unknown.
+const unknownUsage = {
+  features: buildings.features.map((f) => ({ ...f, properties: { osm_id: f.properties.osm_id, f_class: 'yes' } })),
+};
+
 const baseResults = (coordinates: Record<string, { x: number; y: number }>) =>
   ({
     coordinates,
@@ -52,6 +57,15 @@ describe('transformToCapacityData', () => {
     expect(grid?.installed_capacity_kw).toBe(12);
   });
 
+  it('groups buildings of unknown usage into one Other buildings bar', () => {
+    const coords = { n1: { x: 8.805834, y: 53.099527 }, n2: { x: 8.804846, y: 53.099509 } };
+    const out = transformToCapacityData(baseResults(coords), undefined, unknownUsage as never);
+
+    const demand = out.filter((d) => d.type === 'demand');
+    expect(demand.map((d) => d.technology)).toEqual(['Other buildings']);
+    expect(demand[0].installed_capacity_kw).toBeCloseTo(6.36, 2);
+  });
+
   it('falls back to the demand tech label when no f_class resolves', () => {
     const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
     const out = transformToCapacityData(baseResults(coords), undefined, {
@@ -78,6 +92,13 @@ describe('transformToEnergyFlow', () => {
     // No per-building-id demand nodes.
     expect(names).not.toContain('N1 Demand');
     expect(names).not.toContain('N2 Demand');
+  });
+
+  it('groups buildings of unknown usage into one Other buildings node', () => {
+    const coords = { n1: { x: 8.805834, y: 53.099527 }, n2: { x: 8.804846, y: 53.099509 } };
+    const names = transformToEnergyFlow(baseResults(coords), undefined, unknownUsage as never).nodes.map((n) => n.name);
+    expect(names).toContain('Other buildings');
+    expect(names).not.toContain('N1 Demand');
   });
 
   it('falls back to demand tech nodes when no f_class resolves', () => {

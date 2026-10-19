@@ -369,7 +369,8 @@
       "commercialDemand": "Zapotrzebowanie komercyjne",
       "publicDemand": "Zapotrzebowanie budynek publiczny",
       "industrialDemand": "Zapotrzebowanie przemysłowe",
-      "agriculturalDemand": "Zapotrzebowanie rolnicze"
+      "agriculturalDemand": "Zapotrzebowanie rolnicze",
+      "otherBuildings": "Pozostałe budynki"
     },
     "charts": {
       "systemPerformance": "Wydajność Systemu",

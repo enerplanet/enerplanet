@@ -369,7 +369,8 @@
       "commercialDemand": "Commerciële vraag",
       "publicDemand": "Vraag openbaar gebouw",
       "industrialDemand": "Industriële vraag",
-      "agriculturalDemand": "Agrarische vraag"
+      "agriculturalDemand": "Agrarische vraag",
+      "otherBuildings": "Overige gebouwen"
     },
     "charts": {
       "systemPerformance": "Systeemprestaties",

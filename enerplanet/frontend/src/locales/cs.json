@@ -369,7 +369,8 @@
       "commercialDemand": "Komerční poptávka",
       "publicDemand": "Poptávka veřejná budova",
       "industrialDemand": "Průmyslová poptávka",
-      "agriculturalDemand": "Zemědělská poptávka"
+      "agriculturalDemand": "Zemědělská poptávka",
+      "otherBuildings": "Ostatní budovy"
     },
     "charts": {
       "systemPerformance": "Výkon Systému",

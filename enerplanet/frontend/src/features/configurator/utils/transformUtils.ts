@@ -99,12 +99,15 @@ function getTechType(tech: string): 'supply' | 'demand' {
   return 'supply';
 }
 
+/** Group of the buildings whose usage is unknown (OSM building=yes and similar). */
+const OTHER_BUILDINGS = 'other_buildings';
+
 /**
  * Map each demand node location to its building's primary f_class, via a
  * spatial join: a building's footprint centre is matched to the nearest result
  * node (results coordinates are stored as {x: lon, y: lat}, building geometry
- * is GeoJSON [lon, lat]). Falls back to the raw tech name when a building has
- * no usable f_class.
+ * is GeoJSON [lon, lat]). A building without a usable f_class maps to
+ * OTHER_BUILDINGS, so unknown usage forms one group rather than one per node.
  */
 export function buildLocationToFClass(
   coordinates: Record<string, { x: number; y: number }>,
@@ -113,8 +116,7 @@ export function buildLocationToFClass(
   const map: Record<string, string> = {};
   for (const feature of buildings?.features ?? []) {
     const props = feature.properties ?? {};
-    const fClass = getPrimaryFClass(props) || normalizeFClass(String(props.f_class ?? '')) || '';
-    if (!fClass) continue;
+    const fClass = getPrimaryFClass(props) || normalizeFClass(String(props.f_class ?? '')) || OTHER_BUILDINGS;
 
     const centre = geometryCentreLonLat(feature.geometry);
     if (!centre) continue;
@@ -256,6 +258,7 @@ export function transformToCapacityData(
 /** Human label for a demand f_class group, e.g. "demand:school" -> "school". */
 function techLabelForDemandGroup(groupKey: string, fallbackTech: string, t?: TranslateFunction): string {
   const fClass = groupKey.split(':', 2)[1];
+  if (fClass === OTHER_BUILDINGS) return t ? t('results.techNames.otherBuildings') : 'Other buildings';
   if (fClass) {
     const normalized = normalizeFClass(fClass);
     return normalized ? formatFClassLabel(normalized) : getTechDisplayName(fallbackTech, t);
@@ -336,7 +339,7 @@ export function transformToEnergyFlow(
         // to the demand tech label when no f_class resolves.
         const fClass = locationToFClass[cap.location || ''];
         const nodeName = fClass
-          ? (normalizeFClass(fClass) ? formatFClassLabel(fClass) : getTechDisplayName(tech, t))
+          ? techLabelForDemandGroup(`demand:${fClass}`, tech, t)
           : getTechDisplayName(tech, t);
         addValue(demandEnergyByKey, nodeName, Math.abs(cap.value));
       } else if (!excludedSourceTechs.has(tech)) {

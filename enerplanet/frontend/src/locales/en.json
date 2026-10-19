@@ -638,7 +638,8 @@
       "commercialDemand": "Commercial Demand",
       "publicDemand": "Public Building Demand",
       "industrialDemand": "Industrial Demand",
-      "agriculturalDemand": "Agricultural Demand"
+      "agriculturalDemand": "Agricultural Demand",
+      "otherBuildings": "Other buildings"
     },
     "charts": {
       "systemPerformance": "System Performance",

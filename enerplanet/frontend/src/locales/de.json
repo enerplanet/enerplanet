@@ -638,7 +638,8 @@
       "commercialDemand": "Gewerblicher Bedarf",
       "publicDemand": "Öffentliches Gebäude Bedarf",
       "industrialDemand": "Industrieller Bedarf",
-      "agriculturalDemand": "Landwirtschaftlicher Bedarf"
+      "agriculturalDemand": "Landwirtschaftlicher Bedarf",
+      "otherBuildings": "Sonstige Gebäude"
     },
     "charts": {
       "systemPerformance": "Systemleistung",
