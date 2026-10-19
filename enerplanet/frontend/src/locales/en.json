@@ -1724,7 +1724,7 @@
       "importArea": "Import area",
       "exportArea": "Export area",
       "regenerateGrid": "Regenerate grid",
-      "regenerateGridHint": "The site's area or transformers changed. Regenerate to cluster the buildings around them and update the grid.",
+      "regenerateGridHint": "The area or its transformers changed. Regenerate to cluster the buildings around them and update the grid.",
       "importAreaError": {
         "invalid": "The file is not valid GeoJSON.",
         "noPolygon": "The file contains no polygon.",
@@ -1797,8 +1797,8 @@
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
-      "label": "Site mode",
-      "hint": "Generates the grid for this area alone and stores it separately from the shared grids. Only buildings with 3D data are included, up to 150.",
+      "label": "Custom grid",
+      "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
       "locked": "Clear the drawn area to change the mode."
     },
     "largeModel": {

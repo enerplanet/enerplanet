@@ -1673,7 +1673,7 @@
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
       "regenerateGrid": "Regenerar la red",
-      "regenerateGridHint": "La zona o los transformadores del emplazamiento han cambiado. Regenere para agrupar los edificios a su alrededor y actualizar la red.",
+      "regenerateGridHint": "La zona o sus transformadores han cambiado. Regenere para agrupar los edificios a su alrededor y actualizar la red.",
       "importAreaError": {
         "invalid": "El archivo no es un GeoJSON válido.",
         "noPolygon": "El archivo no contiene ningún polígono.",
@@ -1801,8 +1801,8 @@
       "moreFieldsNeeded": "Campos que necesitan un tamaño: {{count}}"
     },
     "siteMode": {
-      "label": "Modo emplazamiento",
-      "hint": "Genera la red solo para esta zona y la guarda aparte de las redes compartidas. Solo se incluyen edificios con datos 3D, hasta 150.",
+      "label": "Red personalizada",
+      "hint": "Coloque sus propios transformadores y construya la red de esta zona a partir de ellos, en lugar de la red pregenerada. Solo se incluyen edificios con datos 3D, hasta 150.",
       "locked": "Borre la zona dibujada para cambiar el modo."
     },
     "largeModel": {

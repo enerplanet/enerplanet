@@ -1724,7 +1724,7 @@
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
       "regenerateGrid": "Netz neu erzeugen",
-      "regenerateGridHint": "Gebiet oder Transformatoren des Standorts haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
+      "regenerateGridHint": "Gebiet oder Transformatoren haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
       "importAreaError": {
         "invalid": "Die Datei ist kein gültiges GeoJSON.",
         "noPolygon": "Die Datei enthält kein Polygon.",
@@ -1797,8 +1797,8 @@
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
     "siteMode": {
-      "label": "Standortmodus",
-      "hint": "Erzeugt das Netz nur für dieses Gebiet und speichert es getrennt von den gemeinsamen Netzen. Nur Gebäude mit 3D-Daten werden aufgenommen, höchstens 150.",
+      "label": "Eigenes Netz",
+      "hint": "Eigene Transformatoren setzen und das Netz für dieses Gebiet daraus erzeugen, statt das vorberechnete Netz zu nutzen. Nur Gebäude mit 3D-Daten, höchstens 150.",
       "locked": "Entfernen Sie das gezeichnete Gebiet, um den Modus zu ändern."
     },
     "largeModel": {

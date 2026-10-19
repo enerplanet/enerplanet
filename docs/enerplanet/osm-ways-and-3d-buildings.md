@@ -45,7 +45,7 @@ A further way is a way that shares a 3D building with its standing way.
 - **MEME:** the heat demand (with its heating technologies) and the
   electricity demand that the standing way's BuEM series covers are dropped. A
   carrier the standing way has no series for stays with the further way.
-- **Grid and site mode:** stays a building of the grid with its own pylovo
+- **Grid and custom grid:** stays a building of the grid with its own pylovo
   load.
 
 ## Ways covering several 3D buildings
