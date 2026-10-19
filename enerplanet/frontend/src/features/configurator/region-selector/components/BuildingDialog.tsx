@@ -93,11 +93,6 @@ interface BuildingDialogProps {
     hotWaterElectric?: boolean
   ) => Promise<void>;
   onAddTech?: (tech: Technology) => void;
-  onApplyTemplate?: (techs: Record<string, TechData>) => void;
-  isMultiEdit?: boolean;
-  onToggleMultiEdit?: (value: boolean) => void;
-  multiEditCount?: number;
-  onApplyTechToAll?: (tech: Technology) => void;
   isExcluded?: boolean;
   onToggleExclude?: (buildingId: number) => void;
   onSave?: () => void;

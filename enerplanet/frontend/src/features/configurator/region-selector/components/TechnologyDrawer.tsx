@@ -121,35 +121,35 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     ${isApplied ? "border-primary/50 bg-primary/5" : ""}
                 `}
             >
-                {/* Add/Remove to all button */}
-                {(onAddTechToAll || onRemoveTechFromAll) && (
+                {onAddTechToAll && (
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <button
-                                onClick={() => {
-                                    if (isApplied && onRemoveTechFromAll) {
-                                        onRemoveTechFromAll(tech);
-                                    } else if (!isApplied && onAddTechToAll) {
-                                        onAddTechToAll(tech);
-                                    }
-                                }}
-                                className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                                    isApplied
-                                        ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                                        : "bg-primary/10 hover:bg-primary/20"
-                                }`}
+                                onClick={() => onAddTechToAll(tech)}
+                                aria-label={t("technologies.addToAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-primary/10 hover:bg-primary/20"
                             >
-                                {isApplied ? (
-                                    <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                                ) : (
-                                    <Plus className="w-3.5 h-3.5 text-primary" />
-                                )}
+                                <Plus className="w-3.5 h-3.5 text-primary" />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent side="right">
-                            <p className="text-xs">
-                                {isApplied ? t("technologies.removeFromAllBuildings") : t("technologies.addToAllBuildings")}
-                            </p>
+                            <p className="text-xs">{t("technologies.addToAllBuildings")}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                )}
+                {isApplied && onRemoveTechFromAll && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => onRemoveTechFromAll(tech)}
+                                aria-label={t("technologies.removeFromAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                            >
+                                <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                            <p className="text-xs">{t("technologies.removeFromAllBuildings")}</p>
                         </TooltipContent>
                     </Tooltip>
                 )}
