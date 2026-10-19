@@ -1043,7 +1043,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/calculate/{code}": {
+        "/v1/ignis/calculate/{code}": {
             "post": {
                 "security": [
                     {
@@ -1101,7 +1101,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/data/{code}": {
+        "/v1/ignis/data/{code}": {
             "get": {
                 "security": [
                     {
@@ -1148,7 +1148,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/fields": {
+        "/v1/ignis/fields": {
             "get": {
                 "security": [
                     {
@@ -1179,7 +1179,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/variants/{country_iso2}": {
+        "/v1/ignis/variants/{country_iso2}": {
             "get": {
                 "security": [
                     {
@@ -1226,7 +1226,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/variants/{country_iso2}/match": {
+        "/v1/ignis/variants/{country_iso2}/match": {
             "get": {
                 "security": [
                     {
@@ -1289,7 +1289,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/pylovo/boundary": {
+        "/v1/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
                 "produces": [
@@ -1353,6 +1353,11 @@ const docTemplate = `{
             "properties": {
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
                 },
                 "dataset_id": {
                     "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
@@ -1777,6 +1782,11 @@ const docTemplate = `{
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
                 },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
+                },
                 "dataset_id": {
                     "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
                     "type": "string",
@@ -2108,6 +2118,10 @@ const docTemplate = `{
                 "resolved": {
                     "type": "integer",
                     "example": 30
+                },
+                "shared": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "status": {
                     "type": "string",
