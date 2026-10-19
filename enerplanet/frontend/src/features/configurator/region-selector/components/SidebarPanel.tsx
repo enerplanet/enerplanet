@@ -110,6 +110,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
   const siteMode = useModelStore((s) => s.siteMode);
+  const gridStale = useModelStore((s) => s.gridStale);
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
@@ -144,8 +145,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                 !state.toDate ||
                 !state.modelName.trim() ||
                 state.isSaving ||
-                allPolygonsCount === 0
+                allPolygonsCount === 0 ||
+                gridStale
               }
+              title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
               variant="default"
               className="flex-1 shrink-0 h-7 cursor-pointer bg-gradient-to-br from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border-0"
               data-tour="save-button"
@@ -166,8 +169,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                 !state.toDate ||
                 !state.modelName.trim() ||
                 state.isSaving ||
-                allPolygonsCount === 0
+                allPolygonsCount === 0 ||
+                gridStale
               }
+              title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
               variant="outline"
               className="ml-auto cursor-pointer shrink-0 h-7 px-5.5"
               aria-label={t("common.save")}

@@ -42,3 +42,17 @@ describe("assignToStation", () => {
         expect(() => siteBuildingIds(grid, ["w9"])).toThrow("Building w9 is not part of this site");
     });
 });
+
+describe("stationsFromGrid before the site is regenerated", () => {
+    it("reuses a generated station an earlier edit stored, matched by position", () => {
+        // A first edit stored grid 102's station as transformer 6; pylovo returns it rounded.
+        const afterFirstEdit: SiteStation[] = [
+            ...stored,
+            { transformer_id: 6, geom: point(12.9000000004, 48.7999999996), rated_kva: 250, cost_eur: null, assigned_building_ids: [] },
+        ];
+        const stations = stationsFromGrid(afterFirstEdit, grid);
+
+        expect(stations.get("102")?.transformer_id).toBe(6);
+        expect([...stations.values()].filter(s => s.transformer_id === null)).toHaveLength(0);
+    });
+});

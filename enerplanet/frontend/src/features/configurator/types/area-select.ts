@@ -154,6 +154,7 @@ export interface AreaSelectActions {
 	handlePolygonDrawn: (coordinates: [number, number][], allPolygons: [number, number][][]) => Promise<void>;
 	handlePolygonModified: (allPolygons: [number, number][][]) => Promise<void>;
 	handleSiteRegenerate: (siteId: number) => Promise<void>;
+	handleRegenerateGrid: () => Promise<void>;
 	handleClearAllPolygons: () => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions

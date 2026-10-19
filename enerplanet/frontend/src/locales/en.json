@@ -1712,7 +1712,8 @@
       "update": "Update Energy Simulation",
       "creating": "Creating Simulation...",
       "updating": "Updating Simulation...",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "regenerateFirst": "Regenerate the grid before saving."
     },
     "mapHeader": {
       "myBuildings": "My Buildings",
@@ -1721,6 +1722,8 @@
       "disableSelected": "Disable selected buildings",
       "importArea": "Import area",
       "exportArea": "Export area",
+      "regenerateGrid": "Regenerate grid",
+      "regenerateGridHint": "The site's area or transformers changed. Regenerate to cluster the buildings around them and update the grid.",
       "importAreaError": {
         "invalid": "The file is not valid GeoJSON.",
         "noPolygon": "The file contains no polygon.",

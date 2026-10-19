@@ -11,6 +11,9 @@ export interface SiteStation {
     assigned_building_ids: number[];
 }
 
+/** A position to about 1 cm; pylovo stores stations in EPSG:3035, so a stored position comes back slightly rounded. */
+const positionKey = (coordinates: number[]): string => coordinates.map(c => c.toFixed(7)).join(",");
+
 /**
  * Returns every station of the shown site grid as a site station, keyed by its
  * grid_result_id, so an edit keeps the layout the user sees. A station the
@@ -19,10 +22,15 @@ export interface SiteStation {
  */
 export const stationsFromGrid = (stored: SiteStation[], grid: PylovoGridData): Map<string, SiteStation> => {
     const byId = new Map(stored.map(s => [s.transformer_id, s]));
+    // A generated station an earlier edit already stored, before the site was
+    // regenerated, is found by its position, so it is not stored twice.
+    const byPosition = new Map(stored.map(s => [positionKey(s.geom.coordinates), s]));
     const stations = new Map<string, SiteStation>();
     for (const feature of grid.transformers?.features ?? []) {
         const props = (feature.properties ?? {}) as Record<string, unknown>;
-        const storedStation = byId.get(props.site_transformer_id as number);
+        const position = positionKey((feature.geometry as unknown as GeoJSON.Point).coordinates ?? []);
+        const storedStation = byId.get(props.site_transformer_id as number)
+            ?? (props.site_transformer_id == null ? byPosition.get(position) : undefined);
         if (storedStation) {
             byId.delete(storedStation.transformer_id);
             stations.set(String(props.grid_result_id), { ...storedStation, assigned_building_ids: [...storedStation.assigned_building_ids] });
