@@ -26,7 +26,7 @@ func requiredFieldsBlock(t *testing.T, country, fClass string, b city2tabula.Bui
 	}}
 	client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1}}
 	buildings, _, unresolved := buildingsForBuem(context.Background(), client, country,
-		[]interface{}{node}, map[string]city2tabula.Building{"1": b}, ignis.RefurbishmentExisting,
+		[]interface{}{node}, map[string]city2tabula.Building{"1": b}, nil, ignis.RefurbishmentExisting,
 		cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
 	if len(buildings) == 0 {
 		return nil, unresolved["1"]

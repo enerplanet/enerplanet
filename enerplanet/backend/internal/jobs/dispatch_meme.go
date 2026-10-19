@@ -89,7 +89,7 @@ type DispatchMemePayload struct {
 // modelDemandResolver resolves a model's BuEM series; DemandResolver
 // implements it.
 type modelDemandResolver interface {
-	Resolve(ctx context.Context, modelID uint) error
+	Resolve(ctx context.Context, modelID uint) (further map[string]string, err error)
 }
 
 // modelPVResolver is implemented by PVResolver.
@@ -157,7 +157,8 @@ func HandleDispatchMeme(
 	// 1. Build the calculation payload from the stored model, with the BuEM
 	//    series of its current config: a save resolves them in the background,
 	//    and a run started before that finishes would read none.
-	if err := resolver.Resolve(ctx, model.ID); err != nil {
+	further, err := resolver.Resolve(ctx, model.ID)
+	if err != nil {
 		return fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err)
 	}
 	built, err := payload.BuildCalculationPayload(&model)
@@ -168,6 +169,7 @@ func HandleDispatchMeme(
 		return err
 	}
 	if calc, ok := built.(payload.CalculationPayload); ok {
+		dropFurtherWayHeat(calc.Topology, further)
 		warning, err := checkDemandCoverage(calc.Topology)
 		if err != nil {
 			return fmt.Errorf("model %d: %w", p.ModelID, err)

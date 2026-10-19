@@ -304,14 +304,14 @@ func TestHandleDispatchMeme_missingCountryIsAnError(t *testing.T) {
 // resolvedDemand is a model whose BuEM series need no resolving.
 type resolvedDemand struct{}
 
-func (resolvedDemand) Resolve(context.Context, uint) error { return nil }
+func (resolvedDemand) Resolve(context.Context, uint) (map[string]string, error) { return nil, nil }
 
 // orderedDemand records whether the series were resolved before they were read.
 type orderedDemand struct{ resolved, readAfterResolve bool }
 
-func (o *orderedDemand) Resolve(context.Context, uint) error {
+func (o *orderedDemand) Resolve(context.Context, uint) (map[string]string, error) {
 	o.resolved = true
-	return nil
+	return nil, nil
 }
 
 func (o *orderedDemand) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) {
@@ -412,4 +412,6 @@ func TestHandleDispatchMeme_resolveFailureStopsTheDispatch(t *testing.T) {
 // failingResolve is a resolution that cannot reach its store.
 type failingResolve struct{}
 
-func (failingResolve) Resolve(context.Context, uint) error { return errors.New("connection refused") }
+func (failingResolve) Resolve(context.Context, uint) (map[string]string, error) {
+	return nil, errors.New("connection refused")
+}

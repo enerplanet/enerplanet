@@ -231,3 +231,17 @@ func TestGetSurfaceGeometry_NoSurfaceRowsIsNotAnError(t *testing.T) {
 	require.Len(t, got.Buildings, 1)
 	assert.Empty(t, got.Buildings[0].Surfaces, "City2TABULA omits the key entirely, so absent and empty are one case")
 }
+
+// A building comes back once under its best way; its other ways point at it.
+func TestFurtherWaysMapsSharedWaysToTheBestWay(t *testing.T) {
+	r := BuildingsResult{Buildings: []Building{
+		{OSMID: "223728275", OSMIDs: []string{"223728275", "1265475272", "1414567368"}},
+		{OSMID: "w1", OSMIDs: []string{"w1"}},
+		{OSMID: "w2"},
+	}}
+	got := r.FurtherWays()
+	want := map[string]string{"1265475272": "223728275", "1414567368": "223728275"}
+	if len(got) != len(want) || got["1265475272"] != want["1265475272"] || got["1414567368"] != want["1414567368"] {
+		t.Fatalf("FurtherWays() = %v, want %v", got, want)
+	}
+}

@@ -154,9 +154,14 @@ func (s *SiteHandler) excludeUnlinked(ctx context.Context, siteID int, country s
 	if err != nil {
 		return 0, 0, fmt.Errorf("City2TABULA lookup for site %d failed: %w", siteID, err)
 	}
+	// A further way of a 3D building stays in the site with its electrical
+	// load; its heat is modelled under the building's best way.
 	linked := make(map[string]bool, len(result.Buildings))
 	for _, b := range result.Buildings {
 		linked[b.OSMID] = true
+	}
+	for way := range result.FurtherWays() {
+		linked[way] = true
 	}
 
 	var patches []map[string]any

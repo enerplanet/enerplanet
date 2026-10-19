@@ -121,9 +121,13 @@ type RunStage struct {
 // City2TABULA serves that separately (GET /api/v1/geometry) for consumers
 // that actually need to render it; nothing here does.
 type Building struct {
-	ObjectID          string    `json:"object_id"`
-	DatasetID         string    `json:"dataset_id"`
-	OSMID             string    `json:"osm_id"`
+	ObjectID  string `json:"object_id"`
+	DatasetID string `json:"dataset_id"`
+	OSMID     string `json:"osm_id"`
+	// OSMIDs lists every OSM way linked to this 3D building, OSMID first
+	// (City2TABULA 0.11.2 and later). A building appears once even when
+	// several of the requested ways belong to it.
+	OSMIDs            []string  `json:"osm_ids,omitempty"`
 	MatchType         int16     `json:"match_type"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
 	MaxHeight         *float64  `json:"max_height,omitempty"`
@@ -135,6 +139,21 @@ type Building struct {
 	FloorAreaSqm      *float64  `json:"area_total_floor,omitempty"`
 	TabulaVariantCode *string   `json:"tabula_variant_code,omitempty"`
 	Surfaces          []Surface `json:"surfaces,omitempty"`
+}
+
+// FurtherWays maps each OSM way that shares a 3D building with that
+// building's best way to the best way. The building's envelope is reported
+// once, under the best way, so a further way has no 3D data of its own.
+func (r BuildingsResult) FurtherWays() map[string]string {
+	further := map[string]string{}
+	for _, b := range r.Buildings {
+		for _, way := range b.OSMIDs {
+			if way != b.OSMID {
+				further[way] = b.OSMID
+			}
+		}
+	}
+	return further
 }
 
 // DatasetCredit is one source dataset's attribution as City2TABULA returns it

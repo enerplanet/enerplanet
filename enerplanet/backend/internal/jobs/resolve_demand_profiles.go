@@ -81,54 +81,57 @@ func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandRes
 	if err := json.Unmarshal(t.Payload(), &rp); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
-	return r.Resolve(ctx, rp.ModelID)
+	_, err := r.Resolve(ctx, rp.ModelID)
+	return err
 }
 
-// Resolve resolves and links the series of every building of model modelID.
-func (r DemandResolver) Resolve(ctx context.Context, modelID uint) error {
+// Resolve resolves and links the series of every building of model modelID
+// and returns its further ways (see buemRun.further), which have no series of
+// their own because their building's heat is resolved under its best way.
+func (r DemandResolver) Resolve(ctx context.Context, modelID uint) (map[string]string, error) {
 	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	var model commonModels.Model
 	if err := r.DB.First(&model, modelID).Error; err != nil {
-		return fmt.Errorf("failed to fetch model %d: %w", modelID, err)
+		return nil, fmt.Errorf("failed to fetch model %d: %w", modelID, err)
 	}
 
 	if ModelHeatSource(model.Config) == HeatSourceEstimate {
 		log.Debugf("model %d: heatSource=estimate, no demand profiles to resolve", modelID)
-		return nil
+		return nil, nil
 	}
 
 	calcPayload, err := buildCalculationPayload(&model)
 	if err != nil {
 		log.Debugf("model %d: cannot build calculation payload, nothing to resolve: %v", modelID, err)
-		return nil
+		return nil, nil
 	}
 
 	osmIDs := buildingOSMIDs(calcPayload.Topology)
 	if len(osmIDs) == 0 {
 		log.Debugf("model %d: no buildings in topology, nothing to resolve", modelID)
-		return nil
+		return nil, nil
 	}
 
 	refurbLevel := modelRefurbishmentLevel(model.Config)
 	if err := r.Profiles.ResetForRun(modelID, osmIDs, string(refurbLevel)); err != nil {
-		return fmt.Errorf("failed to reset demand profile rows for model %d: %w", modelID, err)
+		return nil, fmt.Errorf("failed to reset demand profile rows for model %d: %w", modelID, err)
 	}
 	revision, err := contenthash.Of(model.Config)
 	if err != nil {
-		return fmt.Errorf("hash config of model %d: %w", modelID, err)
+		return nil, fmt.Errorf("hash config of model %d: %w", modelID, err)
 	}
 	run := prepareBuemRun(ctx, log, r.C2T, r.C2TRuns, r.Weather, r.WeatherProvider, r.Ignis, model, calcPayload, refurbLevel)
 	saveFailures(log, r.Profiles, modelID, run.unresolved)
 	if len(run.buildings) == 0 {
-		return nil
+		return run.further, nil
 	}
 	if r.BuemVersion == "" {
 		log.Errorf("model %d: BUEM_VERSION is not configured, BuEM results cannot be keyed", modelID)
 		saveFailures(log, r.Profiles, modelID, allFailed(run.buildings, "BUEM_VERSION is not configured on the backend"))
-		return nil
+		return run.further, nil
 	}
-	return resolveAndLink(ctx, log, r.DB, modelID, revision, run, calcPayload, r.BuemVersion, r.BuEM, r.Profiles, r.Series)
+	return run.further, resolveAndLink(ctx, log, r.DB, modelID, revision, run, calcPayload, r.BuemVersion, r.BuEM, r.Profiles, r.Series)
 }
 
 // resolveAndLink stores every building's series, then links them and fills

@@ -31,7 +31,7 @@ func TestBuildingsForBuem_storedBlockNeedsNoEnvelope(t *testing.T) {
 	topology := []interface{}{storedBuemNode("777", block)}
 
 	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology,
-		map[string]city2tabula.Building{}, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
+		map[string]city2tabula.Building{}, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 1, "a stored block is BuEM input on its own; no City2TABULA envelope is needed")
 	assert.JSONEq(t, `{"building_type":"MFH","envelope":{"elements":[]},"cooking_carrier":"gas"}`, string(buildings[0].Building))
@@ -48,7 +48,7 @@ func TestBuildingsForBuem_storedBlockWinsOverEnvelope(t *testing.T) {
 	}}
 
 	buildings, _, _ := buildingsForBuem(context.Background(), nil, "germany", topology,
-		envelope, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
+		envelope, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 1)
 	assert.JSONEq(t, `{"building_type":"MFH","n_air_infiltration":0.2,"cooking_carrier":"gas"}`, string(buildings[0].Building),
@@ -74,7 +74,7 @@ func TestBuildingsForBuem_storedSolverTravelsBesideTheBlock(t *testing.T) {
 	props["buem"].(map[string]interface{})["solver"] = map[string]interface{}{"use_milp": true}
 
 	buildings, _, _ := buildingsForBuem(context.Background(), nil, "germany", []interface{}{node},
-		map[string]city2tabula.Building{}, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
+		map[string]city2tabula.Building{}, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 1)
 	assert.JSONEq(t, `{"use_milp":true}`, string(buildings[0].Solver))
@@ -86,7 +86,7 @@ func TestBuildingsForBuem_storedCookingCarrierWinsOverTheModel(t *testing.T) {
 	topology := []interface{}{storedBuemNode("1", own), storedBuemNode("2", unset)}
 
 	buildings, _, _ := buildingsForBuem(context.Background(), nil, "germany", topology,
-		map[string]city2tabula.Building{}, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
+		map[string]city2tabula.Building{}, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: true})
 
 	require.Len(t, buildings, 2)
 	assert.JSONEq(t, `{"building_type":"SFH","cooking_carrier":"electric"}`, string(buildings[0].Building),
