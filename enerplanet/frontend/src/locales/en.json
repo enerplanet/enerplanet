@@ -1720,6 +1720,7 @@
       "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings",
       "importArea": "Import area",
+      "exportArea": "Export area",
       "importAreaError": {
         "invalid": "The file is not valid GeoJSON.",
         "noPolygon": "The file contains no polygon.",

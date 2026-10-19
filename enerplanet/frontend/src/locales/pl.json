@@ -1408,6 +1408,7 @@
       "toggleMyBuildings": "Przełącz moje budynki",
       "disableSelected": "Wyłącz zaznaczone budynki",
       "importArea": "Importuj obszar",
+      "exportArea": "Eksportuj obszar",
       "importAreaError": {
         "invalid": "Plik nie jest prawidłowym GeoJSON.",
         "noPolygon": "Plik nie zawiera wielokąta.",

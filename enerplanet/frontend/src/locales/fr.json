@@ -1669,6 +1669,7 @@
       "toggleMyBuildings": "Basculer mes bâtiments",
       "disableSelected": "Désactiver les bâtiments sélectionnés",
       "importArea": "Importer une zone",
+      "exportArea": "Exporter la zone",
       "importAreaError": {
         "invalid": "Le fichier n'est pas un GeoJSON valide.",
         "noPolygon": "Le fichier ne contient aucun polygone.",

@@ -4,6 +4,8 @@ import { get as getProjection } from "ol/proj";
 import { register } from "ol/proj/proj4";
 import proj4 from "proj4";
 
+import { polygonsToGeom } from "@/features/configurator/services/pylovoService";
+
 /** Projected systems of the countries EnerPlanET covers, as QGIS exports them. */
 const PROJ_DEFS: Record<string, string> = {
   "EPSG:25832": "+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs",
@@ -35,6 +37,15 @@ function crsOf(doc: { crs?: { properties?: { name?: string } } }): string {
   const code = /EPSG:{1,2}(\d+)$/i.exec(name)?.[1];
   if (!code) throw new AreaImportError("unknownCrs", name);
   return `EPSG:${code}`;
+}
+
+/**
+ * The area as a GeoJSON FeatureCollection in EPSG:4326 with closed rings, the
+ * form areaRingsFromGeoJSON reads back, so another model can start from it.
+ */
+export function areaToGeoJSON(polygons: [number, number][][], name: string): string {
+  const feature = { type: "Feature", properties: { name }, geometry: polygonsToGeom(polygons) };
+  return JSON.stringify({ type: "FeatureCollection", features: [feature] });
 }
 
 /**

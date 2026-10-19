@@ -1720,6 +1720,7 @@
       "toggleMyBuildings": "Meine Gebäude umschalten",
       "disableSelected": "Ausgewählte Gebäude deaktivieren",
       "importArea": "Gebiet importieren",
+      "exportArea": "Gebiet exportieren",
       "importAreaError": {
         "invalid": "Die Datei ist kein gültiges GeoJSON.",
         "noPolygon": "Die Datei enthält kein Polygon.",

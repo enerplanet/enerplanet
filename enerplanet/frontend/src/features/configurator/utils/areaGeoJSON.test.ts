@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AreaImportError, areaRingsFromGeoJSON } from "./areaGeoJSON";
+import { AreaImportError, areaRingsFromGeoJSON, areaToGeoJSON } from "./areaGeoJSON";
 
 const square = [[12.95, 48.83], [12.96, 48.83], [12.96, 48.84], [12.95, 48.84], [12.95, 48.83]];
 
@@ -40,5 +40,18 @@ describe("areaRingsFromGeoJSON", () => {
     expect(() => areaRingsFromGeoJSON("not json")).toThrow(AreaImportError);
     expect(() => areaRingsFromGeoJSON(JSON.stringify({ type: "Point", coordinates: [1, 2] }))).toThrow("noPolygon");
     expect(() => areaRingsFromGeoJSON(JSON.stringify({ type: "Polygon", coordinates: [square], crs: { type: "name", properties: { name: "EPSG:9999" } } }))).toThrow("unknownCrs");
+  });
+});
+
+describe("areaToGeoJSON", () => {
+  it("writes an area that areaRingsFromGeoJSON reads back unchanged", () => {
+    const rings: [number, number][][] = [
+      [[12.95, 48.83], [12.96, 48.83], [12.96, 48.84]],
+      [[12.89, 48.80], [12.90, 48.80], [12.90, 48.81], [12.89, 48.81]],
+    ];
+    const text = areaToGeoJSON(rings, "Mainkofen");
+
+    expect(JSON.parse(text).features[0].properties.name).toBe("Mainkofen");
+    expect(areaRingsFromGeoJSON(text)).toEqual(rings);
   });
 });
