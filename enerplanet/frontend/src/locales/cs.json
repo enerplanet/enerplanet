@@ -1400,7 +1400,8 @@
       "update": "Aktualizovat energetickou simulaci",
       "creating": "Vytváření simulace...",
       "updating": "Aktualizace simulace...",
-      "cancel": "Zrušit"
+      "cancel": "Zrušit",
+      "regenerateFirst": "Před uložením síť znovu vytvořte."
     },
     "mapHeader": {
       "myBuildings": "Moje budovy",
@@ -1409,6 +1410,8 @@
       "disableSelected": "Vypnout vybrané budovy",
       "importArea": "Importovat oblast",
       "exportArea": "Exportovat oblast",
+      "regenerateGrid": "Znovu vytvořit síť",
+      "regenerateGridHint": "Oblast nebo transformátory lokality se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
       "importAreaError": {
         "invalid": "Soubor není platný GeoJSON.",
         "noPolygon": "Soubor neobsahuje žádný polygon.",

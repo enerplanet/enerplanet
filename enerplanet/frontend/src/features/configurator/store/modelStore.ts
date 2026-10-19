@@ -85,6 +85,9 @@ export interface ModelStore {
   setIsLoadingModel: (v: boolean) => void;
   isGeneratingGrid: boolean;
   setIsGeneratingGrid: (v: boolean) => void;
+  /** The area or the stations changed since the shown grid was generated; Regenerate grid brings it up to date. */
+  gridStale: boolean;
+  setGridStale: (v: boolean) => void;
 
   // ── Unsaved changes ──
   isModified: boolean;
@@ -226,6 +229,7 @@ const getInitialState = () => ({
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
+  gridStale: false,
   isModified: false,
   showUnsavedDialog: false,
   showAreaSelectTour: false,
@@ -323,6 +327,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsLoadingModel: (v) => set({ isLoadingModel: v }),
   isGeneratingGrid: false,
   setIsGeneratingGrid: (v) => set({ isGeneratingGrid: v }),
+  gridStale: false,
+  setGridStale: (v) => set({ gridStale: v }),
 
   // ── Unsaved changes ──
   isModified: false,

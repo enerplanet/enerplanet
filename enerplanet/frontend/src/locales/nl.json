@@ -1400,7 +1400,8 @@
       "update": "Energiesimulatie bijwerken",
       "creating": "Simulatie wordt gemaakt...",
       "updating": "Simulatie wordt bijgewerkt...",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "regenerateFirst": "Genereer het net opnieuw voordat u opslaat."
     },
     "mapHeader": {
       "myBuildings": "Mijn gebouwen",
@@ -1409,6 +1410,8 @@
       "disableSelected": "Geselecteerde gebouwen uitschakelen",
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
+      "regenerateGrid": "Net opnieuw genereren",
+      "regenerateGridHint": "Het gebied of de transformatoren van de locatie zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
       "importAreaError": {
         "invalid": "Het bestand is geen geldige GeoJSON.",
         "noPolygon": "Het bestand bevat geen polygoon.",

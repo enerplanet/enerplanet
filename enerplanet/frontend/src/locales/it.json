@@ -1400,7 +1400,8 @@
       "update": "Aggiorna simulazione energetica",
       "creating": "Creazione simulazione...",
       "updating": "Aggiornamento simulazione...",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "regenerateFirst": "Rigenera la rete prima di salvare."
     },
     "mapHeader": {
       "myBuildings": "I miei edifici",
@@ -1409,6 +1410,8 @@
       "disableSelected": "Disattiva gli edifici selezionati",
       "importArea": "Importa area",
       "exportArea": "Esporta area",
+      "regenerateGrid": "Rigenera la rete",
+      "regenerateGridHint": "L'area o i trasformatori del sito sono cambiati. Rigenera per raggruppare gli edifici attorno ad essi e aggiornare la rete.",
       "importAreaError": {
         "invalid": "Il file non è un GeoJSON valido.",
         "noPolygon": "Il file non contiene alcun poligono.",

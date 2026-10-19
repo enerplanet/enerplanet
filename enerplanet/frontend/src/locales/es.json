@@ -1661,7 +1661,8 @@
       "update": "Actualizar simulación energética",
       "creating": "Creando simulación...",
       "updating": "Actualizando simulación...",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "regenerateFirst": "Regenere la red antes de guardar."
     },
     "mapHeader": {
       "myBuildings": "Mis edificios",
@@ -1670,6 +1671,8 @@
       "disableSelected": "Desactivar los edificios seleccionados",
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
+      "regenerateGrid": "Regenerar la red",
+      "regenerateGridHint": "La zona o los transformadores del emplazamiento han cambiado. Regenere para agrupar los edificios a su alrededor y actualizar la red.",
       "importAreaError": {
         "invalid": "El archivo no es un GeoJSON válido.",
         "noPolygon": "El archivo no contiene ningún polígono.",

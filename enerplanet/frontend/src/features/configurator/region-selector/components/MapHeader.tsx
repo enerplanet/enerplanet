@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { FileDown, FileUp, Loader2, Lock, MapPin } from "lucide-react";
+import { FileDown, FileUp, Loader2, Lock, MapPin, RefreshCw } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -57,6 +57,9 @@ interface MapHeaderProps {
   onImportArea?: (file: File) => void;
   /** Downloads the drawn area as a GeoJSON file that Import area reads back. */
   onExportArea?: () => void;
+  /** Present while a site's grid is out of date with its edits; regenerates it. */
+  onRegenerateGrid?: () => void;
+  isGeneratingGrid?: boolean;
   selectedBuildingCount?: number;
   onDisableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
@@ -81,6 +84,8 @@ export const MapHeader: FC<MapHeaderProps> = ({
   onClearAllPolygons,
   onImportArea,
   onExportArea,
+  onRegenerateGrid,
+  isGeneratingGrid = false,
   selectedBuildingCount = 0,
   onDisableSelectedBuildings,
   isLoadingPreference,
@@ -169,6 +174,18 @@ export const MapHeader: FC<MapHeaderProps> = ({
               }}
             />
           </label>
+        )}
+        {onRegenerateGrid && (
+          <button
+            type="button"
+            onClick={onRegenerateGrid}
+            disabled={isGeneratingGrid}
+            title={t("simulation.mapHeader.regenerateGridHint")}
+            className="md-fade-in bg-amber-500 border border-amber-600 rounded px-2 py-1 flex items-center gap-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingGrid ? "animate-spin" : ""}`} />
+            {t("simulation.mapHeader.regenerateGrid")}
+          </button>
         )}
         {onExportArea && allPolygonsCount > 0 && (
           <button

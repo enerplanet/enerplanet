@@ -233,6 +233,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   useAreaPreparation();
 
   const runMode = useModelStore((s) => s.runMode);
+  const gridStale = useModelStore((s) => s.gridStale);
+  const setGridStale = useModelStore((s) => s.setGridStale);
   const operateIssues = useOperateSizes(pylovoLayers.pylovoLayersRef, runMode, pylovoLayers.pylovoGridData);
   const fixOperateIssue = useCallback((issue: OperateIssue, techKey: string) => {
     const extent = issue.feature.getGeometry()?.getExtent();
@@ -278,11 +280,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Extracted hooks ──────────────────────────────────────────────
 
   const refreshGrid = useCallback(async () => {
-    // A site keeps its edited stations only if the same site is regenerated; redrawing would copy a new one from OSM.
-    const site = siteScope(pylovoLayers.pylovoGridData);
-    if (site) await actions.handleSiteRegenerate(site.site_id);
+    // A site edit (station added, buildings assigned) waits for Regenerate grid,
+    // which re-clusters the site; a default-mode grid is fetched again at once.
+    if (siteScope(pylovoLayers.pylovoGridData)) setGridStale(true);
     else if (state.allPolygons.length > 0) await actions.handlePolygonModified(state.allPolygons);
-  }, [state.allPolygons, actions, pylovoLayers.pylovoGridData]);
+  }, [state.allPolygons, actions, pylovoLayers.pylovoGridData, setGridStale]);
 
   const addTransformer = useAddTransformerMode({
     map,
@@ -694,6 +696,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
             onImportArea={handleImportArea}
             onExportArea={handleExportArea}
+            onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}
+            isGeneratingGrid={state.isGeneratingGrid}
             selectedBuildingCount={buildingSelection.selectedCount}
             onDisableSelectedBuildings={buildingSelection.disableSelected}
             isLoadingPreference={isLoadingPreference}
