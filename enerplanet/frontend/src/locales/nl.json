@@ -1945,6 +1945,9 @@
     },
     "addToAllBuildings": "Aan alle gebouwen toevoegen",
     "removeFromAllBuildings": "Van alle gebouwen verwijderen",
+    "removeAll": "Alle technologieën verwijderen",
+    "removeAllConfirmTitle": "Alle technologieën verwijderen?",
+    "removeAllConfirmDescription": "Verwijdert elke technologie en warmteverbinding van {{count}} gebouwen in dit model, ook automatisch toegewezen. Sla het model op om de wijziging te behouden.",
     "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Stel de technologieparameters voor dit gebouw in",
@@ -2480,6 +2483,7 @@
     "techAddedToAll": "{{tech}} toegevoegd aan {{count}} gebouwen",
     "techAddedToBuilding": "{{tech}} toegevoegd aan gebouw",
     "techRemovedFromAll": "{{tech}} verwijderd van {{count}} gebouwen",
+    "allTechsRemoved": "Technologieën verwijderd van {{count}} gebouwen",
     "techRemovedFromBuilding": "{{tech}} verwijderd van gebouw",
     "techNotFound": "Technologie {{tech}} niet gevonden",
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
