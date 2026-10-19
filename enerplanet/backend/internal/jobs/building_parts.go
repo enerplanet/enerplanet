@@ -172,10 +172,10 @@ func combineParts(store seriesStore, parts map[string][]string, resolved map[str
 	return loadStoredProfiles(store, out)
 }
 
-// sumProfiles stores the step-by-step sum of the profiles ids, with summary
-// statistics recomputed from the sums and the rest of the summary taken from
-// the first, largest building. The sum is keyed by its parts' profiles, so the
-// same buildings are summed once.
+// sumProfiles stores the step-by-step sum of the profiles ids, with the
+// summary combined across them (buem.CombineSummary) and every other field
+// taken from the first, largest building. The sum is keyed by its parts'
+// profiles, so the same buildings are summed once.
 func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredProfile) (int64, error) {
 	key := sumKey(ids)
 	existing, err := store.StoredKeys([]string{key})
@@ -210,7 +210,11 @@ func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredP
 	if err != nil {
 		return 0, err
 	}
-	summary, err := buem.SetSummaryStats(json.RawMessage(head.Summary), sum, head.ResolutionMinutes)
+	blocks := make([]json.RawMessage, len(ids))
+	for i, id := range ids {
+		blocks[i] = json.RawMessage(stored[id].Summary)
+	}
+	summary, err := buem.CombineSummary(blocks, sum, head.ResolutionMinutes)
 	if err != nil {
 		return 0, err
 	}
@@ -233,15 +237,16 @@ func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredP
 	})
 }
 
-// sumKey keys the sum of the profiles ids; it cannot collide with a BuEM
-// request key, which is a bare hash.
+// sumKey keys the sum of the profiles ids. It is a 64-character hash to fit
+// models.SeriesProfile.Key; hashing a "buem-sum:" prefix with the ids keeps it
+// apart from BuEM request keys, which hash the request.
 func sumKey(ids []int64) string {
 	parts := make([]string, len(ids))
 	for i, id := range ids {
 		parts[i] = strconv.FormatInt(id, 10)
 	}
-	h := sha256.Sum256([]byte(strings.Join(parts, ",")))
-	return "buem-sum:" + hex.EncodeToString(h[:])
+	h := sha256.Sum256([]byte("buem-sum:" + strings.Join(parts, ",")))
+	return hex.EncodeToString(h[:])
 }
 
 // combinePartResults sums the raw BuEM results of each way's 3D buildings into
