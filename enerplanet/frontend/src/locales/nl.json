@@ -1514,7 +1514,15 @@
       "plan": "Plannen",
       "operate": "Bedrijven",
       "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
-      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren"
+      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren",
+      "unsized": "Gebouwen die een grootte nodig hebben voor de bedrijfsmodus: {{count}}. Klik op een regel om die in te stellen.",
+      "unsizedEntry": "Gebouw {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximale grootte",
+        "cont_storage_cap_max": "opslaggrootte"
+      },
+      "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
+      "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",

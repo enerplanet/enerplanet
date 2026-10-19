@@ -36,6 +36,7 @@ import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { GridStatsBadge } from "./GridStatsBadge";
 import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
+import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import type { FC, ChangeEvent } from "react";
@@ -68,6 +69,9 @@ interface SidebarPanelProps {
   buildingsCount?: number;
   peakLoadKw?: number;
   isModified?: boolean;
+  /** Buildings whose technologies lack a size for operate mode. */
+  operateIssues?: OperateIssue[];
+  onFixOperateIssue?: (issue: OperateIssue, techKey: string) => void;
 }
 
 export const SidebarPanel: FC<SidebarPanelProps> = ({
@@ -96,6 +100,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   buildingsCount,
   peakLoadKw,
   isModified = false,
+  operateIssues = [],
+  onFixOperateIssue,
 }) => {
   const { t } = useTranslation();
   const cookingCarrier = useModelStore((s) => s.cookingCarrier);
@@ -332,6 +338,30 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </SelectContent>
           </Select>
           <div className="text-xs text-muted-foreground mt-1">{t(`simulation.runMode.${runMode}Hint`)}</div>
+          {runMode === "operate" && operateIssues.length > 0 && (
+            <div className="mt-2 rounded-md border border-red-300 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/40">
+              <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                {t("simulation.runMode.unsized", { count: operateIssues.length })}
+              </p>
+              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto">
+                {operateIssues.flatMap((issue) => issue.techs.map((tech) => (
+                  <li key={`${issue.osmId}:${tech.techKey}`}>
+                    <button
+                      type="button"
+                      onClick={() => onFixOperateIssue?.(issue, tech.techKey)}
+                      className="w-full cursor-pointer text-left text-xs text-red-700 hover:underline dark:text-red-300"
+                    >
+                      {t("simulation.runMode.unsizedEntry", {
+                        building: issue.osmId,
+                        tech: t(`technologies.types.${tech.techKey}`, { defaultValue: tech.techKey }),
+                        fields: tech.fields.map((field) => t(`simulation.runMode.fields.${field}`)).join(", "),
+                      })}
+                    </button>
+                  </li>
+                )))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2" data-tour="technologies-parameters">

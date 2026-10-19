@@ -1514,7 +1514,15 @@
       "plan": "Plánování",
       "operate": "Provoz",
       "planHint": "Zvolit velikost každé technologie při nejnižších nákladech",
-      "operateHint": "Ponechat každou technologii v maximální velikosti a optimalizovat jen její provoz"
+      "operateHint": "Ponechat každou technologii v maximální velikosti a optimalizovat jen její provoz",
+      "unsized": "Budovy, které pro režim provozu potřebují velikost: {{count}}. Kliknutím na položku ji nastavíte.",
+      "unsizedEntry": "Budova {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximální velikost",
+        "cont_storage_cap_max": "velikost úložiště"
+      },
+      "fieldNeeded": "Režim provozu zde potřebuje konečnou velikost",
+      "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",

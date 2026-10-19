@@ -1514,7 +1514,15 @@
       "plan": "Pianificare",
       "operate": "Esercire",
       "planHint": "Scegliere la dimensione di ogni tecnologia al minimo costo",
-      "operateHint": "Mantenere ogni tecnologia alla sua dimensione massima e ottimizzarne solo l'uso"
+      "operateHint": "Mantenere ogni tecnologia alla sua dimensione massima e ottimizzarne solo l'uso",
+      "unsized": "Edifici che richiedono una dimensione per la modalità di esercizio: {{count}}. Fare clic su una voce per impostarla.",
+      "unsizedEntry": "Edificio {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "dimensione massima",
+        "cont_storage_cap_max": "dimensione di accumulo"
+      },
+      "fieldNeeded": "La modalità di esercizio richiede qui una dimensione finita",
+      "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",

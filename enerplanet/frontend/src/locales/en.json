@@ -1771,7 +1771,15 @@
       "plan": "Plan",
       "operate": "Operate",
       "planHint": "Choose the size of each technology at least cost",
-      "operateHint": "Keep each technology at its maximum size and optimise only its use"
+      "operateHint": "Keep each technology at its maximum size and optimise only its use",
+      "unsized": "Buildings that need a size for operate mode: {{count}}. Click an entry to set it.",
+      "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximum size",
+        "cont_storage_cap_max": "storage size"
+      },
+      "fieldNeeded": "Operate mode needs a finite size here",
+      "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "largeModel": {
       "title": "This model has {{count}} buildings",

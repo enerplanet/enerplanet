@@ -291,12 +291,23 @@ function addTechIconStyles(
 }
 
 // Returns a style function for OpenLayers that responds to zoom/resolution changes
+// Red outline for a building whose technologies lack a size in operate mode (useOperateSizes).
+const OPERATE_UNSIZED_OUTLINE = new Style({
+    fill: new Fill({ color: 'rgba(220, 38, 38, 0.6)' }),
+    stroke: new Stroke({ color: '#dc2626', width: 4 }),
+    image: new CircleStyle({ radius: 16, stroke: new Stroke({ color: '#dc2626', width: 4 }) }),
+    // Above the building's own fill (99, 100), below its icons (1001 and up).
+    zIndex: 101,
+});
+
 export function createBuildingStyleFunction(
     colorByTransformer: boolean = false,
     colorByDemand: boolean = false,
 ): StyleFunction {
     return (feature: FeatureLike, resolution: number): Style | Style[] | void => {
-        return buildingSimpleStyleFunction(feature as Feature<Geometry>, colorByTransformer, colorByDemand, resolution);
+        const base = buildingSimpleStyleFunction(feature as Feature<Geometry>, colorByTransformer, colorByDemand, resolution);
+        if (!feature.get('operate_unsized')) return base;
+        return [...(Array.isArray(base) ? base : [base]), OPERATE_UNSIZED_OUTLINE];
     };
 }
 

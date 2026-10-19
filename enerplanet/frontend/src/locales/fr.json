@@ -1775,7 +1775,15 @@
       "plan": "Planifier",
       "operate": "Exploiter",
       "planHint": "Choisir la taille de chaque technologie au moindre coût",
-      "operateHint": "Garder chaque technologie à sa taille maximale et optimiser uniquement son utilisation"
+      "operateHint": "Garder chaque technologie à sa taille maximale et optimiser uniquement son utilisation",
+      "unsized": "Bâtiments qui ont besoin d'une taille pour le mode exploitation : {{count}}. Cliquez sur une entrée pour la définir.",
+      "unsizedEntry": "Bâtiment {{building}} : {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "taille maximale",
+        "cont_storage_cap_max": "taille de stockage"
+      },
+      "fieldNeeded": "Le mode exploitation exige ici une taille finie",
+      "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",

@@ -37,6 +37,7 @@ import {
   SolarPanel,
   Fan,
   ChevronDown,
+  ChevronUp,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -53,6 +54,8 @@ import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import { useTranslation } from "@spatialhub/i18n";
 import { FUEL_BY_TYPE } from "@/features/technologies/catalogue";
+import { useModelStore } from "@/features/configurator/store/modelStore";
+import { OPERATE_SIZE_FIELDS, isFiniteValue } from "@/features/configurator/utils/operateSizes";
 import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
 
 // Wind turbine data structure
@@ -434,6 +437,35 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
   const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
+  const runMode = useModelStore((s) => s.runMode);
+  // Flagged size fields scrolled out of view; a hint below the list points to them.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hiddenFlagged, setHiddenFlagged] = useState({ count: 0, above: false });
+  const flaggedOutOfView = useCallback((): Element[] => {
+    const box = scrollRef.current;
+    if (!box) return [];
+    const view = box.getBoundingClientRect();
+    return [...box.querySelectorAll("[data-operate-missing]")].filter((row) => {
+      const r = row.getBoundingClientRect();
+      return r.top < view.top || r.bottom > view.bottom;
+    });
+  }, []);
+  const updateHiddenFlagged = useCallback(() => {
+    const hidden = flaggedOutOfView();
+    const above = hidden.length > 0 && hidden[0].getBoundingClientRect().top < (scrollRef.current?.getBoundingClientRect().top ?? 0);
+    setHiddenFlagged((prev) => (prev.count === hidden.length && prev.above === above ? prev : { count: hidden.length, above }));
+  }, [flaggedOutOfView]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(updateHiddenFlagged);
+    return () => cancelAnimationFrame(frame);
+  });
+
+  // In operate mode, bring the first size operate needs into view.
+  useEffect(() => {
+    if (!open || runMode !== "operate") return;
+    const timer = setTimeout(() => contentRef.current?.querySelector("[data-operate-missing]")?.scrollIntoView({ block: "center" }), 150);
+    return () => clearTimeout(timer);
+  }, [open, runMode, technology]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get translated parameter name/alias
@@ -811,6 +843,8 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     const description = getDescription(constraint.key, translatedName, constraint.description);
     const isDisabled = disabledFields.has(constraint.key);
     const isInfinityField = infinityFields.has(constraint.key);
+    const operateFields = OPERATE_SIZE_FIELDS[technology.type || technology.key] ?? [];
+    const needsSize = runMode === "operate" && operateFields.includes(constraint.key) && !isFiniteValue(value);
 
     // Check if it's a dropdown (use dynamic options if available)
     const options = dynamicOptions[constraint.key] || constraint.options;
@@ -916,7 +950,11 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     };
 
     return (
-      <tr key={constraint.key} className="hover:bg-muted/30 transition-colors">
+      <tr
+        key={constraint.key}
+        data-operate-missing={needsSize || undefined}
+        className={needsSize ? "bg-red-50 ring-2 ring-inset ring-red-500 dark:bg-red-950/40" : "hover:bg-muted/30 transition-colors"}
+      >
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
             <div>
@@ -955,6 +993,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <td className="px-3 py-2.5">
           {renderControl()}
           {error && <p className="text-[10px] text-red-500 text-right mt-0.5">{error}</p>}
+          {needsSize && <p className="text-[10px] font-medium text-red-600 text-right mt-0.5">{t("simulation.runMode.fieldNeeded")}</p>}
         </td>
         <td className="px-3 py-2.5 text-right">
           <span className="text-xs text-muted-foreground">{constraint.unit || "—"}</span>
@@ -1055,7 +1094,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         </AlertDialogHeader>
 
         <div className="relative max-h-[55dvh] overflow-visible border-y border-border py-4">
-          <div className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
+          <div ref={scrollRef} onScroll={updateHiddenFlagged} className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-foreground">{t("technologies.parameters")}</h3>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
@@ -1067,6 +1106,16 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             {renderSection(t("technologies.paramDialog.constraints"), contConstraints)}
             {renderSection(t("results.buildingDetail.costs"), costConstraints)}
           </div>
+          {hiddenFlagged.count > 0 && (
+            <button
+              type="button"
+              onClick={() => flaggedOutOfView()[0]?.scrollIntoView({ block: "center", behavior: "smooth" })}
+              className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white shadow-md hover:bg-red-700"
+            >
+              {t("simulation.runMode.moreFieldsNeeded", { count: hiddenFlagged.count })}
+              {hiddenFlagged.above ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
 
         <AlertDialogFooter className="pt-4 gap-3">

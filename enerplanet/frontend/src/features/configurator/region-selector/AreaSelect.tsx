@@ -44,6 +44,7 @@ import { useTransformerActions } from "@/features/configurator/hooks/useTransfor
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 
 // Extracted selectors
 import {
@@ -228,6 +229,14 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     draftId,
   });
   useAreaPreparation();
+
+  const runMode = useModelStore((s) => s.runMode);
+  const operateIssues = useOperateSizes(pylovoLayers.pylovoLayersRef, runMode, pylovoLayers.pylovoGridData);
+  const fixOperateIssue = useCallback((issue: OperateIssue, techKey: string) => {
+    const extent = issue.feature.getGeometry()?.getExtent();
+    if (map && extent) map.getView().fit(extent, { maxZoom: 19, duration: 300, padding: [80, 80, 80, 80] });
+    techOperations.handleEditTechFromDialog(techKey, issue.feature);
+  }, [map, techOperations]);
 
   // Fly to default region immediately when map is ready (before saved map location kicks in)
   const hasAppliedDefaultRegion = useRef(false);
@@ -566,6 +575,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             buildingOsmIds={buildingOsmIdsInPolygon}
             peakLoadKw={peakLoadInPolygonKw}
             isModified={state.isModified}
+            operateIssues={operateIssues}
+            onFixOperateIssue={fixOperateIssue}
           />
         }
         onDrop={techOperations.handleMapDrop}
