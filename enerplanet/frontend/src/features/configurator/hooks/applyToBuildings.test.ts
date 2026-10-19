@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Feature } from "ol";
 import { Point } from "ol/geom";
-import { applyToBuildings } from "./useTechDragDrop";
+import { applyToBuildings, techKeysInUse } from "./useTechDragDrop";
 
 const building = (props: Record<string, unknown>) => new Feature({ geometry: new Point([0, 0]), feature_type: "building", ...props });
 const boiler = { alias: "Gas boiler", constraints: [] };
@@ -35,5 +35,11 @@ describe("applyToBuildings", () => {
 
   it("puts a technology that is not a heat supply on every building", () => {
     expect(applyToBuildings(buildings(), "pv_supply", { alias: "PV" }, "missing")).toBe(3);
+  });
+});
+
+describe("techKeysInUse", () => {
+  it("lists a technology that only some buildings have", () => {
+    expect(techKeysInUse(buildings()).sort()).toEqual(["air_source_heat_pump", "battery_storage", "pv_supply"]);
   });
 });
