@@ -196,7 +196,7 @@ func (s *SiteHandler) ListSites(c *gin.Context) {
 	if !ok {
 		return
 	}
-	s.relay(c, http.MethodGet, "/sites?user_id="+url.QueryEscape(userID))
+	s.relay(c, http.MethodGet, "/sites?user_id="+url.QueryEscape(userID), nil)
 }
 
 // GetSite returns one of the caller's sites.
@@ -218,7 +218,7 @@ func (s *SiteHandler) DeleteSite(c *gin.Context) {
 // GenerateSite queues grid generation for the site's current revision.
 func (s *SiteHandler) GenerateSite(c *gin.Context) {
 	if id, _, ok := s.ownedSite(c); ok {
-		s.relay(c, http.MethodPost, fmt.Sprintf("/sites/%d/generate", id))
+		s.relay(c, http.MethodPost, fmt.Sprintf("/sites/%d/generate", id), nil)
 	}
 }
 
@@ -230,15 +230,43 @@ func (s *SiteHandler) GetSiteJob(c *gin.Context) {
 		return
 	}
 	if id, _, ok := s.ownedSite(c); ok {
-		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/jobs/%d", id, jobID))
+		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/jobs/%d", id, jobID), nil)
 	}
 }
 
 // GetSiteGrid returns the site's generated grid in the /generate-grid shape.
 func (s *SiteHandler) GetSiteGrid(c *gin.Context) {
 	if id, _, ok := s.ownedSite(c); ok {
-		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/grid", id))
+		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/grid", id), nil)
 	}
+}
+
+// GetSiteTransformers returns the site's stored stations with their fixed
+// building assignments.
+func (s *SiteHandler) GetSiteTransformers(c *gin.Context) {
+	if id, _, ok := s.ownedSite(c); ok {
+		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/transformers", id), nil)
+	}
+}
+
+// PutSiteTransformers replaces the site's stations and fixed building
+// assignments; pylovo validates each station and answers 422 on a bad one.
+func (s *SiteHandler) PutSiteTransformers(c *gin.Context) {
+	var stations []json.RawMessage
+	if err := c.ShouldBindJSON(&stations); err != nil {
+		httputil.BadRequest(c, fmt.Sprintf("expected a JSON array of stations: %v", err))
+		return
+	}
+	id, _, ok := s.ownedSite(c)
+	if !ok {
+		return
+	}
+	payload, err := json.Marshal(stations)
+	if err != nil {
+		httputil.InternalError(c, errFailedMarshalPayload)
+		return
+	}
+	s.relay(c, http.MethodPut, fmt.Sprintf("/sites/%d/transformers", id), payload)
 }
 
 // ownedSite fetches the site named by the :id parameter and answers 404 unless
@@ -297,8 +325,8 @@ func (h *PylovoHandler) siteOwnedBy(ctx context.Context, siteID int, userID stri
 }
 
 // relay forwards a call and answers with pylovo's body in the success envelope.
-func (s *SiteHandler) relay(c *gin.Context, method, path string) {
-	body, status, ok := s.call(c, method, path, nil)
+func (s *SiteHandler) relay(c *gin.Context, method, path string, payload []byte) {
+	body, status, ok := s.call(c, method, path, payload)
 	if ok {
 		c.JSON(status, gin.H{"success": true, "data": json.RawMessage(body)})
 	}

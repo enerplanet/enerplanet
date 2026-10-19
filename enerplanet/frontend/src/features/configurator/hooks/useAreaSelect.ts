@@ -154,6 +154,20 @@ export const useAreaSelect = ({
         setIsModified(true);
     }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, siteMode, modelName]);
 
+    // Regenerates the shown site after an edit to its stations, keeping the same site and area.
+    const handleSiteRegenerate = useCallback(async (siteId: number) => {
+        setIsGeneratingGrid(true);
+        const genId = ++gridGenIdRef.current;
+        try {
+            const response = await pylovoService.regenerateSiteGrid(siteId);
+            if (genId !== gridGenIdRef.current) return;
+            showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
+            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
+            setIsModified(true);
+        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, true, t("gridNotifications.gridRegenerationFailed"))); }
+        finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
+    }, [pylovoLayersData, showSuccess, showError, t, setIsGeneratingGrid, setIsModified]);
+
     // ── Save ──
     const getUpdatedPylovoData = useCallback(() => {
         const base = pylovoLayersData.pylovoGridData || {};
@@ -184,7 +198,7 @@ export const useAreaSelect = ({
 
     // ── Build return values ──
     const state = { modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, cursorPos, isGeneratingGrid, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
-    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
+    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
 
     return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setCursorPos, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
 };

@@ -65,6 +65,8 @@ func (f *fakeSitePylovo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"revision":2}`)
 	case "DELETE /sites/7":
 		w.WriteHeader(http.StatusNoContent)
+	case "PUT /sites/7/transformers":
+		fmt.Fprintf(w, `{"revision":3,"transformers":%s}`, body)
 	case "POST /sites/7/generate":
 		w.WriteHeader(http.StatusConflict)
 		fmt.Fprint(w, `{"detail":"Site 7 has an active generation job 3"}`)
@@ -99,6 +101,7 @@ func serveSite(t *testing.T, fake *fakeSitePylovo, linked linkedOSMIDs, user, me
 	r.POST("/sites", sites.CreateSite)
 	r.POST("/sites/:id/generate", sites.GenerateSite)
 	r.GET("/sites/:id/grid", sites.GetSiteGrid)
+	r.PUT("/sites/:id/transformers", sites.PutSiteTransformers)
 	r.POST("/power-flow", h.RunPowerFlow)
 
 	rec := httptest.NewRecorder()
@@ -162,6 +165,7 @@ func TestSiteRoutes_otherUsersSiteIsNotFound(t *testing.T) {
 		{http.MethodGet, "/sites/7/grid", ""},
 		{http.MethodPost, "/sites/7/generate", ""},
 		{http.MethodPost, "/power-flow", `{"site_id":7,"revision":1,"kcid":1,"bcid":1}`},
+		{http.MethodPut, "/sites/7/transformers", `[]`},
 	} {
 		fake := &fakeSitePylovo{}
 		rec := serveSite(t, fake, nil, "intruder", tc.method, tc.path, tc.body)
@@ -180,5 +184,29 @@ func TestGenerateSite_conflictPassesThrough(t *testing.T) {
 
 	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "active generation job 3") {
 		t.Fatalf("status = %d body = %s, want 409 with pylovo's detail", rec.Code, rec.Body)
+	}
+}
+
+// The owner's station list reaches pylovo unchanged, and pylovo's answer comes back in the envelope.
+func TestPutSiteTransformers_forwardsStationsForTheOwner(t *testing.T) {
+	stations := `[{"transformer_id":null,"geom":{"type":"Point","coordinates":[12.89,48.81]},"rated_kva":400,"cost_eur":null,"assigned_building_ids":[3]}]`
+	fake := &fakeSitePylovo{}
+	rec := serveSite(t, fake, nil, "owner", http.MethodPut, "/sites/7/transformers", stations)
+
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"revision":3`) {
+		t.Fatalf("status = %d body = %s, want 200 with pylovo's revision", rec.Code, rec.Body)
+	}
+	if put := fake.sent("PUT /sites/7/transformers "); len(put) != 1 || !strings.HasSuffix(put[0], stations) {
+		t.Errorf("forwarded = %v, want the station list unchanged", put)
+	}
+}
+
+// A body that is not a station list is refused before anything reaches pylovo.
+func TestPutSiteTransformers_rejectsNonArray(t *testing.T) {
+	fake := &fakeSitePylovo{}
+	rec := serveSite(t, fake, nil, "owner", http.MethodPut, "/sites/7/transformers", `{"rated_kva":400}`)
+
+	if rec.Code != http.StatusBadRequest || len(fake.requests) != 0 {
+		t.Fatalf("status = %d, pylovo requests = %v; want 400 and none", rec.Code, fake.requests)
 	}
 }

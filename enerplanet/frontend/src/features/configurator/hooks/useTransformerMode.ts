@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { toLonLat } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { useTranslation } from "@spatialhub/i18n";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
+import { addSiteStation } from "@/features/configurator/utils/siteStations";
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -89,17 +90,23 @@ export const useAddTransformerMode = ({
 
       try {
         const userId = user?.id ? String(user.id) : undefined;
-        const result = await pylovoService.addTransformer({
-          coordinates: newTransformerCoords,
-          kva,
-          grid_result_ids: gridResultIds,
-          reassign_radius_m: 0,
-          user_id: userId,
-          model_id: existingModelId,
-          draft_id: draftId,
-        });
-
-        notification.showSuccess(result.message || `Added transformer with ${kva} kVA`);
+        const grid = useModelStore.getState().pylovoGridData;
+        const site = siteScope(grid);
+        if (site && grid) {
+          await addSiteStation(site.site_id, grid, newTransformerCoords, kva);
+          notification.showSuccess(`Added transformer with ${kva} kVA`);
+        } else {
+          const result = await pylovoService.addTransformer({
+            coordinates: newTransformerCoords,
+            kva,
+            grid_result_ids: gridResultIds,
+            reassign_radius_m: 0,
+            user_id: userId,
+            model_id: existingModelId,
+            draft_id: draftId,
+          });
+          notification.showSuccess(result.message || `Added transformer with ${kva} kVA`);
+        }
 
         if (allPolygons.length > 0) {
           await refreshGrid();
@@ -108,7 +115,7 @@ export const useAddTransformerMode = ({
         resetAddTransformerMode();
       } catch (error: any) {
         console.error("Failed to add transformer:", error);
-        notification.showError(error?.message || "Failed to add transformer");
+        notification.showError(error?.response?.data?.error || error?.message || "Failed to add transformer");
       }
     },
     [

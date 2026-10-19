@@ -23,7 +23,7 @@ import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { useDefaultRegionStore } from "@/features/configurator/region-selector/store/default-region";
 import { useReassignmentLine } from "@/features/configurator/hooks/useMapDisplay";
 import { generateUUID } from "@/utils/uuid";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import {
   usePolygonLimitsStore,
   type AccessLevel,
@@ -277,10 +277,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Extracted hooks ──────────────────────────────────────────────
 
   const refreshGrid = useCallback(async () => {
-    if (state.allPolygons.length > 0) {
-      await actions.handlePolygonModified(state.allPolygons);
-    }
-  }, [state.allPolygons, actions]);
+    // A site keeps its edited stations only if the same site is regenerated; redrawing would copy a new one from OSM.
+    const site = siteScope(pylovoLayers.pylovoGridData);
+    if (site) await actions.handleSiteRegenerate(site.site_id);
+    else if (state.allPolygons.length > 0) await actions.handlePolygonModified(state.allPolygons);
+  }, [state.allPolygons, actions, pylovoLayers.pylovoGridData]);
 
   const addTransformer = useAddTransformerMode({
     map,
