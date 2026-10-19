@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"spatialhub_backend/internal/city2tabula"
@@ -94,7 +93,22 @@ func TestFurtherWayIsLinkedButNotSentToBuem(t *testing.T) {
 
 	topology := []interface{}{map[string]interface{}{"from": building("1265475272"), "to": building("1265475272")}}
 	buildings, _, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, nil, mainkofenFurther, "", cookingSettings{})
-	if len(buildings) != 0 || !strings.Contains(unresolved["1265475272"], "OSM way 223728275") {
-		t.Errorf("buildings %d, unresolved %v; want none sent and the best way named", len(buildings), unresolved)
+	if _, failed := unresolved["1265475272"]; len(buildings) != 0 || failed {
+		t.Errorf("buildings %d, unresolved %v; want the further way neither sent nor failed", len(buildings), unresolved)
+	}
+}
+
+// A covered further way's demand is carried by its standing way, so the
+// coverage warning neither counts it as running on yearly demand nor in the total.
+func TestCoverageLeavesOutCoveredWays(t *testing.T) {
+	best, further := standing("223728275", "electricity"), building("1265475272")
+	topology := []interface{}{map[string]interface{}{"from": best, "to": further}}
+	covered := dropFurtherWayDemand(topology, mainkofenFurther)
+
+	if !covered["1265475272"] {
+		t.Fatalf("covered = %v, want the further way", covered)
+	}
+	if w, err := checkDemandCoverage(topology, covered); err != nil || w != nil {
+		t.Errorf("warning %+v, err %v; want none", w, err)
 	}
 }

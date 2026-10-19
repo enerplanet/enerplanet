@@ -422,9 +422,8 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 				continue
 			}
 			seen[osmID] = true
-			if best, ok := further[osmID]; ok {
-				unresolved[osmID] = fmt.Sprintf("shares its 3D building with OSM way %s, whose BuEM run covers the whole building", best)
-				continue
+			if _, ok := further[osmID]; ok {
+				continue // its building runs under the standing way; recorded as shared, see DemandResolver.Resolve
 			}
 
 			node, _ := feature.(map[string]interface{})
