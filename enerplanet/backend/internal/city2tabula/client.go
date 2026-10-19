@@ -141,19 +141,46 @@ type Building struct {
 	Surfaces          []Surface `json:"surfaces,omitempty"`
 }
 
-// FurtherWays maps each OSM way that shares a 3D building with that
-// building's best way to the best way. The building's envelope is reported
-// once, under the best way, so a further way has no 3D data of its own.
-func (r BuildingsResult) FurtherWays() map[string]string {
+// ByRequestedWay indexes the result's buildings by the requested way that
+// stands for each: its best way when that was requested, otherwise its first
+// requested way (OSMIDs lists the best way first). Every other requested way
+// of a building is a further way and maps to the way standing for it; its
+// building's envelope is reported once, under the standing way.
+func (r BuildingsResult) ByRequestedWay(requested []string) (map[string]Building, map[string]string) {
+	want := make(map[string]bool, len(requested))
+	for _, id := range requested {
+		want[id] = true
+	}
+	byWay := map[string]Building{}
 	further := map[string]string{}
 	for _, b := range r.Buildings {
-		for _, way := range b.OSMIDs {
-			if way != b.OSMID {
-				further[way] = b.OSMID
+		ways := b.OSMIDs
+		if len(ways) == 0 && b.OSMID != "" {
+			ways = []string{b.OSMID} // a server before 0.11.2 sends no osm_ids
+		}
+		standing := ""
+		for _, w := range ways {
+			if want[w] {
+				standing = w
+				break
+			}
+		}
+		if standing == "" {
+			continue
+		}
+		byWay[standing] = b
+		for _, w := range ways {
+			if w != standing && want[w] {
+				further[w] = standing
 			}
 		}
 	}
-	return further
+	// A way covering several 3D buildings can stand for one and be further
+	// on another; it keeps its own building's data.
+	for w := range byWay {
+		delete(further, w)
+	}
+	return byWay, further
 }
 
 // DatasetCredit is one source dataset's attribution as City2TABULA returns it

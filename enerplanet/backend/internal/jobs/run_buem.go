@@ -147,8 +147,9 @@ type buemRun struct {
 	buildings  []buem.Building
 	resolved   map[string]BuemResolutionMeta
 	unresolved map[string]string
-	// further maps an OSM way sharing a 3D building with a better-matched way
-	// to that way, whose BuEM run covers the whole building.
+	// further maps an OSM way sharing a 3D building with the way standing for
+	// it (see city2tabula.BuildingsResult.ByRequestedWay) to that way, whose
+	// BuEM run covers the whole building.
 	further    map[string]string
 	weather    json.RawMessage
 	start, end string
@@ -287,22 +288,16 @@ func recordedOrNewRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.C
 }
 
 // fetchLinkedBuildings fetches osmIDs' 3D attributes, indexes them by their
-// best way's osm_id and returns the further ways (see
-// city2tabula.BuildingsResult.FurtherWays). An osm_id in neither has no
+// standing way's osm_id and returns the further ways (see
+// city2tabula.BuildingsResult.ByRequestedWay). An osm_id in neither has no
 // PyLovo-linked building in City2TABULA yet — see missingOSMIDs.
 func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country string, osmIDs []string) (map[string]city2tabula.Building, map[string]string, error) {
 	result, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
 		return nil, nil, err
 	}
-	buildings := result.Buildings
-	byOSMID := make(map[string]city2tabula.Building, len(buildings))
-	for _, b := range buildings {
-		if b.OSMID != "" {
-			byOSMID[b.OSMID] = b
-		}
-	}
-	return byOSMID, result.FurtherWays(), nil
+	byOSMID, further := result.ByRequestedWay(osmIDs)
+	return byOSMID, further, nil
 }
 
 // missingOSMIDs returns the osm_ids in want that are neither in got nor a
@@ -428,7 +423,7 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 			}
 			seen[osmID] = true
 			if best, ok := further[osmID]; ok {
-				unresolved[osmID] = fmt.Sprintf("shares its 3D building with OSM way %s, whose heat demand covers the whole building", best)
+				unresolved[osmID] = fmt.Sprintf("shares its 3D building with OSM way %s, whose BuEM run covers the whole building", best)
 				continue
 			}
 

@@ -25,18 +25,29 @@ func building(osmID string) map[string]interface{} {
 // Mainkofen: 223728275 is the best way of DEBY_LOD2_7595822, 1265475272 a further way.
 var mainkofenFurther = map[string]string{"1265475272": "223728275"}
 
-// A further way keeps its electrical load and other technologies but loses
-// its heat, which its 3D building's best way already carries.
-func TestDropFurtherWayHeat(t *testing.T) {
-	best, further := building("223728275"), building("1265475272")
-	dropFurtherWayHeat([]interface{}{map[string]interface{}{"from": best, "to": further}}, mainkofenFurther)
+// standing returns building osmID with BuEM series for the given carriers.
+func standing(osmID string, carriers ...string) map[string]interface{} {
+	b := building(osmID)
+	series := map[string]interface{}{}
+	for _, c := range carriers {
+		series[c] = []float64{1}
+	}
+	b["properties"].(map[string]interface{})["demand_series"] = series
+	return b
+}
+
+// A further way loses the demand its standing way's BuEM series covers for the
+// whole building, and keeps its other technologies.
+func TestDropFurtherWayDemand(t *testing.T) {
+	best, further := standing("223728275", "heat", "electricity"), building("1265475272")
+	dropFurtherWayDemand([]interface{}{map[string]interface{}{"from": best, "to": further}}, mainkofenFurther)
 
 	fp := further["properties"].(map[string]interface{})
 	if fp["demand_heat"] != 0 || fp["f_class_heat_demands"].([]map[string]interface{})[0]["demand_heat_energy"] != 0 {
 		t.Errorf("further way heat = %v / %v, want 0", fp["demand_heat"], fp["f_class_heat_demands"])
 	}
-	if fp["demand_energy"] != 4000 {
-		t.Errorf("further way electricity = %v, want 4000 kept", fp["demand_energy"])
+	if fp["demand_energy"] != 0 {
+		t.Errorf("further way electricity = %v, want 0", fp["demand_energy"])
 	}
 	ft := further["techs"].(map[string]interface{})
 	if _, ok := ft["gas_boiler"]; ok {
@@ -45,8 +56,32 @@ func TestDropFurtherWayHeat(t *testing.T) {
 	if _, ok := ft["pv_supply"]; !ok {
 		t.Error("further way lost its PV system")
 	}
-	if bp := best["properties"].(map[string]interface{}); bp["demand_heat"] != 30000 {
-		t.Errorf("best way heat = %v, want 30000 kept", bp["demand_heat"])
+	if bp := best["properties"].(map[string]interface{}); bp["demand_heat"] != 30000 || bp["demand_energy"] != 4000 {
+		t.Errorf("best way demand = %v / %v, want kept", bp["demand_heat"], bp["demand_energy"])
+	}
+}
+
+// Without a series on the standing way nothing covers the whole building, so
+// the further way keeps that carrier's demand.
+func TestDropFurtherWayDemand_keepsWhatTheStandingWayLacks(t *testing.T) {
+	for name, tc := range map[string]struct {
+		best                map[string]interface{} // nil: the best way is not in the model
+		wantHeat, wantPower interface{}
+	}{
+		"electricity only": {best: standing("223728275", "electricity"), wantHeat: 30000, wantPower: 0},
+		"no series":        {best: building("223728275"), wantHeat: 30000, wantPower: 4000},
+		"best way absent":  {best: nil, wantHeat: 30000, wantPower: 4000},
+	} {
+		further := building("1265475272")
+		topology := []interface{}{map[string]interface{}{"from": further, "to": further}}
+		if tc.best != nil {
+			topology = append(topology, map[string]interface{}{"from": tc.best, "to": tc.best})
+		}
+		dropFurtherWayDemand(topology, mainkofenFurther)
+		fp := further["properties"].(map[string]interface{})
+		if fp["demand_heat"] != tc.wantHeat || fp["demand_energy"] != tc.wantPower {
+			t.Errorf("%s: heat %v power %v, want %v %v", name, fp["demand_heat"], fp["demand_energy"], tc.wantHeat, tc.wantPower)
+		}
 	}
 }
 

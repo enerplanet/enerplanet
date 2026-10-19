@@ -2,28 +2,47 @@ package jobs
 
 import "fmt"
 
-// dropFurtherWayHeat removes the heat demand and heating technologies of the
-// topology's further ways (see buemRun.further). Their 3D building's heat is
-// in its best way's BuEM series; the yearly heat fallback would count it again.
-func dropFurtherWayHeat(topology []interface{}, further map[string]string) {
+// dropFurtherWayDemand removes from each further way (see buemRun.further) the
+// demand its standing way's BuEM series already covers for the whole 3D
+// building: heat with the heating technologies, and electricity. A carrier
+// the standing way has no series for stays, since nothing else models it.
+// Run after attachDemandSeries, which sets the series it reads.
+func dropFurtherWayDemand(topology []interface{}, further map[string]string) {
 	if len(further) == 0 {
 		return
 	}
+	series := map[string]map[string]interface{}{}
 	for _, feature := range payloadBuildings(topology) {
 		props, _ := feature["properties"].(map[string]interface{})
-		if _, ok := further[fmt.Sprint(props["osm_id"])]; !ok {
+		s, _ := props["demand_series"].(map[string]interface{})
+		series[fmt.Sprint(props["osm_id"])] = s
+	}
+	for _, feature := range payloadBuildings(topology) {
+		props, _ := feature["properties"].(map[string]interface{})
+		standing, ok := further[fmt.Sprint(props["osm_id"])]
+		if !ok {
 			continue
 		}
-		props["demand_heat"] = 0
-		if perClass, ok := props["f_class_heat_demands"].([]map[string]interface{}); ok {
-			for _, d := range perClass {
-				d["demand_heat_energy"] = 0
+		if _, ok := series[standing]["heat"]; ok {
+			dropCarrier(props, "demand_heat", "f_class_heat_demands", "demand_heat_energy")
+			if techs, ok := feature["techs"].(map[string]interface{}); ok {
+				for _, key := range heatTechs {
+					delete(techs, key)
+				}
 			}
 		}
-		if techs, ok := feature["techs"].(map[string]interface{}); ok {
-			for _, key := range heatTechs {
-				delete(techs, key)
-			}
+		if _, ok := series[standing]["electricity"]; ok {
+			dropCarrier(props, "demand_energy", "f_class_demands", "demand_energy")
+		}
+	}
+}
+
+// dropCarrier zeroes a building's yearly demand and its per-class shares.
+func dropCarrier(props map[string]interface{}, total, perClassKey, perClassField string) {
+	props[total] = 0
+	if perClass, ok := props[perClassKey].([]map[string]interface{}); ok {
+		for _, d := range perClass {
+			d[perClassField] = 0
 		}
 	}
 }

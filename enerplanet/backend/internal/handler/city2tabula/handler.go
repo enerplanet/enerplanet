@@ -230,9 +230,9 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// fetchLinked fetches the osm_ids' 3D attributes, indexes them by their best
-// way's osm_id and returns the further ways (see
-// c2t.BuildingsResult.FurtherWays), with the credits of their datasets. An
+// fetchLinked fetches the osm_ids' 3D attributes, indexes them by their
+// standing way's osm_id and returns the further ways (see
+// c2t.BuildingsResult.ByRequestedWay), with the credits of their datasets. An
 // osm_id in neither has no PyLovo-linked building in City2TABULA yet (see
 // missingOSMIDs).
 func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, map[string]string, []c2t.DatasetCredit, error) {
@@ -244,13 +244,8 @@ func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []stri
 	if credits == nil {
 		credits = []c2t.DatasetCredit{}
 	}
-	byOSMID := make(map[string]c2t.Building, len(result.Buildings))
-	for _, b := range result.Buildings {
-		if b.OSMID != "" {
-			byOSMID[b.OSMID] = b
-		}
-	}
-	return byOSMID, result.FurtherWays(), credits, nil
+	byOSMID, further := result.ByRequestedWay(osmIDs)
+	return byOSMID, further, credits, nil
 }
 
 // missingOSMIDs returns the osm_ids in want that have no entry in got.
