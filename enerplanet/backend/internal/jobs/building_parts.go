@@ -172,10 +172,10 @@ func combineParts(store seriesStore, parts map[string][]string, resolved map[str
 	return loadStoredProfiles(store, out)
 }
 
-// sumProfiles stores the step-by-step sum of the profiles ids, with summary
-// statistics recomputed from the sums and the rest of the summary taken from
-// the first, largest building. The sum is keyed by its parts' profiles, so the
-// same buildings are summed once.
+// sumProfiles stores the step-by-step sum of the profiles ids, with the
+// summary combined across them (buem.CombineSummary) and every other field
+// taken from the first, largest building. The sum is keyed by its parts'
+// profiles, so the same buildings are summed once.
 func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredProfile) (int64, error) {
 	key := sumKey(ids)
 	existing, err := store.StoredKeys([]string{key})
@@ -210,7 +210,11 @@ func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredP
 	if err != nil {
 		return 0, err
 	}
-	summary, err := buem.SetSummaryStats(json.RawMessage(head.Summary), sum, head.ResolutionMinutes)
+	blocks := make([]json.RawMessage, len(ids))
+	for i, id := range ids {
+		blocks[i] = json.RawMessage(stored[id].Summary)
+	}
+	summary, err := buem.CombineSummary(blocks, sum, head.ResolutionMinutes)
 	if err != nil {
 		return 0, err
 	}
