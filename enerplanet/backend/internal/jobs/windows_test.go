@@ -46,7 +46,7 @@ func TestBuildingsForBuem_windowSettingsReachTheBlock(t *testing.T) {
 	}}
 	client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1}}
 	buildings, _, _ := buildingsForBuem(context.Background(), client, "netherlands",
-		[]interface{}{node}, envelope, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
+		[]interface{}{node}, envelope, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
 	require.Len(t, buildings, 1)
 	var block map[string]interface{}
 	require.NoError(t, json.Unmarshal(buildings[0].Building, &block))
@@ -80,7 +80,7 @@ func TestBuildingsForBuem_archetypeGlazingSentAndUserValueWins(t *testing.T) {
 		client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{
 			UWall: 1, URoof: 1, UFloor: 1, UWindow: 2.8, UDoor: 3.0, GGlWindow: 0.75}}
 		buildings, _, _ := buildingsForBuem(context.Background(), client, "netherlands",
-			[]interface{}{node(props)}, envelope, ignis.RefurbishmentExisting,
+			[]interface{}{node(props)}, envelope, nil, ignis.RefurbishmentExisting,
 			cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
 		require.Len(t, buildings, 1)
 		var block map[string]interface{}

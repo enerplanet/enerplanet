@@ -437,3 +437,21 @@ func TestEnrich_CountryUnresolvable_IsA400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "could not resolve the country")
 }
+
+// A further way shares its 3D building with the best way, which carries the
+// envelope. It is linked: not missing, no pipeline run, and no second envelope.
+func TestEnrich_FurtherWayIsLinkedWithoutItsOwnEnvelope(t *testing.T) {
+	shared := strings.Replace(twoWallBuilding, `"osm_id": "111",`, `"osm_id": "111", "osm_ids": ["111", "222"],`, 1)
+	fake := &fakeC2T{buildingsJSON: shared}
+	h := &Handler{client: fake.client(t)}
+
+	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111","222"]}`)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "completed", resp.Status)
+	assert.Empty(t, resp.Missing)
+	assert.Equal(t, 2, resp.Resolved)
+	assert.Equal(t, 0, fake.triggeredRuns)
+	assert.Contains(t, resp.Data, "111")
+	assert.NotContains(t, resp.Data, "222")
+}

@@ -154,9 +154,15 @@ func (s *SiteHandler) excludeUnlinked(ctx context.Context, siteID int, country s
 	if err != nil {
 		return 0, 0, fmt.Errorf("City2TABULA lookup for site %d failed: %w", siteID, err)
 	}
-	linked := make(map[string]bool, len(result.Buildings))
-	for _, b := range result.Buildings {
-		linked[b.OSMID] = true
+	// A further way of a 3D building stays in the site as a grid node; its
+	// demand is modelled under the way standing for the building.
+	byWay, further := result.ByRequestedWay(osmIDs)
+	linked := make(map[string]bool, len(byWay)+len(further))
+	for way := range byWay {
+		linked[way] = true
+	}
+	for way := range further {
+		linked[way] = true
 	}
 
 	var patches []map[string]any

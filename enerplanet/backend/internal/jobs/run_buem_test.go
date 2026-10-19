@@ -80,7 +80,7 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 		},
 	}
 
-	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: false})
+	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: false})
 
 	require.Len(t, buildings, 1, "only building 111 has a resolved envelope; the transformer and building 222 must be excluded")
 	assert.Equal(t, "111", buildings[0].ID)
@@ -196,7 +196,7 @@ func TestResolveEnvelope_PartialCoverageTriggersRunForMissingBuildings(t *testin
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 
-	result := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111", "222"))
+	result, _ := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111", "222"))
 
 	assert.True(t, runTriggered, "a run must be triggered when the topology needs a building city2tabula hasn't linked yet")
 	assert.Len(t, result, 2, "after the run, both buildings should resolve, not just the one already linked from an earlier overlapping polygon")
@@ -217,7 +217,7 @@ func TestResolveEnvelope_FullCoverageSkipsRun(t *testing.T) {
 	log := logrus.NewEntry(logrus.New())
 	bbox := city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}
 
-	result := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111"))
+	result, _ := resolveEnvelope(context.Background(), log, client, nil, commonModels.Model{ID: 1}, "germany", bbox, topologyBuildings("111"))
 
 	assert.Len(t, result, 1)
 	assert.Contains(t, result, "111")
@@ -449,7 +449,7 @@ func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
 		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}},
 	}}
 
-	buildings, resolved, _ := buildingsForBuem(context.Background(), nil, "netherlands", topology, envelopeByOSMID, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
+	buildings, resolved, _ := buildingsForBuem(context.Background(), nil, "netherlands", topology, envelopeByOSMID, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
 
 	require.Len(t, buildings, 1)
 	var block map[string]interface{}
@@ -504,7 +504,7 @@ func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1, Apartments: tt.apartments}}
 			buildings, resolved, _ := buildingsForBuem(context.Background(), client, "netherlands",
-				[]interface{}{node("1", tt.fClass)}, map[string]city2tabula.Building{"1": envelope("1")}, ignis.RefurbishmentExisting, cooking)
+				[]interface{}{node("1", tt.fClass)}, map[string]city2tabula.Building{"1": envelope("1")}, nil, ignis.RefurbishmentExisting, cooking)
 			got := block(buildings, "1")
 			if tt.wantUnits == 0 {
 				assert.NotContains(t, got, "residential_units")
@@ -536,7 +536,7 @@ func TestResolveEnvelope_RecordedRunIsPolledNotRetriggered(t *testing.T) {
 	runs := &fakeRunStore{rec: &models.ModelCity2TabulaRun{ModelID: 7, RunID: "recorded-1", Country: "germany", Status: "running"}}
 	log := logrus.NewEntry(logrus.New())
 
-	result := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
+	result, _ := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
 
 	assert.Contains(t, result, "222")
 	assert.Empty(t, runs.saved, "no new run recorded")
@@ -565,7 +565,7 @@ func TestResolveEnvelope_TriggeredRunIsRecorded(t *testing.T) {
 	runs := &fakeRunStore{}
 	log := logrus.NewEntry(logrus.New())
 
-	result := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
+	result, _ := resolveEnvelope(context.Background(), log, client, runs, commonModels.Model{ID: 7}, "germany", city2tabula.Bbox{Xmin: 1, Ymin: 2, Xmax: 3, Ymax: 4}, topologyBuildings("222"))
 
 	assert.Contains(t, result, "222")
 	assert.Equal(t, []string{"run-9"}, runs.saved)

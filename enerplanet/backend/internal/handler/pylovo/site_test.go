@@ -36,6 +36,20 @@ func (l linkedOSMIDs) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []st
 	return res, nil
 }
 
+// linkedWays returns, for each best way requested, its 3D building with all
+// its ways, as City2TABULA 0.11.2 does.
+type linkedWays map[string][]string
+
+func (l linkedWays) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []string) (city2tabula.BuildingsResult, error) {
+	var res city2tabula.BuildingsResult
+	for _, id := range ids {
+		if ways, ok := l[id]; ok {
+			res.Buildings = append(res.Buildings, city2tabula.Building{OSMID: id, OSMIDs: ways})
+		}
+	}
+	return res, nil
+}
+
 // fakeSitePylovo serves one site, 7, owned by "owner", holding osmIDs, and
 // records each request as "METHOD path body".
 type fakeSitePylovo struct {
@@ -88,7 +102,7 @@ func (f *fakeSitePylovo) sent(prefix string) []string {
 	return out
 }
 
-func serveSite(t *testing.T, fake *fakeSitePylovo, linked linkedOSMIDs, user, method, path, body string) *httptest.ResponseRecorder {
+func serveSite(t *testing.T, fake *fakeSitePylovo, linked linkLookup, user, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	pylovo := httptest.NewServer(fake)
@@ -208,5 +222,20 @@ func TestPutSiteTransformers_rejectsNonArray(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest || len(fake.requests) != 0 {
 		t.Fatalf("status = %d, pylovo requests = %v; want 400 and none", rec.Code, fake.requests)
+	}
+}
+
+// A further way of a linked 3D building has 3D data through that building, so
+// the site keeps it for its electrical load.
+func TestCreateSite_keepsFurtherWays(t *testing.T) {
+	fake := &fakeSitePylovo{osmIDs: []string{"w1", "w2", "w3"}}
+	rec := serveSite(t, fake, linkedWays{"w1": {"w1", "w2"}}, "owner", http.MethodPost, "/sites", siteBody)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201: %s", rec.Code, rec.Body)
+	}
+	patch := fake.sent("PATCH /sites/7/buildings")
+	if len(patch) != 1 || strings.Contains(patch[0], `"building_id":2`) || !strings.Contains(patch[0], `"building_id":3`) {
+		t.Errorf("patch = %v, want only building 3 (w3) excluded", patch)
 	}
 }
