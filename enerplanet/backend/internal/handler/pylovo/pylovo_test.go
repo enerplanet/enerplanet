@@ -2,8 +2,10 @@ package pylovo
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,5 +76,55 @@ func TestCopyBuildingFilterOptions_dropsPublicBuildings(t *testing.T) {
 	}
 	if dst["include_private_buildings"] != true || dst["excluded_building_ids"] == nil {
 		t.Errorf("private filter options not forwarded: %v", dst)
+	}
+}
+
+// serveGenerateGrid posts body to GenerateGrid and returns the response and
+// every request body pylovo received.
+func serveGenerateGrid(t *testing.T, body string) (*httptest.ResponseRecorder, []string) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	var received []string
+	pylovo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		received = append(received, string(b))
+		_, _ = w.Write([]byte(`{"status":"success"}`))
+	}))
+	t.Cleanup(pylovo.Close)
+	r := gin.New()
+	r.Use(func(c *gin.Context) { c.Set("user_id", "owner") }) // the auth middleware does this in production
+	r.POST("/generate-grid", NewPylovoHandler(pylovo.URL, nil, nil).GenerateGrid)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/generate-grid", strings.NewReader(body)))
+	return rec, received
+}
+
+// An area that is not a valid polygon is refused with the reason and never reaches pylovo.
+func TestGenerateGrid_rejectsInvalidAreaBeforePylovo(t *testing.T) {
+	for name, body := range map[string]string{
+		"latitude out of range": `{"geom":{"type":"Polygon","coordinates":[[[12.9,95],[13,48],[13,49]]]}}`,
+		"wrong geometry type":   `{"geom":{"type":"Point","coordinates":[12.9,48.8]}}`,
+		"malformed polygon":     `{"polygon":[["x",1],[2,2],[3,3]]}`,
+	} {
+		rec, received := serveGenerateGrid(t, body)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid area geometry") || len(received) != 0 {
+			t.Errorf("%s: status %d body %s, pylovo got %d requests; want 400 and none", name, rec.Code, rec.Body, len(received))
+		}
+	}
+}
+
+// A body over the cap is refused as too large.
+func TestGenerateGrid_rejectsOversizedBody(t *testing.T) {
+	rec, received := serveGenerateGrid(t, `{"pad":"`+strings.Repeat("x", maxAreaRequestBytes)+`"}`)
+	if rec.Code != http.StatusRequestEntityTooLarge || len(received) != 0 {
+		t.Fatalf("status %d, pylovo got %d requests; want 413 and none", rec.Code, len(received))
+	}
+}
+
+// pylovo receives the geometry rebuilt by validation, not the client's text.
+func TestGenerateGrid_forwardsValidatedArea(t *testing.T) {
+	rec, received := serveGenerateGrid(t, `{"geom":{"type":"Polygon","coordinates":[[[12.95,48.83,300],[12.96,48.83,300],[12.96,48.84,300]]]}}`)
+	if rec.Code != http.StatusOK || len(received) != 1 || !strings.Contains(received[0], `"geom":{"type":"Polygon","coordinates":[[[12.95,48.83],[12.96,48.83],[12.96,48.84]]]}`) {
+		t.Fatalf("status %d, pylovo got %v; want the area without altitudes", rec.Code, received)
 	}
 }

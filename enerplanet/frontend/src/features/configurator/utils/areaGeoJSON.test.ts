@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AreaImportError, areaRingsFromGeoJSON, areaToGeoJSON } from "./areaGeoJSON";
+import { AreaImportError, MAX_AREA_FILE_BYTES, MAX_AREA_VERTICES, areaRingsFromGeoJSON, areaToGeoJSON, readAreaFile } from "./areaGeoJSON";
 
 const square = [[12.95, 48.83], [12.96, 48.83], [12.96, 48.84], [12.95, 48.84], [12.95, 48.83]];
 
@@ -53,5 +53,37 @@ describe("areaToGeoJSON", () => {
 
     expect(JSON.parse(text).features[0].properties.name).toBe("Mainkofen");
     expect(areaRingsFromGeoJSON(text)).toEqual(rings);
+  });
+});
+
+describe("area import checks", () => {
+  const reasonOf = (fn: () => unknown) => {
+    try { fn(); } catch (e) { return (e as AreaImportError).reason; }
+    return "accepted";
+  };
+
+  it("refuses JSON that is not GeoJSON", () => {
+    expect(reasonOf(() => areaRingsFromGeoJSON(`{"name":"x","type":"Topology"}`))).toBe("notGeoJSON");
+    expect(reasonOf(() => areaRingsFromGeoJSON(`[1,2,3]`))).toBe("notGeoJSON");
+  });
+
+  it("refuses metre coordinates in a file that names no coordinate system", () => {
+    const metres = `{"type":"Polygon","coordinates":[[[780000,5410000],[781000,5410000],[781000,5411000],[780000,5410000]]]}`;
+    expect(reasonOf(() => areaRingsFromGeoJSON(metres))).toBe("outOfRange");
+  });
+
+  it("refuses an area over the backend's vertex limit", () => {
+    const ring = Array.from({ length: MAX_AREA_VERTICES + 2 }, (_, i) => [12 + i * 1e-6, 48 + (i % 2) * 1e-3]);
+    const text = JSON.stringify({ type: "Polygon", coordinates: [[...ring, ring[0]]] });
+    expect(reasonOf(() => areaRingsFromGeoJSON(text))).toBe("tooComplex");
+  });
+
+  it("refuses other file types and oversized files before reading them", async () => {
+    const square = JSON.stringify({ type: "Polygon", coordinates: [[[12.95, 48.83], [12.96, 48.83], [12.96, 48.84], [12.95, 48.83]]] });
+    await expect(readAreaFile(new File([square], "area.exe"))).rejects.toMatchObject({ reason: "notGeoJSON" });
+    const big = new File([square], "area.geojson");
+    Object.defineProperty(big, "size", { value: MAX_AREA_FILE_BYTES + 1 });
+    await expect(readAreaFile(big)).rejects.toMatchObject({ reason: "tooLarge" });
+    await expect(readAreaFile(new File([square], "area.geojson"))).resolves.toHaveLength(1);
   });
 });

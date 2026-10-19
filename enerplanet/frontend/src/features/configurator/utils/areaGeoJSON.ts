@@ -18,12 +18,27 @@ const PROJ_DEFS: Record<string, string> = {
 Object.entries(PROJ_DEFS).forEach(([code, def]) => proj4.defs(code, def));
 register(proj4);
 
+// Limits matching the backend's geo.ValidateArea (backend/internal/geo/area.go),
+// which enforces them; keep the two in step.
+export const MAX_AREA_POLYGONS = 100;
+export const MAX_AREA_VERTICES = 10000;
+/** Larger files are refused before they are read. */
+export const MAX_AREA_FILE_BYTES = 5 * 1024 * 1024;
+
+/** The nine types RFC 7946 defines; any other top-level type is not GeoJSON. */
+const GEOJSON_TYPES = new Set([
+  "FeatureCollection", "Feature", "GeometryCollection",
+  "Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
+]);
+
+type AreaImportReason = "invalid" | "notGeoJSON" | "tooLarge" | "noPolygon" | "tooComplex" | "outOfRange" | "unknownCrs";
+
 /** A GeoJSON file that cannot be used as a model area, with the reason as a message key. */
 export class AreaImportError extends Error {
-  readonly reason: "invalid" | "noPolygon" | "unknownCrs";
+  readonly reason: AreaImportReason;
   readonly detail: string;
 
-  constructor(reason: "invalid" | "noPolygon" | "unknownCrs", detail = "") {
+  constructor(reason: AreaImportReason, detail = "") {
     super(`${reason}${detail ? `: ${detail}` : ""}`);
     this.reason = reason;
     this.detail = detail;
@@ -54,11 +69,14 @@ export function areaToGeoJSON(polygons: [number, number][][], name: string): str
  * are dropped, because an area is selected by its outline.
  */
 export function areaRingsFromGeoJSON(text: string): [number, number][][] {
-  let doc: { crs?: { properties?: { name?: string } } };
+  let doc: { type?: unknown; crs?: { properties?: { name?: string } } };
   try {
     doc = JSON.parse(text);
   } catch {
     throw new AreaImportError("invalid");
+  }
+  if (typeof doc !== "object" || doc === null || !GEOJSON_TYPES.has(doc.type as string)) {
+    throw new AreaImportError("notGeoJSON", String(doc?.type ?? ""));
   }
   const crs = crsOf(doc);
   if (!getProjection(crs)) throw new AreaImportError("unknownCrs", crs);
@@ -75,5 +93,26 @@ export function areaRingsFromGeoJSON(text: string): [number, number][][] {
     }
   }
   if (rings.length === 0) throw new AreaImportError("noPolygon");
+  checkAreaRings(rings);
   return rings;
+}
+
+/** Applies the backend's limits and the WGS84 range, which a file in metres without a crs member fails. */
+function checkAreaRings(rings: [number, number][][]): void {
+  const vertices = rings.reduce((n, r) => n + r.length, 0);
+  if (rings.length > MAX_AREA_POLYGONS || vertices > MAX_AREA_VERTICES) {
+    throw new AreaImportError("tooComplex", `${rings.length} / ${vertices}`);
+  }
+  for (const [lon, lat] of rings.flat()) {
+    if (!Number.isFinite(lon) || !Number.isFinite(lat) || Math.abs(lon) > 180 || Math.abs(lat) > 90) {
+      throw new AreaImportError("outOfRange", `${lon}, ${lat}`);
+    }
+  }
+}
+
+/** Reads a chosen file as an area, refusing other file types and oversized files before reading them. */
+export async function readAreaFile(file: File): Promise<[number, number][][]> {
+  if (!/\.(geo)?json$/i.test(file.name)) throw new AreaImportError("notGeoJSON", file.name);
+  if (file.size > MAX_AREA_FILE_BYTES) throw new AreaImportError("tooLarge", `${Math.ceil(file.size / 1048576)} MB`);
+  return areaRingsFromGeoJSON(await file.text());
 }

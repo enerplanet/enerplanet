@@ -44,7 +44,7 @@ import { useTransformerActions } from "@/features/configurator/hooks/useTransfor
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
-import { AreaImportError, areaRingsFromGeoJSON, areaToGeoJSON } from "@/features/configurator/utils/areaGeoJSON";
+import { AreaImportError, areaToGeoJSON, readAreaFile } from "@/features/configurator/utils/areaGeoJSON";
 import { downloadBlob } from "@/utils/fileDownload";
 import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 
@@ -525,7 +525,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [importedPolygons, setImportedPolygons] = useState<[number, number][][]>();
   const handleImportArea = async (file: File) => {
     try {
-      const rings = areaRingsFromGeoJSON(await file.text());
+      const rings = await readAreaFile(file);
       setImportedPolygons(rings);
       await handlePolygonDrawnWithLimit(rings[rings.length - 1], rings);
     } catch (error) {
