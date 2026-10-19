@@ -66,6 +66,19 @@ describe('transformToCapacityData', () => {
     expect(demand[0].installed_capacity_kw).toBeCloseTo(6.36, 2);
   });
 
+  it('adds up a technology across buildings and roofs into one bar', () => {
+    const results = baseResults({});
+    results.energy_cap = [
+      { location: 'n1', tech: 'pv_supply_1_0', value: 4 },
+      { location: 'n1', tech: 'pv_supply_1_2', value: 6 },
+      { location: 'n2', tech: 'air_source_heat_pump_2', value: 3 },
+      { location: 'n3', tech: 'air_source_heat_pump_3', value: 5 },
+    ] as never;
+    const supply = transformToCapacityData(results, undefined, unknownUsage as never).filter((d) => d.type === 'supply');
+
+    expect(supply.map((d) => [d.technology, d.installed_capacity_kw])).toEqual([['Solar PV', 10], ['Air Source Heat Pump', 8]]);
+  });
+
   it('falls back to the demand tech label when no f_class resolves', () => {
     const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
     const out = transformToCapacityData(baseResults(coords), undefined, {
@@ -99,6 +112,17 @@ describe('transformToEnergyFlow', () => {
     const names = transformToEnergyFlow(baseResults(coords), undefined, unknownUsage as never).nodes.map((n) => n.name);
     expect(names).toContain('Other buildings');
     expect(names).not.toContain('N1 Demand');
+  });
+
+  it('adds up a technology across buildings and roofs into one node', () => {
+    const results = baseResults({});
+    results.energy_cap = [
+      { location: 'n1', tech: 'pv_supply_1_0', value: 4 },
+      { location: 'n2', tech: 'pv_supply_2_3', value: 6 },
+    ] as never;
+    const names = transformToEnergyFlow(results, undefined, unknownUsage as never).nodes.map((n) => n.name);
+    expect(names.filter((n) => n === 'Solar PV')).toHaveLength(1);
+    expect(names.some((n) => n.startsWith('Pv Supply'))).toBe(false);
   });
 
   it('falls back to demand tech nodes when no f_class resolves', () => {

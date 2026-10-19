@@ -69,9 +69,13 @@ const EXCLUDED_CAPACITY_TECHS = new Set([
   'transformer_supply',
 ]);
 
+/**
+ * The technology without its location and its building and roof numbers, which
+ * T1K appends per building: "pv_supply_20_13:n20" -> "pv_supply".
+ */
 function getBaseTech(tech: string): string {
   if (!tech) return '';
-  return tech.split(':', 1)[0].trim();
+  return tech.split(':', 1)[0].trim().replace(/(_\d+)+$/, '');
 }
 
 function isCapacityChartTech(tech: string): boolean {
@@ -315,7 +319,7 @@ export function transformToEnergyFlow(
   const links: { source: string; target: string; value: number }[] = [];
   const nodeSet = new Set<string>();
 
-  const toBaseTech = (tech: string): string => tech ? tech.split(':', 1)[0].trim() : '';
+  const toBaseTech = getBaseTech;
   const isDemandTech = (tech: string): boolean => toBaseTech(tech).toLowerCase().endsWith('_demand');
   const excludedSourceTechs = new Set(['power_transmission']);
 
