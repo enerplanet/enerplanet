@@ -2350,6 +2350,12 @@
       "constraints": "Contraintes",
       "applyToAllBuildings": "Appliquer à tous les bâtiments",
       "applyTechnology": "Appliquer la technologie"
+    },
+    "heatScope": {
+      "title": "Ajouter {{tech}} à tous les bâtiments ?",
+      "description": "Un bâtiment a une seule source de chaleur. {{withHeat}} bâtiments en ont déjà une, {{without}} n'en ont pas.",
+      "missing": "Seulement les bâtiments sans source de chaleur ({{count}})",
+      "replace": "Remplacer sur tous les bâtiments ({{count}})"
     }
   },
   "locations": {

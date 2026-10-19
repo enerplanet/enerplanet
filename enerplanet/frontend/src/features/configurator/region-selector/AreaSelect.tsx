@@ -72,6 +72,7 @@ import { TechParameterDialog } from "./components/TechParameterDialog";
 import { ProductPickerDialog } from "./components/ProductPickerDialog";
 import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
 import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
+import { HeatScopeDialog } from "./components/HeatScopeDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
@@ -853,6 +854,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         techsFor={pylovoLayers.buildingTechs}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
       />
+
+      <HeatScopeDialog request={techOperations.heatScopeRequest} onChoose={techOperations.resolveHeatScope} />
 
       <HeatBootstrapDialog
         open={heatBootstrapOpen}

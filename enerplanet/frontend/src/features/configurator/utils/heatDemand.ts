@@ -95,8 +95,10 @@ export function estimateYearlyHeatDemand(
   if (explicitHeatKwh !== undefined && explicitHeatKwh > 0) {
     return { kwh: explicitHeatKwh, estimated: false };
   }
-  if (!fClass || isZeroHeatDemandClass(fClass) || !areaSqm || areaSqm <= 0) {
+  // A building of unknown use (OSM building=yes) is heated; like the backend's
+  // heatdemand.SpecificDemandKwhM2a it takes the fallback rate, not zero.
+  if ((fClass && isZeroHeatDemandClass(fClass)) || !areaSqm || areaSqm <= 0) {
     return { kwh: 0, estimated: false };
   }
-  return { kwh: Math.round(areaSqm * specificHeatDemand(fClass)), estimated: true };
+  return { kwh: Math.round(areaSqm * specificHeatDemand(fClass ?? '')), estimated: true };
 }

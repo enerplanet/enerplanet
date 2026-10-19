@@ -2350,6 +2350,12 @@
       "constraints": "Restricciones",
       "applyToAllBuildings": "Aplicar a todos los edificios",
       "applyTechnology": "Aplicar tecnología"
+    },
+    "heatScope": {
+      "title": "¿Añadir {{tech}} a todos los edificios?",
+      "description": "Un edificio tiene un único suministro de calor. {{withHeat}} edificios ya tienen uno, {{without}} no tienen ninguno.",
+      "missing": "Solo edificios sin suministro de calor ({{count}})",
+      "replace": "Sustituir en todos los edificios ({{count}})"
     }
   },
   "locations": {

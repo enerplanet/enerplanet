@@ -1971,6 +1971,12 @@
       "constraints": "Vincoli",
       "applyToAllBuildings": "Applica a tutti gli edifici",
       "applyTechnology": "Applica tecnologia"
+    },
+    "heatScope": {
+      "title": "Aggiungere {{tech}} a tutti gli edifici?",
+      "description": "Un edificio ha una sola fornitura di calore. {{withHeat}} edifici ne hanno già una, {{without}} non ne hanno.",
+      "missing": "Solo edifici senza fornitura di calore ({{count}})",
+      "replace": "Sostituisci su tutti gli edifici ({{count}})"
     }
   },
   "locations": {
