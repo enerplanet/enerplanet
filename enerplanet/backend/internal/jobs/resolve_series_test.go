@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"spatialhub_backend/internal/buem"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/store/series"
 )
 
@@ -64,9 +65,19 @@ func (m *memStore) Profiles(ids []int64) (map[int64]series.StoredProfile, error)
 		for name := range p.Series {
 			names = append(names, name)
 		}
-		out[id] = series.StoredProfile{Summary: p.Summary, SeriesNames: names}
+		out[id] = series.StoredProfile{Summary: p.Summary, SeriesNames: names, StartTime: p.StartTime, ResolutionMinutes: p.ResolutionMinutes}
 	}
 	return out, nil
+}
+
+func (m *memStore) Values(id int64, name string) (models.SeriesValues, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.profiles[id].Series[name]
+	if !ok {
+		return models.SeriesValues{}, fmt.Errorf("profile %d has no series %s", id, name)
+	}
+	return models.SeriesValues{ProfileID: id, Series: name, Unit: d.Unit, Vals: d.Values}, nil
 }
 
 func (m *memStore) Link(_ series.Owner, _ string, links []series.Link) error {

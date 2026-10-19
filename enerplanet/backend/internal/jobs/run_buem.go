@@ -137,7 +137,7 @@ func ResolveBuemForModel(
 	if err != nil {
 		return nil, run.resolved, run.unresolved, err
 	}
-	return results, run.resolved, run.unresolved, nil
+	return combinePartResults(results, run.parts), run.resolved, run.unresolved, nil
 }
 
 // buemRun is one model's prepared BuEM input: the buildings ready to send with
@@ -150,7 +150,11 @@ type buemRun struct {
 	// further maps an OSM way sharing a 3D building with the way standing for
 	// it (see city2tabula.BuildingsResult.ByRequestedWay) to that way, whose
 	// BuEM run covers the whole building.
-	further    map[string]string
+	further map[string]string
+	// parts maps an OSM way covering several 3D buildings to the BuEM ids of
+	// those buildings, largest first (see partID); their results are summed
+	// into the way's (see combineParts and combinePartResults).
+	parts      map[string][]string
 	weather    json.RawMessage
 	start, end string
 }
@@ -161,12 +165,14 @@ type buemRun struct {
 func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, weatherProvider string, ignisClient envelopeUValueResolver, model commonModels.Model, p payload.CalculationPayload, refurbishmentLevel ignis.RefurbishmentLevel) buemRun {
 	period := modelWeatherPeriod(model.Config)
 	envelopeByOSMID, further, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
+	parts := partIDs(envelopeByOSMID)
 
 	country := ""
 	if model.Country != nil {
 		country = *model.Country
 	}
 	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, further, refurbishmentLevel, modelCookingSettings(model.Config))
+	buildings = foldPartFailures(parts, buildings, resolved, unresolved)
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
 		reason := "no weather data for this area"
 		if len(buildings) == 0 {
@@ -179,19 +185,19 @@ func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cli
 		for osmID := range resolved {
 			unresolved[osmID] = reason
 		}
-		return buemRun{unresolved: unresolved, further: further}
+		return buemRun{unresolved: unresolved, further: further, parts: parts}
 	}
 	// The BuEM period follows the weather, not the model's dates: a scenario
 	// series is stamped 1900, and BuEM indexes the weather by start_date's year.
 	start, end := period.Range()
-	return buemRun{buildings: buildings, resolved: resolved, unresolved: unresolved, further: further, weather: weatherJSON, start: start, end: end}
+	return buemRun{buildings: buildings, resolved: resolved, unresolved: unresolved, further: further, parts: parts, weather: weatherJSON, start: start, end: end}
 }
 
 // resolveBuemInputs fetches envelope and weather data for model's area, and
 // the further ways among its buildings (see buemRun.further). All degrade to
 // nil (simply omitted, not a job failure) on any resolution problem, so a
 // building without 3D data still runs.
-func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string]city2tabula.Building, map[string]string, json.RawMessage) {
+func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string][]city2tabula.Building, map[string]string, json.RawMessage) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)
 		return nil, nil, nil
@@ -215,7 +221,7 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 // (started when the polygon was created, see HandleTriggerCity2TabulaRun)
 // and, only when no run was recorded, triggers and records one itself, so
 // a model created before runs were recorded still gets its data.
-func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox, topology []interface{}) (map[string]city2tabula.Building, map[string]string) {
+func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox, topology []interface{}) (map[string][]city2tabula.Building, map[string]string) {
 	osmIDs := buildingOSMIDs(topology)
 	if len(osmIDs) == 0 {
 		return nil, nil
@@ -291,7 +297,7 @@ func recordedOrNewRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.C
 // standing way's osm_id and returns the further ways (see
 // city2tabula.BuildingsResult.ByRequestedWay). An osm_id in neither has no
 // PyLovo-linked building in City2TABULA yet — see missingOSMIDs.
-func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country string, osmIDs []string) (map[string]city2tabula.Building, map[string]string, error) {
+func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country string, osmIDs []string) (map[string][]city2tabula.Building, map[string]string, error) {
 	result, err := c2t.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
 		return nil, nil, err
@@ -302,7 +308,7 @@ func fetchLinkedBuildings(ctx context.Context, c2t *city2tabula.Client, country 
 
 // missingOSMIDs returns the osm_ids in want that are neither in got nor a
 // further way of a building in it.
-func missingOSMIDs(want []string, got map[string]city2tabula.Building, further map[string]string) []string {
+func missingOSMIDs(want []string, got map[string][]city2tabula.Building, further map[string]string) []string {
 	var missing []string
 	for _, id := range want {
 		_, isFurther := further[id]
@@ -406,7 +412,7 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 // Both exist for callers that persist per-building outcomes (see
 // HandleResolveDemandProfiles); HandleRunBuem's calculation-dispatch path
 // ignores them, same behaviour as before this was split out.
-func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string]city2tabula.Building, further map[string]string, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
+func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string][]city2tabula.Building, further map[string]string, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
 	resolved = make(map[string]BuemResolutionMeta)
 	unresolved = make(map[string]string)
 	seen := make(map[string]bool)
@@ -427,35 +433,37 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 			}
 
 			node, _ := feature.(map[string]interface{})
-			b, meta, reason, ok := buildingForBuem(ctx, ignisClient, country, node, props, osmID, envelopeByOSMID, defaultLevel, defaultCooking)
-			if !ok {
-				unresolved[osmID] = reason
-				continue
+			for _, part := range buildingParts(osmID, props, envelopeByOSMID[osmID]) {
+				b, meta, reason, ok := buildingForBuem(ctx, ignisClient, country, node, part.props, part.id, part.envelope, defaultLevel, defaultCooking)
+				if !ok {
+					unresolved[part.id] = reason
+					continue
+				}
+				buildings = append(buildings, b)
+				resolved[part.id] = meta
 			}
-			buildings = append(buildings, b)
-			resolved[osmID] = meta
 		}
 	}
 	return buildings, resolved, unresolved
 }
 
-// buildingForBuem builds one buem.Building for an already-identified building
-// node (props/osmID as buildingProperties extracted them), or reports false
-// with reason set when it has no resolved, non-empty envelope. meta records
-// the TABULA variant/refurbishment level that produced its U-values.
-func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, osmID string, envelopeByOSMID map[string]city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
+// buildingForBuem builds one buem.Building under id for an already-identified
+// building node (props as buildingProperties extracted them) and its 3D
+// building cityBuilding (nil when City2TABULA has none), or reports false with
+// reason set when it has no resolved, non-empty envelope. meta records the
+// TABULA variant/refurbishment level that produced its U-values.
+func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, node map[string]interface{}, props map[string]interface{}, id string, cityBuilding *city2tabula.Building, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (b buem.Building, meta BuemResolutionMeta, reason string, ok bool) {
 	if stored, ok := storedBuemBlock(props); ok {
-		return storedBuildingForBuem(node, osmID, stored, buildingCookingSettings(props, defaultCooking).Carrier)
+		return storedBuildingForBuem(node, id, stored, buildingCookingSettings(props, defaultCooking).Carrier)
 	}
-	cityBuilding, ok := envelopeByOSMID[osmID]
-	if !ok {
+	if cityBuilding == nil {
 		return buem.Building{}, BuemResolutionMeta{}, "no City2TABULA envelope for this building", false
 	}
-	elements := city2tabula.EnvelopeElements(cityBuilding)
+	elements := city2tabula.EnvelopeElements(*cityBuilding)
 	if len(elements) == 0 {
 		return buem.Building{}, BuemResolutionMeta{}, "City2TABULA returned no usable envelope surfaces", false
 	}
-	location, reason := locationAndFloorArea(country, cityBuilding)
+	location, reason := locationAndFloorArea(country, *cityBuilding)
 	if reason != "" {
 		return buem.Building{}, BuemResolutionMeta{}, reason, false
 	}
@@ -475,7 +483,7 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 	// v6-draft request contract; the gateway forwards the building block
 	// verbatim and a BuEM without the fields ignores them.
 	cooking := buildingCookingSettings(props, defaultCooking)
-	block := buildingScalars(cityBuilding)
+	block := buildingScalars(*cityBuilding)
 	// A service class from OSM overrides the TABULA type: City2TABULA's
 	// variant code is a geometry match against residential archetypes and
 	// says nothing about use, and a residential building_type would put a
@@ -531,7 +539,7 @@ func buildingForBuem(ctx context.Context, ignisClient envelopeUValueResolver, co
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal building block: %v", err), false
 	}
 
-	return buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}, meta, "", true
+	return buem.Building{ID: id, Geometry: geometry, Building: buildingBlock}, meta, "", true
 }
 
 // defaultBuildingType is the building_type sent when neither City2TABULA nor
@@ -569,7 +577,7 @@ func storedBuemBlock(props map[string]interface{}) (map[string]interface{}, bool
 // it complete, the same block its own per-building BuEM run sends, so no
 // City2TABULA envelope, U-value resolution or archetype default applies. The
 // one addition is cooking: a block that names no carrier gets the model's.
-func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map[string]interface{}, cooking CookingCarrier) (buem.Building, BuemResolutionMeta, string, bool) {
+func storedBuildingForBuem(node map[string]interface{}, id string, stored map[string]interface{}, cooking CookingCarrier) (buem.Building, BuemResolutionMeta, string, bool) {
 	geometry, err := json.Marshal(node["geometry"])
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal geometry: %v", err), false
@@ -579,7 +587,7 @@ func storedBuildingForBuem(node map[string]interface{}, osmID string, stored map
 	if err != nil {
 		return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored building block: %v", err), false
 	}
-	b := buem.Building{ID: osmID, Geometry: geometry, Building: buildingBlock}
+	b := buem.Building{ID: id, Geometry: geometry, Building: buildingBlock}
 	if solver, ok := stored["solver"]; ok {
 		if b.Solver, err = json.Marshal(solver); err != nil {
 			return buem.Building{}, BuemResolutionMeta{}, fmt.Sprintf("failed to marshal stored solver: %v", err), false

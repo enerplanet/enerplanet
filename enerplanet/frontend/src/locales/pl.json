@@ -3029,6 +3029,7 @@
     "pv": {
       "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
       "unavailable": "Nie udało się wczytać powierzchni PV budynku."
-    }
+    },
+    "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane."
   }
 }

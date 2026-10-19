@@ -55,13 +55,14 @@ func (h *Handler) EnrichArea(c *gin.Context) {
 	}
 	buildings := result.Buildings
 
-	byObjectID := make(map[string]c2t.Building, len(buildings))
+	// Keyed by 3D building, so each entry is one building.
+	byObjectID := make(map[string][]c2t.Building, len(buildings))
 	objectIDs := make([]string, 0, len(buildings))
 	for _, b := range buildings {
 		if b.ObjectID == "" {
 			continue
 		}
-		byObjectID[b.ObjectID] = b
+		byObjectID[b.ObjectID] = []c2t.Building{b}
 		objectIDs = append(objectIDs, b.ObjectID)
 	}
 

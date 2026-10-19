@@ -235,22 +235,26 @@ func (s *Store) Links(owner Owner) ([]models.SeriesLink, error) {
 // StoredProfile is what a caller linking a stored profile needs: the
 // producer's summary and the names of its series.
 type StoredProfile struct {
-	Summary     datatypes.JSON
-	SeriesNames []string
+	Summary           datatypes.JSON
+	SeriesNames       []string
+	StartTime         time.Time
+	ResolutionMinutes int
+	ProducerVersion   *string
 }
 
-// Profiles returns the summary and series names of each stored profile in ids.
+// Profiles returns the summary, series names and timing of each stored
+// profile in ids.
 func (s *Store) Profiles(ids []int64) (map[int64]StoredProfile, error) {
 	out := make(map[int64]StoredProfile, len(ids))
 	if len(ids) == 0 {
 		return out, nil
 	}
 	var profiles []models.SeriesProfile
-	if err := s.db.Select("id", "summary").Where("id IN ?", ids).Find(&profiles).Error; err != nil {
+	if err := s.db.Select("id", "summary", "start_time", "resolution_minutes", "producer_version").Where("id IN ?", ids).Find(&profiles).Error; err != nil {
 		return nil, fmt.Errorf("read %d series profiles: %w", len(ids), err)
 	}
 	for _, p := range profiles {
-		out[p.ID] = StoredProfile{Summary: p.Summary}
+		out[p.ID] = StoredProfile{Summary: p.Summary, StartTime: p.StartTime, ResolutionMinutes: p.ResolutionMinutes, ProducerVersion: p.ProducerVersion}
 	}
 	var names []models.SeriesValues
 	if err := s.db.Select("profile_id", "series").Where("profile_id IN ?", ids).Order("series").Find(&names).Error; err != nil {

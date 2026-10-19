@@ -70,7 +70,7 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 		map[string]interface{}{"from": building("222")}, // no envelope match
 	}
 
-	envelopeByOSMID := map[string]city2tabula.Building{
+	envelopeByOSMID := oneEach(map[string]city2tabula.Building{
 		"111": {
 			OSMID:        "111",
 			FloorAreaSqm: floatPtr(80),
@@ -78,7 +78,7 @@ func TestBuildingsForBuem_CollectsByOSMIDWithGeometryAndEnvelope(t *testing.T) {
 				{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)},
 			},
 		},
-	}
+	})
 
 	buildings, resolved, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, envelopeByOSMID, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingGas, IncludeDHW: false})
 
@@ -444,10 +444,10 @@ func TestBuildingsForBuem_serviceClassOverridesBuildingType(t *testing.T) {
 			"feature_type": "BasePOI", "osm_id": "555", "f_class": "bakery", "capacity": float64(4),
 		},
 	}}}
-	envelopeByOSMID := map[string]city2tabula.Building{"555": {
+	envelopeByOSMID := oneEach(map[string]city2tabula.Building{"555": {
 		OSMID: "555", NumberOfStoreys: &storeys, TabulaVariantCode: &code, FloorAreaSqm: floatPtr(150),
 		Surfaces: []city2tabula.Surface{{ID: "w1", Type: "WallSurface", AreaSqm: floatPtr(20), Azimuth: floatPtr(90), Tilt: floatPtr(0)}},
-	}}
+	}})
 
 	buildings, resolved, _ := buildingsForBuem(context.Background(), nil, "netherlands", topology, envelopeByOSMID, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric, IncludeDHW: true})
 
@@ -504,7 +504,7 @@ func TestBuildingsForBuem_residentialUnitsFromArchetype(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := fakeEnvelopeUValueResolver{uValues: ignis.EnvelopeUValues{UWall: 1, URoof: 1, UFloor: 1, Apartments: tt.apartments}}
 			buildings, resolved, _ := buildingsForBuem(context.Background(), client, "netherlands",
-				[]interface{}{node("1", tt.fClass)}, map[string]city2tabula.Building{"1": envelope("1")}, nil, ignis.RefurbishmentExisting, cooking)
+				[]interface{}{node("1", tt.fClass)}, oneEach(map[string]city2tabula.Building{"1": envelope("1")}), nil, ignis.RefurbishmentExisting, cooking)
 			got := block(buildings, "1")
 			if tt.wantUnits == 0 {
 				assert.NotContains(t, got, "residential_units")

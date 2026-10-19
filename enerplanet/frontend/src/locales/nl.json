@@ -3029,6 +3029,7 @@
     "pv": {
       "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
       "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
-    }
+    },
+    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld."
   }
 }

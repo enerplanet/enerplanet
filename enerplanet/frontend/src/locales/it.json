@@ -3029,6 +3029,7 @@
     "pv": {
       "shadingNotice": "La simulazione non considera l'ombreggiamento di alberi o edifici vicini.",
       "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio."
-    }
+    },
+    "sharedOutline": "Questo contorno comprende {{count}} edifici 3D. Mostrato e modificabile: il più grande. Il fabbisogno di calore è calcolato per ciascuno e sommato."
   }
 }

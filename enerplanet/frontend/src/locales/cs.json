@@ -3029,6 +3029,7 @@
     "pv": {
       "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
       "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
-    }
+    },
+    "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se."
   }
 }

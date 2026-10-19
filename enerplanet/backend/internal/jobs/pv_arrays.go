@@ -167,8 +167,12 @@ func (r PVResolver) placeArrays(ctx context.Context, model *commonModels.Model, 
 		if err != nil {
 			return fmt.Errorf("roof surfaces for the PV of model %d: %w", model.ID, err)
 		}
-		for _, building := range result.Buildings {
-			surfaces[building.OSMID] = building.Surfaces
+		// A way covering several 3D buildings offers the roofs of all of them.
+		byWay, _ := result.ByRequestedWay(ids)
+		for way, buildings := range byWay {
+			for _, building := range buildings {
+				surfaces[way] = append(surfaces[way], building.Surfaces...)
+			}
 		}
 	}
 	for _, b := range buildings {

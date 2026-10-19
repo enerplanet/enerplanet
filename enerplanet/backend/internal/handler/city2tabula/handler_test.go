@@ -455,3 +455,20 @@ func TestEnrich_FurtherWayIsLinkedWithoutItsOwnEnvelope(t *testing.T) {
 	assert.Contains(t, resp.Data, "111")
 	assert.NotContains(t, resp.Data, "222")
 }
+
+// A terraced row mapped as one OSM outline: enrich shows its largest 3D
+// building and says how many the way covers.
+func TestEnrich_WayCoveringSeveralBuildingsShowsTheLargest(t *testing.T) {
+	row := `{"buildings": [
+	  {"object_id": "DEBY_small", "dataset_id": "de-by-lod2", "osm_id": "111", "osm_ids": ["111"], "match_type": 1, "area_total_floor": 90, "footprint_area": 45},
+	  {"object_id": "DEBY_large", "dataset_id": "de-by-lod2", "osm_id": "111", "osm_ids": ["111"], "match_type": 1, "area_total_floor": 140, "footprint_area": 70}
+	], "attributions": []}`
+	fake := &fakeC2T{buildingsJSON: row}
+	h := &Handler{client: fake.client(t)}
+
+	w, resp := postEnrich(t, h, `{"country":"germany","bbox":{"xmin":6,"ymin":51,"xmax":6.1,"ymax":51.1},"osm_ids":["111"]}`)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "DEBY_large", resp.Data["111"].ObjectID)
+	assert.Equal(t, 2, resp.Data["111"].BuildingCount)
+}

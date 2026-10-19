@@ -117,6 +117,7 @@ nav:
       - Test Data: enerplanet/test-data.md
       - Architecture: enerplanet/architecture.md
       - Heat Demand Resolution: enerplanet/heat-demand-flow.md
+      - OSM Ways and 3D Buildings: enerplanet/osm-ways-and-3d-buildings.md
       - Deployment: enerplanet/deployment.md
       - Authentication (Keycloak): enerplanet/keycloak.md
       - Identity Brokering: enerplanet/keycloak-identity-brokering.md

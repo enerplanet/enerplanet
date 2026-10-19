@@ -88,6 +88,16 @@ const ResetNotice: FC<{ onReset: () => void }> = ({ onReset }) => {
   );
 };
 
+/** Says that the OSM outline covers several 3D buildings and which one the view shows. */
+const SharedOutlineNotice: FC<{ count: number }> = ({ count }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="bg-card pointer-events-none absolute bottom-20 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
+      <p className="text-muted-foreground">{t('buildingConfig.sharedOutline', { count })}</p>
+    </div>
+  );
+};
+
 /** The licence credits of the building's 3D dataset and TABULA type, for the view's attribution corner. */
 const Credits: FC<{ credits: DatasetCredit[] }> = ({ credits }) => {
   const { t } = useTranslation();
@@ -144,7 +154,7 @@ interface PanelBodyProps {
 }
 
 const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays }) => {
-  const { building, loading, error, preparing, objectId, country, credits, edited } = useBuildingState(osmId);
+  const { building, loading, error, preparing, objectId, country, credits, edited, buildingCount } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
   const services = useMemo(() => configuratorServicesFor(ownerPath, setDemandProfile), [ownerPath, setDemandProfile]);
@@ -202,6 +212,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         pv={pvMode.pv}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
+      {buildingCount > 1 && <SharedOutlineNotice count={buildingCount} />}
     </>
   );
 };
