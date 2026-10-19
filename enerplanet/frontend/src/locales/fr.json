@@ -1673,7 +1673,7 @@
       "importArea": "Importer une zone",
       "exportArea": "Exporter la zone",
       "regenerateGrid": "Régénérer le réseau",
-      "regenerateGridHint": "La zone ou les transformateurs du site ont changé. Régénérez pour regrouper les bâtiments autour d'eux et mettre le réseau à jour.",
+      "regenerateGridHint": "La zone ou ses transformateurs ont changé. Régénérez pour regrouper les bâtiments autour d'eux et mettre le réseau à jour.",
       "importAreaError": {
         "invalid": "Le fichier n'est pas un GeoJSON valide.",
         "noPolygon": "Le fichier ne contient aucun polygone.",
@@ -1801,8 +1801,8 @@
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "siteMode": {
-      "label": "Mode site",
-      "hint": "Génère le réseau pour cette seule zone et le conserve à part des réseaux partagés. Seuls les bâtiments disposant de données 3D sont inclus, jusqu'à 150.",
+      "label": "Réseau personnalisé",
+      "hint": "Placez vos propres transformateurs et construisez le réseau de cette zone à partir d'eux, au lieu du réseau précalculé. Seuls les bâtiments avec données 3D sont inclus, 150 au maximum.",
       "locked": "Effacez la zone dessinée pour changer de mode."
     },
     "largeModel": {

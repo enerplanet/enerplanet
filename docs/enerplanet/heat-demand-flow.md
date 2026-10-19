@@ -36,7 +36,7 @@ sequenceDiagram
     participant IG as ignis
 
     note over U,PL: 1 - Grid and buildings
-    U->>BE: POST /api/v2/pylovo/generate-grid (polygon)
+    U->>BE: POST /api/v1/pylovo/generate-grid (polygon)
     BE->>PL: POST /generate-grid
     PL-->>BE: buildings + LV grid<br>(f_class, floors, area, country_code)
     BE-->>U: FeatureCollection - buildings drawn on the map
@@ -44,14 +44,14 @@ sequenceDiagram
     note over TC: Every TentaCron call is async. POST /v1/requests<br>(target + payload, X-API-Key header) returns 202 and a request id.<br>The backend long-polls the request until its state is completed,<br>then reads the verbatim ignis body from result.target_response.
 
     note over U,IG: 2 - Building clicked, dialog opens
-    U->>BE: GET /api/v2/ignis/fields
+    U->>BE: GET /api/v1/ignis/fields
     BE->>TC: target ignis-fields, empty payload
     TC->>IG: GET /api/v1/fields
     IG-->>TC: field catalogue
     TC-->>BE: completed
     BE-->>U: success envelope - form labels
 
-    U->>BE: GET /api/v2/ignis/variants/DE
+    U->>BE: GET /api/v1/ignis/variants/DE
     BE->>TC: target ignis-variants, payload iso2
     TC->>IG: GET /api/v1/variants/DE
     IG-->>TC: variant code strings

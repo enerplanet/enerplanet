@@ -1411,7 +1411,7 @@
       "importArea": "Importa area",
       "exportArea": "Esporta area",
       "regenerateGrid": "Rigenera la rete",
-      "regenerateGridHint": "L'area o i trasformatori del sito sono cambiati. Rigenera per raggruppare gli edifici attorno ad essi e aggiornare la rete.",
+      "regenerateGridHint": "L'area o i suoi trasformatori sono cambiati. Rigenera per raggruppare gli edifici attorno ad essi e aggiornare la rete.",
       "importAreaError": {
         "invalid": "Il file non è un GeoJSON valido.",
         "noPolygon": "Il file non contiene alcun poligono.",
@@ -1539,8 +1539,8 @@
       "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
     "siteMode": {
-      "label": "Modalità sito",
-      "hint": "Genera la rete solo per quest'area e la conserva separata dalle reti condivise. Include solo edifici con dati 3D, fino a 150.",
+      "label": "Rete personalizzata",
+      "hint": "Posiziona i tuoi trasformatori e costruisci la rete di quest'area a partire da essi, invece della rete pregenerata. Solo edifici con dati 3D, al massimo 150.",
       "locked": "Cancella l'area disegnata per cambiare modalità."
     },
     "largeModel": {

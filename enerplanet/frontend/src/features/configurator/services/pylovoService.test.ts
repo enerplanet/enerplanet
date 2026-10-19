@@ -59,7 +59,7 @@ describe("pylovoService.generateSiteGrid", () => {
     await vi.runAllTimersAsync();
 
     expect(await result).toEqual({ meta: { mode: "site", site_id: 7, revision: 1 } });
-    expect(get.mock.calls.map(c => c[0])).toEqual(["/v2/pylovo/sites/7/jobs/2", "/v2/pylovo/sites/7/grid"]);
+    expect(get.mock.calls.map(c => c[0])).toEqual(["/v1/pylovo/sites/7/jobs/2", "/v1/pylovo/sites/7/grid"]);
   });
 
   it("rejects with the job's error when generation fails", async () => {

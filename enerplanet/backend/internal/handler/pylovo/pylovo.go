@@ -455,7 +455,7 @@ func (h *PylovoHandler) ToggleCachedRegion(c *gin.Context) {
 // @Success      200  {object}  contracts.GetBoundaryResponse
 // @Failure      400  {object}  contracts.ErrorResponse
 // @Failure      500  {object}  contracts.ErrorResponse
-// @Router       /v2/pylovo/boundary [get]
+// @Router       /v1/pylovo/boundary [get]
 func (h *PylovoHandler) GetBoundary(c *gin.Context) {
 	lat := c.Query("lat")
 	lon := c.Query("lon")

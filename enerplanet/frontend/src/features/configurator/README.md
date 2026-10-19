@@ -76,7 +76,7 @@ useBuildingsInPolygonCount(pylovoGridData) // → number
 
 ### Services
 
-- `services/pylovoService.ts` — axios client for `/v2/pylovo/*` endpoints (generate-grid, add-transformer, power-flow, transformer-sizes, etc.)
+- `services/pylovoService.ts` — axios client for `/v1/pylovo/*` endpoints (generate-grid, add-transformer, power-flow, transformer-sizes, etc.)
 - `services/energyService.ts` — energy estimation API
 - `services/opentechdbService.ts` — OpenTech-DB catalog bridge: fetches heat +
   electricity technologies via the backend proxy (`/api/opentech-db/*`),

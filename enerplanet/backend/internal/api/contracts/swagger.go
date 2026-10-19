@@ -63,7 +63,7 @@ type BoundaryData struct {
 	Message  string          `json:"message,omitempty" example:""`
 }
 
-// GetBoundaryResponse is the response for GET /api/v2/pylovo/boundary.
+// GetBoundaryResponse is the response for GET /api/v1/pylovo/boundary.
 type GetBoundaryResponse struct {
 	Success bool         `json:"success" example:"true"`
 	Data    BoundaryData `json:"data"`
@@ -78,7 +78,7 @@ type IgnisVariantsData struct {
 	Data    []string `json:"data" example:"DE.N.SFH.01.Gen"`
 }
 
-// GetIgnisVariantsResponse is the response for GET /v2/ignis/variants/{country_iso2}.
+// GetIgnisVariantsResponse is the response for GET /v1/ignis/variants/{country_iso2}.
 type GetIgnisVariantsResponse struct {
 	Success bool              `json:"success" example:"true"`
 	Data    IgnisVariantsData `json:"data"`
@@ -98,7 +98,7 @@ type IgnisFieldMetadataData struct {
 	Data []IgnisFieldMetadata `json:"data"`
 }
 
-// GetIgnisFieldMetadataResponse is the response for GET /v2/ignis/fields.
+// GetIgnisFieldMetadataResponse is the response for GET /v1/ignis/fields.
 type GetIgnisFieldMetadataResponse struct {
 	Success bool                   `json:"success" example:"true"`
 	Data    IgnisFieldMetadataData `json:"data"`

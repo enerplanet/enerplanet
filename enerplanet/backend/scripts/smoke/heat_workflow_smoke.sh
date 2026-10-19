@@ -250,12 +250,12 @@ fi
 # else takes.
 # transformer-sizes is cached reference data and needs no grid state, so the
 # answer does not depend on anything the smoke run has created.
-body="$(request GET /api/v2/pylovo/transformer-sizes)"
+body="$(request GET /api/v1/pylovo/transformer-sizes)"
 n="$(printf '%s' "$body" | jq -r '.data.sizes | length' 2>/dev/null || echo 0)"
 if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then
-  pass "2c. GET /v2/pylovo/transformer-sizes ($n sizes)"
+  pass "2c. GET /v1/pylovo/transformer-sizes ($n sizes)"
 else
-  fail "2c. GET /v2/pylovo/transformer-sizes: HTTP $HTTP_CODE ${body:0:200}"
+  fail "2c. GET /v1/pylovo/transformer-sizes: HTTP $HTTP_CODE ${body:0:200}"
 fi
 
 # ---- 2d. the site is discoverable as a region ----------------------------
@@ -268,13 +268,13 @@ fi
 # first read after the PyLovo data changes returns the previous answer. Asserting
 # on that reads a boundary the fixtures no longer serve, so spend one read waking
 # the cache and assert on the next.
-request GET /api/v2/pylovo/boundary/available >/dev/null
+request GET /api/v1/pylovo/boundary/available >/dev/null
 sleep 5
-body="$(request GET /api/v2/pylovo/boundary/available)"
+body="$(request GET /api/v1/pylovo/boundary/available)"
 region="$(printf '%s' "$body" | jq -c --arg cc "$SITE_REGION_CC" --arg sc "$SITE_REGION_STATE" \
   '.data.regions[]? | select(.country_code == $cc and .state_code == $sc)' 2>/dev/null)"
 if [ "$HTTP_CODE" != "200" ] || [ -z "$region" ]; then
-  fail "2d. $SITE_REGION_CC/$SITE_REGION_STATE is not in /v2/pylovo/boundary/available: HTTP $HTTP_CODE ${body:0:200}"
+  fail "2d. $SITE_REGION_CC/$SITE_REGION_STATE is not in /v1/pylovo/boundary/available: HTTP $HTTP_CODE ${body:0:200}"
 else
   # region.country is RegionSelector's grouping key; empty collapses every
   # region into one unlabelled group and drops the per-country states count.
@@ -320,12 +320,12 @@ fi
 # ---- 3. ignis proxies ----------------------------------------------------
 # Reference data, not site data: ignis answers these the same whatever area the
 # run is over, so the country here stays fixed rather than following the site.
-body="$(request GET /api/v2/ignis/fields)"
+body="$(request GET /api/v1/ignis/fields)"
 n="$(printf '%s' "$body" | jq -r '.data.data | length' 2>/dev/null || echo 0)"
-if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then pass "3a. GET /v2/ignis/fields ($n fields)"; else fail "3a. GET /v2/ignis/fields: HTTP $HTTP_CODE ${body:0:200}"; fi
-body="$(request GET /api/v2/ignis/variants/DE)"
+if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then pass "3a. GET /v1/ignis/fields ($n fields)"; else fail "3a. GET /v1/ignis/fields: HTTP $HTTP_CODE ${body:0:200}"; fi
+body="$(request GET /api/v1/ignis/variants/DE)"
 n="$(printf '%s' "$body" | jq -r '.data.data | length' 2>/dev/null || echo 0)"
-if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then pass "3b. GET /v2/ignis/variants/DE ($n variants)"; else fail "3b. GET /v2/ignis/variants/DE: HTTP $HTTP_CODE ${body:0:200}"; fi
+if [ "$HTTP_CODE" = "200" ] && [ "${n:-0}" -gt 0 ]; then pass "3b. GET /v1/ignis/variants/DE ($n variants)"; else fail "3b. GET /v1/ignis/variants/DE: HTTP $HTTP_CODE ${body:0:200}"; fi
 
 # ---- 4. heat-demand resolve (ignis path) ---------------------------------
 body="$(request POST /api/v1/heat-demand/resolve \
