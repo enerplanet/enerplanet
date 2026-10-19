@@ -4,7 +4,7 @@
 # =============================================================================
 
 # Multi-stage build for Go backend
-FROM golang:1.24-alpine AS gobuilder
+FROM golang:1.25-alpine AS gobuilder
 
 WORKDIR /app
 ENV GOTOOLCHAIN=auto
