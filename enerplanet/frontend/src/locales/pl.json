@@ -1412,7 +1412,11 @@
       "importAreaError": {
         "invalid": "Plik nie jest prawidłowym GeoJSON.",
         "noPolygon": "Plik nie zawiera wielokąta.",
-        "unknownCrs": "Układ współrzędnych {{detail}} nie jest obsługiwany; wyeksportuj obszar w EPSG:4326."
+        "unknownCrs": "Układ współrzędnych {{detail}} nie jest obsługiwany; wyeksportuj obszar w EPSG:4326.",
+        "notGeoJSON": "Można importować tylko pliki GeoJSON: plik .geojson lub .json.",
+        "tooLarge": "Plik jest za duży ({{detail}}); można importować pliki do 5 MB.",
+        "tooComplex": "Obszar jest zbyt szczegółowy ({{detail}} wielokątów / wierzchołków); można importować do 100 wielokątów i 10 000 wierzchołków.",
+        "outOfRange": "Współrzędna ({{detail}}) leży poza zakresem długości i szerokości geograficznej. Jeśli plik używa metrów, musi podawać swój układ współrzędnych (crs)."
       }
     },
     "powerFlow": {

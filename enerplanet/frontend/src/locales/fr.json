@@ -1673,7 +1673,11 @@
       "importAreaError": {
         "invalid": "Le fichier n'est pas un GeoJSON valide.",
         "noPolygon": "Le fichier ne contient aucun polygone.",
-        "unknownCrs": "Le système de coordonnées {{detail}} n'est pas pris en charge ; exportez la zone en EPSG:4326."
+        "unknownCrs": "Le système de coordonnées {{detail}} n'est pas pris en charge ; exportez la zone en EPSG:4326.",
+        "notGeoJSON": "Seuls les fichiers GeoJSON peuvent être importés : un fichier .geojson ou .json.",
+        "tooLarge": "Le fichier est trop volumineux ({{detail}}) ; les fichiers jusqu'à 5 Mo peuvent être importés.",
+        "tooComplex": "La zone est trop détaillée ({{detail}} polygones / sommets) ; jusqu'à 100 polygones et 10 000 sommets peuvent être importés.",
+        "outOfRange": "Une coordonnée ({{detail}}) est hors de la plage de longitude et de latitude. Si le fichier utilise des mètres, il doit indiquer son système de coordonnées (crs)."
       }
     },
     "powerFlow": {

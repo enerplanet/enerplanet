@@ -1412,7 +1412,11 @@
       "importAreaError": {
         "invalid": "Il file non è un GeoJSON valido.",
         "noPolygon": "Il file non contiene alcun poligono.",
-        "unknownCrs": "Il sistema di coordinate {{detail}} non è supportato; esportare l'area in EPSG:4326."
+        "unknownCrs": "Il sistema di coordinate {{detail}} non è supportato; esportare l'area in EPSG:4326.",
+        "notGeoJSON": "Si possono importare solo file GeoJSON: un file .geojson o .json.",
+        "tooLarge": "Il file è troppo grande ({{detail}}); si possono importare file fino a 5 MB.",
+        "tooComplex": "L'area è troppo dettagliata ({{detail}} poligoni / vertici); si possono importare fino a 100 poligoni e 10.000 vertici.",
+        "outOfRange": "Una coordinata ({{detail}}) è fuori dall'intervallo di longitudine e latitudine. Se il file usa metri, deve indicare il suo sistema di coordinate (crs)."
       }
     },
     "powerFlow": {

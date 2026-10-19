@@ -1724,7 +1724,11 @@
       "importAreaError": {
         "invalid": "Die Datei ist kein gültiges GeoJSON.",
         "noPolygon": "Die Datei enthält kein Polygon.",
-        "unknownCrs": "Das Koordinatensystem {{detail}} wird nicht unterstützt; exportieren Sie das Gebiet in EPSG:4326."
+        "unknownCrs": "Das Koordinatensystem {{detail}} wird nicht unterstützt; exportieren Sie das Gebiet in EPSG:4326.",
+        "notGeoJSON": "Nur GeoJSON-Dateien können importiert werden: eine .geojson- oder .json-Datei.",
+        "tooLarge": "Die Datei ist zu groß ({{detail}}); importiert werden können Dateien bis 5 MB.",
+        "tooComplex": "Das Gebiet ist zu detailliert ({{detail}} Polygone / Stützpunkte); importiert werden können bis zu 100 Polygone und 10.000 Stützpunkte.",
+        "outOfRange": "Eine Koordinate ({{detail}}) liegt außerhalb des Längen- und Breitengradbereichs. Verwendet die Datei Meter, muss sie ihr Koordinatensystem (crs) angeben."
       }
     },
     "mapOverlay": {

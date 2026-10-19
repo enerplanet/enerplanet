@@ -1412,7 +1412,11 @@
       "importAreaError": {
         "invalid": "Het bestand is geen geldige GeoJSON.",
         "noPolygon": "Het bestand bevat geen polygoon.",
-        "unknownCrs": "Het coördinatenstelsel {{detail}} wordt niet ondersteund; exporteer het gebied in EPSG:4326."
+        "unknownCrs": "Het coördinatenstelsel {{detail}} wordt niet ondersteund; exporteer het gebied in EPSG:4326.",
+        "notGeoJSON": "Alleen GeoJSON-bestanden kunnen worden geïmporteerd: een .geojson- of .json-bestand.",
+        "tooLarge": "Het bestand is te groot ({{detail}}); bestanden tot 5 MB kunnen worden geïmporteerd.",
+        "tooComplex": "Het gebied is te gedetailleerd ({{detail}} polygonen / punten); tot 100 polygonen en 10.000 punten kunnen worden geïmporteerd.",
+        "outOfRange": "Een coördinaat ({{detail}}) valt buiten het bereik van lengte- en breedtegraad. Gebruikt het bestand meters, dan moet het zijn coördinatenstelsel (crs) noemen."
       }
     },
     "powerFlow": {
