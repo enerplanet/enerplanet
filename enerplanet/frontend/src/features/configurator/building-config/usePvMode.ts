@@ -18,7 +18,7 @@ export interface PvArray {
   usable_share: number;
 }
 
-interface PvSurfaceRow extends PvArray {
+export interface PvSurfaceRow extends PvArray {
   kind: 'roof' | 'wall';
   qualifies: boolean;
   suggested: boolean;
@@ -32,10 +32,36 @@ export interface BuildingPv {
 }
 
 // Matches the backend's pv.KWPerSqm.
-const KWP_PER_M2 = 0.2;
+export const KWP_PER_M2 = 0.2;
 
 const toArray = ({ surface_id, tilt, azimuth, area, usable_share }: PvArray): PvArray =>
   ({ surface_id, tilt, azimuth, area, usable_share });
+
+/** The arrays PV covers: the stored ones, or the qualifying roofs while placement is automatic. */
+export function installedPvArrays(arrays: PvArray[] | null, rows: PvSurfaceRow[] | null): PvArray[] {
+  return arrays ?? rows?.filter((r) => r.qualifies).map(toArray) ?? [];
+}
+
+/**
+ * The building's roofs and walls offered for PV, loaded while active; null
+ * until loaded, and failed when loading them failed.
+ */
+export function usePvSurfaceRows(osmId: string, country: string | null, active: boolean) {
+  const [rows, setRows] = useState<PvSurfaceRow[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!active || !country) return;
+    let cancelled = false;
+    axios
+      .get<{ surfaces: PvSurfaceRow[] }>('/v1/city2tabula/pv-surfaces', { params: { osm_id: osmId, country } })
+      .then((res) => { if (!cancelled) setRows(res.data.surfaces); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [active, osmId, country]);
+
+  return { rows, failed };
+}
 
 function stateOf(row: PvSurfaceRow, installed: boolean): PvSurface['state'] {
   if (installed) return 'installed';
@@ -54,25 +80,11 @@ export function usePvMode(
   notice: string,
   onArrays: (arrays: PvArray[]) => void,
 ): { pv: PvMode | undefined; failed: boolean } {
-  const [rows, setRows] = useState<PvSurfaceRow[] | null>(null);
-  const [failed, setFailed] = useState(false);
   const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
   const active = building !== null;
+  const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
-  useEffect(() => {
-    if (!active || !country) return;
-    let cancelled = false;
-    axios
-      .get<{ surfaces: PvSurfaceRow[] }>('/v1/city2tabula/pv-surfaces', { params: { osm_id: osmId, country } })
-      .then((res) => { if (!cancelled) setRows(res.data.surfaces); })
-      .catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
-  }, [active, osmId, country]);
-
-  const installed = useMemo(
-    () => arrays ?? rows?.filter((r) => r.qualifies).map(toArray) ?? [],
-    [arrays, rows],
-  );
+  const installed = useMemo(() => installedPvArrays(arrays, rows), [arrays, rows]);
 
   const change = useCallback((next: PvArray[]) => {
     setArrays(next);

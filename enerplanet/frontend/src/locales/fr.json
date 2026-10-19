@@ -2127,7 +2127,8 @@
       "ground_source_heat_pump": "Pompe à chaleur géothermique",
       "electric_boilers": "Chaudière électrique",
       "gas_boiler": "Chaudière à gaz",
-      "air_conditioner": "Climatiseur"
+      "air_conditioner": "Climatiseur",
+      "gas_supply": "Approvisionnement en gaz"
     },
     "products": {
       "title": "Choisir un produit : {{type}}",
@@ -3028,6 +3029,24 @@
       "shadingNotice": "La simulation ne tient pas compte de l'ombrage des arbres ni des bâtiments voisins.",
       "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées."
     },
-    "sharedOutline": "Ce contour couvre {{count}} bâtiments 3D. Affiché et modifiable : le plus grand. La demande de chaleur est calculée pour chacun et additionnée."
+    "sharedOutline": "Ce contour couvre {{count}} bâtiments 3D. Affiché et modifiable : le plus grand. La demande de chaleur est calculée pour chacun et additionnée.",
+    "tech": {
+      "pvCapacity": "Puissance des surfaces PV",
+      "size": "Taille",
+      "sizeMax": "Taille maximale",
+      "power": "Puissance",
+      "powerMax": "Puissance maximale",
+      "energy": "Énergie",
+      "energyMax": "Énergie maximale",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investissement",
+      "price": "Prix",
+      "pvSurfaces": "Surfaces PV",
+      "required": "Saisissez une valeur",
+      "positive": "Doit être supérieur à 0",
+      "notNegative": "Doit être 0 ou plus",
+      "notEditable": "Cette valeur ne peut pas être modifiée ici"
+    }
   }
 }

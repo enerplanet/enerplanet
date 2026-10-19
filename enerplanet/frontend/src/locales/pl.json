@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Gruntowa pompa ciepła",
       "electric_boilers": "Kocioł elektryczny",
       "gas_boiler": "Kocioł gazowy",
-      "air_conditioner": "Klimatyzator"
+      "air_conditioner": "Klimatyzator",
+      "gas_supply": "Dostawa gazu"
     },
     "products": {
       "title": "Wybierz produkt: {{type}}",
@@ -3034,6 +3035,24 @@
       "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
       "unavailable": "Nie udało się wczytać powierzchni PV budynku."
     },
-    "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane."
+    "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane.",
+    "tech": {
+      "pvCapacity": "Moc z powierzchni PV",
+      "size": "Wielkość",
+      "sizeMax": "Maksymalna wielkość",
+      "power": "Moc",
+      "powerMax": "Maksymalna moc",
+      "energy": "Energia",
+      "energyMax": "Maksymalna energia",
+      "cop": "COP",
+      "efficiency": "Sprawność",
+      "investment": "Inwestycja",
+      "price": "Cena",
+      "pvSurfaces": "Powierzchnie PV",
+      "required": "Wpisz wartość",
+      "positive": "Musi być większe od 0",
+      "notNegative": "Musi wynosić 0 lub więcej",
+      "notEditable": "Tej wartości nie można tu edytować"
+    }
   }
 }

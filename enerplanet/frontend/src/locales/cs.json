@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Tepelné čerpadlo země-voda",
       "electric_boilers": "Elektrokotel",
       "gas_boiler": "Plynový kotel",
-      "air_conditioner": "Klimatizace"
+      "air_conditioner": "Klimatizace",
+      "gas_supply": "Dodávka plynu"
     },
     "products": {
       "title": "Vyberte produkt: {{type}}",
@@ -3034,6 +3035,24 @@
       "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
       "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
     },
-    "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se."
+    "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se.",
+    "tech": {
+      "pvCapacity": "Výkon z ploch FV",
+      "size": "Velikost",
+      "sizeMax": "Maximální velikost",
+      "power": "Výkon",
+      "powerMax": "Maximální výkon",
+      "energy": "Energie",
+      "energyMax": "Maximální energie",
+      "cop": "COP",
+      "efficiency": "Účinnost",
+      "investment": "Investice",
+      "price": "Cena",
+      "pvSurfaces": "Plochy FV",
+      "required": "Zadejte hodnotu",
+      "positive": "Musí být větší než 0",
+      "notNegative": "Musí být 0 nebo více",
+      "notEditable": "Tuto hodnotu zde nelze upravit"
+    }
   }
 }
