@@ -3033,7 +3033,9 @@
     },
     "pv": {
       "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
-      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst.",
+      "otherRoof": "Střecha jiné 3D budovy ({{n}} z {{total}})",
+      "otherWall": "Stěna jiné 3D budovy ({{n}} z {{total}})"
     },
     "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se.",
     "tech": {

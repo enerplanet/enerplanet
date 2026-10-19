@@ -3023,7 +3023,9 @@
     },
     "pv": {
       "shadingNotice": "Die Simulation berücksichtigt keine Verschattung durch Bäume oder Nachbargebäude.",
-      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden."
+      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden.",
+      "otherRoof": "Dach eines anderen 3D-Gebäudes ({{n}} von {{total}})",
+      "otherWall": "Wand eines anderen 3D-Gebäudes ({{n}} von {{total}})"
     },
     "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert.",
     "tech": {

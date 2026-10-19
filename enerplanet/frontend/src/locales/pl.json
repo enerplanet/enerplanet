@@ -3033,7 +3033,9 @@
     },
     "pv": {
       "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
-      "unavailable": "Nie udało się wczytać powierzchni PV budynku."
+      "unavailable": "Nie udało się wczytać powierzchni PV budynku.",
+      "otherRoof": "Dach innego budynku 3D ({{n}} z {{total}})",
+      "otherWall": "Ściana innego budynku 3D ({{n}} z {{total}})"
     },
     "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane.",
     "tech": {

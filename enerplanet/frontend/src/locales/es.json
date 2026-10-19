@@ -3027,7 +3027,9 @@
     },
     "pv": {
       "shadingNotice": "La simulación no tiene en cuenta la sombra de árboles ni de edificios vecinos.",
-      "unavailable": "No se pudieron cargar las superficies FV del edificio."
+      "unavailable": "No se pudieron cargar las superficies FV del edificio.",
+      "otherRoof": "Tejado de otro edificio 3D ({{n}} de {{total}})",
+      "otherWall": "Muro de otro edificio 3D ({{n}} de {{total}})"
     },
     "sharedOutline": "Este contorno abarca {{count}} edificios 3D. Se muestra y se puede editar el mayor. La demanda de calor se calcula para cada uno y se suma.",
     "tech": {

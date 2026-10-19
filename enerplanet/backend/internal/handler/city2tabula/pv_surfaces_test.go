@@ -30,9 +30,26 @@ func TestPVSurfaces_ListsRoofsAndWallsWithPlacement(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.JSONEq(t, `{"surfaces":[
-		{"surface_id":"r-south","tilt":35,"azimuth":180,"area":40,"usable_share":0.8,"kind":"roof","qualifies":true,"suggested":true},
-		{"surface_id":"r-north","tilt":35,"azimuth":0,"area":40,"usable_share":0.8,"kind":"roof","qualifies":false,"suggested":false},
-		{"surface_id":"w-1","tilt":90,"azimuth":180,"area":80,"usable_share":0.8,"kind":"wall","qualifies":false,"suggested":true}]}`, w.Body.String())
+		{"surface_id":"r-south","tilt":35,"azimuth":180,"area":40,"usable_share":0.8,"kind":"roof","qualifies":true,"suggested":true,"object_id":"DE.A"},
+		{"surface_id":"r-north","tilt":35,"azimuth":0,"area":40,"usable_share":0.8,"kind":"roof","qualifies":false,"suggested":false,"object_id":"DE.A"},
+		{"surface_id":"w-1","tilt":90,"azimuth":180,"area":80,"usable_share":0.8,"kind":"wall","qualifies":false,"suggested":true,"object_id":"DE.A"}]}`, w.Body.String())
+}
+
+// A way covering several 3D buildings lists every building's surfaces, each
+// with its building, so the view can name the ones it does not show.
+func TestPVSurfaces_TagsEachSurfaceWithItsBuilding(t *testing.T) {
+	fake := &fakeC2T{buildingsJSON: `{"buildings":[
+		{"object_id":"DE.A","osm_id":"42","surfaces":[{"id":"a-roof","type":"RoofSurface","area":40,"azimuth":180,"tilt":55}]},
+		{"object_id":"DE.B","osm_id":"42","surfaces":[{"id":"b-roof","type":"RoofSurface","area":30,"azimuth":180,"tilt":55}]}],"attributions":[]}`}
+	h := &Handler{client: fake.client(t)}
+
+	w := getPVSurfaces(t, h, "country=germany&osm_id=42")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"surface_id":"a-roof"`)
+	assert.Contains(t, w.Body.String(), `"surface_id":"b-roof"`)
+	assert.Regexp(t, `"surface_id":"a-roof"[^}]*"object_id":"DE.A"`, w.Body.String())
+	assert.Regexp(t, `"surface_id":"b-roof"[^}]*"object_id":"DE.B"`, w.Body.String())
 }
 
 func TestPVSurfaces_NoBuildingIsEmptyList(t *testing.T) {

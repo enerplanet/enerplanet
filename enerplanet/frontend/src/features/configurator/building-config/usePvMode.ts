@@ -22,6 +22,30 @@ export interface PvSurfaceRow extends PvArray {
   kind: 'roof' | 'wall';
   qualifies: boolean;
   suggested: boolean;
+  /** The 3D building of the surface; an OSM way can cover several. */
+  object_id?: string;
+}
+
+/**
+ * Labels for surfaces of the way's other 3D buildings, which the view does not
+ * show: "Roof on another 3D building (2 of 3)". The shown building counts as 1.
+ */
+export function otherBuildingLabels(
+  rows: readonly PvSurfaceRow[],
+  shownObjectId: string | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): Record<string, string> {
+  const others: string[] = [];
+  for (const row of rows) {
+    if (row.object_id && row.object_id !== shownObjectId && !others.includes(row.object_id)) others.push(row.object_id);
+  }
+  const labels: Record<string, string> = {};
+  for (const row of rows) {
+    if (!row.object_id || row.object_id === shownObjectId) continue;
+    const key = row.kind === 'wall' ? 'buildingConfig.pv.otherWall' : 'buildingConfig.pv.otherRoof';
+    labels[row.surface_id] = t(key, { n: others.indexOf(row.object_id) + 2, total: others.length + 1 });
+  }
+  return labels;
 }
 
 /** The building's PV technology as the host stores it. */
@@ -79,6 +103,8 @@ export function usePvMode(
   building: BuildingPv | null,
   notice: string,
   onArrays: (arrays: PvArray[]) => void,
+  shownObjectId: string | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): { pv: PvMode | undefined; failed: boolean } {
   const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
   const active = building !== null;
@@ -105,6 +131,7 @@ export function usePvMode(
   const typeLabel = building?.typeLabel ?? "";
   const pv = useMemo<PvMode | undefined>(() => {
     if (!active || !rows) return undefined;
+    const labels = otherBuildingLabels(rows, shownObjectId, t);
     const surfaces: Record<string, PvSurface> = {};
     for (const row of rows) {
       const array = installed.find((a) => a.surface_id === row.surface_id);
@@ -113,10 +140,11 @@ export function usePvMode(
         state: stateOf(row, array !== undefined),
         usableShare,
         maxKwp: Number((row.area * usableShare * KWP_PER_M2).toFixed(1)),
+        label: labels[row.surface_id],
       };
     }
     return { surfaces, notice, typeLabel, onToggle, onShareChange };
-  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange]);
+  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange, shownObjectId, t]);
 
   return { pv, failed };
 }
