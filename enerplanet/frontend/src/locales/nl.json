@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Bodemwarmtepomp",
       "electric_boilers": "Elektrische ketel",
       "gas_boiler": "Gasketel",
-      "air_conditioner": "Airconditioner"
+      "air_conditioner": "Airconditioner",
+      "gas_supply": "Gaslevering"
     },
     "products": {
       "title": "Kies een product: {{type}}",
@@ -3032,8 +3033,28 @@
     },
     "pv": {
       "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
-      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen.",
+      "otherRoof": "Dak van een ander 3D-gebouw ({{n}} van {{total}})",
+      "otherWall": "Gevel van een ander 3D-gebouw ({{n}} van {{total}})"
     },
-    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld."
+    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld.",
+    "tech": {
+      "pvCapacity": "Vermogen uit de PV-vlakken",
+      "size": "Grootte",
+      "sizeMax": "Maximale grootte",
+      "power": "Vermogen",
+      "powerMax": "Maximaal vermogen",
+      "energy": "Energie",
+      "energyMax": "Maximale energie",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investering",
+      "price": "Prijs",
+      "pvSurfaces": "PV-vlakken",
+      "required": "Voer een waarde in",
+      "positive": "Moet groter dan 0 zijn",
+      "notNegative": "Moet 0 of meer zijn",
+      "notEditable": "Deze waarde kan hier niet worden bewerkt"
+    }
   }
 }

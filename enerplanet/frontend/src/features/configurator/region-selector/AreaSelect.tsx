@@ -850,6 +850,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
         onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        techsFor={pylovoLayers.buildingTechs}
+        onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
       />
 
       <HeatBootstrapDialog

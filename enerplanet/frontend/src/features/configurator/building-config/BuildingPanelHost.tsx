@@ -26,6 +26,8 @@ import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useDemandProfile } from './useDemandProfile';
 import { usePvMode, type BuildingPv, type PvArray } from './usePvMode';
+import { useBuildingTechnologies } from './useBuildingTechnologies';
+import type { BuildingTechs } from './buildingTechnologies';
 import { useConfiguratorParams } from './useConfiguratorParams';
 
 /**
@@ -58,6 +60,9 @@ export type OnBuildingReset = (osmId: string) => void;
 
 /** Receives a building's PV arrays after each change in PV mode. */
 export type OnPvArrays = (osmId: string, arrays: PvArray[]) => void;
+
+/** Receives a building's technologies after each edit in the Technologies tab. */
+export type OnTechsChange = (osmId: string, techs: BuildingTechs) => void;
 
 /**
  * Offered over the view when the building's saved edits match none of its
@@ -151,9 +156,12 @@ interface PanelBodyProps {
   /** The building's PV in PV mode, otherwise null. */
   pv: BuildingPv | null;
   onPvArrays?: OnPvArrays;
+  /** The building's technologies when the view opens. */
+  techs: BuildingTechs | null;
+  onTechsChange?: OnTechsChange;
 }
 
-const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays }) => {
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays, techs, onTechsChange }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited, buildingCount } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
@@ -163,7 +171,9 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const { t } = useTranslation();
   const preparationStep = usePreparationStepText();
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
-  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays);
+  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t);
+  const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
+  const { technologies, pvSurfaceIds } = useBuildingTechnologies(osmId, country, techs, storeTechs);
 
   if (preparing) {
     return (
@@ -210,6 +220,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         seriesCsvUrl={seriesCsvUrl}
         attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
         pv={pvMode.pv}
+        pvSurfaceIds={pvSurfaceIds}
+        technologies={technologies}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
       {buildingCount > 1 && <SharedOutlineNotice count={buildingCount} />}
@@ -227,9 +239,12 @@ interface BuildingPanelHostProps {
   /** The building's PV technology, or null when it has none. */
   pvFor?: (osmId: string) => BuildingPv | null;
   onPvArrays?: OnPvArrays;
+  /** The building's technologies, or null when it has none. */
+  techsFor?: (osmId: string) => BuildingTechs | null;
+  onTechsChange?: OnTechsChange;
 }
 
-export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays }) => {
+export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays, techsFor, onTechsChange }) => {
   const { buildingId, isOpen, pvMode, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
@@ -251,6 +266,8 @@ export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId
         onReset={onBuildingReset}
         pv={pvMode ? pvFor?.(buildingId) ?? null : null}
         onPvArrays={onPvArrays}
+        techs={techsFor?.(buildingId) ?? null}
+        onTechsChange={onTechsChange}
       />
     </div>
   );

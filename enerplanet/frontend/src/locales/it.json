@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Pompa di calore geotermica",
       "electric_boilers": "Caldaia elettrica",
       "gas_boiler": "Caldaia a gas",
-      "air_conditioner": "Condizionatore"
+      "air_conditioner": "Condizionatore",
+      "gas_supply": "Fornitura di gas"
     },
     "products": {
       "title": "Scegli un prodotto: {{type}}",
@@ -3032,8 +3033,28 @@
     },
     "pv": {
       "shadingNotice": "La simulazione non considera l'ombreggiamento di alberi o edifici vicini.",
-      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio."
+      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio.",
+      "otherRoof": "Tetto di un altro edificio 3D ({{n}} di {{total}})",
+      "otherWall": "Parete di un altro edificio 3D ({{n}} di {{total}})"
     },
-    "sharedOutline": "Questo contorno comprende {{count}} edifici 3D. Mostrato e modificabile: il più grande. Il fabbisogno di calore è calcolato per ciascuno e sommato."
+    "sharedOutline": "Questo contorno comprende {{count}} edifici 3D. Mostrato e modificabile: il più grande. Il fabbisogno di calore è calcolato per ciascuno e sommato.",
+    "tech": {
+      "pvCapacity": "Potenza dalle superfici FV",
+      "size": "Taglia",
+      "sizeMax": "Taglia massima",
+      "power": "Potenza",
+      "powerMax": "Potenza massima",
+      "energy": "Energia",
+      "energyMax": "Energia massima",
+      "cop": "COP",
+      "efficiency": "Rendimento",
+      "investment": "Investimento",
+      "price": "Prezzo",
+      "pvSurfaces": "Superfici FV",
+      "required": "Inserire un valore",
+      "positive": "Deve essere maggiore di 0",
+      "notNegative": "Deve essere 0 o più",
+      "notEditable": "Questo valore non si può modificare qui"
+    }
   }
 }

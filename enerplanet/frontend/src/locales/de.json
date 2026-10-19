@@ -2123,7 +2123,8 @@
       "ground_source_heat_pump": "Erdwärmepumpe",
       "electric_boilers": "Elektrokessel",
       "gas_boiler": "Gaskessel",
-      "air_conditioner": "Klimaanlage"
+      "air_conditioner": "Klimaanlage",
+      "gas_supply": "Gasversorgung"
     },
     "products": {
       "title": "Produkt wählen: {{type}}",
@@ -3022,8 +3023,28 @@
     },
     "pv": {
       "shadingNotice": "Die Simulation berücksichtigt keine Verschattung durch Bäume oder Nachbargebäude.",
-      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden."
+      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden.",
+      "otherRoof": "Dach eines anderen 3D-Gebäudes ({{n}} von {{total}})",
+      "otherWall": "Wand eines anderen 3D-Gebäudes ({{n}} von {{total}})"
     },
-    "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert."
+    "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert.",
+    "tech": {
+      "pvCapacity": "Leistung aus den PV-Flächen",
+      "size": "Größe",
+      "sizeMax": "Maximale Größe",
+      "power": "Leistung",
+      "powerMax": "Maximale Leistung",
+      "energy": "Energie",
+      "energyMax": "Maximale Energie",
+      "cop": "COP",
+      "efficiency": "Wirkungsgrad",
+      "investment": "Investition",
+      "price": "Preis",
+      "pvSurfaces": "PV-Flächen",
+      "required": "Wert eingeben",
+      "positive": "Muss größer als 0 sein",
+      "notNegative": "Muss 0 oder größer sein",
+      "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
+    }
   }
 }

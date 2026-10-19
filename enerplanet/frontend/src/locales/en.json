@@ -2123,7 +2123,8 @@
       "ground_source_heat_pump": "Ground-source heat pump",
       "electric_boilers": "Electric boiler",
       "gas_boiler": "Gas boiler",
-      "air_conditioner": "Air conditioner"
+      "air_conditioner": "Air conditioner",
+      "gas_supply": "Gas supply"
     },
     "products": {
       "title": "Choose a product: {{type}}",
@@ -3022,8 +3023,28 @@
     },
     "pv": {
       "shadingNotice": "The simulation does not consider shading from trees or neighbouring buildings.",
-      "unavailable": "The building's PV surfaces could not be loaded."
+      "unavailable": "The building's PV surfaces could not be loaded.",
+      "otherRoof": "Roof on another 3D building ({{n}} of {{total}})",
+      "otherWall": "Wall on another 3D building ({{n}} of {{total}})"
     },
-    "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed."
+    "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed.",
+    "tech": {
+      "pvCapacity": "Capacity from the PV surfaces",
+      "size": "Size",
+      "sizeMax": "Maximum size",
+      "power": "Power",
+      "powerMax": "Maximum power",
+      "energy": "Energy",
+      "energyMax": "Maximum energy",
+      "cop": "COP",
+      "efficiency": "Efficiency",
+      "investment": "Investment",
+      "price": "Price",
+      "pvSurfaces": "PV surfaces",
+      "required": "Enter a value",
+      "positive": "Must be above 0",
+      "notNegative": "Must be 0 or more",
+      "notEditable": "This value cannot be edited here"
+    }
   }
 }

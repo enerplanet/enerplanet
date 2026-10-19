@@ -34,6 +34,8 @@ type Surface struct {
 	Kind      string `json:"kind"`
 	Qualifies bool   `json:"qualifies"`
 	Suggested bool   `json:"suggested"`
+	// ObjectID is the 3D building the surface belongs to; an OSM way can cover several.
+	ObjectID string `json:"object_id,omitempty"`
 }
 
 // Surfaces returns every roof and outer wall with an area and angles. A roof qualifies
