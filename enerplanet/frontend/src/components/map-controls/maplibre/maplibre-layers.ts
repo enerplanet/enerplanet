@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { Popup as MapLibrePopup } from 'maplibre-gl';
 import {
   BUILDING_COLORS, LV_LINE_COLORS, MV_LINE_COLORS,
