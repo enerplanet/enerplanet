@@ -14,6 +14,7 @@ import (
 	"platform.local/platform/logger"
 
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/ignis"
 )
 
@@ -68,19 +69,23 @@ func (s *SiteHandler) CreateSite(c *gin.Context) {
 		return
 	}
 	var req createSiteRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httputil.BadRequest(c, errInvalidPayload)
+	if !bindAreaRequest(c, &req) {
+		return
+	}
+	geom, err := geo.ValidateArea(req.Geom)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
 		return
 	}
 	ctx := c.Request.Context()
-	countryName, iso, err := s.resolveCountry(ctx, req.Geom)
+	countryName, iso, err := s.resolveCountry(ctx, geom)
 	if err != nil {
 		httputil.BadRequest(c, err.Error())
 		return
 	}
 
 	payload, err := json.Marshal(map[string]any{
-		"user_id": userID, "name": req.Name, "country_code": iso, "geom": req.Geom,
+		"user_id": userID, "name": req.Name, "country_code": iso, "geom": geom,
 	})
 	if err != nil {
 		httputil.BadRequest(c, fmt.Sprintf("invalid geometry: %v", err))

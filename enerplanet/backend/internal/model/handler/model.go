@@ -213,6 +213,12 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		httputil.BadRequest(c, "coordinates are required to resolve country")
 		return
 	}
+	coords, verr := geo.ValidateArea(req.Coordinates)
+	if verr != nil {
+		httputil.BadRequest(c, verr.Error())
+		return
+	}
+	req.Coordinates = coords
 	resolver := geo.NewNominatimResolver(h.store.DB())
 	resolvedCountry, rerr := resolver.Resolve(c.Request.Context(), json.RawMessage(req.Coordinates))
 	if rerr != nil {
@@ -400,6 +406,15 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 	var req updateModelRequest
 	if !bindJSONOrBadRequest(c, &req) {
 		return
+	}
+
+	if len(req.Coordinates) > 0 {
+		coords, verr := geo.ValidateArea(req.Coordinates)
+		if verr != nil {
+			httputil.BadRequest(c, verr.Error())
+			return
+		}
+		req.Coordinates = coords
 	}
 
 	updates := make(map[string]any)

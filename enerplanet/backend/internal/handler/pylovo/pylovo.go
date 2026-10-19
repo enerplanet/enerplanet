@@ -16,6 +16,7 @@ import (
 	"time"
 
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
+	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/models"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	regionstore "spatialhub_backend/internal/store/region"
@@ -126,43 +127,37 @@ func (h *PylovoHandler) bindWithUserAndForward(c *gin.Context, method, path stri
 	h.forwardToPylovo(c, method, path, jsonData)
 }
 
-func parsePolygonCoords(payload map[string]interface{}) [][]float64 {
-	var polygonCoords [][]float64
-	coords, ok := payload["polygon"].([]interface{})
-	if !ok {
-		return polygonCoords
+// maxAreaRequestBytes caps a request that carries an area; geo.MaxAreaVertices
+// positions take well under 1 MB.
+const maxAreaRequestBytes = 2 << 20
+
+// bindAreaRequest binds a JSON body of at most maxAreaRequestBytes into v. It
+// answers 413 or 400 and returns false when it cannot.
+func bindAreaRequest(c *gin.Context, v any) bool {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxAreaRequestBytes)
+	err := c.ShouldBindJSON(v)
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge):
+		httputil.ErrorResponse(c, http.StatusRequestEntityTooLarge, fmt.Sprintf("request larger than %d bytes", maxAreaRequestBytes))
+	case err != nil:
+		httputil.BadRequest(c, errInvalidPayload)
 	}
-	for _, p := range coords {
-		if point, ok := p.([]interface{}); ok && len(point) == 2 {
-			polygonCoords = append(polygonCoords, []float64{point[0].(float64), point[1].(float64)})
-		}
-	}
-	return polygonCoords
+	return err == nil
 }
 
-func ensurePolygonClosed(coords [][]float64) [][]float64 {
-	if len(coords) == 0 {
-		return coords
+// requestArea returns the request's area as validated GeoJSON, read from geom
+// or from the older polygon field, which holds one ring.
+func requestArea(payload map[string]interface{}) (json.RawMessage, error) {
+	geom := payload["geom"]
+	if geom == nil {
+		geom = map[string]any{"type": "Polygon", "coordinates": []any{payload["polygon"]}}
 	}
-	first := coords[0]
-	last := coords[len(coords)-1]
-	if first[0] != last[0] || first[1] != last[1] {
-		coords = append(coords, first)
+	raw, err := json.Marshal(geom)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", geo.ErrInvalidArea, err)
 	}
-	return coords
-}
-
-func buildGeomPayload(payload map[string]interface{}) map[string]interface{} {
-	if geom, ok := payload["geom"].(map[string]interface{}); ok {
-		return map[string]interface{}{"geom": geom}
-	}
-	polygonCoords := ensurePolygonClosed(parsePolygonCoords(payload))
-	return map[string]interface{}{
-		"geom": map[string]interface{}{
-			"type":        "Polygon",
-			"coordinates": [][][]float64{polygonCoords},
-		},
-	}
+	return geo.ValidateArea(raw)
 }
 
 func copyBuildingFilterOptions(src, dst map[string]interface{}) {
@@ -176,12 +171,16 @@ func copyBuildingFilterOptions(src, dst map[string]interface{}) {
 
 func (h *PylovoHandler) GenerateGrid(c *gin.Context) {
 	var payload map[string]interface{}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		httputil.BadRequest(c, errInvalidPayload)
+	if !bindAreaRequest(c, &payload) {
+		return
+	}
+	geom, err := requestArea(payload)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
 		return
 	}
 
-	pylovoPayload := buildGeomPayload(payload)
+	pylovoPayload := map[string]interface{}{"geom": geom}
 	if userCtx, ok := httputil.GetUserContext(c); ok {
 		pylovoPayload["user_id"] = userCtx.UserID
 	}
