@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -145,8 +146,12 @@ func toConstraintDTO(c *techstore.TechnologyConstraint) ConstraintDTO {
 		dto.Description = *c.Description
 	}
 
+	// JSON has no Infinity: an unbounded default such as cont_energy_cap_max
+	// goes out as "INF", the spelling Max and the simulation payload use.
 	if isValidFloat(c.DefaultValue) {
 		dto.DefaultValue = *c.DefaultValue
+	} else if c.DefaultValue != nil && math.IsInf(*c.DefaultValue, 1) {
+		dto.DefaultValue = "INF"
 	}
 
 	if c.MaxValue != nil {
@@ -220,6 +225,11 @@ func fromConstraintDTO(dto *ConstraintDTO) techstore.TechnologyConstraint {
 		case int:
 			val := float64(v)
 			c.DefaultValue = &val
+		case string:
+			if strings.EqualFold(v, "INF") {
+				inf := math.Inf(1)
+				c.DefaultValue = &inf
+			}
 		}
 	}
 
