@@ -169,8 +169,8 @@ func HandleDispatchMeme(
 		return err
 	}
 	if calc, ok := built.(payload.CalculationPayload); ok {
-		dropFurtherWayDemand(calc.Topology, further)
-		warning, err := checkDemandCoverage(calc.Topology)
+		covered := dropFurtherWayDemand(calc.Topology, further)
+		warning, err := checkDemandCoverage(calc.Topology, covered)
 		if err != nil {
 			return fmt.Errorf("model %d: %w", p.ModelID, err)
 		}

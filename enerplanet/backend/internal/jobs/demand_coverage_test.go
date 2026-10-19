@@ -16,16 +16,16 @@ func TestCheckDemandCoverage(t *testing.T) {
 		return map[string]interface{}{"properties": props}
 	}
 	some := []interface{}{map[string]interface{}{"from": building("1", true), "to": building("2", false)}}
-	w, err := checkDemandCoverage(some)
+	w, err := checkDemandCoverage(some, nil)
 	require.NoError(t, err)
 	assert.Equal(t, &demandFallbackWarning{Code: "demand_fallback", Fallback: 1, Total: 2}, w)
 
 	all := []interface{}{map[string]interface{}{"from": building("1", true)}}
-	w, err = checkDemandCoverage(all)
+	w, err = checkDemandCoverage(all, nil)
 	require.NoError(t, err)
 	assert.Nil(t, w)
 
 	none := []interface{}{map[string]interface{}{"from": building("1", false)}}
-	_, err = checkDemandCoverage(none)
+	_, err = checkDemandCoverage(none, nil)
 	assert.ErrorContains(t, err, "none of the model's 1 buildings")
 }

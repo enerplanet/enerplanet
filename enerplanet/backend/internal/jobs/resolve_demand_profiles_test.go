@@ -60,6 +60,11 @@ func (f *fakeProfileStore) SaveFailed(modelID uint, osmID, reason string) error 
 	return nil
 }
 
+func (f *fakeProfileStore) SaveShared(modelID uint, osmID, standing string) error {
+	f.saved[osmID] = savedProfile{Status: "shared", Reason: standing}
+	return nil
+}
+
 func TestExtractEnergySummary(t *testing.T) {
 	buemJSON := json.RawMessage(`{
 		"thermal_load_profile": {

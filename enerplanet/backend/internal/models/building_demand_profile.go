@@ -7,11 +7,14 @@ import (
 )
 
 // Building demand profile status values. A row starts pending when a
-// resolution run begins, then moves to exactly one terminal state.
+// resolution run begins, then moves to exactly one terminal state. Shared
+// marks an OSM way whose 3D building is resolved under another way, which
+// carries the whole building's demand.
 const (
 	DemandProfileStatusPending  = "pending"
 	DemandProfileStatusResolved = "resolved"
 	DemandProfileStatusFailed   = "failed"
+	DemandProfileStatusShared   = "shared"
 )
 
 // BuildingDemandProfile is one building's BuEM-resolved annual energy profile,

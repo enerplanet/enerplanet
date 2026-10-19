@@ -6,10 +6,12 @@ import "fmt"
 // demand its standing way's BuEM series already covers for the whole 3D
 // building: heat with the heating technologies, and electricity. A carrier
 // the standing way has no series for stays, since nothing else models it.
-// Run after attachDemandSeries, which sets the series it reads.
-func dropFurtherWayDemand(topology []interface{}, further map[string]string) {
+// Run after attachDemandSeries, which sets the series it reads. It returns
+// the ways whose electricity it dropped: their demand is covered, not missing.
+func dropFurtherWayDemand(topology []interface{}, further map[string]string) map[string]bool {
+	covered := map[string]bool{}
 	if len(further) == 0 {
-		return
+		return covered
 	}
 	series := map[string]map[string]interface{}{}
 	for _, feature := range payloadBuildings(topology) {
@@ -19,7 +21,8 @@ func dropFurtherWayDemand(topology []interface{}, further map[string]string) {
 	}
 	for _, feature := range payloadBuildings(topology) {
 		props, _ := feature["properties"].(map[string]interface{})
-		standing, ok := further[fmt.Sprint(props["osm_id"])]
+		osmID := fmt.Sprint(props["osm_id"])
+		standing, ok := further[osmID]
 		if !ok {
 			continue
 		}
@@ -33,8 +36,10 @@ func dropFurtherWayDemand(topology []interface{}, further map[string]string) {
 		}
 		if _, ok := series[standing]["electricity"]; ok {
 			dropCarrier(props, "demand_energy", "f_class_demands", "demand_energy")
+			covered[osmID] = true
 		}
 	}
+	return covered
 }
 
 // dropCarrier zeroes a building's yearly demand and its per-class shares.

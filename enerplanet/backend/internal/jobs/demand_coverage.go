@@ -21,11 +21,16 @@ type demandFallbackWarning struct {
 
 const demandFallbackCode = "demand_fallback"
 
-// demandCoverage counts the payload's buildings and those with a BuEM electricity series.
-func demandCoverage(topology []interface{}) (withSeries, total int) {
+// demandCoverage counts the payload's buildings and those with a BuEM
+// electricity series, leaving out the covered ways (see dropFurtherWayDemand),
+// whose demand another way's series already carries.
+func demandCoverage(topology []interface{}, covered map[string]bool) (withSeries, total int) {
 	for _, feature := range payloadBuildings(topology) {
-		total++
 		props, _ := feature["properties"].(map[string]interface{})
+		if covered[fmt.Sprint(props["osm_id"])] {
+			continue
+		}
+		total++
 		series, _ := props["demand_series"].(map[string]interface{})
 		if _, ok := series["electricity"]; ok {
 			withSeries++
@@ -35,8 +40,8 @@ func demandCoverage(topology []interface{}) (withSeries, total int) {
 }
 
 // checkDemandCoverage fails when no building has a series and warns when some lack one.
-func checkDemandCoverage(topology []interface{}) (*demandFallbackWarning, error) {
-	with, total := demandCoverage(topology)
+func checkDemandCoverage(topology []interface{}, covered map[string]bool) (*demandFallbackWarning, error) {
+	with, total := demandCoverage(topology, covered)
 	if total > 0 && with == 0 {
 		return nil, fmt.Errorf("none of the model's %d buildings has an hourly demand profile: no 3D data was found for them, so BuEM could not run", total)
 	}

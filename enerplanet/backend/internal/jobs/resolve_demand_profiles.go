@@ -42,6 +42,7 @@ type demandProfileStore interface {
 	ResetForRun(modelID uint, osmIDs []string, refurbishmentLevel string) error
 	SaveResolved(modelID uint, osmID string, p demandprofile.ResolvedProfile) error
 	SaveFailed(modelID uint, osmID, reason string) error
+	SaveShared(modelID uint, osmID, standing string) error
 }
 
 // DemandResolver gives each building of a model its BuEM hourly series:
@@ -123,6 +124,11 @@ func (r DemandResolver) Resolve(ctx context.Context, modelID uint) (map[string]s
 	}
 	run := prepareBuemRun(ctx, log, r.C2T, r.C2TRuns, r.Weather, r.WeatherProvider, r.Ignis, model, calcPayload, refurbLevel)
 	saveFailures(log, r.Profiles, modelID, run.unresolved)
+	for osmID, standing := range run.further {
+		if err := r.Profiles.SaveShared(modelID, osmID, standing); err != nil {
+			log.Errorf("model %d osm_id=%s: failed to record it as shared: %v", modelID, osmID, err)
+		}
+	}
 	if len(run.buildings) == 0 {
 		return run.further, nil
 	}
