@@ -1,7 +1,7 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { FileUp, Loader2, Lock, MapPin } from "lucide-react";
+import { FileDown, FileUp, Loader2, Lock, MapPin } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -55,6 +55,8 @@ interface MapHeaderProps {
   onClearAllPolygons: () => void;
   /** Imports a GeoJSON file as the model area; absent where an area cannot be replaced. */
   onImportArea?: (file: File) => void;
+  /** Downloads the drawn area as a GeoJSON file that Import area reads back. */
+  onExportArea?: () => void;
   selectedBuildingCount?: number;
   onDisableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
@@ -78,6 +80,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
   allPolygonsCount,
   onClearAllPolygons,
   onImportArea,
+  onExportArea,
   selectedBuildingCount = 0,
   onDisableSelectedBuildings,
   isLoadingPreference,
@@ -166,6 +169,16 @@ export const MapHeader: FC<MapHeaderProps> = ({
               }}
             />
           </label>
+        )}
+        {onExportArea && allPolygonsCount > 0 && (
+          <button
+            type="button"
+            onClick={onExportArea}
+            className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            <FileDown className="w-3.5 h-3.5" />
+            {t("simulation.mapHeader.exportArea")}
+          </button>
         )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">

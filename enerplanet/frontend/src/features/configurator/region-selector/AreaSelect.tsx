@@ -44,7 +44,8 @@ import { useTransformerActions } from "@/features/configurator/hooks/useTransfor
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
-import { AreaImportError, areaRingsFromGeoJSON } from "@/features/configurator/utils/areaGeoJSON";
+import { AreaImportError, areaRingsFromGeoJSON, areaToGeoJSON } from "@/features/configurator/utils/areaGeoJSON";
+import { downloadBlob } from "@/utils/fileDownload";
 import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 
 // Extracted selectors
@@ -533,6 +534,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   };
 
+  // Shares the area without sharing the model: anyone can import the file into their own model.
+  const handleExportArea = () => {
+    const name = state.modelName.trim();
+    const blob = new Blob([areaToGeoJSON(state.allPolygons, name)], { type: "application/geo+json" });
+    downloadBlob(blob, name && `${name}.geojson`, "area.geojson");
+  };
+
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
   const closeTechDialog = () => {
@@ -685,6 +693,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             allPolygonsCount={state.allPolygons.length}
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
             onImportArea={handleImportArea}
+            onExportArea={handleExportArea}
             selectedBuildingCount={buildingSelection.selectedCount}
             onDisableSelectedBuildings={buildingSelection.disableSelected}
             isLoadingPreference={isLoadingPreference}
