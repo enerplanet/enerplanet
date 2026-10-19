@@ -47,6 +47,10 @@ func (m *memStore) Save(p series.NewProfile) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.saves++
+	// series_profiles.key is varchar(64) (models.SeriesProfile.Key).
+	if len(p.Key) > 64 {
+		return 0, fmt.Errorf("key %s is %d characters, the column holds 64", p.Key, len(p.Key))
+	}
 	if id, ok := m.byKey[p.Key]; ok {
 		return id, nil
 	}

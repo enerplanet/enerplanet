@@ -237,15 +237,16 @@ func sumProfiles(store seriesStore, ids []int64, stored map[int64]series.StoredP
 	})
 }
 
-// sumKey keys the sum of the profiles ids; it cannot collide with a BuEM
-// request key, which is a bare hash.
+// sumKey keys the sum of the profiles ids. It is a 64-character hash to fit
+// models.SeriesProfile.Key; hashing a "buem-sum:" prefix with the ids keeps it
+// apart from BuEM request keys, which hash the request.
 func sumKey(ids []int64) string {
 	parts := make([]string, len(ids))
 	for i, id := range ids {
 		parts[i] = strconv.FormatInt(id, 10)
 	}
-	h := sha256.Sum256([]byte(strings.Join(parts, ",")))
-	return "buem-sum:" + hex.EncodeToString(h[:])
+	h := sha256.Sum256([]byte("buem-sum:" + strings.Join(parts, ",")))
+	return hex.EncodeToString(h[:])
 }
 
 // combinePartResults sums the raw BuEM results of each way's 3D buildings into
