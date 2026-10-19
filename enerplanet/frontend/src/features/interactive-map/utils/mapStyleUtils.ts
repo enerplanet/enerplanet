@@ -489,6 +489,37 @@ function getUtilizationBarColor(utilization: number): string {
     return '#22c55e';                          // Green
 }
 
+/**
+ * Zoom at or below which a grid is shown in overview: transformers as counts and
+ * a drawn area without its corner markers, so several models stay readable.
+ */
+export const OVERVIEW_ZOOM = 15.5;
+
+const transformerCountStyles = new Map<number, Style>();
+
+/** Style of an OpenLayers cluster of transformers: one badge with their count. */
+export function transformerCountStyle(cluster: FeatureLike): Style {
+    const count = (cluster.get('features') as unknown[] | undefined)?.length ?? 1;
+    let style = transformerCountStyles.get(count);
+    if (!style) {
+        style = new Style({
+            image: new CircleStyle({
+                radius: count > 1 ? 11 : 6,
+                fill: new Fill({ color: '#f59e0b' }),
+                stroke: new Stroke({ color: '#ffffff', width: 2 }),
+            }),
+            text: count > 1 ? new Text({
+                text: String(count),
+                font: 'bold 11px sans-serif',
+                fill: new Fill({ color: '#ffffff' }),
+            }) : undefined,
+            zIndex: 999,
+        });
+        transformerCountStyles.set(count, style);
+    }
+    return style;
+}
+
 export function transformerStyleFunction(feature?: Feature<Geometry>, resolution?: number): Style[] {
     const colorIndex = feature?.get('_color_index');
     // Yellow/amber - standard color for transformers in electrical diagrams (IEC)
