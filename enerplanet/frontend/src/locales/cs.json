@@ -1411,7 +1411,7 @@
       "importArea": "Importovat oblast",
       "exportArea": "Exportovat oblast",
       "regenerateGrid": "Znovu vytvořit síť",
-      "regenerateGridHint": "Oblast nebo transformátory lokality se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
+      "regenerateGridHint": "Oblast nebo její transformátory se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
       "importAreaError": {
         "invalid": "Soubor není platný GeoJSON.",
         "noPolygon": "Soubor neobsahuje žádný polygon.",
@@ -1539,8 +1539,8 @@
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
     "siteMode": {
-      "label": "Režim lokality",
-      "hint": "Vytvoří síť pouze pro tuto oblast a uloží ji odděleně od sdílených sítí. Zahrnuje jen budovy s 3D daty, nejvýše 150.",
+      "label": "Vlastní síť",
+      "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
       "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
     },
     "largeModel": {
