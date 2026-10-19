@@ -1945,6 +1945,9 @@
     },
     "addToAllBuildings": "Přidat ke všem budovám",
     "removeFromAllBuildings": "Odebrat ze všech budov",
+    "removeAll": "Odebrat všechny technologie",
+    "removeAllConfirmTitle": "Odebrat všechny technologie?",
+    "removeAllConfirmDescription": "Odebere každou technologii a tepelné propojení z {{count}} budov tohoto modelu, včetně automaticky přiřazených. Uložte model, aby se změna zachovala.",
     "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Nastavte parametry technologie pro tuto budovu",
@@ -2480,6 +2483,7 @@
     "techAddedToAll": "{{tech}} přidáno k {{count}} budovám",
     "techAddedToBuilding": "{{tech}} přidáno k budově",
     "techRemovedFromAll": "{{tech}} odebráno z {{count}} budov",
+    "allTechsRemoved": "Technologie odebrány z {{count}} budov",
     "techRemovedFromBuilding": "{{tech}} odebráno z budovy",
     "techNotFound": "Technologie {{tech}} nenalezena",
     "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu",

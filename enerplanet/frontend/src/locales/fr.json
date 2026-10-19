@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} ajouté à {{count}} bâtiments",
     "techAddedToBuilding": "{{tech}} ajouté au bâtiment",
     "techRemovedFromAll": "{{tech}} supprimé de {{count}} bâtiments",
+    "allTechsRemoved": "Technologies retirées de {{count}} bâtiments",
     "techRemovedFromBuilding": "{{tech}} supprimé du bâtiment",
     "techNotFound": "Technologie {{tech}} non trouvée",
     "techLoadFailed": "Échec du chargement de la technologie pour modification",
@@ -2323,6 +2324,9 @@
     },
     "addToAllBuildings": "Ajouter à tous les bâtiments",
     "removeFromAllBuildings": "Retirer de tous les bâtiments",
+    "removeAll": "Retirer toutes les technologies",
+    "removeAllConfirmTitle": "Retirer toutes les technologies ?",
+    "removeAllConfirmDescription": "Retire chaque technologie et chaque liaison de chaleur de {{count}} bâtiments de ce modèle, y compris celles attribuées automatiquement. Enregistrez le modèle pour conserver la modification.",
     "paramCount": "Paramètres : {{count}}",
     "paramDialog": {
       "description": "Configurez les paramètres de la technologie pour ce bâtiment",

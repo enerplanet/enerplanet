@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} added to {{count}} buildings",
     "techAddedToBuilding": "{{tech}} added to building",
     "techRemovedFromAll": "{{tech}} removed from {{count}} buildings",
+    "allTechsRemoved": "Technologies removed from {{count}} buildings",
     "techRemovedFromBuilding": "{{tech}} removed from building",
     "techNotFound": "Technology {{tech}} not found",
     "techLoadFailed": "Failed to load technology for editing",
@@ -2319,6 +2320,9 @@
     },
     "addToAllBuildings": "Add to all buildings",
     "removeFromAllBuildings": "Remove from all buildings",
+    "removeAll": "Remove all technologies",
+    "removeAllConfirmTitle": "Remove all technologies?",
+    "removeAllConfirmDescription": "Removes every technology and heat link from {{count}} buildings in this model, including those assigned automatically. Save the model to keep the change.",
     "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Configure technology parameters for this building",

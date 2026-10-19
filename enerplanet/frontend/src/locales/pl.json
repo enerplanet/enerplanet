@@ -1945,6 +1945,9 @@
     },
     "addToAllBuildings": "Dodaj do wszystkich budynków",
     "removeFromAllBuildings": "Usuń ze wszystkich budynków",
+    "removeAll": "Usuń wszystkie technologie",
+    "removeAllConfirmTitle": "Usunąć wszystkie technologie?",
+    "removeAllConfirmDescription": "Usuwa każdą technologię i połączenie ciepła z {{count}} budynków tego modelu, także przypisane automatycznie. Zapisz model, aby zachować zmianę.",
     "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Skonfiguruj parametry technologii dla tego budynku",
@@ -2480,6 +2483,7 @@
     "techAddedToAll": "{{tech}} dodano do {{count}} budynków",
     "techAddedToBuilding": "{{tech}} dodano do budynku",
     "techRemovedFromAll": "{{tech}} usunięto z {{count}} budynków",
+    "allTechsRemoved": "Usunięto technologie z {{count}} budynków",
     "techRemovedFromBuilding": "{{tech}} usunięto z budynku",
     "techNotFound": "Technologia {{tech}} nie znaleziona",
     "techLoadFailed": "Nie udało się załadować technologii do edycji",

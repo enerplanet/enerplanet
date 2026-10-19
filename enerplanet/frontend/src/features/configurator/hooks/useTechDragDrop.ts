@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
@@ -9,6 +9,27 @@ import { createBuildingStyleFunction } from "@/features/interactive-map/utils/ma
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
+
+/** Whether a building carries any technology or a heat link to a producer. */
+const hasTechs = (f: Feature<Geometry>): boolean =>
+  Object.keys(f.get("techs") || {}).length > 0 || Boolean(f.get("heat_supplier"));
+
+/**
+ * Removes every technology and heat link from buildings and returns how many
+ * changed. Heat links go too: their producer has no heat technology left, and a
+ * linked building is skipped by automatic heat assignment.
+ */
+export const clearTechs = (buildings: Feature<Geometry>[]): number => {
+  let count = 0;
+  for (const f of buildings) {
+    if (!hasTechs(f)) continue;
+    f.set("techs", {});
+    f.unset("heat_supplier");
+    f.setStyle(createBuildingStyleFunction(true, false));
+    count++;
+  }
+  return count;
+};
 
 interface TechDragDropOptions {
   map: any;
@@ -145,6 +166,19 @@ export const useTechDragDrop = ({
 
   useEffect(() => { if (showTechDrawer) setAppliedTechKeys(getAppliedTechKeys()); }, [showTechDrawer, getAppliedTechKeys, setAppliedTechKeys]);
 
+  const [techBuildingCount, setTechBuildingCount] = useState(0);
+  useEffect(() => {
+    if (showTechDrawer) setTechBuildingCount(collectBuildingsFromLayers(pylovoLayersRef.current).filter(hasTechs).length);
+  }, [showTechDrawer, appliedTechKeys, pylovoLayersRef]);
+
+  const handleRemoveAllTechs = useCallback(() => {
+    const count = clearTechs(collectBuildingsFromLayers(pylovoLayersRef.current));
+    setAppliedTechKeys([]);
+    setTechBuildingCount(0);
+    showSuccess(t("gridNotifications.allTechsRemoved", { count }));
+    setIsModified(true);
+  }, [pylovoLayersRef, setAppliedTechKeys, showSuccess, t, setIsModified]);
+
   const handleEditTechFromDialog = useCallback(async (techKey: string, buildingFeature: Feature<Geometry>) => {
     try {
       const catalogue = await loadCatalogue();
@@ -173,6 +207,7 @@ export const useTechDragDrop = ({
     selectedTechForDialog, selectedBuildingForTech, setSelectedBuildingForTech,
     handleSaveTechToBuildingBulk, isAddingTechToAll, setIsAddingTechToAll,
     handleAddTechToAll, handleRemoveTechFromAll, appliedTechKeys,
+    handleRemoveAllTechs, techBuildingCount,
     handleEditTechFromDialog, handleRemoveTechFromDialog, setSelectedTechForDialog,
   };
 };

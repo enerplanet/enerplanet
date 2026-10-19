@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} añadido a {{count}} edificios",
     "techAddedToBuilding": "{{tech}} añadido al edificio",
     "techRemovedFromAll": "{{tech}} eliminado de {{count}} edificios",
+    "allTechsRemoved": "Tecnologías eliminadas de {{count}} edificios",
     "techRemovedFromBuilding": "{{tech}} eliminado del edificio",
     "techNotFound": "Tecnología {{tech}} no encontrada",
     "techLoadFailed": "Error al cargar tecnología para edición",
@@ -2323,6 +2324,9 @@
     },
     "addToAllBuildings": "Añadir a todos los edificios",
     "removeFromAllBuildings": "Quitar de todos los edificios",
+    "removeAll": "Eliminar todas las tecnologías",
+    "removeAllConfirmTitle": "¿Eliminar todas las tecnologías?",
+    "removeAllConfirmDescription": "Elimina todas las tecnologías y conexiones de calor de {{count}} edificios de este modelo, incluidas las asignadas automáticamente. Guarde el modelo para conservar el cambio.",
     "paramCount": "Parámetros: {{count}}",
     "paramDialog": {
       "description": "Configure los parámetros de la tecnología para este edificio",

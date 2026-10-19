@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} zu {{count}} Gebäuden hinzugefügt",
     "techAddedToBuilding": "{{tech}} zum Gebäude hinzugefügt",
     "techRemovedFromAll": "{{tech}} von {{count}} Gebäuden entfernt",
+    "allTechsRemoved": "Technologien von {{count}} Gebäuden entfernt",
     "techRemovedFromBuilding": "{{tech}} vom Gebäude entfernt",
     "techNotFound": "Technologie {{tech}} nicht gefunden",
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
@@ -2319,6 +2320,9 @@
     },
     "addToAllBuildings": "Zu allen Gebäuden hinzufügen",
     "removeFromAllBuildings": "Von allen Gebäuden entfernen",
+    "removeAll": "Alle Technologien entfernen",
+    "removeAllConfirmTitle": "Alle Technologien entfernen?",
+    "removeAllConfirmDescription": "Entfernt jede Technologie und jede Wärmeverbindung von {{count}} Gebäuden dieses Modells, auch automatisch zugewiesene. Speichern Sie das Modell, um die Änderung zu übernehmen.",
     "paramCount": "Parameter: {{count}}",
     "paramDialog": {
       "description": "Konfigurieren Sie die Technologieparameter für dieses Gebäude",
