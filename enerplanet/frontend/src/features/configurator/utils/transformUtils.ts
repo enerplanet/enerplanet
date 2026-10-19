@@ -200,6 +200,8 @@ export function transformToCapacityData(
   // name, demand uses the resolved f_class (or the demand tech as fallback).
   const buckets = new Map<string, { tech: string; isDemand: boolean }>();
   const bucketCapacity: Record<string, number> = {};
+  // A bar's capacity factor is the capacity-weighted mean of its members'.
+  const bucketUtilised: Record<string, number> = {};
 
   const demandKeyFor = (location: string, tech: string): string => {
     const fClass = locationToFClass[location];
@@ -208,6 +210,23 @@ export function transformToCapacityData(
     if (fClass) return `demand:${fClass}`;
     return tech;
   };
+
+  // Get capacity factors for each tech.
+  // Some payloads store factors as "tech:location", while energy_cap uses base tech names.
+  const capacityFactorsExact: Record<string, number> = {};
+  const capacityFactorsByBaseMax: Record<string, number> = {};
+  if (results.systemwide_capacity_factor) {
+    results.systemwide_capacity_factor.forEach(cf => {
+      if (!Number.isFinite(cf.value)) return;
+      const clamped = Math.max(0, Math.min(1, cf.value));
+      // One row per carrier; a tech produces one carrier and reads 0 on the others.
+      capacityFactorsExact[cf.techs] = Math.max(capacityFactorsExact[cf.techs] ?? 0, clamped);
+
+      const baseTech = getBaseTech(cf.techs);
+      const prev = capacityFactorsByBaseMax[baseTech];
+      capacityFactorsByBaseMax[baseTech] = prev === undefined ? clamped : Math.max(prev, clamped);
+    });
+  }
 
   results.energy_cap.forEach(cap => {
     const tech = getBaseTech(cap.tech || '');
@@ -219,23 +238,11 @@ export function transformToCapacityData(
       buckets.set(key, { tech, isDemand: type === 'demand' });
     }
     bucketCapacity[key] = (bucketCapacity[key] ?? 0) + cap.value;
+    const factor = capacityFactorsExact[cap.tech || '']
+      ?? capacityFactorsExact[`${cap.tech}:${cap.location}`]
+      ?? capacityFactorsByBaseMax[tech] ?? 0;
+    bucketUtilised[key] = (bucketUtilised[key] ?? 0) + cap.value * factor;
   });
-
-  // Get capacity factors for each tech.
-  // Some payloads store factors as "tech:location", while energy_cap uses base tech names.
-  const capacityFactorsExact: Record<string, number> = {};
-  const capacityFactorsByBaseMax: Record<string, number> = {};
-  if (results.systemwide_capacity_factor) {
-    results.systemwide_capacity_factor.forEach(cf => {
-      if (!Number.isFinite(cf.value)) return;
-      const clamped = Math.max(0, Math.min(1, cf.value));
-      capacityFactorsExact[cf.techs] = clamped;
-
-      const baseTech = getBaseTech(cf.techs);
-      const prev = capacityFactorsByBaseMax[baseTech];
-      capacityFactorsByBaseMax[baseTech] = prev === undefined ? clamped : Math.max(prev, clamped);
-    });
-  }
 
   return Array.from(buckets.entries())
     .filter(([key]) => (bucketCapacity[key] ?? 0) > 0)
@@ -246,7 +253,7 @@ export function transformToCapacityData(
       const technology = isDemand
         ? techLabelForDemandGroup(key, tech, t)
         : getTechDisplayName(tech, t);
-      const capacityFactor = capacityFactorsExact[tech] ?? capacityFactorsByBaseMax[tech] ?? 0;
+      const capacityFactor = value > 0 ? (bucketUtilised[key] ?? 0) / value : 0;
 
       return {
         technology,

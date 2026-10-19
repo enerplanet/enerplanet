@@ -79,6 +79,24 @@ describe('transformToCapacityData', () => {
     expect(supply.map((d) => [d.technology, d.installed_capacity_kw])).toEqual([['Solar PV', 10], ['Air Source Heat Pump', 8]]);
   });
 
+  it('weights a bar\'s capacity factor by capacity and reads each tech\'s producing carrier', () => {
+    const results = baseResults({});
+    results.energy_cap = [
+      { location: 'n1', tech: 'pv_supply_1_0', value: 4 },
+      { location: 'n1', tech: 'pv_supply_1_2', value: 6 },
+    ] as never;
+    results.systemwide_capacity_factor = [
+      { techs: 'pv_supply_1_0', carrier: 'power', value: 0.1 },
+      { techs: 'pv_supply_1_0', carrier: 'heat', value: 0 },
+      { techs: 'pv_supply_1_2', carrier: 'power', value: 0.05 },
+      { techs: 'pv_supply_1_2', carrier: 'heat', value: 0 },
+    ] as never;
+    const pv = transformToCapacityData(results, undefined, unknownUsage as never).find((d) => d.technology === 'Solar PV');
+
+    // (4 x 0.1 + 6 x 0.05) / 10, not the maximum 0.1 and not the heat rows' 0.
+    expect(pv?.capacity_factor).toBeCloseTo(0.07, 6);
+  });
+
   it('falls back to the demand tech label when no f_class resolves', () => {
     const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
     const out = transformToCapacityData(baseResults(coords), undefined, {
