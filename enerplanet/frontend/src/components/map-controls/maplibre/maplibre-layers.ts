@@ -563,12 +563,19 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
     return;
   }
 
+  const closeRing = (ring: [number, number][]): [number, number][] => {
+    if (ring.length < 3) return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] === last[0] && first[1] === last[1]) return ring;
+    return [...ring, [first[0], first[1]]];
+  };
   const fc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
       properties: {},
-      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [c]) },
+      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [closeRing(c)]) },
     }],
   };
 

@@ -14,16 +14,6 @@ import { MapControls } from "@/components/map-controls/MapControls";
 import { MapContext } from "@/providers/map-context";
 
 
-if (typeof HTMLCanvasElement !== 'undefined') {
-    const originalGetContext = HTMLCanvasElement.prototype.getContext;
-    // @ts-expect-error - overriding native method
-    HTMLCanvasElement.prototype.getContext = function(type, attributes) {
-        if (type === '2d') {
-            attributes = { ...attributes, willReadFrequently: true };
-        }
-        return originalGetContext.call(this, type, attributes);
-    };
-}
 
 interface MapProviderProps {
 	children: React.ReactNode;

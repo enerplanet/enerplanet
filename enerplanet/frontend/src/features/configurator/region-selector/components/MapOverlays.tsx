@@ -6,6 +6,7 @@ import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
 import { getEnergyLabelColorClasses, normalizeEnergyLabel } from "@/features/configurator/utils/energyLabelUtils";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface TooltipTransformer {
     x: number;
@@ -65,7 +66,8 @@ interface MapOverlaysProps {
     drawHintKey?: string | null;
     /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
     deleteHintKey?: string | null;
-    cursorPos: { x: number; y: number } | null;
+    /** Read from the map store rather than passed down, so a pointer move re-renders only these overlays. */
+    cursorPos?: { x: number; y: number } | null;
     transformerTooltip: TooltipTransformer | null;
     buildingTooltip: TooltipBuilding | null;
     mvLineTooltip?: TooltipMvLine | null;
@@ -79,7 +81,7 @@ interface MapOverlaysProps {
 export const MapOverlays: FC<MapOverlaysProps> = ({
     drawHintKey = null,
     deleteHintKey = null,
-    cursorPos,
+    cursorPos: cursorPosProp,
     transformerTooltip,
     buildingTooltip,
     mvLineTooltip,
@@ -90,6 +92,8 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
     gridIdToPeakLoad = {}
 }) => {
     const { t } = useTranslation();
+    const cursorPosStore = useModelStore((s) => s.cursorPos);
+    const cursorPos = cursorPosProp ?? cursorPosStore;
     const techEntries = buildingTooltip?.techs ? Object.entries(buildingTooltip.techs) : [];
     const hasFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
@@ -157,7 +161,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
             {/* Grid Generation Loader - minimal floating pill at top center */}
             {isGeneratingGrid && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                    <div className="md-rise flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
+                    <div className="md-rise flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
                         {/* Spinning icon */}
                         <div className="relative w-5 h-5">
                             <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
@@ -182,7 +186,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     className="absolute pointer-events-none z-20"
                     style={{ left: cursorPos.x, top: cursorPos.y }}
                 >
-                    <div className="md-fade-in bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
+                    <div className="md-fade-in bg-background dark:bg-gray-800 border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground">
                         {t(drawHintKey)}
                     </div>
                 </div>
@@ -208,7 +212,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         top: transformerTooltip.y - 10
                     }}
                 >
-                    <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
+                    <div className="md-fade-in bg-background dark:bg-gray-800 border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <img src="/images/transformer-icon-dark.svg" alt="" className="w-4 h-4 dark:invert" />{" "}
                             {t("results.grid.transformer")}
@@ -248,7 +252,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         top: buildingTooltip.y - 10
                     }}
                 >
-                    <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
+                    <div className="md-fade-in bg-background dark:bg-gray-800 border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5" />
                             {t("results.building")}
@@ -459,7 +463,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         top: mvLineTooltip.y - 10
                     }}
                 >
-                    <div className="bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-orange-400/50 rounded-md px-3 py-2 shadow-lg text-xs">
+                    <div className="bg-background dark:bg-gray-800 border border-orange-400/50 rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Zap className="w-3.5 h-3.5 text-orange-500" />
                             <span className="text-orange-600 dark:text-orange-400">{t("simulation.mapOverlay.mvLine")}</span>

@@ -454,18 +454,34 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, []);
 
   // ── Mouse tracking for overlays ──────────────────────────────────
+  const [pointerOverMap, setPointerOverMap] = useState(false);
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
     if (!el) return;
+    let frame = 0;
+    let last: { x: number; y: number } | null = null;
     const onMove = (e: MouseEvent) => {
       const rect = el.getBoundingClientRect();
-      setCursorPos({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
+      last = { x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 };
+      if (!frame) frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (last) setCursorPos(last);
+      });
     };
-    const onLeave = () => setCursorPos(null);
+    const onEnter = () => setPointerOverMap(true);
+    const onLeave = () => {
+      setPointerOverMap(false);
+      last = null;
+      if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      setCursorPos(null);
+    };
     el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseenter", onEnter);
       el.removeEventListener("mouseleave", onLeave);
     };
   }, [mapRef, setCursorPos]);
@@ -511,10 +527,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [pylovoLayers, notification, t]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.cursorPos !== null && activeMode === null);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, pointerOverMap && activeMode === null);
 
   const hoveredBuilding = hoveredBuildingOf(mapInteractions.buildingTooltip, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.cursorPos !== null && !state.isDrawing && activeMode === null);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, pointerOverMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -635,7 +651,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             <MapOverlays
               drawHintKey={drawHint}
               deleteHintKey={deleteHint}
-              cursorPos={state.cursorPos}
               transformerTooltip={mapInteractions.transformerTooltip}
               buildingTooltip={mapInteractions.buildingTooltip}
               mvLineTooltip={mapInteractions.mvLineTooltip}
