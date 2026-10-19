@@ -132,7 +132,17 @@ curl -s 'http://localhost:8000/api/v1/city2tabula/enrich/a1b2c3d4?country=german
 ```
 
 ```json
-{ "status": "running", "resolved": 0, "total": 0, "data": {} }
+{
+  "status": "running",
+  "run_id": "a1b2c3d4",
+  "stage": "extract_features",
+  "stage_label": "Extracting building features",
+  "stage_index": 2,
+  "stage_count": 3,
+  "resolved": 0,
+  "total": 0,
+  "data": {}
+}
 ```
 
 When the run finishes:
@@ -161,6 +171,9 @@ client proceeds with what resolved.
 |---|---|
 | `status` | `completed` \| `running` \| `partial`; on the run endpoint also City2TABULA's `pending` \| `no_data` \| `failed` |
 | `run_id` | present when `status` is `running`; pass to the GET endpoint |
+| `stage` | the run's pipeline step: `import`, `extract_features` or `link_buildings`; absent while the run is `pending` |
+| `stage_label` | English label for `stage`, for display |
+| `stage_index` / `stage_count` | the step's number, 1 to 3, and the number of steps |
 | `resolved` / `total` | count of `osm_ids` with data / requested |
 | `missing` | `osm_ids` with no linked City2TABULA building |
 | `data[osm_id].tabula_variant_code` | absent when City2TABULA matched the building geometry but no TABULA archetype; the configurator falls back to an archetype |

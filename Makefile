@@ -23,14 +23,17 @@ ENERPLANET_COMPOSE := $(ENV_FILE) -f enerplanet/docker-compose.yml -f enerplanet
 BACKEND_RUN := docker compose $(ENERPLANET_COMPOSE) run --rm --build --no-deps --entrypoint
 
 # Runs a bash script from the repo with curl, jq and the docker CLI, so the host
-# needs none of them. Host networking keeps the backend at localhost:8000, the
-# domain its session cookie is scoped to. $(1) is the working directory.
+# needs none of them. $(1) is the working directory. Scripts reach the host via
+# host.docker.internal, as Docker Desktop can have host networking switched off.
 SCRIPTS_IMAGE := enerplanet-scripts
 # The scripts' optional settings, forwarded only when set in the caller's shell.
-SCRIPT_ENV := $(foreach v,SMOKE_SITE KEEP_MODEL POLL_TIMEOUT_S SMOKE_EMAIL SMOKE_PASSWORD SEED_EMAIL SEED_PASSWORD WAIT_S BACKEND_URL TENTACRON_URL TENTACRON_API_KEY,-e $(v))
+SCRIPT_ENV := $(foreach v,SMOKE_SITE KEEP_MODEL POLL_TIMEOUT_S SMOKE_EMAIL SMOKE_PASSWORD SEED_EMAIL SEED_PASSWORD WAIT_S TENTACRON_API_KEY,-e $(v))
 define run_script
 	@printf 'FROM alpine:3.20\nRUN apk add --no-cache bash curl jq docker-cli\n' | docker build -q -t $(SCRIPTS_IMAGE) - >/dev/null
-	@docker run --rm --network host $(SCRIPT_ENV) -v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
+	@docker run --rm --add-host=host.docker.internal:host-gateway $(SCRIPT_ENV) \
+		-e BACKEND_URL="$${BACKEND_URL:-http://host.docker.internal:8000}" \
+		-e TENTACRON_URL="$${TENTACRON_URL:-http://host.docker.internal:$(TENTACRON_PORT)}" \
+		-v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
 endef
 
 .env:
@@ -118,7 +121,7 @@ dev-bg:
 	@tmux has-session -t $(SESSION_NAME) 2>/dev/null && \
 		(echo "Error: Session '$(SESSION_NAME)' is already running. Run 'make clean-bg' first.") || \
 		(tmux new-session -d -s $(SESSION_NAME) -n frontend "cd $(FRONT_DIR) && npm run dev" && \
-		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && go run cmd/main.go" && \
+		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && BUEM_VERSION='$(BUEM_MODEL_IMAGE_TAG)' go run cmd/main.go" && \
 		 echo "Services started successfully!" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Access Frontend:  http://localhost:3000" && \
@@ -164,10 +167,13 @@ up: up-deps
 
 .PHONY: up-deps
 # Every service except the backend, for `make dev`, which runs the backend on
-# the host instead.
+# the host instead. PLATFORM_SERVICES are the platform-core services started,
+# with their dependencies. The legacy webservice is left out: neither the
+# backend's start nor MEME runs need it.
+PLATFORM_SERVICES ?= redis auth-service
 up-deps: .env
 	@docker network create spatialhub-net 2>/dev/null || true
-	@docker compose $(PLATFORM_COMPOSE) up -d
+	@docker compose $(PLATFORM_COMPOSE) up -d $(PLATFORM_SERVICES)
 	@$(MAKE) pylovo
 	@$(MAKE) tentacron-stack
 
@@ -319,7 +325,7 @@ db-create:
 
 .PHONY: up-services
 up-services: .env
-	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service webservice
+	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service
 
 .PHONY: webservice
 # Cloned here rather than in setup-repos: only the Calliope/PyPSA simulation
@@ -340,6 +346,9 @@ pylovo:
 # meme is left out until its translator and parser packages are released; it
 # serves only the simulation step. `make meme` starts it on its own.
 tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
+	@# These services' own compose files set no restart policy, so after a Docker
+	@# restart they stay down. Remove once each pinned version sets one.
+	@docker update --restart unless-stopped tentacron-env-tentacron-1 >/dev/null
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
@@ -369,7 +378,11 @@ buem: tentacron-network
 .PHONY: meme
 meme: tentacron-network
 	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
-	@docker network connect tentacron-net meme-env-api-1 2>/dev/null || true
+	@# MEME's compose does not join tentacron-net, so the alias is set here: it gives
+	@# TentaCron a name that survives a rename or a second instance. Reconnect only
+	@# when the alias is missing; disconnect fails harmlessly when not yet connected.
+	@docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{if eq $$k "tentacron-net"}}{{$$v.Aliases}}{{end}}{{end}}' meme-env-api-1 | grep -qw meme || \
+		{ docker network disconnect tentacron-net meme-env-api-1 2>/dev/null; docker network connect --alias meme tentacron-net meme-env-api-1; }
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
 # weather and city2tabula pull rather than build: both publish an image, and

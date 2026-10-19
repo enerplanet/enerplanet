@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
+	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/models"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	regionstore "spatialhub_backend/internal/store/region"
@@ -61,6 +63,27 @@ const (
 	errFailedMarshalPayload = "Failed to marshal payload"
 )
 
+// statusClientClosedRequest is nginx's 499: the caller disconnected before the
+// response, so a cancelled pylovo call is logged as such rather than as a 500.
+const statusClientClosedRequest = 499
+
+// clientGone reports whether the caller cancelled its request. The pylovo call
+// runs on the request's context, so it fails with that cancellation too.
+func clientGone(c *gin.Context) bool {
+	return errors.Is(c.Request.Context().Err(), context.Canceled)
+}
+
+// abortClientGone ends a request whose caller has left.
+func abortClientGone(c *gin.Context, method, path string) {
+	logger.Logger.Infof("Client cancelled request to Pylovo (%s %s)", method, path)
+	c.AbortWithStatus(statusClientClosedRequest)
+}
+
+func isTimeout(err error) bool {
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
 var (
 	pylovoHTTPClient      = &http.Client{Timeout: constants.HTTPTimeoutPylovo}
 	regionRefreshMu       sync.Mutex
@@ -104,47 +127,41 @@ func (h *PylovoHandler) bindWithUserAndForward(c *gin.Context, method, path stri
 	h.forwardToPylovo(c, method, path, jsonData)
 }
 
-func parsePolygonCoords(payload map[string]interface{}) [][]float64 {
-	var polygonCoords [][]float64
-	coords, ok := payload["polygon"].([]interface{})
-	if !ok {
-		return polygonCoords
+// maxAreaRequestBytes caps a request that carries an area; geo.MaxAreaVertices
+// positions take well under 1 MB.
+const maxAreaRequestBytes = 2 << 20
+
+// bindAreaRequest binds a JSON body of at most maxAreaRequestBytes into v. It
+// answers 413 or 400 and returns false when it cannot.
+func bindAreaRequest(c *gin.Context, v any) bool {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxAreaRequestBytes)
+	err := c.ShouldBindJSON(v)
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge):
+		httputil.ErrorResponse(c, http.StatusRequestEntityTooLarge, fmt.Sprintf("request larger than %d bytes", maxAreaRequestBytes))
+	case err != nil:
+		httputil.BadRequest(c, errInvalidPayload)
 	}
-	for _, p := range coords {
-		if point, ok := p.([]interface{}); ok && len(point) == 2 {
-			polygonCoords = append(polygonCoords, []float64{point[0].(float64), point[1].(float64)})
-		}
-	}
-	return polygonCoords
+	return err == nil
 }
 
-func ensurePolygonClosed(coords [][]float64) [][]float64 {
-	if len(coords) == 0 {
-		return coords
+// requestArea returns the request's area as validated GeoJSON, read from geom
+// or from the older polygon field, which holds one ring.
+func requestArea(payload map[string]interface{}) (json.RawMessage, error) {
+	geom := payload["geom"]
+	if geom == nil {
+		geom = map[string]any{"type": "Polygon", "coordinates": []any{payload["polygon"]}}
 	}
-	first := coords[0]
-	last := coords[len(coords)-1]
-	if first[0] != last[0] || first[1] != last[1] {
-		coords = append(coords, first)
+	raw, err := json.Marshal(geom)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", geo.ErrInvalidArea, err)
 	}
-	return coords
-}
-
-func buildGeomPayload(payload map[string]interface{}) map[string]interface{} {
-	if geom, ok := payload["geom"].(map[string]interface{}); ok {
-		return map[string]interface{}{"geom": geom}
-	}
-	polygonCoords := ensurePolygonClosed(parsePolygonCoords(payload))
-	return map[string]interface{}{
-		"geom": map[string]interface{}{
-			"type":        "Polygon",
-			"coordinates": [][][]float64{polygonCoords},
-		},
-	}
+	return geo.ValidateArea(raw)
 }
 
 func copyBuildingFilterOptions(src, dst map[string]interface{}) {
-	filterKeys := []string{"include_public_buildings", "include_private_buildings", "excluded_building_ids", "model_id", "draft_id"}
+	filterKeys := []string{"include_private_buildings", "excluded_building_ids", "model_id", "draft_id"}
 	for _, key := range filterKeys {
 		if val, ok := src[key]; ok {
 			dst[key] = val
@@ -154,12 +171,16 @@ func copyBuildingFilterOptions(src, dst map[string]interface{}) {
 
 func (h *PylovoHandler) GenerateGrid(c *gin.Context) {
 	var payload map[string]interface{}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		httputil.BadRequest(c, errInvalidPayload)
+	if !bindAreaRequest(c, &payload) {
+		return
+	}
+	geom, err := requestArea(payload)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
 		return
 	}
 
-	pylovoPayload := buildGeomPayload(payload)
+	pylovoPayload := map[string]interface{}{"geom": geom}
 	if userCtx, ok := httputil.GetUserContext(c); ok {
 		pylovoPayload["user_id"] = userCtx.UserID
 	}
@@ -183,7 +204,7 @@ func (h *PylovoHandler) GetConsumerCategories(c *gin.Context) {
 }
 
 func (h *PylovoHandler) GetGridStatistics(c *gin.Context) {
-	h.bindAndForward(c, http.MethodPost, "/grid-statistics")
+	h.bindSiteScopedAndForward(c, "/grid-statistics")
 }
 
 func (h *PylovoHandler) GetCableCosts(c *gin.Context) {
@@ -191,7 +212,33 @@ func (h *PylovoHandler) GetCableCosts(c *gin.Context) {
 }
 
 func (h *PylovoHandler) RunPowerFlow(c *gin.Context) {
-	h.bindAndForward(c, http.MethodPost, "/power-flow")
+	h.bindSiteScopedAndForward(c, "/power-flow")
+}
+
+// bindSiteScopedAndForward forwards a POST whose payload may name a site_id,
+// after checking that the caller owns that site.
+func (h *PylovoHandler) bindSiteScopedAndForward(c *gin.Context, path string) {
+	var payload map[string]interface{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		httputil.BadRequest(c, errInvalidPayload)
+		return
+	}
+	if raw, ok := payload["site_id"]; ok && raw != nil {
+		siteID, ok := raw.(float64)
+		if !ok || siteID != float64(int(siteID)) {
+			httputil.BadRequest(c, fmt.Sprintf("invalid site_id %v", raw))
+			return
+		}
+		if _, ok := h.requireSiteOwner(c, int(siteID)); !ok {
+			return
+		}
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		httputil.InternalError(c, errFailedMarshalPayload)
+		return
+	}
+	h.forwardToPylovo(c, http.MethodPost, path, jsonData)
 }
 
 func (h *PylovoHandler) GetCableTypes(c *gin.Context) {
@@ -278,8 +325,12 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 
 	body, status, err := forwardPylovoRequest(ctx, h.resolveBaseURL(), method, path, payload)
 	if err != nil {
+		if clientGone(c) {
+			abortClientGone(c, method, path)
+			return
+		}
 		msg := fmt.Sprintf("Error contacting Pylovo (%s %s): %v", method, path, err)
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+		if isTimeout(err) {
 			msg += " — Pylovo service is not responding (stale DB pool / frozen worker). " +
 				"Restart the Pylovo service"
 		} else if strings.Contains(err.Error(), "connection refused") {
@@ -529,6 +580,10 @@ func (h *PylovoHandler) GetAvailableRegions(c *gin.Context) {
 	resolvedURL := h.resolveBaseURL()
 	body, status, err := forwardPylovoRequest(ctx, resolvedURL, http.MethodGet, "/boundary/available", nil)
 	if err != nil {
+		if clientGone(c) {
+			abortClientGone(c, http.MethodGet, "/boundary/available")
+			return
+		}
 		logger.Logger.Errorf("Error contacting Pylovo (GET /boundary/available): %v (baseURL=%s)", err, resolvedURL)
 		httputil.InternalError(c, fmt.Sprintf("Pylovo service unreachable: %v", err))
 		return

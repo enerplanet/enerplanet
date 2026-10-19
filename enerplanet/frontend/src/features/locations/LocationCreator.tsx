@@ -49,7 +49,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
 
   // Step 1: Metadata
   const [title, setTitle] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -128,7 +127,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
           setTitle(location.title);
           setBuildingProps((prev) => ({ ...prev, fClass: location.f_class || 'house' }));
           setDemandEnergy(location.demand_energy);
-          setIsPublic(location.is_public);
           setTags(location.tags || []);
           setArea(location.area);
           if (location.geometry_area?.coordinates) {
@@ -193,7 +191,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
         geometry: { type: 'Point' as const, coordinates: [avgLon, avgLat] },
         geometry_area: { type: 'Polygon' as const, coordinates: [polygonCoordinates] },
         tags,
-        is_public: isPublic,
       };
 
       if (editMode && id) {
@@ -210,7 +207,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
       setIsLoading(false);
     }
   }, [
-    title, polygonCoordinates, area, buildingProps, demandEnergy, tags, isPublic,
+    title, polygonCoordinates, area, buildingProps, demandEnergy, tags,
     editMode, id, createLocation, updateLocation, navigate, showSuccess, showError,
   ]);
 
@@ -236,7 +233,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   }
 
   const stepDescriptions = [
-    'Set up your location name and visibility',
+    'Set up your location name and tags',
     'Draw the area boundary on the map',
     'Configure building characteristics',
     'Review and save your location',
@@ -285,7 +282,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
                 {currentStep === 0 && (
                   <Step1Metadata
                     title={title} setTitle={setTitle}
-                    isPublic={isPublic} setIsPublic={setIsPublic}
                     tags={tags} setTags={setTags}
                     tagInput={tagInput} setTagInput={setTagInput}
                   />
@@ -307,7 +303,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
                   <Step4DemandSave
                     demandEnergy={demandEnergy} setDemandEnergy={setDemandEnergy}
                     peakLoad={peakLoad} setPeakLoad={setPeakLoad}
-                    title={title} area={area} isPublic={isPublic} tags={tags}
+                    title={title} area={area} tags={tags}
                     properties={buildingProps} polygonCoordinates={polygonCoordinates}
                     isLoading={isLoading} onSave={handleSave} editMode={editMode}
                   />

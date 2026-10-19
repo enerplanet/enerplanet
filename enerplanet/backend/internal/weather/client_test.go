@@ -55,6 +55,19 @@ func TestGetPointWeather_ReturnsRawBodyVerbatim(t *testing.T) {
 	}, *gotPayload)
 }
 
+func TestGetPVWeather_RequestsWindWithTheIrradiance(t *testing.T) {
+	status := `{"state":"completed","result":{"target_status":200,"target_response":{"index":[],"variables":{}}}}`
+	tc, gotPayload := fakeTentacron(t, status)
+
+	_, err := NewClient(tc).GetPVWeather(context.Background(), 48.83, 12.95, Period{Scenario: "p50"}, "merra-2")
+
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{
+		"lat": 48.83, "lon": 12.95, "scenario": "p50",
+		"provider": "merra-2", "variables": "T,DHI,DNI,WS_10M", "format": "json",
+	}, *gotPayload)
+}
+
 func TestGetPointWeather_UpstreamRejectionSurfacesWeatherMessage(t *testing.T) {
 	status := `{"state":"failed","error":{"code":"target_error","message":"target weather-point: HTTP 422: no servable archive for cosmo-rea6 in 2099"}}`
 	tc, _ := fakeTentacron(t, status)

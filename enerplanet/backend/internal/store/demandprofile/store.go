@@ -4,6 +4,7 @@
 package demandprofile
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -112,6 +113,22 @@ func (s *Store) SaveFailed(modelID uint, osmID, reason string) error {
 	}).Create(&row).Error
 }
 
+// SaveShared upserts a building whose 3D building is resolved under the OSM
+// way standing, which carries the whole building's demand.
+func (s *Store) SaveShared(modelID uint, osmID, standing string) error {
+	note := fmt.Sprintf("shares its 3D building with OSM way %s, whose BuEM run covers the whole building", standing)
+	row := models.BuildingDemandProfile{
+		ModelID:      modelID,
+		OSMID:        osmID,
+		Status:       models.DemandProfileStatusShared,
+		ErrorMessage: &note,
+	}
+	return s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "model_id"}, {Name: "osm_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"status", "error_message", "updated_at"}),
+	}).Create(&row).Error
+}
+
 // GetByModel returns every building demand profile row for a model.
 func (s *Store) GetByModel(modelID uint) ([]models.BuildingDemandProfile, error) {
 	var rows []models.BuildingDemandProfile
@@ -124,11 +141,12 @@ type StatusCounts struct {
 	Pending  int64
 	Resolved int64
 	Failed   int64
+	Shared   int64
 }
 
 // Total is the number of buildings tracked for this model's current run.
 func (c StatusCounts) Total() int64 {
-	return c.Pending + c.Resolved + c.Failed
+	return c.Pending + c.Resolved + c.Failed + c.Shared
 }
 
 // GetStatusCounts returns the row-status breakdown for a model, for the poll
@@ -154,6 +172,8 @@ func (s *Store) GetStatusCounts(modelID uint) (StatusCounts, error) {
 			counts.Resolved = r.Count
 		case models.DemandProfileStatusFailed:
 			counts.Failed = r.Count
+		case models.DemandProfileStatusShared:
+			counts.Shared = r.Count
 		}
 	}
 	return counts, nil

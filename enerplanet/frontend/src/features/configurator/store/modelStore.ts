@@ -20,6 +20,11 @@ export type HeatResolutionMode = "expected" | "manual";
 
 export type AssignStep = "select-buildings" | "select-transformer";
 
+/** BuEM's cooking carriers that EnerPlanET offers. */
+export type CookingCarrier = "electric" | "gas";
+/** "plan" sizes every technology; "operate" keeps each at its maximum and optimises only the dispatch. */
+export type RunMode = "plan" | "operate";
+
 export interface ModelStore {
   // ── Active mode (unified) ──
   activeMode: ActiveMode;
@@ -49,8 +54,6 @@ export interface ModelStore {
   setAllPolygons: (polygons: [number, number][][]) => void;
   isDrawing: boolean;
   setIsDrawing: (drawing: boolean) => void;
-  allowMultiplePolygons: boolean;
-  setAllowMultiplePolygons: (allow: boolean) => void;
   clearTrigger: number;
   incrementClearTrigger: () => void;
   cursorPos: { x: number; y: number } | null;
@@ -65,6 +68,15 @@ export interface ModelStore {
   setToDate: (date: string) => void;
   resolution: number;
   setResolution: (res: number) => void;
+  /** What households cook with; gas cooking adds BuEM's kitchen profile as a gas demand. Saved as config.cookingCarrier. */
+  cookingCarrier: CookingCarrier;
+  setCookingCarrier: (carrier: CookingCarrier) => void;
+  /** Saved as config.mode. */
+  runMode: RunMode;
+  setRunMode: (mode: RunMode) => void;
+  /** Generate the grid as a pylovo site, kept apart from the shared postcode grids. Saved as config.site. */
+  siteMode: boolean;
+  setSiteMode: (on: boolean) => void;
 
   // ── Loading / saving ──
   isSaving: boolean;
@@ -73,6 +85,9 @@ export interface ModelStore {
   setIsLoadingModel: (v: boolean) => void;
   isGeneratingGrid: boolean;
   setIsGeneratingGrid: (v: boolean) => void;
+  /** The area or the stations changed since the shown grid was generated; Regenerate grid brings it up to date. */
+  gridStale: boolean;
+  setGridStale: (v: boolean) => void;
 
   // ── Unsaved changes ──
   isModified: boolean;
@@ -90,13 +105,15 @@ export interface ModelStore {
   resetAdvancedParams: () => void;
 
   // ── Building filters ──
-  includePublicBuildings: boolean;
-  setIncludePublicBuildings: (v: boolean) => void;
   includePrivateBuildings: boolean;
   setIncludePrivateBuildings: (v: boolean) => void;
   excludedBuildingIds: Set<number>;
   toggleBuildingExclusion: (id: number) => void;
   clearExcludedBuildings: () => void;
+  /** osm_ids picked with Ctrl+click, for acting on several buildings at once. */
+  selectedBuildingIds: Set<string>;
+  toggleBuildingSelection: (osmId: string) => void;
+  clearBuildingSelection: () => void;
 
   // ── Map interactions (dialogs + tooltips) ──
   transformerDialogOpen: boolean;
@@ -123,6 +140,9 @@ export interface ModelStore {
   setDraggingTech: (v: Technology | null) => void;
   techDialogOpen: boolean;
   setTechDialogOpen: (v: boolean) => void;
+  /** pick: choose a catalogue product; define: edit its parameters. */
+  techDialogStep: "pick" | "define";
+  setTechDialogStep: (v: "pick" | "define") => void;
   selectedTechForDialog: Technology | null;
   setSelectedTechForDialog: (v: Technology | null) => void;
   selectedBuildingForTech: any;
@@ -197,24 +217,27 @@ const getInitialState = () => ({
   powerFlowResults: new Map<number, any>(),
   allPolygons: [] as [number, number][][],
   isDrawing: false,
-  allowMultiplePolygons: false,
   clearTrigger: 0,
   cursorPos: null as { x: number; y: number } | null,
   modelName: "",
   fromDate: "",
   toDate: "",
   resolution: 60,
+  cookingCarrier: "electric" as CookingCarrier,
+  runMode: "plan" as RunMode,
+  siteMode: false,
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
+  gridStale: false,
   isModified: false,
   showUnsavedDialog: false,
   showAreaSelectTour: false,
   showAdvancedParams: false,
   advancedParams: getDefaultAdvancedParameters(),
-  includePublicBuildings: true,
   includePrivateBuildings: true,
   excludedBuildingIds: new Set<number>(),
+  selectedBuildingIds: new Set<string>(),
   transformerDialogOpen: false,
   selectedTransformer: null,
   transformerTooltip: null,
@@ -226,6 +249,7 @@ const getInitialState = () => ({
   showTechDrawer: false,
   draggingTech: null,
   techDialogOpen: false,
+  techDialogStep: "pick" as const,
   selectedTechForDialog: null,
   selectedBuildingForTech: null,
   isAddingTechToAll: false,
@@ -275,8 +299,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   setAllPolygons: (polygons) => set({ allPolygons: polygons }),
   isDrawing: false,
   setIsDrawing: (drawing) => set({ isDrawing: drawing }),
-  allowMultiplePolygons: false,
-  setAllowMultiplePolygons: (allow) => set({ allowMultiplePolygons: allow }),
   clearTrigger: 0,
   incrementClearTrigger: () => set((s) => ({ clearTrigger: s.clearTrigger + 1 })),
   cursorPos: null,
@@ -291,6 +313,12 @@ export const useModelStore = create<ModelStore>((set) => ({
   setToDate: (date) => set({ toDate: date }),
   resolution: 60,
   setResolution: (res) => set({ resolution: res }),
+  cookingCarrier: "electric",
+  setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
+  runMode: "plan",
+  setRunMode: (mode) => set({ runMode: mode }),
+  siteMode: false,
+  setSiteMode: (on) => set({ siteMode: on }),
 
   // ── Loading / saving ──
   isSaving: false,
@@ -299,6 +327,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsLoadingModel: (v) => set({ isLoadingModel: v }),
   isGeneratingGrid: false,
   setIsGeneratingGrid: (v) => set({ isGeneratingGrid: v }),
+  gridStale: false,
+  setGridStale: (v) => set({ gridStale: v }),
 
   // ── Unsaved changes ──
   isModified: false,
@@ -316,8 +346,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   resetAdvancedParams: () => set({ advancedParams: getDefaultAdvancedParameters() }),
 
   // ── Building filters ──
-  includePublicBuildings: true,
-  setIncludePublicBuildings: (v) => set({ includePublicBuildings: v }),
   includePrivateBuildings: true,
   setIncludePrivateBuildings: (v) => set({ includePrivateBuildings: v }),
   excludedBuildingIds: new Set(),
@@ -329,6 +357,15 @@ export const useModelStore = create<ModelStore>((set) => ({
       return { excludedBuildingIds: next };
     }),
   clearExcludedBuildings: () => set({ excludedBuildingIds: new Set() }),
+  selectedBuildingIds: new Set(),
+  toggleBuildingSelection: (osmId) =>
+    set((s) => {
+      const next = new Set(s.selectedBuildingIds);
+      if (next.has(osmId)) next.delete(osmId);
+      else next.add(osmId);
+      return { selectedBuildingIds: next };
+    }),
+  clearBuildingSelection: () => set({ selectedBuildingIds: new Set() }),
 
   // ── Map interactions ──
   transformerDialogOpen: false,
@@ -363,6 +400,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setDraggingTech: (v) => set({ draggingTech: v }),
   techDialogOpen: false,
   setTechDialogOpen: (v) => set({ techDialogOpen: v }),
+  techDialogStep: "pick",
+  setTechDialogStep: (v) => set({ techDialogStep: v }),
   selectedTechForDialog: null,
   setSelectedTechForDialog: (v) => set({ selectedTechForDialog: v }),
   selectedBuildingForTech: null,

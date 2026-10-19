@@ -27,7 +27,6 @@ import (
 	grouphandler "spatialhub_backend/internal/handler/group"
 	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	"spatialhub_backend/internal/handler/ignis"
-	locationhandler "spatialhub_backend/internal/handler/location"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
 	"spatialhub_backend/internal/handler/pylovo"
 	"spatialhub_backend/internal/handler/render"
@@ -47,6 +46,7 @@ import (
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
@@ -143,6 +143,9 @@ func main() {
 		return
 	}
 
+	if err := config.ValidateBuemVersion(cfg.BuemVersion); err != nil {
+		log.Errorf("%v", err)
+	}
 	platformconfig.SetupTimezone(cfg.AppTimezone, log)
 	serverAddr := fmt.Sprintf("%s:%s", cfg.AppHost, cfg.AppPort)
 
@@ -289,7 +292,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
 	coatiRunner := resultservice.SubprocessCoatiRunner{}
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
@@ -301,6 +304,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeDispatchMemePyPSA, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeIngestMemePyPSAResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
+
+	go startOrphanedRunSweep(db, jobs.AsynqLiveTasks{Inspector: asynq.NewInspector(asynqRedisOpt), Queues: []string{"buem", "results"}}, log)
 
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
@@ -692,6 +697,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
+	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient))
 
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
@@ -705,14 +711,8 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
 	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
 
-	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider)
+	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider, seriesstore.NewStore(deps.DB), deps.Cfg.BuemVersion, modelHandler)
 	registerBuemRoutes(protectedAPI, buemHandler)
-
-	locationHandler := locationhandler.NewLocationHandler(deps.DB)
-	registerLocationRoutes(protectedAPI, locationHandler)
-
-	locationShareHandler := locationhandler.NewLocationShareHandler(deps.DB)
-	registerLocationShareRoutes(protectedAPI, locationShareHandler)
 
 	// Energy demand is calculated dynamically based on building area and type
 }
@@ -854,6 +854,11 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
 	api.GET(routeModelByID+"/demand-profiles", modelHandler.GetModelDemandProfiles)
+	api.GET(routeModelByID+"/buildings/:building_ref/demand-profile", modelHandler.GetBuildingDemandProfile)
+	api.GET(routeModelByID+"/buildings/:building_ref/series/:series", modelHandler.GetBuildingSeriesWeek)
+	api.GET(routeModelByID+"/buildings/:building_ref/series.csv", modelHandler.GetBuildingSeriesCSV)
+	api.GET(routeModelByID+"/series.zip", modelHandler.GetModelSeriesZip)
+	api.POST(routeModelByID+"/series/claim-draft", modelHandler.ClaimDraftSeries)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
@@ -911,6 +916,7 @@ func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler
 	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
 	api.POST("/v1/city2tabula/enrich/area", handler.EnrichArea)
 	api.GET("/v1/city2tabula/geometry", handler.Geometry)
+	api.GET("/v1/city2tabula/pv-surfaces", handler.PVSurfaces)
 	api.GET("/v1/heat/availability", handler.Availability)
 }
 
@@ -928,6 +934,8 @@ func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.H
 // caller rather than from City2TABULA.
 func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
 	api.POST("/v1/buem/building", handler.RunBuilding)
+	api.POST("/models/:id/buildings/:building_ref/buem", handler.RunModelBuilding)
+	api.POST("/drafts/:draft_id/buildings/:building_ref/buem", handler.RunDraftBuilding)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
@@ -967,6 +975,20 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	// Boundary routes are registered in configurePublicAPI (no auth required)
 }
 
+// registerSiteRoutes registers the site-mode routes; each checks the site's owner.
+func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
+	sites := api.Group("/v2/pylovo/sites")
+	sites.POST("", handler.CreateSite)
+	sites.GET("", handler.ListSites)
+	sites.GET("/:id", handler.GetSite)
+	sites.DELETE("/:id", handler.DeleteSite)
+	sites.POST("/:id/generate", handler.GenerateSite)
+	sites.GET("/:id/jobs/:job_id", handler.GetSiteJob)
+	sites.GET("/:id/grid", handler.GetSiteGrid)
+	sites.GET("/:id/transformers", handler.GetSiteTransformers)
+	sites.PUT("/:id/transformers", handler.PutSiteTransformers)
+}
+
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
 func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
 	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
@@ -992,29 +1014,20 @@ func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.Manage
 	services.POST("/:id/unavailable", handler.MarkUnavailable)
 }
 
-func registerLocationRoutes(api *gin.RouterGroup, handler *locationhandler.LocationHandler) {
-	locations := api.Group("/locations")
-	locations.GET("", handler.GetUserLocations)
-	locations.GET("/public", handler.GetPublicLocations)
-	locations.GET("/all", handler.GetAllAccessibleLocations)
-	locations.GET("/geojson", handler.GetUserLocationsGeoJSON)
-	locations.POST("", handler.CreateLocation)
-	locations.GET("/:id", handler.GetLocation)
-	locations.PUT("/:id", handler.UpdateLocation)
-	locations.DELETE("/:id", handler.DeleteLocation)
-	locations.POST("/:id/copy", handler.CopyLocation)
-}
-
-func registerLocationShareRoutes(api *gin.RouterGroup, handler *locationhandler.LocationShareHandler) {
-	locations := api.Group("/locations")
-	// Share routes
-	locations.GET("/:id/shares", handler.GetShares)
-	locations.POST("/:id/share/user", handler.ShareWithUser)
-	locations.POST("/:id/share/workspace", handler.ShareWithWorkspace)
-	locations.POST("/:id/share/group", handler.ShareWithGroup)
-	locations.DELETE("/:id/share/user/:shareId", handler.RemoveUserShare)
-	locations.DELETE("/:id/share/workspace/:shareId", handler.RemoveWorkspaceShare)
-	locations.DELETE("/:id/share/group/:shareId", handler.RemoveGroupShare)
+// startOrphanedRunSweep fails, at startup and every five minutes, the models
+// a stopped backend left in a run status with no task to finish them.
+func startOrphanedRunSweep(db *gorm.DB, live jobs.AsynqLiveTasks, log *logrus.Logger) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		failed, err := jobs.FailOrphanedRuns(db, live, time.Now().UTC())
+		if err != nil {
+			log.Errorf("orphaned run sweep failed: %v", err)
+		} else if len(failed) > 0 {
+			log.Warnf("orphaned run sweep: marked models %v failed, their runs had no task left", failed)
+		}
+		<-ticker.C
+	}
 }
 
 func startFeedbackCleanup(db *gorm.DB, log *logrus.Logger) {

@@ -22,6 +22,7 @@ interface TechData {
 }
 
 interface TooltipBuilding {
+    disabled?: boolean;
     x: number;
     y: number;
     type: string;
@@ -60,7 +61,10 @@ interface TooltipMvLine {
 }
 
 interface MapOverlaysProps {
-    showDrawHint: boolean;
+    /** Translation key of the drawing hint beside the cursor, or null for none. */
+    drawHintKey?: string | null;
+    /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
+    deleteHintKey?: string | null;
     cursorPos: { x: number; y: number } | null;
     transformerTooltip: TooltipTransformer | null;
     buildingTooltip: TooltipBuilding | null;
@@ -73,7 +77,8 @@ interface MapOverlaysProps {
 }
 
 export const MapOverlays: FC<MapOverlaysProps> = ({
-    showDrawHint,
+    drawHintKey = null,
+    deleteHintKey = null,
     cursorPos,
     transformerTooltip,
     buildingTooltip,
@@ -112,7 +117,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
             return {
                 count: 0,
                 status: 'critical',
-                label: 'Grid Constrained',
+                label: t("tooltips.gridConstrained.title"),
                 utilization: Math.round(utilizationPercent)
             };
         }
@@ -124,14 +129,14 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
         const projectedUtilization = ((currentLoadKva + count * effectiveLoad) / trafoCapKva) * 100;
 
         let status = 'safe';
-        let label = `Can host ${count} Chargers`;
+        let label = t("simulation.mapOverlay.canHostChargers", { count });
 
         if (count === 0) {
             status = 'critical';
-            label = 'Grid Constrained';
+            label = t("tooltips.gridConstrained.title");
         } else if (count <= 2 || projectedUtilization >= 95) {
             status = 'warning';
-            label = `Limited: ${count} Chargers`;
+            label = t("simulation.mapOverlay.limitedChargers", { count });
         }
 
         return {
@@ -160,7 +165,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         </div>
 
                         {/* Text */}
-                        <span className="text-sm font-medium text-foreground whitespace-nowrap">Analyzing area</span>
+                        <span className="text-sm font-medium text-foreground whitespace-nowrap">{t("simulation.mapOverlay.analyzingArea")}</span>
 
                         {/* Animated dots */}
                         <span className="flex items-center gap-0.5">
@@ -172,18 +177,30 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {showDrawHint && cursorPos && (
+            {drawHintKey && cursorPos && (
                 <div
                     className="absolute pointer-events-none z-20"
                     style={{ left: cursorPos.x, top: cursorPos.y }}
                 >
                     <div className="md-fade-in bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
-                        {t("drawing.clickToDraw")}
+                        {t(drawHintKey)}
                     </div>
                 </div>
             )}
 
-            {transformerTooltip && (
+            {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
+            {deleteHintKey && cursorPos && (
+                <div
+                    className="absolute pointer-events-none z-30"
+                    style={{ left: cursorPos.x, top: cursorPos.y - 48 }}
+                >
+                    <div className="md-fade-in bg-red-600 text-white rounded px-2 py-1 shadow-md text-xs font-medium">
+                        {t(deleteHintKey)}
+                    </div>
+                </div>
+            )}
+
+            {transformerTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -194,7 +211,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <img src="/images/transformer-icon-dark.svg" alt="" className="w-4 h-4 dark:invert" />{" "}
-                            Transformer
+                            {t("results.grid.transformer")}
                         </div>
                         <div className="text-muted-foreground mt-1">
                             <span className="font-medium text-foreground">{transformerTooltip.ratedPowerKva} kVA</span>
@@ -205,25 +222,25 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             <div className="mt-2 pt-2 border-t border-border">
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                     <Building className="w-3.5 h-3.5" />
+                                    <span>{t("simulation.mapOverlay.connectedBuildings")}:</span>
                                     <span className="font-medium text-foreground">{transformerTooltip.connectedBuildingCount}</span>
-                                    <span>connected building{transformerTooltip.connectedBuildingCount === 1 ? '' : 's'}</span>
                                 </div>
                                 {transformerTooltip.connectedBuildingTypes && transformerTooltip.connectedBuildingTypes.length > 0 && (
                                     <div className="mt-1 text-[10px] text-muted-foreground">
-                                        Types: {transformerTooltip.connectedBuildingTypes.slice(0, 3).map(formatFClassLabel).join(', ')}
-                                        {transformerTooltip.connectedBuildingTypes.length > 3 && ` +${transformerTooltip.connectedBuildingTypes.length - 3} more`}
+                                        {t("simulation.mapOverlay.types")}: {transformerTooltip.connectedBuildingTypes.slice(0, 3).map(formatFClassLabel).join(', ')}
+                                        {transformerTooltip.connectedBuildingTypes.length > 3 && ` ${t("simulation.mapOverlay.moreCount", { count: transformerTooltip.connectedBuildingTypes.length - 3 })}`}
                                     </div>
                                 )}
                             </div>
                         )}
                         <div className="text-muted-foreground mt-1.5 text-[10px]">
-                            Click for more details
+                            {t("simulation.mapOverlay.clickForDetails")}
                         </div>
                     </div>
                 </div>
             )}
 
-            {buildingTooltip && (
+            {buildingTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -234,14 +251,19 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     <div className="md-fade-in bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-border rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5" />
-                            Building
+                            {t("results.building")}
+                            {buildingTooltip.disabled && (
+                                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                    {t("simulation.mapOverlay.disabled")}
+                                </span>
+                            )}
                         </div>
                         <div className="text-muted-foreground mt-1">
                             <span className="font-medium text-foreground">{formatFClassLabel(buildingTooltip.type)}</span>
                         </div>
                         {(buildingTooltip.fClasses?.length || buildingTooltip.fClass) && (
                             <div className="text-muted-foreground mt-0.5">
-                                Class:{' '}
+                                {t("simulation.mapOverlay.class")}:{' '}
                                 <span className="font-medium text-foreground">
                                     {(buildingTooltip.fClasses && buildingTooltip.fClasses.length > 0
                                         ? buildingTooltip.fClasses
@@ -262,7 +284,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 {buildingTooltip.yearlyHeatDemandKwh.toLocaleString()} kWh/yr
                                 {buildingTooltip.heatDemandEstimated && (
                                     <span className="text-[9px] px-1 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
-                                        est.
+                                        {t("simulation.mapOverlay.estimatedShort")}
                                     </span>
                                 )}
                             </div>
@@ -278,28 +300,28 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 {(buildingTooltip.floors3dBag || buildingTooltip.floors) && (
                                     <div className="flex items-center gap-1.5">
                                         <Layers className="w-3 h-3" />
-                                        <span>Floors:</span>
+                                        <span>{t("simulation.mapOverlay.floors")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.floors3dBag || buildingTooltip.floors}</span>
                                     </div>
                                 )}
                                 {hasFiniteNumber(buildingTooltip.heightMax) && (
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
-                                        <span>Height:</span>
+                                        <span>{t("simulation.mapOverlay.height")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.heightMax.toFixed(1)} m</span>
                                     </div>
                                 )}
                                 {!hasFiniteNumber(buildingTooltip.heightMax) && hasFiniteNumber(buildingTooltip.heightMedian) && (
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
-                                        <span>Height (median):</span>
+                                        <span>{t("simulation.mapOverlay.heightMedian")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.heightMedian.toFixed(1)} m</span>
                                     </div>
                                 )}
                                 {buildingTooltip.constructionYear && (
                                     <div className="flex items-center gap-1.5">
                                         <Calendar className="w-3 h-3" />
-                                        <span>Built:</span>
+                                        <span>{t("simulation.mapOverlay.built")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.constructionYear}</span>
                                     </div>
                                 )}
@@ -307,13 +329,13 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Tag className="w-3 h-3" />
                                         <span className="inline-flex items-center gap-1">
-                                            Label:
+                                            {t("simulation.mapOverlay.label")}:
                                             <span className="pointer-events-auto inline-flex scale-75">
                                                 <InfoIcon tooltipKey="energyLabel" position="top" />
                                             </span>
                                         </span>
                                         <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${buildingTooltip.energyLabel ? getEnergyLabelColorClasses(buildingTooltip.energyLabel) : 'bg-muted text-muted-foreground border-border'}`}>
-                                            {buildingTooltip.energyLabel ? normalizeEnergyLabel(buildingTooltip.energyLabel) : 'N/A'}
+                                            {buildingTooltip.energyLabel ? normalizeEnergyLabel(buildingTooltip.energyLabel) : t("common.na")}
                                         </span>
                                         {hasFiniteNumber(buildingTooltip.energyIndex) && (
                                             <span className="text-muted-foreground">(EI {buildingTooltip.energyIndex.toFixed(2)})</span>
@@ -323,34 +345,34 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 {buildingTooltip.countryCode === 'NL' && !buildingTooltip.energyLabel && hasFiniteNumber(buildingTooltip.energyIndex) && (
                                     <div className="flex items-center gap-1.5">
                                         <Tag className="w-3 h-3" />
-                                        <span>Energy Index:</span>
+                                        <span>{t("simulation.mapOverlay.energyIndex")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.energyIndex.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && buildingTooltip.labelDate && (
                                     <div className="flex items-center gap-1.5">
                                         <Calendar className="w-3 h-3" />
-                                        <span>Label date:</span>
+                                        <span>{t("simulation.mapOverlay.labelDate")}:</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.labelDate}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsPopulation) && (
                                     <div className="flex items-center gap-1.5">
                                         <Users className="w-3 h-3" />
-                                        <span>Population (PC6/PC4):</span>
+                                        <span>{t("simulation.mapOverlay.population")} (PC6/PC4):</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.cbsPopulation.toLocaleString()}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsHouseholds) && (
                                     <div className="flex items-center gap-1.5">
                                         <Home className="w-3 h-3" />
-                                        <span>Households (PC6/PC4):</span>
+                                        <span>{t("simulation.mapOverlay.households")} (PC6/PC4):</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.cbsHouseholds.toLocaleString()}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize) && (
                                     <div className="flex items-center gap-1.5">
-                                        <span>Avg household size (PC6/PC4):</span>
+                                        <span>{t("simulation.mapOverlay.avgHouseholdSize")} (PC6/PC4):</span>
                                         <span className="font-medium text-foreground">{buildingTooltip.cbsAvgHouseholdSize.toFixed(2)}</span>
                                     </div>
                                 )}
@@ -361,17 +383,17 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && (hasFiniteNumber(buildingTooltip.cbsPopulation) || hasFiniteNumber(buildingTooltip.cbsHouseholds) || hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize)) && (
                                     <div className="text-[9px] text-muted-foreground/90 pt-0.5">
-                                        CBS values are postcode-area statistics (PC6 preferred, PC4 fallback), not single-building values.
+                                        {t("simulation.mapOverlay.cbsNote")}
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode && buildingTooltip.countryCode !== 'NL' && (
                                     <div className="text-[9px] text-muted-foreground/90 pt-0.5">
-                                        Source: EUBUCCO v0.1 (CC BY 4.0).
+                                        {t("simulation.mapOverlay.source", { source: "EUBUCCO v0.1 (CC BY 4.0)" })}
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && (buildingTooltip.energyLabel || hasFiniteNumber(buildingTooltip.cbsPopulation) || hasFiniteNumber(buildingTooltip.cbsHouseholds) || hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize)) && (
                                     <div className="text-[9px] text-muted-foreground/90 pt-0.5">
-                                        Sources: EP-Online (terms apply) and CBS Open Data (CC BY 4.0).
+                                        {t("simulation.mapOverlay.sourcesNl", { epOnline: "EP-Online", cbs: "CBS Open Data (CC BY 4.0)" })}
                                     </div>
                                 )}
                             </div>
@@ -404,7 +426,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             <div className="mt-2 pt-2 border-t border-border">
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
                                     <CircuitBoard className="w-3 h-3" />
-                                    Technologies ({techEntries.length})
+                                    {t("simulation.mapOverlay.technologiesCount", { count: techEntries.length })}
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                     {techEntries.map(([key, tech]) => (
@@ -423,13 +445,13 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         )}
 
                         <div className="text-muted-foreground mt-1.5 text-[10px]">
-                            {isDraggingTech ? "Drop to add technology" : "Click to edit details"}
+                            {isDraggingTech ? t("simulation.mapOverlay.dropToAddTech") : t("simulation.mapOverlay.clickToEdit")}
                         </div>
                     </div>
                 </div>
             )}
 
-            {mvLineTooltip && (
+            {mvLineTooltip && !deleteHintKey && (
                 <div
                     className="absolute pointer-events-none z-30"
                     style={{
@@ -440,10 +462,10 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     <div className="bg-background/95 dark:bg-gray-800/95 backdrop-blur-sm border border-orange-400/50 rounded-md px-3 py-2 shadow-lg text-xs">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Zap className="w-3.5 h-3.5 text-orange-500" />
-                            <span className="text-orange-600 dark:text-orange-400">MV Line</span>
+                            <span className="text-orange-600 dark:text-orange-400">{t("simulation.mapOverlay.mvLine")}</span>
                             {mvLineTooltip.normallyOpen && (
                                 <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
-                                    Normally Open
+                                    {t("simulation.mapOverlay.normallyOpen")}
                                 </span>
                             )}
                         </div>
@@ -454,12 +476,12 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             </div>
                             {mvLineTooltip.lengthM !== undefined && mvLineTooltip.lengthM > 0 && (
                                 <div>
-                                    Length: <span className="font-medium text-foreground">{mvLineTooltip.lengthM.toFixed(1)} m</span>
+                                    {t("simulation.mapOverlay.length")}: <span className="font-medium text-foreground">{mvLineTooltip.lengthM.toFixed(1)} m</span>
                                 </div>
                             )}
                             {mvLineTooltip.cableType && (
                                 <div>
-                                    Type: <span className="font-medium text-foreground">{mvLineTooltip.cableType}</span>
+                                    {t("simulation.mapOverlay.type")}: <span className="font-medium text-foreground">{mvLineTooltip.cableType}</span>
                                 </div>
                             )}
                         </div>
@@ -467,11 +489,11 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-800/50 text-[10px]">
                                 <div className="flex items-center gap-1 text-muted-foreground">
                                     <span className="w-2 h-2 rounded-full bg-green-500"></span>{" "}
-                                    From: <span className="text-foreground">{mvLineTooltip.fromBus || 'Bus'}</span>
+                                    {t("common.from")}: <span className="text-foreground">{mvLineTooltip.fromBus || t("simulation.mapOverlay.bus")}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
                                     <span className="w-2 h-2 rounded-full bg-red-500"></span>{" "}
-                                    To: <span className="text-foreground">{mvLineTooltip.toBus || 'Bus'}</span>
+                                    {t("common.to")}: <span className="text-foreground">{mvLineTooltip.toBus || t("simulation.mapOverlay.bus")}</span>
                                 </div>
                             </div>
                         )}

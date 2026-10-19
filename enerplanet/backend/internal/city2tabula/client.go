@@ -103,6 +103,16 @@ type Run struct {
 	Country string `json:"country"`
 	Status  string `json:"status"`
 	Error   string `json:"error,omitempty"`
+	RunStage
+}
+
+// RunStage is the pipeline step a run is in: import, extract_features or
+// link_buildings, numbered 1 to 3. It is empty while the run is pending.
+type RunStage struct {
+	Stage      string `json:"stage,omitempty" example:"extract_features"`
+	StageLabel string `json:"stage_label,omitempty" example:"Extracting building features"`
+	StageIndex int    `json:"stage_index,omitempty" example:"2"`
+	StageCount int    `json:"stage_count,omitempty" example:"3"`
 }
 
 // Building is one LOD2 building's thematic (non-geometric) 3D attributes, as
@@ -111,9 +121,13 @@ type Run struct {
 // City2TABULA serves that separately (GET /api/v1/geometry) for consumers
 // that actually need to render it; nothing here does.
 type Building struct {
-	ObjectID          string    `json:"object_id"`
-	DatasetID         string    `json:"dataset_id"`
-	OSMID             string    `json:"osm_id"`
+	ObjectID  string `json:"object_id"`
+	DatasetID string `json:"dataset_id"`
+	OSMID     string `json:"osm_id"`
+	// OSMIDs lists every OSM way linked to this 3D building, OSMID first
+	// (City2TABULA 0.11.2 and later). A building appears once even when
+	// several of the requested ways belong to it.
+	OSMIDs            []string  `json:"osm_ids,omitempty"`
 	MatchType         int16     `json:"match_type"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
 	MaxHeight         *float64  `json:"max_height,omitempty"`
@@ -125,6 +139,48 @@ type Building struct {
 	FloorAreaSqm      *float64  `json:"area_total_floor,omitempty"`
 	TabulaVariantCode *string   `json:"tabula_variant_code,omitempty"`
 	Surfaces          []Surface `json:"surfaces,omitempty"`
+}
+
+// ByRequestedWay indexes the result's buildings by the requested way that
+// stands for each: its best way when that was requested, otherwise its first
+// requested way (OSMIDs lists the best way first). Every other requested way
+// of a building is a further way and maps to the way standing for it; its
+// building's envelope is reported once, under the standing way.
+func (r BuildingsResult) ByRequestedWay(requested []string) (map[string]Building, map[string]string) {
+	want := make(map[string]bool, len(requested))
+	for _, id := range requested {
+		want[id] = true
+	}
+	byWay := map[string]Building{}
+	further := map[string]string{}
+	for _, b := range r.Buildings {
+		ways := b.OSMIDs
+		if len(ways) == 0 && b.OSMID != "" {
+			ways = []string{b.OSMID} // a server before 0.11.2 sends no osm_ids
+		}
+		standing := ""
+		for _, w := range ways {
+			if want[w] {
+				standing = w
+				break
+			}
+		}
+		if standing == "" {
+			continue
+		}
+		byWay[standing] = b
+		for _, w := range ways {
+			if w != standing && want[w] {
+				further[w] = standing
+			}
+		}
+	}
+	// A way covering several 3D buildings can stand for one and be further
+	// on another; it keeps its own building's data.
+	for w := range byWay {
+		delete(further, w)
+	}
+	return byWay, further
 }
 
 // DatasetCredit is one source dataset's attribution as City2TABULA returns it
@@ -171,6 +227,10 @@ type Surface struct {
 	// IsPartyWall marks a wall piece City2TABULA found shared with a
 	// neighbouring building (City2TABULA v0.9.0 and later).
 	IsPartyWall *bool `json:"is_party_wall,omitempty"`
+	// AreaBelowPrecision is true when the area rounds to 0.00 m2, as for the
+	// sliver faces where walls meet. City2TABULA documents that such a surface
+	// must not be used as a thermal area (v0.9.0 and later).
+	AreaBelowPrecision *bool `json:"area_below_precision,omitempty"`
 }
 
 // normalizeCountry adapts the backend's country vocabulary (geo.NormalizeCountry,

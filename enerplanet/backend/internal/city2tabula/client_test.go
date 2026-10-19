@@ -231,3 +231,35 @@ func TestGetSurfaceGeometry_NoSurfaceRowsIsNotAnError(t *testing.T) {
 	require.Len(t, got.Buildings, 1)
 	assert.Empty(t, got.Buildings[0].Surfaces, "City2TABULA omits the key entirely, so absent and empty are one case")
 }
+
+// A building comes back once; the requested way standing for it is its best
+// way when that was asked for, otherwise its first requested way.
+func TestByRequestedWay(t *testing.T) {
+	r := BuildingsResult{Buildings: []Building{
+		{ObjectID: "A", OSMID: "best", OSMIDs: []string{"best", "f1", "f2"}},
+		{ObjectID: "B", OSMID: "other", OSMIDs: []string{"other", "f3", "f4"}},
+		{ObjectID: "C", OSMID: "old"}, // a server before 0.11.2
+	}}
+	byWay, further := r.ByRequestedWay([]string{"best", "f1", "f2", "f3", "f4", "old"})
+
+	if byWay["best"].ObjectID != "A" || byWay["f3"].ObjectID != "B" || byWay["old"].ObjectID != "C" || len(byWay) != 3 {
+		t.Errorf("byWay = %v, want A under best, B under f3 (its best way was not asked for), C under old", byWay)
+	}
+	want := map[string]string{"f1": "best", "f2": "best", "f4": "f3"}
+	if len(further) != len(want) || further["f1"] != "best" || further["f2"] != "best" || further["f4"] != "f3" {
+		t.Errorf("further = %v, want %v", further, want)
+	}
+}
+
+// A way covering two 3D buildings stands for one and is never further on the
+// other, so it keeps its own building's data.
+func TestByRequestedWay_standingWayIsNeverFurther(t *testing.T) {
+	r := BuildingsResult{Buildings: []Building{
+		{ObjectID: "A", OSMID: "w", OSMIDs: []string{"w"}},
+		{ObjectID: "B", OSMID: "x", OSMIDs: []string{"x", "w"}},
+	}}
+	_, further := r.ByRequestedWay([]string{"w", "x"})
+	if _, ok := further["w"]; ok {
+		t.Errorf("further = %v, want w left out", further)
+	}
+}

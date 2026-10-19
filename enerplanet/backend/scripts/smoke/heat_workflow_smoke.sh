@@ -17,7 +17,8 @@
 #                       is skipped without it
 #   SMOKE_EMAIL / SMOKE_PASSWORD   dev login, default admin@example.de / 12345678
 #   POLL_TIMEOUT_S      per-poll-loop timeout, default 900
-#   KEEP_MODEL=1        leave the smoke model in place instead of deleting it
+#   KEEP_MODEL=1        leave the main smoke model in place instead of deleting
+#                       it; the comparison models are always deleted
 #
 # Requires bash, curl and jq. Creating the model resolves its country
 # through nominatim.openstreetmap.org on a cache miss, so the backend needs
@@ -169,8 +170,8 @@ poll_until() {
 resolve_model() {
   local suffix="$1" config="$2" body payload
   : > "$MODEL_ID_FILE"
-  payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$config" --arg t "heat workflow smoke $suffix $(date +%s)" \
-    '{title: $t, from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
+  payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$config" --arg t "heat workflow smoke $suffix $(date +%s)" --argjson ws "$WORKSPACE_ID" \
+    '{title: $t, workspace_id: $ws, from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
   body="$(request POST /api/models "$payload")"
   local new_id
   new_id="$(printf '%s' "$body" | jq -r '.data.id // empty')"
@@ -195,12 +196,10 @@ total_heating() {
 }
 
 cleanup() {
-  if [ "$KEEP_MODEL" != "1" ]; then
-    for extra in ${EXTRA_MODEL_IDS+"${EXTRA_MODEL_IDS[@]}"}; do
-      request DELETE "/api/models/$extra" >/dev/null
-      [ "$HTTP_CODE" = "200" ] || warn "could not delete smoke model $extra (HTTP $HTTP_CODE)"
-    done
-  fi
+  for extra in ${EXTRA_MODEL_IDS+"${EXTRA_MODEL_IDS[@]}"}; do
+    request DELETE "/api/models/$extra" >/dev/null
+    [ "$HTTP_CODE" = "200" ] || warn "could not delete smoke model $extra (HTTP $HTTP_CODE)"
+  done
   if [ -n "$MODEL_ID" ] && [ "$KEEP_MODEL" != "1" ]; then
     request DELETE "/api/models/$MODEL_ID" >/dev/null
     [ "$HTTP_CODE" = "200" ] && echo "info  deleted smoke model $MODEL_ID" || warn "could not delete smoke model $MODEL_ID (HTTP $HTTP_CODE)"
@@ -227,6 +226,9 @@ else
   echo "aborting: nothing else can run without a session"
   exit 1
 fi
+# Smoke models go in the user's preferred workspace: the model dashboard lists
+# one workspace, so a model left behind without one cannot be found to delete.
+WORKSPACE_ID="$(request GET /api/workspaces/preferred | jq '.data.preferred_workspace_id // null')"
 
 # ---- 2. TentaCron --------------------------------------------------------
 body="$(curl -s -w '\n%{http_code}' "$TENTACRON_URL/readyz")"; code="${body##*$'\n'}"
@@ -367,8 +369,8 @@ BAKERY_OSM_ID="$(jq -r '.features[-1].properties.osm_id' "$FIXTURE")"
 # in the one thing each is testing, so they start from the same buildings.
 SMOKE_BUILDINGS="$(jq '.features[-1].properties.f_class = "bakery" | .features[-1].properties.f_classes = "bakery" | .features[-1].properties.capacity = 4' "$FIXTURE")"
 config="$(jq -c --argjson b "$SMOKE_BUILDINGS" --argjson x "$SITE_CONFIG_EXTRA" -n '{buildings: $b, energyVectors: ["electricity"]} + $x')"
-payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$config" \
-  '{title: ("heat workflow smoke " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
+payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$config" --argjson ws "$WORKSPACE_ID" \
+  '{title: ("heat workflow smoke " + (now|todate)), workspace_id: $ws, from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
 body="$(request POST /api/models "$payload")"
 MODEL_ID="$(printf '%s' "$body" | jq -r '.data.id // empty')"
 if { [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; } && [ -n "$MODEL_ID" ]; then
@@ -491,8 +493,8 @@ command -v docker >/dev/null && GATEWAY_CONTAINER="$(docker ps -q \
   --filter label=com.docker.compose.service=buem-gateway | head -n 1)"
 if [ -n "$GATEWAY_CONTAINER" ]; then
   est_config="$(jq -c --argjson b "$(cat "$FIXTURE")" --argjson x "$SITE_CONFIG_EXTRA" -n '{buildings: $b, energyVectors: ["electricity"], heatSource: "estimate"} + $x')"
-  est_payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$est_config" \
-    '{title: ("heat workflow smoke estimate " + (now|todate)), from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
+  est_payload="$(jq -c -n --argjson coords "$SITE_POLYGON" --argjson cfg "$est_config" --argjson ws "$WORKSPACE_ID" \
+    '{title: ("heat workflow smoke estimate " + (now|todate)), workspace_id: $ws, from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, coordinates: $coords, config: $cfg}')"
   body="$(request POST /api/models "$est_payload")"
   EST_MODEL_ID="$(printf '%s' "$body" | jq -r '.data.id // empty')"
   if [ -n "$EST_MODEL_ID" ]; then

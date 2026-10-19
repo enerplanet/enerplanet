@@ -65,6 +65,7 @@ func (h *ModelHandler) GetModelDemandProfiles(c *gin.Context) {
 		Resolved:  counts.Resolved,
 		Pending:   counts.Pending,
 		Failed:    counts.Failed,
+		Shared:    counts.Shared,
 		Buildings: mapDemandProfiles(rows),
 	})
 }

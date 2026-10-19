@@ -86,6 +86,17 @@ type DispatchMemePayload struct {
 	Target string `json:"target,omitempty"`
 }
 
+// modelDemandResolver resolves a model's BuEM series; DemandResolver
+// implements it.
+type modelDemandResolver interface {
+	Resolve(ctx context.Context, modelID uint) (further map[string]string, err error)
+}
+
+// modelPVResolver is implemented by PVResolver.
+type modelPVResolver interface {
+	Attach(ctx context.Context, model *commonModels.Model, calc payload.CalculationPayload) error
+}
+
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
 // seam (electricity only; heat carriers are not translated),
@@ -109,6 +120,9 @@ func HandleDispatchMeme(
 	db *gorm.DB,
 	tc *tentacronclient.Client,
 	runs memeRunStore,
+	resolver modelDemandResolver,
+	seriesReader demandSeriesReader,
+	pvResolver modelPVResolver,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
 ) (retErr error) {
@@ -140,10 +154,38 @@ func HandleDispatchMeme(
 		return fmt.Errorf("failed to fetch model %d: %w", p.ModelID, err)
 	}
 
-	// 1. Build the calculation payload from the stored model.
+	// 1. Build the calculation payload from the stored model, with the BuEM
+	//    series of its current config: a save resolves them in the background,
+	//    and a run started before that finishes would read none.
+	further, err := resolver.Resolve(ctx, model.ID)
+	if err != nil {
+		return fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err)
+	}
 	built, err := payload.BuildCalculationPayload(&model)
 	if err != nil {
 		return fmt.Errorf("build calculation payload for model %d: %w", p.ModelID, err)
+	}
+	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
+		return err
+	}
+	if calc, ok := built.(payload.CalculationPayload); ok {
+		covered := dropFurtherWayDemand(calc.Topology, further)
+		warning, err := checkDemandCoverage(calc.Topology, covered)
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		if warning != nil {
+			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)
+		}
+		setModelWarning(db, p.ModelID, warning)
+		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
+			return err
+		}
+		if calc.Mode == "operate" {
+			if err := checkOperateSizes(calc.Topology); err != nil {
+				return fmt.Errorf("model %d: %w", p.ModelID, err)
+			}
+		}
 	}
 	calcBytes, err := json.Marshal(built)
 	if err != nil {

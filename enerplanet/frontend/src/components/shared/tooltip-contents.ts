@@ -1,7 +1,5 @@
 // Tooltip keys for translation lookup
 export const TOOLTIP_KEYS = {
-  multiplePolygons: 'tooltips.multiplePolygons',
-  publicBuildings: 'tooltips.publicBuildings',
   privateBuildings: 'tooltips.privateBuildings',
   simulateEV: 'tooltips.simulateEV',
   gridConstrained: 'tooltips.gridConstrained',
@@ -43,16 +41,6 @@ export type TooltipKey = keyof typeof TOOLTIP_KEYS;
 
 // Fallback content (English) - used when translations are not available
 export const TOOLTIP_CONTENTS = {
-  multiplePolygons: {
-    title: 'Multiple Polygons',
-    description: 'Enable this option to draw multiple separate areas on the map for your Energy assessment. When disabled, drawing a new polygon will replace the previous one. When enabled, you can define multiple distinct areas that will all be included in the analysis.',
-    example: 'Use this to analyze energy simulation across multiple non-contiguous areas simultaneously.'
-  },
-  publicBuildings: {
-    title: 'Public Custom Buildings',
-    description: 'Include buildings shared by other users in the grid calculation. These are custom buildings that other users have made publicly available.',
-    example: 'You can also exclude individual buildings by clicking on them on the map.'
-  },
   privateBuildings: {
     title: 'My Custom Buildings',
     description: 'Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.',

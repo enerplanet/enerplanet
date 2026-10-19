@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 
 	"platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -30,6 +32,7 @@ type Config struct {
 	WebserviceServiceURL string // URL of the webservice microservice
 	PylovoServiceURL     string // URL of the pylovo microservice
 	WeatherProvider      string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
+	BuemVersion          string // BuEM release the stored results are keyed for; must match the deployed buem-model
 	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v2/ignis/* proxy) routes through it
 	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
 	OpenTechDBServiceURL string // URL of the OpenTech-DB service
@@ -68,7 +71,8 @@ func LoadFromEnv() (*Config, error) {
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
-		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "cosmo-rea6"),
+		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
+		BuemVersion:          platformconfig.GetEnv("BUEM_VERSION", ""),
 		// 8400 is TentaCron's slot in the dev port allocation (repos.conf),
 		// a range chosen to avoid the crowded 8080 and 9000 neighbourhoods.
 		// The Makefile publishes it there; TentaCron's own default is 8080,
@@ -95,4 +99,21 @@ func normalizeWebserviceURL(raw string) string {
 		return defaultWebserviceURL
 	}
 	return raw
+}
+
+// buemReleaseVersion is the form BuEM reports as model_version for a release
+// image (buem-model:6.10.0 reports "6.10.0"); other tags report other strings.
+var buemReleaseVersion = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// ValidateBuemVersion reports why v cannot key stored BuEM results: a result
+// is stored only when BuEM's model_version equals it, so it must be the
+// release version of the deployed buem-model image.
+func ValidateBuemVersion(v string) error {
+	if v == "" {
+		return fmt.Errorf("BUEM_VERSION is not set; set it to the buem-model release in repos.conf (BUEM_MODEL_IMAGE_TAG), or no BuEM result is stored")
+	}
+	if !buemReleaseVersion.MatchString(v) {
+		return fmt.Errorf("BUEM_VERSION %q is not a release version X.Y.Z; BuEM reports X.Y.Z only for release images, so no BuEM result would be stored", v)
+	}
+	return nil
 }

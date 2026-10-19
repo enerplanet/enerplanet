@@ -18,27 +18,43 @@ import (
 
 	"platform.local/common/pkg/httputil"
 
+	"platform.local/common/pkg/models"
+
 	"spatialhub_backend/internal/api/contracts"
 	buemclient "spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/geo"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 )
 
-// Handler serves the per-building BuEM run.
+// ModelAccess loads a model the caller may edit, answering the request itself
+// when it may not. Satisfied by the model handler.
+type ModelAccess interface {
+	EditableModel(c *gin.Context, id string) (*models.Model, bool)
+}
+
+// Handler serves the per-building BuEM runs.
 type Handler struct {
-	buem     *buemclient.Client
-	weather  *weatherclient.Client
-	provider string
+	buem        *buemclient.Client
+	weather     *weatherclient.Client
+	provider    string
+	series      *seriesstore.Store
+	buemVersion string
+	models      ModelAccess
 }
 
 // NewHandler returns a Handler reaching buem-gateway and weather-serve through
-// TentaCron, with provider naming the weather-serve dataset.
-func NewHandler(tc *tentacron.Client, provider string) *Handler {
+// TentaCron, with provider naming the weather-serve dataset. Stored runs key
+// their results for buemVersion and check model access through access.
+func NewHandler(tc *tentacron.Client, provider string, store *seriesstore.Store, buemVersion string, access ModelAccess) *Handler {
 	return &Handler{
-		buem:     buemclient.NewClient(tc),
-		weather:  weatherclient.NewClient(tc),
-		provider: provider,
+		buem:        buemclient.NewClient(tc),
+		weather:     weatherclient.NewClient(tc),
+		provider:    provider,
+		series:      store,
+		buemVersion: buemVersion,
+		models:      access,
 	}
 }
 
@@ -66,78 +82,94 @@ func NewHandler(tc *tentacron.Client, provider string) *Handler {
 //	@Security		SessionAuth
 //	@Router			/v1/buem/building [post]
 func (h *Handler) RunBuilding(c *gin.Context) {
+	p, ok := h.prepare(c)
+	if !ok {
+		return
+	}
+	result, ok := h.run(c, p, "")
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, contracts.BuemBuildingRunResponse{
+		OSMID: p.req.OSMID,
+		BUEM:  json.RawMessage(result.BUEM),
+	})
+}
+
+// prepared is a validated run request with its building and weather.
+type prepared struct {
+	req        contracts.BuemBuildingRunRequest
+	building   buemclient.Building
+	weather    json.RawMessage
+	start, end string
+}
+
+// prepare binds and validates the request and fetches the building's weather,
+// answering the request itself on any failure.
+func (h *Handler) prepare(c *gin.Context) (prepared, bool) {
 	var req contracts.BuemBuildingRunRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httputil.BadRequest(c, "invalid request payload")
-		return
+		return prepared{}, false
 	}
 	if len(req.Building) == 0 {
 		httputil.BadRequest(c, "building is required")
-		return
+		return prepared{}, false
 	}
 	if len(req.Geometry) == 0 {
 		httputil.BadRequest(c, "geometry is required")
-		return
+		return prepared{}, false
 	}
-
 	period, err := requestPeriod(req)
 	if err != nil {
 		httputil.BadRequest(c, err.Error())
-		return
+		return prepared{}, false
 	}
-
 	provider := h.provider
 	if req.WeatherProvider != "" {
 		if !weatherclient.IsProvider(req.WeatherProvider) {
 			httputil.BadRequest(c, "weather_provider must be cosmo-rea6, era5-land or merra-2, got "+req.WeatherProvider)
-			return
+			return prepared{}, false
 		}
 		provider = req.WeatherProvider
 	}
-
 	xmin, ymin, xmax, ymax, err := geo.BBoxFromGeoJSON(req.Geometry)
 	if err != nil {
 		httputil.BadRequest(c, "geometry is not usable GeoJSON: "+err.Error())
-		return
+		return prepared{}, false
 	}
-	lon, lat := (xmin+xmax)/2, (ymin+ymax)/2
-
-	ctx := c.Request.Context()
 	start, end := period.Range()
-	weather, err := h.weather.GetPointWeather(ctx, lat, lon, period, provider)
+	weather, err := h.weather.GetPointWeather(c.Request.Context(), (ymin+ymax)/2, (xmin+xmax)/2, period, provider)
 	if err != nil {
 		httputil.BadGateway(c, "weather-serve did not return a series for this building: "+err.Error())
-		return
+		return prepared{}, false
 	}
+	b := buemclient.Building{ID: req.OSMID, Geometry: req.Geometry, Building: req.Building, Solver: req.Solver, Outputs: req.Outputs}
+	return prepared{req: req, building: b, weather: weather, start: start, end: end}, true
+}
 
-	result, err := h.buem.RunBuilding(ctx, buemclient.Building{
-		ID:       req.OSMID,
-		Geometry: req.Geometry,
-		Building: req.Building,
-		Solver:   req.Solver,
-	}, weather, start, end, req.Resolution, req.ModelID)
+// run runs one building through BuEM with its hourly series, answering the
+// request itself on any failure.
+func (h *Handler) run(c *gin.Context, p prepared, modelID string) (buemclient.BuildingResult, bool) {
+	result, err := h.buem.RunBuilding(c.Request.Context(), p.building, p.weather, p.start, p.end, p.req.Resolution, modelID)
 	if err != nil {
 		// buem-gateway rejecting the body is the caller's envelope being wrong,
 		// which is a 400 they can act on; anything else is the chain being down.
 		var badRequest *buemclient.BadRequestError
 		if errors.As(err, &badRequest) {
 			httputil.BadRequest(c, badRequest.Message)
-			return
+			return buemclient.BuildingResult{}, false
 		}
 		httputil.BadGateway(c, "BuEM did not complete for this building: "+err.Error())
-		return
+		return buemclient.BuildingResult{}, false
 	}
 	// A per-building rejection comes back inside a 200 batch, because one bad
 	// building never fails a model run. Here it is the whole request.
 	if result.Error != "" {
 		httputil.BadRequest(c, result.Error)
-		return
+		return buemclient.BuildingResult{}, false
 	}
-
-	c.JSON(http.StatusOK, contracts.BuemBuildingRunResponse{
-		OSMID: req.OSMID,
-		BUEM:  json.RawMessage(result.BUEM),
-	})
+	return result, true
 }
 
 // requestPeriod reads the run's weather from the request: a validation year, a

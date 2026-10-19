@@ -62,9 +62,9 @@ run; draw it clear of the line to test on-request processing.
 | `pylovo/brno_box.wkt` | 4 kB | `export_pylovo.py` | Brno | as above | not loaded; regeneration input |
 | `weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc` | 1.9 MB | weather-serve | Loenen | hourly 2018 weather, 3×3 cells | `load.sh weather`, into the weather checkout's `data/` |
 | `weather/cosmo_rea6/germany/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.1 MB | weather-serve | Bremen | hourly 2018 weather, 4×4 cells | `load.sh weather` |
-| `weather/cosmo_rea6/austria/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Vienna | hourly 2018 weather, 4×4 cells | `load.sh weather` |
+| `weather/cosmo_rea6/austria/output/COSMO_REA6_2018_annual_all_attrs.nc` | 6.4 MB | weather-serve | Vienna, Deggendorf | hourly 2018 weather, a 4×4 block around Vienna and one around Deggendorf and Mainkofen, side by side on the x axis | `load.sh weather` |
 | `weather/cosmo_rea6/czech_republic/output/COSMO_REA6_2018_annual_all_attrs.nc` | 3.3 MB | weather-serve | Brno | hourly 2018 weather, 4×4 cells | `load.sh weather` |
-| `weather/merra2/<country>/output/percentile/merra2_<p10,p50,p90>_<01..12>_all_attrs.nc` | 2.6 MB per country | weather-serve | all four | low, typical and high solar year scenarios, one MERRA-2 cell per site, 36 files per country | `load.sh weather` |
+| `weather/merra2/<country>/output/percentile/merra2_<p10,p50,p90>_<01..12>_all_attrs.nc` | 2.6 MB per country, 27 MB for austria | weather-serve | all four, Deggendorf | low, typical and high solar year scenarios, one MERRA-2 cell per site, 36 files per country; austria holds a 3×7 box from Deggendorf to Vienna | `load.sh weather` |
 | `models/loenen.json`, `models/bremen.json` | 96 kB, 62 kB | backend | Loenen, Bremen | example saved models, development only | `make example-models` (`example_models.sh`) |
 
 ## Weather per provider
@@ -75,6 +75,11 @@ at `<provider>/<country>/output/<PROVIDER>_2018_annual_all_attrs.nc`, scenarios
 at `<provider>/<country>/output/percentile/<provider>_<p10|p50|p90>_<month>_all_attrs.nc`.
 The scenarios p10, p50 and p90 are the low, typical and high solar year,
 ranked on monthly global horizontal irradiance.
+
+!!! note "Deggendorf weather lives under austria"
+    weather-serve picks the country whose box centre is nearest to the point,
+    and Deggendorf and Mainkofen lie closer to Austria's than to Germany's. Their
+    cells are therefore in the `austria/` cuts, next to Vienna's.
 
 | Provider | Kind | Loenen (NL) | Bremen (DE) | Vienna (AT) | Brno (CZ) |
 |---|---|---|---|---|---|

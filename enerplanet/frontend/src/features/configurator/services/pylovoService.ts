@@ -1,4 +1,39 @@
 import axios from "@/lib/axios";
+import type { PylovoGridData } from "@/features/configurator/types/area-select";
+import type { SiteStation } from "@/features/configurator/utils/siteStations";
+
+/** The pylovo site and generated revision a site grid's statistics and power flow must name. */
+export interface SiteScope {
+    site_id: number;
+    revision: number;
+}
+
+/** Returns the site scope of a site grid, or undefined for a postcode-mode grid. */
+export const siteScope = (data: PylovoGridData | undefined): SiteScope | undefined => {
+    const meta = data?.meta;
+    return meta?.mode === "site" && meta.site_id && meta.revision ? { site_id: meta.site_id, revision: meta.revision } : undefined;
+};
+
+/** Converts open lon/lat rings into a GeoJSON Polygon, or a MultiPolygon for several, closing each ring. */
+export const polygonsToGeom = (polygons: number[][][]): GeoJSON.Polygon | GeoJSON.MultiPolygon => {
+    const rings = polygons.filter(p => p.length >= 3).map(p => {
+        const [first, last] = [p[0], p[p.length - 1]];
+        return first[0] === last[0] && first[1] === last[1] ? p : [...p, first];
+    });
+    if (rings.length === 0) throw new Error("No polygon with at least three points");
+    return rings.length === 1
+        ? { type: "Polygon", coordinates: [rings[0]] }
+        : { type: "MultiPolygon", coordinates: rings.map(r => [r]) };
+};
+
+const SITE_POLL_MS = 2000;
+
+interface SiteJob {
+    job_id: number;
+    revision: number;
+    status: "queued" | "running" | "succeeded" | "failed";
+    error?: string | null;
+}
 
 interface PylovoGridResponse {
     status: string;
@@ -89,6 +124,12 @@ interface GridStatistics {
         nominal_voltage_v: number;
         voltage_band_low: number;
         voltage_band_high: number;
+    };
+    /** Present only when the request named buildings: today's whole-grid figures. */
+    whole_grid?: {
+        buildings: { count: number };
+        cables: { count: number; total_length_km: number };
+        transformers: { utilization_percent: number };
     };
 }
 
@@ -208,7 +249,6 @@ export const pylovoService = {
         user_id?: string;
         model_id?: number;  // Model ID for filtering user-placed transformers (existing models)
         draft_id?: string;  // Draft ID for new models before saving
-        include_public_buildings?: boolean;
         include_private_buildings?: boolean;
         excluded_building_ids?: number[];
     }): Promise<PylovoGridResponse> => {
@@ -218,7 +258,6 @@ export const pylovoService = {
             user_id?: string;
             model_id?: number;
             draft_id?: string;
-            include_public_buildings?: boolean;
             include_private_buildings?: boolean;
             excluded_building_ids?: number[];
         };
@@ -274,9 +313,6 @@ export const pylovoService = {
         }
 
         // Include custom building filter options
-        if (payload.include_public_buildings !== undefined) {
-            requestPayload.include_public_buildings = payload.include_public_buildings;
-        }
         if (payload.include_private_buildings !== undefined) {
             requestPayload.include_private_buildings = payload.include_private_buildings;
         }
@@ -318,26 +354,62 @@ export const pylovoService = {
         };
     },
 
-    getGridStatistics: async (gridResultIds: number[]): Promise<GridStatistics> => {
+    /** Whole-grid figures, or figures scoped to buildingOsmIds when given (an empty list means no buildings). */
+    getGridStatistics: async (gridResultIds: number[], buildingOsmIds?: string[], site?: SiteScope): Promise<GridStatistics> => {
         const response = await axios.post<{ data: { statistics: GridStatistics; grid_result_ids: number[] } }>(
             "/v2/pylovo/grid-statistics",
-            { grid_result_ids: gridResultIds },
+            { grid_result_ids: gridResultIds, building_osm_ids: buildingOsmIds, ...site },
             { timeout: 0 } // no timeout; large models need unlimited time
         );
         return response.data?.data?.statistics || {} as GridStatistics;
     },
 
-    runPowerFlow: async (gridResultId: number, loadScaling: number = 1, buildingOsmIds?: string[]): Promise<PowerFlowResponse> => {
+    runPowerFlow: async (gridResultId: number, loadScaling: number = 1, buildingOsmIds?: string[], site?: SiteScope): Promise<PowerFlowResponse> => {
         const response = await axios.post<{ data: PowerFlowResponse }>(
             "/v2/pylovo/power-flow",
             {
                 grid_result_id: gridResultId,
                 load_scaling: loadScaling,
-                building_osm_ids: buildingOsmIds
+                building_osm_ids: buildingOsmIds,
+                ...site,
             },
             { timeout: 0 } // no timeout; large models need unlimited time
         );
         return response.data?.data || {} as PowerFlowResponse;
+    },
+
+    /**
+     * Creates a pylovo site for the area, generates its grid and returns it in the
+     * /generate-grid shape with meta.mode "site". Rejects with the backend's message
+     * when the area is refused (no 3D-linked buildings, over the limit) or generation fails.
+     */
+    generateSiteGrid: async (name: string, polygons: number[][][]): Promise<PylovoGridResponse> => {
+        const created = await axios.post<{ data: { site_id: number } }>("/v2/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
+        return pylovoService.regenerateSiteGrid(created.data.data.site_id);
+    },
+
+    /** Generates the site's current revision and returns its grid; rejects with the job's error when generation fails. */
+    regenerateSiteGrid: async (siteId: number): Promise<PylovoGridResponse> => {
+        const queued = await axios.post<{ data: SiteJob }>(`/v2/pylovo/sites/${siteId}/generate`);
+        let job = queued.data.data;
+        while (job.status !== "succeeded") {
+            if (job.status === "failed") throw new Error(job.error || `Grid generation for site ${siteId} failed`);
+            await new Promise(r => setTimeout(r, SITE_POLL_MS));
+            job = (await axios.get<{ data: SiteJob }>(`/v2/pylovo/sites/${siteId}/jobs/${job.job_id}`)).data.data;
+        }
+        const grid = await axios.get<{ data: PylovoGridResponse }>(`/v2/pylovo/sites/${siteId}/grid`, { timeout: 0 });
+        return grid.data.data;
+    },
+
+    /** The site's stored stations with their fixed building assignments. */
+    getSiteTransformers: async (siteId: number): Promise<SiteStation[]> => {
+        const response = await axios.get<{ data: SiteStation[] }>(`/v2/pylovo/sites/${siteId}/transformers`);
+        return response.data.data;
+    },
+
+    /** Replaces the site's stations and fixed assignments; the grid is stale until the site is regenerated. */
+    putSiteTransformers: async (siteId: number, stations: SiteStation[]): Promise<void> => {
+        await axios.put(`/v2/pylovo/sites/${siteId}/transformers`, stations);
     },
 
     getEquipmentCosts: async (): Promise<EquipmentCosts> => {
@@ -357,7 +429,6 @@ export const pylovoService = {
         demand_energy: number;
         geometry: GeoJSON.Point;
         geometry_area: GeoJSON.Polygon;
-        is_public?: boolean;
         icon?: string;
     }): Promise<{ building_id: number; message: string }> => {
         const response = await axios.post<{ data: { building: { id: number }; status: string } }>(
@@ -775,7 +846,6 @@ export interface CustomBuilding {
     demand_energy: number;
     geometry: GeoJSON.Point;
     geometry_area: GeoJSON.Polygon;
-    is_public: boolean;
     is_owner: boolean;
     icon: string;
     created_at: string;

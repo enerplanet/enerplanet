@@ -12,11 +12,13 @@ import (
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
+	"spatialhub_backend/internal/pv"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	"spatialhub_backend/internal/store/c2trun"
 	"spatialhub_backend/internal/store/demandprofile"
 	"spatialhub_backend/internal/store/memerun"
+	seriesstore "spatialhub_backend/internal/store/series"
 	tentacronclient "spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
@@ -34,6 +36,8 @@ type TaskProcessor struct {
 	buemClient          *buem.Client
 	ignisClient         *ignis.Client
 	profileStore        *demandprofile.Store
+	seriesStore         *seriesstore.Store
+	buemVersion         string
 	c2tRuns             *c2trun.Store
 	memeRuns            *memerun.Store
 	tentacronClient     *tentacronclient.Client
@@ -50,6 +54,7 @@ func NewTaskProcessor(
 	city2tabulaClient *city2tabula.Client,
 	weatherClient *weatherclient.Client,
 	weatherProvider string,
+	buemVersion string,
 	buemClient *buem.Client,
 	ignisClient *ignis.Client,
 	tentacronClient *tentacronclient.Client,
@@ -68,11 +73,31 @@ func NewTaskProcessor(
 		buemClient:          buemClient,
 		ignisClient:         ignisClient,
 		profileStore:        demandprofile.NewStore(db),
+		seriesStore:         seriesstore.NewStore(db),
+		buemVersion:         buemVersion,
 		c2tRuns:             c2trun.NewStore(db),
 		memeRuns:            memerun.NewStore(db),
 		tentacronClient:     tentacronClient,
 		resultZipStore:      resultZipStore,
 		coatiRunner:         coatiRunner,
+	}
+}
+
+// demandResolver is the BuEM series resolution resolve_demand_profiles and
+// dispatch_meme share.
+func (p *TaskProcessor) demandResolver() jobs.DemandResolver {
+	return jobs.DemandResolver{
+		DB: p.db, C2T: p.city2tabulaClient, C2TRuns: p.c2tRuns, Weather: p.weatherClient,
+		WeatherProvider: p.weatherProvider, Ignis: p.ignisClient, BuEM: p.buemClient,
+		Profiles: p.profileStore, Series: p.seriesStore, BuemVersion: p.buemVersion,
+	}
+}
+
+// pvResolver is dispatch_meme's PV step.
+func (p *TaskProcessor) pvResolver() jobs.PVResolver {
+	return jobs.PVResolver{
+		C2T: p.city2tabulaClient, Weather: p.weatherClient,
+		WeatherProvider: p.weatherProvider, PV: pv.NewClient(p.tentacronClient),
 	}
 }
 
@@ -87,11 +112,11 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeRunBuem:
 		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.buemClient, p.ignisClient, p.asynqClient, p.notificationService)
 	case jobs.TypeResolveDemandProfiles:
-		return jobs.HandleResolveDemandProfiles(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.ignisClient, p.buemClient, p.profileStore)
+		return jobs.HandleResolveDemandProfiles(ctx, t, p.demandResolver())
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:

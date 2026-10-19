@@ -18,7 +18,16 @@ export interface TechnologyConstraint {
 
 export interface Technology {
   id?: number;
+  /** The product's key; on a building, the technology type it provides. */
   key: string;
+  /** The technology type the product provides, e.g. pv_supply. */
+  type?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  datasheet_url?: string | null;
+  source?: string | null;
+  /** On a building: the catalogue product it was chosen from. */
+  product?: string;
   alias: string;
   icon: string;
   description: string;

@@ -98,3 +98,31 @@ func TestCreateBuildingFeature_estimatedHeatDemandIsNotExplicit(t *testing.T) {
 	})
 	assert.Equal(t, int64(12345), heatOf(given), "a user-entered heat demand is passed on")
 }
+
+// A building the user disabled in the configurator (activated: false) stays in
+// the saved grid but must not reach the topology, which feeds BuEM and the
+// simulation. Absent or true means the building takes part.
+func TestIndexBuildingsByGrid_skipsDisabledBuildings(t *testing.T) {
+	building := func(osmID string, props map[string]interface{}) interface{} {
+		p := map[string]interface{}{"osm_id": osmID, "grid_result_id": 7.0, "area": 100.0}
+		for k, v := range props {
+			p[k] = v
+		}
+		return map[string]interface{}{
+			"geometry":   map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}},
+			"properties": p,
+		}
+	}
+
+	byGrid := indexBuildingsByGrid([]interface{}{
+		building("1", nil),
+		building("2", map[string]interface{}{"activated": false}),
+		building("3", map[string]interface{}{"activated": true}),
+	})
+
+	var osmIDs []interface{}
+	for _, b := range byGrid[7] {
+		osmIDs = append(osmIDs, b["properties"].(map[string]interface{})["osm_id"])
+	}
+	assert.Equal(t, []interface{}{"1", "3"}, osmIDs)
+}

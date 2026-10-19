@@ -114,7 +114,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 		return
 	}
 
-	byOSMID, credits, err := h.fetchLinked(ctx, country, req.OSMIDs)
+	byOSMID, further, credits, err := h.fetchLinked(ctx, country, req.OSMIDs)
 	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
 		log.Warnf("city2tabula rejected the building fetch for %s: %s", country, badReq.Message)
 		httputil.BadRequest(c, upstreamRejectedMessage)
@@ -126,10 +126,10 @@ func (h *Handler) Enrich(c *gin.Context) {
 		return
 	}
 
-	missing := missingOSMIDs(req.OSMIDs, byOSMID)
+	missing := missingOSMIDs(req.OSMIDs, byOSMID, further)
 	resp := contracts.EnrichResponse{
 		Country:  country,
-		Resolved: len(byOSMID),
+		Resolved: len(req.OSMIDs) - len(missing),
 		Total:    len(req.OSMIDs),
 		Missing:  missing,
 		Data:     h.mapBuildings(ctx, byOSMID),
@@ -156,6 +156,7 @@ func (h *Handler) Enrich(c *gin.Context) {
 
 	resp.Status = "running"
 	resp.RunID = run.RunID
+	resp.RunStage = run.RunStage
 	c.JSON(http.StatusAccepted, resp)
 }
 
@@ -200,6 +201,7 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	resp := contracts.EnrichResponse{
 		Status:       run.Status,
 		RunID:        run.RunID,
+		RunStage:     run.RunStage,
 		Data:         map[string]contracts.EnrichedBuilding{},
 		Attributions: []c2t.DatasetCredit{},
 	}
@@ -207,7 +209,7 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	country := c.Query("country")
 	osmIDs := splitCSV(c.Query("osm_ids"))
 	if run.Status == "completed" && country != "" && len(osmIDs) > 0 {
-		byOSMID, credits, ferr := h.fetchLinked(ctx, country, osmIDs)
+		byOSMID, further, credits, ferr := h.fetchLinked(ctx, country, osmIDs)
 		if badReq := new(c2t.BadRequestError); errors.As(ferr, &badReq) {
 			log.Warnf("city2tabula rejected the building re-fetch after run %s: %s", runID, badReq.Message)
 			httputil.BadRequest(c, upstreamRejectedMessage)
@@ -218,9 +220,9 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 			httputil.BadGateway(c, "city2tabula unavailable")
 			return
 		}
-		resp.Resolved = len(byOSMID)
+		resp.Missing = missingOSMIDs(osmIDs, byOSMID, further)
+		resp.Resolved = len(osmIDs) - len(resp.Missing)
 		resp.Total = len(osmIDs)
-		resp.Missing = missingOSMIDs(osmIDs, byOSMID)
 		resp.Data = h.mapBuildings(ctx, byOSMID)
 		resp.Attributions = credits
 	}
@@ -228,32 +230,30 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// fetchLinked fetches the osm_ids' 3D attributes and indexes them by osm_id,
-// with the credits of their datasets. An osm_id absent from the result has no
-// PyLovo-linked building in City2TABULA yet (see missingOSMIDs).
-func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, []c2t.DatasetCredit, error) {
+// fetchLinked fetches the osm_ids' 3D attributes, indexes them by their
+// standing way's osm_id and returns the further ways (see
+// c2t.BuildingsResult.ByRequestedWay), with the credits of their datasets. An
+// osm_id in neither has no PyLovo-linked building in City2TABULA yet (see
+// missingOSMIDs).
+func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, map[string]string, []c2t.DatasetCredit, error) {
 	result, err := h.client.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	credits := result.Attributions
 	if credits == nil {
 		credits = []c2t.DatasetCredit{}
 	}
-	byOSMID := make(map[string]c2t.Building, len(result.Buildings))
-	for _, b := range result.Buildings {
-		if b.OSMID != "" {
-			byOSMID[b.OSMID] = b
-		}
-	}
-	return byOSMID, credits, nil
+	byOSMID, further := result.ByRequestedWay(osmIDs)
+	return byOSMID, further, credits, nil
 }
 
 // missingOSMIDs returns the osm_ids in want that have no entry in got.
-func missingOSMIDs(want []string, got map[string]c2t.Building) []string {
+func missingOSMIDs(want []string, got map[string]c2t.Building, further map[string]string) []string {
 	var missing []string
 	for _, id := range want {
-		if _, ok := got[id]; !ok {
+		_, isFurther := further[id]
+		if _, ok := got[id]; !ok && !isFurther {
 			missing = append(missing, id)
 		}
 	}

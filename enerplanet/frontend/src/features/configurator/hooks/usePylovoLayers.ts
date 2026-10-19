@@ -4,7 +4,7 @@ import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -20,6 +20,8 @@ import { extractPeakLoadFromProps } from "@/features/configurator/utils/building
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
+import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import type { BuildingPv, PvArray } from "@/features/configurator/building-config/usePvMode";
 
 // Local aliases matching original useAreaSelect.ts
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -80,6 +82,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     buildings.features.forEach(feature => {
       if (feature.geometry.type === 'Point') coords.push(feature.geometry.coordinates as [number, number]);
       else if (feature.geometry.type === 'Polygon' && feature.geometry.coordinates[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0] as [number, number]);
+      else if (feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates[0]?.[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0][0] as [number, number]);
     });
     if (coords.length === 0) return;
     const centroidLon = coords.reduce((s, c) => s + c[0], 0) / coords.length;
@@ -117,7 +120,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const results = new Map<number, any>();
     try {
       for (const gid of Array.from(gridResultIds)) {
-        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
+        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid), siteScope(pylovoGridData)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
       }
       setPowerFlowResults(results);
       pylovoLayersRef.current.forEach(layer => {
@@ -182,14 +185,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     }
     if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
 
-    // One-time "how to add heat techs" prompt — fires once after grid data lands
-    // (generation or edit-model load) so the user decides auto-assign vs manual
-    // before hand-picking; never on rebuilds once a choice has been made.
+    // One-time "how to add heat techs" prompt after a new model's first grid.
+    // Not in edit mode: the prompted flag is not persisted, so it would reopen
+    // on every load, and a ?building= link opens the z-[60] building panel over it.
     const storeState = useModelStore.getState();
-    if ((nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
+    if (!editMode && (nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
       storeState.setHeatBootstrapOpen(true);
     }
-  }, [map, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
+  }, [map, editMode, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
 
   // Auto-run power flow debounce
   const lastGridDataRef = useRef(''); const pendingGridDataRef = useRef(''); const pfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,6 +223,19 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       return { ...prev, buildings: { ...prev.buildings, features } };
     });
   }, [setPylovoGridData]);
+  const findBuilding = useCallback((osmId: string) => collectBuildingsFromLayers(pylovoLayersRef.current).find((f) => String(f.get('osm_id')) === osmId), []);
+  /** The building's PV technology, or null when it has none. */
+  const buildingPv = useCallback((osmId: string): BuildingPv | null => {
+    const tech = findBuilding(osmId)?.get('techs')?.pv_supply;
+    return tech ? { typeLabel: tech.alias, arrays: tech.arrays ?? null } : null;
+  }, [findBuilding]);
+  /** Stores the arrays chosen in PV mode on the building's PV technology. */
+  const storePvArrays = useCallback((osmId: string, arrays: PvArray[]) => {
+    const feature = findBuilding(osmId);
+    const techs = feature?.get('techs');
+    if (!feature || !techs?.pv_supply) return;
+    feature.set('techs', { ...techs, pv_supply: { ...techs.pv_supply, arrays } });
+  }, [findBuilding]);
   const updateBuildingProperty = useCallback((osmId: string, key: string, val: unknown) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) f.set(key, val); }); }); }, []);
   const updateBuildingFClassDemand = useCallback((osmId: string, fClass: string, newDemand: number) => {
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
@@ -228,12 +244,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

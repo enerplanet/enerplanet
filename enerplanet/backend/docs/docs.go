@@ -15,6 +15,71 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/drafts/{draft_id}/buildings/{building_ref}/buem": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "As the model route, for a model not saved yet. The result is linked to the draft\nand moves to the model when it is saved (POST /models/{id}/series/claim-draft).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for one building of an unsaved model and store the result",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft id the frontend created for the unsaved model",
+                        "name": "draft_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/models": {
             "get": {
                 "security": [
@@ -83,6 +148,273 @@ const docTemplate = `{
                 }
             }
         },
+        "/models/{id}/buildings/{building_ref}/buem": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs the building with the block the caller supplies, as POST /v1/buem/building\ndoes, then stores the result once under its request key and links it to the\nbuilding as source user. A request whose key is already stored makes no BuEM call.\nReturns the building's demand summary. Needs edit permission on the model.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for one building of a model and store the result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/demand-profile": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns, for each series linked to the building, its total, peak and daily, weekly\nand monthly energy. Full series are not returned; use the week endpoint or the CSV\ndownload. 404 when the building has no stored series in this model yet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get one building's demand profile summary",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/series.csv": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "One row per time step: a UTC timestamp, then one column per series named\n\"\u003cseries\u003e [\u003cunit\u003e]\". Cooling is written positive. 404 when the building has no\nstored series in this model.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Download one building's series as CSV",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/series/{series}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the power values of one week of a series, for the hourly chart. week 0 is\nthe first seven days from the series' start. 400 for a week outside the series,\n404 when the building or series is not stored in this model.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get one week of a building's series",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Series name, for example heating",
+                        "name": "series",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Week from the start, default 0",
+                        "name": "week",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Roof face, for a PV series",
+                        "name": "part",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.SeriesWindowResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/models/{id}/demand-profiles": {
             "get": {
                 "security": [
@@ -128,6 +460,116 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/series.zip": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "One CSV per building, in the format of the per-building CSV download. 404 when\nno building of the model has stored series yet.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Download every building's series of a model as a ZIP of CSV files",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/series/claim-draft": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Links stored for the draft id the frontend created before the model's first save\nmove to the model; a link the model already has for the same building and series\nis kept. Call once after creating the model. Needs edit permission on the model.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Move an unsaved model's stored series to the saved model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Draft id",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
@@ -394,6 +836,70 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.GeometryResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/pv-surfaces": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Roof and wall surfaces of a building for PV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OSM id of the building",
+                        "name": "osm_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country name or ISO2 code; resolved from lon and lat when absent",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building longitude (WGS84), when country is absent",
+                        "name": "lon",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building latitude (WGS84), when country is absent",
+                        "name": "lat",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse"
                         }
                     },
                     "400": {
@@ -984,13 +1490,13 @@ const docTemplate = `{
                 "geometry": {
                     "type": "object"
                 },
-                "model_id": {
-                    "type": "string",
-                    "example": "42"
-                },
                 "osm_id": {
                     "type": "string",
                     "example": "240054621"
+                },
+                "outputs": {
+                    "description": "Outputs selects the load profiles to compute (heating, cooling,\nelectricity, hot_water, kitchen: none, summary or series), forwarded as\nproperties.buem.outputs; omitted, BuEM computes its default set.",
+                    "type": "object"
                 },
                 "resolution": {
                     "type": "integer",
@@ -1013,7 +1519,7 @@ const docTemplate = `{
                         "era5-land",
                         "merra-2"
                     ],
-                    "example": "cosmo-rea6"
+                    "example": "merra-2"
                 },
                 "weather_scenario": {
                     "description": "WeatherScenario and WeatherYear are the model's weather: a scenario, or\na real year for validation runs. At most one; with neither, p50.",
@@ -1106,6 +1612,42 @@ const docTemplate = `{
                 "tabula_variant_code": {
                     "type": "string",
                     "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse": {
+            "type": "object",
+            "properties": {
+                "building_ref": {
+                    "type": "string",
+                    "example": "268426401"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.SeriesSummary"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest": {
+            "type": "object",
+            "required": [
+                "draft_id"
+            ],
+            "properties": {
+                "draft_id": {
+                    "type": "string",
+                    "example": "3f6c2a1e-8b1d-4c2e-9a7f-1e2d3c4b5a69"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse": {
+            "type": "object",
+            "properties": {
+                "moved": {
+                    "type": "integer",
+                    "example": 24
                 }
             }
         },
@@ -1202,6 +1744,22 @@ const docTemplate = `{
                 "run_id": {
                     "type": "string",
                     "example": "a1b2c3d4"
+                },
+                "stage": {
+                    "type": "string",
+                    "example": "extract_features"
+                },
+                "stage_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "stage_index": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "stage_label": {
+                    "type": "string",
+                    "example": "Extracting building features"
                 },
                 "status": {
                     "type": "string",
@@ -1630,6 +2188,125 @@ const docTemplate = `{
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.PVSurfacesResponse": {
+            "type": "object",
+            "properties": {
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_pv.Surface"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.SeriesSummary": {
+            "type": "object",
+            "properties": {
+                "daily": {
+                    "description": "Daily holds one value per calendar day from Start, Monthly one per\ncalendar month. Weekly holds one per seven days from Start, the last\npossibly shorter.",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "energy_unit": {
+                    "description": "EnergyUnit is the unit of Total, Daily, Weekly and Monthly (kWh for kW).",
+                    "type": "string"
+                },
+                "monthly": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "name": {
+                    "description": "name is the series: heating, cooling, electricity, hot_water, kitchen.",
+                    "type": "string",
+                    "example": "heating"
+                },
+                "part": {
+                    "description": "part is the roof face for a PV series, empty for a whole-building series.",
+                    "type": "string"
+                },
+                "peak": {
+                    "type": "number"
+                },
+                "peak_time": {
+                    "type": "string"
+                },
+                "peak_unit": {
+                    "type": "string"
+                },
+                "producer_version": {
+                    "type": "string",
+                    "example": "6.10.0+21f79d7ce08016a6df43e81aaad6aa7493c40c25"
+                },
+                "resolution_minutes": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "user",
+                        "uploaded"
+                    ],
+                    "example": "default"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "1900-01-01T00:00:00Z"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "weekly": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.SeriesWindowResponse": {
+            "type": "object",
+            "properties": {
+                "building_ref": {
+                    "type": "string",
+                    "example": "268426401"
+                },
+                "part": {
+                    "type": "string"
+                },
+                "resolution_minutes": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "series": {
+                    "type": "string",
+                    "example": "heating"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "1900-01-01T00:00:00Z"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "kW"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "week": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
         "spatialhub_backend_internal_city2tabula.BuildingGeometry": {
             "type": "object",
             "properties": {
@@ -1762,6 +2439,38 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_pv.Surface": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "type": "number"
+                },
+                "azimuth": {
+                    "type": "number"
+                },
+                "capacity_kw": {
+                    "type": "number"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "qualifies": {
+                    "type": "boolean"
+                },
+                "suggested": {
+                    "type": "boolean"
+                },
+                "surface_id": {
+                    "type": "string"
+                },
+                "tilt": {
+                    "type": "number"
+                },
+                "usable_share": {
+                    "type": "number"
                 }
             }
         }

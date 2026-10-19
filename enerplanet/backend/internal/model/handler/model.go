@@ -14,6 +14,7 @@ import (
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/store/demandprofile"
 	modelstore "spatialhub_backend/internal/store/model"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/webservice"
 
 	"platform.local/common/pkg/constants"
@@ -77,6 +78,7 @@ type ModelHandler struct {
 	keycloakCache *cache.KeycloakCacheService
 	syncCache     *cache.SyncCacheService
 	profileStore  *demandprofile.Store
+	seriesStore   *seriesstore.Store
 }
 
 func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminTokenProvider *pkgauth.AdminTokenProvider, keycloakBaseURL, realm string, wsClient *webservice.Client, keycloakCache *cache.KeycloakCacheService, syncCache *cache.SyncCacheService) *ModelHandler {
@@ -88,6 +90,7 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 		keycloakCache: keycloakCache,
 		syncCache:     syncCache,
 		profileStore:  demandprofile.NewStore(db),
+		seriesStore:   seriesstore.NewStore(db),
 	}
 }
 
@@ -210,6 +213,12 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		httputil.BadRequest(c, "coordinates are required to resolve country")
 		return
 	}
+	coords, verr := geo.ValidateArea(req.Coordinates)
+	if verr != nil {
+		httputil.BadRequest(c, verr.Error())
+		return
+	}
+	req.Coordinates = coords
 	resolver := geo.NewNominatimResolver(h.store.DB())
 	resolvedCountry, rerr := resolver.Resolve(c.Request.Context(), json.RawMessage(req.Coordinates))
 	if rerr != nil {
@@ -397,6 +406,15 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 	var req updateModelRequest
 	if !bindJSONOrBadRequest(c, &req) {
 		return
+	}
+
+	if len(req.Coordinates) > 0 {
+		coords, verr := geo.ValidateArea(req.Coordinates)
+		if verr != nil {
+			httputil.BadRequest(c, verr.Error())
+			return
+		}
+		req.Coordinates = coords
 	}
 
 	updates := make(map[string]any)

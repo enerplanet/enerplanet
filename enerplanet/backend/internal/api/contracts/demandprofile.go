@@ -31,12 +31,15 @@ type BuildingDemandProfile struct {
 // status is one of:
 //   - idle: no resolution run has been started for this model yet
 //   - resolving: a run is in progress (some buildings still pending)
-//   - completed: every building has a terminal outcome (resolved or failed)
+//   - completed: every building has a terminal outcome (resolved, failed or
+//     shared; a shared building's 3D building is resolved under another OSM
+//     way, named in its error_message)
 type ModelDemandProfilesResponse struct {
 	Status    string                  `json:"status" example:"resolving"`
 	Total     int64                   `json:"total" example:"42"`
 	Resolved  int64                   `json:"resolved" example:"30"`
 	Pending   int64                   `json:"pending" example:"10"`
 	Failed    int64                   `json:"failed" example:"2"`
+	Shared    int64                   `json:"shared" example:"1"`
 	Buildings []BuildingDemandProfile `json:"buildings"`
 }

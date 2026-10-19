@@ -164,6 +164,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
     building.fClass === "Transformer" ||
     (building.fClasses ?? []).some((value) => value.toLowerCase() === "transformer");
 
+  // totalProduction and totalDemand sum installed capacities (kW), not energy.
   const energyBalance = building.totalProduction - building.totalDemand;
 
   // Compute self-sufficiency for this building
@@ -377,7 +378,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
               </span>
             </div>
             <p className="text-base font-bold text-foreground">
-              {formatEnergy(building.totalProduction)}
+              {formatPower(building.totalProduction)}
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 border border-border">
@@ -388,7 +389,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
               </span>
             </div>
             <p className="text-base font-bold text-foreground">
-              {formatEnergy(-Math.abs(building.totalDemand))}
+              {formatPower(-Math.abs(building.totalDemand))}
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 border border-border">
@@ -398,7 +399,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                 {t("results.buildingDetail.balance")}
               </span>
             </div>
-            <p className="text-base font-bold text-foreground">{formatEnergy(energyBalance)}</p>
+            <p className="text-base font-bold text-foreground">{formatPower(energyBalance)}</p>
             {building.totalDemand > 0 && (
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {selfSufficiency.toFixed(1)}%{" "}

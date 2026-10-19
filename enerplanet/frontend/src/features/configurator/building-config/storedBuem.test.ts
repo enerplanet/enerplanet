@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptBuemFeature, type TechnologyState } from "@thd-spatial-ai/building-configurator";
+import { adaptBuemFeature } from "@thd-spatial-ai/building-configurator";
 
 import { fromStoredBuem, storedBuemOf, toStoredBuem } from "./storedBuem";
 
@@ -18,16 +18,39 @@ const opened = adaptBuemFeature({
 });
 
 describe("stored BuEM", () => {
-  it("reopens an edited building with its envelope, solver and technologies", () => {
-    const technologyState = { pvArrays: [], battery: { installed: true } } as unknown as TechnologyState;
-    const stored = toStoredBuem({ ...opened, technologyState });
+  it("reopens an edited building with its envelope and solver", () => {
+    const stored = toStoredBuem(opened);
 
     const reopened = fromStoredBuem("268425674", footprint, stored);
 
     expect(stored.solver).toEqual({ use_milp: false });
     expect(Object.keys(reopened.envelope)).toEqual(Object.keys(opened.envelope));
     expect(reopened.envelope.w1).toMatchObject({ uValue: 0.18, area: 40 });
-    expect(reopened.technologyState).toBe(technologyState);
+  });
+
+  it("reopens a building saved with the old technology state", () => {
+    const legacy = { ...toStoredBuem(opened), technology_state: { pvArrays: [], battery: { installed: true } } };
+
+    const reopened = fromStoredBuem("268425674", footprint, legacy);
+
+    expect(reopened.envelope.w1).toMatchObject({ uValue: 0.18, area: 40 });
+    expect(toStoredBuem(reopened)).not.toHaveProperty("technology_state");
+  });
+
+  it("keeps the construction year beside the block across save and reopen", () => {
+    const withYear = adaptBuemFeature({
+      type: "Feature",
+      id: "268425674",
+      geometry: footprint,
+      properties: { buem: { building: { building_type: "SFH", envelope: { elements: [wall] } }, construction_year: 1968 } },
+    });
+
+    const stored = toStoredBuem(withYear);
+    const reopened = toStoredBuem(fromStoredBuem("268425674", footprint, stored));
+
+    expect(stored.construction_year).toBe(1968);
+    expect(stored.building).not.toHaveProperty("construction_period");
+    expect(reopened.construction_year).toBe(1968);
   });
 
   it("finds nothing stored on a building nobody edited", () => {

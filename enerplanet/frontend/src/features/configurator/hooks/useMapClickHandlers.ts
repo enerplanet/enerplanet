@@ -13,6 +13,7 @@ import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/
 import { extractTransformerId } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { createBuildingStyleFunction, createBuildingHighlightStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
+import { isBuildingDisabled } from "@/features/configurator/hooks/useBuildingSelection";
 
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -30,7 +31,7 @@ const createBuildingTooltip = (feature: any, pixel: number[]) => {
   const fClasses = getFeatureFClasses(props);
   const primary = getPrimaryFClass(props) || 'unknown';
   const heat = estimateYearlyHeatDemand(primary, props.area as number, explicitHeatDemandKwh(props));
-  return { x: pixel[0], y: pixel[1], type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated, techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
+  return { x: pixel[0], y: pixel[1], osmId: String(feature.get('osm_id') ?? ''), disabled: isBuildingDisabled(feature), type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated, techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
 };
 
 const createMvLineTooltip = (feature: any, pixel: number[]) => ({
@@ -97,7 +98,9 @@ export const useMapClickHandlers = ({
     if (suppressMapInteractions) { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
 
     const handleClick = (evt: any) => {
-      if (isDrawing || suppressDialogOnClickRef?.current) return;
+      // Modified clicks belong to the polygon drawer (Shift, Alt on a corner) and useBuildingSelection (Alt, Ctrl, Cmd).
+      const e = evt.originalEvent;
+      if (isDrawing || suppressDialogOnClickRef?.current || e?.shiftKey || e?.altKey || e?.ctrlKey || e?.metaKey) return;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building') return f; return null; });
       if (!feature) return;
       const type = feature.get('feature_type');
