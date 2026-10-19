@@ -15,8 +15,6 @@ export type { BuildingDemandHandlers } from "./useBuildingDemandRecalculation";
 
 export { useMapResize, useReassignmentLine, useMapLibre3DHandlers } from "./useMapDisplay";
 
-export { useMultiEditMode } from "./useMultiEditMode";
-export type { MultiEditModeState } from "./useMultiEditMode";
 
 export { useRegionSelection } from "./useRegion";
 
