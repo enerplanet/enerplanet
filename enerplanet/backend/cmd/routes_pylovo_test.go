@@ -48,18 +48,18 @@ func serve(r *gin.Engine, method, path string) int {
 // never reaches PyLovo.
 func TestPylovoAdminRoutes_requireExpert(t *testing.T) {
 	adminRoutes := []struct{ method, path string }{
-		{http.MethodPost, "/api/v2/pylovo/pipeline/run"},
-		{http.MethodGet, "/api/v2/pylovo/pipeline/status/job-1"},
-		{http.MethodGet, "/api/v2/pylovo/pipeline/regions"},
-		{http.MethodGet, "/api/v2/pylovo/pipeline/history"},
-		{http.MethodGet, "/api/v2/pylovo/pipeline/states/germany"},
-		{http.MethodDelete, "/api/v2/pylovo/pipeline/states/germany/bremen"},
+		{http.MethodPost, "/api/v1/pylovo/pipeline/run"},
+		{http.MethodGet, "/api/v1/pylovo/pipeline/status/job-1"},
+		{http.MethodGet, "/api/v1/pylovo/pipeline/regions"},
+		{http.MethodGet, "/api/v1/pylovo/pipeline/history"},
+		{http.MethodGet, "/api/v1/pylovo/pipeline/states/germany"},
+		{http.MethodDelete, "/api/v1/pylovo/pipeline/states/germany/bremen"},
 		{http.MethodGet, "/api/pylovo-services"},
 		{http.MethodPost, "/api/pylovo-services"},
 		{http.MethodPost, "/api/pylovo-services/1/primary"},
 		{http.MethodDelete, "/api/pylovo-services/1"},
-		{http.MethodPatch, "/api/v2/pylovo/regions/cached/1"},
-		{http.MethodDelete, "/api/v2/pylovo/regions/cached/1"},
+		{http.MethodPatch, "/api/v1/pylovo/regions/cached/1"},
+		{http.MethodDelete, "/api/v1/pylovo/regions/cached/1"},
 	}
 	for _, level := range []string{"manager", "intermediate", "very_low"} {
 		r, hits := newPylovoRouter(t, level)
@@ -72,7 +72,7 @@ func TestPylovoAdminRoutes_requireExpert(t *testing.T) {
 
 func TestPylovoPipelineRoute_allowsExpert(t *testing.T) {
 	r, hits := newPylovoRouter(t, "expert")
-	assert.Equal(t, http.StatusOK, serve(r, http.MethodPost, "/api/v2/pylovo/pipeline/run"))
+	assert.Equal(t, http.StatusOK, serve(r, http.MethodPost, "/api/v1/pylovo/pipeline/run"))
 	assert.Equal(t, int32(1), atomic.LoadInt32(hits))
 }
 
@@ -80,6 +80,6 @@ func TestPylovoPipelineRoute_allowsExpert(t *testing.T) {
 // every signed-in user.
 func TestPylovoGridRoutes_openToAllUsers(t *testing.T) {
 	r, hits := newPylovoRouter(t, "very_low")
-	assert.Equal(t, http.StatusOK, serve(r, http.MethodGet, "/api/v2/pylovo/transformer-sizes"))
+	assert.Equal(t, http.StatusOK, serve(r, http.MethodGet, "/api/v1/pylovo/transformer-sizes"))
 	assert.Equal(t, int32(1), atomic.LoadInt32(hits))
 }

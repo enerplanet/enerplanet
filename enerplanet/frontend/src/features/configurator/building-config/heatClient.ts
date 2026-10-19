@@ -31,7 +31,7 @@ interface Enveloped<T> {
 export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
   async fetchMatchingVariants(countryIso2, typeCode, constructionYear) {
     const res = await axios.get<Enveloped<IgnisMatchResponse>>(
-      `/v2/ignis/variants/${encodeURIComponent(countryIso2)}/match`,
+      `/v1/ignis/variants/${encodeURIComponent(countryIso2)}/match`,
       {
         params: { type: typeCode, year: String(constructionYear) },
         signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
@@ -42,7 +42,7 @@ export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
 
   async fetchVariantData(variantCode) {
     const res = await axios.get<Enveloped<IgnisDataResponse>>(
-      `/v2/ignis/data/${encodeURIComponent(variantCode)}`,
+      `/v1/ignis/data/${encodeURIComponent(variantCode)}`,
       { signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) },
     );
     return res.data.data;
@@ -50,7 +50,7 @@ export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
 
   async calculateHeatDemand(variantCode, inputs) {
     const res = await axios.post<Enveloped<IgnisCalculateResponse>>(
-      `/v2/ignis/calculate/${encodeURIComponent(variantCode)}`,
+      `/v1/ignis/calculate/${encodeURIComponent(variantCode)}`,
       inputs,
       { signal: AbortSignal.timeout(CALCULATE_TIMEOUT_MS) },
     );
