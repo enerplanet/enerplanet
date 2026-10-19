@@ -32,9 +32,9 @@ const baseResults = (coordinates: Record<string, { x: number; y: number }>) =>
 describe('transformToCapacityData', () => {
   it('groups demand nodes of the same f_class into one sector bar', () => {
     const coords = {
-      n1: { x: 53.099527, y: 8.805834 },
-      n2: { x: 53.099509, y: 8.804846 },
-      ntrafo_82: { x: 53.100875, y: 8.803872 },
+      n1: { x: 8.805834, y: 53.099527 },
+      n2: { x: 8.804846, y: 53.099509 },
+      ntrafo_82: { x: 8.803872, y: 53.100875 },
     };
     const out = transformToCapacityData(baseResults(coords), undefined, buildings as never);
 
@@ -53,7 +53,7 @@ describe('transformToCapacityData', () => {
   });
 
   it('falls back to the demand tech label when no f_class resolves', () => {
-    const coords = { n1: { x: 53.099527, y: 8.805834 }, ntrafo_82: { x: 53.100875, y: 8.803872 } };
+    const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
     const out = transformToCapacityData(baseResults(coords), undefined, {
       features: [],
     } as never);
@@ -67,9 +67,9 @@ describe('transformToCapacityData', () => {
 describe('transformToEnergyFlow', () => {
   it('groups demand nodes of the same f_class into one sector node', () => {
     const coords = {
-      n1: { x: 53.099527, y: 8.805834 },
-      n2: { x: 53.099509, y: 8.804846 },
-      ntrafo_82: { x: 53.100875, y: 8.803872 },
+      n1: { x: 8.805834, y: 53.099527 },
+      n2: { x: 8.804846, y: 53.099509 },
+      ntrafo_82: { x: 8.803872, y: 53.100875 },
     };
     const flow = transformToEnergyFlow(baseResults(coords), undefined, buildings as never);
 
@@ -81,7 +81,7 @@ describe('transformToEnergyFlow', () => {
   });
 
   it('falls back to demand tech nodes when no f_class resolves', () => {
-    const coords = { n1: { x: 53.099527, y: 8.805834 }, ntrafo_82: { x: 53.100875, y: 8.803872 } };
+    const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
     const flow = transformToEnergyFlow(baseResults(coords), undefined, { features: [] } as never);
     const names = flow.nodes.map((n) => n.name);
     expect(names).toContain('N1 Demand');

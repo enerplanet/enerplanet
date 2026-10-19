@@ -102,7 +102,7 @@ function getTechType(tech: string): 'supply' | 'demand' {
 /**
  * Map each demand node location to its building's primary f_class, via a
  * spatial join: a building's footprint centre is matched to the nearest result
- * node (results coordinates are stored as {x: lat, y: lon}, building geometry
+ * node (results coordinates are stored as {x: lon, y: lat}, building geometry
  * is GeoJSON [lon, lat]). Falls back to the raw tech name when a building has
  * no usable f_class.
  */
@@ -161,7 +161,7 @@ function droppableClosestTo(
   let bestDist = Infinity;
   for (const [locId, coord] of Object.entries(coordinates)) {
     if (locId.toLowerCase().includes('trafo')) continue;
-    const dist = Math.hypot(lon - coord.y, lat - coord.x);
+    const dist = Math.hypot(lon - coord.x, lat - coord.y);
     if (dist < bestDist && dist < 0.001) {
       bestDist = dist;
       bestId = locId;
