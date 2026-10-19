@@ -99,6 +99,8 @@ export interface PylovoGridData {
 		features: GeoJSONFeature[];
 	};
 	grids?: unknown;
+	/** Present on a site grid: the pylovo site and the revision it was generated from. */
+	meta?: { mode?: string; site_id?: number; revision?: number };
 	boundary?: {
 		region: {
 			name: string;

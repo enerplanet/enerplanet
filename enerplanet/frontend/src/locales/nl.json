@@ -1406,7 +1406,13 @@
       "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
       "toggleMyBuildings": "Mijn gebouwen aan/uit",
-      "disableSelected": "Geselecteerde gebouwen uitschakelen"
+      "disableSelected": "Geselecteerde gebouwen uitschakelen",
+      "importArea": "Gebied importeren",
+      "importAreaError": {
+        "invalid": "Het bestand is geen geldige GeoJSON.",
+        "noPolygon": "Het bestand bevat geen polygoon.",
+        "unknownCrs": "Het coördinatenstelsel {{detail}} wordt niet ondersteund; exporteer het gebied in EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",
@@ -1523,6 +1529,11 @@
       },
       "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
+    },
+    "siteMode": {
+      "label": "Locatiemodus",
+      "hint": "Genereert het net alleen voor dit gebied en slaat het apart op van de gedeelde netten. Alleen gebouwen met 3D-gegevens worden meegenomen, maximaal 150.",
+      "locked": "Wis het getekende gebied om de modus te wijzigen."
     },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",

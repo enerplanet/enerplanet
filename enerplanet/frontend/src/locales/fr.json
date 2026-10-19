@@ -1667,7 +1667,13 @@
       "myBuildings": "Mes bâtiments",
       "clearAll": "Supprimer tous les polygones",
       "toggleMyBuildings": "Basculer mes bâtiments",
-      "disableSelected": "Désactiver les bâtiments sélectionnés"
+      "disableSelected": "Désactiver les bâtiments sélectionnés",
+      "importArea": "Importer une zone",
+      "importAreaError": {
+        "invalid": "Le fichier n'est pas un GeoJSON valide.",
+        "noPolygon": "Le fichier ne contient aucun polygone.",
+        "unknownCrs": "Le système de coordonnées {{detail}} n'est pas pris en charge ; exportez la zone en EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Lancer l'analyse du flux de puissance",
@@ -1784,6 +1790,11 @@
       },
       "fieldNeeded": "Le mode exploitation exige ici une taille finie",
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
+    },
+    "siteMode": {
+      "label": "Mode site",
+      "hint": "Génère le réseau pour cette seule zone et le conserve à part des réseaux partagés. Seuls les bâtiments disposant de données 3D sont inclus, jusqu'à 150.",
+      "locked": "Effacez la zone dessinée pour changer de mode."
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",

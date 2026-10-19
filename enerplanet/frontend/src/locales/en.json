@@ -1718,7 +1718,13 @@
       "myBuildings": "My Buildings",
       "clearAll": "Remove all polygons",
       "toggleMyBuildings": "Toggle my buildings",
-      "disableSelected": "Disable selected buildings"
+      "disableSelected": "Disable selected buildings",
+      "importArea": "Import area",
+      "importAreaError": {
+        "invalid": "The file is not valid GeoJSON.",
+        "noPolygon": "The file contains no polygon.",
+        "unknownCrs": "The coordinate system {{detail}} is not supported; export the area in EPSG:4326."
+      }
     },
     "mapOverlay": {
       "analyzingArea": "Analyzing area",
@@ -1780,6 +1786,11 @@
       },
       "fieldNeeded": "Operate mode needs a finite size here",
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
+    },
+    "siteMode": {
+      "label": "Site mode",
+      "hint": "Generates the grid for this area alone and stores it separately from the shared grids. Only buildings with 3D data are included, up to 150.",
+      "locked": "Clear the drawn area to change the mode."
     },
     "largeModel": {
       "title": "This model has {{count}} buildings",

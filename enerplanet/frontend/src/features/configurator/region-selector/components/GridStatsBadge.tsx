@@ -1,6 +1,7 @@
 import { useState, useEffect, type FC } from "react";
 import { Building2, Zap, Cable, Activity, Euro, Loader2, Info } from "lucide-react";
-import { pylovoService, type GridStatistics } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope, type GridStatistics } from "@/features/configurator/services/pylovoService";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@spatialhub/i18n";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
@@ -20,6 +21,9 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
     const [loading, setLoading] = useState(false);
     // Joined so a new array with the same ids does not refetch.
     const selectionKey = buildingOsmIds?.join(",") ?? "";
+    const site = siteScope(useModelStore((s) => s.pylovoGridData));
+    const siteId = site?.site_id;
+    const siteRevision = site?.revision;
 
     useEffect(() => {
         if (gridResultIds.length === 0) {
@@ -32,7 +36,8 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
             try {
                 const stats = await pylovoService.getGridStatistics(
                     gridResultIds,
-                    selectionKey ? selectionKey.split(",") : undefined
+                    selectionKey ? selectionKey.split(",") : undefined,
+                    siteId && siteRevision ? { site_id: siteId, revision: siteRevision } : undefined
                 );
                 setStatistics(stats);
             } catch (err) {
@@ -43,7 +48,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
         };
 
         fetchStatistics();
-    }, [gridResultIds, selectionKey]);
+    }, [gridResultIds, selectionKey, siteId, siteRevision]);
 
     if (loading) {
         return (

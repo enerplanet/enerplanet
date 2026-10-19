@@ -74,6 +74,9 @@ export interface ModelStore {
   /** Saved as config.mode. */
   runMode: RunMode;
   setRunMode: (mode: RunMode) => void;
+  /** Generate the grid as a pylovo site, kept apart from the shared postcode grids. Saved as config.site. */
+  siteMode: boolean;
+  setSiteMode: (on: boolean) => void;
 
   // ── Loading / saving ──
   isSaving: boolean;
@@ -219,6 +222,7 @@ const getInitialState = () => ({
   resolution: 60,
   cookingCarrier: "electric" as CookingCarrier,
   runMode: "plan" as RunMode,
+  siteMode: false,
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
@@ -309,6 +313,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
   runMode: "plan",
   setRunMode: (mode) => set({ runMode: mode }),
+  siteMode: false,
+  setSiteMode: (on) => set({ siteMode: on }),
 
   // ── Loading / saving ──
   isSaving: false,

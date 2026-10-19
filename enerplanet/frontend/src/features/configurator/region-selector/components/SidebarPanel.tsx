@@ -30,6 +30,7 @@ import {
   Loader2,
   CircuitBoard,
   Activity,
+  MapPinned,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
@@ -108,6 +109,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
+  const siteMode = useModelStore((s) => s.siteMode);
+  const setSiteMode = useModelStore((s) => s.setSiteMode);
+  // A drawn grid was made in one mode; switching would leave it labelled with the other.
+  const siteModeLocked = state.allPolygons.length > 0;
 
   return (
     <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -381,6 +386,26 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                         <Sliders className="w-4 h-4" />
                         {t('simulation.parameters')}
                     </Button> */}
+        </div>
+
+        <div className="p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPinned className="w-4 h-4 text-foreground" />
+              <UILabel htmlFor="site-mode-toggle" className="text-sm font-medium text-foreground cursor-pointer">
+                {t("simulation.siteMode.label")}
+              </UILabel>
+            </div>
+            <Switch
+              id="site-mode-toggle"
+              disabled={siteModeLocked}
+              checked={siteMode}
+              onCheckedChange={setSiteMode}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
+          </div>
         </div>
 
         <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">

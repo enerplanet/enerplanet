@@ -1667,7 +1667,13 @@
       "myBuildings": "Mis edificios",
       "clearAll": "Eliminar todos los polígonos",
       "toggleMyBuildings": "Alternar mis edificios",
-      "disableSelected": "Desactivar los edificios seleccionados"
+      "disableSelected": "Desactivar los edificios seleccionados",
+      "importArea": "Importar área",
+      "importAreaError": {
+        "invalid": "El archivo no es un GeoJSON válido.",
+        "noPolygon": "El archivo no contiene ningún polígono.",
+        "unknownCrs": "El sistema de coordenadas {{detail}} no es compatible; exporte el área en EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Ejecutar análisis de flujo de potencia",
@@ -1784,6 +1790,11 @@
       },
       "fieldNeeded": "El modo de operación necesita aquí un tamaño finito",
       "moreFieldsNeeded": "Campos que necesitan un tamaño: {{count}}"
+    },
+    "siteMode": {
+      "label": "Modo emplazamiento",
+      "hint": "Genera la red solo para esta zona y la guarda aparte de las redes compartidas. Solo se incluyen edificios con datos 3D, hasta 150.",
+      "locked": "Borre la zona dibujada para cambiar el modo."
     },
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",

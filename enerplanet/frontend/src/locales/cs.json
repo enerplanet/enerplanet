@@ -1406,7 +1406,13 @@
       "myBuildings": "Moje budovy",
       "clearAll": "Odstranit všechny polygony",
       "toggleMyBuildings": "Přepnout moje budovy",
-      "disableSelected": "Vypnout vybrané budovy"
+      "disableSelected": "Vypnout vybrané budovy",
+      "importArea": "Importovat oblast",
+      "importAreaError": {
+        "invalid": "Soubor není platný GeoJSON.",
+        "noPolygon": "Soubor neobsahuje žádný polygon.",
+        "unknownCrs": "Souřadnicový systém {{detail}} není podporován; exportujte oblast v EPSG:4326."
+      }
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",
@@ -1523,6 +1529,11 @@
       },
       "fieldNeeded": "Režim provozu zde potřebuje konečnou velikost",
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
+    },
+    "siteMode": {
+      "label": "Režim lokality",
+      "hint": "Vytvoří síť pouze pro tuto oblast a uloží ji odděleně od sdílených sítí. Zahrnuje jen budovy s 3D daty, nejvýše 150.",
+      "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",
