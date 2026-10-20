@@ -45,7 +45,7 @@ grep -rn "tasks/closed/" enerplanet/ --include=*.go --include=*.ts --include=*.t
 |---|---|---|
 | `open/pypsa-isolated-run-plan.md` | **the active plan** — the isolated PyPSA (power-flow) run: Calliope first, PyPSA as a second, separate pass fed by the parsed Calliope results | Phases 1–6. **Gated on B1**: can MEME's schema express `lines` at all? Start at Phase 1 step 3 — it needs no services |
 | `open/pypsa-pass-ask.md` | the sendable ask to the MEME/T1K/TentaCron dev (8 questions, the legacy + schema ones) | **Send it.** Then record the answers in the plan's §12 and unblock B1 |
-| `open/heat-patch.md` | deferred register — the heat vector on the MEME dispatch path | after electricity is solid end-to-end |
+| `open/heat-patch.md` | deferred register — the heat vector on the MEME dispatch path. **Re-baselined 2026-10-20:** the T1K mapping already carries heat/cooling/gas and run mode exists; the gaps are frontend `energyVectors` + heat techs, the unconditional `capacity.expandable` vs `operate`, and enforcing `operate` for heat models | gap 1 (frontend schema) first, then the Go expandable pass |
 | `open/pv-patch.md` | deferred register — a precomputed profile for physics PV/wind (a `pv_supply` tech currently 422s the whole dispatch) | when a real TentaCron `resolvent-pvgis` run is available |
 
 ## Closed — what shipped, and what it records
