@@ -231,12 +231,13 @@ export interface ModelResults {
  */
 export type EnergyCarrier = string;
 
-export const CARRIER_LABELS: Record<string, string> = {
-  power: 'results.carrier.electricity',
-  electricity: 'results.carrier.electricity',
-  heat: 'results.carrier.heat',
-  thermal: 'results.carrier.heat',
-};
+/**
+ * Carrier label/i18n table lives in `./carrierUnits` (single source of truth
+ * for labels, units and generation-capability per carrier). Re-exported here
+ * because this module is the types entry point for the results feature.
+ */
+export { CARRIER_LABELS } from './carrierUnits';
+
 
 /** Summary block per carrier, served by the backend structured endpoint. */
 export interface CarrierSummary {
