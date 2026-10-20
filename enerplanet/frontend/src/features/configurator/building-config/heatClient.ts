@@ -29,11 +29,11 @@ interface Enveloped<T> {
 }
 
 export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
-  async fetchMatchingVariants(countryIso2, typeCode, constructionYear) {
+  async fetchMatchingVariants(countryIso2, typeCode, constructionYear, subtype) {
     const res = await axios.get<Enveloped<IgnisMatchResponse>>(
       `/v1/ignis/variants/${encodeURIComponent(countryIso2)}/match`,
       {
-        params: { type: typeCode, year: String(constructionYear) },
+        params: { type: typeCode, year: String(constructionYear), subtype },
         signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
       },
     );
