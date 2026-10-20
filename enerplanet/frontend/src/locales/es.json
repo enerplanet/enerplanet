@@ -2216,11 +2216,21 @@
       "defaultValuePlaceholder": "Valor Predeterminado",
       "unitPlaceholder": "Unidad (opcional)",
       "minPlaceholder": "Mín (opcional)",
-      "maxPlaceholder": "Máx (opcional)"
+      "maxPlaceholder": "Máx (opcional)",
+      "type": "Tipo de tecnología",
+      "typePlaceholder": "Elija una tecnología",
+      "productName": "Nombre del producto",
+      "productNamePlaceholder": "p. ej. FV en cubierta 8 kWp",
+      "manufacturer": "Fabricante",
+      "model": "Modelo",
+      "datasheet": "Enlace a la ficha técnica"
     },
     "addModal": {
-      "title": "Agregar Nueva Tecnología",
-      "description": "Crear una nueva tecnología con parámetros personalizados"
+      "title": "Añadir producto",
+      "description": "Añada un producto de una tecnología compatible. Sus parámetros vienen del tipo de tecnología; defina sus valores.",
+      "confirm": "Añadir producto",
+      "parametersHint": "Los parámetros que la simulación usa para este tipo de tecnología.",
+      "range": "Rango {{min}} a {{max}}"
     },
     "copyModal": {
       "title": "Copiar Tecnología",

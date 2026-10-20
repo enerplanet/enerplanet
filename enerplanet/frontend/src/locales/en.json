@@ -2212,11 +2212,21 @@
       "defaultValuePlaceholder": "Default Value",
       "unitPlaceholder": "Unit (optional)",
       "minPlaceholder": "Min (optional)",
-      "maxPlaceholder": "Max (optional)"
+      "maxPlaceholder": "Max (optional)",
+      "type": "Technology type",
+      "typePlaceholder": "Choose a technology",
+      "productName": "Product name",
+      "productNamePlaceholder": "e.g., Rooftop PV 8 kWp",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "datasheet": "Datasheet link"
     },
     "addModal": {
-      "title": "Add New Technology",
-      "description": "Create a new technology with custom parameters"
+      "title": "Add product",
+      "description": "Add a product of a supported technology. Its parameters come from the technology type; set their values.",
+      "confirm": "Add product",
+      "parametersHint": "The parameters the simulation uses for this technology type.",
+      "range": "Range {{min}} to {{max}}"
     },
     "copyModal": {
       "title": "Copy Technology",

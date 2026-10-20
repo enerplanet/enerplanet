@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Technology } from './services/technologyService';
-import { asBuildingTechnology, defaultConstraints, defaultProduct, productsOfType } from './catalogue';
+import { asBuildingTechnology, defaultConstraints, defaultProduct, newProductKey, productsOfType } from './catalogue';
 
 const product = (key: string, type?: string): Technology => ({
   key, type, alias: key, icon: 'flame', description: '',
@@ -32,5 +32,15 @@ describe('catalogue', () => {
     expect(tech.key).toBe('air_source_heat_pump');
     expect(tech.product).toBe('air_source_heat_pump__6kw');
     expect(defaultConstraints(tech)).toEqual([{ key: 'cont_energy_eff', value: 3.1 }]);
+  });
+});
+
+describe('newProductKey', () => {
+  it('builds the key from the type and the name', () => {
+    expect(newProductKey('pv_supply', 'Sunny Roof 8.5 kW (TOPCon)', 'a1b2c3')).toBe('pv_supply_sunny_roof_8_5_kw_topcon_a1b2c3');
+  });
+
+  it('keeps the type when the name has no usable characters', () => {
+    expect(newProductKey('gas_boiler', '***', 'x9')).toBe('gas_boiler_x9');
   });
 });

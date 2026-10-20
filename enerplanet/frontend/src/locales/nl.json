@@ -1817,11 +1817,21 @@
       "defaultValuePlaceholder": "Standaardwaarde",
       "unitPlaceholder": "Eenheid (optioneel)",
       "minPlaceholder": "Min (optioneel)",
-      "maxPlaceholder": "Max (optioneel)"
+      "maxPlaceholder": "Max (optioneel)",
+      "type": "Technologietype",
+      "typePlaceholder": "Kies een technologie",
+      "productName": "Productnaam",
+      "productNamePlaceholder": "bijv. Dak-PV 8 kWp",
+      "manufacturer": "Fabrikant",
+      "model": "Model",
+      "datasheet": "Link naar datasheet"
     },
     "addModal": {
-      "title": "Nieuwe Technologie Toevoegen",
-      "description": "Maak een nieuwe technologie met aangepaste parameters"
+      "title": "Product toevoegen",
+      "description": "Voeg een product van een ondersteunde technologie toe. De parameters komen van het technologietype; stel hun waarden in.",
+      "confirm": "Product toevoegen",
+      "parametersHint": "De parameters die de simulatie voor dit technologietype gebruikt.",
+      "range": "Bereik {{min}} tot {{max}}"
     },
     "copyModal": {
       "title": "Technologie Kopiëren",

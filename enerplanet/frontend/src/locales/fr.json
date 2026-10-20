@@ -2216,11 +2216,21 @@
       "defaultValuePlaceholder": "Valeur par Défaut",
       "unitPlaceholder": "Unité (optionnel)",
       "minPlaceholder": "Min (optionnel)",
-      "maxPlaceholder": "Max (optionnel)"
+      "maxPlaceholder": "Max (optionnel)",
+      "type": "Type de technologie",
+      "typePlaceholder": "Choisir une technologie",
+      "productName": "Nom du produit",
+      "productNamePlaceholder": "p. ex. PV en toiture 8 kWc",
+      "manufacturer": "Fabricant",
+      "model": "Modèle",
+      "datasheet": "Lien vers la fiche technique"
     },
     "addModal": {
-      "title": "Ajouter une Nouvelle Technologie",
-      "description": "Créer une nouvelle technologie avec des paramètres personnalisés"
+      "title": "Ajouter un produit",
+      "description": "Ajoutez un produit d'une technologie prise en charge. Ses paramètres viennent du type de technologie ; définissez leurs valeurs.",
+      "confirm": "Ajouter le produit",
+      "parametersHint": "Les paramètres que la simulation utilise pour ce type de technologie.",
+      "range": "Plage {{min}} à {{max}}"
     },
     "copyModal": {
       "title": "Copier la Technologie",

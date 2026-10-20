@@ -1,43 +1,70 @@
-import { ComponentType } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { TechnologyConstraint } from "@/features/technologies/services/technologyService";
 import { FormDataConvertible } from "@/hooks/useForm";
 import { TechnologyActionModal } from "./TechnologyActionModal";
 
-type TechnologyForm<FormData> = {
-  data: FormData;
-  errors: Partial<Record<keyof FormData, string>>;
+/** The fields of a new product; its key is generated from type and name. */
+export interface ProductFormData {
+  type: string;
+  alias: string;
+  description: string;
+  manufacturer: string;
+  model: string;
+  datasheet_url: string;
+}
+
+type ProductForm = {
+  data: ProductFormData;
+  errors: Partial<Record<keyof ProductFormData, string>>;
   isLoading: boolean;
-  setData: (key: keyof FormData, value: FormDataConvertible) => void;
 };
 
-interface AddTechnologyModalProps<FormData extends { key: string; alias: string; icon: string; description: string }> {
+interface AddTechnologyModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: () => void;
-  techForm: TechnologyForm<FormData>;
-  onFieldChange: (key: keyof FormData, value: FormDataConvertible) => void;
-  iconOptions: { value: string; label: string; icon: ComponentType<{ className?: string }> }[];
-  newTechConstraints: TechnologyConstraint[];
-  addConstraint: () => void;
-  removeConstraint: (index: number) => void;
-  updateConstraint: (index: number, field: keyof TechnologyConstraint, value: string | number | null) => void;
+  techForm: ProductForm;
+  onFieldChange: (key: keyof ProductFormData, value: FormDataConvertible) => void;
+  /** The supported technology types, labelled by their default product. */
+  typeOptions: { value: string; label: string }[];
+  /** The chosen type's parameters; only their values are editable. */
+  constraints: TechnologyConstraint[];
+  onValueChange: (index: number, value: string) => void;
 }
 
-function AddTechnologyModal<FormData extends { key: string; alias: string; icon: string; description: string }>({
+const inputClass =
+  "block w-full px-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground";
+
+/** Adds a product of a supported technology type, with that type's parameters. */
+function AddTechnologyModal({
   open,
   onClose,
   onSubmit,
   techForm,
   onFieldChange,
-  iconOptions,
-  newTechConstraints,
-  addConstraint,
-  removeConstraint,
-  updateConstraint,
-}: Readonly<AddTechnologyModalProps<FormData>>) {
+  typeOptions,
+  constraints,
+  onValueChange,
+}: Readonly<AddTechnologyModalProps>) {
   const { t } = useTranslation();
+  const field = (key: keyof ProductFormData, label: string, required = false, placeholder = "") => (
+    <div className="space-y-1.5">
+      <label htmlFor={`product-${key}`} className="block text-sm font-medium text-foreground">
+        {label} {required && <span className="text-destructive">*</span>}
+      </label>
+      <input
+        id={`product-${key}`}
+        type={key === "datasheet_url" ? "url" : "text"}
+        value={techForm.data[key]}
+        onChange={(e) => onFieldChange(key, e.target.value)}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+      {techForm.errors[key] && <p className="text-xs text-destructive">{techForm.errors[key]}</p>}
+    </div>
+  );
+
   return (
     <TechnologyActionModal
       open={open}
@@ -45,149 +72,81 @@ function AddTechnologyModal<FormData extends { key: string; alias: string; icon:
       title={t('technologies.addModal.title')}
       description={t('technologies.addModal.description')}
       icon={Plus}
-      confirmLabel={t('technologies.addTechnology')}
+      confirmLabel={t('technologies.addModal.confirm')}
       onConfirm={onSubmit}
       isLoading={techForm.isLoading}
       isConfirmDisabled={techForm.isLoading}
       maxWidth="sm:max-w-2xl"
     >
       <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor="product-type" className="block text-sm font-medium text-foreground">
+            {t('technologies.form.type')} <span className="text-destructive">*</span>
+          </label>
+          <select
+            id="product-type"
+            value={techForm.data.type}
+            onChange={(e) => onFieldChange("type", e.target.value)}
+            className={inputClass}
+          >
+            <option value="" disabled>{t('technologies.form.typePlaceholder')}</option>
+            {typeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {techForm.errors.type && <p className="text-xs text-destructive">{techForm.errors.type}</p>}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label htmlFor="tech-key-input" className="block text-sm font-medium text-foreground">
-              {t('technologies.form.key')} <span className="text-destructive">*</span>
-            </label>
-            <input
-              id="tech-key-input"
-              type="text"
-              value={techForm.data.key}
-              onChange={(e) => onFieldChange("key", e.target.value)}
-              placeholder={t('technologies.form.keyPlaceholder')}
-              className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
-            />
-            {techForm.errors.key && <p className="text-xs text-destructive">{techForm.errors.key}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="tech-alias-input" className="block text-sm font-medium text-foreground">
-              {t('technologies.form.displayName')} <span className="text-destructive">*</span>
-            </label>
-            <input
-              id="tech-alias-input"
-              type="text"
-              value={techForm.data.alias}
-              onChange={(e) => onFieldChange("alias", e.target.value)}
-              placeholder={t('technologies.form.displayNamePlaceholder')}
-              className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
-            />
-            {techForm.errors.alias && <p className="text-xs text-destructive">{techForm.errors.alias}</p>}
-          </div>
+          {field("alias", t('technologies.form.productName'), true, t('technologies.form.productNamePlaceholder'))}
+          {field("manufacturer", t('technologies.form.manufacturer'))}
+          {field("model", t('technologies.form.model'))}
+          {field("datasheet_url", t('technologies.form.datasheet'), false, "https://")}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="tech-description-input" className="block text-sm font-medium text-foreground">{t('technologies.form.description')}</label>
+          <label htmlFor="product-description" className="block text-sm font-medium text-foreground">{t('technologies.form.description')}</label>
           <textarea
-            id="tech-description-input"
+            id="product-description"
             value={techForm.data.description}
             onChange={(e) => onFieldChange("description", e.target.value)}
             placeholder={t('technologies.form.descriptionPlaceholder')}
             rows={2}
-            className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground resize-none"
+            className={`${inputClass} resize-none`}
           />
         </div>
 
-        <div className="space-y-1.5">
-          <span className="block text-sm font-medium text-foreground">{t('technologies.form.icon')}</span>
-          <div className="flex flex-wrap gap-2">
-            {iconOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onFieldChange("icon", opt.value)}
-                className={`p-2 rounded-lg border transition-colors ${
-                  techForm.data.icon === opt.value ? "border-primary bg-primary/10" : "border-border hover:bg-muted"
-                }`}
-              >
-                <opt.icon className="w-5 h-5 text-foreground" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-foreground">{t('technologies.form.parametersOptional')}</span>
-            <button type="button" onClick={addConstraint} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
-              <Plus className="w-3 h-3" />
-              {t('technologies.addParameter')}
-            </button>
-          </div>
-
-          <div className="space-y-3 max-h-48 overflow-y-auto">
-            {newTechConstraints.map((constraint, index) => (
-              <div key={`constraint-${constraint.key || index}`} className="p-3 bg-muted/50 rounded-lg border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground">{t('technologies.form.parameter')} {index + 1}</span>
-                  {newTechConstraints.length > 1 && (
-                    <button type="button" onClick={() => removeConstraint(index)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded">
-                      <X className="w-3 h-3 text-red-500" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+        {constraints.length > 0 && (
+          <div>
+            <span className="block text-sm font-medium text-foreground mb-1">{t('technologies.parameters')}</span>
+            <p className="text-xs text-muted-foreground mb-3">{t('technologies.addModal.parametersHint')}</p>
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {constraints.map((c, index) => (
+                <div key={c.key} className="grid grid-cols-[1fr_9rem] items-center gap-3">
+                  <label htmlFor={`product-param-${c.key}`} className="text-xs text-foreground">
+                    {c.alias}{c.unit ? ` (${c.unit})` : ""}
+                    {c.min != null && c.max != null && (
+                      <span className="block text-[11px] text-muted-foreground">
+                        {t('technologies.addModal.range', { min: c.min, max: c.max })}
+                      </span>
+                    )}
+                  </label>
                   <input
+                    id={`product-param-${c.key}`}
                     type="text"
-                    value={constraint.key}
-                    onChange={(e) => updateConstraint(index, "key", e.target.value)}
-                    placeholder={t('technologies.form.keyFieldPlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <input
-                    type="text"
-                    value={constraint.alias}
-                    onChange={(e) => updateConstraint(index, "alias", e.target.value)}
-                    placeholder={t('technologies.form.aliasFieldPlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={constraint.default_value}
-                    onChange={(e) => updateConstraint(index, "default_value", e.target.value)}
-                    placeholder={t('technologies.form.defaultValuePlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <input
-                    type="text"
-                    value={constraint.unit || ""}
-                    onChange={(e) => updateConstraint(index, "unit", e.target.value || null)}
-                    placeholder={t('technologies.form.unitPlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={constraint.min ?? ""}
-                    onChange={(e) => updateConstraint(index, "min", e.target.value !== "" ? e.target.value : null)}
-                    placeholder={t('technologies.form.minPlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={constraint.max ?? ""}
-                    onChange={(e) => updateConstraint(index, "max", e.target.value !== "" ? e.target.value : null)}
-                    placeholder={t('technologies.form.maxPlaceholder')}
-                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    inputMode="decimal"
+                    value={String(c.default_value ?? "")}
+                    onChange={(e) => onValueChange(index, e.target.value)}
+                    className="px-2 py-1.5 bg-background border border-border rounded text-xs text-right text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </TechnologyActionModal>
   );
 }
 
 export default AddTechnologyModal;
-

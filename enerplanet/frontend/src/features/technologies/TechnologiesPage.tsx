@@ -52,7 +52,8 @@ import {
 } from "@/components/ui/toolbar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import AddParameterModal from "./components/AddParameterModal";
-import AddTechnologyModal from "./components/AddTechnologyModal";
+import AddTechnologyModal, { type ProductFormData } from "./components/AddTechnologyModal";
+import { PRODUCT_TYPES, defaultProduct, newProductKey } from "./catalogue";
 import CopyTechnologyModal from "./components/CopyTechnologyModal";
 import ImportTechnologiesModal from "./components/ImportTechnologiesModal";
 import TechnologyDetailsModal from "./components/TechnologyDetailsModal";
@@ -110,20 +111,6 @@ const iconMap: Record<string, LucideIcon> = {
   "wind-turbine": WindTurbine as unknown as LucideIcon,
 };
 
-const iconOptions = [
-  { value: "battery", label: "Battery", icon: Battery },
-  { value: "solar-panel", label: "Solar Panel", icon: SolarPanel },
-  { value: "wind-turbine", label: "Wind Turbine", icon: WindTurbine },
-  { value: "sun", label: "Sun", icon: Sun },
-  { value: "wind", label: "Wind", icon: Wind },
-  { value: "leaf", label: "Leaf", icon: Leaf },
-  { value: "flame", label: "Flame", icon: Flame },
-  { value: "snowflake", label: "Snowflake", icon: Snowflake },
-  { value: "droplets", label: "Droplets", icon: Droplets },
-  { value: "home", label: "Home", icon: Home },
-  { value: "building-2", label: "Building", icon: Building2 },
-];
-
 const emptyConstraint: TechnologyConstraint = {
   key: "",
   alias: "",
@@ -141,26 +128,13 @@ const updateTechByKey = (techs: Technology[], key: string, updated: Technology):
 const removeTechByKey = (techs: Technology[], key: string): Technology[] =>
   techs.filter((t) => t.key !== key);
 
-interface TechnologyFormData extends FormDataType {
-  key: string;
-  alias: string;
-  icon: string;
-  description: string;
-}
+interface TechnologyFormData extends FormDataType, ProductFormData {}
 
-const validateTechnologyForm = (values: Record<string, unknown>): Record<string, string> => {
+const validateTechnologyForm = (values: TechnologyFormData): Record<string, string> => {
   const errors: Record<string, string> = {};
-
-  const key = typeof values.key === "string" ? values.key : "";
-  if (!key.trim()) {
-    errors.key = "Key is required";
-  }
-
-  const alias = typeof values.alias === "string" ? values.alias : "";
-  if (!alias.trim()) {
-    errors.alias = "Display name is required";
-  }
-
+  if (!values.type) errors.type = "Choose a technology type";
+  if (!values.alias.trim()) errors.alias = "Product name is required";
+  if (values.datasheet_url && !/^https?:\/\//.test(values.datasheet_url)) errors.datasheet_url = "Enter a link starting with http:// or https://";
   return errors;
 };
 
@@ -179,7 +153,7 @@ export default function TechnologiesPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddParamModal, setShowAddParamModal] = useState(false);
-  const [newTechConstraints, setNewTechConstraints] = useState<TechnologyConstraint[]>([{ ...emptyConstraint }]);
+  const [newTechConstraints, setNewTechConstraints] = useState<TechnologyConstraint[]>([]);
   const [newParam, setNewParam] = useState<TechnologyConstraint>({ ...emptyConstraint });
   const [addingParam, setAddingParam] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
@@ -199,10 +173,12 @@ export default function TechnologiesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const techForm = useForm<TechnologyFormData>({
-    key: "",
+    type: "",
     alias: "",
-    icon: "battery",
     description: "",
+    manufacturer: "",
+    model: "",
+    datasheet_url: "",
   });
 
   const isOwnTechnology = (tech: Technology) => Boolean(tech.user_id && user && tech.user_id === String(user.id));
@@ -324,19 +300,18 @@ export default function TechnologiesPage() {
       return;
     }
 
-    if (technologies.some((t) => t.key === techForm.data.key)) {
-      showError(t('technologies.error.addFailed'));
-      handleCloseAddModal();
-      return;
-    }
-
     try {
+      const { type, alias, description, manufacturer, model, datasheet_url } = techForm.data;
       const newTech: Technology = {
-        key: techForm.data.key,
-        alias: techForm.data.alias,
-        icon: techForm.data.icon,
-        description: techForm.data.description,
-        constraints: newTechConstraints.filter((c) => c.key && c.alias).map(parseNumericConstraint),
+        key: newProductKey(type, alias),
+        type,
+        alias,
+        icon: defaultProduct(technologies, type)?.icon ?? "",
+        description,
+        manufacturer: manufacturer || null,
+        model: model || null,
+        datasheet_url: datasheet_url || null,
+        constraints: newTechConstraints.map(parseNumericConstraint),
       };
 
       const created = await technologyService.create(newTech);
@@ -352,13 +327,18 @@ export default function TechnologiesPage() {
   const handleCloseAddModal = () => {
     if (!techForm.isLoading) {
       techForm.reset();
-      setNewTechConstraints([{ ...emptyConstraint }]);
+      setNewTechConstraints([]);
       setShowAddModal(false);
     }
   };
 
   const handleFormChange = (key: string, value: FormDataConvertible) => {
     techForm.setData(key as keyof TechnologyFormData, value);
+    // A product carries its type's parameters; the user sets their values only.
+    if (key === "type") {
+      const base = defaultProduct(technologies, String(value));
+      setNewTechConstraints(base?.constraints.map((c) => ({ ...c, id: undefined })) ?? []);
+    }
     if (techForm.errors[key as keyof TechnologyFormData]) {
       techForm.clearErrors(key as keyof TechnologyFormData);
     }
@@ -387,10 +367,8 @@ export default function TechnologiesPage() {
     });
   };
 
-  const addConstraint = () => setNewTechConstraints((prev) => [...prev, { ...emptyConstraint }]);
-  const removeConstraint = (index: number) => setNewTechConstraints((prev) => prev.filter((_, i) => i !== index));
-  const updateConstraint = (index: number, field: keyof TechnologyConstraint, value: string | number | null) => {
-    setNewTechConstraints((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
+  const updateConstraintValue = (index: number, value: string) => {
+    setNewTechConstraints((prev) => prev.map((c, i) => (i === index ? { ...c, default_value: value } : c)));
   };
 
   const openTechDetails = (tech: Technology) => {
@@ -730,7 +708,7 @@ export default function TechnologiesPage() {
 
               <button onClick={() => setShowAddModal(true)} className={PRIMARY_BUTTON_CLASS}>
                 <Plus className="h-4 w-4" />
-                {t('technologies.addTechnology')}
+                {t('technologies.addModal.confirm')}
               </button>
             </>
           }
@@ -865,12 +843,13 @@ export default function TechnologiesPage() {
           onClose={handleCloseAddModal}
           onSubmit={handleAddTechnology}
           techForm={techForm}
-          onFieldChange={(key, value) => handleFormChange(key as string, value)}
-          iconOptions={iconOptions}
-          newTechConstraints={newTechConstraints}
-          addConstraint={addConstraint}
-          removeConstraint={removeConstraint}
-          updateConstraint={updateConstraint}
+          onFieldChange={(key, value) => handleFormChange(key, value)}
+          typeOptions={PRODUCT_TYPES.flatMap((type) => {
+            const base = defaultProduct(technologies, type);
+            return base ? [{ value: type, label: t(`technologies.types.${type}`, { defaultValue: base.alias }) }] : [];
+          })}
+          constraints={newTechConstraints}
+          onValueChange={updateConstraintValue}
         />
 
         <AddParameterModal

@@ -1817,11 +1817,21 @@
       "defaultValuePlaceholder": "Výchozí Hodnota",
       "unitPlaceholder": "Jednotka (volitelné)",
       "minPlaceholder": "Min (volitelné)",
-      "maxPlaceholder": "Max (volitelné)"
+      "maxPlaceholder": "Max (volitelné)",
+      "type": "Typ technologie",
+      "typePlaceholder": "Vyberte technologii",
+      "productName": "Název produktu",
+      "productNamePlaceholder": "např. Střešní FV 8 kWp",
+      "manufacturer": "Výrobce",
+      "model": "Model",
+      "datasheet": "Odkaz na datový list"
     },
     "addModal": {
-      "title": "Přidat Novou Technologii",
-      "description": "Vytvořte novou technologii s vlastními parametry"
+      "title": "Přidat produkt",
+      "description": "Přidejte produkt podporované technologie. Parametry pocházejí z typu technologie; nastavte jejich hodnoty.",
+      "confirm": "Přidat produkt",
+      "parametersHint": "Parametry, které simulace pro tento typ technologie používá.",
+      "range": "Rozsah {{min}} až {{max}}"
     },
     "copyModal": {
       "title": "Kopírovat Technologii",

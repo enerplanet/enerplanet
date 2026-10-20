@@ -2212,11 +2212,21 @@
       "defaultValuePlaceholder": "Standardwert",
       "unitPlaceholder": "Einheit (optional)",
       "minPlaceholder": "Min (optional)",
-      "maxPlaceholder": "Max (optional)"
+      "maxPlaceholder": "Max (optional)",
+      "type": "Technologietyp",
+      "typePlaceholder": "Technologie wählen",
+      "productName": "Produktname",
+      "productNamePlaceholder": "z. B. Dach-PV 8 kWp",
+      "manufacturer": "Hersteller",
+      "model": "Modell",
+      "datasheet": "Link zum Datenblatt"
     },
     "addModal": {
-      "title": "Neue Technologie hinzufügen",
-      "description": "Erstellen Sie eine neue Technologie mit benutzerdefinierten Parametern"
+      "title": "Produkt hinzufügen",
+      "description": "Fügen Sie ein Produkt einer unterstützten Technologie hinzu. Die Parameter kommen vom Technologietyp; legen Sie ihre Werte fest.",
+      "confirm": "Produkt hinzufügen",
+      "parametersHint": "Die Parameter, die die Simulation für diesen Technologietyp verwendet.",
+      "range": "Bereich {{min}} bis {{max}}"
     },
     "copyModal": {
       "title": "Technologie kopieren",

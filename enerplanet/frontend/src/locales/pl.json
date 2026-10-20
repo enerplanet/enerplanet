@@ -1817,11 +1817,21 @@
       "defaultValuePlaceholder": "Wartość Domyślna",
       "unitPlaceholder": "Jednostka (opcjonalnie)",
       "minPlaceholder": "Min (opcjonalnie)",
-      "maxPlaceholder": "Max (opcjonalnie)"
+      "maxPlaceholder": "Max (opcjonalnie)",
+      "type": "Typ technologii",
+      "typePlaceholder": "Wybierz technologię",
+      "productName": "Nazwa produktu",
+      "productNamePlaceholder": "np. PV dachowe 8 kWp",
+      "manufacturer": "Producent",
+      "model": "Model",
+      "datasheet": "Link do karty katalogowej"
     },
     "addModal": {
-      "title": "Dodaj Nową Technologię",
-      "description": "Utwórz nową technologię z niestandardowymi parametrami"
+      "title": "Dodaj produkt",
+      "description": "Dodaj produkt obsługiwanej technologii. Parametry pochodzą z typu technologii; ustaw ich wartości.",
+      "confirm": "Dodaj produkt",
+      "parametersHint": "Parametry, których symulacja używa dla tego typu technologii.",
+      "range": "Zakres od {{min}} do {{max}}"
     },
     "copyModal": {
       "title": "Kopiuj Technologię",

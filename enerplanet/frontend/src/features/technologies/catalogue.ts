@@ -4,6 +4,9 @@ export const ELECTRICITY_TYPES = ["pv_supply", "battery_storage"];
 export const HEAT_SUPPLY_TYPES = ["air_source_heat_pump", "ground_source_heat_pump", "electric_boilers", "gas_boiler"];
 export const HEAT_TYPES = [...HEAT_SUPPLY_TYPES, "air_conditioner"];
 
+/** The technology types a user can add a product for. */
+export const PRODUCT_TYPES = [...ELECTRICITY_TYPES, ...HEAT_TYPES];
+
 /** Fuel a technology type buys, for its price line. */
 export const FUEL_BY_TYPE: Record<string, string[]> = { gas_boiler: ["natural_gas"] };
 
@@ -24,6 +27,15 @@ export const asBuildingTechnology = (product: Technology): Technology => ({
   key: productType(product),
   product: product.key,
 });
+
+/**
+ * A key for a new product of a type: the type and its name, with a random
+ * suffix because keys are unique across all users' private products.
+ */
+export const newProductKey = (type: string, name: string, suffix = Math.random().toString(36).slice(2, 8)): string => {
+  const slug = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+  return [type, slug, suffix].filter(Boolean).join("_");
+};
 
 /** A product's constraints with their default values, as a building stores them. */
 export const defaultConstraints = (product: Technology): { key: string; value: number | string }[] =>
