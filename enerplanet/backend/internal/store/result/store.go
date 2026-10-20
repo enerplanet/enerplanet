@@ -671,13 +671,39 @@ func (s *Store) GetAllCarrierSummaries(modelID uint) map[string]CarrierSummary {
 	return summaries
 }
 
-// GetDistinctCarriers returns the distinct carrier values from carrier_prod results.
+// GetDistinctCarriers returns every carrier that has result rows, from BOTH
+// carrier_prod and carrier_con.
+//
+// Taking only the production side hides a carrier whose demand is served
+// without an in-model producer (a heat demand with no heat pump, an import-only
+// fuel): its consumption rows exist but no production row does, so the API
+// would never advertise the carrier and the UI could not switch to it.
 func (s *Store) GetDistinctCarriers(modelID uint) []string {
-	var carriers []string
+	seen := make(map[string]struct{})
+
+	var prodCarriers []string
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
 		Where("model_id = ?", modelID).
 		Distinct("carrier").
-		Pluck("carrier", &carriers)
+		Pluck("carrier", &prodCarriers)
+
+	var conCarriers []string
+	s.db.Model(&backendModels.ResultsCarrierCon{}).
+		Where("model_id = ?", modelID).
+		Distinct("carrier").
+		Pluck("carrier", &conCarriers)
+
+	carriers := make([]string, 0, len(prodCarriers)+len(conCarriers))
+	for _, c := range append(prodCarriers, conCarriers...) {
+		if c == "" {
+			continue
+		}
+		if _, ok := seen[c]; ok {
+			continue
+		}
+		seen[c] = struct{}{}
+		carriers = append(carriers, c)
+	}
 	return carriers
 }
 
