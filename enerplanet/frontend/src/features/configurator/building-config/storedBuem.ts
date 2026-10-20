@@ -3,9 +3,9 @@
  * the building's properties.buem.
  *
  * building and solver are BuEM's own blocks, the ones the configurator's run
- * sends, so the backend's model run can send them unchanged. construction_year
- * and outputs are not part of either block; they are kept beside them so
- * reopening the building shows them again.
+ * sends, so the backend's model run can send them unchanged. construction_year,
+ * refurbishment and outputs are not part of either block; they are kept beside
+ * them so reopening the building shows them again.
  */
 
 import { adaptBuemFeature, toBuem, type BuildingState } from '@thd-spatial-ai/building-configurator';

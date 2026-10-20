@@ -105,6 +105,7 @@ func (h *IgnisHandler) GetFieldMetadata(c *gin.Context) {
 //	@Param			country_iso2	path		string	true	"ISO 3166-1 alpha-2 country code"	example(NL)
 //	@Param			type			query		string	true	"TABULA building type"				example(SFH)
 //	@Param			year			query		int		true	"Construction year"					example(1975)
+//	@Param			subtype			query		string	false	"TABULA subtype; ignis uses Gen when absent"	example(Gen)
 //	@Success		200				{object}	contracts.GetIgnisVariantsResponse
 //	@Failure		400				{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502				{object}	contracts.ErrorResponse	"ignis unavailable"
@@ -116,11 +117,15 @@ func (h *IgnisHandler) MatchVariants(c *gin.Context) {
 		httputil.BadRequest(c, "year must be a whole number, got "+c.Query("year"))
 		return
 	}
-	h.forward(c, "ignis-variants-match", map[string]any{
+	params := map[string]any{
 		"iso2": c.Param("country_iso2"),
 		"type": c.Query("type"),
 		"year": year,
-	})
+	}
+	if subtype := c.Query("subtype"); subtype != "" {
+		params["subtype"] = subtype
+	}
+	h.forward(c, "ignis-variants-match", params)
 }
 
 // GetVariantData godoc

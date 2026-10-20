@@ -860,7 +860,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's\nsurfaces are returned, each with the object_id of its building.\nEmpty when City2TABULA has no 3D data for the building.",
                 "produces": [
                     "application/json"
                 ],
@@ -1265,6 +1265,13 @@ const docTemplate = `{
                         "name": "year",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Gen",
+                        "description": "TABULA subtype; ignis uses Gen when absent",
+                        "name": "subtype",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2469,6 +2476,10 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "kind": {
+                    "type": "string"
+                },
+                "object_id": {
+                    "description": "ObjectID is the 3D building the surface belongs to; an OSM way can cover several.",
                     "type": "string"
                 },
                 "qualifies": {

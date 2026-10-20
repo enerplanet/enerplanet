@@ -840,6 +840,10 @@ definitions:
         type: number
       kind:
         type: string
+      object_id:
+        description: ObjectID is the 3D building the surface belongs to; an OSM way
+          can cover several.
+        type: string
       qualifies:
         type: boolean
       suggested:
@@ -1460,7 +1464,8 @@ paths:
       description: |-
         Returns every roof and outer wall of the building with its area, tilt from horizontal
         and azimuth clockwise from north, whether automatic PV placement uses it (roofs only)
-        and whether it is suggested for PV.
+        and whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's
+        surfaces are returned, each with the object_id of its building.
         Empty when City2TABULA has no 3D data for the building.
       parameters:
       - description: OSM id of the building
@@ -1742,6 +1747,11 @@ paths:
         name: year
         required: true
         type: integer
+      - description: TABULA subtype; ignis uses Gen when absent
+        example: Gen
+        in: query
+        name: subtype
+        type: string
       produces:
       - application/json
       responses:
