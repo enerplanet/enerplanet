@@ -128,3 +128,34 @@ func TestGenerateGrid_forwardsValidatedArea(t *testing.T) {
 		t.Fatalf("status %d, pylovo got %v; want the area without altitudes", rec.Code, received)
 	}
 }
+
+// The count route validates the area like generate-grid and sends pylovo only
+// the rebuilt geometry.
+func TestCountBuildings_forwardsValidatedAreaOnly(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	var received []string
+	pylovo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		received = append(received, r.URL.Path+" "+string(b))
+		_, _ = w.Write([]byte(`{"count":312}`))
+	}))
+	t.Cleanup(pylovo.Close)
+	r := gin.New()
+	r.POST("/building-count", NewPylovoHandler(pylovo.URL, nil, nil).CountBuildings)
+	serve := func(body string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/building-count", strings.NewReader(body)))
+		return rec
+	}
+
+	if rec := serve(`{"geom":{"type":"Point","coordinates":[12.9,48.8]}}`); rec.Code != http.StatusBadRequest || len(received) != 0 {
+		t.Fatalf("invalid area: status %d, pylovo got %v; want 400 and nothing", rec.Code, received)
+	}
+	rec := serve(`{"geom":{"type":"Polygon","coordinates":[[[12.95,48.83],[12.96,48.83],[12.96,48.84]]]},"user_id":"x"}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"count":312`) {
+		t.Fatalf("status %d body %s; want 200 with the count", rec.Code, rec.Body)
+	}
+	if len(received) != 1 || received[0] != `/building-count {"geom":{"type":"Polygon","coordinates":[[[12.95,48.83],[12.96,48.83],[12.96,48.84]]]}}` {
+		t.Errorf("pylovo got %v; want only the validated geometry", received)
+	}
+}

@@ -2495,7 +2495,11 @@
     "techNotFound": "Technologia {{tech}} nie znaleziona",
     "techLoadFailed": "Nie udało się załadować technologii do edycji",
     "heatAutoAssigned": "Technologie cieplne zostały przypisane automatycznie.",
-    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}"
+    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}",
+    "areaOverLimit": {
+      "title": "Ten obszar zawiera {{buildings}} budynków; model może zawierać {{limit}}",
+      "description": "Zmniejsz obszar o około {{excess}} budynków. Pozostaje na mapie, a sieć zostanie pobrana, gdy zmieści się w limicie."
+    }
   },
   "gridStats": {
     "title": "Analiza Sieci",

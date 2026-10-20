@@ -76,6 +76,7 @@ import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
+import { AreaLimitWarning } from "./components/AreaLimitWarning";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
@@ -685,7 +686,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
-            <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />
+            {state.areaOverLimit
+              ? <AreaLimitWarning overLimit={state.areaOverLimit} />
+              : <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />}
           </>
         }
         mapHeader={
