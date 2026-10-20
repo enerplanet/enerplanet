@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"spatialhub_backend/internal/tentacron"
@@ -141,17 +142,19 @@ type Building struct {
 	Surfaces          []Surface `json:"surfaces,omitempty"`
 }
 
-// ByRequestedWay indexes the result's buildings by the requested way that
+// ByRequestedWay groups the result's buildings under the requested way that
 // stands for each: its best way when that was requested, otherwise its first
-// requested way (OSMIDs lists the best way first). Every other requested way
-// of a building is a further way and maps to the way standing for it; its
-// building's envelope is reported once, under the standing way.
-func (r BuildingsResult) ByRequestedWay(requested []string) (map[string]Building, map[string]string) {
+// requested way (OSMIDs lists the best way first). One way can stand for
+// several 3D buildings, a terraced row mapped as one OSM outline; they are
+// listed largest first (see Larger). Every other requested way of a building
+// is a further way and maps to the way standing for it; its building is
+// reported once, under the standing way.
+func (r BuildingsResult) ByRequestedWay(requested []string) (map[string][]Building, map[string]string) {
 	want := make(map[string]bool, len(requested))
 	for _, id := range requested {
 		want[id] = true
 	}
-	byWay := map[string]Building{}
+	byWay := map[string][]Building{}
 	further := map[string]string{}
 	for _, b := range r.Buildings {
 		ways := b.OSMIDs
@@ -168,19 +171,44 @@ func (r BuildingsResult) ByRequestedWay(requested []string) (map[string]Building
 		if standing == "" {
 			continue
 		}
-		byWay[standing] = b
+		byWay[standing] = append(byWay[standing], b)
 		for _, w := range ways {
 			if w != standing && want[w] {
 				further[w] = standing
 			}
 		}
 	}
-	// A way covering several 3D buildings can stand for one and be further
-	// on another; it keeps its own building's data.
-	for w := range byWay {
+	for w, buildings := range byWay {
+		slices.SortStableFunc(buildings, func(a, b Building) int {
+			switch {
+			case Larger(a, b):
+				return -1
+			case Larger(b, a):
+				return 1
+			}
+			return strings.Compare(a.ObjectID, b.ObjectID)
+		})
+		// A way covering several 3D buildings can stand for one and be further
+		// on another; it keeps its own buildings' data.
 		delete(further, w)
 	}
 	return byWay, further
+}
+
+// Larger reports whether a is the larger building by floor area, then by
+// footprint; the largest building of a way is the one the configurator shows.
+func Larger(a, b Building) bool {
+	if fa, fb := deref(a.FloorAreaSqm), deref(b.FloorAreaSqm); fa != fb {
+		return fa > fb
+	}
+	return deref(a.FootprintAreaSqm) > deref(b.FootprintAreaSqm)
+}
+
+func deref(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 // DatasetCredit is one source dataset's attribution as City2TABULA returns it

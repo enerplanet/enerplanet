@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} ajouté à {{count}} bâtiments",
     "techAddedToBuilding": "{{tech}} ajouté au bâtiment",
     "techRemovedFromAll": "{{tech}} supprimé de {{count}} bâtiments",
+    "allTechsRemoved": "Technologies retirées de {{count}} bâtiments",
     "techRemovedFromBuilding": "{{tech}} supprimé du bâtiment",
     "techNotFound": "Technologie {{tech}} non trouvée",
     "techLoadFailed": "Échec du chargement de la technologie pour modification",
@@ -1672,7 +1673,7 @@
       "importArea": "Importer une zone",
       "exportArea": "Exporter la zone",
       "regenerateGrid": "Régénérer le réseau",
-      "regenerateGridHint": "La zone ou les transformateurs du site ont changé. Régénérez pour regrouper les bâtiments autour d'eux et mettre le réseau à jour.",
+      "regenerateGridHint": "La zone ou ses transformateurs ont changé. Régénérez pour regrouper les bâtiments autour d'eux et mettre le réseau à jour.",
       "importAreaError": {
         "invalid": "Le fichier n'est pas un GeoJSON valide.",
         "noPolygon": "Le fichier ne contient aucun polygone.",
@@ -1800,8 +1801,8 @@
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "siteMode": {
-      "label": "Mode site",
-      "hint": "Génère le réseau pour cette seule zone et le conserve à part des réseaux partagés. Seuls les bâtiments disposant de données 3D sont inclus, jusqu'à 150.",
+      "label": "Réseau personnalisé",
+      "hint": "Placez vos propres transformateurs et construisez le réseau de cette zone à partir d'eux, au lieu du réseau précalculé. Seuls les bâtiments avec données 3D sont inclus, 150 au maximum.",
       "locked": "Effacez la zone dessinée pour changer de mode."
     },
     "largeModel": {
@@ -2126,7 +2127,8 @@
       "ground_source_heat_pump": "Pompe à chaleur géothermique",
       "electric_boilers": "Chaudière électrique",
       "gas_boiler": "Chaudière à gaz",
-      "air_conditioner": "Climatiseur"
+      "air_conditioner": "Climatiseur",
+      "gas_supply": "Approvisionnement en gaz"
     },
     "products": {
       "title": "Choisir un produit : {{type}}",
@@ -2323,6 +2325,9 @@
     },
     "addToAllBuildings": "Ajouter à tous les bâtiments",
     "removeFromAllBuildings": "Retirer de tous les bâtiments",
+    "removeAll": "Retirer toutes les technologies",
+    "removeAllConfirmTitle": "Retirer toutes les technologies ?",
+    "removeAllConfirmDescription": "Retire chaque technologie et chaque liaison de chaleur de {{count}} bâtiments de ce modèle, y compris celles attribuées automatiquement. Enregistrez le modèle pour conserver la modification.",
     "paramCount": "Paramètres : {{count}}",
     "paramDialog": {
       "description": "Configurez les paramètres de la technologie pour ce bâtiment",
@@ -2345,6 +2350,12 @@
       "constraints": "Contraintes",
       "applyToAllBuildings": "Appliquer à tous les bâtiments",
       "applyTechnology": "Appliquer la technologie"
+    },
+    "heatScope": {
+      "title": "Ajouter {{tech}} à tous les bâtiments ?",
+      "description": "Un bâtiment a une seule source de chaleur. {{withHeat}} bâtiments en ont déjà une, {{without}} n'en ont pas.",
+      "missing": "Seulement les bâtiments sans source de chaleur ({{count}})",
+      "replace": "Remplacer sur tous les bâtiments ({{count}})"
     }
   },
   "locations": {
@@ -3022,7 +3033,28 @@
     },
     "pv": {
       "shadingNotice": "La simulation ne tient pas compte de l'ombrage des arbres ni des bâtiments voisins.",
-      "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées."
+      "unavailable": "Les surfaces PV du bâtiment n'ont pas pu être chargées.",
+      "otherRoof": "Toit d'un autre bâtiment 3D ({{n}} sur {{total}})",
+      "otherWall": "Mur d'un autre bâtiment 3D ({{n}} sur {{total}})"
+    },
+    "sharedOutline": "Ce contour couvre {{count}} bâtiments 3D. Affiché et modifiable : le plus grand. La demande de chaleur est calculée pour chacun et additionnée.",
+    "tech": {
+      "pvCapacity": "Puissance des surfaces PV",
+      "size": "Taille",
+      "sizeMax": "Taille maximale",
+      "power": "Puissance",
+      "powerMax": "Puissance maximale",
+      "energy": "Énergie",
+      "energyMax": "Énergie maximale",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investissement",
+      "price": "Prix",
+      "pvSurfaces": "Surfaces PV",
+      "required": "Saisissez une valeur",
+      "positive": "Doit être supérieur à 0",
+      "notNegative": "Doit être 0 ou plus",
+      "notEditable": "Cette valeur ne peut pas être modifiée ici"
     }
   }
 }

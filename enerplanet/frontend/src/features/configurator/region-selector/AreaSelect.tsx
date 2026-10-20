@@ -36,7 +36,6 @@ import {
 } from "@/features/configurator/hooks/useTransformerMode";
 import { useBuildingAssignMode } from "@/features/configurator/hooks/useBuildingAssignMode";
 import { useBuildingSelection } from "@/features/configurator/hooks/useBuildingSelection";
-import { useMultiEditMode } from "@/features/configurator/hooks/useMultiEditMode";
 import { useBuildingDemandRecalculation } from "@/features/configurator/hooks/useBuildingDemandRecalculation";
 import { useRegionSelection } from "@/features/configurator/hooks/useRegion";
 import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
@@ -72,6 +71,7 @@ import { TechParameterDialog } from "./components/TechParameterDialog";
 import { ProductPickerDialog } from "./components/ProductPickerDialog";
 import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
 import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
+import { HeatScopeDialog } from "./components/HeatScopeDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
@@ -315,8 +315,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     draftId,
   });
 
-  const multiEdit = useMultiEditMode();
-
   const buildingDemand = useBuildingDemandRecalculation({
     pylovoLayers,
     notification,
@@ -391,9 +389,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   });
 
   // ── Tech dialog flow ─────────────────────────────────────────────
-  const techDialogFlow = useTechDialogFlow({
-    multiEditSelectedIds: multiEdit.multiEditSelectedIds,
-  });
+  const techDialogFlow = useTechDialogFlow();
 
   // ── Heat resolution (expected-fit auto-resolve) ───────────────────
   const heatResolution = useHeatResolution({
@@ -610,6 +606,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onTechDragEnd={techOperations.handleTechDragEnd}
             onAddTechToAll={techOperations.handleAddTechToAll}
             onRemoveTechFromAll={techOperations.handleRemoveTechFromAll}
+            onRemoveAllTechs={techOperations.handleRemoveAllTechs}
+            techBuildingCount={techOperations.techBuildingCount}
             appliedTechKeys={techOperations.appliedTechKeys}
             gridResultIds={gridResultIds}
             buildingsCount={buildingsInPolygonCount}
@@ -825,15 +823,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onAreaChange={buildingDemand.handleAreaChange}
         onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
         onRecalculateDemand={buildingDemand.handleRecalculateDemand}
-        onAddTech={
-          multiEdit.isMultiEdit
-            ? techDialogFlow.handleApplyTechToSelected
-            : techDialogFlow.handleAddTechFromDialog
-        }
-        isMultiEdit={multiEdit.isMultiEdit}
-        onToggleMultiEdit={multiEdit.toggleMultiEdit}
-        multiEditCount={multiEdit.multiEditSelectedIds.size}
-        onApplyTechToAll={techDialogFlow.handleApplyTechToSelected}
+        onAddTech={techDialogFlow.handleAddTechFromDialog}
         isExcluded={(() => {
           const osmId = mapInteractions.selectedBuilding?.osmId;
           if (!osmId) return false;
@@ -842,18 +832,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         })()}
         onToggleExclude={actions.toggleBuildingExclusion}
         onSave={() => setIsModified(true)}
-        onApplyTemplate={(templateTechs) => {
-          if (mapInteractions.selectedBuildingFeature) {
-            const feature = mapInteractions.selectedBuildingFeature;
-            for (const [techKey, techData] of Object.entries(templateTechs)) {
-              feature.set(`tech_${techKey}`, JSON.stringify(techData));
-            }
-            mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-              prev ? { ...prev, techs: { ...prev.techs, ...templateTechs } } : null
-            );
-          }
-          setIsModified(true);
-        }}
       />
 
       <BuildingPanelHost
@@ -863,7 +841,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
         onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        techsFor={pylovoLayers.buildingTechs}
+        onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
       />
+
+      <HeatScopeDialog request={techOperations.heatScopeRequest} onChoose={techOperations.resolveHeatScope} />
 
       <HeatBootstrapDialog
         open={heatBootstrapOpen}

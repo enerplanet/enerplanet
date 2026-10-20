@@ -51,7 +51,6 @@ All hooks are re-exported from `hooks/index.ts` and wired into `AreaSelect.tsx`:
 | `useMapDisplay` | Map resize, reassignment line, MapLibre 3D handlers |
 | `usePylovoLayers` | OpenLayers layer management for grid, buildings, transformers |
 | `useCustomLocationLayers` | User-defined custom building layers |
-| `useMultiEditMode` | Toggle multi-edit state for batch building edits |
 | `useRegion` | Reverse-geocode polygon centroid → region name, handle region selection |
 | `useMapResize` | Respond to sidebar/collapse layout changes |
 
@@ -59,7 +58,7 @@ All hooks are re-exported from `hooks/index.ts` and wired into `AreaSelect.tsx`:
 
 Centralized in a Zustand store (`store/modelStore.ts`). Key state groups:
 
-- **Active mode** — a unified `activeMode` (`"add-transformer" | "move-transformer" | "assign-buildings" | "multi-edit" | null`) so only one interaction mode is active at a time
+- **Active mode** — a unified `activeMode` (`"add-transformer" | "move-transformer" | "assign-buildings" | "heat-link" | null`) so only one interaction mode is active at a time
 - **Grid data** — `pylovoGridData`, `powerFlowResults`, `isRunningPowerFlow`
 - **Drawing** — `allPolygons`, `isDrawing`, `allowMultiplePolygons`, `cursorPos`
 - **Model metadata** — `modelName`, `fromDate`, `toDate`, `resolution`
@@ -76,7 +75,7 @@ useBuildingsInPolygonCount(pylovoGridData) // → number
 
 ### Services
 
-- `services/pylovoService.ts` — axios client for `/v2/pylovo/*` endpoints (generate-grid, add-transformer, power-flow, transformer-sizes, etc.)
+- `services/pylovoService.ts` — axios client for `/v1/pylovo/*` endpoints (generate-grid, add-transformer, power-flow, transformer-sizes, etc.)
 - `services/energyService.ts` — energy estimation API
 - `services/opentechdbService.ts` — OpenTech-DB catalog bridge: fetches heat +
   electricity technologies via the backend proxy (`/api/opentech-db/*`),

@@ -1411,7 +1411,7 @@
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
       "regenerateGrid": "Net opnieuw genereren",
-      "regenerateGridHint": "Het gebied of de transformatoren van de locatie zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
+      "regenerateGridHint": "Het gebied of de transformatoren zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
       "importAreaError": {
         "invalid": "Het bestand is geen geldige GeoJSON.",
         "noPolygon": "Het bestand bevat geen polygoon.",
@@ -1539,8 +1539,8 @@
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "siteMode": {
-      "label": "Locatiemodus",
-      "hint": "Genereert het net alleen voor dit gebied en slaat het apart op van de gedeelde netten. Alleen gebouwen met 3D-gegevens worden meegenomen, maximaal 150.",
+      "label": "Eigen net",
+      "hint": "Plaats eigen transformatoren en bouw het net voor dit gebied daaruit op, in plaats van het vooraf gegenereerde net. Alleen gebouwen met 3D-gegevens, maximaal 150.",
       "locked": "Wis het getekende gebied om de modus te wijzigen."
     },
     "largeModel": {
@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Bodemwarmtepomp",
       "electric_boilers": "Elektrische ketel",
       "gas_boiler": "Gasketel",
-      "air_conditioner": "Airconditioner"
+      "air_conditioner": "Airconditioner",
+      "gas_supply": "Gaslevering"
     },
     "products": {
       "title": "Kies een product: {{type}}",
@@ -1945,6 +1946,9 @@
     },
     "addToAllBuildings": "Aan alle gebouwen toevoegen",
     "removeFromAllBuildings": "Van alle gebouwen verwijderen",
+    "removeAll": "Alle technologieën verwijderen",
+    "removeAllConfirmTitle": "Alle technologieën verwijderen?",
+    "removeAllConfirmDescription": "Verwijdert elke technologie en warmteverbinding van {{count}} gebouwen in dit model, ook automatisch toegewezen. Sla het model op om de wijziging te behouden.",
     "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Stel de technologieparameters voor dit gebouw in",
@@ -1967,6 +1971,12 @@
       "constraints": "Beperkingen",
       "applyToAllBuildings": "Op alle gebouwen toepassen",
       "applyTechnology": "Technologie toepassen"
+    },
+    "heatScope": {
+      "title": "{{tech}} aan alle gebouwen toevoegen?",
+      "description": "Een gebouw heeft één warmtevoorziening. {{withHeat}} gebouwen hebben er al een, {{without}} hebben er geen.",
+      "missing": "Alleen gebouwen zonder warmtevoorziening ({{count}})",
+      "replace": "Op alle gebouwen vervangen ({{count}})"
     }
   },
   "locations": {
@@ -2480,6 +2490,7 @@
     "techAddedToAll": "{{tech}} toegevoegd aan {{count}} gebouwen",
     "techAddedToBuilding": "{{tech}} toegevoegd aan gebouw",
     "techRemovedFromAll": "{{tech}} verwijderd van {{count}} gebouwen",
+    "allTechsRemoved": "Technologieën verwijderd van {{count}} gebouwen",
     "techRemovedFromBuilding": "{{tech}} verwijderd van gebouw",
     "techNotFound": "Technologie {{tech}} niet gevonden",
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
@@ -3028,7 +3039,28 @@
     },
     "pv": {
       "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
-      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen.",
+      "otherRoof": "Dak van een ander 3D-gebouw ({{n}} van {{total}})",
+      "otherWall": "Gevel van een ander 3D-gebouw ({{n}} van {{total}})"
+    },
+    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld.",
+    "tech": {
+      "pvCapacity": "Vermogen uit de PV-vlakken",
+      "size": "Grootte",
+      "sizeMax": "Maximale grootte",
+      "power": "Vermogen",
+      "powerMax": "Maximaal vermogen",
+      "energy": "Energie",
+      "energyMax": "Maximale energie",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investering",
+      "price": "Prijs",
+      "pvSurfaces": "PV-vlakken",
+      "required": "Voer een waarde in",
+      "positive": "Moet groter dan 0 zijn",
+      "notNegative": "Moet 0 of meer zijn",
+      "notEditable": "Deze waarde kan hier niet worden bewerkt"
     }
   }
 }

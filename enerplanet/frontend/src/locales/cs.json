@@ -1411,7 +1411,7 @@
       "importArea": "Importovat oblast",
       "exportArea": "Exportovat oblast",
       "regenerateGrid": "Znovu vytvořit síť",
-      "regenerateGridHint": "Oblast nebo transformátory lokality se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
+      "regenerateGridHint": "Oblast nebo její transformátory se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
       "importAreaError": {
         "invalid": "Soubor není platný GeoJSON.",
         "noPolygon": "Soubor neobsahuje žádný polygon.",
@@ -1539,8 +1539,8 @@
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
     "siteMode": {
-      "label": "Režim lokality",
-      "hint": "Vytvoří síť pouze pro tuto oblast a uloží ji odděleně od sdílených sítí. Zahrnuje jen budovy s 3D daty, nejvýše 150.",
+      "label": "Vlastní síť",
+      "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
       "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
     },
     "largeModel": {
@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Tepelné čerpadlo země-voda",
       "electric_boilers": "Elektrokotel",
       "gas_boiler": "Plynový kotel",
-      "air_conditioner": "Klimatizace"
+      "air_conditioner": "Klimatizace",
+      "gas_supply": "Dodávka plynu"
     },
     "products": {
       "title": "Vyberte produkt: {{type}}",
@@ -1945,6 +1946,9 @@
     },
     "addToAllBuildings": "Přidat ke všem budovám",
     "removeFromAllBuildings": "Odebrat ze všech budov",
+    "removeAll": "Odebrat všechny technologie",
+    "removeAllConfirmTitle": "Odebrat všechny technologie?",
+    "removeAllConfirmDescription": "Odebere každou technologii a tepelné propojení z {{count}} budov tohoto modelu, včetně automaticky přiřazených. Uložte model, aby se změna zachovala.",
     "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Nastavte parametry technologie pro tuto budovu",
@@ -1967,6 +1971,12 @@
       "constraints": "Omezení",
       "applyToAllBuildings": "Použít na všechny budovy",
       "applyTechnology": "Použít technologii"
+    },
+    "heatScope": {
+      "title": "Přidat {{tech}} ke všem budovám?",
+      "description": "Budova má jeden zdroj tepla. {{withHeat}} budov už jeden má, {{without}} nemá žádný.",
+      "missing": "Jen budovy bez zdroje tepla ({{count}})",
+      "replace": "Nahradit u všech budov ({{count}})"
     }
   },
   "locations": {
@@ -2480,6 +2490,7 @@
     "techAddedToAll": "{{tech}} přidáno k {{count}} budovám",
     "techAddedToBuilding": "{{tech}} přidáno k budově",
     "techRemovedFromAll": "{{tech}} odebráno z {{count}} budov",
+    "allTechsRemoved": "Technologie odebrány z {{count}} budov",
     "techRemovedFromBuilding": "{{tech}} odebráno z budovy",
     "techNotFound": "Technologie {{tech}} nenalezena",
     "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu",
@@ -3028,7 +3039,28 @@
     },
     "pv": {
       "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
-      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst.",
+      "otherRoof": "Střecha jiné 3D budovy ({{n}} z {{total}})",
+      "otherWall": "Stěna jiné 3D budovy ({{n}} z {{total}})"
+    },
+    "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se.",
+    "tech": {
+      "pvCapacity": "Výkon z ploch FV",
+      "size": "Velikost",
+      "sizeMax": "Maximální velikost",
+      "power": "Výkon",
+      "powerMax": "Maximální výkon",
+      "energy": "Energie",
+      "energyMax": "Maximální energie",
+      "cop": "COP",
+      "efficiency": "Účinnost",
+      "investment": "Investice",
+      "price": "Cena",
+      "pvSurfaces": "Plochy FV",
+      "required": "Zadejte hodnotu",
+      "positive": "Musí být větší než 0",
+      "notNegative": "Musí být 0 nebo více",
+      "notEditable": "Tuto hodnotu zde nelze upravit"
     }
   }
 }

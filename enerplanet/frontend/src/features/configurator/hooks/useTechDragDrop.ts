@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
@@ -7,8 +7,78 @@ import type { Technology } from "@/features/technologies/services/technologyServ
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
-import { asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
+import { HEAT_SUPPLY_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
+import { hasHeatTech } from "@/features/configurator/utils/heatResolution";
 import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
+
+/** Whether a building carries any technology or a heat link to a producer. */
+const hasTechs = (f: Feature<Geometry>): boolean =>
+  Object.keys(f.get("techs") || {}).length > 0 || Boolean(f.get("heat_supplier"));
+
+/**
+ * Removes every technology and heat link from buildings and returns how many
+ * changed. Heat links go too: their producer has no heat technology left, and a
+ * linked building is skipped by automatic heat assignment.
+ */
+export const clearTechs = (buildings: Feature<Geometry>[]): number => {
+  let count = 0;
+  for (const f of buildings) {
+    if (!hasTechs(f)) continue;
+    f.set("techs", {});
+    f.unset("heat_supplier");
+    f.setStyle(createBuildingStyleFunction(true, false));
+    count++;
+  }
+  return count;
+};
+
+/** Whether a building has its heat supply: a heat technology or a link to a producer's. */
+export const hasHeatSupply = (f: Feature<Geometry>): boolean => hasHeatTech(f.get("techs")) || Boolean(f.get("heat_supplier"));
+
+/** Technology keys present on at least one of the buildings. */
+export const techKeysInUse = (buildings: Feature<Geometry>[]): string[] => {
+  const keys = new Set<string>();
+  for (const f of buildings) for (const key of Object.keys(f.get("techs") || {})) keys.add(key);
+  return [...keys];
+};
+
+/** For a heat supply added to many buildings: only those without one, or all with theirs replaced. */
+export type HeatScope = "missing" | "replace";
+
+/**
+ * Puts the technology entry on buildings and returns how many got it. A building
+ * has one heat supply, so for a heat supply technology scope decides: "missing"
+ * skips buildings that have one, "replace" removes their other heat technologies
+ * and heat link first. Other technologies go on every building.
+ */
+export const applyToBuildings = (
+  buildings: Feature<Geometry>[], techKey: string, entry: Record<string, unknown>, scope: HeatScope = "replace",
+): number => {
+  const heat = HEAT_SUPPLY_TYPES.includes(techKey);
+  let count = 0;
+  for (const f of buildings) {
+    if (heat && scope === "missing" && hasHeatSupply(f)) continue;
+    const techs = { ...(f.get("techs") || {}) };
+    if (heat && scope === "replace") {
+      for (const key of HEAT_SUPPLY_TYPES) delete techs[key];
+      f.unset("heat_supplier");
+    }
+    techs[techKey] = { ...entry };
+    f.set("techs", techs);
+    f.setStyle(createBuildingStyleFunction(true, false));
+    count++;
+  }
+  return count;
+};
+
+/** A heat supply waiting for the user to choose which buildings it goes on. */
+export interface HeatScopeRequest {
+  techKey: string;
+  alias: string;
+  entry: Record<string, unknown>;
+  withHeat: number;
+  total: number;
+}
 
 interface TechDragDropOptions {
   map: any;
@@ -40,6 +110,7 @@ export const useTechDragDrop = ({
   const appliedTechKeys = useModelStore((s) => s.appliedTechKeys);
   const setAppliedTechKeys = useModelStore((s) => s.setAppliedTechKeys);
   const { openBuilding } = useConfiguratorParams();
+  const [heatScopeRequest, setHeatScopeRequest] = useState<HeatScopeRequest | null>(null);
 
   const handleTechDragStart = useCallback((tech: Technology) => { setDraggingTech(tech); }, [setDraggingTech]);
   const handleTechDragEnd = useCallback(() => { setDraggingTech(null); }, [setDraggingTech]);
@@ -73,21 +144,14 @@ export const useTechDragDrop = ({
     if (!selectedBuildingForTech || !source) return;
     const entry = { alias: source.alias, icon: source.icon, constraints, ...(source.product && { product: source.product }) };
     if (applyToAll) {
-      let count = 0;
-      pylovoLayersRef.current.forEach((layer: any) => {
-        const src = layer.getSource();
-        if (src) src.getFeatures().forEach((f: Feature<Geometry>) => {
-          if (f.get('feature_type') === 'building') {
-            const existing = f.get("techs") || {};
-            existing[techKey] = { ...entry };
-            f.set("techs", existing);
-            f.setStyle(createBuildingStyleFunction(true, false));
-            count++;
-          }
-        });
-      });
-      setAppliedTechKeys((prev) => prev.includes(techKey) ? prev : [...prev, techKey]);
-      showSuccess(t("gridNotifications.techAddedToAll", { tech: source.alias, count }));
+      const buildings = collectBuildingsFromLayers(pylovoLayersRef.current);
+      const withHeat = HEAT_SUPPLY_TYPES.includes(techKey) ? buildings.filter(hasHeatSupply).length : 0;
+      if (withHeat > 0) {
+        setHeatScopeRequest({ techKey, alias: source.alias, entry, withHeat, total: buildings.length });
+      } else {
+        const count = applyToBuildings(buildings, techKey, entry);
+        showSuccess(t("gridNotifications.techAddedToAll", { tech: source.alias, count }));
+      }
     } else {
       const existing = selectedBuildingForTech.get("techs") || {};
       // Arrays chosen in PV mode outlive a later edit of the parameters.
@@ -104,7 +168,17 @@ export const useTechDragDrop = ({
     setSelectedBuildingForTech(null);
     setIsAddingTechToAll(false);
     setIsModified(true);
-  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, setAppliedTechKeys, openBuilding]);
+  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, openBuilding]);
+
+  /** Applies the waiting heat supply to the chosen buildings, or drops it when scope is null. */
+  const resolveHeatScope = useCallback((scope: HeatScope | null) => {
+    const request = heatScopeRequest;
+    setHeatScopeRequest(null);
+    if (!request || !scope) return;
+    const count = applyToBuildings(collectBuildingsFromLayers(pylovoLayersRef.current), request.techKey, request.entry, scope);
+    showSuccess(t("gridNotifications.techAddedToAll", { tech: request.alias, count }));
+    setIsModified(true);
+  }, [heatScopeRequest, pylovoLayersRef, showSuccess, t, setIsModified]);
 
   const handleAddTechToAll = useCallback((tech: Technology) => {
     setSelectedTechForDialog(tech);
@@ -131,19 +205,32 @@ export const useTechDragDrop = ({
         }
       });
     });
-    setAppliedTechKeys((prev) => prev.filter((k: string) => k !== tech.key));
     showSuccess(t("gridNotifications.techRemovedFromAll", { tech: tech.alias, count }));
     setIsModified(true);
-  }, [showSuccess, pylovoLayersRef, t, setIsModified, setAppliedTechKeys]);
+  }, [showSuccess, pylovoLayersRef, t, setIsModified]);
 
-  const getAppliedTechKeys = useCallback((): string[] => {
-    const counts: Record<string, number> = {};
-    let bc = 0;
-    for (const f of collectBuildingsFromLayers(pylovoLayersRef.current)) { bc++; const techs = f.get("techs") || {}; for (const key of Object.keys(techs)) counts[key] = (counts[key] || 0) + 1; }
-    return Object.entries(counts).filter(([, c]) => c === bc && bc > 0).map(([k]) => k);
-  }, [pylovoLayersRef]);
+  // Follows every building edit while the drawer is open, whichever path made it.
+  useEffect(() => {
+    if (!showTechDrawer) return;
+    const refresh = () => setAppliedTechKeys(techKeysInUse(collectBuildingsFromLayers(pylovoLayersRef.current)));
+    refresh();
+    const sources = pylovoLayersRef.current.map((layer) => layer.getSource()).filter((s): s is VectorSource => s !== null);
+    for (const s of sources) s.on("changefeature", refresh);
+    return () => { for (const s of sources) s.un("changefeature", refresh); };
+  }, [showTechDrawer, pylovoLayersRef, setAppliedTechKeys]);
 
-  useEffect(() => { if (showTechDrawer) setAppliedTechKeys(getAppliedTechKeys()); }, [showTechDrawer, getAppliedTechKeys, setAppliedTechKeys]);
+  const [techBuildingCount, setTechBuildingCount] = useState(0);
+  useEffect(() => {
+    if (showTechDrawer) setTechBuildingCount(collectBuildingsFromLayers(pylovoLayersRef.current).filter(hasTechs).length);
+  }, [showTechDrawer, appliedTechKeys, pylovoLayersRef]);
+
+  const handleRemoveAllTechs = useCallback(() => {
+    const count = clearTechs(collectBuildingsFromLayers(pylovoLayersRef.current));
+    setAppliedTechKeys([]);
+    setTechBuildingCount(0);
+    showSuccess(t("gridNotifications.allTechsRemoved", { count }));
+    setIsModified(true);
+  }, [pylovoLayersRef, setAppliedTechKeys, showSuccess, t, setIsModified]);
 
   const handleEditTechFromDialog = useCallback(async (techKey: string, buildingFeature: Feature<Geometry>) => {
     try {
@@ -173,6 +260,8 @@ export const useTechDragDrop = ({
     selectedTechForDialog, selectedBuildingForTech, setSelectedBuildingForTech,
     handleSaveTechToBuildingBulk, isAddingTechToAll, setIsAddingTechToAll,
     handleAddTechToAll, handleRemoveTechFromAll, appliedTechKeys,
+    heatScopeRequest, resolveHeatScope,
+    handleRemoveAllTechs, techBuildingCount,
     handleEditTechFromDialog, handleRemoveTechFromDialog, setSelectedTechForDialog,
   };
 };

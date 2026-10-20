@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} added to {{count}} buildings",
     "techAddedToBuilding": "{{tech}} added to building",
     "techRemovedFromAll": "{{tech}} removed from {{count}} buildings",
+    "allTechsRemoved": "Technologies removed from {{count}} buildings",
     "techRemovedFromBuilding": "{{tech}} removed from building",
     "techNotFound": "Technology {{tech}} not found",
     "techLoadFailed": "Failed to load technology for editing",
@@ -1723,7 +1724,7 @@
       "importArea": "Import area",
       "exportArea": "Export area",
       "regenerateGrid": "Regenerate grid",
-      "regenerateGridHint": "The site's area or transformers changed. Regenerate to cluster the buildings around them and update the grid.",
+      "regenerateGridHint": "The area or its transformers changed. Regenerate to cluster the buildings around them and update the grid.",
       "importAreaError": {
         "invalid": "The file is not valid GeoJSON.",
         "noPolygon": "The file contains no polygon.",
@@ -1796,8 +1797,8 @@
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
-      "label": "Site mode",
-      "hint": "Generates the grid for this area alone and stores it separately from the shared grids. Only buildings with 3D data are included, up to 150.",
+      "label": "Custom grid",
+      "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
       "locked": "Clear the drawn area to change the mode."
     },
     "largeModel": {
@@ -2122,7 +2123,8 @@
       "ground_source_heat_pump": "Ground-source heat pump",
       "electric_boilers": "Electric boiler",
       "gas_boiler": "Gas boiler",
-      "air_conditioner": "Air conditioner"
+      "air_conditioner": "Air conditioner",
+      "gas_supply": "Gas supply"
     },
     "products": {
       "title": "Choose a product: {{type}}",
@@ -2319,6 +2321,9 @@
     },
     "addToAllBuildings": "Add to all buildings",
     "removeFromAllBuildings": "Remove from all buildings",
+    "removeAll": "Remove all technologies",
+    "removeAllConfirmTitle": "Remove all technologies?",
+    "removeAllConfirmDescription": "Removes every technology and heat link from {{count}} buildings in this model, including those assigned automatically. Save the model to keep the change.",
     "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Configure technology parameters for this building",
@@ -2341,6 +2346,12 @@
       "constraints": "Constraints",
       "applyToAllBuildings": "Apply to All Buildings",
       "applyTechnology": "Apply Technology"
+    },
+    "heatScope": {
+      "title": "Add {{tech}} to all buildings?",
+      "description": "A building has one heat supply. {{withHeat}} buildings already have one, {{without}} have none.",
+      "missing": "Only buildings without heat supply ({{count}})",
+      "replace": "Replace on all buildings ({{count}})"
     }
   },
   "locations": {
@@ -3018,7 +3029,28 @@
     },
     "pv": {
       "shadingNotice": "The simulation does not consider shading from trees or neighbouring buildings.",
-      "unavailable": "The building's PV surfaces could not be loaded."
+      "unavailable": "The building's PV surfaces could not be loaded.",
+      "otherRoof": "Roof on another 3D building ({{n}} of {{total}})",
+      "otherWall": "Wall on another 3D building ({{n}} of {{total}})"
+    },
+    "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed.",
+    "tech": {
+      "pvCapacity": "Capacity from the PV surfaces",
+      "size": "Size",
+      "sizeMax": "Maximum size",
+      "power": "Power",
+      "powerMax": "Maximum power",
+      "energy": "Energy",
+      "energyMax": "Maximum energy",
+      "cop": "COP",
+      "efficiency": "Efficiency",
+      "investment": "Investment",
+      "price": "Price",
+      "pvSurfaces": "PV surfaces",
+      "required": "Enter a value",
+      "positive": "Must be above 0",
+      "notNegative": "Must be 0 or more",
+      "notEditable": "This value cannot be edited here"
     }
   }
 }

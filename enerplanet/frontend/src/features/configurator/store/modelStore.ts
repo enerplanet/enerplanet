@@ -12,7 +12,6 @@ export type ActiveMode =
   | "add-transformer"
   | "move-transformer"
   | "assign-buildings"
-  | "multi-edit"
   | "heat-link"
   | null;
 

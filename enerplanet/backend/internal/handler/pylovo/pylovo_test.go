@@ -27,7 +27,7 @@ func TestForwardToPylovo_cancelledClientIsNotAServerError(t *testing.T) {
 	cancel()
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/api/v2/pylovo/transformer-sizes", nil).WithContext(ctx)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/pylovo/transformer-sizes", nil).WithContext(ctx)
 
 	NewPylovoHandler(pylovo.URL, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
 
@@ -50,7 +50,7 @@ func TestForwardToPylovo_pylovoTimeoutIsAServerError(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/api/v2/pylovo/transformer-sizes", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/pylovo/transformer-sizes", nil)
 
 	NewPylovoHandler(pylovo.URL, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
 

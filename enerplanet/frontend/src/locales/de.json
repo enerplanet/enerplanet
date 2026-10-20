@@ -164,6 +164,7 @@
     "techAddedToAll": "{{tech}} zu {{count}} Gebäuden hinzugefügt",
     "techAddedToBuilding": "{{tech}} zum Gebäude hinzugefügt",
     "techRemovedFromAll": "{{tech}} von {{count}} Gebäuden entfernt",
+    "allTechsRemoved": "Technologien von {{count}} Gebäuden entfernt",
     "techRemovedFromBuilding": "{{tech}} vom Gebäude entfernt",
     "techNotFound": "Technologie {{tech}} nicht gefunden",
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
@@ -1723,7 +1724,7 @@
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
       "regenerateGrid": "Netz neu erzeugen",
-      "regenerateGridHint": "Gebiet oder Transformatoren des Standorts haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
+      "regenerateGridHint": "Gebiet oder Transformatoren haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
       "importAreaError": {
         "invalid": "Die Datei ist kein gültiges GeoJSON.",
         "noPolygon": "Die Datei enthält kein Polygon.",
@@ -1796,8 +1797,8 @@
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
     "siteMode": {
-      "label": "Standortmodus",
-      "hint": "Erzeugt das Netz nur für dieses Gebiet und speichert es getrennt von den gemeinsamen Netzen. Nur Gebäude mit 3D-Daten werden aufgenommen, höchstens 150.",
+      "label": "Eigenes Netz",
+      "hint": "Eigene Transformatoren setzen und das Netz für dieses Gebiet daraus erzeugen, statt das vorberechnete Netz zu nutzen. Nur Gebäude mit 3D-Daten, höchstens 150.",
       "locked": "Entfernen Sie das gezeichnete Gebiet, um den Modus zu ändern."
     },
     "largeModel": {
@@ -2122,7 +2123,8 @@
       "ground_source_heat_pump": "Erdwärmepumpe",
       "electric_boilers": "Elektrokessel",
       "gas_boiler": "Gaskessel",
-      "air_conditioner": "Klimaanlage"
+      "air_conditioner": "Klimaanlage",
+      "gas_supply": "Gasversorgung"
     },
     "products": {
       "title": "Produkt wählen: {{type}}",
@@ -2319,6 +2321,9 @@
     },
     "addToAllBuildings": "Zu allen Gebäuden hinzufügen",
     "removeFromAllBuildings": "Von allen Gebäuden entfernen",
+    "removeAll": "Alle Technologien entfernen",
+    "removeAllConfirmTitle": "Alle Technologien entfernen?",
+    "removeAllConfirmDescription": "Entfernt jede Technologie und jede Wärmeverbindung von {{count}} Gebäuden dieses Modells, auch automatisch zugewiesene. Speichern Sie das Modell, um die Änderung zu übernehmen.",
     "paramCount": "Parameter: {{count}}",
     "paramDialog": {
       "description": "Konfigurieren Sie die Technologieparameter für dieses Gebäude",
@@ -2341,6 +2346,12 @@
       "constraints": "Beschränkungen",
       "applyToAllBuildings": "Auf alle Gebäude anwenden",
       "applyTechnology": "Technologie anwenden"
+    },
+    "heatScope": {
+      "title": "{{tech}} allen Gebäuden hinzufügen?",
+      "description": "Ein Gebäude hat eine Wärmeversorgung. {{withHeat}} Gebäude haben bereits eine, {{without}} haben keine.",
+      "missing": "Nur Gebäude ohne Wärmeversorgung ({{count}})",
+      "replace": "Bei allen Gebäuden ersetzen ({{count}})"
     }
   },
   "locations": {
@@ -3018,7 +3029,28 @@
     },
     "pv": {
       "shadingNotice": "Die Simulation berücksichtigt keine Verschattung durch Bäume oder Nachbargebäude.",
-      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden."
+      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden.",
+      "otherRoof": "Dach eines anderen 3D-Gebäudes ({{n}} von {{total}})",
+      "otherWall": "Wand eines anderen 3D-Gebäudes ({{n}} von {{total}})"
+    },
+    "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert.",
+    "tech": {
+      "pvCapacity": "Leistung aus den PV-Flächen",
+      "size": "Größe",
+      "sizeMax": "Maximale Größe",
+      "power": "Leistung",
+      "powerMax": "Maximale Leistung",
+      "energy": "Energie",
+      "energyMax": "Maximale Energie",
+      "cop": "COP",
+      "efficiency": "Wirkungsgrad",
+      "investment": "Investition",
+      "price": "Preis",
+      "pvSurfaces": "PV-Flächen",
+      "required": "Wert eingeben",
+      "positive": "Muss größer als 0 sein",
+      "notNegative": "Muss 0 oder größer sein",
+      "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
     }
   }
 }

@@ -1411,7 +1411,7 @@
       "importArea": "Importa area",
       "exportArea": "Esporta area",
       "regenerateGrid": "Rigenera la rete",
-      "regenerateGridHint": "L'area o i trasformatori del sito sono cambiati. Rigenera per raggruppare gli edifici attorno ad essi e aggiornare la rete.",
+      "regenerateGridHint": "L'area o i suoi trasformatori sono cambiati. Rigenera per raggruppare gli edifici attorno ad essi e aggiornare la rete.",
       "importAreaError": {
         "invalid": "Il file non è un GeoJSON valido.",
         "noPolygon": "Il file non contiene alcun poligono.",
@@ -1539,8 +1539,8 @@
       "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
     "siteMode": {
-      "label": "Modalità sito",
-      "hint": "Genera la rete solo per quest'area e la conserva separata dalle reti condivise. Include solo edifici con dati 3D, fino a 150.",
+      "label": "Rete personalizzata",
+      "hint": "Posiziona i tuoi trasformatori e costruisci la rete di quest'area a partire da essi, invece della rete pregenerata. Solo edifici con dati 3D, al massimo 150.",
       "locked": "Cancella l'area disegnata per cambiare modalità."
     },
     "largeModel": {
@@ -1748,7 +1748,8 @@
       "ground_source_heat_pump": "Pompa di calore geotermica",
       "electric_boilers": "Caldaia elettrica",
       "gas_boiler": "Caldaia a gas",
-      "air_conditioner": "Condizionatore"
+      "air_conditioner": "Condizionatore",
+      "gas_supply": "Fornitura di gas"
     },
     "products": {
       "title": "Scegli un prodotto: {{type}}",
@@ -1945,6 +1946,9 @@
     },
     "addToAllBuildings": "Aggiungi a tutti gli edifici",
     "removeFromAllBuildings": "Rimuovi da tutti gli edifici",
+    "removeAll": "Rimuovi tutte le tecnologie",
+    "removeAllConfirmTitle": "Rimuovere tutte le tecnologie?",
+    "removeAllConfirmDescription": "Rimuove ogni tecnologia e collegamento termico da {{count}} edifici di questo modello, compresi quelli assegnati automaticamente. Salva il modello per mantenere la modifica.",
     "paramCount": "Parametri: {{count}}",
     "paramDialog": {
       "description": "Configura i parametri della tecnologia per questo edificio",
@@ -1967,6 +1971,12 @@
       "constraints": "Vincoli",
       "applyToAllBuildings": "Applica a tutti gli edifici",
       "applyTechnology": "Applica tecnologia"
+    },
+    "heatScope": {
+      "title": "Aggiungere {{tech}} a tutti gli edifici?",
+      "description": "Un edificio ha una sola fornitura di calore. {{withHeat}} edifici ne hanno già una, {{without}} non ne hanno.",
+      "missing": "Solo edifici senza fornitura di calore ({{count}})",
+      "replace": "Sostituisci su tutti gli edifici ({{count}})"
     }
   },
   "locations": {
@@ -2480,6 +2490,7 @@
     "techAddedToAll": "{{tech}} aggiunto a {{count}} edifici",
     "techAddedToBuilding": "{{tech}} aggiunto all'edificio",
     "techRemovedFromAll": "{{tech}} rimosso da {{count}} edifici",
+    "allTechsRemoved": "Tecnologie rimosse da {{count}} edifici",
     "techRemovedFromBuilding": "{{tech}} rimosso dall'edificio",
     "techNotFound": "Tecnologia {{tech}} non trovata",
     "techLoadFailed": "Impossibile caricare la tecnologia per la modifica",
@@ -3028,7 +3039,28 @@
     },
     "pv": {
       "shadingNotice": "La simulazione non considera l'ombreggiamento di alberi o edifici vicini.",
-      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio."
+      "unavailable": "Non è stato possibile caricare le superfici FV dell'edificio.",
+      "otherRoof": "Tetto di un altro edificio 3D ({{n}} di {{total}})",
+      "otherWall": "Parete di un altro edificio 3D ({{n}} di {{total}})"
+    },
+    "sharedOutline": "Questo contorno comprende {{count}} edifici 3D. Mostrato e modificabile: il più grande. Il fabbisogno di calore è calcolato per ciascuno e sommato.",
+    "tech": {
+      "pvCapacity": "Potenza dalle superfici FV",
+      "size": "Taglia",
+      "sizeMax": "Taglia massima",
+      "power": "Potenza",
+      "powerMax": "Potenza massima",
+      "energy": "Energia",
+      "energyMax": "Energia massima",
+      "cop": "COP",
+      "efficiency": "Rendimento",
+      "investment": "Investimento",
+      "price": "Prezzo",
+      "pvSurfaces": "Superfici FV",
+      "required": "Inserire un valore",
+      "positive": "Deve essere maggiore di 0",
+      "notNegative": "Deve essere 0 o più",
+      "notEditable": "Questo valore non si può modificare qui"
     }
   }
 }

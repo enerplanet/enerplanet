@@ -21,7 +21,8 @@ import (
 //	@Summary		Roof and wall surfaces of a building for PV
 //	@Description	Returns every roof and outer wall of the building with its area, tilt from horizontal
 //	@Description	and azimuth clockwise from north, whether automatic PV placement uses it (roofs only)
-//	@Description	and whether it is suggested for PV.
+//	@Description	and whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's
+//	@Description	surfaces are returned, each with the object_id of its building.
 //	@Description	Empty when City2TABULA has no 3D data for the building.
 //	@Tags			City2TABULA
 //	@Produce		json
@@ -54,7 +55,10 @@ func (h *Handler) PVSurfaces(c *gin.Context) {
 
 	surfaces := []pv.Surface{}
 	for _, b := range result.Buildings {
-		surfaces = append(surfaces, pv.Surfaces(b.Surfaces)...)
+		for _, s := range pv.Surfaces(b.Surfaces) {
+			s.ObjectID = b.ObjectID
+			surfaces = append(surfaces, s)
+		}
 	}
 	c.JSON(http.StatusOK, contracts.PVSurfacesResponse{Surfaces: surfaces})
 }

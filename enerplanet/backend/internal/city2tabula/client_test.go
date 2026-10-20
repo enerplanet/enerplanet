@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,7 +243,7 @@ func TestByRequestedWay(t *testing.T) {
 	}}
 	byWay, further := r.ByRequestedWay([]string{"best", "f1", "f2", "f3", "f4", "old"})
 
-	if byWay["best"].ObjectID != "A" || byWay["f3"].ObjectID != "B" || byWay["old"].ObjectID != "C" || len(byWay) != 3 {
+	if byWay["best"][0].ObjectID != "A" || byWay["f3"][0].ObjectID != "B" || byWay["old"][0].ObjectID != "C" || len(byWay) != 3 {
 		t.Errorf("byWay = %v, want A under best, B under f3 (its best way was not asked for), C under old", byWay)
 	}
 	want := map[string]string{"f1": "best", "f2": "best", "f4": "f3"}
@@ -261,5 +262,26 @@ func TestByRequestedWay_standingWayIsNeverFurther(t *testing.T) {
 	_, further := r.ByRequestedWay([]string{"w", "x"})
 	if _, ok := further["w"]; ok {
 		t.Errorf("further = %v, want w left out", further)
+	}
+}
+
+// A terraced row mapped as one OSM outline: the way stands for every 3D
+// building it covers, largest first, so none of them is dropped.
+func TestByRequestedWay_keepsEveryBuildingOfAWayLargestFirst(t *testing.T) {
+	area := func(v float64) *float64 { return &v }
+	r := BuildingsResult{Buildings: []Building{
+		{ObjectID: "DEBY_small", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(90)},
+		{ObjectID: "DEBY_large", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(140)},
+		{ObjectID: "DEBY_same_b", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(90)},
+	}}
+	byWay, further := r.ByRequestedWay([]string{"1001832407"})
+
+	var got []string
+	for _, b := range byWay["1001832407"] {
+		got = append(got, b.ObjectID)
+	}
+	want := []string{"DEBY_large", "DEBY_same_b", "DEBY_small"}
+	if strings.Join(got, ",") != strings.Join(want, ",") || len(further) != 0 {
+		t.Errorf("buildings = %v, further = %v; want %v (largest first, ties by object id) and no further ways", got, further, want)
 	}
 }

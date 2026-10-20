@@ -61,11 +61,11 @@ func failed(code, message string) string {
 func newRouter(stub *tentacronStub) *gin.Engine {
 	h := NewIgnisHandler(tentacron.New(stub.URL, "test-key"))
 	r := gin.New()
-	r.GET("/v2/ignis/variants/:country_iso2", h.GetVariants)
-	r.GET("/v2/ignis/fields", h.GetFieldMetadata)
-	r.GET("/v2/ignis/variants/:country_iso2/match", h.MatchVariants)
-	r.GET("/v2/ignis/data/:code", h.GetVariantData)
-	r.POST("/v2/ignis/calculate/:code", h.Calculate)
+	r.GET("/v1/ignis/variants/:country_iso2", h.GetVariants)
+	r.GET("/v1/ignis/fields", h.GetFieldMetadata)
+	r.GET("/v1/ignis/variants/:country_iso2/match", h.MatchVariants)
+	r.GET("/v1/ignis/data/:code", h.GetVariantData)
+	r.POST("/v1/ignis/calculate/:code", h.Calculate)
 	return r
 }
 
@@ -92,7 +92,7 @@ func do(r *gin.Engine, path string) *httptest.ResponseRecorder {
 func TestGetVariants_sendsIso2AndWrapsResponse(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"country":"germany","data":["DE.N.SFH.01.Gen","DE.N.MFH.03.Gen"]}`))
 
-	w := do(newRouter(stub), "/v2/ignis/variants/DE")
+	w := do(newRouter(stub), "/v1/ignis/variants/DE")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "ignis-variants", stub.lastTarget)
@@ -115,7 +115,7 @@ func TestGetVariants_sendsIso2AndWrapsResponse(t *testing.T) {
 func TestGetFieldMetadata_sendsEmptyPayloadAndWraps(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"data":[{"key":"A_C_Ref_Input","label":"Reference floor area","unit":"m2"}]}`))
 
-	w := do(newRouter(stub), "/v2/ignis/fields")
+	w := do(newRouter(stub), "/v1/ignis/fields")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "ignis-fields", stub.lastTarget)
@@ -130,7 +130,7 @@ func TestGetVariants_ignisRejectionIs400WithoutUpstreamText(t *testing.T) {
 	stub := newTentacronStub(t, failed("target_error",
 		`target ignis-variants: HTTP 400: {"error":"country ZZ is not supported"}`))
 
-	w := do(newRouter(stub), "/v2/ignis/variants/ZZ")
+	w := do(newRouter(stub), "/v1/ignis/variants/ZZ")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), ignisRejectedMessage)
@@ -140,7 +140,7 @@ func TestGetVariants_ignisRejectionIs400WithoutUpstreamText(t *testing.T) {
 func TestGetVariants_infrastructureFaultIs502(t *testing.T) {
 	stub := newTentacronStub(t, failed("max_attempts_exceeded", "ignis unreachable after 5 attempts"))
 
-	w := do(newRouter(stub), "/v2/ignis/variants/DE")
+	w := do(newRouter(stub), "/v1/ignis/variants/DE")
 
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 }
@@ -148,7 +148,7 @@ func TestGetVariants_infrastructureFaultIs502(t *testing.T) {
 func TestMatchVariants_sendsTypeAndYearAlongsideIso2(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"data":[{"code":"NL.N.SFH.05.Gen.ReEx.001.001","label":"Existing state"}]}`))
 
-	w := do(newRouter(stub), "/v2/ignis/variants/NL/match?type=SFH&year=1975")
+	w := do(newRouter(stub), "/v1/ignis/variants/NL/match?type=SFH&year=1975")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "ignis-variants-match", stub.lastTarget)
@@ -160,7 +160,7 @@ func TestMatchVariants_sendsTypeAndYearAlongsideIso2(t *testing.T) {
 func TestMatchVariants_rejectsANonNumericYear(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{}`))
 
-	w := do(newRouter(stub), "/v2/ignis/variants/NL/match?type=SFH&year=recently")
+	w := do(newRouter(stub), "/v1/ignis/variants/NL/match?type=SFH&year=recently")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "recently", "the rejected value belongs in the message")
@@ -170,7 +170,7 @@ func TestMatchVariants_rejectsANonNumericYear(t *testing.T) {
 func TestGetVariantData_sendsTheCode(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"tabula_data":{"BasicParameters":{}}}`))
 
-	w := do(newRouter(stub), "/v2/ignis/data/NL.N.SFH.05.Gen.ReEx.001.001")
+	w := do(newRouter(stub), "/v1/ignis/data/NL.N.SFH.05.Gen.ReEx.001.001")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "ignis-data", stub.lastTarget)
@@ -180,7 +180,7 @@ func TestGetVariantData_sendsTheCode(t *testing.T) {
 func TestCalculate_forwardsOverridesAndPinsTheCodeToThePath(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"q_h_nd":123.4}`))
 
-	w := post(newRouter(stub), "/v2/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001",
+	w := post(newRouter(stub), "/v1/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001",
 		`{"U_Actual_Wall_1":0.18,"code":"DE.N.MFH.09.Gen.ReEx.001.001"}`)
 
 	require.Equal(t, http.StatusOK, w.Code)
@@ -193,7 +193,7 @@ func TestCalculate_forwardsOverridesAndPinsTheCodeToThePath(t *testing.T) {
 func TestCalculate_emptyBodyRunsTheArchetypeUnmodified(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{"q_h_nd":99}`))
 
-	w := post(newRouter(stub), "/v2/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001", "")
+	w := post(newRouter(stub), "/v1/ignis/calculate/NL.N.SFH.05.Gen.ReEx.001.001", "")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, map[string]any{"code": "NL.N.SFH.05.Gen.ReEx.001.001"}, stub.lastPayload)
