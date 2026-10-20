@@ -258,3 +258,16 @@ func TestPutSiteTransformers_rejectsNonArray(t *testing.T) {
 		t.Fatalf("status = %d, pylovo requests = %v; want 400 and none", rec.Code, fake.requests)
 	}
 }
+
+// A 3D building is sent to pylovo by its object id, which pylovo matches as
+// the site building's source_id; OSM ids pass unchanged.
+func TestSiteScopedRequest_sends3DBuildingsByObjectID(t *testing.T) {
+	fake := &fakeSitePylovo{}
+	serveSite(t, fake, nil, "owner", http.MethodPost, "/power-flow",
+		`{"site_id":7,"revision":1,"grid_result_id":1,"building_osm_ids":["c2t:DEBY_LOD2_7672149","1001832418"]}`)
+
+	sent := fake.sent("POST /power-flow")
+	if len(sent) != 1 || !strings.Contains(sent[0], `"building_osm_ids":["DEBY_LOD2_7672149","1001832418"]`) {
+		t.Fatalf("pylovo got %v; want the object id without its c2t: prefix and the OSM id unchanged", sent)
+	}
+}

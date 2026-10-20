@@ -16,6 +16,7 @@ import (
 	"time"
 
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
+	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/models"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
@@ -253,6 +254,9 @@ func (h *PylovoHandler) bindSiteScopedAndForward(c *gin.Context, path string) {
 		if _, ok := h.requireSiteOwner(c, int(siteID)); !ok {
 			return
 		}
+		if ids, ok := payload["building_osm_ids"]; ok {
+			payload["building_osm_ids"] = siteBuildingIDs(ids)
+		}
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -260,6 +264,26 @@ func (h *PylovoHandler) bindSiteScopedAndForward(c *gin.Context, path string) {
 		return
 	}
 	h.forwardToPylovo(c, http.MethodPost, path, jsonData)
+}
+
+// siteBuildingIDs names a 3D building by its bare object id where the client
+// sends its c2t: key: pylovo matches a site's buildings by OSM id or by
+// source_id, and does not know EnerPlanET's key.
+func siteBuildingIDs(raw interface{}) interface{} {
+	ids, ok := raw.([]interface{})
+	if !ok {
+		return raw
+	}
+	out := make([]interface{}, len(ids))
+	for i, v := range ids {
+		out[i] = v
+		if key, ok := v.(string); ok {
+			if objectID, isObject := city2tabula.ObjectIDOfKey(key); isObject {
+				out[i] = objectID
+			}
+		}
+	}
+	return out
 }
 
 func (h *PylovoHandler) GetCableTypes(c *gin.Context) {
