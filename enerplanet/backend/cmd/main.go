@@ -940,6 +940,7 @@ func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 	api.POST("/v1/pylovo/generate-grid", handler.GenerateGrid)
+	api.POST("/v1/pylovo/building-count", handler.CountBuildings)
 	api.GET("/v1/pylovo/transformer-sizes", handler.GetTransformerSizes)
 	api.GET("/v1/pylovo/consumer-categories", handler.GetConsumerCategories)
 	api.POST("/v1/pylovo/grid-statistics", handler.GetGridStatistics)
