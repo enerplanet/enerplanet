@@ -308,13 +308,49 @@ func (c *Client) GetRunStatus(ctx context.Context, runID string) (*Run, error) {
 // a PyLovo building via building_link. OSMID and MatchType are populated on
 // every result, so callers join the response back to their own topology nodes
 // by osm_id.
+//
+// A key made by ObjectKey is looked up by object id (City2TABULA 0.11.4 and
+// later) and its building comes back with that key as OSMID and only OSMID,
+// so ByRequestedWay files it under the key.
 func (c *Client) GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) (BuildingsResult, error) {
-	if len(osmIDs) == 0 {
+	var ways, objects []string
+	for _, key := range osmIDs {
+		if id, ok := ObjectIDOfKey(key); ok {
+			objects = append(objects, id)
+		} else {
+			ways = append(ways, key)
+		}
+	}
+	result, err := c.getBuildings(ctx, country, "osm_ids", ways)
+	if err != nil {
+		return BuildingsResult{}, err
+	}
+	byObject, err := c.getBuildings(ctx, country, "object_ids", objects)
+	if err != nil {
+		return BuildingsResult{}, err
+	}
+	for _, b := range byObject.Buildings {
+		key := ObjectKey(b.ObjectID)
+		b.OSMID, b.OSMIDs = key, []string{key}
+		result.Buildings = append(result.Buildings, b)
+	}
+	for _, credit := range byObject.Attributions {
+		if !slices.Contains(result.Attributions, credit) {
+			result.Attributions = append(result.Attributions, credit)
+		}
+	}
+	return result, nil
+}
+
+// getBuildings asks GET /api/v1/buildings for ids in the given mode
+// (osm_ids or object_ids); no ids sends no request.
+func (c *Client) getBuildings(ctx context.Context, country, mode string, ids []string) (BuildingsResult, error) {
+	if len(ids) == 0 {
 		return BuildingsResult{}, nil
 	}
 	payload := map[string]any{
 		"country": normalizeCountry(country),
-		"osm_ids": strings.Join(osmIDs, ","),
+		mode:      strings.Join(ids, ","),
 	}
 	var result BuildingsResult
 	if err := c.tc.Do(ctx, targetBuildings, payload, &result); err != nil {
