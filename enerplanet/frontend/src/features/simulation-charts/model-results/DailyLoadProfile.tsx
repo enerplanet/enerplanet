@@ -2,12 +2,19 @@ import { FC, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { CarrierConRecord, CarrierProdRecord } from '@/features/model-results/types';
+import {
+  carrierPowerAxis,
+  formatCarrierPower,
+  sameCarrier,
+} from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 
 interface DailyLoadProfileProps {
   consumption?: CarrierConRecord[];
   production?: CarrierProdRecord[];
+  /** Carrier the records belong to — drives record filtering, units and labels. */
+  carrier?: string;
   height?: number;
   title?: string;
 }
@@ -26,15 +33,7 @@ const extractHourFromTimestamp = (timestamp: string): number | null => {
   return parsed.getUTCHours();
 };
 
-const formatPower = (valueKw: number): string => {
-  if (!Number.isFinite(valueKw)) return '0';
-  const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(2)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(valueKw * 1_000_000).toFixed(1)} mW`;
-};
+const formatPower = (valueKw: number, carrier?: string): string => formatCarrierPower(valueKw, carrier);
 
 const formatAxisPower = (valueKw: number): string => {
   if (!Number.isFinite(valueKw)) return '0';
@@ -46,7 +45,7 @@ const formatAxisPower = (valueKw: number): string => {
 };
 
 // Helper to aggregate data by hour
-const aggregateByHour = (data: DataRecord[]): Map<number, number[]> => {
+const aggregateByHour = (data: DataRecord[], carrier?: string): Map<number, number[]> => {
   const hourlyData = new Map<number, number[]>();
   for (let h = 0; h < 24; h++) hourlyData.set(h, []);
 
@@ -54,7 +53,10 @@ const aggregateByHour = (data: DataRecord[]): Map<number, number[]> => {
   const timestampTotals = new Map<string, number>();
 
   for (const record of data) {
-    if (record.carrier !== 'power' || !record.techs || record.techs.includes('power_transmission')) continue;
+    // The panel may hold records for more than one carrier (small-model
+    // responses embed them); only aggregate the active one.
+    if (!sameCarrier(record.carrier, carrier)) continue;
+    if (!record.techs || record.techs.includes('power_transmission')) continue;
     timestampTotals.set(
       record.timestep,
       (timestampTotals.get(record.timestep) || 0) + Math.abs(record.value)
@@ -101,6 +103,7 @@ const findPeakPeriod = (hourlyAvg: number[], threshold: number, startHour: numbe
 export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
   consumption,
   production,
+  carrier,
   height = 300,
   title = '',
 }) => {
@@ -111,7 +114,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
     const data = consumption || production;
     if (!data || data.length === 0) return null;
 
-    const hourlyData = aggregateByHour(data);
+    const hourlyData = aggregateByHour(data, carrier);
     const stats = calculateHourlyStats(hourlyData);
     const { hourlyAvg } = stats;
 
@@ -124,7 +127,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
       morningPeak: findPeakPeriod(hourlyAvg, threshold, 6, 12),
       eveningPeak: findPeakPeriod(hourlyAvg, threshold, 16, 22),
     };
-  }, [consumption, production]);
+  }, [consumption, production, carrier]);
 
   const option: EChartsOption = useMemo(() => {
     if (!chartData) return {};
@@ -210,7 +213,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
           return `
             <div style="font-weight: 600; margin-bottom: 6px; color: ${themeColors.text};">${hour}</div>
             <div style="margin-bottom: 4px; color: ${themeColors.text};">
-              ${t('results.energy.power')}: <b style="color: ${isPeak ? '#ef4444' : '#22c55e'}">${formatPower(value)}</b>
+              ${t('results.energy.consumption')}: <b style="color: ${isPeak ? '#ef4444' : '#22c55e'}">${formatPower(value, carrier)}</b>
             </div>
             <div style="font-size: 11px; color: ${isPeak ? '#ef4444' : '#22c55e'}">
               ${isPeak ? `⚠ ${t('results.energy.peakPeriod')}` : `✓ ${t('results.energy.offPeak')}`}
@@ -255,7 +258,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
       },
       yAxis: {
         type: 'value',
-        name: t('results.energy.power'),
+        name: carrierPowerAxis(t('results.energy.power'), carrier),
         nameLocation: 'center',
         nameGap: 45,
         nameTextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -277,7 +280,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
       },
       series: [
         {
-          name: 'Power Consumption',
+          name: t('results.energy.consumption'),
           type: 'line',
           smooth: true,
           symbol: 'circle',
@@ -319,13 +322,13 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
               position: 'end',
               fontSize: 10,
               color: themeColors.textMuted,
-              formatter: (params: any) => `${t('results.energy.avg')}: ${formatPower(Number(params?.value ?? 0))}`,
+              formatter: (params: any) => `${t('results.energy.avg')}: ${formatPower(Number(params?.value ?? 0), carrier)}`,
             },
             data: [
               {
                 yAxis: chartData.avgLoad,
                 label: {
-                  formatter: `${t('results.energy.avg')}: ${formatPower(chartData.avgLoad)}`,
+                  formatter: `${t('results.energy.avg')}: ${formatPower(chartData.avgLoad, carrier)}`,
                 },
               },
             ],
@@ -333,7 +336,7 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
         },
       ],
     };
-  }, [chartData, title, t, themeColors]);
+  }, [chartData, title, t, themeColors, carrier]);
 
   if (!chartData) {
     return (
@@ -363,10 +366,10 @@ export const DailyLoadProfile: FC<DailyLoadProfileProps> = ({
         </div>
         <span className="text-muted-foreground">|</span>
         <span className="text-muted-foreground">
-          {t('results.energy.peak')}: <b className="text-red-600">{formatPower(chartData.peakValue)}</b> {t('results.energy.at')} {chartData.peakHour.toString().padStart(2, '0')}:00
+          {t('results.energy.peak')}: <b className="text-red-600">{formatPower(chartData.peakValue, carrier)}</b> {t('results.energy.at')} {chartData.peakHour.toString().padStart(2, '0')}:00
         </span>
         <span className="text-muted-foreground">
-          {t('results.energy.min')}: <b className="text-green-600">{formatPower(chartData.minValue)}</b> {t('results.energy.at')} {chartData.minHour.toString().padStart(2, '0')}:00
+          {t('results.energy.min')}: <b className="text-green-600">{formatPower(chartData.minValue, carrier)}</b> {t('results.energy.at')} {chartData.minHour.toString().padStart(2, '0')}:00
         </span>
       </div>
     </div>
