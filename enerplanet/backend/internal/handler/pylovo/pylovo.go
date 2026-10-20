@@ -195,6 +195,27 @@ func (h *PylovoHandler) GenerateGrid(c *gin.Context) {
 	h.forwardToPylovo(c, http.MethodPost, "/generate-grid", jsonData)
 }
 
+// CountBuildings returns how many buildings generate-grid would take for the
+// area, without generating a grid, so a client can hold back an area over its
+// building limit before fetching it.
+func (h *PylovoHandler) CountBuildings(c *gin.Context) {
+	var payload map[string]interface{}
+	if !bindAreaRequest(c, &payload) {
+		return
+	}
+	geom, err := requestArea(payload)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
+		return
+	}
+	jsonData, err := json.Marshal(map[string]interface{}{"geom": geom})
+	if err != nil {
+		httputil.InternalError(c, errFailedMarshalPayload)
+		return
+	}
+	h.forwardToPylovo(c, http.MethodPost, "/building-count", jsonData)
+}
+
 func (h *PylovoHandler) GetTransformerSizes(c *gin.Context) {
 	h.forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
 }
