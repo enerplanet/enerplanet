@@ -157,6 +157,17 @@ func TestMatchVariants_sendsTypeAndYearAlongsideIso2(t *testing.T) {
 	assert.Equal(t, float64(1975), stub.lastPayload["year"], "year reaches ignis as a number, not the query string")
 }
 
+func TestMatchVariants_sendsSubtypeOnlyWhenGiven(t *testing.T) {
+	stub := newTentacronStub(t, completed(`{"data":[]}`))
+	router := newRouter(stub)
+
+	do(router, "/v1/ignis/variants/DE/match?type=MFH&year=1963&subtype=Gen")
+	assert.Equal(t, "Gen", stub.lastPayload["subtype"])
+
+	do(router, "/v1/ignis/variants/DE/match?type=MFH&year=1963")
+	assert.NotContains(t, stub.lastPayload, "subtype", "an absent subtype must not reach ignis as an empty one")
+}
+
 func TestMatchVariants_rejectsANonNumericYear(t *testing.T) {
 	stub := newTentacronStub(t, completed(`{}`))
 
