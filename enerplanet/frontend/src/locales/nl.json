@@ -272,7 +272,12 @@
     "published": "Gepubliceerd",
     "failed": "Mislukt",
     "cancelled": "Geannuleerd",
-    "modified": "Gewijzigd"
+    "modified": "Gewijzigd",
+    "failedAt": {
+      "queue": "Voorbereiding mislukt",
+      "running": "Simulatie mislukt",
+      "processing": "Verwerking mislukt"
+    }
   },
   "results": {
     "title": "Simulatieresultaten",

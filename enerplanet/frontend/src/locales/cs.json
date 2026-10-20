@@ -272,7 +272,12 @@
     "published": "Publikováno",
     "failed": "Selhalo",
     "cancelled": "Zrušeno",
-    "modified": "Upraveno"
+    "modified": "Upraveno",
+    "failedAt": {
+      "queue": "Příprava selhala",
+      "running": "Simulace selhala",
+      "processing": "Zpracování selhalo"
+    }
   },
   "results": {
     "title": "Výsledky Simulace",

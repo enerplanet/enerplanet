@@ -272,7 +272,12 @@
     "published": "Opublikowane",
     "failed": "Niepowodzenie",
     "cancelled": "Anulowane",
-    "modified": "Zmodyfikowany"
+    "modified": "Zmodyfikowany",
+    "failedAt": {
+      "queue": "Przygotowanie nie powiodło się",
+      "running": "Symulacja nie powiodła się",
+      "processing": "Przetwarzanie nie powiodło się"
+    }
   },
   "results": {
     "title": "Wyniki Symulacji",

@@ -538,7 +538,12 @@
     "published": "Veröffentlicht",
     "failed": "Fehlgeschlagen",
     "cancelled": "Abgebrochen",
-    "modified": "Bearbeitet"
+    "modified": "Bearbeitet",
+    "failedAt": {
+      "queue": "Vorbereitung fehlgeschlagen",
+      "running": "Simulation fehlgeschlagen",
+      "processing": "Auswertung fehlgeschlagen"
+    }
   },
   "results": {
     "title": "Simulationsergebnisse",

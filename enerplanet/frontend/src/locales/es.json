@@ -538,7 +538,12 @@
     "published": "Publicado",
     "failed": "Fallido",
     "cancelled": "Cancelado",
-    "modified": "Modificado"
+    "modified": "Modificado",
+    "failedAt": {
+      "queue": "Falló la preparación",
+      "running": "Falló la simulación",
+      "processing": "Falló el procesamiento"
+    }
   },
   "results": {
     "title": "Resultados de Simulación",
