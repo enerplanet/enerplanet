@@ -1,12 +1,15 @@
 import { FC, useCallback, useMemo, type ReactNode } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { StructuredModelResults, CostRecord } from '@/features/model-results/types';
+import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 
 interface ComparisonChartsProps {
   results1: StructuredModelResults;
   results2: StructuredModelResults;
+  /** Carrier both sides were fetched for — drives units and chart availability. */
+  carrier?: string;
 }
 
 const TECH_KEYS = {
@@ -236,9 +239,13 @@ const ChartCard: FC<{ children: ReactNode }> = ({ children }) => (
   </div>
 );
 
-export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2 }) => {
+export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2, carrier }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  // Supply-vs-demand compares generation with load: only meaningful for a
+  // generating carrier. Capacity / cost / economics charts are model-level.
+  const generation = isGenerationCarrier(carrier);
+  const { energyUnit } = carrierDisplay(carrier);
 
   const metrics1 = useMemo(() => calculateMetrics(results1), [results1]);
   const metrics2 = useMemo(() => calculateMetrics(results2), [results2]);
@@ -271,7 +278,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const label = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${label}</strong><br/>`;
           params.forEach((p) => {
-            const unit = p.seriesName === selfSuffKey ? '%' : 'kWh';
+            const unit = p.seriesName === selfSuffKey ? '%' : energyUnit;
             const val = unit === '%' ? p.value.toFixed(1) : formatShortNumber(p.value, 1);
             html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${val} ${unit}</span><br/>`;
           });
@@ -297,7 +304,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       yAxis: [
         {
           type: 'value' as const,
-          name: 'kWh',
+          name: energyUnit,
           nameTextStyle: { color: themeColors.textMuted, fontSize: 10, padding: [0, 0, 0, 30] },
           nameLocation: 'end' as const,
           splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
@@ -355,7 +362,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         },
       ],
     };
-  }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors]);
+  }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors, energyUnit]);
 
   const capacityByTechOption = useMemo(() => {
     const cap1 = getInstalledCapacityMix(results1);
@@ -954,10 +961,12 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         {t('simulationComparison.charts.energyCapacityAnalysis', 'Energy & Capacity Analysis')}
       </SectionHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard>
-          <ReactECharts option={energyCoverageOption} style={{ height: '360px' }} />
-        </ChartCard>
+      <div className={`grid grid-cols-1 gap-6 ${generation ? 'lg:grid-cols-2' : ''}`}>
+        {generation && (
+          <ChartCard>
+            <ReactECharts option={energyCoverageOption} style={{ height: '360px' }} />
+          </ChartCard>
+        )}
         <ChartCard>
           <ReactECharts option={capacityByTechOption} style={{ height: '360px' }} />
         </ChartCard>

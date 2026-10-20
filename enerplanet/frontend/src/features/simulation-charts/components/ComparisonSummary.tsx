@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { ArrowDown, ArrowUp, Minus, Zap, TrendingUp, DollarSign, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@spatialhub/i18n';
+import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
 
 interface SummaryData {
   total_generation_kwh: number;
@@ -20,6 +21,8 @@ interface SummaryData {
 interface ComparisonSummaryProps {
   data1: SummaryData;
   data2: SummaryData;
+  /** Carrier both sides were fetched for — drives units and the metric set. */
+  carrier?: string;
 }
 
 const FLOATING_POINT_EPSILON = 1e-6;
@@ -111,11 +114,43 @@ const MetricCard: FC<{
   );
 };
 
-export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2 }) => {
+export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, carrier }) => {
   const { t } = useTranslation();
 
   const baselineLabel = t('simulationComparison.summary.baseline');
   const comparisonLabel = t('simulationComparison.comparison');
+  const generation = isGenerationCarrier(carrier);
+  const { energyUnit, powerUnit } = carrierDisplay(carrier);
+
+  // Self-sufficiency and the (renewable-derived) CO₂ figure only exist for a
+  // generating carrier. A heat comparison shows peak demand instead.
+  const generationCards = generation ? (
+    <MetricCard
+      label={t('simulationComparison.metrics.selfSufficiency')}
+      value1={data1.self_sufficiency_rate * 100}
+      value2={data2.self_sufficiency_rate * 100}
+      unit="%"
+      baselineLabel={baselineLabel}
+      comparisonLabel={comparisonLabel}
+      styleKey="sufficiency"
+      format={(v) => v.toFixed(1)}
+    />
+  ) : (
+    <MetricCard
+      label={t('simulationComparison.metrics.peakDemand')}
+      value1={data1.peak_demand_kw}
+      value2={data2.peak_demand_kw}
+      unit={powerUnit}
+      baselineLabel={baselineLabel}
+      comparisonLabel={comparisonLabel}
+      inverse
+      styleKey="demand"
+      format={(v) => {
+        if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+        return v.toFixed(1);
+      }}
+    />
+  );
 
   return (
     <div className="space-y-3">
@@ -124,12 +159,12 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2 }) 
         {t('simulationComparison.performanceComparison')}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={cn('grid grid-cols-1 gap-4 md:grid-cols-2', generation ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
         <MetricCard
           label={t('simulationComparison.metrics.totalDemand')}
           value1={data1.total_demand_kwh}
           value2={data2.total_demand_kwh}
-          unit="kWh"
+          unit={energyUnit}
           baselineLabel={baselineLabel}
           comparisonLabel={comparisonLabel}
           styleKey="demand"
@@ -139,16 +174,7 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2 }) 
             return v.toFixed(0);
           }}
         />
-        <MetricCard
-          label={t('simulationComparison.metrics.selfSufficiency')}
-          value1={data1.self_sufficiency_rate * 100}
-          value2={data2.self_sufficiency_rate * 100}
-          unit="%"
-          baselineLabel={baselineLabel}
-          comparisonLabel={comparisonLabel}
-          styleKey="sufficiency"
-          format={(v) => v.toFixed(1)}
-        />
+        {generationCards}
         <MetricCard
           label={t('simulationComparison.metrics.totalCost')}
           value1={data1.total_cost_eur}
@@ -164,19 +190,21 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2 }) 
             return v.toFixed(0);
           }}
         />
-        <MetricCard
-          label={t('simulationComparison.metrics.co2Savings')}
-          value1={data1.co2_savings_kg}
-          value2={data2.co2_savings_kg}
-          unit="kg"
-          baselineLabel={baselineLabel}
-          comparisonLabel={comparisonLabel}
-          styleKey="co2"
-          format={(v) => {
-            if (v >= 1000) return `${(v / 1000).toFixed(1)}t`;
-            return v.toFixed(0);
-          }}
-        />
+        {generation && (
+          <MetricCard
+            label={t('simulationComparison.metrics.co2Savings')}
+            value1={data1.co2_savings_kg}
+            value2={data2.co2_savings_kg}
+            unit="kg"
+            baselineLabel={baselineLabel}
+            comparisonLabel={comparisonLabel}
+            styleKey="co2"
+            format={(v) => {
+              if (v >= 1000) return `${(v / 1000).toFixed(1)}t`;
+              return v.toFixed(0);
+            }}
+          />
+        )}
       </div>
     </div>
   );
