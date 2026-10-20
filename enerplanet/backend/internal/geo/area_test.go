@@ -1,6 +1,7 @@
 package geo
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -44,6 +45,22 @@ func TestValidateArea_rejects(t *testing.T) {
 		_, err := ValidateArea([]byte(tc.in))
 		if !errors.Is(err, ErrInvalidArea) || !strings.Contains(err.Error(), tc.msg) {
 			t.Errorf("%s: err = %v, want ErrInvalidArea mentioning %q", name, err, tc.msg)
+		}
+	}
+}
+
+func TestTouches(t *testing.T) {
+	area := json.RawMessage(`{"type":"Polygon","coordinates":[[[0,0],[10,0],[10,10],[0,10],[0,0]],[[4,4],[6,4],[6,6],[4,6],[4,4]]]}`)
+	cases := map[string]bool{
+		`{"type":"Polygon","coordinates":[[[1,1],[2,1],[2,2],[1,1]]]}`:           true,
+		`{"type":"Polygon","coordinates":[[[9,9],[12,9],[12,12],[9,9]]]}`:        true,
+		`{"type":"Polygon","coordinates":[[[11,11],[12,11],[12,12],[11,11]]]}`:   false,
+		`{"type":"Polygon","coordinates":[[[4.5,4.5],[5,4.5],[5,5],[4.5,4.5]]]}`: false,
+		`{"type":"Point","coordinates":[1,1]}`:                                   false,
+	}
+	for footprint, want := range cases {
+		if got := Touches(area, json.RawMessage(footprint)); got != want {
+			t.Errorf("Touches(%s) = %v, want %v", footprint, got, want)
 		}
 	}
 }

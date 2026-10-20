@@ -128,8 +128,12 @@ type Building struct {
 	// OSMIDs lists every OSM way linked to this 3D building, OSMID first
 	// (City2TABULA 0.11.2 and later). A building appears once even when
 	// several of the requested ways belong to it.
-	OSMIDs            []string  `json:"osm_ids,omitempty"`
-	MatchType         int16     `json:"match_type"`
+	OSMIDs    []string `json:"osm_ids,omitempty"`
+	MatchType int16    `json:"match_type"`
+	// FunctionCode is the source building's CityGML function, such as the
+	// ALKIS code 31001_1000; null where the dataset has none (City2TABULA
+	// 0.11.3 and later).
+	FunctionCode      *string   `json:"function_code,omitempty"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
 	MaxHeight         *float64  `json:"max_height,omitempty"`
 	RoomHeight        *float64  `json:"room_height,omitempty"`
@@ -406,7 +410,13 @@ type GeometryResult struct {
 // Buildings carry no geometry in the other responses, so this is the only way
 // to place them on a map.
 func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
-	return c.getGeometry(ctx, country, objectIDs, false)
+	return c.getGeometry(ctx, country, objectIDs, nil)
+}
+
+// GetFootprintsWGS84 returns footprints for the given object ids reprojected
+// to EPSG:4326 in 2D, for consumers whose API takes WGS84.
+func (c *Client) GetFootprintsWGS84(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
+	return c.getGeometry(ctx, country, objectIDs, map[string]any{"srid": "4326"})
 }
 
 // GetSurfaceGeometryByObjectIDs returns footprints and every envelope surface
@@ -417,12 +427,13 @@ func (c *Client) GetGeometryByObjectIDs(ctx context.Context, country string, obj
 // so an area would fail on its largest buildings with nothing in the request
 // predicting which those are.
 func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
-	return c.getGeometry(ctx, country, objectIDs, true)
+	return c.getGeometry(ctx, country, objectIDs, map[string]any{"include": "surfaces"})
 }
 
-// getGeometry backs both variants. Unconsumed payload fields reach City2TABULA
-// as query parameters, so include travels without any target configuration.
-func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []string, withSurfaces bool) (GeometryResult, error) {
+// getGeometry backs every variant. Unconsumed payload fields reach City2TABULA
+// as query parameters, so the options in extra travel without any target
+// configuration.
+func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []string, extra map[string]any) (GeometryResult, error) {
 	if len(objectIDs) == 0 {
 		return GeometryResult{}, nil
 	}
@@ -430,8 +441,8 @@ func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []st
 		"country":    normalizeCountry(country),
 		"object_ids": strings.Join(objectIDs, ","),
 	}
-	if withSurfaces {
-		payload["include"] = "surfaces"
+	for k, v := range extra {
+		payload[k] = v
 	}
 	var result GeometryResult
 	if err := c.tc.Do(ctx, targetGeometry, payload, &result); err != nil {
