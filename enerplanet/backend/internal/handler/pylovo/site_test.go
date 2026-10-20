@@ -22,30 +22,35 @@ func (f fixedCountry) Resolve(context.Context, json.RawMessage) (string, error) 
 	return string(f), nil
 }
 
-type linkedOSMIDs []string
+// fake3D answers as City2TABULA does: ways maps a requested OSM way to the 3D
+// building linked to it (with all its ways), area lists the 3D buildings the
+// bbox holds (without ways), and every footprint lies inside siteBody.
+type fake3D struct {
+	ways map[string]city2tabula.Building
+	area []city2tabula.Building
+}
 
-func (l linkedOSMIDs) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []string) (city2tabula.BuildingsResult, error) {
+func (f fake3D) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []string) (city2tabula.BuildingsResult, error) {
 	var res city2tabula.BuildingsResult
 	for _, id := range ids {
-		for _, linked := range l {
-			if id == linked {
-				res.Buildings = append(res.Buildings, city2tabula.Building{OSMID: id})
-			}
+		if b, ok := f.ways[id]; ok && b.OSMID == id {
+			res.Buildings = append(res.Buildings, b)
 		}
 	}
 	return res, nil
 }
 
-// linkedWays returns, for each best way requested, its 3D building with all
-// its ways, as City2TABULA 0.11.2 does.
-type linkedWays map[string][]string
+func (f fake3D) GetBuildingsInBBox(context.Context, string, city2tabula.Bbox) (city2tabula.BuildingsResult, error) {
+	return city2tabula.BuildingsResult{Buildings: f.area}, nil
+}
 
-func (l linkedWays) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []string) (city2tabula.BuildingsResult, error) {
-	var res city2tabula.BuildingsResult
+func (f fake3D) GetFootprintsWGS84(_ context.Context, _ string, ids []string) (city2tabula.GeometryResult, error) {
+	var res city2tabula.GeometryResult
 	for _, id := range ids {
-		if ways, ok := l[id]; ok {
-			res.Buildings = append(res.Buildings, city2tabula.Building{OSMID: id, OSMIDs: ways})
-		}
+		res.Buildings = append(res.Buildings, city2tabula.BuildingGeometry{
+			ObjectID:         id,
+			FootprintGeoJSON: json.RawMessage(`{"type":"Polygon","coordinates":[[[13.05,48.01],[13.06,48.01],[13.06,48.02],[13.05,48.01]]]}`),
+		})
 	}
 	return res, nil
 }
@@ -72,11 +77,18 @@ func (f *fakeSitePylovo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /sites/7/buildings":
 		var features []string
 		for i, id := range f.osmIDs {
-			features = append(features, fmt.Sprintf(`{"properties":{"building_id":%d,"osm_id":%q}}`, i+1, id))
+			features = append(features, fmt.Sprintf(`{"properties":{"building_id":%d,"osm_id":%q,"f_class":"house"}}`, i+1, id))
 		}
 		fmt.Fprintf(w, `{"features":[%s]}`, strings.Join(features, ","))
 	case "PATCH /sites/7/buildings":
 		fmt.Fprint(w, `{"revision":2}`)
+	case "POST /sites/7/buildings":
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, `{"revision":3,"buildings":[]}`)
+	case "GET /sites/7/grid":
+		fmt.Fprint(w, `{"buildings":{"features":[`+
+			`{"properties":{"building_id":12345678901,"osm_id":null,"source":"city2tabula","source_id":"DEBY_LOD2_1"}},`+
+			`{"properties":{"building_id":2,"osm_id":"1001832418","source":"osm","source_id":null}}]}}`)
 	case "DELETE /sites/7":
 		w.WriteHeader(http.StatusNoContent)
 	case "PUT /sites/7/transformers":
@@ -102,7 +114,7 @@ func (f *fakeSitePylovo) sent(prefix string) []string {
 	return out
 }
 
-func serveSite(t *testing.T, fake *fakeSitePylovo, linked linkLookup, user, method, path, body string) *httptest.ResponseRecorder {
+func serveSite(t *testing.T, fake *fakeSitePylovo, linked buildings3D, user, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	pylovo := httptest.NewServer(fake)
@@ -125,11 +137,15 @@ func serveSite(t *testing.T, fake *fakeSitePylovo, linked linkLookup, user, meth
 
 const siteBody = `{"name":"THD","geom":{"type":"Polygon","coordinates":[[[13,48],[13.1,48],[13.1,48.1],[13,48]]]}}`
 
-// Buildings without a City2TABULA link cannot be modelled, so a new site
-// excludes them in pylovo and counts only the linked ones.
-func TestCreateSite_excludesUnlinkedBuildings(t *testing.T) {
+// A new site's buildings are its 3D buildings: the OSM copies they cover are
+// excluded, each 3D building is added with the class of its OSM way, and an
+// outline with no 3D building stays.
+func TestCreateSite_buildsFromFootprints(t *testing.T) {
+	area := 80.0
+	row := city2tabula.Building{ObjectID: "A", OSMID: "w1", OSMIDs: []string{"w1", "w2"}, FootprintAreaSqm: &area}
+	alone := city2tabula.Building{ObjectID: "B", FootprintAreaSqm: &area}
 	fake := &fakeSitePylovo{osmIDs: []string{"w1", "w2", "w3"}}
-	rec := serveSite(t, fake, linkedOSMIDs{"w1", "w3"}, "owner", http.MethodPost, "/sites", siteBody)
+	rec := serveSite(t, fake, fake3D{ways: map[string]city2tabula.Building{"w1": row}, area: []city2tabula.Building{alone}}, "owner", http.MethodPost, "/sites", siteBody)
 
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201: %s", rec.Code, rec.Body)
@@ -138,8 +154,12 @@ func TestCreateSite_excludesUnlinkedBuildings(t *testing.T) {
 		t.Errorf("create request = %v, want country_code DE and the caller as user_id", create)
 	}
 	patch := fake.sent("PATCH /sites/7/buildings")
-	if len(patch) != 1 || !strings.Contains(patch[0], `{"building_id":2,"overrides":{"excluded":true}}`) || strings.Contains(patch[0], `"building_id":1`) {
-		t.Errorf("patch = %v, want only building 2 excluded", patch)
+	if len(patch) != 1 || !strings.Contains(patch[0], `"building_id":1,`) || !strings.Contains(patch[0], `"building_id":2,`) || strings.Contains(patch[0], `"building_id":3,`) {
+		t.Errorf("patch = %v, want buildings 1 and 2 excluded", patch)
+	}
+	add := fake.sent("POST /sites/7/buildings")
+	if len(add) != 1 || !strings.Contains(add[0], `"source_id":"A","f_class":"house"`) || !strings.Contains(add[0], `"source_id":"B","f_class":"yes"`) {
+		t.Errorf("add = %v, want A with its way's class and B as yes", add)
 	}
 	var resp struct {
 		Data struct {
@@ -150,8 +170,22 @@ func TestCreateSite_excludesUnlinkedBuildings(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Data.BuildingCount != 2 || resp.Data.Revision != 2 {
-		t.Errorf("data = %+v, want building_count 2 and revision 2", resp.Data)
+	if resp.Data.BuildingCount != 3 || resp.Data.Revision != 3 {
+		t.Errorf("data = %+v, want building_count 3 and revision 3", resp.Data)
+	}
+}
+
+// The grid names each 3D building by its object key, where pylovo has no OSM id.
+func TestGetSiteGrid_keysBuildings3D(t *testing.T) {
+	fake := &fakeSitePylovo{}
+	rec := serveSite(t, fake, nil, "owner", http.MethodGet, "/sites/7/grid", "")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `"osm_id":"c2t:DEBY_LOD2_1"`) || !strings.Contains(body, `"osm_id":"1001832418"`) || !strings.Contains(body, `"building_id":12345678901`) {
+		t.Errorf("grid = %s, want the 3D building keyed c2t:DEBY_LOD2_1, the OSM one unchanged, numbers intact", body)
 	}
 }
 
@@ -162,7 +196,7 @@ func TestCreateSite_overLimitIsRefusedAndDeleted(t *testing.T) {
 		ids[i] = fmt.Sprintf("w%d", i)
 	}
 	fake := &fakeSitePylovo{osmIDs: ids}
-	rec := serveSite(t, fake, linkedOSMIDs(ids), "owner", http.MethodPost, "/sites", siteBody)
+	rec := serveSite(t, fake, fake3D{}, "owner", http.MethodPost, "/sites", siteBody)
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422: %s", rec.Code, rec.Body)
@@ -222,20 +256,5 @@ func TestPutSiteTransformers_rejectsNonArray(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest || len(fake.requests) != 0 {
 		t.Fatalf("status = %d, pylovo requests = %v; want 400 and none", rec.Code, fake.requests)
-	}
-}
-
-// A further way of a linked 3D building has 3D data through that building, so
-// the site keeps it for its electrical load.
-func TestCreateSite_keepsFurtherWays(t *testing.T) {
-	fake := &fakeSitePylovo{osmIDs: []string{"w1", "w2", "w3"}}
-	rec := serveSite(t, fake, linkedWays{"w1": {"w1", "w2"}}, "owner", http.MethodPost, "/sites", siteBody)
-
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want 201: %s", rec.Code, rec.Body)
-	}
-	patch := fake.sent("PATCH /sites/7/buildings")
-	if len(patch) != 1 || strings.Contains(patch[0], `"building_id":2`) || !strings.Contains(patch[0], `"building_id":3`) {
-		t.Errorf("patch = %v, want only building 3 (w3) excluded", patch)
 	}
 }
