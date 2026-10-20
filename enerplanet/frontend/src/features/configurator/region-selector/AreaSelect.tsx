@@ -121,8 +121,8 @@ interface HoveredBuilding { disabled: boolean; selected: boolean }
 const isCorner = (target: PointerTarget): boolean => target === "corner" || target === "triangle-corner";
 
 /** The hovered building's state, from the map tooltip and the current selection. */
-const hoveredBuildingOf = (tooltip: { osmId?: string; disabled?: boolean } | null, selected: ReadonlySet<string>): HoveredBuilding | null =>
-  tooltip ? { disabled: tooltip.disabled === true, selected: selected.has(tooltip.osmId ?? "") } : null;
+const hoveredBuildingOf = (osmId: string | null, disabled: boolean, selected: ReadonlySet<string>): HoveredBuilding | null =>
+  osmId === null ? null : { disabled, selected: selected.has(osmId) };
 
 /** Translation key of the hint for what a click does with the held modifier: delete, disable or select. */
 const deleteHintKey = (target: PointerTarget, keys: HeldKeys, building: HoveredBuilding | null, pointerOnMap: boolean): string | null => {
@@ -216,7 +216,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     techOperations,
     mapInteractions,
     notification,
-    setCursorPos,
+    setPointerOnMap,
     map,
     mapRef,
     unsavedDialog,
@@ -449,22 +449,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     };
   }, []);
 
-  // ── Mouse tracking for overlays ──────────────────────────────────
+  // ── Pointer over the map, for the hints ──────────────────────────
+  // Only enter and leave are stored. The position is tracked in CursorHint,
+  // so a mouse move does not re-render the configurator.
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
     if (!el) return;
-    const onMove = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      setCursorPos({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
-    };
-    const onLeave = () => setCursorPos(null);
-    el.addEventListener("mousemove", onMove);
+    const onEnter = () => setPointerOnMap(true);
+    const onLeave = () => setPointerOnMap(false);
+    el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
     return () => {
-      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseenter", onEnter);
       el.removeEventListener("mouseleave", onLeave);
     };
-  }, [mapRef, setCursorPos]);
+  }, [mapRef, setPointerOnMap]);
 
   // ── Cleanup polygon on unmount ───────────────────────────────────
   useEffect(() => {
@@ -507,10 +506,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [pylovoLayers, notification, t]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.cursorPos !== null && activeMode === null);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
 
-  const hoveredBuilding = hoveredBuildingOf(mapInteractions.buildingTooltip, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.cursorPos !== null && !state.isDrawing && activeMode === null);
+  // Primitive selectors: they change when another building is hovered, not on every move.
+  const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
+  const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
+  const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -633,10 +635,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             <MapOverlays
               drawHintKey={drawHint}
               deleteHintKey={deleteHint}
-              cursorPos={state.cursorPos}
-              transformerTooltip={mapInteractions.transformerTooltip}
-              buildingTooltip={mapInteractions.buildingTooltip}
-              mvLineTooltip={mapInteractions.mvLineTooltip}
+              mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
               isGeneratingGrid={state.isGeneratingGrid}
               simulateEV={simulateEV}

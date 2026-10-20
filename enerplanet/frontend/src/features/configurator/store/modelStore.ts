@@ -55,8 +55,9 @@ export interface ModelStore {
   setIsDrawing: (drawing: boolean) => void;
   clearTrigger: number;
   incrementClearTrigger: () => void;
-  cursorPos: { x: number; y: number } | null;
-  setCursorPos: (pos: { x: number; y: number } | null) => void;
+  /** Whether the pointer is over the map; the position itself stays with the overlays that follow it. */
+  pointerOnMap: boolean;
+  setPointerOnMap: (on: boolean) => void;
 
   // ── Model metadata ──
   modelName: string;
@@ -217,7 +218,7 @@ const getInitialState = () => ({
   allPolygons: [] as [number, number][][],
   isDrawing: false,
   clearTrigger: 0,
-  cursorPos: null as { x: number; y: number } | null,
+  pointerOnMap: false,
   modelName: "",
   fromDate: "",
   toDate: "",
@@ -300,8 +301,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsDrawing: (drawing) => set({ isDrawing: drawing }),
   clearTrigger: 0,
   incrementClearTrigger: () => set((s) => ({ clearTrigger: s.clearTrigger + 1 })),
-  cursorPos: null,
-  setCursorPos: (pos) => set({ cursorPos: pos }),
+  pointerOnMap: false,
+  setPointerOnMap: (on) => set({ pointerOnMap: on }),
 
   // ── Model metadata ──
   modelName: "",
