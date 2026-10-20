@@ -2,6 +2,8 @@ package technology
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -312,6 +314,18 @@ func (h *Handler) GetByID(c *gin.Context) {
 	httputil.SuccessResponse(c, toTechnologyDTO(tech))
 }
 
+// checkNewTechnology refuses a product without key or name, or of a type the
+// simulation does not model.
+func checkNewTechnology(tech *techstore.Technology) error {
+	if tech.Key == "" || tech.Alias == "" {
+		return errors.New("Key and Alias are required")
+	}
+	if !payload.IsSupportedTechnology(tech.Type) {
+		return fmt.Errorf("unsupported technology type %q", tech.Type)
+	}
+	return nil
+}
+
 func (h *Handler) Create(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
@@ -324,8 +338,9 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	if dto.Key == "" || dto.Alias == "" {
-		httputil.BadRequest(c, "Key and Alias are required")
+	tech := fromTechnologyDTO(&dto, userCtx.UserID)
+	if err := checkNewTechnology(tech); err != nil {
+		httputil.BadRequest(c, err.Error())
 		return
 	}
 
@@ -334,7 +349,6 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	tech := fromTechnologyDTO(&dto, userCtx.UserID)
 	if err := h.store.Create(tech); err != nil {
 		httputil.InternalError(c, "Failed to create technology")
 		return

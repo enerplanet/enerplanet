@@ -36,3 +36,22 @@ func TestConstraintDTOCarriesInfiniteDefaultAsINF(t *testing.T) {
 		assert.True(t, math.IsInf(*back.DefaultValue, 1), "INF must be stored as Infinity again, got %v", *back.DefaultValue)
 	}
 }
+
+// Only a technology the simulation models can get a new product; a missing
+// type falls back to the key, as for the seeded defaults.
+func TestCheckNewTechnology(t *testing.T) {
+	cases := map[string]struct {
+		dto  TechnologyDTO
+		fail bool
+	}{
+		"supported type":     {TechnologyDTO{Key: "pv_supply_x_1a2b3c", Type: "pv_supply", Alias: "X"}, false},
+		"key as type":        {TechnologyDTO{Key: "gas_boiler", Alias: "Gas boiler"}, false},
+		"user-defined type":  {TechnologyDTO{Key: "solar_supply", Type: "solar_supply", Alias: "Solar"}, true},
+		"unsupported legacy": {TechnologyDTO{Key: "wind_onshore", Alias: "Wind"}, true},
+		"no name":            {TechnologyDTO{Key: "pv_supply_a", Type: "pv_supply"}, true},
+	}
+	for name, tc := range cases {
+		err := checkNewTechnology(fromTechnologyDTO(&tc.dto, "u1"))
+		assert.Equal(t, tc.fail, err != nil, "%s: err = %v", name, err)
+	}
+}
