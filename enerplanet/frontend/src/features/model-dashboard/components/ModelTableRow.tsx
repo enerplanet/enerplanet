@@ -175,6 +175,13 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
   );
 };
 
+/** The run stages a failure is recorded in (results.failed_stage), by the status the run had. */
+const FAILED_STAGES = new Set(["queue", "running", "processing"]);
+
+/** The failed badge's label naming the stage, or undefined to show plain "Failed". */
+const failedStageLabel = (stage: unknown, t: (key: string) => string): string | undefined =>
+  typeof stage === "string" && FAILED_STAGES.has(stage) ? t(`modelStatus.failedAt.${stage}`) : undefined;
+
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
   index,
@@ -272,7 +279,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <StatusBadge status={model.status} size="small" />
+                  <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent>

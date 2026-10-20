@@ -19,6 +19,7 @@ import (
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/services"
+	modelstore "spatialhub_backend/internal/store/model"
 	"spatialhub_backend/internal/weather"
 )
 
@@ -825,9 +826,7 @@ func failRunBuem(ctx context.Context, db *gorm.DB, log *logrus.Entry, notificati
 		"status":                   commonModels.ModelStatusFailed,
 		"calculation_completed_at": now,
 		"updated_at":               now,
-		"results": map[string]interface{}{
-			"error": fmt.Sprintf("BuEM run failed: %v", cause),
-		},
+		"results":                  modelstore.FailedResults(fmt.Sprintf("BuEM run failed: %v", cause)),
 	}).Error
 
 	if notificationService != nil {
