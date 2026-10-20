@@ -15,6 +15,7 @@ import (
 	"platform.local/common/pkg/httputil"
 	commonModels "platform.local/common/pkg/models"
 	"spatialhub_backend/internal/jobs"
+	modelstore "spatialhub_backend/internal/store/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
@@ -32,9 +33,7 @@ func (h *ResultHandler) handleWebserviceFailure(c *gin.Context, model *commonMod
 		"status":                   commonModels.ModelStatusFailed,
 		"calculation_completed_at": now,
 		"updated_at":               now,
-		"results": gin.H{
-			"error": errorMessage,
-		},
+		"results":                  modelstore.FailedResults(errorMessage),
 	}
 
 	if err := h.store.UpdateModel(model, updateData); err != nil {
@@ -294,9 +293,7 @@ func (h *ResultHandler) handleResultProcessingError(c *gin.Context, model *commo
 		"status":                   commonModels.ModelStatusFailed,
 		"calculation_completed_at": now,
 		"updated_at":               now,
-		"results": gin.H{
-			"error": fmt.Sprintf("Failed to process result: %v", err),
-		},
+		"results":                  modelstore.FailedResults(fmt.Sprintf("Failed to process result: %v", err)),
 	})
 
 	h.releaseAssignedWebservice(c.Request.Context(), model, log)
