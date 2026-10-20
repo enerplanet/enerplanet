@@ -29,7 +29,6 @@ export interface AddTransformerModeState {
   isAddTransformerMode: boolean;
   newTransformerCoords: [number, number] | null;
   addTransformerDialogOpen: boolean;
-  transformerCursorPos: { x: number; y: number } | null;
   toggleAddTransformerMode: () => void;
   setAddTransformerDialogOpen: (open: boolean) => void;
   setNewTransformerCoords: (coords: [number, number] | null) => void;
@@ -59,7 +58,6 @@ export const useAddTransformerMode = ({
   const setNewTransformerCoords = useModelStore((s) => s.setNewTransformerCoords);
   const addTransformerDialogOpen = useModelStore((s) => s.addTransformerDialogOpen);
   const setAddTransformerDialogOpen = useModelStore((s) => s.setAddTransformerDialogOpen);
-  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
   const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
 
   const isAddTransformerMode = activeMode === "add-transformer";
@@ -200,7 +198,6 @@ export const useAddTransformerMode = ({
     isAddTransformerMode,
     newTransformerCoords,
     addTransformerDialogOpen,
-    transformerCursorPos,
     toggleAddTransformerMode,
     setAddTransformerDialogOpen,
     setNewTransformerCoords,
@@ -232,7 +229,6 @@ interface MoveTransformerOptions {
 export interface MoveTransformerModeState {
   isMoveTransformerMode: boolean;
   transformerToMove: number | null;
-  transformerCursorPos: { x: number; y: number } | null;
   startMoveTransformer: (gridResultId: number) => void;
   setTransformerToMove: (id: number | null) => void;
   setIsMoveTransformerMode: (active: boolean) => void;
@@ -266,7 +262,6 @@ export const useMoveTransformerMode = ({
   const setActiveMode = useModelStore((s) => s.setActiveMode);
   const transformerToMove = useModelStore((s) => s.transformerToMove);
   const setTransformerToMove = useModelStore((s) => s.setTransformerToMove);
-  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
   const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
 
   const isMoveTransformerMode = activeMode === "move-transformer";
@@ -367,7 +362,6 @@ export const useMoveTransformerMode = ({
   return {
     isMoveTransformerMode,
     transformerToMove,
-    transformerCursorPos,
     startMoveTransformer,
     setTransformerToMove,
     setIsMoveTransformerMode,

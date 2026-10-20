@@ -883,11 +883,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <TransformerCursorOverlay
         isAddTransformerMode={addTransformer.isAddTransformerMode}
         isMoveTransformerMode={moveTransformer.isMoveTransformerMode}
-        cursorPos={
-          addTransformer.isAddTransformerMode
-            ? addTransformer.transformerCursorPos
-            : moveTransformer.transformerCursorPos
-        }
       />
 
       <UnsavedChangesDialog
