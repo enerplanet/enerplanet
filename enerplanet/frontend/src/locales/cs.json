@@ -2497,8 +2497,8 @@
     "heatAutoAssigned": "Tepelné technologie byly přiřazeny automaticky.",
     "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}",
     "areaOverLimit": {
-      "title": "Tato oblast obsahuje {{count}} budov; model smí obsahovat {{limit}}",
-      "description": "Zmenšete oblast přibližně o {{count}} budov. Zůstane na mapě a síť se načte, jakmile se vejde do limitu."
+      "title": "Tato oblast obsahuje {{buildings}} budov; model smí obsahovat {{limit}}",
+      "description": "Zmenšete oblast přibližně o {{excess}} budov. Zůstane na mapě a síť se načte, jakmile se vejde do limitu."
     }
   },
   "gridStats": {

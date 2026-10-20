@@ -2497,8 +2497,8 @@
     "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
     "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
     "areaOverLimit": {
-      "title": "Dit gebied bevat {{count}} gebouwen; een model mag er {{limit}} bevatten",
-      "description": "Verklein het gebied met ongeveer {{count}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
+      "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
+      "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
     }
   },
   "gridStats": {

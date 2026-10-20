@@ -171,8 +171,8 @@
     "heatAutoAssigned": "Heat technologies assigned automatically.",
     "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
     "areaOverLimit": {
-      "title": "This area holds {{count}} buildings; a model may hold {{limit}}",
-      "description": "Reduce the area by about {{count}} buildings. It stays on the map, and the grid is fetched once it fits."
+      "title": "This area holds {{buildings}} buildings; a model may hold {{limit}}",
+      "description": "Reduce the area by about {{excess}} buildings. It stays on the map, and the grid is fetched once it fits."
     }
   },
   "common": {

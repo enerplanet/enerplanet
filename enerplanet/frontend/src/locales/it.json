@@ -2497,8 +2497,8 @@
     "heatAutoAssigned": "Le tecnologie termiche sono state assegnate automaticamente.",
     "heatResolved": "Tecnologie termiche assegnate. Edifici aggiornati: {{count}}",
     "areaOverLimit": {
-      "title": "Quest'area contiene {{count}} edifici; un modello può contenerne {{limit}}",
-      "description": "Riduci l'area di circa {{count}} edifici. Resta sulla mappa e la rete viene caricata quando rientra nel limite."
+      "title": "Quest'area contiene {{buildings}} edifici; un modello può contenerne {{limit}}",
+      "description": "Riduci l'area di circa {{excess}} edifici. Resta sulla mappa e la rete viene caricata quando rientra nel limite."
     }
   },
   "gridStats": {

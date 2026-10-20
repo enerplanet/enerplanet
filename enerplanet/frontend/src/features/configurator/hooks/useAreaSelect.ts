@@ -107,7 +107,7 @@ export const useAreaSelect = ({
     // area is unchanged keeps its stations and is regenerated in place.
     const areaChangedRef = useRef(false);
     // An area over the building limit: it stays on the map and is not fetched.
-    const [areaOverLimit, setAreaOverLimit] = useState<{ count: number; limit: number } | null>(null);
+    const [areaOverLimit, setAreaOverLimit] = useState<{ count: number; capped: boolean; limit: number } | null>(null);
     const countIdRef = useRef(0);
     const areaLimit = areaBuildingLimit(buildingLimit, siteMode);
 
@@ -117,11 +117,11 @@ export const useAreaSelect = ({
     const areaFits = useCallback(async (polygons: [number, number][][]): Promise<boolean> => {
         const countId = ++countIdRef.current;
         if (areaLimit <= 0) { setAreaOverLimit(null); return true; }
-        let count: number;
-        try { count = await pylovoService.countBuildings(polygons); }
+        let count: number, capped: boolean;
+        try { ({ count, capped } = await pylovoService.countBuildings(polygons)); }
         catch (err) { console.warn('Building count failed; the area is fetched without it', err); setAreaOverLimit(null); return true; }
         if (countId !== countIdRef.current) return false;
-        setAreaOverLimit(count > areaLimit ? { count, limit: areaLimit } : null);
+        setAreaOverLimit(count > areaLimit ? { count, capped, limit: areaLimit } : null);
         return count <= areaLimit;
     }, [areaLimit]);
     useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, setIsModified]);

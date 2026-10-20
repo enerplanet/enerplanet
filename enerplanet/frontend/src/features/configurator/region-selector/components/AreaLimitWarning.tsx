@@ -5,9 +5,13 @@ import { useTranslation } from "@spatialhub/i18n";
  * Shown while the drawn or imported area holds more buildings than the model
  * may; the area stays on the map and nothing is fetched until it fits.
  */
-export const AreaLimitWarning = ({ overLimit }: { overLimit: { count: number; limit: number } | null }) => {
+export const AreaLimitWarning = ({ overLimit }: { overLimit: { count: number; capped: boolean; limit: number } | null }) => {
   const { t } = useTranslation();
   if (!overLimit) return null;
+  // A capped count is a lower bound, shown as "10,000+".
+  const plus = overLimit.capped ? "+" : "";
+  const count = `${overLimit.count.toLocaleString()}${plus}`;
+  const excess = `${(overLimit.count - overLimit.limit).toLocaleString()}${plus}`;
   return (
     <div
       role="alert"
@@ -15,8 +19,8 @@ export const AreaLimitWarning = ({ overLimit }: { overLimit: { count: number; li
     >
       <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
       <div className="text-sm">
-        <p className="font-semibold">{t("gridNotifications.areaOverLimit.title", { count: overLimit.count, limit: overLimit.limit })}</p>
-        <p className="mt-1">{t("gridNotifications.areaOverLimit.description", { count: overLimit.count - overLimit.limit, limit: overLimit.limit })}</p>
+        <p className="font-semibold">{t("gridNotifications.areaOverLimit.title", { buildings: count, limit: overLimit.limit })}</p>
+        <p className="mt-1">{t("gridNotifications.areaOverLimit.description", { excess, limit: overLimit.limit })}</p>
       </div>
     </div>
   );

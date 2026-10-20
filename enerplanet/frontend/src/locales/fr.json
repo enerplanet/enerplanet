@@ -171,8 +171,8 @@
     "heatAutoAssigned": "Les technologies de chaleur ont été attribuées automatiquement.",
     "heatResolved": "Technologies de chaleur attribuées. Bâtiments mis à jour : {{count}}",
     "areaOverLimit": {
-      "title": "Cette zone contient {{count}} bâtiments ; un modèle peut en contenir {{limit}}",
-      "description": "Réduisez la zone d'environ {{count}} bâtiments. Elle reste sur la carte et le réseau est chargé dès qu'elle respecte la limite."
+      "title": "Cette zone contient {{buildings}} bâtiments ; un modèle peut en contenir {{limit}}",
+      "description": "Réduisez la zone d'environ {{excess}} bâtiments. Elle reste sur la carte et le réseau est chargé dès qu'elle respecte la limite."
     }
   },
   "common": {
