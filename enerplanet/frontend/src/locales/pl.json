@@ -282,7 +282,10 @@
     "carrier": {
       "toggleLabel": "Nośnik energii",
       "electricity": "Energia elektryczna",
-      "heat": "Ciepło"
+      "heat": "Ciepło",
+      "gas": "Gaz",
+      "oil": "Olej",
+      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii"
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
@@ -409,6 +412,7 @@
       "noData": "Brak dostępnych danych energetycznych",
       "dailyEnergyBalance": "Dzienny Bilans Energetyczny",
       "dailyEnergyBalanceDesc": "Pokazuje dzienny bilans między produkcją a zużyciem energii dla wszystkich technologii w systemie.",
+      "dailyEnergyBalanceDescHeat": "Pokazuje dzienny bilans między dostarczonym ciepłem (np. przez pompy ciepła) a zapotrzebowaniem na ciepło dla wszystkich technologii w systemie.",
       "production": "Produkcja",
       "productionDesc": "Energia wytwarzana przez instalacje solarne, wiatrowe i inne źródła",
       "consumption": "Zużycie",
@@ -421,10 +425,12 @@
       "selfSufficiency": "Samowystarczalność",
       "netBalance": "Bilans Netto",
       "energyKwh": "Energia (kWh)",
+      "energy": "Energia",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Brak dostępnych danych bilansu energetycznego",
       "dailyLoadProfile": "Dzienny Profil Obciążenia",
       "dailyLoadProfileDesc": "Pokazuje wzorce zużycia energii elektrycznej w okresie 24 godzin z automatycznym wykrywaniem okresów szczytowych.",
+      "dailyLoadProfileDescHeat": "Pokazuje profile zapotrzebowania na ciepło w ciągu 24 godzin z automatycznym wykrywaniem okresów szczytowych.",
       "peakPeriods": "Okresy Szczytowe",
       "peakPeriodsDesc": "Rano (07:00-10:00) i wieczorem (17:00-21:00) okresy wysokiego zapotrzebowania",
       "offPeak": "Poza Szczytem",
@@ -454,6 +460,10 @@
       "eveningPeak": "Szczyt Wieczorny",
       "peakPeriod": "Okres Szczytowy",
       "noDataLoadProfile": "Brak danych dla dziennego profilu obciążenia",
+      "generationDurationCurve": "Krzywa czasu trwania produkcji",
+      "generationDurationCurveDesc": "Porządkuje godzinową produkcję odnawialną od najwyższej do najniższej, pokazując szczyt produkcji i przebieg w ciągu roku.",
+      "demandDurationCurve": "Krzywa czasu trwania zapotrzebowania",
+      "demandDurationCurveDesc": "Porządkuje godzinowe zapotrzebowanie na ciepło od najwyższego do najniższego, pokazując szczyt i przebieg w ciągu roku.",
       "noDataLoadCurve": "Brak danych dla krzywej obciążenia"
     },
     "grid": {
@@ -534,6 +544,8 @@
       "unmetDemandDesc": "Zapotrzebowanie na energię, które nie mogło być zaspokojone przez dostępną podaż. Niższe wartości oznaczają lepszą niezawodność.",
       "unmetEnergy": "Niezaspokojona Energia",
       "unmetEnergyDesc": "Zapotrzebowanie przekraczające dostępną podaż",
+      "energy": "Energia",
+      "unmet": "Niezaspokojone",
       "unmetKwh": "Niezaspokojone (kWh)",
       "powerFlowAnalysis": "Analiza Przepływu Mocy",
       "powerFlow": "Przepływ Mocy",

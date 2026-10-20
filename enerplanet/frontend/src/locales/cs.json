@@ -282,7 +282,10 @@
     "carrier": {
       "toggleLabel": "Nosič energie",
       "electricity": "Elektřina",
-      "heat": "Teplo"
+      "heat": "Teplo",
+      "gas": "Plyn",
+      "oil": "Olej",
+      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie"
     },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
@@ -409,6 +412,7 @@
       "noData": "Nejsou k dispozici žádná energetická data",
       "dailyEnergyBalance": "Denní Energetická Bilance",
       "dailyEnergyBalanceDesc": "Zobrazuje denní bilanci mezi výrobou a spotřebou energie pro všechny technologie v systému.",
+      "dailyEnergyBalanceDescHeat": "Zobrazuje denní bilanci mezi dodaným teplem (např. z tepelných čerpadel) a potřebou tepla pro všechny technologie v systému.",
       "production": "Výroba",
       "productionDesc": "Energie vyrobená solárními, větrnými a dalšími zdroji",
       "consumption": "Spotřeba",
@@ -421,10 +425,12 @@
       "selfSufficiency": "Soběstačnost",
       "netBalance": "Čistá Bilance",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Nejsou k dispozici žádná data energetické bilance",
       "dailyLoadProfile": "Denní Profil Zatížení",
       "dailyLoadProfileDesc": "Zobrazuje vzorce spotřeby elektřiny za 24hodinové období s automatickou detekcí špičkových období.",
+      "dailyLoadProfileDescHeat": "Zobrazuje profily potřeby tepla v průběhu 24 hodin s automatickou detekcí špičkových období.",
       "peakPeriods": "Špičková Období",
       "peakPeriodsDesc": "Ráno (07:00-10:00) a večer (17:00-21:00) období vysoké poptávky",
       "offPeak": "Mimo Špičku",
@@ -454,6 +460,10 @@
       "eveningPeak": "Večerní Špička",
       "peakPeriod": "Špičkové Období",
       "noDataLoadProfile": "Nejsou k dispozici žádná data pro denní profil zatížení",
+      "generationDurationCurve": "Křivka trvání výroby",
+      "generationDurationCurveDesc": "Seřadí hodinovou obnovitelnou výrobu od nejvyšší po nejnižší, aby byla vidět špička výroby a průběh v roce.",
+      "demandDurationCurve": "Křivka trvání potřeby",
+      "demandDurationCurveDesc": "Seřadí hodinovou potřebu tepla od nejvyšší po nejnižší, aby byla vidět špička a průběh v roce.",
       "noDataLoadCurve": "Nejsou k dispozici žádná data pro křivku zatížení"
     },
     "grid": {
@@ -534,6 +544,8 @@
       "unmetDemandDesc": "Poptávka po energii, kterou nemohla být uspokojena dostupnou nabídkou. Nižší hodnoty značí lepší spolehlivost.",
       "unmetEnergy": "Neuspokojená Energie",
       "unmetEnergyDesc": "Poptávka přesahující dostupnou nabídku",
+      "energy": "Energie",
+      "unmet": "Nepokryté",
       "unmetKwh": "Neuspokojeno (kWh)",
       "powerFlowAnalysis": "Analýza Toku Výkonu",
       "powerFlow": "Tok Výkonu",

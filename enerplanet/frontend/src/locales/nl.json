@@ -282,7 +282,10 @@
     "carrier": {
       "toggleLabel": "Energiedrager",
       "electricity": "Elektriciteit",
-      "heat": "Warmte"
+      "heat": "Warmte",
+      "gas": "Gas",
+      "oil": "Olie",
+      "toggleItemHint": "Resultaten voor deze energiedrager tonen"
     },
     "selectModel": "Selecteer Model",
     "completedSimulations": "Voltooide Simulaties",
@@ -409,6 +412,7 @@
       "noData": "Geen energiegegevens beschikbaar",
       "dailyEnergyBalance": "Dagelijkse Energiebalans",
       "dailyEnergyBalanceDesc": "Toont de dagelijkse balans tussen energieproductie en -verbruik voor alle technologieën in het systeem.",
+      "dailyEnergyBalanceDescHeat": "Toont de dagelijkse balans tussen geleverde warmte (bijv. door warmtepompen) en warmtevraag over alle technologieën in het systeem.",
       "production": "Productie",
       "productionDesc": "Energie opgewekt door zon, wind en andere bronnen",
       "consumption": "Verbruik",
@@ -421,10 +425,12 @@
       "selfSufficiency": "Zelfvoorziening",
       "netBalance": "Nettobalans",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Geen energiebalansgegevens beschikbaar",
       "dailyLoadProfile": "Dagelijks Belastingprofiel",
       "dailyLoadProfileDesc": "Toont elektriciteitsverbruikspatronen over een periode van 24 uur met automatische detectie van piekperiodes.",
+      "dailyLoadProfileDescHeat": "Toont warmtevraagpatronen over 24 uur met automatische detectie van piekperiodes.",
       "peakPeriods": "Piekperiodes",
       "peakPeriodsDesc": "Ochtend (07:00-10:00) en avond (17:00-21:00) periodes van hoge vraag",
       "offPeak": "Daluren",
@@ -454,6 +460,10 @@
       "eveningPeak": "Avondpiek",
       "peakPeriod": "Piekperiode",
       "noDataLoadProfile": "Geen gegevens beschikbaar voor dagelijks belastingprofiel",
+      "generationDurationCurve": "Productieduurcurve",
+      "generationDurationCurveDesc": "Sorteert de hernieuwbare productie per uur van hoog naar laag, zodat de piekproductie en het verloop over het jaar zichtbaar worden.",
+      "demandDurationCurve": "Vraagduurcurve",
+      "demandDurationCurveDesc": "Sorteert de warmtevraag per uur van hoog naar laag, zodat de piekvraag en het verloop over het jaar zichtbaar worden.",
       "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve"
     },
     "grid": {
@@ -534,6 +544,8 @@
       "unmetDemandDesc": "Energievraag die niet kon worden vervuld door het beschikbare aanbod. Lagere waarden duiden op betere betrouwbaarheid.",
       "unmetEnergy": "Onvervulde Energie",
       "unmetEnergyDesc": "Vraag die beschikbaar aanbod overschrijdt",
+      "energy": "Energie",
+      "unmet": "Onvervuld",
       "unmetKwh": "Onvervuld (kWh)",
       "powerFlowAnalysis": "Vermogenstroomanalyse",
       "powerFlow": "Vermogensstroom",
