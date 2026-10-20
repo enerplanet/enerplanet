@@ -56,6 +56,12 @@ import CostPanel from './components/panels/CostPanel';
 import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
 import { capabilitiesFrom } from '@/config/resultCapabilities';
+import {
+  carrierLabelKey,
+  formatCarrierEnergy,
+  formatCarrierPower,
+  isGenerationCarrier,
+} from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
@@ -152,25 +158,6 @@ function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusD
   });
 }
 
-// Format energy value with appropriate units
-function formatEnergy(kwh: number): string {
-  if (kwh >= 1000000) {
-    return `${(kwh / 1000000).toFixed(2)} GWh`;
-  } else if (kwh >= 1000) {
-    return `${(kwh / 1000).toFixed(2)} MWh`;
-  }
-  return `${kwh.toFixed(1)} kWh`;
-}
-
-function formatPower(kw: number): string {
-  const abs = Math.abs(kw);
-  if (!Number.isFinite(kw)) return '0';
-  if (abs >= 1000) return `${(kw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(kw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(kw * 1_000_000).toFixed(1)} mW`;
-}
 
 const FLOATING_POINT_EPSILON = 1e-6;
 
@@ -710,7 +697,7 @@ export const ModelResultsViewer = () => {
       {/* Header */}
       <header className="bg-card border-b border-border flex-shrink-0">
         <div className="px-4 py-4 sm:px-6">
-          <div className="md-rise flex items-center justify-between">
+          <div className="md-rise flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(isFromAdmin ? '/app/admin-dashboard' : '/app/model-dashboard')}
@@ -917,9 +904,38 @@ export const ModelResultsViewer = () => {
             return null;
           })() : null;
           const periodLabel = simDays ? `${t('results.metrics.over')} ${simDays} ${t('results.chartLabels.days')}` : undefined;
-          const installedRenewable = supplyCapacity.length > 0
-            ? formatPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0))
+          // Generation / import / self-sufficiency are electricity notions: they
+          // are meaningless for a heat demand served by heat pumps, so gate them
+          // on the carrier instead of printing zeros with a kWh suffix.
+          const generation = isGenerationCarrier(carrier);
+          const carrierLabel = (() => {
+            const key = carrierLabelKey(carrier);
+            return key ? t(key) : carrier;
+          })();
+          const installedRenewable = generation && supplyCapacity.length > 0
+            ? formatCarrierPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0), carrier)
             : undefined;
+          const generationItems = generation
+            ? [
+                {
+                  label: t('results.metrics.renewableGen'),
+                  value: formatCarrierEnergy(summary.renewable_production_kwh, carrier),
+                  hint: installedRenewable
+                    ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
+                    : periodLabel,
+                },
+                {
+                  label: t('results.metrics.gridImport'),
+                  value: formatCarrierEnergy(summary.grid_import_kwh, carrier),
+                  hint: periodLabel,
+                },
+                {
+                  label: t('results.metrics.selfSufficiency'),
+                  value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
+                  hint: t('results.metrics.selfSufficiencyDesc'),
+                },
+              ]
+            : [];
           return (
             <div className="px-4 pb-4 sm:px-6">
               <StatsStrip
@@ -927,29 +943,13 @@ export const ModelResultsViewer = () => {
                 items={[
                   {
                     label: t('results.metrics.totalDemand'),
-                    value: formatEnergy(summary.total_demand_kwh),
-                    hint: periodLabel,
+                    value: formatCarrierEnergy(summary.total_demand_kwh, carrier),
+                    hint: carrierLabel && periodLabel ? `${carrierLabel} · ${periodLabel}` : periodLabel,
                   },
-                  {
-                    label: t('results.metrics.renewableGen'),
-                    value: formatEnergy(summary.renewable_production_kwh),
-                    hint: installedRenewable
-                      ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
-                      : periodLabel,
-                  },
-                  {
-                    label: t('results.metrics.gridImport'),
-                    value: formatEnergy(summary.grid_import_kwh),
-                    hint: periodLabel,
-                  },
-                  {
-                    label: t('results.metrics.selfSufficiency'),
-                    value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
-                    hint: t('results.metrics.selfSufficiencyDesc'),
-                  },
+                  ...generationItems,
                   {
                     label: t('results.metrics.peakDemand'),
-                    value: formatPower(summary.peak_demand_kw),
+                    value: formatCarrierPower(summary.peak_demand_kw, carrier),
                     hint: periodLabel,
                   },
                   {
