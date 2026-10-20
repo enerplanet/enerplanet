@@ -169,7 +169,11 @@
     "techNotFound": "Technology {{tech}} not found",
     "techLoadFailed": "Failed to load technology for editing",
     "heatAutoAssigned": "Heat technologies assigned automatically.",
-    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}"
+    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
+    "areaOverLimit": {
+      "title": "This area holds {{count}} buildings; a model may hold {{limit}}",
+      "description": "Reduce the area by about {{count}} buildings. It stays on the map, and the grid is fetched once it fits."
+    }
   },
   "common": {
     "save": "Save",

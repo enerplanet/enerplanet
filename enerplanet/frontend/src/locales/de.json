@@ -169,7 +169,11 @@
     "techNotFound": "Technologie {{tech}} nicht gefunden",
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
     "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
-    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}"
+    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}",
+    "areaOverLimit": {
+      "title": "Dieses Gebiet enthält {{count}} Gebäude; ein Modell darf {{limit}} enthalten",
+      "description": "Verkleinern Sie das Gebiet um etwa {{count}} Gebäude. Es bleibt auf der Karte, und das Netz wird geladen, sobald es passt."
+    }
   },
   "common": {
     "save": "Speichern",

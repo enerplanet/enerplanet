@@ -378,6 +378,12 @@ export const pylovoService = {
         return response.data?.data || {} as PowerFlowResponse;
     },
 
+    /** The number of buildings generate-grid would take for the area, without generating a grid. */
+    countBuildings: async (polygons: number[][][]): Promise<number> => {
+        const response = await axios.post<{ data: { count: number } }>("/v1/pylovo/building-count", { geom: polygonsToGeom(polygons) });
+        return response.data.data.count;
+    },
+
     /**
      * Creates a pylovo site for the area, generates its grid and returns it in the
      * /generate-grid shape with meta.mode "site". Rejects with the backend's message

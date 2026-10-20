@@ -169,7 +169,11 @@
     "techNotFound": "Tecnología {{tech}} no encontrada",
     "techLoadFailed": "Error al cargar tecnología para edición",
     "heatAutoAssigned": "Las tecnologías de calor se han asignado automáticamente.",
-    "heatResolved": "Tecnologías de calor asignadas. Edificios actualizados: {{count}}"
+    "heatResolved": "Tecnologías de calor asignadas. Edificios actualizados: {{count}}",
+    "areaOverLimit": {
+      "title": "Esta zona contiene {{count}} edificios; un modelo puede contener {{limit}}",
+      "description": "Reduzca la zona en unos {{count}} edificios. Se queda en el mapa y la red se carga cuando quepa en el límite."
+    }
   },
   "common": {
     "save": "Guardar",

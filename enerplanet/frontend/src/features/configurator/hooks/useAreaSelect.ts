@@ -22,6 +22,7 @@ import { generateUUID } from '@/utils/uuid';
 import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
 import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
 import { settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
+import { areaBuildingLimit } from '@/features/configurator/utils/areaLimit';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
@@ -105,6 +106,24 @@ export const useAreaSelect = ({
     // Whether the area changed since the shown grid was generated; a site whose
     // area is unchanged keeps its stations and is regenerated in place.
     const areaChangedRef = useRef(false);
+    // An area over the building limit: it stays on the map and is not fetched.
+    const [areaOverLimit, setAreaOverLimit] = useState<{ count: number; limit: number } | null>(null);
+    const countIdRef = useRef(0);
+    const areaLimit = areaBuildingLimit(buildingLimit, siteMode);
+
+    // Counts the area's buildings before anything is fetched and reports
+    // whether it fits; a count that fails lets the fetch go ahead, so an
+    // unavailable count never blocks modelling.
+    const areaFits = useCallback(async (polygons: [number, number][][]): Promise<boolean> => {
+        const countId = ++countIdRef.current;
+        if (areaLimit <= 0) { setAreaOverLimit(null); return true; }
+        let count: number;
+        try { count = await pylovoService.countBuildings(polygons); }
+        catch (err) { console.warn('Building count failed; the area is fetched without it', err); setAreaOverLimit(null); return true; }
+        if (countId !== countIdRef.current) return false;
+        setAreaOverLimit(count > areaLimit ? { count, limit: areaLimit } : null);
+        return count <= areaLimit;
+    }, [areaLimit]);
     useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
@@ -112,6 +131,9 @@ export const useAreaSelect = ({
         setIsGeneratingGrid(true);
         const genId = ++gridGenIdRef.current;
         try {
+            const fits = await areaFits(polygons);
+            if (genId !== gridGenIdRef.current) return;
+            if (!fits) { setGridStale(true); setIsModified(true); return; }
             const user = useAuthStore.getState().user;
             const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', polygons) : await pylovoService.generateGrid({
                 polygon: coords, polygons, user_id: user?.id ? String(user.id) : undefined,
@@ -127,10 +149,11 @@ export const useAreaSelect = ({
             setIsModified(true);
         } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridGenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger, siteMode, modelName, setGridStale]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger, siteMode, modelName, setGridStale, areaFits]);
 
     const handleClearAllPolygons = useCallback(() => {
-        gridGenIdRef.current++;
+        gridGenIdRef.current++; countIdRef.current++;
+        setAreaOverLimit(null);
         setAllPolygons([]); incrementClearTrigger();
         pylovoLayersData.processPylovoData({});
         mapInteractionsData.handleCloseTransformerDialog();
@@ -144,6 +167,9 @@ export const useAreaSelect = ({
         setIsGeneratingGrid(true);
         const genId = ++gridGenIdRef.current;
         try {
+            const fits = await areaFits(updatedPolygons);
+            if (genId !== gridGenIdRef.current) return;
+            if (!fits) { setGridStale(true); return; }
             const user = useAuthStore.getState().user;
             const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
                 polygons: updatedPolygons, user_id: user?.id ? String(user.id) : undefined,
@@ -157,7 +183,7 @@ export const useAreaSelect = ({
         } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale, areaFits]);
 
     // Default mode reads pylovo's precomputed postcode grids, so an edited area
     // is fetched at once. A site is generated from its edits, so in site mode an
@@ -169,7 +195,8 @@ export const useAreaSelect = ({
         areaChangedRef.current = true;
         setGridStale(true);
         setIsModified(true);
-    }, [setAllPolygons, setGridStale, setIsModified, siteMode, regenerateArea]);
+        await areaFits(updatedPolygons);
+    }, [setAllPolygons, setGridStale, setIsModified, siteMode, regenerateArea, areaFits]);
 
     // Regenerates the shown site after an edit to its stations, keeping the same site and area.
     const handleSiteRegenerate = useCallback(async (siteId: number) => {
@@ -223,7 +250,7 @@ export const useAreaSelect = ({
     const handleUnsavedDiscard = useCallback(() => { setShowUnsavedDialog(false); setIsModified(false); const url = pendingNavigationUrl; setPendingNavigationUrl(null); if (url) { isInternalNavRef.current = true; navigate(url); } else if (onCancel) onCancel(); else { isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); } }, [navigate, onCancel, pendingNavigationUrl, setShowUnsavedDialog, setIsModified]);
 
     // ── Build return values ──
-    const state = { modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, cursorPos, isGeneratingGrid, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
+    const state = { areaOverLimit, modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, cursorPos, isGeneratingGrid, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
     const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleRegenerateGrid, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
 
     return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setCursorPos, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
