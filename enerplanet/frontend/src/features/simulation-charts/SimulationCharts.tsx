@@ -92,9 +92,9 @@ function calculateSummary(structured: StructuredModelResults) {
   const structuredLcoe = (structured.model_total_levelised_cost || []).find((row) => {
     return (row.carrier || '').toLowerCase() === 'power' && isMonetaryCost(row.costs);
   });
-  const lcoe = structuredLcoe
-    ? Math.abs(structuredLcoe.value)
-    : (renewableProduction > 0 ? totalCost / renewableProduction : 0);
+  // Stored levelised cost is EUR/MWh (see lcoeUnits). No stored value => 0,
+  // meaning "not reported": the UI hides it instead of inventing one.
+  const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
   const co2Savings = renewableProduction * 0.4;
 
@@ -117,7 +117,7 @@ function calculateSummary(structured: StructuredModelResults) {
     peak_demand_kw: peakDemandRaw,
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
-    lcoe_eur_kwh: lcoe,
+    lcoe_eur_mwh: lcoe,
     co2_savings_kg: co2Savings,
   };
 }

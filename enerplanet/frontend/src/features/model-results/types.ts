@@ -15,12 +15,14 @@ interface SystemwideLevelisedCost {
   carrier: string;
   costs: string;
   techs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
 interface TotalLevelisedCost {
   carrier: string;
   costs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
@@ -104,6 +106,7 @@ interface ModelLevelisedCostRecord {
   carrier: string;
   costs: string;
   techs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
@@ -113,6 +116,7 @@ interface ModelTotalLevelisedCostRecord {
   model_id: number;
   carrier: string;
   costs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 

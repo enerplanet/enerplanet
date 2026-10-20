@@ -230,9 +230,10 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     ? normalizeDisplayValue(gridImport / totalSupply, 6)
     : 1;
 
-  const lcoe = structuredLcoe
-    ? Math.abs(structuredLcoe.value)
-    : (renewableProduction > 0 ? totalCost / renewableProduction : 0);
+  // Stored levelised cost is EUR/MWh (see lcoeUnits). No stored value => 0,
+  // meaning "not reported": the cost UI hides an LCOE it does not have rather
+  // than deriving one from cost ÷ renewable energy, which is not an LCOE.
+  const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
   return {
     total_generation_kwh: totalProduction,
@@ -244,7 +245,7 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     peak_demand_kw: peakDemand,
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
-    lcoe_eur_kwh: lcoe,
+    lcoe_eur_mwh: lcoe,
     co2_savings_kg: renewableProduction * 0.4,
   };
 }

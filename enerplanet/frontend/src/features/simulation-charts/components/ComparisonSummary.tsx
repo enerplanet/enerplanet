@@ -14,7 +14,8 @@ interface SummaryData {
   peak_demand_kw: number;
   average_demand_kw: number;
   total_cost_eur: number;
-  lcoe_eur_kwh: number;
+  /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
+  lcoe_eur_mwh: number;
   co2_savings_kg: number;
 }
 
