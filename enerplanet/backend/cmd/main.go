@@ -45,6 +45,7 @@ import (
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
+	modelstore "spatialhub_backend/internal/store/model"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
 	seriesstore "spatialhub_backend/internal/store/series"
@@ -710,7 +711,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
-	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient))
+	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient, modelstore.NewStore(deps.DB)))
 
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
