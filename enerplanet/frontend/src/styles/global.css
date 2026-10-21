@@ -310,7 +310,7 @@
 }
 
 .md-fade-in {
-  animation: md-fade-in 0.35s ease-out both;
+  animation: md-fade-in 0.35s ease-out backwards;
 }
 
 @keyframes md-drop-in {
@@ -331,11 +331,11 @@
 }
 
 .md-rise {
-  animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .md-row-in {
-  animation: md-row-in 0.3s ease-out both;
+  animation: md-row-in 0.3s ease-out backwards;
 }
 
 .md-skeleton {
@@ -343,7 +343,7 @@
 }
 
 .md-stagger > * {
-  animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: md-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .md-stagger > *:nth-child(1) {
