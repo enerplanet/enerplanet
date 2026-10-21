@@ -17,7 +17,7 @@ import {
   FolderInput,
   KeyRound,
 } from "lucide-react";
-import { ApiTokensDialog } from "@/features/admin-dashboard/components/ApiTokensDialog";
+import { ApiTokensDialog } from "@/features/api-tokens/ApiTokensDialog";
 import { useAuthStore } from "@/store/auth-store";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import axios from "@/lib/axios";

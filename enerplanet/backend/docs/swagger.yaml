@@ -1,5 +1,18 @@
 basePath: /api
 definitions:
+  internal_middleware.WhoAmIResponse:
+    properties:
+      access_level:
+        type: string
+      authentication_method:
+        type: string
+      email:
+        type: string
+      issuer:
+        type: string
+      subject:
+        type: string
+    type: object
   spatialhub_backend_internal_api_contracts.AreaBuilding:
     properties:
       buem:
@@ -864,6 +877,30 @@ info:
   title: EnerPlanET API
   version: "1.0"
 paths:
+  /auth/whoami:
+    get:
+      description: SpatialHub subject and effective API permissions; never returns
+        credentials.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_middleware.WhoAmIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SpatialHubBearer: []
+      - APITokenAuth: []
+      - SessionAuth: []
+      summary: Resolve the current API identity
+      tags:
+      - Authentication
   /drafts/{draft_id}/buildings/{building_ref}/buem:
     post:
       consumes:
@@ -951,6 +988,8 @@ paths:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
       security:
       - SessionAuth: []
+      - APITokenAuth: []
+      - SpatialHubBearer: []
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
@@ -1177,6 +1216,47 @@ paths:
       security:
       - SessionAuth: []
       summary: Get a model's per-building BuEM energy profiles
+      tags:
+      - EnerPlanET
+  /models/{id}/results:
+    get:
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SpatialHubBearer: []
+      - APITokenAuth: []
+      - SessionAuth: []
+      summary: Read results for an accessible model
       tags:
       - EnerPlanET
   /models/{id}/series.zip:
@@ -1826,5 +1906,12 @@ securityDefinitions:
     description: Session cookie obtained via POST /api/login
     in: cookie
     name: session_id
+    type: apiKey
+  SpatialHubBearer:
+    description: Bearer <SpatialHub access token>, obtained by the toolbox backend
+      through JWT Authorization Grant. Requires configured integration and enerplanet:read
+      scope. Direct RENvolveIT tokens are not accepted.
+    in: header
+    name: Authorization
     type: apiKey
 swagger: "2.0"
