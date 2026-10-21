@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Check,
   FileBarChart,
+  Layers,
   Activity,
   Info,
 } from 'lucide-react';
@@ -73,46 +74,67 @@ interface ModelDropdownItemProps {
   style?: React.CSSProperties;
 }
 
+// A family is one framed block: the parent opens it, its last copy closes it,
+// and a rail joins the parent's icon to each copy. Heights match menuRowHeight.
+const familyFrame: Record<ModelMenuRow['role'], string> = {
+  parent: 'rounded-t-lg border border-b-0 border-border bg-muted/40 pt-1',
+  copy: 'border-x border-border bg-muted/40',
+  single: '',
+};
+
 const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownItemProps) => {
   const { t } = useTranslation();
-  const { model, role, copyCount, selectable } = row;
+  const { model, role, copyCount, selectable, closesFamily } = row;
+  const Icon = role === 'parent' ? Layers : FileBarChart;
   return (
-    <div style={style} className={`py-0.5 pr-1.5 ${role === 'copy' ? 'pl-6' : 'pl-1.5'}`}>
-      <button
-        onClick={() => onSelect(model)}
-        disabled={!selectable}
-        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md transition-all duration-150 text-left group text-sm text-foreground ${
-          selectable ? 'hover:bg-muted' : 'cursor-default opacity-60'
-        } ${isSelected ? 'bg-muted' : role === 'copy' ? 'bg-muted/40' : ''}`}
-      >
+    <div style={style} className={`px-1.5 ${closesFamily ? 'pb-2' : ''}`}>
+      <div className={`relative h-full px-1 ${familyFrame[role]} ${closesFamily ? 'rounded-b-lg border-b pb-1' : ''}`}>
+        {role === 'parent' && <span className="absolute left-[26px] top-[38px] bottom-0 w-px bg-muted-foreground/40" aria-hidden="true" />}
         {role === 'copy' && (
-          <span className="-mt-3 h-3 w-3 flex-shrink-0 rounded-bl-md border-b-2 border-l-2 border-border" aria-hidden="true" />
+          <>
+            <span className={`absolute left-[26px] top-0 w-px bg-muted-foreground/40 ${closesFamily ? 'h-1/2' : 'bottom-0'}`} aria-hidden="true" />
+            <span className="absolute left-[26px] top-1/2 h-px w-3 bg-muted-foreground/40" aria-hidden="true" />
+          </>
         )}
-        <div className="flex items-center justify-center w-6 h-6 rounded transition-colors bg-muted">
-          <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
-            {model.title}
+        <button
+          onClick={() => onSelect(model)}
+          disabled={!selectable}
+          className={`relative flex h-full w-full items-center gap-2 rounded-md py-1.5 pr-2.5 text-left text-foreground transition-all duration-150 ${
+            role === 'copy' ? 'pl-9 text-[13px]' : 'pl-2.5 text-sm'
+          } ${selectable ? 'hover:bg-background' : 'cursor-default opacity-60'} ${
+            isSelected ? 'bg-background shadow-sm ring-1 ring-primary/40' : ''
+          }`}
+        >
+          <div className={`flex items-center justify-center rounded bg-muted ${role === 'copy' ? 'h-5 w-5' : 'h-6 w-6'}`}>
+            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {role === 'parent' && (
-              <span className="rounded-full bg-muted px-1.5 font-medium text-foreground">
-                {t('results.copies', { count: copyCount })}
-              </span>
-            )}
-            {!selectable && <span>{t('results.notRun')}</span>}
-            {model.region && <span>{model.region}</span>}
-            <span>{new Date(model.created_at).toLocaleDateString()}</span>
+          <div className="flex-1 min-w-0">
+            <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
+              {model.title}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {role === 'parent' && (
+                <span className="rounded-full bg-background px-1.5 font-medium text-foreground">
+                  {t('results.copies', { count: copyCount })}
+                </span>
+              )}
+              {!selectable && <span>{t('results.notRun')}</span>}
+              {model.region && <span>{model.region}</span>}
+              <span>{new Date(model.created_at).toLocaleDateString()}</span>
+            </div>
           </div>
-        </div>
-        {isSelected && (
-          <Check className="w-4 h-4 text-foreground flex-shrink-0" />
-        )}
-      </button>
+          {isSelected && (
+            <Check className="w-4 h-4 text-foreground flex-shrink-0" />
+          )}
+        </button>
+      </div>
     </div>
   );
 };
+
+/** Row height in the virtualised menu: the parent's top border and padding, and a gap after each family. */
+const menuRowHeight = (row: ModelMenuRow): number =>
+  row.role === 'parent' ? 56 : row.closesFamily ? 62 : 50;
 
 // Calculate bus status data from PyPSA results
 function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusData[] {
@@ -439,7 +461,8 @@ export const ModelResultsViewer = () => {
   const virtualizer = useVirtualizer({
     count: modelMenu.rows.length,
     getScrollElement: () => dropdownScrollRef.current,
-    estimateSize: () => 52, // Height of ModelDropdownItem
+    estimateSize: (index) => menuRowHeight(modelMenu.rows[index]),
+    getItemKey: (index) => modelMenu.rows[index].model.id,
     overscan: 5,
   });
 

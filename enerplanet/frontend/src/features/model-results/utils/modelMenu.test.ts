@@ -20,6 +20,7 @@ describe('buildModelMenu', () => {
       [2, 'copy'],
     ]);
     expect(menu.rows[1].copyCount).toBe(2);
+    expect(menu.rows.map((r) => r.closesFamily)).toEqual([false, false, false, true]);
     expect(menu).toMatchObject({ runCount: 4, familyCount: 2 });
   });
 

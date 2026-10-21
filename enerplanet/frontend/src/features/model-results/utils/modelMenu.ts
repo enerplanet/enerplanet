@@ -9,6 +9,8 @@ export interface ModelMenuRow {
   copyCount: number;
   /** Only completed models have results to open. */
   selectable: boolean;
+  /** The last copy of a family, where its block closes. */
+  closesFamily: boolean;
 }
 
 /** The menu rows and the counts its header shows. */
@@ -50,13 +52,13 @@ export function buildModelMenu(models: Model[]): ModelMenu {
   for (const { root, copies } of [...families.values()].sort((a, b) => newestFirst(a.root, b.root))) {
     const rootCompleted = root.status === 'completed';
     if (copies.length === 0) {
-      rows.push({ model: root, role: 'single', copyCount: 0, selectable: rootCompleted });
+      rows.push({ model: root, role: 'single', copyCount: 0, selectable: rootCompleted, closesFamily: false });
       continue;
     }
-    rows.push({ model: root, role: 'parent', copyCount: copies.length, selectable: rootCompleted });
-    for (const copy of copies.sort(newestFirst)) {
-      rows.push({ model: copy, role: 'copy', copyCount: 0, selectable: true });
-    }
+    rows.push({ model: root, role: 'parent', copyCount: copies.length, selectable: rootCompleted, closesFamily: false });
+    copies.sort(newestFirst).forEach((copy, i) => {
+      rows.push({ model: copy, role: 'copy', copyCount: 0, selectable: true, closesFamily: i === copies.length - 1 });
+    });
   }
   return { rows, runCount: completed.length, familyCount: families.size };
 }
