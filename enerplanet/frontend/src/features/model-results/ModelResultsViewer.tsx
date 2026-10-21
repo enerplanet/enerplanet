@@ -11,6 +11,7 @@ import {
 } from '@/features/configurator/utils/transformUtils';
 import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { Model } from '@/features/model-dashboard/services/modelService';
+import type { ModelMenuRow } from '@/features/model-results/utils/modelMenu';
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
@@ -66,39 +67,52 @@ type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'buil
 
 // Extracted component: Model dropdown list item
 interface ModelDropdownItemProps {
-  model: Model;
+  row: ModelMenuRow;
   isSelected: boolean;
   onSelect: (model: Model) => void;
   style?: React.CSSProperties;
 }
 
-const ModelDropdownItem = ({ model, isSelected, onSelect, style }: ModelDropdownItemProps) => (
-  <div style={style} className="px-1.5 py-0.5">
-    <button
-      onClick={() => onSelect(model)}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md transition-all duration-150 text-left group text-sm hover:bg-muted text-foreground ${
-        isSelected ? 'bg-muted' : ''
-      }`}
-    >
-      <div className="flex items-center justify-center w-6 h-6 rounded transition-colors bg-muted">
-        <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className={`truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
-          {model.title}
+const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownItemProps) => {
+  const { t } = useTranslation();
+  const { model, role, copyCount, selectable } = row;
+  return (
+    <div style={style} className={`py-0.5 pr-1.5 ${role === 'copy' ? 'pl-6' : 'pl-1.5'}`}>
+      <button
+        onClick={() => onSelect(model)}
+        disabled={!selectable}
+        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md transition-all duration-150 text-left group text-sm text-foreground ${
+          selectable ? 'hover:bg-muted' : 'cursor-default opacity-60'
+        } ${isSelected ? 'bg-muted' : role === 'copy' ? 'bg-muted/40' : ''}`}
+      >
+        {role === 'copy' && (
+          <span className="-mt-3 h-3 w-3 flex-shrink-0 rounded-bl-md border-b-2 border-l-2 border-border" aria-hidden="true" />
+        )}
+        <div className="flex items-center justify-center w-6 h-6 rounded transition-colors bg-muted">
+          <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {model.region && <span>{model.region}</span>}
-          <span>•</span>
-          <span>{new Date(model.created_at).toLocaleDateString()}</span>
+        <div className="flex-1 min-w-0">
+          <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
+            {model.title}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {role === 'parent' && (
+              <span className="rounded-full bg-muted px-1.5 font-medium text-foreground">
+                {t('results.copies', { count: copyCount })}
+              </span>
+            )}
+            {!selectable && <span>{t('results.notRun')}</span>}
+            {model.region && <span>{model.region}</span>}
+            <span>{new Date(model.created_at).toLocaleDateString()}</span>
+          </div>
         </div>
-      </div>
-      {isSelected && (
-        <Check className="w-4 h-4 text-foreground flex-shrink-0" />
-      )}
-    </button>
-  </div>
-);
+        {isSelected && (
+          <Check className="w-4 h-4 text-foreground flex-shrink-0" />
+        )}
+      </button>
+    </div>
+  );
+};
 
 // Calculate bus status data from PyPSA results
 function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusData[] {
@@ -419,11 +433,11 @@ export const ModelResultsViewer = () => {
   const dropdownScrollRef = useRef<HTMLDivElement>(null);
 
   // Use custom hooks
-  const { completedModels, isLoadingModels } = useCompletedModels(currentWorkspace);
+  const { modelMenu, isLoadingModels } = useCompletedModels(currentWorkspace);
 
   // Virtualizer for the model list
   const virtualizer = useVirtualizer({
-    count: completedModels.length,
+    count: modelMenu.rows.length,
     getScrollElement: () => dropdownScrollRef.current,
     estimateSize: () => 52, // Height of ModelDropdownItem
     overscan: 5,
@@ -754,14 +768,14 @@ export const ModelResultsViewer = () => {
                       <div className="absolute top-full left-0 mt-1.5 w-80 bg-card border border-border rounded-lg shadow-lg z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="p-2 border-b border-border">
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {t('results.completedSimulations')} {completedModels.length > 0 && `(${completedModels.length})`}
+                            {t('results.completedSimulations')} {modelMenu.runCount > 0 && `(${modelMenu.runCount}) · ${t('results.inModels', { count: modelMenu.familyCount })}`}
                           </span>
                         </div>
                         <div 
                           ref={dropdownScrollRef}
                           className="max-h-64 overflow-y-auto"
                         >
-                          {completedModels.length === 0 ? (
+                          {modelMenu.rows.length === 0 ? (
                             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                               {isLoadingModels ? t('results.loadingModels') : t('results.noCompletedSimulations')}
                             </div>
@@ -775,9 +789,9 @@ export const ModelResultsViewer = () => {
                             >
                               {virtualizer.getVirtualItems().map((virtualRow) => (
                                 <ModelDropdownItem
-                                  key={completedModels[virtualRow.index].id}
-                                  model={completedModels[virtualRow.index]}
-                                  isSelected={completedModels[virtualRow.index].id === modelId}
+                                  key={modelMenu.rows[virtualRow.index].model.id}
+                                  row={modelMenu.rows[virtualRow.index]}
+                                  isSelected={modelMenu.rows[virtualRow.index].model.id === modelId}
                                   onSelect={handleModelSelect}
                                   style={{
                                     position: 'absolute',

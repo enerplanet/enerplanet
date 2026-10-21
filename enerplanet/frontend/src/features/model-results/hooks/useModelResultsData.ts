@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   fetchModelWithResults,
   fetchStructuredResults,
@@ -10,6 +10,7 @@ import { ModelInfo, ModelResults, StructuredModelResults } from '@/features/mode
 import technologyService from '@/features/technologies/services/technologyService';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
+import { buildModelMenu } from '@/features/model-results/utils/modelMenu';
 
 // Wind turbine data interface
 export interface WindTurbineInfo {
@@ -70,8 +71,9 @@ export const useTurbineData = () => {
  * Custom hook for loading completed models filtered by workspace
  */
 export const useCompletedModels = (currentWorkspace: Workspace | null) => {
-  const [completedModels, setCompletedModels] = useState<Model[]>([]);
+  const [workspaceModels, setWorkspaceModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const modelMenu = useMemo(() => buildModelMenu(workspaceModels), [workspaceModels]);
 
   useEffect(() => {
     const loadCompletedModels = async () => {
@@ -83,12 +85,11 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
         }
         const response = await modelService.getModels(params);
         if (response.success) {
-          const completed = response.data.filter(m => m.status === 'completed');
-          setCompletedModels(completed);
+          setWorkspaceModels(response.data);
         }
       } catch (err) {
         console.error('Failed to load models:', err);
-        setCompletedModels([]);
+        setWorkspaceModels([]);
       } finally {
         setIsLoadingModels(false);
       }
@@ -96,7 +97,7 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
     loadCompletedModels();
   }, [currentWorkspace]);
 
-  return { completedModels, isLoadingModels };
+  return { modelMenu, isLoadingModels };
 };
 
 /**
