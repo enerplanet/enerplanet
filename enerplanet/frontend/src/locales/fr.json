@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Cliquer pour dessiner",
+    "buildingNotStart": "Un clic ouvre ce bâtiment. Commencez la zone à côté.",
     "secondCorner": "Cliquez pour placer le deuxième coin",
     "thirdCorner": "Cliquez pour placer le troisième coin",
     "rightClickToFinish": "Clic droit pour terminer la zone",
