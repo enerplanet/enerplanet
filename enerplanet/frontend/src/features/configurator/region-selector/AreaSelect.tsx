@@ -108,7 +108,10 @@ const activeBuildingCount = (grid: PylovoGridData | undefined): number =>
 /** Translation key of the hint beside the cursor: where to click next while drawing an area. */
 const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, pointerOnMap: boolean): string | null => {
   if (!pointerOnMap) return null;
-  if (!drawing) return target === "outside" ? "drawing.clickToDraw" : null;
+  if (!drawing) {
+    if (target === "outside") return "drawing.clickToDraw";
+    return target === "building" ? "drawing.buildingNotStart" : null;
+  }
   if (corners <= 1) return "drawing.secondCorner";
   if (corners === 2) return "drawing.thirdCorner";
   return "drawing.rightClickToFinish";

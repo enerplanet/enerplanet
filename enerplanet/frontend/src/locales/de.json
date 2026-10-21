@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Klicken zum Zeichnen",
+    "buildingNotStart": "Klick öffnet dieses Gebäude. Gebiet daneben beginnen.",
     "secondCorner": "Klicken, um die zweite Ecke zu setzen",
     "thirdCorner": "Klicken, um die dritte Ecke zu setzen",
     "rightClickToFinish": "Rechtsklick, um die Fläche abzuschließen",

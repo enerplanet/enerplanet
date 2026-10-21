@@ -19,7 +19,7 @@ import type { Feature as GeoJSONFeature, Polygon as GeoJSONPolygon, Position } f
 import { OVERVIEW_ZOOM } from "@/features/interactive-map/utils/mapStyleUtils";
 
 /** What a click at the pointer would act on: a polygon corner (of a triangle), a polygon's inside, or empty map. */
-export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "outside";
+export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "building" | "outside";
 
 // Modify's default pixelTolerance: the distance at which it picks up a vertex.
 const CORNER_TOLERANCE_PX = 10;
@@ -312,6 +312,13 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
     let handlePointerMove: ((evt: MapBrowserEvent) => void) | null = null;
 
+    // A click on a building or transformer opens it, so a new polygon cannot start there.
+    const onModelFeature = (pixel: number[]): boolean =>
+      map.forEachFeatureAtPixel(pixel, (f) => {
+        const type = f.get("feature_type");
+        return type === "building" || type === "transformer" ? true : undefined;
+      }) === true;
+
     // Only add draw interaction if not in readOnly mode
     if (!readOnly) {
       const draw = new Draw({
@@ -325,7 +332,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           noModifierKeys(event) &&
           !spaceHeld &&
           !suspendedRef.current &&
-          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0),
+          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0) &&
+          (sketching || !onModelFeature(event.pixel)),
       });
       drawInteractionRef.current = draw;
 
@@ -690,6 +698,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         corner: "move",
         "triangle-corner": "move",
         polygon: "pointer",
+        building: "pointer",
         outside: "crosshair",
       };
       handlePointerMove = (evt: MapBrowserEvent) => {
@@ -703,6 +712,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           target = onTriangleCorner ? "triangle-corner" : "corner";
         } else if (vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0) {
           target = "polygon";
+        } else if (onModelFeature(evt.pixel)) {
+          target = "building";
         }
         if (allowMultipleRef.current) draw.setActive(target === "outside");
         const changed = target !== pointerTarget;

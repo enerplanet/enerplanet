@@ -2276,6 +2276,7 @@
   },
   "drawing": {
     "clickToDraw": "Klik om te tekenen",
+    "buildingNotStart": "Klik opent dit gebouw. Begin het gebied ernaast.",
     "secondCorner": "Klik om de tweede hoek te plaatsen",
     "thirdCorner": "Klik om de derde hoek te plaatsen",
     "rightClickToFinish": "Klik met de rechtermuisknop om het gebied af te ronden",

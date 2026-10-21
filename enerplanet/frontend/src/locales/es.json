@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Clic para dibujar",
+    "buildingNotStart": "El clic abre este edificio. Empiece el área junto a él.",
     "secondCorner": "Haga clic para colocar la segunda esquina",
     "thirdCorner": "Haga clic para colocar la tercera esquina",
     "rightClickToFinish": "Haga clic derecho para terminar el área",

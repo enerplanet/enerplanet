@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Click to draw",
+    "buildingNotStart": "Click opens this building. Start the area next to it.",
     "secondCorner": "Click to place the second corner",
     "thirdCorner": "Click to place the third corner",
     "rightClickToFinish": "Right-click to finish the area",

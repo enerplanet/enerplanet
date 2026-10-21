@@ -2280,6 +2280,7 @@
   },
   "drawing": {
     "clickToDraw": "Kliknij, aby rysować",
+    "buildingNotStart": "Kliknięcie otwiera ten budynek. Zacznij obszar obok.",
     "secondCorner": "Kliknij, aby umieścić drugi narożnik",
     "thirdCorner": "Kliknij, aby umieścić trzeci narożnik",
     "rightClickToFinish": "Kliknij prawym przyciskiem, aby zakończyć obszar",

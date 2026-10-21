@@ -2276,6 +2276,7 @@
   },
   "drawing": {
     "clickToDraw": "Clicca per disegnare",
+    "buildingNotStart": "Il clic apre questo edificio. Inizia l'area accanto.",
     "secondCorner": "Fai clic per posizionare il secondo vertice",
     "thirdCorner": "Fai clic per posizionare il terzo vertice",
     "rightClickToFinish": "Fai clic destro per completare l'area",
