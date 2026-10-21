@@ -1,12 +1,13 @@
 import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
-import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame } from "lucide-react";
+import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
 import { getEnergyLabelColorClasses, normalizeEnergyLabel } from "@/features/configurator/utils/energyLabelUtils";
+import { buemTotals, type StoredDemandProfile } from "@/features/configurator/building-config/modelDemandProfiles";
 
 interface TooltipTransformer {
     x: number;
@@ -23,6 +24,7 @@ interface TechData {
 }
 
 interface TooltipBuilding {
+    osmId?: string;
     disabled?: boolean;
     x: number;
     y: number;
@@ -68,6 +70,8 @@ interface MapOverlaysProps {
     deleteHintKey?: string | null;
     /** The map element; the hints follow the pointer over it. */
     mapRef: RefObject<HTMLDivElement | null>;
+    /** The BuEM results stored for the saved model, by osm_id; empty before the first save. */
+    demandProfiles?: Map<string, StoredDemandProfile>;
     isDraggingTech?: boolean;
     isGeneratingGrid?: boolean;
     simulateEV?: boolean;
@@ -99,10 +103,76 @@ const CursorHint: FC<{ mapRef: RefObject<HTMLDivElement | null>; offsetY?: numbe
     );
 };
 
+const kwh = (value: number) => `${Math.round(value).toLocaleString()} kWh/yr`;
+
+/**
+ * A building's annual demand in the tooltip: the stored BuEM totals once its
+ * run has resolved, matching the configurator's energy overview; until then
+ * pylovo's electricity estimate and the estimated heat demand, with the run's
+ * state when it did not resolve.
+ */
+const TooltipDemand: FC<{ building: TooltipBuilding; profile?: StoredDemandProfile }> = ({ building, profile }) => {
+    const { t } = useTranslation();
+    const totals = profile ? buemTotals(profile) : null;
+    if (profile && totals) {
+        const rows: { icon: ReactNode; value: number }[] = [
+            { icon: <Flame className="w-3 h-3 text-orange-500" />, value: totals.heating },
+            { icon: <Zap className="w-3 h-3 text-sky-500" />, value: totals.electricity },
+            { icon: <Snowflake className="w-3 h-3 text-cyan-500" />, value: totals.cooling },
+            { icon: <Droplets className="w-3 h-3 text-blue-500" />, value: totals.hotWater },
+        ];
+        return (
+            <div className="mt-1 space-y-0.5 text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-foreground">{t("simulation.mapOverlay.buemTotal", { value: kwh(totals.total) })}</span>
+                    <span className="text-[9px] px-1 py-0.5 rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300 font-medium">BuEM</span>
+                </div>
+                {rows.filter((r) => r.value > 0).map((r, i) => (
+                    <div key={i} className="flex items-center gap-1">{r.icon}{kwh(r.value)}</div>
+                ))}
+                {totals.kitchenGas > 0 && <div>{t("simulation.mapOverlay.kitchenGas", { value: kwh(totals.kitchenGas) })}</div>}
+                {(profile.tabula_variant_code || profile.building_type) && (
+                    <div className="text-[10px]">{t("simulation.mapOverlay.modelledAs", { type: profile.tabula_variant_code ?? profile.building_type })}</div>
+                )}
+                <div className="text-[10px]">{t("simulation.mapOverlay.geometry3d")}</div>
+            </div>
+        );
+    }
+    return (
+        <>
+            <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
+                <Zap className="w-3 h-3 text-sky-500" />
+                {building.yearlyDemandKwh.toLocaleString()} kWh/yr
+            </div>
+            {building.yearlyHeatDemandKwh != null && building.yearlyHeatDemandKwh > 0 && (
+                <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-orange-500" />
+                    {building.yearlyHeatDemandKwh.toLocaleString()} kWh/yr
+                    {building.heatDemandEstimated && (
+                        <span className="text-[9px] px-1 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                            {t("simulation.mapOverlay.estimatedShort")}
+                        </span>
+                    )}
+                </div>
+            )}
+            {profile?.status === "failed" && (
+                <div className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{t("simulation.mapOverlay.buemFailed", { reason: profile.error_message ?? "" })}</div>
+            )}
+            {profile?.status === "shared" && (
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemShared", { detail: profile.error_message ?? "" })}</div>
+            )}
+            {profile?.status === "pending" && (
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemPending")}</div>
+            )}
+        </>
+    );
+};
+
 export const MapOverlays: FC<MapOverlaysProps> = ({
     drawHintKey = null,
     deleteHintKey = null,
     mapRef,
+    demandProfiles,
     isDraggingTech = false,
     isGeneratingGrid = false,
     simulateEV = false,
@@ -291,21 +361,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 </span>
                             </div>
                         )}
-                        <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-sky-500" />
-                            {buildingTooltip.yearlyDemandKwh.toLocaleString()} kWh/yr
-                        </div>
-                        {buildingTooltip.yearlyHeatDemandKwh != null && buildingTooltip.yearlyHeatDemandKwh > 0 && (
-                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
-                                <Flame className="w-3 h-3 text-orange-500" />
-                                {buildingTooltip.yearlyHeatDemandKwh.toLocaleString()} kWh/yr
-                                {buildingTooltip.heatDemandEstimated && (
-                                    <span className="text-[9px] px-1 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
-                                        {t("simulation.mapOverlay.estimatedShort")}
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        <TooltipDemand building={buildingTooltip} profile={buildingTooltip.osmId ? demandProfiles?.get(buildingTooltip.osmId) : undefined} />
                         {(buildingTooltip.floors3dBag || buildingTooltip.floors || hasFiniteNumber(buildingTooltip.heightMax) || hasFiniteNumber(buildingTooltip.heightMedian) || hasFiniteNumber(buildingTooltip.heightGround) || buildingTooltip.constructionYear || buildingTooltip.energyLabel || hasFiniteNumber(buildingTooltip.energyIndex) || buildingTooltip.labelDate || buildingTooltip.bagId || hasFiniteNumber(buildingTooltip.cbsPopulation) || hasFiniteNumber(buildingTooltip.cbsHouseholds) || hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize)) && (
                             <div className="mt-2 pt-2 border-t border-border space-y-0.5 text-[10px] text-muted-foreground">
                                 <div className="font-semibold text-foreground/90 flex items-center gap-1.5">
