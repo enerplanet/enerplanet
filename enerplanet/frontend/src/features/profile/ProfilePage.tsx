@@ -9,15 +9,18 @@ import {
 	Mail,
 	Save,
 	Camera,
-	ArrowLeft
+	ArrowLeft,
+	KeyRound
 } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import axios from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
+import { ApiTokensDialog } from "@/features/api-tokens/ApiTokensDialog";
 
 interface ProfileData {
+	id: string;
 	name: string;
 	email: string;
 	access_level: string;
@@ -29,7 +32,7 @@ const ProfilePage: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	
-	// Check if user came from admin dashboard
+	// Back destination
 	const cameFromAdmin = location.state?.from === 'admin' || document.referrer.includes('admin-dashboard');
 	
 	const handleBack = () => {
@@ -41,6 +44,7 @@ const ProfilePage: React.FC = () => {
 	};
 	
 	const [formData, setFormData] = useState<ProfileData>({
+		id: "",
 		name: "",
 		email: "",
 		access_level: "",
@@ -49,6 +53,7 @@ const ProfilePage: React.FC = () => {
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
+	const [tokensOpen, setTokensOpen] = useState(false);
 
 	useEffect(() => {
 		loadProfile();
@@ -215,7 +220,7 @@ const ProfilePage: React.FC = () => {
 			)}
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Left Column - Profile Card */}
+				{/* Profile card */}
 				<div className="lg:col-span-1">
 					<div className="md-rise bg-card text-card-foreground rounded-2xl border border-border overflow-hidden shadow-sm transition-shadow duration-300 hover:shadow-md" style={{ animationDelay: "60ms" }}>
 						{/* Profile Header */}
@@ -252,7 +257,7 @@ const ProfilePage: React.FC = () => {
 					</div>
 				</div>
 
-				{/* Right Column - Edit Form */}
+				{/* Edit form */}
 				<div className="lg:col-span-2">
 					<form onSubmit={handleSubmit} className="md-rise bg-card text-card-foreground rounded-2xl border border-border shadow-sm overflow-hidden transition-shadow duration-300 hover:shadow-md" style={{ animationDelay: "120ms" }}>
 						<div className="px-6 py-4 border-b border-border">
@@ -276,7 +281,7 @@ const ProfilePage: React.FC = () => {
 								/>
 							</div>
 
-							{/* Email Field (Read-only) */}
+							{/* Email field */}
 							<div>
 								<label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
 									<Mail className="w-4 h-4 text-muted-foreground" />
@@ -321,8 +326,27 @@ const ProfilePage: React.FC = () => {
 							</button>
 						</div>
 					</form>
+					<section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+						<h3 className="flex items-center gap-2 text-base font-semibold">
+							<KeyRound className="h-4 w-4" />
+							{t("apiTokens.title", "API Tokens")}
+						</h3>
+						<p className="mt-2 text-sm text-muted-foreground">
+							{t("apiTokens.profileDescription", "Create and revoke your API tokens to access your models and results from scripts or other apps.")}
+						</p>
+						<button
+							type="button"
+							onClick={() => setTokensOpen(true)}
+							className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+						>
+							{t("apiTokens.manageOwn", "Manage my API tokens")}
+						</button>
+					</section>
 				</div>
 			</div>
+			{tokensOpen && (
+				<ApiTokensDialog user={formData} personal isOpen onClose={() => setTokensOpen(false)} />
+			)}
 		</div>
 	);
 };

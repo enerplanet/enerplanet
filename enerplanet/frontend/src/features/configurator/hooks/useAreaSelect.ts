@@ -329,8 +329,8 @@ async function saveAreaData(params: any) {
             if (draftId && newModel?.data?.id) try { await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId); } catch { /* non-critical */ }
             // Not fatal: the save's background run finds the same results stored by key.
             if (draftId && newModel?.data?.id) await modelService.claimDraftSeries(newModel.data.id, draftId).catch((err) => console.warn(`claiming draft ${draftId} series for model ${newModel.data.id} failed`, err));
+            params.navigate(DASHBOARD_ROUTE);
         }
-        params.navigate(DASHBOARD_ROUTE);
     } catch { /* ignore */ }
     finally { setIsSaving(false); }
 }

@@ -15,6 +15,7 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"spatialhub_backend/internal/apitoken"
+	"spatialhub_backend/internal/bearerauth"
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/city2tabula"
@@ -124,6 +125,11 @@ const (
 // @in                         header
 // @name                       Authorization
 // @description API token obtained via POST /api/users/{userId}/tokens. Format: Bearer whf_xxx
+
+// @securityDefinitions.apikey SpatialHubBearer
+// @in header
+// @name Authorization
+// @description Bearer <SpatialHub access token>, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.
 
 func main() {
 	// Set GIN to release mode to disable debug messages
@@ -652,14 +658,21 @@ type RouteDeps struct {
 // configureProtectedAPI registers protected API routes that require a valid session.
 func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	protectedAPI := r.Group("/api")
-	// API tokens authenticate before session auth.
+	bearerVerifier, err := bearerauth.New(deps.Cfg.BearerAuth)
+	if err != nil {
+		panic(fmt.Sprintf("invalid bearer authentication configuration: %v", err))
+	}
+	// Tokens before sessions.
 	protectedAPI.Use(middleware.APITokenAuth(apitoken.NewService(apitokenstore.NewStore(deps.DB))))
+	protectedAPI.Use(middleware.BearerAuth(bearerVerifier))
 	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
 		AuthServiceURL:             deps.Cfg.AuthServiceURL,
 		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
 		CookieDomain:               deps.Cfg.CookieDomain,
 		IsProduction:               deps.Cfg.AppEnv == "production",
 	}))
+
+	protectedAPI.GET("/auth/whoami", middleware.WhoAmI(deps.Cfg.BearerAuth.Issuer))
 
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -734,6 +747,9 @@ func registerTechnologyRoutes(api *gin.RouterGroup, handler *technologyhandler.H
 func registerProfileRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
 	api.GET("/users/profile", handler.GetProfile)
 	api.PUT("/users/profile", handler.UpdateProfile)
+	api.POST("/users/profile/tokens", handler.CreateUserToken)
+	api.GET("/users/profile/tokens", handler.ListUserTokens)
+	api.DELETE("/users/profile/tokens/:tokenId", handler.RevokeUserToken)
 }
 
 func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.SettingsHandler) {
@@ -784,7 +800,7 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
 
-	// Per-user API tokens (managed by experts, or managers for their own users).
+	// Managed tokens
 	api.POST(routeUsersByID+"/tokens", handler.CreateUserToken)
 	api.GET(routeUsersByID+"/tokens", handler.ListUserTokens)
 	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
