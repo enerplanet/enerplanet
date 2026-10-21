@@ -1,9 +1,10 @@
 import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame } from "lucide-react";
-import type { FC } from "react";
+import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
 import { getEnergyLabelColorClasses, normalizeEnergyLabel } from "@/features/configurator/utils/energyLabelUtils";
 
@@ -65,10 +66,8 @@ interface MapOverlaysProps {
     drawHintKey?: string | null;
     /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
     deleteHintKey?: string | null;
-    cursorPos: { x: number; y: number } | null;
-    transformerTooltip: TooltipTransformer | null;
-    buildingTooltip: TooltipBuilding | null;
-    mvLineTooltip?: TooltipMvLine | null;
+    /** The map element; the hints follow the pointer over it. */
+    mapRef: RefObject<HTMLDivElement | null>;
     isDraggingTech?: boolean;
     isGeneratingGrid?: boolean;
     simulateEV?: boolean;
@@ -76,13 +75,34 @@ interface MapOverlaysProps {
     gridIdToPeakLoad?: Record<number, number>;
 }
 
+/**
+ * A hint beside the pointer over the map. It keeps the pointer position in its
+ * own state, so a mouse move re-renders only the hint.
+ */
+const CursorHint: FC<{ mapRef: RefObject<HTMLDivElement | null>; offsetY?: number; className: string; children: ReactNode }> = ({ mapRef, offsetY = 0, className, children }) => {
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+    useEffect(() => {
+        const el = mapRef.current;
+        if (!el) return;
+        const onMove = (e: MouseEvent) => {
+            const rect = el.getBoundingClientRect();
+            setPos({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
+        };
+        el.addEventListener("mousemove", onMove);
+        return () => el.removeEventListener("mousemove", onMove);
+    }, [mapRef]);
+    if (!pos) return null;
+    return (
+        <div className={`absolute pointer-events-none ${className}`} style={{ left: pos.x, top: pos.y + offsetY }}>
+            {children}
+        </div>
+    );
+};
+
 export const MapOverlays: FC<MapOverlaysProps> = ({
     drawHintKey = null,
     deleteHintKey = null,
-    cursorPos,
-    transformerTooltip,
-    buildingTooltip,
-    mvLineTooltip,
+    mapRef,
     isDraggingTech = false,
     isGeneratingGrid = false,
     simulateEV = false,
@@ -90,6 +110,9 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
     gridIdToPeakLoad = {}
 }) => {
     const { t } = useTranslation();
+    const transformerTooltip: TooltipTransformer | null = useModelStore((s) => s.transformerTooltip);
+    const buildingTooltip: TooltipBuilding | null = useModelStore((s) => s.buildingTooltip);
+    const mvLineTooltip: TooltipMvLine | null = useModelStore((s) => s.mvLineTooltip);
     const techEntries = buildingTooltip?.techs ? Object.entries(buildingTooltip.techs) : [];
     const hasFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
@@ -177,27 +200,21 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            {drawHintKey && cursorPos && (
-                <div
-                    className="absolute pointer-events-none z-20"
-                    style={{ left: cursorPos.x, top: cursorPos.y }}
-                >
+            {drawHintKey && (
+                <CursorHint mapRef={mapRef} className="z-20">
                     <div className="md-fade-in bg-background/90 dark:bg-gray-800/90 backdrop-blur-sm border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground opacity-90">
                         {t(drawHintKey)}
                     </div>
-                </div>
+                </CursorHint>
             )}
 
             {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
-            {deleteHintKey && cursorPos && (
-                <div
-                    className="absolute pointer-events-none z-30"
-                    style={{ left: cursorPos.x, top: cursorPos.y - 48 }}
-                >
+            {deleteHintKey && (
+                <CursorHint mapRef={mapRef} offsetY={-48} className="z-30">
                     <div className="md-fade-in bg-red-600 text-white rounded px-2 py-1 shadow-md text-xs font-medium">
                         {t(deleteHintKey)}
                     </div>
-                </div>
+                </CursorHint>
             )}
 
             {transformerTooltip && !deleteHintKey && (
