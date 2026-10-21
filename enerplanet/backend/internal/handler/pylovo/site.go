@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -36,17 +37,24 @@ type buildings3D interface {
 	GetFootprintsWGS84(ctx context.Context, country string, objectIDs []string) (city2tabula.GeometryResult, error)
 }
 
+// siteModels names the saved models whose grid is a site.
+// Satisfied by *modelstore.Store; faked in tests.
+type siteModels interface {
+	ModelsUsingSite(siteID int) ([]string, error)
+}
+
 // SiteHandler serves the site-mode routes. pylovo stores a site's owner but
 // does not authenticate, so every route here checks the owner itself.
 type SiteHandler struct {
 	pylovo  *PylovoHandler
 	country countryResolver
 	links   buildings3D
+	models  siteModels
 }
 
 // NewSiteHandler returns a SiteHandler that reaches pylovo through h.
-func NewSiteHandler(h *PylovoHandler, country countryResolver, links buildings3D) *SiteHandler {
-	return &SiteHandler{pylovo: h, country: country, links: links}
+func NewSiteHandler(h *PylovoHandler, country countryResolver, links buildings3D, models siteModels) *SiteHandler {
+	return &SiteHandler{pylovo: h, country: country, links: links, models: models}
 }
 
 type createSiteRequest struct {
@@ -146,12 +154,26 @@ func (s *SiteHandler) GetSite(c *gin.Context) {
 	}
 }
 
-// DeleteSite deletes one of the caller's sites with its grid results.
+// DeleteSite deletes one of the caller's sites with its grid results, unless
+// a saved model still uses it: that model's grid would then be gone.
 func (s *SiteHandler) DeleteSite(c *gin.Context) {
-	if id, _, ok := s.ownedSite(c); ok {
-		if _, _, ok := s.call(c, http.MethodDelete, fmt.Sprintf("/sites/%d", id), nil); ok {
-			httputil.NoContent(c)
-		}
+	id, _, ok := s.ownedSite(c)
+	if !ok {
+		return
+	}
+	titles, err := s.models.ModelsUsingSite(id)
+	if err != nil {
+		logger.ForComponent("pylovo").Errorf("list models using site %d: %v", id, err)
+		httputil.InternalError(c, fmt.Sprintf("could not check which models use site %d", id))
+		return
+	}
+	if len(titles) > 0 {
+		httputil.Conflict(c, fmt.Sprintf("site %d is the grid of %d saved model(s): %s; delete those models or give them another grid first",
+			id, len(titles), strings.Join(titles, ", ")))
+		return
+	}
+	if _, _, ok := s.call(c, http.MethodDelete, fmt.Sprintf("/sites/%d", id), nil); ok {
+		httputil.NoContent(c)
 	}
 }
 

@@ -55,6 +55,13 @@ func (f fake3D) GetFootprintsWGS84(_ context.Context, _ string, ids []string) (c
 	return res, nil
 }
 
+// fakeSiteModels reports the saved models using each site, by site id.
+type fakeSiteModels map[int][]string
+
+func (f fakeSiteModels) ModelsUsingSite(siteID int) ([]string, error) {
+	return f[siteID], nil
+}
+
 // fakeSitePylovo serves one site, 7, owned by "owner", holding osmIDs, and
 // records each request as "METHOD path body".
 type fakeSitePylovo struct {
@@ -116,18 +123,25 @@ func (f *fakeSitePylovo) sent(prefix string) []string {
 
 func serveSite(t *testing.T, fake *fakeSitePylovo, linked buildings3D, user, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
+	return serveSiteUsedBy(t, fake, linked, nil, user, method, path, body)
+}
+
+// serveSiteUsedBy serves one request, with models naming the saved models that use each site.
+func serveSiteUsedBy(t *testing.T, fake *fakeSitePylovo, linked buildings3D, models fakeSiteModels, user, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	pylovo := httptest.NewServer(fake)
 	t.Cleanup(pylovo.Close)
 
 	h := NewPylovoHandler(pylovo.URL, nil, nil)
-	sites := NewSiteHandler(h, fixedCountry("germany"), linked)
+	sites := NewSiteHandler(h, fixedCountry("germany"), linked, models)
 	r := gin.New()
 	r.Use(func(c *gin.Context) { c.Set("user_id", user) })
 	r.POST("/sites", sites.CreateSite)
 	r.POST("/sites/:id/generate", sites.GenerateSite)
 	r.GET("/sites/:id/grid", sites.GetSiteGrid)
 	r.PUT("/sites/:id/transformers", sites.PutSiteTransformers)
+	r.DELETE("/sites/:id", sites.DeleteSite)
 	r.POST("/power-flow", h.RunPowerFlow)
 
 	rec := httptest.NewRecorder()
@@ -269,5 +283,33 @@ func TestSiteScopedRequest_sends3DBuildingsByObjectID(t *testing.T) {
 	sent := fake.sent("POST /power-flow")
 	if len(sent) != 1 || !strings.Contains(sent[0], `"building_osm_ids":["DEBY_LOD2_7672149","1001832418"]`) {
 		t.Fatalf("pylovo got %v; want the object id without its c2t: prefix and the OSM id unchanged", sent)
+	}
+}
+
+// A site a saved model still uses is not deleted: the models are named and
+// pylovo never receives the delete.
+func TestDeleteSite_refusedWhileAModelUsesIt(t *testing.T) {
+	fake := &fakeSitePylovo{}
+	rec := serveSiteUsedBy(t, fake, nil, fakeSiteModels{7: {"THD 2014 I-L"}}, "owner", http.MethodDelete, "/sites/7", "")
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409; body %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(rec.Body.String(), "THD 2014 I-L") {
+		t.Errorf("body does not name the model: %s", rec.Body)
+	}
+	if got := fake.sent("DELETE"); len(got) != 0 {
+		t.Errorf("pylovo received %q, want no delete", got)
+	}
+}
+
+// A site no saved model uses is deleted in pylovo.
+func TestDeleteSite_deletesAnUnusedSite(t *testing.T) {
+	fake := &fakeSitePylovo{}
+	rec := serveSiteUsedBy(t, fake, nil, fakeSiteModels{}, "owner", http.MethodDelete, "/sites/7", "")
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body %s", rec.Code, rec.Body)
+	}
+	if got := fake.sent("DELETE /sites/7"); len(got) != 1 {
+		t.Errorf("pylovo delete requests = %q, want one", got)
 	}
 }
