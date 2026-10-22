@@ -1,5 +1,6 @@
-const CARTO_BASEMAP_API_KEY =
-  import.meta.env.VITE_CARTO_BASEMAP_API_KEY?.trim() ?? "";
+import { runtimeConfig } from "@/configuration/runtime";
+
+const CARTO_BASEMAP_API_KEY = runtimeConfig.cartoBasemapApiKey.trim();
 
 /** Return true only for CARTO's public basemap CDN and its subdomains. */
 export function isCartoBasemapUrl(url: string): boolean {

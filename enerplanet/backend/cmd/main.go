@@ -419,6 +419,16 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 	r.Static("/images", "./www/images")
 	r.StaticFile("/vite.svg", "./www/vite.svg")
 
+	// Runtime frontend configuration (radarr-style: one image, config injected
+	// at deploy time). Served as a JS file that sets window.__ENERPLANET_CONFIG__
+	// before the app bundle loads; no-cache so a config change takes effect on
+	// the next page load without a rebuild.
+	r.GET("/config.js", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Content-Type", "application/javascript")
+		c.String(http.StatusOK, config.RenderFrontendConfigJS(cfg.Frontend))
+	})
+
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		if len(path) >= 4 && path[:4] == "/api" {

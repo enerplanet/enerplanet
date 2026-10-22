@@ -2,9 +2,11 @@
  * Application-wide constants consolidated for better maintainability
  */
 
+import { runtimeConfig } from "@/configuration/runtime";
+
 // API Configuration
 export const API_CONFIG = {
-	BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api',
+	BASE_URL: runtimeConfig.api.baseUrl,
 	TIMEOUT: 10000,
 	RETRY_ATTEMPTS: 3,
 } as const;
