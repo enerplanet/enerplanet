@@ -1733,7 +1733,9 @@
         "tooLarge": "Le fichier est trop volumineux ({{detail}}) ; les fichiers jusqu'à 5 Mo peuvent être importés.",
         "tooComplex": "La zone est trop détaillée ({{detail}} polygones / sommets) ; jusqu'à 100 polygones et 10 000 sommets peuvent être importés.",
         "outOfRange": "Une coordonnée ({{detail}}) est hors de la plage de longitude et de latitude. Si le fichier utilise des mètres, il doit indiquer son système de coordonnées (crs)."
-      }
+      },
+      "importAreaHint": "Charge la zone du modèle depuis un fichier GeoJSON (.geojson ou .json) contenant des entités Polygon ou MultiPolygon. Coordonnées en WGS 84 (EPSG:4326) ou dans une grille nationale comme ETRS89 / UTM, telles que QGIS les exporte. Jusqu'à 100 polygones, 10 000 points et 5 Mo. Le fichier remplace la zone dessinée.",
+      "exportAreaHint": "Télécharge la zone dessinée sous forme de fichier GeoJSON (WGS 84, EPSG:4326). Il peut être importé dans un autre modèle ou ouvert dans QGIS."
     },
     "powerFlow": {
       "run": "Lancer l'analyse du flux de puissance",
@@ -3084,18 +3086,6 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Les transformateurs ne peuvent être placés qu'à l'intérieur de la zone sélectionnée"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Transformateurs personnalisés",
-    "transformer": "Transformateur {{number}}",
-    "buildingCount": "Bâtiments : {{count}}",
-    "loadUtilization": "Taux de charge",
-    "low": "Faible",
-    "moderate": "Modérée",
-    "medium": "Moyenne",
-    "high": "Élevée",
-    "overloaded": "Surchargée",
-    "mvLines": "Lignes HTA"
   },
   "buildingConfig": {
     "backToMap": "Retour à la carte",

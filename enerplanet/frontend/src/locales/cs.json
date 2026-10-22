@@ -1491,7 +1491,9 @@
         "tooLarge": "Soubor je příliš velký ({{detail}}); importovat lze soubory do 5 MB.",
         "tooComplex": "Oblast je příliš podrobná ({{detail}} polygonů / vrcholů); importovat lze nejvýše 100 polygonů a 10 000 vrcholů.",
         "outOfRange": "Souřadnice ({{detail}}) leží mimo rozsah zeměpisné délky a šířky. Pokud soubor používá metry, musí uvádět svůj souřadnicový systém (crs)."
-      }
+      },
+      "importAreaHint": "Načte oblast modelu ze souboru GeoJSON (.geojson nebo .json) s prvky Polygon nebo MultiPolygon. Souřadnice ve WGS 84 (EPSG:4326) nebo v národní síti, například ETRS89 / UTM, jak je exportuje QGIS. Nejvýše 100 polygonů, 10 000 bodů a 5 MB. Soubor nahradí nakreslenou oblast.",
+      "exportAreaHint": "Stáhne nakreslenou oblast jako soubor GeoJSON (WGS 84, EPSG:4326). Lze ho importovat do jiného modelu nebo otevřít v QGIS."
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",
@@ -3104,18 +3106,6 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Transformátory lze umístit jen uvnitř vybrané oblasti"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Vlastní transformátory",
-    "transformer": "Transformátor {{number}}",
-    "buildingCount": "Budovy: {{count}}",
-    "loadUtilization": "Vytížení",
-    "low": "Nízké",
-    "moderate": "Mírné",
-    "medium": "Střední",
-    "high": "Vysoké",
-    "overloaded": "Přetížené",
-    "mvLines": "Vedení VN"
   },
   "buildingConfig": {
     "backToMap": "Zpět na mapu",

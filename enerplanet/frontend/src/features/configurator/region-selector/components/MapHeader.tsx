@@ -160,24 +160,28 @@ export const MapHeader: FC<MapHeaderProps> = ({
           </div>
         )}
         {onImportArea && (
-          <label
-            title={t("simulation.mapHeader.importArea")}
-            aria-label={t("simulation.mapHeader.importArea")}
-            className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
-          >
-            <FileUp className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">{t("simulation.mapHeader.importArea")}</span>
-            <input
-              type="file"
-              accept=".geojson,.json,application/geo+json,application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onImportArea(file);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <label
+                aria-label={t("simulation.mapHeader.importArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileUp className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.importArea")}</span>
+                <input
+                  type="file"
+                  accept=".geojson,.json,application/geo+json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onImportArea(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.importAreaHint")}</TooltipContent>
+          </Tooltip>
         )}
         {onRegenerateGrid && (
           <button
@@ -192,16 +196,20 @@ export const MapHeader: FC<MapHeaderProps> = ({
           </button>
         )}
         {onExportArea && allPolygonsCount > 0 && (
-          <button
-            type="button"
-            onClick={onExportArea}
-            title={t("simulation.mapHeader.exportArea")}
-            aria-label={t("simulation.mapHeader.exportArea")}
-            className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">{t("simulation.mapHeader.exportArea")}</span>
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onExportArea}
+                aria-label={t("simulation.mapHeader.exportArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.exportArea")}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.exportAreaHint")}</TooltipContent>
+          </Tooltip>
         )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">

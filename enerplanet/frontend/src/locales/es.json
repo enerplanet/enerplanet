@@ -1733,7 +1733,9 @@
         "tooLarge": "El archivo es demasiado grande ({{detail}}); se pueden importar archivos de hasta 5 MB.",
         "tooComplex": "La zona es demasiado detallada ({{detail}} polígonos / vértices); se pueden importar hasta 100 polígonos y 10.000 vértices.",
         "outOfRange": "Una coordenada ({{detail}}) está fuera del rango de longitud y latitud. Si el archivo usa metros, debe indicar su sistema de coordenadas (crs)."
-      }
+      },
+      "importAreaHint": "Carga el área del modelo desde un archivo GeoJSON (.geojson o .json) con entidades Polygon o MultiPolygon. Coordenadas en WGS 84 (EPSG:4326) o en una cuadrícula nacional como ETRS89 / UTM, tal como las exporta QGIS. Hasta 100 polígonos, 10 000 puntos y 5 MB. El archivo sustituye al área dibujada.",
+      "exportAreaHint": "Descarga el área dibujada como archivo GeoJSON (WGS 84, EPSG:4326). Se puede importar en otro modelo o abrir en QGIS."
     },
     "powerFlow": {
       "run": "Ejecutar análisis de flujo de potencia",
@@ -3084,18 +3086,6 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Los transformadores solo se pueden colocar dentro del área seleccionada"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Transformadores propios",
-    "transformer": "Transformador {{number}}",
-    "buildingCount": "Edificios: {{count}}",
-    "loadUtilization": "Utilización de carga",
-    "low": "Baja",
-    "moderate": "Moderada",
-    "medium": "Media",
-    "high": "Alta",
-    "overloaded": "Sobrecargada",
-    "mvLines": "Líneas de MT"
   },
   "buildingConfig": {
     "backToMap": "Volver al mapa",

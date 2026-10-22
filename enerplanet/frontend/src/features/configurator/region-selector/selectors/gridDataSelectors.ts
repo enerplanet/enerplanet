@@ -126,37 +126,3 @@ export const useGridIdToConnectedBuildings = (
     return lookup;
   }, [pylovoGridData]);
 
-/** User-placed transformers (osmId starts with 'user/') with building counts. */
-export const useCustomTransformers = (
-  pylovoGridData: PylovoGridData | undefined
-): Array<{ gridResultId: number; osmId: string; buildingCount: number }> =>
-  useMemo(() => {
-    if (!pylovoGridData?.transformers?.features) return [];
-
-    // Build lookup of building counts per grid_result_id
-    const buildingCounts: Record<number, number> = {};
-    if (pylovoGridData?.buildings?.features) {
-      pylovoGridData.buildings.features.forEach((feature: any) => {
-        const gridId = feature.properties?.grid_result_id;
-        if (gridId !== undefined) {
-          buildingCounts[gridId] = (buildingCounts[gridId] || 0) + 1;
-        }
-      });
-    }
-
-    // Filter for user-placed transformers (osmId starts with 'user/')
-    return pylovoGridData.transformers.features
-      .filter((feature: any) => {
-        const osmId = feature.properties?.osm_id || "";
-        return osmId.startsWith("user/");
-      })
-      .map((feature: any) => {
-        const props = feature.properties;
-        const gridResultId = props?.grid_result_id;
-        return {
-          gridResultId,
-          osmId: props?.osm_id || "",
-          buildingCount: buildingCounts[gridResultId] || 0,
-        };
-      });
-  }, [pylovoGridData]);

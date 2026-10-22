@@ -97,7 +97,6 @@ useBuildingsInPolygonCount(pylovoGridData) // → number
 - `MapOverlays` — tooltips, cursors, grid/building labels
 - `TransformerCursorOverlay` — animated cursor following the mouse in add/move mode
 - `MapInteractionBanners` — top-of-map hints for active modes
-- `PowerFlowLegend` — color legend for power flow results
 - `LoadingOverlay` — full-screen spinner during model load
 
 ## Data flow

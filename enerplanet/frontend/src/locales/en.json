@@ -1783,7 +1783,9 @@
         "tooLarge": "The file is too large ({{detail}}); files up to 5 MB can be imported.",
         "tooComplex": "The area is too detailed ({{detail}} polygons / vertices); up to 100 polygons and 10,000 vertices can be imported.",
         "outOfRange": "A coordinate ({{detail}}) is outside the longitude and latitude range. If the file uses metres, it must name its coordinate system (crs)."
-      }
+      },
+      "importAreaHint": "Load a model area from a GeoJSON file (.geojson or .json) with Polygon or MultiPolygon features. Coordinates in WGS 84 (EPSG:4326) or a national grid such as ETRS89 / UTM, as QGIS exports them. Up to 100 polygons, 10,000 points and 5 MB. The file replaces the drawn area.",
+      "exportAreaHint": "Download the drawn area as a GeoJSON file (WGS 84, EPSG:4326). Import it into another model or open it in QGIS."
     },
     "mapOverlay": {
       "analyzingArea": "Analyzing area",
@@ -3079,18 +3081,6 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Transformers can only be placed inside the selected area"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Custom transformers",
-    "transformer": "Transformer {{number}}",
-    "buildingCount": "Buildings: {{count}}",
-    "loadUtilization": "Load utilisation",
-    "low": "Low",
-    "moderate": "Moderate",
-    "medium": "Medium",
-    "high": "High",
-    "overloaded": "Overloaded",
-    "mvLines": "MV lines"
   },
   "buildingConfig": {
     "backToMap": "Back to map",

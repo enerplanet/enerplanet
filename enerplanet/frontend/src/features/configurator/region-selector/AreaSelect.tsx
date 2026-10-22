@@ -54,13 +54,11 @@ import {
   useGridIdToPeakLoad,
   useGridIdToConnectedBuildings,
   useBuildingOsmIdsInPolygon,
-  useCustomTransformers,
 } from "@/features/configurator/region-selector/selectors/gridDataSelectors";
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { GridStatsBadge } from "./components/GridStatsBadge";
-import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -331,7 +329,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
   const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
   const buildingOsmIdsInPolygon = useBuildingOsmIdsInPolygon(pylovoLayers.pylovoGridData);
-  const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
   const activeMode = useModelStore((s) => s.activeMode);
@@ -690,10 +687,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onBackStep={() => buildingAssign.setAssignStep("select-buildings")}
               onCancelAssign={buildingAssign.clearBuildingAssignMode}
               onCancelAddTransformer={addTransformer.resetAddTransformerMode}
-            />
-            <PowerFlowLegend
-              visible={pylovoLayers.powerFlowResults.size > 0}
-              customTransformers={customTransformers}
             />
             {state.areaOverLimit
               ? <AreaLimitWarning overLimit={state.areaOverLimit} />

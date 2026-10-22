@@ -1783,7 +1783,9 @@
         "tooLarge": "Die Datei ist zu groß ({{detail}}); importiert werden können Dateien bis 5 MB.",
         "tooComplex": "Das Gebiet ist zu detailliert ({{detail}} Polygone / Stützpunkte); importiert werden können bis zu 100 Polygone und 10.000 Stützpunkte.",
         "outOfRange": "Eine Koordinate ({{detail}}) liegt außerhalb des Längen- und Breitengradbereichs. Verwendet die Datei Meter, muss sie ihr Koordinatensystem (crs) angeben."
-      }
+      },
+      "importAreaHint": "Lädt ein Modellgebiet aus einer GeoJSON-Datei (.geojson oder .json) mit Polygon- oder MultiPolygon-Features. Koordinaten in WGS 84 (EPSG:4326) oder einem nationalen Gitter wie ETRS89 / UTM, wie QGIS sie exportiert. Bis zu 100 Polygone, 10.000 Punkte und 5 MB. Die Datei ersetzt das gezeichnete Gebiet.",
+      "exportAreaHint": "Lädt das gezeichnete Gebiet als GeoJSON-Datei herunter (WGS 84, EPSG:4326). Sie lässt sich in ein anderes Modell importieren oder in QGIS öffnen."
     },
     "mapOverlay": {
       "analyzingArea": "Gebiet wird analysiert",
@@ -3079,18 +3081,6 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Transformatoren können nur innerhalb des ausgewählten Gebiets platziert werden"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Eigene Transformatoren",
-    "transformer": "Transformator {{number}}",
-    "buildingCount": "Gebäude: {{count}}",
-    "loadUtilization": "Auslastung",
-    "low": "Niedrig",
-    "moderate": "Mäßig",
-    "medium": "Mittel",
-    "high": "Hoch",
-    "overloaded": "Überlastet",
-    "mvLines": "MS-Leitungen"
   },
   "buildingConfig": {
     "backToMap": "Zurück zur Karte",
