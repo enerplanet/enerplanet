@@ -822,7 +822,9 @@
       "nextFor": {
         "city2tabula": "Ponowne uruchomienie nie pomoże, dopóki obszar nie będzie miał danych 3D budynków. Jeśli oczekiwano tu danych, zgłoś to zespołowi EnerPlanET."
       },
-      "report": "Zgłoś"
+      "report": "Zgłoś",
+      "reported": "Zgłoszono",
+      "reportedHint": "Zgłoszono zespołowi EnerPlanET. Otrzymasz powiadomienie, gdy problem zostanie rozwiązany."
     },
     "pending": "Oczekujące",
     "queued": "W kolejce",
@@ -1813,6 +1815,7 @@
     "errors": {
       "loginRequired": "Zaloguj się, aby wysłać opinię",
       "submitFailed": "Nie udało się wysłać opinii. Spróbuj ponownie później.",
+      "alreadyReported": "Ten model ma już otwarte zgłoszenie. Otrzymasz powiadomienie, gdy zostanie rozwiązane.",
       "invalidImageType": "Wybierz prawidłowy plik obrazu (PNG, JPG, GIF)",
       "imageTooLarge": "Rozmiar obrazu musi być mniejszy niż 15MB"
     },

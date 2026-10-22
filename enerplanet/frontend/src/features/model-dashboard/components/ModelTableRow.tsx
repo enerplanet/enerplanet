@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight } from "lucide-react";
+import { FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -12,7 +12,7 @@ import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
-import { RUN_REPORT_STATE_KEY, type RunReportTarget } from "@/features/user-feedback/runReport";
+import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === "string") return error;
@@ -171,6 +171,20 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
 const ReportFailureButton: React.FC<{ model: Model }> = ({ model }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const reported = useOpenRunReports().data?.has(model.id) ?? false;
+  if (reported) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("model.failure.reported")}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">{t("model.failure.reportedHint")}</TooltipContent>
+      </Tooltip>
+    );
+  }
   const stage = model.results?.failed_stage;
   const target: RunReportTarget = { id: model.id, title: model.title, stage: typeof stage === "string" ? stage : undefined };
   return (

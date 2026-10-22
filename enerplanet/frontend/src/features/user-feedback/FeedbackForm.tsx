@@ -40,7 +40,8 @@ import axios from "@/lib/axios";
 import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { RUN_REPORT_STATE_KEY, type RunReportTarget } from "./runReport";
+import { useQueryClient } from "@tanstack/react-query";
+import { OPEN_RUN_REPORTS_KEY, RUN_REPORT_STATE_KEY, type RunReportTarget } from "./runReport";
 
 // Types
 interface FeedbackFormData {
@@ -121,6 +122,15 @@ const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080, quality = 
 
     img.src = url;
   });
+
+/** The message shown when submitting the form fails with error. */
+const submitErrorMessage = (error: unknown, t: ReturnType<typeof useTranslation>["t"]): string => {
+  const status = error && typeof error === 'object' && 'response' in error ? (error as { response?: { status?: number } }).response?.status : undefined;
+  if (status === 413) return t("feedback.errors.payloadTooLarge", "The attachment is too large. Please use smaller images.");
+  if (status === 409) return t("feedback.errors.alreadyReported");
+  if (error instanceof Error) return error.message;
+  return t("feedback.errors.submitFailed");
+};
 
 const ALERT_STYLES = {
   success: "bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200",
@@ -357,6 +367,7 @@ export const FeedbackComponent: React.FC = () => {
   const { user } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const reportRun = (location.state as Record<string, RunReportTarget | undefined> | null)?.[RUN_REPORT_STATE_KEY];
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -611,6 +622,7 @@ export const FeedbackComponent: React.FC = () => {
 
       if (data.success) {
         if (reportRun) {
+          queryClient.invalidateQueries({ queryKey: OPEN_RUN_REPORTS_KEY });
           // Drop the report target so the next feedback from this page is not attached to the run.
           navigate(location.pathname, { replace: true, state: null });
         }
@@ -639,15 +651,9 @@ export const FeedbackComponent: React.FC = () => {
       }
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error("Error submitting feedback:", error);
-      let message = t("feedback.errors.submitFailed");
-      if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 413) {
-        message = t("feedback.errors.payloadTooLarge", "The attachment is too large. Please use smaller images.");
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
       setSnackbar({
         open: true,
-        message,
+        message: submitErrorMessage(error, t),
         severity: "error",
       });
     } finally {
@@ -827,7 +833,7 @@ export const FeedbackComponent: React.FC = () => {
                   onChange={(e) => updateField("message", e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t("feedback.messagePlaceholder")}
-                  required
+                  required={!reportRun}
                   rows={10}
                   className="w-full px-4 py-3 bg-background dark:bg-input text-foreground placeholder-muted-foreground resize-y min-h-[200px] focus:outline-none text-sm font-mono leading-relaxed"
                 />
@@ -945,16 +951,17 @@ export const FeedbackComponent: React.FC = () => {
           </div>
         </FormSection>
 
-        {/* Rating */}
-        <FormSection title={t("feedback.rating")}>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{t("feedback.ratingDescription")}</span>
-            <Rating 
-              value={feedbackData.rating} 
-              onChange={(value) => updateField("rating", value)} 
-            />
-          </div>
-        </FormSection>
+        {!reportRun && (
+          <FormSection title={t("feedback.rating")}>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">{t("feedback.ratingDescription")}</span>
+              <Rating 
+                value={feedbackData.rating} 
+                onChange={(value) => updateField("rating", value)} 
+              />
+            </div>
+          </FormSection>
+        )}
 
         {/* Submit */}
         <FormSection title="">

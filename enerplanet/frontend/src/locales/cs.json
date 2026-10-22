@@ -822,7 +822,9 @@
       "nextFor": {
         "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET."
       },
-      "report": "Nahlásit"
+      "report": "Nahlásit",
+      "reported": "Nahlášeno",
+      "reportedHint": "Nahlášeno týmu EnerPlanET. Po vyřešení dostanete oznámení."
     },
     "pending": "Čeká",
     "queued": "Ve frontě",
@@ -1813,6 +1815,7 @@
     "errors": {
       "loginRequired": "Pro odeslání zpětné vazby se prosím přihlaste",
       "submitFailed": "Odeslání zpětné vazby se nezdařilo. Zkuste to prosím později.",
+      "alreadyReported": "Tento model již má otevřené hlášení. Po vyřešení dostanete oznámení.",
       "invalidImageType": "Vyberte prosím platný obrazový soubor (PNG, JPG, GIF)",
       "imageTooLarge": "Velikost obrázku musí být menší než 15MB"
     },

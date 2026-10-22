@@ -1080,7 +1080,9 @@
       "nextFor": {
         "city2tabula": "Ein erneuter Start hilft erst, wenn für das Gebiet 3D-Gebäudedaten vorliegen. Wenn Sie hier Daten erwartet haben, melden Sie es dem EnerPlanET-Team."
       },
-      "report": "Melden"
+      "report": "Melden",
+      "reported": "Gemeldet",
+      "reportedHint": "An das EnerPlanET-Team gemeldet. Sie erhalten eine Benachrichtigung, sobald es gelöst ist."
     },
     "pending": "Ausstehend",
     "queued": "In Warteschlange",
@@ -2061,6 +2063,7 @@
     "errors": {
       "loginRequired": "Bitte melden Sie sich an, um Feedback zu senden",
       "submitFailed": "Feedback konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
+      "alreadyReported": "Für dieses Modell gibt es bereits eine offene Meldung. Sie erhalten eine Benachrichtigung, sobald sie gelöst ist.",
       "invalidImageType": "Bitte wählen Sie eine gültige Bilddatei (PNG, JPG, GIF)",
       "imageTooLarge": "Die Bildgröße muss unter 15MB liegen"
     },

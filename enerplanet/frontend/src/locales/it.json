@@ -814,7 +814,9 @@
       "nextFor": {
         "city2tabula": "Eseguirlo di nuovo non servirà finché l'area non avrà dati 3D degli edifici. Se ti aspettavi dati qui, segnalalo al team EnerPlanET."
       },
-      "report": "Segnala"
+      "report": "Segnala",
+      "reported": "Segnalato",
+      "reportedHint": "Segnalato al team EnerPlanET. Riceverai una notifica quando sarà risolto."
     },
     "pending": "In attesa",
     "queued": "In coda",
@@ -1799,6 +1801,7 @@
     "errors": {
       "loginRequired": "Effettua l'accesso per inviare feedback",
       "submitFailed": "Invio feedback fallito. Riprova più tardi.",
+      "alreadyReported": "Questo modello ha già una segnalazione aperta. Riceverai una notifica quando sarà risolta.",
       "invalidImageType": "Seleziona un file immagine valido (PNG, JPG, GIF)",
       "imageTooLarge": "La dimensione dell'immagine deve essere inferiore a 15MB"
     },

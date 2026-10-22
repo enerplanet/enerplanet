@@ -813,7 +813,9 @@
       "nextFor": {
         "city2tabula": "Opnieuw starten helpt pas als het gebied 3D-gebouwgegevens heeft. Verwachtte u hier gegevens, meld het dan aan het EnerPlanET-team."
       },
-      "report": "Melden"
+      "report": "Melden",
+      "reported": "Gemeld",
+      "reportedHint": "Gemeld bij het EnerPlanET-team. U krijgt een melding zodra het is opgelost."
     },
     "pending": "In afwachting",
     "queued": "In wachtrij",
@@ -1798,6 +1800,7 @@
     "errors": {
       "loginRequired": "Log in om feedback te verzenden",
       "submitFailed": "Feedback verzenden mislukt. Probeer het later opnieuw.",
+      "alreadyReported": "Voor dit model staat al een melding open. U krijgt een melding zodra deze is opgelost.",
       "invalidImageType": "Selecteer een geldig afbeeldingsbestand (PNG, JPG, GIF)",
       "imageTooLarge": "Afbeeldingsgrootte moet kleiner zijn dan 15MB"
     },
