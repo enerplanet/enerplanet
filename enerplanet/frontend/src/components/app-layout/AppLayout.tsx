@@ -447,7 +447,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </aside>
 
         <main
-          className="relative flex-1 bg-background text-foreground"
+          className="relative min-w-0 flex-1 bg-background text-foreground"
           style={{
             paddingTop: "var(--topbar-height)",
             paddingLeft: "var(--sidebar-width)",
