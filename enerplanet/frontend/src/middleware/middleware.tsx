@@ -34,7 +34,7 @@ export const Middleware: React.FC<MiddlewareProps> = ({ type = "guest", access }
 	}
 
 	if (type === "guest" && isAuthenticated) {
-		return <Navigate to="/app/map" state={{ from: location }} replace />;
+		return <Navigate to="/app/model-dashboard" state={{ from: location }} replace />;
 	}
 
 	if (type === "auth") {

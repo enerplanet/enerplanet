@@ -22,7 +22,6 @@ import {
   GitCompareArrows,
   LayoutGrid,
   LucideIcon,
-  Globe2,
   Cpu,
 } from "lucide-react";
 import {
@@ -185,14 +184,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         dataTour: "simulations",
       },
       {
-        path: "/app/map",
-        icon: Globe2,
-        title: t("common.sidebar.map"),
-        color: "#3b82f6",
-        bgColor: "#dbeafe",
-        dataTour: "map",
-      },
-      {
         path: "/app/locations",
         icon: MapPinHouse,
         title: t("common.sidebar.locations"),
@@ -264,8 +255,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <aside className="fixed left-0 bottom-0 bg-card border-r border-border shadow-lg z-[51] w-[var(--sidebar-width)] top-[var(--topbar-height)]">
           <div className="flex flex-col items-center gap-2 py-4">
             <a
-              href="/"
-              onClick={(e) => { if (!e.ctrlKey && !e.metaKey && e.button === 0) { e.preventDefault(); navigate("/"); } }}
+              href="/app/model-dashboard"
+              onClick={(e) => { if (!e.ctrlKey && !e.metaKey && e.button === 0) { e.preventDefault(); navigate("/app/model-dashboard"); } }}
               aria-label="EnerPlanET"
               className="mb-3 rounded-lg p-1 transition-opacity hover:opacity-80"
             >

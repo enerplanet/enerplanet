@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginForm, RegisterForm, ForgotPasswordForm } from "./features/authentication";
 import { LayoutProvider } from "@/providers/layout-provider";
 import { AppLayout } from "@/components/app-layout/AppLayout";
@@ -9,7 +9,6 @@ import { TooltipProvider } from "@spatialhub/ui";
 import { Loader2 } from 'lucide-react';
 
 // Lazy loaded components for code splitting
-const MapComponent = lazy(() => import("./features/interactive-map").then(module => ({ default: module.MapComponent })));
 const EnergyRiskDashboard = lazy(() => import("@/features/model-dashboard/components").then(module => ({ default: module.EnergyRiskDashboard })));
 const Dashboard = lazy(() => import("@/features/admin-dashboard").then(module => ({ default: module.Dashboard })));
 const FeedbackComponent = lazy(() => import("@/features/user-feedback").then(module => ({ default: module.FeedbackComponent })));
@@ -65,7 +64,8 @@ const App: React.FC<AppProps> = () => {
                 </Route>
 
                 <Route element={<Middleware type="auth" />}>
-                  <Route path="/app/map" element={<MapComponent />} />
+                  {/* Legacy path: redirects to the model dashboard so old links and SSO return URLs keep working. */}
+                  <Route path="/app/map" element={<Navigate to="/app/model-dashboard" replace />} />
                   <Route path="/app/feedback" element={<FeedbackComponent />} />
                 </Route>
 
