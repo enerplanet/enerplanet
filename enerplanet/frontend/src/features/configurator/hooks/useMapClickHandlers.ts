@@ -15,6 +15,9 @@ import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings
 import { createBuildingStyleFunction, createBuildingHighlightStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { isBuildingDisabled } from "@/features/configurator/hooks/useBuildingSelection";
 
+/** Delay between the pointer entering a feature and its tooltip appearing. */
+const HOVER_DELAY_MS = 300;
+
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
 const extractPeakLoadKw = extractPeakLoadFromProps;
 const extractBuildingEnrichment = extractBuildingEnrichmentFromProps;
@@ -133,31 +136,47 @@ export const useMapClickHandlers = ({
       }
     };
 
-    let dragHoverCleared = false;
+    // A tooltip appears HOVER_DELAY_MS after the pointer enters a feature,
+    // however it moves within it, and stays where it appeared. Leaving the
+    // feature first cancels it, so sweeping across buildings renders nothing.
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    let target: unknown = null;
+    let shown = false;
+    let lastPixel: number[] = [];
+    const clearTooltips = () => { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); };
+    const showTooltip = (feature: any, pixel: number[]) => {
+      const type = feature.get('feature_type');
+      clearTooltips();
+      if (type === 'transformer') setTransformerTooltip(createTransformerTooltip(feature, pixel, pylovoLayersRef.current));
+      else if (type === 'building') setBuildingTooltip(createBuildingTooltip(feature, pixel));
+      else if (type === 'mv_line') setMvLineTooltip(createMvLineTooltip(feature, pixel));
+      shown = true;
+    };
+    const hide = () => {
+      clearTimeout(pending);
+      if (shown) clearTooltips();
+      shown = false;
+      target = null;
+    };
+
     const handlePointerMove = (evt: any) => {
-      if (evt.dragging) {
-        if (!dragHoverCleared) {
-          dragHoverCleared = true;
-          setTransformerTooltip(null);
-          setBuildingTooltip(null);
-          setMvLineTooltip(null);
-        }
+      if (evt.dragging || isDrawing) { hide(); return; }
+      const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
+      map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      if (feature && feature === target) {
+        if (!shown) lastPixel = evt.pixel;
         return;
       }
-      dragHoverCleared = false;
-      if (isDrawing) return;
-      const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
-      if (!feature) { map.getTargetElement().style.cursor = ''; setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
-      map.getTargetElement().style.cursor = 'pointer';
-      const type = feature.get('feature_type');
-      if (type === 'transformer') { setTransformerTooltip(createTransformerTooltip(feature, evt.pixel, pylovoLayersRef.current)); setBuildingTooltip(null); setMvLineTooltip(null); }
-      else if (type === 'building') { setBuildingTooltip(createBuildingTooltip(feature, evt.pixel)); setTransformerTooltip(null); setMvLineTooltip(null); }
-      else if (type === 'mv_line') { setMvLineTooltip(createMvLineTooltip(feature, evt.pixel)); setTransformerTooltip(null); setBuildingTooltip(null); }
+      hide();
+      if (!feature) return;
+      target = feature;
+      lastPixel = evt.pixel;
+      pending = setTimeout(() => showTooltip(feature, lastPixel), HOVER_DELAY_MS);
     };
 
     map.on('click', handleClick);
     map.on('pointermove', handlePointerMove);
-    return () => { map.un('click', handleClick); map.un('pointermove', handlePointerMove); };
+    return () => { clearTimeout(pending); map.un('click', handleClick); map.un('pointermove', handlePointerMove); };
   }, [map, isDrawing, suppressMapInteractions]);
 
   const handleCloseTransformerDialog = useCallback(() => { setTransformerDialogOpen(false); setSelectedTransformer(null); }, [setTransformerDialogOpen, setSelectedTransformer]);

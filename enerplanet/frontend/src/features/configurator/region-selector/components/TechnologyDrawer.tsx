@@ -132,7 +132,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 <Plus className="w-3.5 h-3.5 text-primary" />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="right">
+                        <TooltipContent side="top">
                             <p className="text-xs">{t("technologies.addToAllBuildings")}</p>
                         </TooltipContent>
                     </Tooltip>
@@ -148,7 +148,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="right">
+                        <TooltipContent side="top">
                             <p className="text-xs">{t("technologies.removeFromAllBuildings")}</p>
                         </TooltipContent>
                     </Tooltip>
