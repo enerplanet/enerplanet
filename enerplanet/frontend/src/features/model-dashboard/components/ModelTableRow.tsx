@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Copy, FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight } from "lucide-react";
+import { FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -41,7 +41,6 @@ interface ModelTableRowProps {
   model: Model & { level: number };
   index: number;
   modelTitle: string;
-  parentModelTitle?: string;
   /** Copies of this original on the page; 0 for a copy or an original without copies. */
   copyCount: number;
   /** Failed copies among them, shown while the family is collapsed. */
@@ -77,7 +76,6 @@ interface ModelNameCellProps {
   isEditing: boolean;
   editTitle: string;
   modelTitle: string;
-  parentModelTitle?: string;
   onEditTitleChange: (value: string) => void;
   onUpdateTitle: () => void;
   onCancelEdit: () => void;
@@ -91,7 +89,6 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
   isEditing,
   editTitle,
   modelTitle,
-  parentModelTitle,
   onEditTitleChange,
   onUpdateTitle,
   onCancelEdit,
@@ -133,18 +130,6 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
           )}
 
           <div className="flex items-center gap-1.5">
-            {model.is_copy && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md">
-                    <Copy className="w-3 h-3 text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("model.copyOf", { name: parentModelTitle || t("model.anotherModel") })}
-                </TooltipContent>
-              </Tooltip>
-            )}
             {isNotModelOwner && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -251,7 +236,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
   index,
   modelTitle,
-  parentModelTitle,
   copyCount,
   failedCopyCount,
   familyCollapsed,
@@ -330,7 +314,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             isEditing={isEditing}
             editTitle={editTitle}
             modelTitle={modelTitle}
-            parentModelTitle={parentModelTitle}
             onEditTitleChange={onEditTitleChange}
             onUpdateTitle={onUpdateTitle}
             onCancelEdit={onCancelEdit}
@@ -349,7 +332,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
+                  <StatusBadge status={model.status} size="small" showIcon={false} label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="w-[340px] whitespace-normal">
@@ -357,7 +340,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <StatusBadge status={model.status} size="small" />
+            <StatusBadge status={model.status} size="small" showIcon={false} />
           )}
 
           {model.status === "failed" && (!isNotModelOwner || userAccessLevel === "expert") && <ReportFailureButton model={model} />}
@@ -493,7 +476,6 @@ const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   if (!modelSnapshotEqual(prev.model, next.model)) return false;
 
   if (prev.modelTitle !== next.modelTitle) return false;
-  if (prev.parentModelTitle !== next.parentModelTitle) return false;
   if (prev.copyCount !== next.copyCount) return false;
   if (prev.failedCopyCount !== next.failedCopyCount) return false;
   if (prev.familyCollapsed !== next.familyCollapsed) return false;

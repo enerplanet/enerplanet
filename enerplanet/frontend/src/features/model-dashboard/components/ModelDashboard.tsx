@@ -765,7 +765,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			model={model}
 			index={rowIndex(model)}
 			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-			parentModelTitle={model.parent_model_id ? modelTitlesByID.get(model.parent_model_id) : undefined}
 			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
 			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
 			familyCollapsed={collapsedFamilies.has(model.id)}
