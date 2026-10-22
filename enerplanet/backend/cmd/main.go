@@ -15,6 +15,7 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"spatialhub_backend/internal/apitoken"
+	"spatialhub_backend/internal/bearerauth"
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/city2tabula"
@@ -44,6 +45,7 @@ import (
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
+	modelstore "spatialhub_backend/internal/store/model"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
 	seriesstore "spatialhub_backend/internal/store/series"
@@ -124,6 +126,11 @@ const (
 // @in                         header
 // @name                       Authorization
 // @description API token obtained via POST /api/users/{userId}/tokens. Format: Bearer whf_xxx
+
+// @securityDefinitions.apikey SpatialHubBearer
+// @in header
+// @name Authorization
+// @description Bearer <SpatialHub access token>, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.
 
 func main() {
 	// Set GIN to release mode to disable debug messages
@@ -624,9 +631,9 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	regionStore := region.NewStore(db)
 	pylovoInstanceStore := pylovoinstance.NewStore(db)
 	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore)
-	api.GET("/v2/pylovo/boundary", pylovoHandler.GetBoundary)
-	api.GET("/v2/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
-	api.GET("/v2/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
+	api.GET("/v1/pylovo/boundary", pylovoHandler.GetBoundary)
+	api.GET("/v1/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
+	api.GET("/v1/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
 
 	// Public feedback endpoint (landing page contact form, no auth required)
 	publicFeedbackHandler := feedback.NewFeedbackHandler(db)
@@ -652,14 +659,21 @@ type RouteDeps struct {
 // configureProtectedAPI registers protected API routes that require a valid session.
 func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	protectedAPI := r.Group("/api")
-	// API tokens authenticate before session auth.
+	bearerVerifier, err := bearerauth.New(deps.Cfg.BearerAuth)
+	if err != nil {
+		panic(fmt.Sprintf("invalid bearer authentication configuration: %v", err))
+	}
+	// Tokens before sessions.
 	protectedAPI.Use(middleware.APITokenAuth(apitoken.NewService(apitokenstore.NewStore(deps.DB))))
+	protectedAPI.Use(middleware.BearerAuth(bearerVerifier))
 	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
 		AuthServiceURL:             deps.Cfg.AuthServiceURL,
 		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
 		CookieDomain:               deps.Cfg.CookieDomain,
 		IsProduction:               deps.Cfg.AppEnv == "production",
 	}))
+
+	protectedAPI.GET("/auth/whoami", middleware.WhoAmI(deps.Cfg.BearerAuth.Issuer))
 
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -697,7 +711,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
-	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient))
+	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient, modelstore.NewStore(deps.DB)))
 
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
@@ -734,6 +748,9 @@ func registerTechnologyRoutes(api *gin.RouterGroup, handler *technologyhandler.H
 func registerProfileRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
 	api.GET("/users/profile", handler.GetProfile)
 	api.PUT("/users/profile", handler.UpdateProfile)
+	api.POST("/users/profile/tokens", handler.CreateUserToken)
+	api.GET("/users/profile/tokens", handler.ListUserTokens)
+	api.DELETE("/users/profile/tokens/:tokenId", handler.RevokeUserToken)
 }
 
 func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.SettingsHandler) {
@@ -784,7 +801,7 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
 
-	// Per-user API tokens (managed by experts, or managers for their own users).
+	// Managed tokens
 	api.POST(routeUsersByID+"/tokens", handler.CreateUserToken)
 	api.GET(routeUsersByID+"/tokens", handler.ListUserTokens)
 	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
@@ -939,37 +956,38 @@ func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
-	api.POST("/v2/pylovo/generate-grid", handler.GenerateGrid)
-	api.GET("/v2/pylovo/transformer-sizes", handler.GetTransformerSizes)
-	api.GET("/v2/pylovo/consumer-categories", handler.GetConsumerCategories)
-	api.POST("/v2/pylovo/grid-statistics", handler.GetGridStatistics)
-	api.POST("/v2/pylovo/cable-costs", handler.GetCableCosts)
-	api.POST("/v2/pylovo/power-flow", handler.RunPowerFlow)
-	api.GET("/v2/pylovo/cable-types", handler.GetCableTypes)
-	api.GET("/v2/pylovo/equipment-costs", handler.GetEquipmentCosts)
-	api.GET("/v2/pylovo/voltage-settings", handler.GetVoltageSettings)
-	api.POST("/v2/pylovo/custom-buildings", handler.AddCustomBuilding)
-	api.GET("/v2/pylovo/custom-buildings", handler.GetCustomBuildings)
-	api.DELETE("/v2/pylovo/custom-buildings/:id", handler.DeleteCustomBuilding)
-	api.POST("/v2/pylovo/estimate-energy", handler.EstimateEnergy)
-	api.POST("/v2/pylovo/estimate-energy-batch", handler.EstimateEnergyBatch)
+	api.POST("/v1/pylovo/generate-grid", handler.GenerateGrid)
+	api.POST("/v1/pylovo/building-count", handler.CountBuildings)
+	api.GET("/v1/pylovo/transformer-sizes", handler.GetTransformerSizes)
+	api.GET("/v1/pylovo/consumer-categories", handler.GetConsumerCategories)
+	api.POST("/v1/pylovo/grid-statistics", handler.GetGridStatistics)
+	api.POST("/v1/pylovo/cable-costs", handler.GetCableCosts)
+	api.POST("/v1/pylovo/power-flow", handler.RunPowerFlow)
+	api.GET("/v1/pylovo/cable-types", handler.GetCableTypes)
+	api.GET("/v1/pylovo/equipment-costs", handler.GetEquipmentCosts)
+	api.GET("/v1/pylovo/voltage-settings", handler.GetVoltageSettings)
+	api.POST("/v1/pylovo/custom-buildings", handler.AddCustomBuilding)
+	api.GET("/v1/pylovo/custom-buildings", handler.GetCustomBuildings)
+	api.DELETE("/v1/pylovo/custom-buildings/:id", handler.DeleteCustomBuilding)
+	api.POST("/v1/pylovo/estimate-energy", handler.EstimateEnergy)
+	api.POST("/v1/pylovo/estimate-energy-batch", handler.EstimateEnergyBatch)
 	// Transformer management routes
-	api.POST("/v2/pylovo/add-transformer", handler.AddTransformer)
-	api.POST("/v2/pylovo/delete-transformer", handler.DeleteTransformer)
-	api.POST("/v2/pylovo/move-transformer", handler.MoveTransformer)
-	api.POST("/v2/pylovo/assign-building", handler.AssignBuilding)
-	api.POST("/v2/pylovo/finalize-transformers", handler.FinalizeTransformers)
+	api.POST("/v1/pylovo/add-transformer", handler.AddTransformer)
+	api.POST("/v1/pylovo/delete-transformer", handler.DeleteTransformer)
+	api.POST("/v1/pylovo/move-transformer", handler.MoveTransformer)
+	api.POST("/v1/pylovo/assign-building", handler.AssignBuilding)
+	api.POST("/v1/pylovo/finalize-transformers", handler.FinalizeTransformers)
 	// The pipeline rebuilds and deletes PyLovo data for every user, and the
 	// cached-region writes change the regions everyone sees: experts only.
-	pipeline := api.Group("/v2/pylovo/pipeline", middleware.RequireExpert())
+	pipeline := api.Group("/v1/pylovo/pipeline", middleware.RequireExpert())
 	pipeline.POST("/run", handler.RunPipeline)
 	pipeline.GET("/status/:job_id", handler.GetPipelineStatus)
 	pipeline.GET("/regions", handler.GetPipelineRegions)
 	pipeline.GET("/history", handler.GetPipelineHistory)
 	pipeline.GET("/states/:country", handler.GetCountryStates)
 	pipeline.DELETE("/states/:country/:state", handler.DeleteStateData)
-	api.GET("/v2/pylovo/regions/cached", handler.GetCachedRegions)
-	cachedRegions := api.Group("/v2/pylovo/regions/cached", middleware.RequireExpert())
+	api.GET("/v1/pylovo/regions/cached", handler.GetCachedRegions)
+	cachedRegions := api.Group("/v1/pylovo/regions/cached", middleware.RequireExpert())
 	cachedRegions.PATCH("/:id", handler.ToggleCachedRegion)
 	cachedRegions.DELETE("/:id", handler.DeleteCachedRegion)
 	// Boundary routes are registered in configurePublicAPI (no auth required)
@@ -977,7 +995,7 @@ func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
 
 // registerSiteRoutes registers the site-mode routes; each checks the site's owner.
 func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
-	sites := api.Group("/v2/pylovo/sites")
+	sites := api.Group("/v1/pylovo/sites")
 	sites.POST("", handler.CreateSite)
 	sites.GET("", handler.ListSites)
 	sites.GET("/:id", handler.GetSite)
@@ -991,11 +1009,11 @@ func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
 
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
 func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
-	api.GET("/v2/ignis/variants/:country_iso2", handler.GetVariants)
-	api.GET("/v2/ignis/fields", handler.GetFieldMetadata)
-	api.GET("/v2/ignis/variants/:country_iso2/match", handler.MatchVariants)
-	api.GET("/v2/ignis/data/:code", handler.GetVariantData)
-	api.POST("/v2/ignis/calculate/:code", handler.Calculate)
+	api.GET("/v1/ignis/variants/:country_iso2", handler.GetVariants)
+	api.GET("/v1/ignis/fields", handler.GetFieldMetadata)
+	api.GET("/v1/ignis/variants/:country_iso2/match", handler.MatchVariants)
+	api.GET("/v1/ignis/data/:code", handler.GetVariantData)
+	api.POST("/v1/ignis/calculate/:code", handler.Calculate)
 }
 
 // The PyLovo instance list decides where the backend sends PyLovo requests:

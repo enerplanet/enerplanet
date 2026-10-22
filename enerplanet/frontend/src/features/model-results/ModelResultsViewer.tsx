@@ -11,6 +11,7 @@ import {
 } from '@/features/configurator/utils/transformUtils';
 import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { Model } from '@/features/model-dashboard/services/modelService';
+import type { ModelMenuRow } from '@/features/model-results/utils/modelMenu';
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
@@ -32,6 +33,7 @@ import {
   ChevronDown,
   Check,
   FileBarChart,
+  Layers,
   Activity,
   Info,
 } from 'lucide-react';
@@ -56,8 +58,15 @@ import CostPanel from './components/panels/CostPanel';
 import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
 import { capabilitiesFrom } from '@/config/resultCapabilities';
+import {
+  carrierLabelKey,
+  formatCarrierEnergy,
+  formatCarrierPower,
+  isGenerationCarrier,
+} from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
+import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
@@ -66,39 +75,73 @@ type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'buil
 
 // Extracted component: Model dropdown list item
 interface ModelDropdownItemProps {
-  model: Model;
+  row: ModelMenuRow;
   isSelected: boolean;
   onSelect: (model: Model) => void;
   style?: React.CSSProperties;
 }
 
-const ModelDropdownItem = ({ model, isSelected, onSelect, style }: ModelDropdownItemProps) => (
-  <div style={style} className="px-1.5 py-0.5">
-    <button
-      onClick={() => onSelect(model)}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md transition-all duration-150 text-left group text-sm hover:bg-muted text-foreground ${
-        isSelected ? 'bg-muted' : ''
-      }`}
-    >
-      <div className="flex items-center justify-center w-6 h-6 rounded transition-colors bg-muted">
-        <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
+// A family is one framed block: the parent opens it, its last copy closes it,
+// and a rail joins the parent's icon to each copy. Heights match menuRowHeight.
+const familyFrame: Record<ModelMenuRow['role'], string> = {
+  parent: 'rounded-t-lg border border-b-0 border-border bg-muted/40 pt-1',
+  copy: 'border-x border-border bg-muted/40',
+  single: '',
+};
+
+const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownItemProps) => {
+  const { t } = useTranslation();
+  const { model, role, copyCount, selectable, closesFamily } = row;
+  const Icon = role === 'parent' ? Layers : FileBarChart;
+  return (
+    <div style={style} className={`px-1.5 ${closesFamily ? 'pb-2' : ''}`}>
+      <div className={`relative h-full px-1 ${familyFrame[role]} ${closesFamily ? 'rounded-b-lg border-b pb-1' : ''}`}>
+        {role === 'parent' && <span className="absolute left-[26px] top-[38px] bottom-0 w-px bg-muted-foreground/40" aria-hidden="true" />}
+        {role === 'copy' && (
+          <>
+            <span className={`absolute left-[26px] top-0 w-px bg-muted-foreground/40 ${closesFamily ? 'h-1/2' : 'bottom-0'}`} aria-hidden="true" />
+            <span className="absolute left-[26px] top-1/2 h-px w-3 bg-muted-foreground/40" aria-hidden="true" />
+          </>
+        )}
+        <button
+          onClick={() => onSelect(model)}
+          disabled={!selectable}
+          className={`relative flex h-full w-full items-center gap-2 rounded-md py-1.5 pr-2.5 text-left text-foreground transition-all duration-150 ${
+            role === 'copy' ? 'pl-9 text-[13px]' : 'pl-2.5 text-sm'
+          } ${selectable ? 'hover:bg-background' : 'cursor-default opacity-60'} ${
+            isSelected ? 'bg-background shadow-sm ring-1 ring-primary/40' : ''
+          }`}
+        >
+          <div className={`flex items-center justify-center rounded bg-muted ${role === 'copy' ? 'h-5 w-5' : 'h-6 w-6'}`}>
+            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
+              {model.title}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {role === 'parent' && (
+                <span className="rounded-full bg-background px-1.5 font-medium text-foreground">
+                  {t('results.copies', { count: copyCount })}
+                </span>
+              )}
+              {!selectable && <span>{t('results.notRun')}</span>}
+              {model.region && <span>{model.region}</span>}
+              <span>{new Date(model.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+          {isSelected && (
+            <Check className="w-4 h-4 text-foreground flex-shrink-0" />
+          )}
+        </button>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className={`truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
-          {model.title}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {model.region && <span>{model.region}</span>}
-          <span>•</span>
-          <span>{new Date(model.created_at).toLocaleDateString()}</span>
-        </div>
-      </div>
-      {isSelected && (
-        <Check className="w-4 h-4 text-foreground flex-shrink-0" />
-      )}
-    </button>
-  </div>
-);
+    </div>
+  );
+};
+
+/** Row height in the virtualised menu: the parent's top border and padding, and a gap after each family. */
+const menuRowHeight = (row: ModelMenuRow): number =>
+  row.role === 'parent' ? 56 : row.closesFamily ? 62 : 50;
 
 // Calculate bus status data from PyPSA results
 function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusData[] {
@@ -152,25 +195,6 @@ function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusD
   });
 }
 
-// Format energy value with appropriate units
-function formatEnergy(kwh: number): string {
-  if (kwh >= 1000000) {
-    return `${(kwh / 1000000).toFixed(2)} GWh`;
-  } else if (kwh >= 1000) {
-    return `${(kwh / 1000).toFixed(2)} MWh`;
-  }
-  return `${kwh.toFixed(1)} kWh`;
-}
-
-function formatPower(kw: number): string {
-  const abs = Math.abs(kw);
-  if (!Number.isFinite(kw)) return '0';
-  if (abs >= 1000) return `${(kw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(kw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(kw * 1_000_000).toFixed(1)} mW`;
-}
 
 const FLOATING_POINT_EPSILON = 1e-6;
 
@@ -243,9 +267,10 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     ? normalizeDisplayValue(gridImport / totalSupply, 6)
     : 1;
 
-  const lcoe = structuredLcoe
-    ? Math.abs(structuredLcoe.value)
-    : (renewableProduction > 0 ? totalCost / renewableProduction : 0);
+  // Stored levelised cost is EUR/MWh (see lcoeUnits). No stored value => 0,
+  // meaning "not reported": the cost UI hides an LCOE it does not have rather
+  // than deriving one from cost ÷ renewable energy, which is not an LCOE.
+  const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
   return {
     total_generation_kwh: totalProduction,
@@ -257,7 +282,7 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     peak_demand_kw: peakDemand,
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
-    lcoe_eur_kwh: lcoe,
+    lcoe_eur_mwh: lcoe,
     co2_savings_kg: renewableProduction * 0.4,
   };
 }
@@ -419,13 +444,14 @@ export const ModelResultsViewer = () => {
   const dropdownScrollRef = useRef<HTMLDivElement>(null);
 
   // Use custom hooks
-  const { completedModels, isLoadingModels } = useCompletedModels(currentWorkspace);
+  const { modelMenu, isLoadingModels } = useCompletedModels(currentWorkspace);
 
   // Virtualizer for the model list
   const virtualizer = useVirtualizer({
-    count: completedModels.length,
+    count: modelMenu.rows.length,
     getScrollElement: () => dropdownScrollRef.current,
-    estimateSize: () => 52, // Height of ModelDropdownItem
+    estimateSize: (index) => menuRowHeight(modelMenu.rows[index]),
+    getItemKey: (index) => modelMenu.rows[index].model.id,
     overscan: 5,
   });
 
@@ -710,7 +736,7 @@ export const ModelResultsViewer = () => {
       {/* Header */}
       <header className="bg-card border-b border-border flex-shrink-0">
         <div className="px-4 py-4 sm:px-6">
-          <div className="md-rise flex items-center justify-between">
+          <div className="md-rise flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(isFromAdmin ? '/app/admin-dashboard' : '/app/model-dashboard')}
@@ -754,14 +780,14 @@ export const ModelResultsViewer = () => {
                       <div className="absolute top-full left-0 mt-1.5 w-80 bg-card border border-border rounded-lg shadow-lg z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="p-2 border-b border-border">
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {t('results.completedSimulations')} {completedModels.length > 0 && `(${completedModels.length})`}
+                            {t('results.completedSimulations')} {modelMenu.runCount > 0 && `(${modelMenu.runCount}) · ${t('results.inModels', { count: modelMenu.familyCount })}`}
                           </span>
                         </div>
                         <div 
                           ref={dropdownScrollRef}
                           className="max-h-64 overflow-y-auto"
                         >
-                          {completedModels.length === 0 ? (
+                          {modelMenu.rows.length === 0 ? (
                             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                               {isLoadingModels ? t('results.loadingModels') : t('results.noCompletedSimulations')}
                             </div>
@@ -775,9 +801,9 @@ export const ModelResultsViewer = () => {
                             >
                               {virtualizer.getVirtualItems().map((virtualRow) => (
                                 <ModelDropdownItem
-                                  key={completedModels[virtualRow.index].id}
-                                  model={completedModels[virtualRow.index]}
-                                  isSelected={completedModels[virtualRow.index].id === modelId}
+                                  key={modelMenu.rows[virtualRow.index].model.id}
+                                  row={modelMenu.rows[virtualRow.index]}
+                                  isSelected={modelMenu.rows[virtualRow.index].model.id === modelId}
                                   onSelect={handleModelSelect}
                                   style={{
                                     position: 'absolute',
@@ -826,7 +852,7 @@ export const ModelResultsViewer = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {model.resolution}h {t('results.resolution')}
+                    {model.resolution} min {t('results.resolution')}
                   </span>
                 </div>
               )}
@@ -917,9 +943,38 @@ export const ModelResultsViewer = () => {
             return null;
           })() : null;
           const periodLabel = simDays ? `${t('results.metrics.over')} ${simDays} ${t('results.chartLabels.days')}` : undefined;
-          const installedRenewable = supplyCapacity.length > 0
-            ? formatPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0))
+          // Generation / import / self-sufficiency are electricity notions: they
+          // are meaningless for a heat demand served by heat pumps, so gate them
+          // on the carrier instead of printing zeros with a kWh suffix.
+          const generation = isGenerationCarrier(carrier);
+          const carrierLabel = (() => {
+            const key = carrierLabelKey(carrier);
+            return key ? t(key) : carrier;
+          })();
+          const installedRenewable = generation && supplyCapacity.length > 0
+            ? formatCarrierPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0), carrier)
             : undefined;
+          const generationItems = generation
+            ? [
+                {
+                  label: t('results.metrics.renewableGen'),
+                  value: formatCarrierEnergy(summary.renewable_production_kwh, carrier),
+                  hint: installedRenewable
+                    ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
+                    : periodLabel,
+                },
+                {
+                  label: t('results.metrics.gridImport'),
+                  value: formatCarrierEnergy(summary.grid_import_kwh, carrier),
+                  hint: periodLabel,
+                },
+                {
+                  label: t('results.metrics.selfSufficiency'),
+                  value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
+                  hint: t('results.metrics.selfSufficiencyDesc'),
+                },
+              ]
+            : [];
           return (
             <div className="px-4 pb-4 sm:px-6">
               <StatsStrip
@@ -927,29 +982,13 @@ export const ModelResultsViewer = () => {
                 items={[
                   {
                     label: t('results.metrics.totalDemand'),
-                    value: formatEnergy(summary.total_demand_kwh),
-                    hint: periodLabel,
+                    value: formatCarrierEnergy(summary.total_demand_kwh, carrier),
+                    hint: carrierLabel && periodLabel ? `${carrierLabel} · ${periodLabel}` : periodLabel,
                   },
-                  {
-                    label: t('results.metrics.renewableGen'),
-                    value: formatEnergy(summary.renewable_production_kwh),
-                    hint: installedRenewable
-                      ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
-                      : periodLabel,
-                  },
-                  {
-                    label: t('results.metrics.gridImport'),
-                    value: formatEnergy(summary.grid_import_kwh),
-                    hint: periodLabel,
-                  },
-                  {
-                    label: t('results.metrics.selfSufficiency'),
-                    value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
-                    hint: t('results.metrics.selfSufficiencyDesc'),
-                  },
+                  ...generationItems,
                   {
                     label: t('results.metrics.peakDemand'),
-                    value: formatPower(summary.peak_demand_kw),
+                    value: formatCarrierPower(summary.peak_demand_kw, carrier),
                     hint: periodLabel,
                   },
                   {
@@ -983,6 +1022,8 @@ export const ModelResultsViewer = () => {
               visible={isMapLibre3D}
             />
           )}
+
+          <CopyrightFooter />
 
           {/* Map Info Panel - shows on hover (tooltip) or click (selectedBuilding) */}
           {model && (

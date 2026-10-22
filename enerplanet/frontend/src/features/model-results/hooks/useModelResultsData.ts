@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   fetchModelWithResults,
   fetchStructuredResults,
@@ -10,6 +10,7 @@ import { ModelInfo, ModelResults, StructuredModelResults } from '@/features/mode
 import technologyService from '@/features/technologies/services/technologyService';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
+import { buildModelMenu } from '@/features/model-results/utils/modelMenu';
 
 // Wind turbine data interface
 export interface WindTurbineInfo {
@@ -70,8 +71,9 @@ export const useTurbineData = () => {
  * Custom hook for loading completed models filtered by workspace
  */
 export const useCompletedModels = (currentWorkspace: Workspace | null) => {
-  const [completedModels, setCompletedModels] = useState<Model[]>([]);
+  const [workspaceModels, setWorkspaceModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const modelMenu = useMemo(() => buildModelMenu(workspaceModels), [workspaceModels]);
 
   useEffect(() => {
     const loadCompletedModels = async () => {
@@ -83,12 +85,11 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
         }
         const response = await modelService.getModels(params);
         if (response.success) {
-          const completed = response.data.filter(m => m.status === 'completed');
-          setCompletedModels(completed);
+          setWorkspaceModels(response.data);
         }
       } catch (err) {
         console.error('Failed to load models:', err);
-        setCompletedModels([]);
+        setWorkspaceModels([]);
       } finally {
         setIsLoadingModels(false);
       }
@@ -96,51 +97,8 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
     loadCompletedModels();
   }, [currentWorkspace]);
 
-  return { completedModels, isLoadingModels };
+  return { modelMenu, isLoadingModels };
 };
-
-/**
- * TEMPORARY preview stub — remove when real heat result data flows.
- * When set to true, a fake "heat" carrier is injected so the carrier toggle
- * and heat views render without backend heat data. Delete the whole block
- * (PREVIEW_HEAT + buildHeatPreview + its two usages) once heat results exist.
- */
-const PREVIEW_HEAT = true;
-
-/** Builds a plausible heat summary from the real power summary (scaled). */
-function buildHeatPreview(structured: StructuredModelResults): StructuredModelResults {
-  const powerSum = structured.carrier_summaries?.power || {
-    sum_production: structured.sum_production || 0,
-    sum_consumption: structured.sum_consumption || 0,
-    renewable_production: structured.renewable_production || 0,
-    grid_import: structured.grid_import || 0,
-    peak_demand: structured.peak_demand || 0,
-    timestep_count: structured.timestep_count || 8760,
-  };
-  const heatConsumption = powerSum.sum_consumption * 3; // heat demand ≈ 3× electric
-  const heatRenewable = heatConsumption * 0.15; // solar thermal share
-  const clone: StructuredModelResults = JSON.parse(JSON.stringify(structured));
-  clone.sum_consumption = heatConsumption;
-  clone.sum_production = heatRenewable + heatConsumption * 0.2; // HP electricity-in → thermal-out
-  clone.renewable_production = heatRenewable;
-  clone.grid_import = heatConsumption - heatRenewable;
-  clone.peak_demand = powerSum.peak_demand * 3;
-  clone.timestep_count = powerSum.timestep_count;
-  clone.carrier_summaries = {
-    ...clone.carrier_summaries,
-    heat: {
-      sum_production: clone.sum_production,
-      sum_consumption: heatConsumption,
-      renewable_production: heatRenewable,
-      grid_import: clone.grid_import,
-      peak_demand: clone.peak_demand,
-      timestep_count: powerSum.timestep_count,
-      prod_aggregates: [],
-      con_aggregates: [],
-    },
-  };
-  return clone;
-}
 
 /**
  * Custom hook for loading model data including results and PyPSA data.
@@ -207,10 +165,6 @@ export const useModelData = (modelId: number | null) => {
           } else {
             setAvailableCarriers(['power']);
           }
-          // TEMPORARY preview: force heat carrier to appear.
-          if (PREVIEW_HEAT) {
-            setAvailableCarriers((prev) => (prev.includes('heat') ? prev : [...prev, 'heat']));
-          }
         }
 
         if (pypsa) {
@@ -241,13 +195,6 @@ export const useModelData = (modelId: number | null) => {
   // '' (default) already fetched above; only non-default carriers need this.
   useEffect(() => {
     if (!modelId || carrier === '') return;
-
-    // TEMPORARY preview: for heat, use the fake summary instead of an empty
-    // backend response (no real heat data in the DB yet).
-    if (PREVIEW_HEAT && carrier === 'heat') {
-      setStructuredResults((current) => (current ? buildHeatPreview(current) : current));
-      return;
-    }
 
     let cancelled = false;
     fetchStructuredResults(modelId, carrier).then((data) => {

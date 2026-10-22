@@ -63,7 +63,6 @@ export const useMapClickHandlers = ({
   const setTransformerDialogOpen = useModelStore((s) => s.setTransformerDialogOpen);
   const selectedTransformer = useModelStore((s) => s.selectedTransformer);
   const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
-  const transformerTooltip = useModelStore((s) => s.transformerTooltip);
   const setTransformerTooltip = useModelStore((s) => s.setTransformerTooltip);
   const buildingDialogOpen = useModelStore((s) => s.buildingDialogOpen);
   const setBuildingDialogOpen = useModelStore((s) => s.setBuildingDialogOpen);
@@ -71,9 +70,7 @@ export const useMapClickHandlers = ({
   const setSelectedBuilding = useModelStore((s) => s.setSelectedBuilding);
   const selectedBuildingFeature = useModelStore((s) => s.selectedBuildingFeature);
   const setSelectedBuildingFeature = useModelStore((s) => s.setSelectedBuildingFeature);
-  const buildingTooltip = useModelStore((s) => s.buildingTooltip);
   const setBuildingTooltip = useModelStore((s) => s.setBuildingTooltip);
-  const mvLineTooltip = useModelStore((s) => s.mvLineTooltip);
   const setMvLineTooltip = useModelStore((s) => s.setMvLineTooltip);
 
   const highlightedBuildingsRef = useRef<Feature<Geometry>[]>([]);
@@ -136,7 +133,19 @@ export const useMapClickHandlers = ({
       }
     };
 
+    let dragHoverCleared = false;
     const handlePointerMove = (evt: any) => {
+      if (evt.dragging) {
+        if (!dragHoverCleared) {
+          dragHoverCleared = true;
+          setTransformerTooltip(null);
+          setBuildingTooltip(null);
+          setMvLineTooltip(null);
+        }
+        return;
+      }
+      dragHoverCleared = false;
+      if (isDrawing) return;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
       if (!feature) { map.getTargetElement().style.cursor = ''; setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
       map.getTargetElement().style.cursor = 'pointer';
@@ -154,15 +163,17 @@ export const useMapClickHandlers = ({
   const handleCloseTransformerDialog = useCallback(() => { setTransformerDialogOpen(false); setSelectedTransformer(null); }, [setTransformerDialogOpen, setSelectedTransformer]);
   const handleCloseBuildingDialog = useCallback(() => { setBuildingDialogOpen(false); setSelectedBuilding(null); setSelectedBuildingFeature(null); }, [setBuildingDialogOpen, setSelectedBuilding, setSelectedBuildingFeature]);
 
+  // Hover tooltips change on every pointer move, so they are read in
+  // MapOverlays; reading them here would re-render the configurator.
   return {
     transformerDialogOpen, setTransformerDialogOpen,
     selectedTransformer, setSelectedTransformer,
-    transformerTooltip, setTransformerTooltip,
+    setTransformerTooltip,
     buildingDialogOpen, setBuildingDialogOpen,
     selectedBuilding, setSelectedBuilding,
     selectedBuildingFeature, setSelectedBuildingFeature,
-    buildingTooltip, setBuildingTooltip,
-    mvLineTooltip, setMvLineTooltip,
+    setBuildingTooltip,
+    setMvLineTooltip,
     handleCloseTransformerDialog, handleCloseBuildingDialog,
   };
 };

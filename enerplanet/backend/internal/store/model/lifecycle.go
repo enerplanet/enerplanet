@@ -2,10 +2,8 @@ package model
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	"spatialhub_backend/internal/events"
@@ -60,10 +58,6 @@ func (s *Store) ClaimRunning(ctx context.Context, modelID, webserviceID uint, no
 
 // Marks model failed.
 func (s *Store) MarkFailed(ctx context.Context, modelID uint, reason string, now time.Time) (LifecycleTransition, error) {
-	resultJSON, err := json.Marshal(map[string]string{"error": reason})
-	if err != nil {
-		return LifecycleTransition{}, err
-	}
 	event, err := events.NewModelEvent(events.ModelFailed, modelID, "", map[string]interface{}{
 		"reason": reason,
 	})
@@ -83,7 +77,7 @@ func (s *Store) MarkFailed(ctx context.Context, modelID uint, reason string, now
 				"webservice_id":            nil,
 				"calculation_completed_at": now,
 				"updated_at":               now,
-				"results":                  datatypes.JSON(resultJSON),
+				"results":                  FailedResults(reason),
 			})
 		if result.Error != nil {
 			return result.Error

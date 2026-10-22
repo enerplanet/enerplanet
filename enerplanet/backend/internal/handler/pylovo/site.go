@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,10 +29,18 @@ type countryResolver interface {
 	Resolve(ctx context.Context, coords json.RawMessage) (string, error)
 }
 
-// linkLookup returns the City2TABULA buildings linked to the given OSM ids.
+// buildings3D finds a site's City2TABULA buildings and their WGS84 footprints.
 // Satisfied by *city2tabula.Client; faked in tests.
-type linkLookup interface {
+type buildings3D interface {
 	GetBuildingsByOSMIDs(ctx context.Context, country string, osmIDs []string) (city2tabula.BuildingsResult, error)
+	GetBuildingsInBBox(ctx context.Context, country string, bbox city2tabula.Bbox) (city2tabula.BuildingsResult, error)
+	GetFootprintsWGS84(ctx context.Context, country string, objectIDs []string) (city2tabula.GeometryResult, error)
+}
+
+// siteModels names the saved models whose grid is a site.
+// Satisfied by *modelstore.Store; faked in tests.
+type siteModels interface {
+	ModelsUsingSite(siteID int) ([]string, error)
 }
 
 // SiteHandler serves the site-mode routes. pylovo stores a site's owner but
@@ -39,12 +48,13 @@ type linkLookup interface {
 type SiteHandler struct {
 	pylovo  *PylovoHandler
 	country countryResolver
-	links   linkLookup
+	links   buildings3D
+	models  siteModels
 }
 
 // NewSiteHandler returns a SiteHandler that reaches pylovo through h.
-func NewSiteHandler(h *PylovoHandler, country countryResolver, links linkLookup) *SiteHandler {
-	return &SiteHandler{pylovo: h, country: country, links: links}
+func NewSiteHandler(h *PylovoHandler, country countryResolver, links buildings3D, models siteModels) *SiteHandler {
+	return &SiteHandler{pylovo: h, country: country, links: links, models: models}
 }
 
 type createSiteRequest struct {
@@ -52,17 +62,8 @@ type createSiteRequest struct {
 	Geom json.RawMessage `json:"geom" binding:"required"`
 }
 
-type siteBuildings struct {
-	Features []struct {
-		Properties struct {
-			BuildingID int    `json:"building_id"`
-			OSMID      string `json:"osm_id"`
-		} `json:"properties"`
-	} `json:"features"`
-}
-
-// CreateSite creates a site for the caller from a polygon. Only buildings with
-// a City2TABULA link are modelled; the others are excluded in pylovo.
+// CreateSite creates a site for the caller from a polygon. Its buildings are
+// the 3D buildings in the polygon, plus the OSM outlines no 3D building covers.
 func (s *SiteHandler) CreateSite(c *gin.Context) {
 	userID, ok := httputil.MustGetUserID(c)
 	if !ok {
@@ -105,16 +106,13 @@ func (s *SiteHandler) CreateSite(c *gin.Context) {
 	}
 	siteID := created.SiteID
 
-	linked, revision, err := s.excludeUnlinked(ctx, siteID, countryName)
-	if err == nil && (linked == 0 || linked > siteBuildingLimit) {
-		err = fmt.Errorf("the area holds %d buildings with 3D data; a site needs between 1 and %d", linked, siteBuildingLimit)
-	}
+	count, revision, err := s.buildFromFootprints(ctx, siteID, countryName, geom)
 	if err != nil {
 		s.discard(ctx, siteID)
 		httputil.ErrorResponse(c, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	site["building_count"] = linked
+	site["building_count"] = count
 	site["revision"] = revision
 	site["country"] = countryName
 	c.JSON(status, gin.H{"success": true, "data": site})
@@ -131,67 +129,6 @@ func (s *SiteHandler) resolveCountry(ctx context.Context, geom json.RawMessage) 
 		return "", "", fmt.Errorf("site mode does not support country %q", name)
 	}
 	return name, iso, nil
-}
-
-// excludeUnlinked excludes the site's buildings that have no City2TABULA link
-// and returns the number left and the site's revision afterwards.
-func (s *SiteHandler) excludeUnlinked(ctx context.Context, siteID int, country string) (int, int, error) {
-	body, status, err := forwardPylovoRequest(ctx, s.pylovo.resolveBaseURL(), http.MethodGet, fmt.Sprintf("/sites/%d/buildings", siteID), nil)
-	if err != nil || status != http.StatusOK {
-		return 0, 0, fmt.Errorf("listing buildings of site %d failed (status %d): %v", siteID, status, err)
-	}
-	var buildings siteBuildings
-	if err := json.Unmarshal(body, &buildings); err != nil {
-		return 0, 0, fmt.Errorf("unreadable buildings of site %d: %w", siteID, err)
-	}
-	osmIDs := make([]string, 0, len(buildings.Features))
-	for _, f := range buildings.Features {
-		if f.Properties.OSMID != "" {
-			osmIDs = append(osmIDs, f.Properties.OSMID)
-		}
-	}
-	result, err := s.links.GetBuildingsByOSMIDs(ctx, country, osmIDs)
-	if err != nil {
-		return 0, 0, fmt.Errorf("City2TABULA lookup for site %d failed: %w", siteID, err)
-	}
-	// A further way of a 3D building stays in the site as a grid node; its
-	// demand is modelled under the way standing for the building.
-	byWay, further := result.ByRequestedWay(osmIDs)
-	linked := make(map[string]bool, len(byWay)+len(further))
-	for way := range byWay {
-		linked[way] = true
-	}
-	for way := range further {
-		linked[way] = true
-	}
-
-	var patches []map[string]any
-	for _, f := range buildings.Features {
-		if !linked[f.Properties.OSMID] {
-			patches = append(patches, map[string]any{
-				"building_id": f.Properties.BuildingID, "overrides": map[string]any{"excluded": true},
-			})
-		}
-	}
-	count := len(buildings.Features) - len(patches)
-	if len(patches) == 0 {
-		return count, 1, nil
-	}
-	payload, err := json.Marshal(patches)
-	if err != nil {
-		return 0, 0, fmt.Errorf("encoding exclusions of site %d: %w", siteID, err)
-	}
-	body, status, err = forwardPylovoRequest(ctx, s.pylovo.resolveBaseURL(), http.MethodPatch, fmt.Sprintf("/sites/%d/buildings", siteID), payload)
-	if err != nil || status != http.StatusOK {
-		return 0, 0, fmt.Errorf("excluding unlinked buildings of site %d failed (status %d): %v %s", siteID, status, err, body)
-	}
-	var patched struct {
-		Revision int `json:"revision"`
-	}
-	if err := json.Unmarshal(body, &patched); err != nil {
-		return 0, 0, fmt.Errorf("unreadable revision of site %d: %w", siteID, err)
-	}
-	return count, patched.Revision, nil
 }
 
 // discard deletes a site whose creation could not complete.
@@ -217,12 +154,26 @@ func (s *SiteHandler) GetSite(c *gin.Context) {
 	}
 }
 
-// DeleteSite deletes one of the caller's sites with its grid results.
+// DeleteSite deletes one of the caller's sites with its grid results, unless
+// a saved model still uses it: that model's grid would then be gone.
 func (s *SiteHandler) DeleteSite(c *gin.Context) {
-	if id, _, ok := s.ownedSite(c); ok {
-		if _, _, ok := s.call(c, http.MethodDelete, fmt.Sprintf("/sites/%d", id), nil); ok {
-			httputil.NoContent(c)
-		}
+	id, _, ok := s.ownedSite(c)
+	if !ok {
+		return
+	}
+	titles, err := s.models.ModelsUsingSite(id)
+	if err != nil {
+		logger.ForComponent("pylovo").Errorf("list models using site %d: %v", id, err)
+		httputil.InternalError(c, fmt.Sprintf("could not check which models use site %d", id))
+		return
+	}
+	if len(titles) > 0 {
+		httputil.Conflict(c, fmt.Sprintf("site %d is the grid of %d saved model(s): %s; delete those models or give them another grid first",
+			id, len(titles), strings.Join(titles, ", ")))
+		return
+	}
+	if _, _, ok := s.call(c, http.MethodDelete, fmt.Sprintf("/sites/%d", id), nil); ok {
+		httputil.NoContent(c)
 	}
 }
 
@@ -248,7 +199,16 @@ func (s *SiteHandler) GetSiteJob(c *gin.Context) {
 // GetSiteGrid returns the site's generated grid in the /generate-grid shape.
 func (s *SiteHandler) GetSiteGrid(c *gin.Context) {
 	if id, _, ok := s.ownedSite(c); ok {
-		s.relay(c, http.MethodGet, fmt.Sprintf("/sites/%d/grid", id), nil)
+		body, status, ok := s.call(c, http.MethodGet, fmt.Sprintf("/sites/%d/grid", id), nil)
+		if !ok {
+			return
+		}
+		keyed, err := keyBuildings3D(body)
+		if err != nil {
+			httputil.BadGateway(c, fmt.Sprintf("Unreadable grid of site %d from Pylovo: %v", id, err))
+			return
+		}
+		c.JSON(status, gin.H{"success": true, "data": keyed})
 	}
 }
 

@@ -5,6 +5,7 @@
 import OLMap from 'ol/Map';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
+import Cluster from 'ol/source/Cluster';
 import Feature from 'ol/Feature';
 import GeoJSON from 'ol/format/GeoJSON';
 import type { Geometry } from 'ol/geom';
@@ -15,6 +16,8 @@ import {
   cableStyleFunction,
   mvLineStyleFunction,
   transformerStyleFunction,
+  transformerCountStyle,
+  OVERVIEW_ZOOM,
   boundaryStyleFunction,
   selectedBoundaryStyleFunction,
   searchBoundaryStyleFunction,
@@ -34,11 +37,25 @@ const createMvLineStyleFunction = (): StyleFunction => {
   };
 };
 
-const createTransformerStyleFunction = (): StyleFunction => {
-  return (feature: FeatureLike, resolution: number): ReturnType<StyleFunction> => {
-    return transformerStyleFunction(feature as Feature<Geometry>, resolution);
-  };
-};
+/**
+ * The layers of a grid's transformers: full markers when zoomed in and, at
+ * OVERVIEW_ZOOM or below, one count badge per group of nearby transformers.
+ * Both read source, so a transformer added to it shows in either.
+ */
+export const createTransformerLayers = (source: VectorSource): VectorLayer<VectorSource>[] => [
+  new VectorLayer({
+    source,
+    style: (feature, resolution) => transformerStyleFunction(feature as Feature<Geometry>, resolution),
+    zIndex: 102,
+    minZoom: OVERVIEW_ZOOM,
+  }),
+  new VectorLayer({
+    source: new Cluster({ source, distance: 40 }),
+    style: transformerCountStyle,
+    zIndex: 102,
+    maxZoom: OVERVIEW_ZOOM,
+  }),
+];
 
 // GeoJSON data structure for grid/model config
 interface GridLayerData {
@@ -229,13 +246,10 @@ export const loadGridLayers = (
     transformerSource.addFeatures(features);
     allFeatures.push(...features);
 
-    const transformerLayer = new VectorLayer({
-      source: transformerSource,
-      style: createTransformerStyleFunction(),
-      zIndex: 102,
-    });
-    map.addLayer(transformerLayer);
-    layers.push(transformerLayer);
+    for (const layer of createTransformerLayers(transformerSource)) {
+      map.addLayer(layer);
+      layers.push(layer);
+    }
   }
 
   return { layers, buildingSource, allFeatures };

@@ -2,7 +2,6 @@ import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import { MapContainer } from "@/components/shared/MapContainer";
 import axios from "@/lib/axios";
 import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -309,8 +308,6 @@ export const AssessmentViewer: React.FC = () => {
 
 			<MapSearchBar />
 			<MapControls />
-
-			<CopyrightFooter position="bottom-left-sidebar" />
 		</>
 	);
 

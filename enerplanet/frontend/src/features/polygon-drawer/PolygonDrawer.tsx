@@ -16,9 +16,10 @@ import type MapBrowserEvent from "ol/MapBrowserEvent";
 import { getArea } from "ol/sphere";
 import buffer from "@turf/buffer";
 import type { Feature as GeoJSONFeature, Polygon as GeoJSONPolygon, Position } from "geojson";
+import { OVERVIEW_ZOOM } from "@/features/interactive-map/utils/mapStyleUtils";
 
 /** What a click at the pointer would act on: a polygon corner (of a triangle), a polygon's inside, or empty map. */
-export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "outside";
+export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "building" | "outside";
 
 // Modify's default pixelTolerance: the distance at which it picks up a vertex.
 const CORNER_TOLERANCE_PX = 10;
@@ -213,31 +214,33 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     vectorSourceRef.current = vectorSource;
     setSourceReady(true);
 
+    const outlineStyle = new Style({
+      fill: new Fill({
+        color: "transparent",
+      }),
+      stroke: new Stroke({
+        color: "#000000",
+        width: 2.5,
+      }),
+    });
+    // A marker on every corner shows where the polygon can be grabbed.
+    const cornerStyle = new Style({
+      geometry: (feature) => {
+        const ring = (feature.getGeometry() as Polygon).getCoordinates()[0];
+        return new MultiPoint(ring.slice(0, -1));
+      },
+      image: new CircleStyle({
+        radius: 4,
+        fill: new Fill({ color: "#ffffff" }),
+        stroke: new Stroke({ color: "#111827", width: 1.5 }),
+      }),
+    });
     const vectorLayer = new VectorLayer({
       source: vectorSource,
-      style: [
-        new Style({
-          fill: new Fill({
-            color: "transparent",
-          }),
-          stroke: new Stroke({
-            color: "#000000",
-            width: 2.5,
-          }),
-        }),
-        // A marker on every corner shows where the polygon can be grabbed.
-        new Style({
-          geometry: (feature) => {
-            const ring = (feature.getGeometry() as Polygon).getCoordinates()[0];
-            return new MultiPoint(ring.slice(0, -1));
-          },
-          image: new CircleStyle({
-            radius: 4,
-            fill: new Fill({ color: "#ffffff" }),
-            stroke: new Stroke({ color: "#111827", width: 1.5 }),
-          }),
-        }),
-      ],
+      style: (_feature, resolution) =>
+        (map.getView().getZoomForResolution(resolution) ?? Infinity) > OVERVIEW_ZOOM
+          ? [outlineStyle, cornerStyle]
+          : [outlineStyle],
       zIndex: 2000, // High z-index to ensure polygon stays on top of all grid layers
     });
 
@@ -309,6 +312,13 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
     let handlePointerMove: ((evt: MapBrowserEvent) => void) | null = null;
 
+    // A click on a building or transformer opens it, so a new polygon cannot start there.
+    const onModelFeature = (pixel: number[]): boolean =>
+      map.forEachFeatureAtPixel(pixel, (f) => {
+        const type = f.get("feature_type");
+        return type === "building" || type === "transformer" ? true : undefined;
+      }) === true;
+
     // Only add draw interaction if not in readOnly mode
     if (!readOnly) {
       const draw = new Draw({
@@ -322,7 +332,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           noModifierKeys(event) &&
           !spaceHeld &&
           !suspendedRef.current &&
-          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0),
+          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0) &&
+          (sketching || !onModelFeature(event.pixel)),
       });
       drawInteractionRef.current = draw;
 
@@ -687,6 +698,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         corner: "move",
         "triangle-corner": "move",
         polygon: "pointer",
+        building: "pointer",
         outside: "crosshair",
       };
       handlePointerMove = (evt: MapBrowserEvent) => {
@@ -700,6 +712,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           target = onTriangleCorner ? "triangle-corner" : "corner";
         } else if (vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0) {
           target = "polygon";
+        } else if (onModelFeature(evt.pixel)) {
+          target = "building";
         }
         if (allowMultipleRef.current) draw.setActive(target === "outside");
         const changed = target !== pointerTarget;

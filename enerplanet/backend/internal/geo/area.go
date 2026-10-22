@@ -119,3 +119,71 @@ func checkRing(ring [][]float64) ([][2]float64, error) {
 	}
 	return out, nil
 }
+
+// Touches reports whether any vertex of footprint lies inside area. Both are
+// GeoJSON Polygons or MultiPolygons in the same CRS.
+// Vertex test only: a footprint that an area edge crosses without any
+// footprint vertex inside is not reported.
+func Touches(area, footprint json.RawMessage) bool {
+	areaPolys, err := polygonsOf(area)
+	if err != nil {
+		return false
+	}
+	footPolys, err := polygonsOf(footprint)
+	if err != nil {
+		return false
+	}
+	for _, poly := range footPolys {
+		for _, ring := range poly {
+			for _, p := range ring {
+				for _, a := range areaPolys {
+					if contains(a, p) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+// polygonsOf reads a Polygon or MultiPolygon as polygons of rings of [x, y].
+func polygonsOf(raw json.RawMessage) ([][][][]float64, error) {
+	var g areaGeometry
+	if err := json.Unmarshal(raw, &g); err != nil {
+		return nil, err
+	}
+	switch g.Type {
+	case "Polygon":
+		var p [][][]float64
+		err := json.Unmarshal(g.Coordinates, &p)
+		return [][][][]float64{p}, err
+	case "MultiPolygon":
+		var mp [][][][]float64
+		err := json.Unmarshal(g.Coordinates, &mp)
+		return mp, err
+	}
+	return nil, fmt.Errorf("type %q, want Polygon or MultiPolygon", g.Type)
+}
+
+// contains is the even-odd test of p against every ring of polygon, so a
+// point in a hole is outside.
+func contains(polygon [][][]float64, p []float64) bool {
+	if len(p) < 2 {
+		return false
+	}
+	x, y := p[0], p[1]
+	inside := false
+	for _, ring := range polygon {
+		for i, j := 0, len(ring)-1; i < len(ring); j, i = i, i+1 {
+			if len(ring[i]) < 2 || len(ring[j]) < 2 {
+				continue
+			}
+			xi, yi, xj, yj := ring[i][0], ring[i][1], ring[j][0], ring[j][1]
+			if (yi > y) != (yj > y) && x < (xj-xi)*(y-yi)/(yj-yi)+xi {
+				inside = !inside
+			}
+		}
+	}
+	return inside
+}

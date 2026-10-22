@@ -74,7 +74,7 @@ func (h *IgnisHandler) forward(c *gin.Context, target string, payload any) {
 //	@Failure		400				{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502				{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
-//	@Router			/v2/ignis/variants/{country_iso2} [get]
+//	@Router			/v1/ignis/variants/{country_iso2} [get]
 func (h *IgnisHandler) GetVariants(c *gin.Context) {
 	h.forward(c, "ignis-variants", map[string]any{"iso2": c.Param("country_iso2")})
 }
@@ -89,7 +89,7 @@ func (h *IgnisHandler) GetVariants(c *gin.Context) {
 //	@Success		200	{object}	contracts.GetIgnisFieldMetadataResponse
 //	@Failure		502	{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
-//	@Router			/v2/ignis/fields [get]
+//	@Router			/v1/ignis/fields [get]
 func (h *IgnisHandler) GetFieldMetadata(c *gin.Context) {
 	h.forward(c, "ignis-fields", map[string]any{})
 }
@@ -105,22 +105,27 @@ func (h *IgnisHandler) GetFieldMetadata(c *gin.Context) {
 //	@Param			country_iso2	path		string	true	"ISO 3166-1 alpha-2 country code"	example(NL)
 //	@Param			type			query		string	true	"TABULA building type"				example(SFH)
 //	@Param			year			query		int		true	"Construction year"					example(1975)
+//	@Param			subtype			query		string	false	"TABULA subtype; ignis uses Gen when absent"	example(Gen)
 //	@Success		200				{object}	contracts.GetIgnisVariantsResponse
 //	@Failure		400				{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502				{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
-//	@Router			/v2/ignis/variants/{country_iso2}/match [get]
+//	@Router			/v1/ignis/variants/{country_iso2}/match [get]
 func (h *IgnisHandler) MatchVariants(c *gin.Context) {
 	year, err := strconv.Atoi(c.Query("year"))
 	if err != nil {
 		httputil.BadRequest(c, "year must be a whole number, got "+c.Query("year"))
 		return
 	}
-	h.forward(c, "ignis-variants-match", map[string]any{
+	params := map[string]any{
 		"iso2": c.Param("country_iso2"),
 		"type": c.Query("type"),
 		"year": year,
-	})
+	}
+	if subtype := c.Query("subtype"); subtype != "" {
+		params["subtype"] = subtype
+	}
+	h.forward(c, "ignis-variants-match", params)
 }
 
 // GetVariantData godoc
@@ -135,7 +140,7 @@ func (h *IgnisHandler) MatchVariants(c *gin.Context) {
 //	@Failure		400		{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502		{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
-//	@Router			/v2/ignis/data/{code} [get]
+//	@Router			/v1/ignis/data/{code} [get]
 func (h *IgnisHandler) GetVariantData(c *gin.Context) {
 	h.forward(c, "ignis-data", map[string]any{"code": c.Param("code")})
 }
@@ -154,7 +159,7 @@ func (h *IgnisHandler) GetVariantData(c *gin.Context) {
 //	@Failure		400		{object}	contracts.ErrorResponse	"ignis declined the request"
 //	@Failure		502		{object}	contracts.ErrorResponse	"ignis unavailable"
 //	@Security		SessionAuth
-//	@Router			/v2/ignis/calculate/{code} [post]
+//	@Router			/v1/ignis/calculate/{code} [post]
 func (h *IgnisHandler) Calculate(c *gin.Context) {
 	// An empty body is a valid call: it runs the archetype unmodified.
 	payload := map[string]any{}

@@ -18,10 +18,34 @@ export interface PvArray {
   usable_share: number;
 }
 
-interface PvSurfaceRow extends PvArray {
+export interface PvSurfaceRow extends PvArray {
   kind: 'roof' | 'wall';
   qualifies: boolean;
   suggested: boolean;
+  /** The 3D building of the surface; an OSM way can cover several. */
+  object_id?: string;
+}
+
+/**
+ * Labels for surfaces of the way's other 3D buildings, which the view does not
+ * show: "Roof on another 3D building (2 of 3)". The shown building counts as 1.
+ */
+export function otherBuildingLabels(
+  rows: readonly PvSurfaceRow[],
+  shownObjectId: string | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): Record<string, string> {
+  const others: string[] = [];
+  for (const row of rows) {
+    if (row.object_id && row.object_id !== shownObjectId && !others.includes(row.object_id)) others.push(row.object_id);
+  }
+  const labels: Record<string, string> = {};
+  for (const row of rows) {
+    if (!row.object_id || row.object_id === shownObjectId) continue;
+    const key = row.kind === 'wall' ? 'buildingConfig.pv.otherWall' : 'buildingConfig.pv.otherRoof';
+    labels[row.surface_id] = t(key, { n: others.indexOf(row.object_id) + 2, total: others.length + 1 });
+  }
+  return labels;
 }
 
 /** The building's PV technology as the host stores it. */
@@ -32,10 +56,36 @@ export interface BuildingPv {
 }
 
 // Matches the backend's pv.KWPerSqm.
-const KWP_PER_M2 = 0.2;
+export const KWP_PER_M2 = 0.2;
 
 const toArray = ({ surface_id, tilt, azimuth, area, usable_share }: PvArray): PvArray =>
   ({ surface_id, tilt, azimuth, area, usable_share });
+
+/** The arrays PV covers: the stored ones, or the qualifying roofs while placement is automatic. */
+export function installedPvArrays(arrays: PvArray[] | null, rows: PvSurfaceRow[] | null): PvArray[] {
+  return arrays ?? rows?.filter((r) => r.qualifies).map(toArray) ?? [];
+}
+
+/**
+ * The building's roofs and walls offered for PV, loaded while active; null
+ * until loaded, and failed when loading them failed.
+ */
+export function usePvSurfaceRows(osmId: string, country: string | null, active: boolean) {
+  const [rows, setRows] = useState<PvSurfaceRow[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!active || !country) return;
+    let cancelled = false;
+    axios
+      .get<{ surfaces: PvSurfaceRow[] }>('/v1/city2tabula/pv-surfaces', { params: { osm_id: osmId, country } })
+      .then((res) => { if (!cancelled) setRows(res.data.surfaces); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [active, osmId, country]);
+
+  return { rows, failed };
+}
 
 function stateOf(row: PvSurfaceRow, installed: boolean): PvSurface['state'] {
   if (installed) return 'installed';
@@ -53,26 +103,14 @@ export function usePvMode(
   building: BuildingPv | null,
   notice: string,
   onArrays: (arrays: PvArray[]) => void,
+  shownObjectId: string | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): { pv: PvMode | undefined; failed: boolean } {
-  const [rows, setRows] = useState<PvSurfaceRow[] | null>(null);
-  const [failed, setFailed] = useState(false);
   const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
   const active = building !== null;
+  const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
-  useEffect(() => {
-    if (!active || !country) return;
-    let cancelled = false;
-    axios
-      .get<{ surfaces: PvSurfaceRow[] }>('/v1/city2tabula/pv-surfaces', { params: { osm_id: osmId, country } })
-      .then((res) => { if (!cancelled) setRows(res.data.surfaces); })
-      .catch(() => { if (!cancelled) setFailed(true); });
-    return () => { cancelled = true; };
-  }, [active, osmId, country]);
-
-  const installed = useMemo(
-    () => arrays ?? rows?.filter((r) => r.qualifies).map(toArray) ?? [],
-    [arrays, rows],
-  );
+  const installed = useMemo(() => installedPvArrays(arrays, rows), [arrays, rows]);
 
   const change = useCallback((next: PvArray[]) => {
     setArrays(next);
@@ -93,6 +131,7 @@ export function usePvMode(
   const typeLabel = building?.typeLabel ?? "";
   const pv = useMemo<PvMode | undefined>(() => {
     if (!active || !rows) return undefined;
+    const labels = otherBuildingLabels(rows, shownObjectId, t);
     const surfaces: Record<string, PvSurface> = {};
     for (const row of rows) {
       const array = installed.find((a) => a.surface_id === row.surface_id);
@@ -101,10 +140,11 @@ export function usePvMode(
         state: stateOf(row, array !== undefined),
         usableShare,
         maxKwp: Number((row.area * usableShare * KWP_PER_M2).toFixed(1)),
+        label: labels[row.surface_id],
       };
     }
     return { surfaces, notice, typeLabel, onToggle, onShareChange };
-  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange]);
+  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange, shownObjectId, t]);
 
   return { pv, failed };
 }

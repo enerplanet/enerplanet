@@ -64,11 +64,34 @@ export interface BuildingStateResult {
   credits: DatasetCredit[];
   /** True when the building opened from edits saved in the model rather than from City2TABULA. */
   edited: boolean;
+  /**
+   * How many 3D buildings this OSM outline covers, as a terraced row mapped as
+   * one outline does. The view shows the largest; heat demand is computed for
+   * each and summed.
+   */
+  buildingCount: number;
 }
 
-const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [], edited: false };
+const EMPTY: BuildingStateResult = { building: null, loading: false, error: null, preparing: false, objectId: null, country: null, credits: [], edited: false, buildingCount: 1 };
 
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
+
+/** Prefix of the key a building from 3D data carries when it has no OSM way (backend city2tabula.ObjectKey). */
+const OBJECT_KEY_PREFIX = 'c2t:';
+
+/**
+ * The building with the label its header shows: a 3D building's dataset id
+ * rather than its internal `c2t:` key; any other building keeps its label.
+ */
+export function withDisplayLabel(building: BuildingState, key: string): BuildingState {
+  if (!key.startsWith(OBJECT_KEY_PREFIX)) return building;
+  const label = key.slice(OBJECT_KEY_PREFIX.length);
+  // The configurator reads thematic.identity first and identity otherwise.
+  const thematic = building.thematic?.identity
+    ? { ...building.thematic, identity: { ...building.thematic.identity, label } }
+    : building.thematic;
+  return { ...building, thematic, identity: { ...building.identity, label } };
+}
 
 /** Enrich one building and build its state, or say why there is none. */
 async function resolveBuilding(
@@ -90,11 +113,12 @@ async function resolveBuilding(
   const stored = storedBuemOf(feature.properties);
   if (!entry && !stored) return failed('No 3D envelope is available for this building yet.');
 
-  const building = stored
+  const built = stored
     ? fromStoredBuem(osmId, feature.geometry, stored)
     : (await buildBuildingStates(variantLookups, { features: [feature] }, res.data.data))[osmId];
+  const building = built ? withDisplayLabel(built, osmId) : null;
   return {
-    building: building ?? null,
+    building,
     loading: false,
     error: null,
     preparing: false,
@@ -106,6 +130,7 @@ async function resolveBuilding(
       Boolean(entry?.tabula_variant_code),
     ),
     edited: stored !== null,
+    buildingCount: (entry as { building_count?: number } | undefined)?.building_count ?? 1,
   };
 }
 

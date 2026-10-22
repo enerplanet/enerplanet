@@ -33,7 +33,7 @@ export const PowerFlowLegend: FC<PowerFlowLegendProps> = ({
 
   return (
     <div className="absolute bottom-10 left-3 z-30">
-      <div className="bg-card/95 backdrop-blur-md border border-border rounded-lg shadow-lg p-3 w-52">
+      <div className="bg-card border border-border rounded-lg shadow-lg p-3 w-52">
         {/* Custom Transformers section - shown first if any exist */}
         {customTransformers.length > 0 && (
           <div className="space-y-1.5 mb-3 pb-3 border-b border-border">

@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Klicken zum Zeichnen",
+    "buildingNotStart": "Klick öffnet dieses Gebäude. Gebiet daneben beginnen.",
     "secondCorner": "Klicken, um die zweite Ecke zu setzen",
     "thirdCorner": "Klicken, um die dritte Ecke zu setzen",
     "rightClickToFinish": "Rechtsklick, um die Fläche abzuschließen",
@@ -164,11 +165,16 @@
     "techAddedToAll": "{{tech}} zu {{count}} Gebäuden hinzugefügt",
     "techAddedToBuilding": "{{tech}} zum Gebäude hinzugefügt",
     "techRemovedFromAll": "{{tech}} von {{count}} Gebäuden entfernt",
+    "allTechsRemoved": "Technologien von {{count}} Gebäuden entfernt",
     "techRemovedFromBuilding": "{{tech}} vom Gebäude entfernt",
     "techNotFound": "Technologie {{tech}} nicht gefunden",
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
     "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
-    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}"
+    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}",
+    "areaOverLimit": {
+      "title": "Dieses Gebiet enthält {{buildings}} Gebäude; ein Modell darf {{limit}} enthalten",
+      "description": "Verkleinern Sie das Gebiet um etwa {{excess}} Gebäude. Es bleibt auf der Karte, und das Netz wird geladen, sobald es passt."
+    }
   },
   "common": {
     "save": "Speichern",
@@ -533,7 +539,12 @@
     "published": "Veröffentlicht",
     "failed": "Fehlgeschlagen",
     "cancelled": "Abgebrochen",
-    "modified": "Bearbeitet"
+    "modified": "Bearbeitet",
+    "failedAt": {
+      "queue": "Vorbereitung fehlgeschlagen",
+      "running": "Simulation fehlgeschlagen",
+      "processing": "Auswertung fehlgeschlagen"
+    }
   },
   "results": {
     "title": "Simulationsergebnisse",
@@ -543,10 +554,18 @@
     "carrier": {
       "toggleLabel": "Energieträger",
       "electricity": "Strom",
-      "heat": "Wärme"
+      "heat": "Wärme",
+      "gas": "Gas",
+      "oil": "Öl",
+      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen"
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
+    "copies_one": "{{count}} Kopie",
+    "copies_other": "{{count}} Kopien",
+    "notRun": "nicht ausgeführt",
+    "inModels_one": "in {{count}} Modell",
+    "inModels_other": "in {{count}} Modellen",
     "loadingModels": "Modelle werden geladen...",
     "noCompletedSimulations": "Keine abgeschlossenen Simulationen in diesem Arbeitsbereich",
     "noCompletedModels": "Keine abgeschlossenen Modelle",
@@ -679,6 +698,7 @@
       "noData": "Keine Energiedaten verfügbar",
       "dailyEnergyBalance": "Tägliche Energiebilanz",
       "dailyEnergyBalanceDesc": "Zeigt die tägliche Bilanz zwischen Energieerzeugung und -verbrauch über alle Technologien im System.",
+      "dailyEnergyBalanceDescHeat": "Zeigt die tägliche Bilanz zwischen bereitgestellter Wärme (z. B. durch Wärmepumpen) und Wärmebedarf über alle Technologien im System.",
       "production": "Erzeugung",
       "productionDesc": "Energie erzeugt durch Solar, Wind und andere Quellen",
       "consumption": "Verbrauch",
@@ -691,10 +711,12 @@
       "selfSufficiency": "Eigenversorgungsgrad",
       "netBalance": "Nettobilanz",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Keine Energiebilanzdaten verfügbar",
       "dailyLoadProfile": "Tägliches Lastprofil",
       "dailyLoadProfileDesc": "Zeigt Stromverbrauchsmuster über einen 24-Stunden-Zeitraum mit automatischer Erkennung von Spitzenlastzeiten.",
+      "dailyLoadProfileDescHeat": "Zeigt Wärmebedarfsmuster über einen 24-Stunden-Zeitraum mit automatischer Erkennung von Spitzenlastzeiten.",
       "peakPeriods": "Spitzenzeiten",
       "peakPeriodsDesc": "Morgens (07:00-10:00) und abends (17:00-21:00) Zeiten hoher Nachfrage",
       "offPeak": "Schwachlastzeit",
@@ -724,6 +746,10 @@
       "morningPeak": "Morgenspitze",
       "eveningPeak": "Abendspitze",
       "noDataLoadProfile": "Keine Daten für tägliches Lastprofil verfügbar",
+      "generationDurationCurve": "Erzeugungsdauerlinie",
+      "generationDurationCurveDesc": "Sortiert die stündliche regenerative Erzeugung vom höchsten zum niedrigsten Wert, sodass Spitzenerzeugung und Jahresverlauf sichtbar werden.",
+      "demandDurationCurve": "Bedarf-Dauerlinie",
+      "demandDurationCurveDesc": "Sortiert den stündlichen Wärmebedarf vom höchsten zum niedrigsten Wert, sodass Spitzenbedarf und Jahresverlauf sichtbar werden.",
       "noDataLoadCurve": "Keine Daten für Lastkurve verfügbar"
     },
     "grid": {
@@ -804,6 +830,8 @@
       "unmetDemandDesc": "Energiebedarf, der nicht durch das verfügbare Angebot gedeckt werden konnte. Niedrigere Werte zeigen bessere Systemzuverlässigkeit.",
       "unmetEnergy": "Ungedeckte Energie",
       "unmetEnergyDesc": "Bedarf übersteigt verfügbares Angebot",
+      "energy": "Energie",
+      "unmet": "Ungedeckt",
       "unmetKwh": "Ungedeckt (kWh)",
       "powerFlowAnalysis": "Leistungsflussanalyse",
       "powerFlow": "Leistungsfluss",
@@ -1724,7 +1752,7 @@
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
       "regenerateGrid": "Netz neu erzeugen",
-      "regenerateGridHint": "Gebiet oder Transformatoren des Standorts haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
+      "regenerateGridHint": "Gebiet oder Transformatoren haben sich geändert. Neu erzeugen, um die Gebäude darum zu gruppieren und das Netz zu aktualisieren.",
       "importAreaError": {
         "invalid": "Die Datei ist kein gültiges GeoJSON.",
         "noPolygon": "Die Datei enthält kein Polygon.",
@@ -1745,6 +1773,31 @@
       "clickForDetails": "Klicken Sie für weitere Details",
       "class": "Klasse",
       "estimatedShort": "geschätzt",
+      "buemTotal": "Gesamt: {{value}}",
+      "kitchenGas": "Küchengas: {{value}}",
+      "geometry3d": "3D-Geometrie: City2TABULA",
+      "asModelled": "Gebäude, wie modelliert",
+      "storeys": "Geschosse (3D-Geometrie)",
+      "floorArea": "Nutzfläche",
+      "roomHeight": "Raumhöhe",
+      "envelope": "Hüllen-Referenz (TABULA)",
+      "useType": {
+        "SFH": "Einfamilienhaus",
+        "TH": "Reihenhaus",
+        "MFH": "Mehrfamilienhaus",
+        "AB": "Wohnblock",
+        "bakery": "Bäckerei",
+        "clinic": "Klinik",
+        "hotel": "Hotel",
+        "office": "Büro",
+        "restaurant": "Restaurant",
+        "school": "Schule",
+        "supermarket": "Supermarkt",
+        "warehouse": "Lagerhalle"
+      },
+      "buemFailed": "BuEM fehlgeschlagen: {{reason}}",
+      "buemShared": "Mit einem anderen Gebäude gezählt: {{detail}}",
+      "buemPending": "BuEM-Ergebnis ausstehend",
       "floors": "Geschosse",
       "height": "Höhe",
       "heightMedian": "Höhe (Median)",
@@ -1756,7 +1809,6 @@
       "households": "Haushalte",
       "avgHouseholdSize": "Durchschn. Haushaltsgröße",
       "cbsNote": "CBS-Werte sind Statistiken für das Postleitzahlgebiet (bevorzugt PC6, ersatzweise PC4), keine Werte einzelner Gebäude.",
-      "source": "Quelle: {{source}}.",
       "sourcesNl": "Quellen: {{epOnline}} (Nutzungsbedingungen gelten) und {{cbs}}.",
       "technologiesCount": "Technologien ({{count}})",
       "dropToAddTech": "Loslassen, um Technologie hinzuzufügen",
@@ -1797,8 +1849,8 @@
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
     "siteMode": {
-      "label": "Standortmodus",
-      "hint": "Erzeugt das Netz nur für dieses Gebiet und speichert es getrennt von den gemeinsamen Netzen. Nur Gebäude mit 3D-Daten werden aufgenommen, höchstens 150.",
+      "label": "Eigenes Netz",
+      "hint": "Eigene Transformatoren setzen und das Netz für dieses Gebiet daraus erzeugen, statt das vorberechnete Netz zu nutzen. Nur Gebäude mit 3D-Daten, höchstens 150.",
       "locked": "Entfernen Sie das gezeichnete Gebiet, um den Modus zu ändern."
     },
     "largeModel": {
@@ -2123,7 +2175,8 @@
       "ground_source_heat_pump": "Erdwärmepumpe",
       "electric_boilers": "Elektrokessel",
       "gas_boiler": "Gaskessel",
-      "air_conditioner": "Klimaanlage"
+      "air_conditioner": "Klimaanlage",
+      "gas_supply": "Gasversorgung"
     },
     "products": {
       "title": "Produkt wählen: {{type}}",
@@ -2320,6 +2373,9 @@
     },
     "addToAllBuildings": "Zu allen Gebäuden hinzufügen",
     "removeFromAllBuildings": "Von allen Gebäuden entfernen",
+    "removeAll": "Alle Technologien entfernen",
+    "removeAllConfirmTitle": "Alle Technologien entfernen?",
+    "removeAllConfirmDescription": "Entfernt jede Technologie und jede Wärmeverbindung von {{count}} Gebäuden dieses Modells, auch automatisch zugewiesene. Speichern Sie das Modell, um die Änderung zu übernehmen.",
     "paramCount": "Parameter: {{count}}",
     "paramDialog": {
       "description": "Konfigurieren Sie die Technologieparameter für dieses Gebäude",
@@ -2342,6 +2398,12 @@
       "constraints": "Beschränkungen",
       "applyToAllBuildings": "Auf alle Gebäude anwenden",
       "applyTechnology": "Technologie anwenden"
+    },
+    "heatScope": {
+      "title": "{{tech}} allen Gebäuden hinzufügen?",
+      "description": "Ein Gebäude hat eine Wärmeversorgung. {{withHeat}} Gebäude haben bereits eine, {{without}} haben keine.",
+      "missing": "Nur Gebäude ohne Wärmeversorgung ({{count}})",
+      "replace": "Bei allen Gebäuden ersetzen ({{count}})"
     }
   },
   "locations": {
@@ -3019,7 +3081,28 @@
     },
     "pv": {
       "shadingNotice": "Die Simulation berücksichtigt keine Verschattung durch Bäume oder Nachbargebäude.",
-      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden."
+      "unavailable": "Die PV-Flächen des Gebäudes konnten nicht geladen werden.",
+      "otherRoof": "Dach eines anderen 3D-Gebäudes ({{n}} von {{total}})",
+      "otherWall": "Wand eines anderen 3D-Gebäudes ({{n}} von {{total}})"
+    },
+    "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert.",
+    "tech": {
+      "pvCapacity": "Leistung aus den PV-Flächen",
+      "size": "Größe",
+      "sizeMax": "Maximale Größe",
+      "power": "Leistung",
+      "powerMax": "Maximale Leistung",
+      "energy": "Energie",
+      "energyMax": "Maximale Energie",
+      "cop": "COP",
+      "efficiency": "Wirkungsgrad",
+      "investment": "Investition",
+      "price": "Preis",
+      "pvSurfaces": "PV-Flächen",
+      "required": "Wert eingeben",
+      "positive": "Muss größer als 0 sein",
+      "notNegative": "Muss 0 oder größer sein",
+      "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
     }
   }
 }

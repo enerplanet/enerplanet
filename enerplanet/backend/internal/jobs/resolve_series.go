@@ -10,6 +10,7 @@ import (
 
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/demand"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/store/series"
 )
 
@@ -24,6 +25,7 @@ type seriesStore interface {
 	Save(p series.NewProfile) (int64, error)
 	Profiles(ids []int64) (map[int64]series.StoredProfile, error)
 	Link(owner series.Owner, revision string, links []series.Link) error
+	Values(profileID int64, series string) (models.SeriesValues, error)
 }
 
 // groupRunner submits and awaits BuEM building groups. Satisfied by

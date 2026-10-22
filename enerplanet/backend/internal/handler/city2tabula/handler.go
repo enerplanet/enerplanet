@@ -235,7 +235,7 @@ func (h *Handler) EnrichStatus(c *gin.Context) {
 // c2t.BuildingsResult.ByRequestedWay), with the credits of their datasets. An
 // osm_id in neither has no PyLovo-linked building in City2TABULA yet (see
 // missingOSMIDs).
-func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string]c2t.Building, map[string]string, []c2t.DatasetCredit, error) {
+func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string][]c2t.Building, map[string]string, []c2t.DatasetCredit, error) {
 	result, err := h.client.GetBuildingsByOSMIDs(ctx, country, osmIDs)
 	if err != nil {
 		return nil, nil, nil, err
@@ -249,7 +249,7 @@ func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []stri
 }
 
 // missingOSMIDs returns the osm_ids in want that have no entry in got.
-func missingOSMIDs(want []string, got map[string]c2t.Building, further map[string]string) []string {
+func missingOSMIDs(want []string, got map[string][]c2t.Building, further map[string]string) []string {
 	var missing []string
 	for _, id := range want {
 		_, isFurther := further[id]
@@ -274,7 +274,10 @@ func splitCSV(s string) []string {
 // run_buem job it keeps a building even when no surface qualifies for the
 // envelope: the configurator still shows its scalar attributes and TABULA
 // variant and falls back to an archetype for the geometry (scenario SC-03).
-func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Building) map[string]contracts.EnrichedBuilding {
+// A way covering several 3D buildings is shown as its largest one, the
+// building a customised BuEM block replaces (see jobs.buildingsForBuem), with
+// the number of 3D buildings the way covers.
+func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string][]c2t.Building) map[string]contracts.EnrichedBuilding {
 	out := make(map[string]contracts.EnrichedBuilding, len(byOSMID))
 	// One ignis lookup per distinct variant code rather than per building: an
 	// area covering a village shares a handful of archetypes across hundreds
@@ -291,7 +294,8 @@ func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Build
 		years[*code] = y
 		return y
 	}
-	for osmID, b := range byOSMID {
+	for osmID, buildings := range byOSMID {
+		b := buildings[0]
 		bb := contracts.BuemBuilding{
 			Envelope: contracts.BuemEnvelope{Elements: c2t.EnvelopeElements(b)},
 		}
@@ -311,6 +315,7 @@ func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string]c2t.Build
 			MatchType:               b.MatchType,
 			TabulaVariantCode:       b.TabulaVariantCode,
 			DefaultConstructionYear: yearFor(b.TabulaVariantCode),
+			BuildingCount:           len(buildings),
 			Buem:                    contracts.BuemNode{Building: bb},
 		}
 	}

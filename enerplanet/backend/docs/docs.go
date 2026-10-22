@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/whoami": {
+            "get": {
+                "security": [
+                    {
+                        "SpatialHubBearer": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "SpatialHub subject and effective API permissions; never returns credentials.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Resolve the current API identity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_middleware.WhoAmIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/drafts/{draft_id}/buildings/{building_ref}/buem": {
             "post": {
                 "security": [
@@ -85,6 +125,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "SessionAuth": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SpatialHubBearer": []
                     }
                 ],
                 "description": "Returns a paginated list of energy planning models the user has access to,\nfiltered by workspace and search query. Includes shared and workspace-scoped models.",
@@ -462,6 +508,73 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/results": {
+            "get": {
+                "security": [
+                    {
+                        "SpatialHubBearer": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Read results for an accessible model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -860,7 +973,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's\nsurfaces are returned, each with the object_id of its building.\nEmpty when City2TABULA has no 3D data for the building.",
                 "produces": [
                     "application/json"
                 ],
@@ -1043,7 +1156,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/calculate/{code}": {
+        "/v1/ignis/calculate/{code}": {
             "post": {
                 "security": [
                     {
@@ -1101,7 +1214,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/data/{code}": {
+        "/v1/ignis/data/{code}": {
             "get": {
                 "security": [
                     {
@@ -1148,7 +1261,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/fields": {
+        "/v1/ignis/fields": {
             "get": {
                 "security": [
                     {
@@ -1179,7 +1292,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/variants/{country_iso2}": {
+        "/v1/ignis/variants/{country_iso2}": {
             "get": {
                 "security": [
                     {
@@ -1226,7 +1339,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/ignis/variants/{country_iso2}/match": {
+        "/v1/ignis/variants/{country_iso2}/match": {
             "get": {
                 "security": [
                     {
@@ -1265,6 +1378,13 @@ const docTemplate = `{
                         "name": "year",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Gen",
+                        "description": "TABULA subtype; ignis uses Gen when absent",
+                        "name": "subtype",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1289,7 +1409,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/pylovo/boundary": {
+        "/v1/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
                 "produces": [
@@ -1348,11 +1468,36 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "internal_middleware.WhoAmIResponse": {
+            "type": "object",
+            "properties": {
+                "access_level": {
+                    "type": "string"
+                },
+                "authentication_method": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.AreaBuilding": {
             "type": "object",
             "properties": {
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
                 },
                 "dataset_id": {
                     "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
@@ -1570,6 +1715,10 @@ const docTemplate = `{
         "spatialhub_backend_internal_api_contracts.BuildingDemandProfile": {
             "type": "object",
             "properties": {
+                "a_ref_m2": {
+                    "type": "number",
+                    "example": 6648.84
+                },
                 "building_type": {
                     "description": "building_type is what was modelled: a TABULA residential type (SFH, TH,\nMFH, AB) or a BuEM service id (bakery, clinic, hotel, office,\nrestaurant, school, supermarket, warehouse). For a service id\nhot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.",
                     "type": "string",
@@ -1587,6 +1736,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "no City2TABULA envelope for this building"
                 },
+                "h_room_m": {
+                    "type": "number",
+                    "example": 2.5
+                },
                 "heating_kwh_a": {
                     "type": "number",
                     "example": 4823.5
@@ -1596,6 +1749,11 @@ const docTemplate = `{
                 },
                 "kitchen_kwh_a": {
                     "type": "number"
+                },
+                "n_storeys": {
+                    "description": "The BuEM inputs of a resolved building: storeys and room height from its\n3D geometry, and the conditioned floor area A_ref in m2.",
+                    "type": "integer",
+                    "example": 6
                 },
                 "osm_id": {
                     "type": "string",
@@ -1776,6 +1934,11 @@ const docTemplate = `{
             "properties": {
                 "buem": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
                 },
                 "dataset_id": {
                     "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
@@ -2108,6 +2271,10 @@ const docTemplate = `{
                 "resolved": {
                     "type": "integer",
                     "example": 30
+                },
+                "shared": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "status": {
                     "type": "string",
@@ -2457,6 +2624,10 @@ const docTemplate = `{
                 "kind": {
                     "type": "string"
                 },
+                "object_id": {
+                    "description": "ObjectID is the 3D building the surface belongs to; an OSM way can cover several.",
+                    "type": "string"
+                },
                 "qualifies": {
                     "type": "boolean"
                 },
@@ -2487,6 +2658,12 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "session_id",
             "in": "cookie"
+        },
+        "SpatialHubBearer": {
+            "description": "Bearer \u003cSpatialHub access token\u003e, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

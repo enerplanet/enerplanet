@@ -272,7 +272,12 @@
     "published": "Gepubliceerd",
     "failed": "Mislukt",
     "cancelled": "Geannuleerd",
-    "modified": "Gewijzigd"
+    "modified": "Gewijzigd",
+    "failedAt": {
+      "queue": "Voorbereiding mislukt",
+      "running": "Simulatie mislukt",
+      "processing": "Verwerking mislukt"
+    }
   },
   "results": {
     "title": "Simulatieresultaten",
@@ -282,10 +287,18 @@
     "carrier": {
       "toggleLabel": "Energiedrager",
       "electricity": "Elektriciteit",
-      "heat": "Warmte"
+      "heat": "Warmte",
+      "gas": "Gas",
+      "oil": "Olie",
+      "toggleItemHint": "Resultaten voor deze energiedrager tonen"
     },
     "selectModel": "Selecteer Model",
     "completedSimulations": "Voltooide Simulaties",
+    "copies_one": "{{count}} kopie",
+    "copies_other": "{{count}} kopieën",
+    "notRun": "niet uitgevoerd",
+    "inModels_one": "in {{count}} model",
+    "inModels_other": "in {{count}} modellen",
     "loadingModels": "Modellen laden...",
     "noCompletedSimulations": "Geen voltooide simulaties in deze werkruimte",
     "noCompletedModels": "Geen voltooide modellen",
@@ -410,6 +423,7 @@
       "noData": "Geen energiegegevens beschikbaar",
       "dailyEnergyBalance": "Dagelijkse Energiebalans",
       "dailyEnergyBalanceDesc": "Toont de dagelijkse balans tussen energieproductie en -verbruik voor alle technologieën in het systeem.",
+      "dailyEnergyBalanceDescHeat": "Toont de dagelijkse balans tussen geleverde warmte (bijv. door warmtepompen) en warmtevraag over alle technologieën in het systeem.",
       "production": "Productie",
       "productionDesc": "Energie opgewekt door zon, wind en andere bronnen",
       "consumption": "Verbruik",
@@ -422,10 +436,12 @@
       "selfSufficiency": "Zelfvoorziening",
       "netBalance": "Nettobalans",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Geen energiebalansgegevens beschikbaar",
       "dailyLoadProfile": "Dagelijks Belastingprofiel",
       "dailyLoadProfileDesc": "Toont elektriciteitsverbruikspatronen over een periode van 24 uur met automatische detectie van piekperiodes.",
+      "dailyLoadProfileDescHeat": "Toont warmtevraagpatronen over 24 uur met automatische detectie van piekperiodes.",
       "peakPeriods": "Piekperiodes",
       "peakPeriodsDesc": "Ochtend (07:00-10:00) en avond (17:00-21:00) periodes van hoge vraag",
       "offPeak": "Daluren",
@@ -455,6 +471,10 @@
       "eveningPeak": "Avondpiek",
       "peakPeriod": "Piekperiode",
       "noDataLoadProfile": "Geen gegevens beschikbaar voor dagelijks belastingprofiel",
+      "generationDurationCurve": "Productieduurcurve",
+      "generationDurationCurveDesc": "Sorteert de hernieuwbare productie per uur van hoog naar laag, zodat de piekproductie en het verloop over het jaar zichtbaar worden.",
+      "demandDurationCurve": "Vraagduurcurve",
+      "demandDurationCurveDesc": "Sorteert de warmtevraag per uur van hoog naar laag, zodat de piekvraag en het verloop over het jaar zichtbaar worden.",
       "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve"
     },
     "grid": {
@@ -535,6 +555,8 @@
       "unmetDemandDesc": "Energievraag die niet kon worden vervuld door het beschikbare aanbod. Lagere waarden duiden op betere betrouwbaarheid.",
       "unmetEnergy": "Onvervulde Energie",
       "unmetEnergyDesc": "Vraag die beschikbaar aanbod overschrijdt",
+      "energy": "Energie",
+      "unmet": "Onvervuld",
       "unmetKwh": "Onvervuld (kWh)",
       "powerFlowAnalysis": "Vermogenstroomanalyse",
       "powerFlow": "Vermogensstroom",
@@ -1412,7 +1434,7 @@
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
       "regenerateGrid": "Net opnieuw genereren",
-      "regenerateGridHint": "Het gebied of de transformatoren van de locatie zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
+      "regenerateGridHint": "Het gebied of de transformatoren zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
       "importAreaError": {
         "invalid": "Het bestand is geen geldige GeoJSON.",
         "noPolygon": "Het bestand bevat geen polygoon.",
@@ -1488,6 +1510,31 @@
       "clickForDetails": "Klik voor meer details",
       "class": "Klasse",
       "estimatedShort": "geschat",
+      "buemTotal": "Totaal: {{value}}",
+      "kitchenGas": "Kookgas: {{value}}",
+      "geometry3d": "3D-geometrie: City2TABULA",
+      "asModelled": "Gebouw, zoals gemodelleerd",
+      "storeys": "Bouwlagen (3D-geometrie)",
+      "floorArea": "Vloeroppervlak",
+      "roomHeight": "Verdiepingshoogte",
+      "envelope": "Referentie-schil (TABULA)",
+      "useType": {
+        "SFH": "Vrijstaande woning",
+        "TH": "Rijwoning",
+        "MFH": "Meergezinswoning",
+        "AB": "Appartementencomplex",
+        "bakery": "Bakkerij",
+        "clinic": "Kliniek",
+        "hotel": "Hotel",
+        "office": "Kantoor",
+        "restaurant": "Restaurant",
+        "school": "School",
+        "supermarket": "Supermarkt",
+        "warehouse": "Magazijn"
+      },
+      "buemFailed": "BuEM mislukt: {{reason}}",
+      "buemShared": "Meegeteld bij een ander gebouw: {{detail}}",
+      "buemPending": "BuEM-resultaat in behandeling",
       "floors": "Verdiepingen",
       "height": "Hoogte",
       "heightMedian": "Hoogte (mediaan)",
@@ -1499,7 +1546,6 @@
       "households": "Huishoudens",
       "avgHouseholdSize": "Gem. huishoudgrootte",
       "cbsNote": "CBS-waarden zijn statistieken per postcodegebied (bij voorkeur PC6, anders PC4), geen waarden van één gebouw.",
-      "source": "Bron: {{source}}.",
       "sourcesNl": "Bronnen: {{epOnline}} (voorwaarden van toepassing) en {{cbs}}.",
       "technologiesCount": "Technologieën ({{count}})",
       "dropToAddTech": "Loslaten om technologie toe te voegen",
@@ -1540,8 +1586,8 @@
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "siteMode": {
-      "label": "Locatiemodus",
-      "hint": "Genereert het net alleen voor dit gebied en slaat het apart op van de gedeelde netten. Alleen gebouwen met 3D-gegevens worden meegenomen, maximaal 150.",
+      "label": "Eigen net",
+      "hint": "Plaats eigen transformatoren en bouw het net voor dit gebied daaruit op, in plaats van het vooraf gegenereerde net. Alleen gebouwen met 3D-gegevens, maximaal 150.",
       "locked": "Wis het getekende gebied om de modus te wijzigen."
     },
     "largeModel": {
@@ -1749,7 +1795,8 @@
       "ground_source_heat_pump": "Bodemwarmtepomp",
       "electric_boilers": "Elektrische ketel",
       "gas_boiler": "Gasketel",
-      "air_conditioner": "Airconditioner"
+      "air_conditioner": "Airconditioner",
+      "gas_supply": "Gaslevering"
     },
     "products": {
       "title": "Kies een product: {{type}}",
@@ -1946,6 +1993,9 @@
     },
     "addToAllBuildings": "Aan alle gebouwen toevoegen",
     "removeFromAllBuildings": "Van alle gebouwen verwijderen",
+    "removeAll": "Alle technologieën verwijderen",
+    "removeAllConfirmTitle": "Alle technologieën verwijderen?",
+    "removeAllConfirmDescription": "Verwijdert elke technologie en warmteverbinding van {{count}} gebouwen in dit model, ook automatisch toegewezen. Sla het model op om de wijziging te behouden.",
     "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Stel de technologieparameters voor dit gebouw in",
@@ -1968,6 +2018,12 @@
       "constraints": "Beperkingen",
       "applyToAllBuildings": "Op alle gebouwen toepassen",
       "applyTechnology": "Technologie toepassen"
+    },
+    "heatScope": {
+      "title": "{{tech}} aan alle gebouwen toevoegen?",
+      "description": "Een gebouw heeft één warmtevoorziening. {{withHeat}} gebouwen hebben er al een, {{without}} hebben er geen.",
+      "missing": "Alleen gebouwen zonder warmtevoorziening ({{count}})",
+      "replace": "Op alle gebouwen vervangen ({{count}})"
     }
   },
   "locations": {
@@ -2257,6 +2313,7 @@
   },
   "drawing": {
     "clickToDraw": "Klik om te tekenen",
+    "buildingNotStart": "Klik opent dit gebouw. Begin het gebied ernaast.",
     "secondCorner": "Klik om de tweede hoek te plaatsen",
     "thirdCorner": "Klik om de derde hoek te plaatsen",
     "rightClickToFinish": "Klik met de rechtermuisknop om het gebied af te ronden",
@@ -2481,11 +2538,16 @@
     "techAddedToAll": "{{tech}} toegevoegd aan {{count}} gebouwen",
     "techAddedToBuilding": "{{tech}} toegevoegd aan gebouw",
     "techRemovedFromAll": "{{tech}} verwijderd van {{count}} gebouwen",
+    "allTechsRemoved": "Technologieën verwijderd van {{count}} gebouwen",
     "techRemovedFromBuilding": "{{tech}} verwijderd van gebouw",
     "techNotFound": "Technologie {{tech}} niet gevonden",
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
     "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
-    "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}"
+    "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
+    "areaOverLimit": {
+      "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
+      "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
+    }
   },
   "gridStats": {
     "title": "Netwerkanalyse",
@@ -3029,7 +3091,28 @@
     },
     "pv": {
       "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
-      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen."
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen.",
+      "otherRoof": "Dak van een ander 3D-gebouw ({{n}} van {{total}})",
+      "otherWall": "Gevel van een ander 3D-gebouw ({{n}} van {{total}})"
+    },
+    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld.",
+    "tech": {
+      "pvCapacity": "Vermogen uit de PV-vlakken",
+      "size": "Grootte",
+      "sizeMax": "Maximale grootte",
+      "power": "Vermogen",
+      "powerMax": "Maximaal vermogen",
+      "energy": "Energie",
+      "energyMax": "Maximale energie",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investering",
+      "price": "Prijs",
+      "pvSurfaces": "PV-vlakken",
+      "required": "Voer een waarde in",
+      "positive": "Moet groter dan 0 zijn",
+      "notNegative": "Moet 0 of meer zijn",
+      "notEditable": "Deze waarde kan hier niet worden bewerkt"
     }
   }
 }

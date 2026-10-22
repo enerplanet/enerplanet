@@ -109,3 +109,19 @@ func TestMarkModelCompleted_fromProcessing(t *testing.T) {
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+// A failed run records the status it failed in as results.failed_stage, read
+// from the row being updated, next to the error.
+func TestMarkModelFailed_recordsStage(t *testing.T) {
+	dbConn, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { dbConn.Close() })
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: dbConn}), &gorm.Config{SkipDefaultTransaction: true})
+	require.NoError(t, err)
+	mock.ExpectExec(`"results"=jsonb_build_object\('error', \$\d+::text, 'failed_stage', status\)`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	markModelFailed(db, 18, "target meme: HTTP 422")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}

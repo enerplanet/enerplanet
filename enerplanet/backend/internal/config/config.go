@@ -5,6 +5,8 @@ import (
 	"os"
 	"regexp"
 
+	"spatialhub_backend/internal/bearerauth"
+
 	"platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
 
@@ -18,6 +20,7 @@ const (
 
 type Config struct {
 	Auth                 auth.Config
+	BearerAuth           bearerauth.Options
 	RedisConfig          goredis.Options
 	AppPort              string
 	AppHost              string
@@ -33,7 +36,7 @@ type Config struct {
 	PylovoServiceURL     string // URL of the pylovo microservice
 	WeatherProvider      string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
 	BuemVersion          string // BuEM release the stored results are keyed for; must match the deployed buem-model
-	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v2/ignis/* proxy) routes through it
+	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v1/ignis/* proxy) routes through it
 	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
 	OpenTechDBServiceURL string // URL of the OpenTech-DB service
 	CallbackSecret       string // Shared secret for webservice callback authentication
@@ -81,6 +84,10 @@ func LoadFromEnv() (*Config, error) {
 		TentacronAPIKey:      os.Getenv("TENTACRON_API_KEY"),
 		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
+	}
+	cfg.BearerAuth, err = loadBearerAuth(cfg.AppEnv)
+	if err != nil {
+		return nil, err
 	}
 	return cfg, nil
 }

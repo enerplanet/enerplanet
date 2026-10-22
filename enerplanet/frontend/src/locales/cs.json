@@ -272,7 +272,12 @@
     "published": "Publikováno",
     "failed": "Selhalo",
     "cancelled": "Zrušeno",
-    "modified": "Upraveno"
+    "modified": "Upraveno",
+    "failedAt": {
+      "queue": "Příprava selhala",
+      "running": "Simulace selhala",
+      "processing": "Zpracování selhalo"
+    }
   },
   "results": {
     "title": "Výsledky Simulace",
@@ -282,10 +287,22 @@
     "carrier": {
       "toggleLabel": "Nosič energie",
       "electricity": "Elektřina",
-      "heat": "Teplo"
+      "heat": "Teplo",
+      "gas": "Plyn",
+      "oil": "Olej",
+      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie"
     },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
+    "copies_one": "{{count}} kopie",
+    "copies_few": "{{count}} kopie",
+    "copies_many": "{{count}} kopie",
+    "copies_other": "{{count}} kopií",
+    "notRun": "nespuštěno",
+    "inModels_one": "v {{count}} modelu",
+    "inModels_few": "v {{count}} modelech",
+    "inModels_many": "v {{count}} modelu",
+    "inModels_other": "v {{count}} modelech",
     "loadingModels": "Načítání modelů...",
     "noCompletedSimulations": "Žádné dokončené simulace v tomto pracovním prostoru",
     "noCompletedModels": "Žádné dokončené modely",
@@ -410,6 +427,7 @@
       "noData": "Nejsou k dispozici žádná energetická data",
       "dailyEnergyBalance": "Denní Energetická Bilance",
       "dailyEnergyBalanceDesc": "Zobrazuje denní bilanci mezi výrobou a spotřebou energie pro všechny technologie v systému.",
+      "dailyEnergyBalanceDescHeat": "Zobrazuje denní bilanci mezi dodaným teplem (např. z tepelných čerpadel) a potřebou tepla pro všechny technologie v systému.",
       "production": "Výroba",
       "productionDesc": "Energie vyrobená solárními, větrnými a dalšími zdroji",
       "consumption": "Spotřeba",
@@ -422,10 +440,12 @@
       "selfSufficiency": "Soběstačnost",
       "netBalance": "Čistá Bilance",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Nejsou k dispozici žádná data energetické bilance",
       "dailyLoadProfile": "Denní Profil Zatížení",
       "dailyLoadProfileDesc": "Zobrazuje vzorce spotřeby elektřiny za 24hodinové období s automatickou detekcí špičkových období.",
+      "dailyLoadProfileDescHeat": "Zobrazuje profily potřeby tepla v průběhu 24 hodin s automatickou detekcí špičkových období.",
       "peakPeriods": "Špičková Období",
       "peakPeriodsDesc": "Ráno (07:00-10:00) a večer (17:00-21:00) období vysoké poptávky",
       "offPeak": "Mimo Špičku",
@@ -455,6 +475,10 @@
       "eveningPeak": "Večerní Špička",
       "peakPeriod": "Špičkové Období",
       "noDataLoadProfile": "Nejsou k dispozici žádná data pro denní profil zatížení",
+      "generationDurationCurve": "Křivka trvání výroby",
+      "generationDurationCurveDesc": "Seřadí hodinovou obnovitelnou výrobu od nejvyšší po nejnižší, aby byla vidět špička výroby a průběh v roce.",
+      "demandDurationCurve": "Křivka trvání potřeby",
+      "demandDurationCurveDesc": "Seřadí hodinovou potřebu tepla od nejvyšší po nejnižší, aby byla vidět špička a průběh v roce.",
       "noDataLoadCurve": "Nejsou k dispozici žádná data pro křivku zatížení"
     },
     "grid": {
@@ -535,6 +559,8 @@
       "unmetDemandDesc": "Poptávka po energii, kterou nemohla být uspokojena dostupnou nabídkou. Nižší hodnoty značí lepší spolehlivost.",
       "unmetEnergy": "Neuspokojená Energie",
       "unmetEnergyDesc": "Poptávka přesahující dostupnou nabídku",
+      "energy": "Energie",
+      "unmet": "Nepokryté",
       "unmetKwh": "Neuspokojeno (kWh)",
       "powerFlowAnalysis": "Analýza Toku Výkonu",
       "powerFlow": "Tok Výkonu",
@@ -1412,7 +1438,7 @@
       "importArea": "Importovat oblast",
       "exportArea": "Exportovat oblast",
       "regenerateGrid": "Znovu vytvořit síť",
-      "regenerateGridHint": "Oblast nebo transformátory lokality se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
+      "regenerateGridHint": "Oblast nebo její transformátory se změnily. Znovu vytvořte síť, aby se budovy seskupily kolem nich a síť se aktualizovala.",
       "importAreaError": {
         "invalid": "Soubor není platný GeoJSON.",
         "noPolygon": "Soubor neobsahuje žádný polygon.",
@@ -1488,6 +1514,31 @@
       "clickForDetails": "Klikněte pro více podrobností",
       "class": "Třída",
       "estimatedShort": "odh.",
+      "buemTotal": "Celkem: {{value}}",
+      "kitchenGas": "Plyn na vaření: {{value}}",
+      "geometry3d": "3D geometrie: City2TABULA",
+      "asModelled": "Budova, jak je modelována",
+      "storeys": "Podlaží (3D geometrie)",
+      "floorArea": "Podlahová plocha",
+      "roomHeight": "Výška místnosti",
+      "envelope": "Referenční obálka (TABULA)",
+      "useType": {
+        "SFH": "Rodinný dům",
+        "TH": "Řadový dům",
+        "MFH": "Bytový dům",
+        "AB": "Panelový dům",
+        "bakery": "Pekárna",
+        "clinic": "Klinika",
+        "hotel": "Hotel",
+        "office": "Kancelář",
+        "restaurant": "Restaurace",
+        "school": "Škola",
+        "supermarket": "Supermarket",
+        "warehouse": "Sklad"
+      },
+      "buemFailed": "BuEM selhal: {{reason}}",
+      "buemShared": "Započteno s jinou budovou: {{detail}}",
+      "buemPending": "Výsledek BuEM čeká",
       "floors": "Podlaží",
       "height": "Výška",
       "heightMedian": "Výška (medián)",
@@ -1499,7 +1550,6 @@
       "households": "Domácnosti",
       "avgHouseholdSize": "Prům. velikost domácnosti",
       "cbsNote": "Hodnoty CBS jsou statistiky za oblast PSČ (přednostně PC6, jinak PC4), nikoli hodnoty jednotlivých budov.",
-      "source": "Zdroj: {{source}}.",
       "sourcesNl": "Zdroje: {{epOnline}} (platí podmínky užití) a {{cbs}}.",
       "technologiesCount": "Technologie ({{count}})",
       "dropToAddTech": "Pusťte pro přidání technologie",
@@ -1540,8 +1590,8 @@
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
     "siteMode": {
-      "label": "Režim lokality",
-      "hint": "Vytvoří síť pouze pro tuto oblast a uloží ji odděleně od sdílených sítí. Zahrnuje jen budovy s 3D daty, nejvýše 150.",
+      "label": "Vlastní síť",
+      "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
       "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
     },
     "largeModel": {
@@ -1749,7 +1799,8 @@
       "ground_source_heat_pump": "Tepelné čerpadlo země-voda",
       "electric_boilers": "Elektrokotel",
       "gas_boiler": "Plynový kotel",
-      "air_conditioner": "Klimatizace"
+      "air_conditioner": "Klimatizace",
+      "gas_supply": "Dodávka plynu"
     },
     "products": {
       "title": "Vyberte produkt: {{type}}",
@@ -1946,6 +1997,9 @@
     },
     "addToAllBuildings": "Přidat ke všem budovám",
     "removeFromAllBuildings": "Odebrat ze všech budov",
+    "removeAll": "Odebrat všechny technologie",
+    "removeAllConfirmTitle": "Odebrat všechny technologie?",
+    "removeAllConfirmDescription": "Odebere každou technologii a tepelné propojení z {{count}} budov tohoto modelu, včetně automaticky přiřazených. Uložte model, aby se změna zachovala.",
     "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Nastavte parametry technologie pro tuto budovu",
@@ -1968,6 +2022,12 @@
       "constraints": "Omezení",
       "applyToAllBuildings": "Použít na všechny budovy",
       "applyTechnology": "Použít technologii"
+    },
+    "heatScope": {
+      "title": "Přidat {{tech}} ke všem budovám?",
+      "description": "Budova má jeden zdroj tepla. {{withHeat}} budov už jeden má, {{without}} nemá žádný.",
+      "missing": "Jen budovy bez zdroje tepla ({{count}})",
+      "replace": "Nahradit u všech budov ({{count}})"
     }
   },
   "locations": {
@@ -2257,6 +2317,7 @@
   },
   "drawing": {
     "clickToDraw": "Klikněte pro kreslení",
+    "buildingNotStart": "Kliknutí otevře tuto budovu. Oblast začněte vedle ní.",
     "secondCorner": "Klikněte a umístěte druhý roh",
     "thirdCorner": "Klikněte a umístěte třetí roh",
     "rightClickToFinish": "Kliknutím pravým tlačítkem oblast dokončíte",
@@ -2481,11 +2542,16 @@
     "techAddedToAll": "{{tech}} přidáno k {{count}} budovám",
     "techAddedToBuilding": "{{tech}} přidáno k budově",
     "techRemovedFromAll": "{{tech}} odebráno z {{count}} budov",
+    "allTechsRemoved": "Technologie odebrány z {{count}} budov",
     "techRemovedFromBuilding": "{{tech}} odebráno z budovy",
     "techNotFound": "Technologie {{tech}} nenalezena",
     "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu",
     "heatAutoAssigned": "Tepelné technologie byly přiřazeny automaticky.",
-    "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}"
+    "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}",
+    "areaOverLimit": {
+      "title": "Tato oblast obsahuje {{buildings}} budov; model smí obsahovat {{limit}}",
+      "description": "Zmenšete oblast přibližně o {{excess}} budov. Zůstane na mapě a síť se načte, jakmile se vejde do limitu."
+    }
   },
   "gridStats": {
     "title": "Analýza Sítě",
@@ -3029,7 +3095,28 @@
     },
     "pv": {
       "shadingNotice": "Simulace nezohledňuje zastínění stromy ani sousedními budovami.",
-      "unavailable": "Plochy budovy pro FV se nepodařilo načíst."
+      "unavailable": "Plochy budovy pro FV se nepodařilo načíst.",
+      "otherRoof": "Střecha jiné 3D budovy ({{n}} z {{total}})",
+      "otherWall": "Stěna jiné 3D budovy ({{n}} z {{total}})"
+    },
+    "sharedOutline": "Tento obrys zahrnuje {{count}} 3D budov. Zobrazena a upravitelná je největší. Potřeba tepla se počítá pro každou a sčítá se.",
+    "tech": {
+      "pvCapacity": "Výkon z ploch FV",
+      "size": "Velikost",
+      "sizeMax": "Maximální velikost",
+      "power": "Výkon",
+      "powerMax": "Maximální výkon",
+      "energy": "Energie",
+      "energyMax": "Maximální energie",
+      "cop": "COP",
+      "efficiency": "Účinnost",
+      "investment": "Investice",
+      "price": "Cena",
+      "pvSurfaces": "Plochy FV",
+      "required": "Zadejte hodnotu",
+      "positive": "Musí být větší než 0",
+      "notNegative": "Musí být 0 nebo více",
+      "notEditable": "Tuto hodnotu zde nelze upravit"
     }
   }
 }

@@ -68,7 +68,7 @@ class EnergyService {
     hotWaterElectric?: boolean
   ): Promise<BuildingEnergyEstimate> {
     try {
-      const response = await axios.post<{ data: unknown }>("/v2/pylovo/estimate-energy", {
+      const response = await axios.post<{ data: unknown }>("/v1/pylovo/estimate-energy", {
         building_type: buildingType,
         area_m2: areaM2,
         year_of_construction: this.toOptionalFiniteNumber(yearOfConstruction) ?? null,
@@ -130,7 +130,7 @@ class EnergyService {
       };
 
       const response = await axios.post<{ data: unknown }>(
-        "/v2/pylovo/estimate-energy-batch",
+        "/v1/pylovo/estimate-energy-batch",
         batchPayload
       );
 

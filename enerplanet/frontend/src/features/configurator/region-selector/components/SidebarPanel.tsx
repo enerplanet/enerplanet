@@ -64,6 +64,8 @@ interface SidebarPanelProps {
   onTechDragEnd: () => void;
   onAddTechToAll?: (tech: Technology) => void;
   onRemoveTechFromAll?: (tech: Technology) => void;
+  onRemoveAllTechs?: () => void;
+  techBuildingCount?: number;
   appliedTechKeys?: string[];
   gridResultIds?: number[];
   buildingOsmIds?: string[];
@@ -95,6 +97,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onTechDragEnd,
   onAddTechToAll,
   onRemoveTechFromAll,
+  onRemoveAllTechs,
+  techBuildingCount = 0,
   appliedTechKeys = [],
   gridResultIds = [],
   buildingOsmIds,
@@ -451,6 +455,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         onTechDragEnd={onTechDragEnd}
         onAddTechToAll={onAddTechToAll}
         onRemoveTechFromAll={onRemoveTechFromAll}
+        onRemoveAllTechs={onRemoveAllTechs}
+        techBuildingCount={techBuildingCount}
         appliedTechKeys={appliedTechKeys}
       />
     </div>

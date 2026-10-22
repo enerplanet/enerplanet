@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Clic para dibujar",
+    "buildingNotStart": "El clic abre este edificio. Empiece el área junto a él.",
     "secondCorner": "Haga clic para colocar la segunda esquina",
     "thirdCorner": "Haga clic para colocar la tercera esquina",
     "rightClickToFinish": "Haga clic derecho para terminar el área",
@@ -164,11 +165,16 @@
     "techAddedToAll": "{{tech}} añadido a {{count}} edificios",
     "techAddedToBuilding": "{{tech}} añadido al edificio",
     "techRemovedFromAll": "{{tech}} eliminado de {{count}} edificios",
+    "allTechsRemoved": "Tecnologías eliminadas de {{count}} edificios",
     "techRemovedFromBuilding": "{{tech}} eliminado del edificio",
     "techNotFound": "Tecnología {{tech}} no encontrada",
     "techLoadFailed": "Error al cargar tecnología para edición",
     "heatAutoAssigned": "Las tecnologías de calor se han asignado automáticamente.",
-    "heatResolved": "Tecnologías de calor asignadas. Edificios actualizados: {{count}}"
+    "heatResolved": "Tecnologías de calor asignadas. Edificios actualizados: {{count}}",
+    "areaOverLimit": {
+      "title": "Esta zona contiene {{buildings}} edificios; un modelo puede contener {{limit}}",
+      "description": "Reduzca la zona en unos {{excess}} edificios. Se queda en el mapa y la red se carga cuando quepa en el límite."
+    }
   },
   "common": {
     "save": "Guardar",
@@ -533,7 +539,12 @@
     "published": "Publicado",
     "failed": "Fallido",
     "cancelled": "Cancelado",
-    "modified": "Modificado"
+    "modified": "Modificado",
+    "failedAt": {
+      "queue": "Falló la preparación",
+      "running": "Falló la simulación",
+      "processing": "Falló el procesamiento"
+    }
   },
   "results": {
     "title": "Resultados de Simulación",
@@ -543,10 +554,18 @@
     "carrier": {
       "toggleLabel": "Vector energético",
       "electricity": "Electricidad",
-      "heat": "Calor"
+      "heat": "Calor",
+      "gas": "Gas",
+      "oil": "Fuelóleo",
+      "toggleItemHint": "Mostrar los resultados de este vector energético"
     },
     "selectModel": "Seleccionar Modelo",
     "completedSimulations": "Simulaciones Completadas",
+    "copies_one": "{{count}} copia",
+    "copies_other": "{{count}} copias",
+    "notRun": "sin ejecutar",
+    "inModels_one": "en {{count}} modelo",
+    "inModels_other": "en {{count}} modelos",
     "loadingModels": "Cargando modelos...",
     "noCompletedSimulations": "No hay simulaciones completadas en este espacio de trabajo",
     "noCompletedModels": "No hay modelos completados",
@@ -671,6 +690,7 @@
       "noData": "No hay datos de energía disponibles",
       "dailyEnergyBalance": "Balance Energético Diario",
       "dailyEnergyBalanceDesc": "Muestra el balance diario entre producción y consumo de energía en todas las tecnologías del sistema.",
+      "dailyEnergyBalanceDescHeat": "Muestra el balance diario entre el calor suministrado (p. ej. por bombas de calor) y la demanda de calor para todas las tecnologías del sistema.",
       "production": "Producción",
       "productionDesc": "Energía generada por solar, eólica y otras fuentes",
       "consumption": "Consumo",
@@ -683,10 +703,12 @@
       "selfSufficiency": "Autosuficiencia",
       "netBalance": "Balance Neto",
       "energyKwh": "Energía (kWh)",
+      "energy": "Energía",
       "netKwh": "Neto (kWh)",
       "noEnergyBalanceData": "No hay datos de balance energético disponibles",
       "dailyLoadProfile": "Perfil de Carga Diario",
       "dailyLoadProfileDesc": "Muestra patrones de consumo eléctrico durante un período de 24 horas con detección automática de períodos de demanda pico.",
+      "dailyLoadProfileDescHeat": "Muestra los patrones de demanda de calor en un periodo de 24 horas con detección automática de los periodos punta.",
       "peakPeriods": "Períodos Pico",
       "peakPeriodsDesc": "Mañana (07:00-10:00) y tarde (17:00-21:00) períodos de alta demanda",
       "offPeak": "Fuera de Pico",
@@ -716,6 +738,10 @@
       "eveningPeak": "Pico Vespertino",
       "peakPeriod": "Período Pico",
       "noDataLoadProfile": "No hay datos disponibles para el perfil de carga diario",
+      "generationDurationCurve": "Curva de duración de la generación",
+      "generationDurationCurveDesc": "Ordena la generación renovable horaria de mayor a menor para ver el pico de generación y su evolución a lo largo del año.",
+      "demandDurationCurve": "Curva de duración de la demanda",
+      "demandDurationCurveDesc": "Ordena la demanda de calor horaria de mayor a menor para ver la punta y su evolución a lo largo del año.",
       "noDataLoadCurve": "No hay datos disponibles para la curva de carga"
     },
     "grid": {
@@ -796,6 +822,8 @@
       "unmetDemandDesc": "Demanda de energía que no pudo ser satisfecha por el suministro disponible. Valores más bajos indican mejor fiabilidad.",
       "unmetEnergy": "Energía No Cubierta",
       "unmetEnergyDesc": "Demanda que excede el suministro disponible",
+      "energy": "Energía",
+      "unmet": "No cubierto",
       "unmetKwh": "No Cubierta (kWh)",
       "powerFlowAnalysis": "Análisis de Flujo de Potencia",
       "powerFlow": "Flujo de Potencia",
@@ -1673,7 +1701,7 @@
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
       "regenerateGrid": "Regenerar la red",
-      "regenerateGridHint": "La zona o los transformadores del emplazamiento han cambiado. Regenere para agrupar los edificios a su alrededor y actualizar la red.",
+      "regenerateGridHint": "La zona o sus transformadores han cambiado. Regenere para agrupar los edificios a su alrededor y actualizar la red.",
       "importAreaError": {
         "invalid": "El archivo no es un GeoJSON válido.",
         "noPolygon": "El archivo no contiene ningún polígono.",
@@ -1749,6 +1777,31 @@
       "clickForDetails": "Haz clic para ver más detalles",
       "class": "Clase",
       "estimatedShort": "est.",
+      "buemTotal": "Total: {{value}}",
+      "kitchenGas": "Gas de cocina: {{value}}",
+      "geometry3d": "Geometría 3D: City2TABULA",
+      "asModelled": "Edificio, tal como se modela",
+      "storeys": "Plantas (geometría 3D)",
+      "floorArea": "Superficie útil",
+      "roomHeight": "Altura de planta",
+      "envelope": "Envolvente de referencia (TABULA)",
+      "useType": {
+        "SFH": "Vivienda unifamiliar",
+        "TH": "Vivienda adosada",
+        "MFH": "Edificio plurifamiliar",
+        "AB": "Bloque de viviendas",
+        "bakery": "Panadería",
+        "clinic": "Clínica",
+        "hotel": "Hotel",
+        "office": "Oficina",
+        "restaurant": "Restaurante",
+        "school": "Escuela",
+        "supermarket": "Supermercado",
+        "warehouse": "Almacén"
+      },
+      "buemFailed": "BuEM falló: {{reason}}",
+      "buemShared": "Contado con otro edificio: {{detail}}",
+      "buemPending": "Resultado de BuEM pendiente",
       "floors": "Plantas",
       "height": "Altura",
       "heightMedian": "Altura (mediana)",
@@ -1760,7 +1813,6 @@
       "households": "Hogares",
       "avgHouseholdSize": "Tamaño medio del hogar",
       "cbsNote": "Los valores de CBS son estadísticas del área del código postal (preferentemente PC6, si no PC4), no valores de un solo edificio.",
-      "source": "Fuente: {{source}}.",
       "sourcesNl": "Fuentes: {{epOnline}} (se aplican condiciones) y {{cbs}}.",
       "technologiesCount": "Tecnologías ({{count}})",
       "dropToAddTech": "Suelta para añadir la tecnología",
@@ -1801,8 +1853,8 @@
       "moreFieldsNeeded": "Campos que necesitan un tamaño: {{count}}"
     },
     "siteMode": {
-      "label": "Modo emplazamiento",
-      "hint": "Genera la red solo para esta zona y la guarda aparte de las redes compartidas. Solo se incluyen edificios con datos 3D, hasta 150.",
+      "label": "Red personalizada",
+      "hint": "Coloque sus propios transformadores y construya la red de esta zona a partir de ellos, en lugar de la red pregenerada. Solo se incluyen edificios con datos 3D, hasta 150.",
       "locked": "Borre la zona dibujada para cambiar el modo."
     },
     "largeModel": {
@@ -2127,7 +2179,8 @@
       "ground_source_heat_pump": "Bomba de calor geotérmica",
       "electric_boilers": "Caldera eléctrica",
       "gas_boiler": "Caldera de gas",
-      "air_conditioner": "Aire acondicionado"
+      "air_conditioner": "Aire acondicionado",
+      "gas_supply": "Suministro de gas"
     },
     "products": {
       "title": "Elija un producto: {{type}}",
@@ -2324,6 +2377,9 @@
     },
     "addToAllBuildings": "Añadir a todos los edificios",
     "removeFromAllBuildings": "Quitar de todos los edificios",
+    "removeAll": "Eliminar todas las tecnologías",
+    "removeAllConfirmTitle": "¿Eliminar todas las tecnologías?",
+    "removeAllConfirmDescription": "Elimina todas las tecnologías y conexiones de calor de {{count}} edificios de este modelo, incluidas las asignadas automáticamente. Guarde el modelo para conservar el cambio.",
     "paramCount": "Parámetros: {{count}}",
     "paramDialog": {
       "description": "Configure los parámetros de la tecnología para este edificio",
@@ -2346,6 +2402,12 @@
       "constraints": "Restricciones",
       "applyToAllBuildings": "Aplicar a todos los edificios",
       "applyTechnology": "Aplicar tecnología"
+    },
+    "heatScope": {
+      "title": "¿Añadir {{tech}} a todos los edificios?",
+      "description": "Un edificio tiene un único suministro de calor. {{withHeat}} edificios ya tienen uno, {{without}} no tienen ninguno.",
+      "missing": "Solo edificios sin suministro de calor ({{count}})",
+      "replace": "Sustituir en todos los edificios ({{count}})"
     }
   },
   "locations": {
@@ -3023,7 +3085,28 @@
     },
     "pv": {
       "shadingNotice": "La simulación no tiene en cuenta la sombra de árboles ni de edificios vecinos.",
-      "unavailable": "No se pudieron cargar las superficies FV del edificio."
+      "unavailable": "No se pudieron cargar las superficies FV del edificio.",
+      "otherRoof": "Tejado de otro edificio 3D ({{n}} de {{total}})",
+      "otherWall": "Muro de otro edificio 3D ({{n}} de {{total}})"
+    },
+    "sharedOutline": "Este contorno abarca {{count}} edificios 3D. Se muestra y se puede editar el mayor. La demanda de calor se calcula para cada uno y se suma.",
+    "tech": {
+      "pvCapacity": "Potencia de las superficies FV",
+      "size": "Tamaño",
+      "sizeMax": "Tamaño máximo",
+      "power": "Potencia",
+      "powerMax": "Potencia máxima",
+      "energy": "Energía",
+      "energyMax": "Energía máxima",
+      "cop": "COP",
+      "efficiency": "Eficiencia",
+      "investment": "Inversión",
+      "price": "Precio",
+      "pvSurfaces": "Superficies FV",
+      "required": "Introduzca un valor",
+      "positive": "Debe ser mayor que 0",
+      "notNegative": "Debe ser 0 o más",
+      "notEditable": "Este valor no se puede editar aquí"
     }
   }
 }

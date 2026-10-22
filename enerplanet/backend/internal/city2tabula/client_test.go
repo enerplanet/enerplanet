@@ -3,8 +3,10 @@ package city2tabula
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,7 +244,7 @@ func TestByRequestedWay(t *testing.T) {
 	}}
 	byWay, further := r.ByRequestedWay([]string{"best", "f1", "f2", "f3", "f4", "old"})
 
-	if byWay["best"].ObjectID != "A" || byWay["f3"].ObjectID != "B" || byWay["old"].ObjectID != "C" || len(byWay) != 3 {
+	if byWay["best"][0].ObjectID != "A" || byWay["f3"][0].ObjectID != "B" || byWay["old"][0].ObjectID != "C" || len(byWay) != 3 {
 		t.Errorf("byWay = %v, want A under best, B under f3 (its best way was not asked for), C under old", byWay)
 	}
 	want := map[string]string{"f1": "best", "f2": "best", "f4": "f3"}
@@ -262,4 +264,62 @@ func TestByRequestedWay_standingWayIsNeverFurther(t *testing.T) {
 	if _, ok := further["w"]; ok {
 		t.Errorf("further = %v, want w left out", further)
 	}
+}
+
+// A terraced row mapped as one OSM outline: the way stands for every 3D
+// building it covers, largest first, so none of them is dropped.
+func TestByRequestedWay_keepsEveryBuildingOfAWayLargestFirst(t *testing.T) {
+	area := func(v float64) *float64 { return &v }
+	r := BuildingsResult{Buildings: []Building{
+		{ObjectID: "DEBY_small", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(90)},
+		{ObjectID: "DEBY_large", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(140)},
+		{ObjectID: "DEBY_same_b", OSMID: "1001832407", OSMIDs: []string{"1001832407"}, FloorAreaSqm: area(90)},
+	}}
+	byWay, further := r.ByRequestedWay([]string{"1001832407"})
+
+	var got []string
+	for _, b := range byWay["1001832407"] {
+		got = append(got, b.ObjectID)
+	}
+	want := []string{"DEBY_large", "DEBY_same_b", "DEBY_small"}
+	if strings.Join(got, ",") != strings.Join(want, ",") || len(further) != 0 {
+		t.Errorf("buildings = %v, further = %v; want %v (largest first, ties by object id) and no further ways", got, further, want)
+	}
+}
+
+// A c2t: key is looked up by object id and comes back under that key, next
+// to the buildings found by OSM way; a shared credit is listed once.
+func TestGetBuildingsByOSMIDs_routesObjectKeys(t *testing.T) {
+	var payloads []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			var body struct {
+				Payload map[string]any `json:"payload"`
+			}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			payloads = append(payloads, body.Payload)
+			w.WriteHeader(http.StatusAccepted)
+			fmt.Fprintf(w, `{"id":"req-%d"}`, len(payloads))
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/req-1") {
+			_, _ = w.Write([]byte(completed(`{"buildings":[{"object_id":"DE1","osm_id":"w1","osm_ids":["w1"],"match_type":1}],"attributions":[` + bremenCredit + `]}`)))
+			return
+		}
+		_, _ = w.Write([]byte(completed(`{"buildings":[{"object_id":"DE2","osm_id":"","osm_ids":[],"match_type":2}],"attributions":[` + bremenCredit + `]}`)))
+	}))
+	t.Cleanup(srv.Close)
+
+	got, err := NewClient(tentacron.New(srv.URL, "k")).GetBuildingsByOSMIDs(context.Background(), "germany", []string{"w1", ObjectKey("DE2")})
+
+	require.NoError(t, err)
+	require.Len(t, payloads, 2)
+	assert.Equal(t, "w1", payloads[0]["osm_ids"])
+	assert.Equal(t, "DE2", payloads[1]["object_ids"])
+	require.Len(t, got.Buildings, 2)
+	assert.Equal(t, "c2t:DE2", got.Buildings[1].OSMID)
+	assert.Equal(t, []string{"c2t:DE2"}, got.Buildings[1].OSMIDs)
+	byWay, _ := got.ByRequestedWay([]string{"w1", "c2t:DE2"})
+	assert.Equal(t, "DE2", byWay["c2t:DE2"][0].ObjectID)
+	assert.Len(t, got.Attributions, 1)
 }

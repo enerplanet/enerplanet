@@ -1,9 +1,16 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { Popup as MapLibrePopup } from 'maplibre-gl';
 import {
   BUILDING_COLORS, LV_LINE_COLORS, MV_LINE_COLORS,
   TRANSFORMER_COLORS, POLYGON_COLORS, CLUSTER_COLORS, BOUNDARY_COLORS, USER_MODEL_COLORS,
 } from './maplibre-styles';
+
+/** Popup content as text: model titles and region names are user or data input, never HTML. */
+function boldText(text: string): HTMLElement {
+  const b = document.createElement('b');
+  b.textContent = text;
+  return b;
+}
 
 /**
  * Optimized MapLibre Layer Management.
@@ -563,12 +570,19 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
     return;
   }
 
+  const closeRing = (ring: [number, number][]): [number, number][] => {
+    if (ring.length < 3) return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] === last[0] && first[1] === last[1]) return ring;
+    return [...ring, [first[0], first[1]]];
+  };
   const fc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
       properties: {},
-      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [c]) },
+      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [closeRing(c)]) },
     }],
   };
 
@@ -644,7 +658,7 @@ export function setupUserModelInteractions(
         ]);
       }
 
-      popup.setLngLat(e.lngLat).setHTML(`<b>${props?.title || 'Untitled'}</b>`).addTo(map);
+      popup.setLngLat(e.lngLat).setDOMContent(boldText(String(props?.title || 'Untitled'))).addTo(map);
     } else {
       if (hoveredId !== null) {
         hoveredId = null;
@@ -702,7 +716,7 @@ export function setupBoundaryInteractions(
         ]);
       }
 
-      popup.setLngLat(e.lngLat).setHTML(`<b>${name}</b>`).addTo(map);
+      popup.setLngLat(e.lngLat).setDOMContent(boldText(String(name))).addTo(map);
     } else {
       if (hoveredName) {
         hoveredName = null;

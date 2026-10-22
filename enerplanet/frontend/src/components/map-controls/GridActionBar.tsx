@@ -48,8 +48,8 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     if (!hasGridData) return null;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="flex items-center bg-card/95 backdrop-blur-md border border-border rounded-full shadow-lg">
+        <div className="absolute bottom-10 left-4 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
+            <div className="flex items-center bg-card border border-border rounded-full shadow-lg">
                 {/* Add Transformer */}
                 <button
                     type="button"

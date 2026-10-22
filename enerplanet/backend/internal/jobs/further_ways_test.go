@@ -87,7 +87,7 @@ func TestDropFurtherWayDemand_keepsWhatTheStandingWayLacks(t *testing.T) {
 // A further way is linked, so it neither counts as missing (which would start a
 // City2TABULA run) nor goes to BuEM, which runs the building under its best way.
 func TestFurtherWayIsLinkedButNotSentToBuem(t *testing.T) {
-	if missing := missingOSMIDs([]string{"223728275", "1265475272", "999"}, map[string]city2tabula.Building{"223728275": {}}, mainkofenFurther); len(missing) != 1 || missing[0] != "999" {
+	if missing := missingOSMIDs([]string{"223728275", "1265475272", "999"}, oneEach(map[string]city2tabula.Building{"223728275": {}}), mainkofenFurther); len(missing) != 1 || missing[0] != "999" {
 		t.Errorf("missing = %v, want only 999", missing)
 	}
 
@@ -111,4 +111,13 @@ func TestCoverageLeavesOutCoveredWays(t *testing.T) {
 	if w, err := checkDemandCoverage(topology, covered); err != nil || w != nil {
 		t.Errorf("warning %+v, err %v; want none", w, err)
 	}
+}
+
+// oneEach gives each way of m its one 3D building, the shape most tests need.
+func oneEach(m map[string]city2tabula.Building) map[string][]city2tabula.Building {
+	out := make(map[string][]city2tabula.Building, len(m))
+	for way, b := range m {
+		out[way] = []city2tabula.Building{b}
+	}
+	return out
 }

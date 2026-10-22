@@ -320,7 +320,7 @@ export const pylovoService = {
             requestPayload.excluded_building_ids = payload.excluded_building_ids;
         }
 
-        const response = await axios.post<{ success: boolean; data: PylovoGridResponse }>("/v2/pylovo/generate-grid", requestPayload, {
+        const response = await axios.post<{ success: boolean; data: PylovoGridResponse }>("/v1/pylovo/generate-grid", requestPayload, {
             timeout: 0 // no timeout; large models (750+ buildings) need unlimited time
         });
         // Backend wraps response in {success: true, data: ...}
@@ -328,7 +328,7 @@ export const pylovoService = {
     },
 
     getTransformerSizes: async (): Promise<TransformerSize[]> => {
-        const response = await axios.get<{ data: { sizes: TransformerSize[]; count: number } }>("/v2/pylovo/transformer-sizes");
+        const response = await axios.get<{ data: { sizes: TransformerSize[]; count: number } }>("/v1/pylovo/transformer-sizes");
         const sizes = response.data?.data?.sizes;
         if (!sizes || sizes.length === 0) {
             throw new Error("Failed to load transformer sizes from Pylovo");
@@ -337,7 +337,7 @@ export const pylovoService = {
     },
 
     getConsumerCategories: async (): Promise<ConsumerCategory[]> => {
-        const response = await axios.get<{ data: { categories: ConsumerCategory[]; count: number } }>("/v2/pylovo/consumer-categories");
+        const response = await axios.get<{ data: { categories: ConsumerCategory[]; count: number } }>("/v1/pylovo/consumer-categories");
         return response.data?.data?.categories || [];
     },
 
@@ -347,7 +347,7 @@ export const pylovoService = {
     },
 
     getCableTypes: async (): Promise<{ cables: CableType[]; cable_costs: CableType[] }> => {
-        const response = await axios.get<{ data: { cables: CableType[]; cable_costs: CableType[]; count: number } }>("/v2/pylovo/cable-types");
+        const response = await axios.get<{ data: { cables: CableType[]; cable_costs: CableType[]; count: number } }>("/v1/pylovo/cable-types");
         return {
             cables: response.data?.data?.cables || [],
             cable_costs: response.data?.data?.cable_costs || []
@@ -357,7 +357,7 @@ export const pylovoService = {
     /** Whole-grid figures, or figures scoped to buildingOsmIds when given (an empty list means no buildings). */
     getGridStatistics: async (gridResultIds: number[], buildingOsmIds?: string[], site?: SiteScope): Promise<GridStatistics> => {
         const response = await axios.post<{ data: { statistics: GridStatistics; grid_result_ids: number[] } }>(
-            "/v2/pylovo/grid-statistics",
+            "/v1/pylovo/grid-statistics",
             { grid_result_ids: gridResultIds, building_osm_ids: buildingOsmIds, ...site },
             { timeout: 0 } // no timeout; large models need unlimited time
         );
@@ -366,7 +366,7 @@ export const pylovoService = {
 
     runPowerFlow: async (gridResultId: number, loadScaling: number = 1, buildingOsmIds?: string[], site?: SiteScope): Promise<PowerFlowResponse> => {
         const response = await axios.post<{ data: PowerFlowResponse }>(
-            "/v2/pylovo/power-flow",
+            "/v1/pylovo/power-flow",
             {
                 grid_result_id: gridResultId,
                 load_scaling: loadScaling,
@@ -379,46 +379,55 @@ export const pylovoService = {
     },
 
     /**
+     * The number of buildings generate-grid would take for the area, without
+     * generating a grid; pylovo stops counting at 10,000 and sets capped.
+     */
+    countBuildings: async (polygons: number[][][]): Promise<{ count: number; capped: boolean }> => {
+        const response = await axios.post<{ data: { count: number; capped: boolean } }>("/v1/pylovo/building-count", { geom: polygonsToGeom(polygons) });
+        return response.data.data;
+    },
+
+    /**
      * Creates a pylovo site for the area, generates its grid and returns it in the
      * /generate-grid shape with meta.mode "site". Rejects with the backend's message
      * when the area is refused (no 3D-linked buildings, over the limit) or generation fails.
      */
     generateSiteGrid: async (name: string, polygons: number[][][]): Promise<PylovoGridResponse> => {
-        const created = await axios.post<{ data: { site_id: number } }>("/v2/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
+        const created = await axios.post<{ data: { site_id: number } }>("/v1/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
         return pylovoService.regenerateSiteGrid(created.data.data.site_id);
     },
 
     /** Generates the site's current revision and returns its grid; rejects with the job's error when generation fails. */
     regenerateSiteGrid: async (siteId: number): Promise<PylovoGridResponse> => {
-        const queued = await axios.post<{ data: SiteJob }>(`/v2/pylovo/sites/${siteId}/generate`);
+        const queued = await axios.post<{ data: SiteJob }>(`/v1/pylovo/sites/${siteId}/generate`);
         let job = queued.data.data;
         while (job.status !== "succeeded") {
             if (job.status === "failed") throw new Error(job.error || `Grid generation for site ${siteId} failed`);
             await new Promise(r => setTimeout(r, SITE_POLL_MS));
-            job = (await axios.get<{ data: SiteJob }>(`/v2/pylovo/sites/${siteId}/jobs/${job.job_id}`)).data.data;
+            job = (await axios.get<{ data: SiteJob }>(`/v1/pylovo/sites/${siteId}/jobs/${job.job_id}`)).data.data;
         }
-        const grid = await axios.get<{ data: PylovoGridResponse }>(`/v2/pylovo/sites/${siteId}/grid`, { timeout: 0 });
+        const grid = await axios.get<{ data: PylovoGridResponse }>(`/v1/pylovo/sites/${siteId}/grid`, { timeout: 0 });
         return grid.data.data;
     },
 
     /** The site's stored stations with their fixed building assignments. */
     getSiteTransformers: async (siteId: number): Promise<SiteStation[]> => {
-        const response = await axios.get<{ data: SiteStation[] }>(`/v2/pylovo/sites/${siteId}/transformers`);
+        const response = await axios.get<{ data: SiteStation[] }>(`/v1/pylovo/sites/${siteId}/transformers`);
         return response.data.data;
     },
 
     /** Replaces the site's stations and fixed assignments; the grid is stale until the site is regenerated. */
     putSiteTransformers: async (siteId: number, stations: SiteStation[]): Promise<void> => {
-        await axios.put(`/v2/pylovo/sites/${siteId}/transformers`, stations);
+        await axios.put(`/v1/pylovo/sites/${siteId}/transformers`, stations);
     },
 
     getEquipmentCosts: async (): Promise<EquipmentCosts> => {
-        const response = await axios.get<{ data: { equipment: EquipmentCosts } }>("/v2/pylovo/equipment-costs");
+        const response = await axios.get<{ data: { equipment: EquipmentCosts } }>("/v1/pylovo/equipment-costs");
         return response.data?.data?.equipment || {};
     },
 
     getVoltageSettings: async (): Promise<VoltageSettings> => {
-        const response = await axios.get<{ data: { settings: VoltageSettings } }>("/v2/pylovo/voltage-settings");
+        const response = await axios.get<{ data: { settings: VoltageSettings } }>("/v1/pylovo/voltage-settings");
         return response.data?.data?.settings || {} as VoltageSettings;
     },
 
@@ -432,7 +441,7 @@ export const pylovoService = {
         icon?: string;
     }): Promise<{ building_id: number; message: string }> => {
         const response = await axios.post<{ data: { building: { id: number }; status: string } }>(
-            "/v2/pylovo/custom-buildings",
+            "/v1/pylovo/custom-buildings",
             payload
         );
         // The API returns { status: "success", building: { id: ... } }
@@ -442,13 +451,13 @@ export const pylovoService = {
 
     getCustomBuildings: async (): Promise<CustomBuilding[]> => {
         const response = await axios.get<{ data: { buildings: CustomBuilding[]; count: number } }>(
-            "/v2/pylovo/custom-buildings"
+            "/v1/pylovo/custom-buildings"
         );
         return response.data?.data?.buildings || [];
     },
 
     deleteCustomBuilding: async (buildingId: number): Promise<void> => {
-        await axios.delete(`/v2/pylovo/custom-buildings/${buildingId}`);
+        await axios.delete(`/v1/pylovo/custom-buildings/${buildingId}`);
     },
 
     runPipeline: async (payload: {
@@ -459,7 +468,7 @@ export const pylovoService = {
         no_cache?: boolean;
     }): Promise<{ job_id: string; status: string; message: string }> => {
         const response = await axios.post<{ data: { job_id: string; status: string; message: string } }>(
-            "/v2/pylovo/pipeline/run",
+            "/v1/pylovo/pipeline/run",
             payload,
             { timeout: 0 } // no timeout; large models need unlimited time
         );
@@ -485,7 +494,7 @@ export const pylovoService = {
             started_at?: string;
             completed_at?: string;
             error?: string;
-        } }>(`/v2/pylovo/pipeline/status/${jobId}`);
+        } }>(`/v1/pylovo/pipeline/status/${jobId}`);
         return response.data?.data || { job_id: '', status: 'pending', step: '', progress: 0, logs: [] };
     },
 
@@ -508,7 +517,7 @@ export const pylovoService = {
             started_at: string;
             completed_at?: string;
             error?: string;
-        }> } }>(`/v2/pylovo/pipeline/history` + (limit ? `?limit=${String(limit)}` : ''));
+        }> } }>(`/v1/pylovo/pipeline/history` + (limit ? `?limit=${String(limit)}` : ''));
         return response.data?.data?.jobs || [];
     },
 
@@ -535,7 +544,7 @@ export const pylovoService = {
             };
             boundary?: GeoJSON.Feature;
             message?: string;
-        } }>(`/v2/pylovo/boundary?lat=${lat}&lon=${lon}&admin_level=${adminLevel}`);
+        } }>(`/v1/pylovo/boundary?lat=${lat}&lon=${lon}&admin_level=${adminLevel}`);
         return response.data?.data || { status: 'error', message: 'No response' };
     },
 
@@ -552,7 +561,7 @@ export const pylovoService = {
                 osm_relation_id: number;
                 states: Record<string, { name: string; osm_relation_id: number }>;
             }>;
-        } }>("/v2/pylovo/boundary/regions");
+        } }>("/v1/pylovo/boundary/regions");
         return response.data?.data || { regions: {} };
     },
 
@@ -607,7 +616,7 @@ export const pylovoService = {
                 };
                 boundary?: GeoJSON.Feature;
             }>;
-        } }>("/v2/pylovo/boundary/available", { timeout: 180000 })
+        } }>("/v1/pylovo/boundary/available", { timeout: 180000 })
             .then(response => {
                 const result = response.data?.data || { status: 'error', regions: [] };
                 // A failed answer is not cached, so a retry asks again.
@@ -676,7 +685,7 @@ export const pylovoService = {
                 max_chargers_cable: number | null;
                 projected_utilization_percent: number;
             };
-        } }>("/v2/pylovo/hosting-capacity", payload);
+        } }>("/v1/pylovo/hosting-capacity", payload);
         return response.data?.data;
     },
 
@@ -705,7 +714,7 @@ export const pylovoService = {
             lines: GeoJSON.FeatureCollection;
             reassigned_count: number;
             message: string;
-        } }>("/v2/pylovo/add-transformer", payload, { timeout: 60_000 });
+        } }>("/v1/pylovo/add-transformer", payload, { timeout: 60_000 });
         return response.data?.data;
     },
 
@@ -725,7 +734,7 @@ export const pylovoService = {
             deleted_grid_id: number;
             reassigned_buildings_count: number;
             message: string;
-        } }>("/v2/pylovo/delete-transformer", {
+        } }>("/v1/pylovo/delete-transformer", {
             grid_result_id: gridResultId,
             user_id: userId,
             model_id: modelId,
@@ -751,7 +760,7 @@ export const pylovoService = {
             grid_result_id: number;
             buildings_count: number;
             message: string;
-        } }>("/v2/pylovo/move-transformer", {
+        } }>("/v1/pylovo/move-transformer", {
             grid_result_id: gridResultId,
             coordinates,
             user_id: userId,
@@ -780,7 +789,7 @@ export const pylovoService = {
             old_grid_id: number;
             new_grid_id: number;
             message: string;
-        } }>("/v2/pylovo/assign-building", {
+        } }>("/v1/pylovo/assign-building", {
             building_osm_id: buildingOsmId,
             target_grid_id: targetGridId,
             user_id: userId,
@@ -801,7 +810,7 @@ export const pylovoService = {
             updated_count: number;
             updated_grid_ids: number[];
             message: string;
-        }>("/v2/pylovo/finalize-transformers", {
+        }>("/v1/pylovo/finalize-transformers", {
             draft_id: draftId,
             model_id: modelId,
             user_id: userId
@@ -810,16 +819,16 @@ export const pylovoService = {
     },
 
     getCachedRegions: async (): Promise<CachedRegion[]> => {
-        const response = await axios.get<{ data: CachedRegion[] }>("/v2/pylovo/regions/cached");
+        const response = await axios.get<{ data: CachedRegion[] }>("/v1/pylovo/regions/cached");
         return response.data?.data || [];
     },
 
     deleteCachedRegion: async (id: number): Promise<void> => {
-        await axios.delete(`/v2/pylovo/regions/cached/${id}`);
+        await axios.delete(`/v1/pylovo/regions/cached/${id}`);
     },
 
     toggleCachedRegion: async (id: number, enabled: boolean): Promise<void> => {
-        await axios.patch(`/v2/pylovo/regions/cached/${id}`, { enabled });
+        await axios.patch(`/v1/pylovo/regions/cached/${id}`, { enabled });
     },
 
     deleteStateData: async (country: string, state: string, dryRun = false): Promise<{
@@ -829,7 +838,7 @@ export const pylovoService = {
         tables: Record<string, number>;
     }> => {
         const response = await axios.delete(
-            `/v2/pylovo/pipeline/states/${encodeURIComponent(country)}/${encodeURIComponent(state)}?dry_run=${dryRun}&drop_state_row=true`
+            `/v1/pylovo/pipeline/states/${encodeURIComponent(country)}/${encodeURIComponent(state)}?dry_run=${dryRun}&drop_state_row=true`
         );
         return response.data?.data || response.data;
     },

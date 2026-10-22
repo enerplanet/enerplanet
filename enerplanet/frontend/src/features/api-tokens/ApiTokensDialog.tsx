@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, Copy, Loader2, Plus, ShieldOff } from "lucide-react";
 import { IconX } from "@tabler/icons-react";
 import {
@@ -14,12 +14,14 @@ import {
 	SelectValue,
 } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
-import { apiTokensService, type ApiToken, type CreatedApiToken } from "@/features/admin-dashboard/services/apiTokens";
+import { useAuthStore } from "@/store/auth-store";
+import { createApiTokensService, type ApiToken, type CreatedApiToken } from "./service";
 
 interface ApiTokensDialogProps {
 	user: { id: string | number; email: string } | null;
 	isOpen: boolean;
 	onClose: () => void;
+	personal?: boolean;
 }
 
 function formatDate(value?: string | null): string {
@@ -33,8 +35,14 @@ function tokenStatus(token: ApiToken): "active" | "revoked" | "expired" {
 	return "active";
 }
 
-export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps) {
+export function ApiTokensDialog({ user, isOpen, onClose, personal = false }: ApiTokensDialogProps) {
 	const { t } = useTranslation();
+	const accessLevel = useAuthStore((state) => state.user?.access_level);
+	const canIssueWrite = accessLevel === "expert" || accessLevel === "manager";
+	const apiTokensService = useMemo(
+		() => createApiTokensService(personal ? undefined : user?.id),
+		[personal, user?.id],
+	);
 	const [tokens, setTokens] = useState<ApiToken[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -44,7 +52,7 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 	const [expiresInDays, setExpiresInDays] = useState(90);
 	const [creating, setCreating] = useState(false);
 
-	// Freshly created token (shown once).
+	// New token
 	const [created, setCreated] = useState<CreatedApiToken | null>(null);
 	const [copied, setCopied] = useState(false);
 
@@ -53,13 +61,13 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 		setLoading(true);
 		setError(null);
 		try {
-			setTokens(await apiTokensService.list(user.id));
+			setTokens(await apiTokensService.list());
 		} catch {
 			setError(t("apiTokens.errors.load", "Failed to load tokens"));
 		} finally {
 			setLoading(false);
 		}
-	}, [user, t]);
+	}, [user, t, apiTokensService]);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -77,9 +85,9 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 		setCreating(true);
 		setError(null);
 		try {
-			const result = await apiTokensService.create(user.id, {
+			const result = await apiTokensService.create({
 				name: name.trim(),
-				scope,
+				scope: canIssueWrite ? scope : "read",
 				expires_in_days: expiresInDays,
 			});
 			setCreated(result);
@@ -95,7 +103,8 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 	const handleRevoke = async (token: ApiToken) => {
 		if (!user) return;
 		try {
-			await apiTokensService.revoke(user.id, token.id);
+			await apiTokensService.revoke(token.id);
+			if (created?.id === token.id) setCreated(null);
 			await loadTokens();
 		} catch {
 			setError(t("apiTokens.errors.revoke", "Failed to revoke token"));
@@ -122,6 +131,7 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 						{t("apiTokens.subtitle", "Manage API access tokens for")} {user.email}
 					</AlertDialogDescription>
 					<button
+						aria-label={t("common.close", "Close")}
 						onClick={onClose}
 						className="absolute right-3 top-3 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
 					>
@@ -137,7 +147,7 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 						</div>
 					)}
 
-					{/* One-time display of a freshly created token */}
+					{/* Token display */}
 					{created && (
 						<div className="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 space-y-2">
 							<p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
@@ -171,13 +181,13 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 							className="w-full h-9 px-3 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
 						/>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							<Select value={scope} onValueChange={(v) => setScope(v as "read" | "full")}>
+							<Select value={canIssueWrite ? scope : "read"} disabled={!canIssueWrite} onValueChange={(v) => setScope(v as "read" | "full")}>
 								<SelectTrigger className="h-9" aria-label={t("apiTokens.scope", "Scope")}>
 									<SelectValue placeholder={t("apiTokens.scope", "Scope")} />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="read">{t("apiTokens.scopeRead", "Read-only (recommended)")}</SelectItem>
-									<SelectItem value="full">{t("apiTokens.scopeFull", "Read & write")}</SelectItem>
+									{canIssueWrite && <SelectItem value="full">{t("apiTokens.scopeFull", "Read & write")}</SelectItem>}
 								</SelectContent>
 							</Select>
 							<Select value={String(expiresInDays)} onValueChange={(v) => setExpiresInDays(Number(v))}>
@@ -192,6 +202,11 @@ export function ApiTokensDialog({ user, isOpen, onClose }: ApiTokensDialogProps)
 								</SelectContent>
 							</Select>
 						</div>
+						{!canIssueWrite && (
+							<p className="text-xs text-muted-foreground">
+								{t("apiTokens.readOnlyAccount", "You can create read-only tokens. Contact an expert or your manager if you need write access.")}
+							</p>
+						)}
 						<button
 							type="button"
 							onClick={handleCreate}

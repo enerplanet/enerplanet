@@ -1,5 +1,6 @@
 import { useState, useEffect, type FC } from "react";
-import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, type LucideIcon } from "lucide-react";
+import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, Trash2, type LucideIcon } from "lucide-react";
+import { useConfirm } from "@/hooks/useConfirmDialog";
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue, productType } from "@/features/technologies/catalogue";
@@ -29,6 +30,10 @@ interface TechnologyDrawerProps {
     onAddTechToAll?: (tech: Technology) => void;
     onRemoveTechFromAll?: (tech: Technology) => void;
     appliedTechKeys?: string[];
+    /** Removes every technology and heat link from every building, after a confirmation. */
+    onRemoveAllTechs?: () => void;
+    /** Buildings that currently carry a technology or heat link. */
+    techBuildingCount?: number;
 }
 
 export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
@@ -39,8 +44,11 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     onAddTechToAll,
     onRemoveTechFromAll,
     appliedTechKeys = [],
+    onRemoveAllTechs,
+    techBuildingCount = 0,
 }) => {
     const { t } = useTranslation();
+    const confirm = useConfirm();
     const [catalogue, setCatalogue] = useState<Technology[]>([]);
     const [loading, setLoading] = useState(true);
     // Client-side search across the active carrier's techs (catalog is small
@@ -67,6 +75,15 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
         setIsAnimating(false);
         setTimeout(onClose, 300);
     };
+
+    const handleRemoveAll = () =>
+        confirm({
+            type: "delete",
+            title: t("technologies.removeAllConfirmTitle"),
+            description: t("technologies.removeAllConfirmDescription", { count: techBuildingCount }),
+            confirmLabel: t("technologies.removeAll"),
+            onConfirm: async () => onRemoveAllTechs?.(),
+        });
 
     const handleDragStart = (e: React.DragEvent<HTMLElement>, tech: Technology) => {
         e.dataTransfer.setData("application/json", JSON.stringify(tech));
@@ -104,35 +121,35 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     ${isApplied ? "border-primary/50 bg-primary/5" : ""}
                 `}
             >
-                {/* Add/Remove to all button */}
-                {(onAddTechToAll || onRemoveTechFromAll) && (
+                {onAddTechToAll && (
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <button
-                                onClick={() => {
-                                    if (isApplied && onRemoveTechFromAll) {
-                                        onRemoveTechFromAll(tech);
-                                    } else if (!isApplied && onAddTechToAll) {
-                                        onAddTechToAll(tech);
-                                    }
-                                }}
-                                className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                                    isApplied
-                                        ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                                        : "bg-primary/10 hover:bg-primary/20"
-                                }`}
+                                onClick={() => onAddTechToAll(tech)}
+                                aria-label={t("technologies.addToAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-primary/10 hover:bg-primary/20"
                             >
-                                {isApplied ? (
-                                    <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                                ) : (
-                                    <Plus className="w-3.5 h-3.5 text-primary" />
-                                )}
+                                <Plus className="w-3.5 h-3.5 text-primary" />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent side="right">
-                            <p className="text-xs">
-                                {isApplied ? t("technologies.removeFromAllBuildings") : t("technologies.addToAllBuildings")}
-                            </p>
+                            <p className="text-xs">{t("technologies.addToAllBuildings")}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                )}
+                {isApplied && onRemoveTechFromAll && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => onRemoveTechFromAll(tech)}
+                                aria-label={t("technologies.removeFromAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                            >
+                                <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                            <p className="text-xs">{t("technologies.removeFromAllBuildings")}</p>
                         </TooltipContent>
                     </Tooltip>
                 )}
@@ -258,7 +275,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     </div>
                 </div>
 
-                <div className="px-3 py-4 space-y-6 h-[calc(100vh-240px)] overflow-y-auto">
+                <div className="px-3 py-4 space-y-6 h-[calc(100vh-290px)] overflow-y-auto">
                     {(() => {
                         if (loading) {
                             return (
@@ -309,7 +326,18 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     })()}
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-3 border-t border-border bg-background dark:bg-gray-800">
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-3 border-t border-border bg-background dark:bg-gray-800 space-y-2">
+                    {onRemoveAllTechs && (
+                        <Button
+                            variant="outline"
+                            onClick={handleRemoveAll}
+                            disabled={techBuildingCount === 0}
+                            className="w-full text-red-600 hover:text-red-700 dark:text-red-400"
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {t("technologies.removeAll")}
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={handleClose} className="w-full">
                         {t("common.close")}
                     </Button>

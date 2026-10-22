@@ -272,7 +272,12 @@
     "published": "Opublikowane",
     "failed": "Niepowodzenie",
     "cancelled": "Anulowane",
-    "modified": "Zmodyfikowany"
+    "modified": "Zmodyfikowany",
+    "failedAt": {
+      "queue": "Przygotowanie nie powiodło się",
+      "running": "Symulacja nie powiodła się",
+      "processing": "Przetwarzanie nie powiodło się"
+    }
   },
   "results": {
     "title": "Wyniki Symulacji",
@@ -282,10 +287,22 @@
     "carrier": {
       "toggleLabel": "Nośnik energii",
       "electricity": "Energia elektryczna",
-      "heat": "Ciepło"
+      "heat": "Ciepło",
+      "gas": "Gaz",
+      "oil": "Olej",
+      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii"
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
+    "copies_one": "{{count}} kopia",
+    "copies_few": "{{count}} kopie",
+    "copies_many": "{{count}} kopii",
+    "copies_other": "{{count}} kopii",
+    "notRun": "nieuruchomiony",
+    "inModels_one": "w {{count}} modelu",
+    "inModels_few": "w {{count}} modelach",
+    "inModels_many": "w {{count}} modelach",
+    "inModels_other": "w {{count}} modelach",
     "loadingModels": "Ładowanie modeli...",
     "noCompletedSimulations": "Brak ukończonych symulacji w tej przestrzeni roboczej",
     "noCompletedModels": "Brak ukończonych modeli",
@@ -410,6 +427,7 @@
       "noData": "Brak dostępnych danych energetycznych",
       "dailyEnergyBalance": "Dzienny Bilans Energetyczny",
       "dailyEnergyBalanceDesc": "Pokazuje dzienny bilans między produkcją a zużyciem energii dla wszystkich technologii w systemie.",
+      "dailyEnergyBalanceDescHeat": "Pokazuje dzienny bilans między dostarczonym ciepłem (np. przez pompy ciepła) a zapotrzebowaniem na ciepło dla wszystkich technologii w systemie.",
       "production": "Produkcja",
       "productionDesc": "Energia wytwarzana przez instalacje solarne, wiatrowe i inne źródła",
       "consumption": "Zużycie",
@@ -422,10 +440,12 @@
       "selfSufficiency": "Samowystarczalność",
       "netBalance": "Bilans Netto",
       "energyKwh": "Energia (kWh)",
+      "energy": "Energia",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Brak dostępnych danych bilansu energetycznego",
       "dailyLoadProfile": "Dzienny Profil Obciążenia",
       "dailyLoadProfileDesc": "Pokazuje wzorce zużycia energii elektrycznej w okresie 24 godzin z automatycznym wykrywaniem okresów szczytowych.",
+      "dailyLoadProfileDescHeat": "Pokazuje profile zapotrzebowania na ciepło w ciągu 24 godzin z automatycznym wykrywaniem okresów szczytowych.",
       "peakPeriods": "Okresy Szczytowe",
       "peakPeriodsDesc": "Rano (07:00-10:00) i wieczorem (17:00-21:00) okresy wysokiego zapotrzebowania",
       "offPeak": "Poza Szczytem",
@@ -455,6 +475,10 @@
       "eveningPeak": "Szczyt Wieczorny",
       "peakPeriod": "Okres Szczytowy",
       "noDataLoadProfile": "Brak danych dla dziennego profilu obciążenia",
+      "generationDurationCurve": "Krzywa czasu trwania produkcji",
+      "generationDurationCurveDesc": "Porządkuje godzinową produkcję odnawialną od najwyższej do najniższej, pokazując szczyt produkcji i przebieg w ciągu roku.",
+      "demandDurationCurve": "Krzywa czasu trwania zapotrzebowania",
+      "demandDurationCurveDesc": "Porządkuje godzinowe zapotrzebowanie na ciepło od najwyższego do najniższego, pokazując szczyt i przebieg w ciągu roku.",
       "noDataLoadCurve": "Brak danych dla krzywej obciążenia"
     },
     "grid": {
@@ -535,6 +559,8 @@
       "unmetDemandDesc": "Zapotrzebowanie na energię, które nie mogło być zaspokojone przez dostępną podaż. Niższe wartości oznaczają lepszą niezawodność.",
       "unmetEnergy": "Niezaspokojona Energia",
       "unmetEnergyDesc": "Zapotrzebowanie przekraczające dostępną podaż",
+      "energy": "Energia",
+      "unmet": "Niezaspokojone",
       "unmetKwh": "Niezaspokojone (kWh)",
       "powerFlowAnalysis": "Analiza Przepływu Mocy",
       "powerFlow": "Przepływ Mocy",
@@ -1412,7 +1438,7 @@
       "importArea": "Importuj obszar",
       "exportArea": "Eksportuj obszar",
       "regenerateGrid": "Wygeneruj sieć ponownie",
-      "regenerateGridHint": "Obszar lub transformatory lokalizacji uległy zmianie. Wygeneruj ponownie, aby pogrupować wokół nich budynki i zaktualizować sieć.",
+      "regenerateGridHint": "Obszar lub jego transformatory uległy zmianie. Wygeneruj ponownie, aby pogrupować wokół nich budynki i zaktualizować sieć.",
       "importAreaError": {
         "invalid": "Plik nie jest prawidłowym GeoJSON.",
         "noPolygon": "Plik nie zawiera wielokąta.",
@@ -1488,6 +1514,31 @@
       "clickForDetails": "Kliknij, aby zobaczyć szczegóły",
       "class": "Klasa",
       "estimatedShort": "szac.",
+      "buemTotal": "Łącznie: {{value}}",
+      "kitchenGas": "Gaz kuchenny: {{value}}",
+      "geometry3d": "Geometria 3D: City2TABULA",
+      "asModelled": "Budynek, jak modelowany",
+      "storeys": "Kondygnacje (geometria 3D)",
+      "floorArea": "Powierzchnia użytkowa",
+      "roomHeight": "Wysokość pomieszczenia",
+      "envelope": "Przegroda referencyjna (TABULA)",
+      "useType": {
+        "SFH": "Dom jednorodzinny",
+        "TH": "Dom szeregowy",
+        "MFH": "Budynek wielorodzinny",
+        "AB": "Blok mieszkalny",
+        "bakery": "Piekarnia",
+        "clinic": "Klinika",
+        "hotel": "Hotel",
+        "office": "Biuro",
+        "restaurant": "Restauracja",
+        "school": "Szkoła",
+        "supermarket": "Supermarket",
+        "warehouse": "Magazyn"
+      },
+      "buemFailed": "BuEM nie powiódł się: {{reason}}",
+      "buemShared": "Liczony z innym budynkiem: {{detail}}",
+      "buemPending": "Wynik BuEM w toku",
       "floors": "Kondygnacje",
       "height": "Wysokość",
       "heightMedian": "Wysokość (mediana)",
@@ -1499,7 +1550,6 @@
       "households": "Gospodarstwa domowe",
       "avgHouseholdSize": "Śr. wielkość gospodarstwa domowego",
       "cbsNote": "Wartości CBS to statystyki dla obszaru kodu pocztowego (preferowany PC6, zastępczo PC4), a nie wartości pojedynczego budynku.",
-      "source": "Źródło: {{source}}.",
       "sourcesNl": "Źródła: {{epOnline}} (obowiązują warunki) i {{cbs}}.",
       "technologiesCount": "Technologie ({{count}})",
       "dropToAddTech": "Upuść, aby dodać technologię",
@@ -1540,8 +1590,8 @@
       "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
     "siteMode": {
-      "label": "Tryb lokalizacji",
-      "hint": "Generuje sieć tylko dla tego obszaru i przechowuje ją oddzielnie od wspólnych sieci. Uwzględnia tylko budynki z danymi 3D, maksymalnie 150.",
+      "label": "Własna sieć",
+      "hint": "Umieść własne transformatory i zbuduj z nich sieć dla tego obszaru zamiast gotowej sieci. Tylko budynki z danymi 3D, maksymalnie 150.",
       "locked": "Usuń narysowany obszar, aby zmienić tryb."
     },
     "largeModel": {
@@ -1749,7 +1799,8 @@
       "ground_source_heat_pump": "Gruntowa pompa ciepła",
       "electric_boilers": "Kocioł elektryczny",
       "gas_boiler": "Kocioł gazowy",
-      "air_conditioner": "Klimatyzator"
+      "air_conditioner": "Klimatyzator",
+      "gas_supply": "Dostawa gazu"
     },
     "products": {
       "title": "Wybierz produkt: {{type}}",
@@ -1946,6 +1997,9 @@
     },
     "addToAllBuildings": "Dodaj do wszystkich budynków",
     "removeFromAllBuildings": "Usuń ze wszystkich budynków",
+    "removeAll": "Usuń wszystkie technologie",
+    "removeAllConfirmTitle": "Usunąć wszystkie technologie?",
+    "removeAllConfirmDescription": "Usuwa każdą technologię i połączenie ciepła z {{count}} budynków tego modelu, także przypisane automatycznie. Zapisz model, aby zachować zmianę.",
     "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Skonfiguruj parametry technologii dla tego budynku",
@@ -1968,6 +2022,12 @@
       "constraints": "Ograniczenia",
       "applyToAllBuildings": "Zastosuj do wszystkich budynków",
       "applyTechnology": "Zastosuj technologię"
+    },
+    "heatScope": {
+      "title": "Dodać {{tech}} do wszystkich budynków?",
+      "description": "Budynek ma jedno źródło ciepła. {{withHeat}} budynków już je ma, {{without}} nie ma żadnego.",
+      "missing": "Tylko budynki bez źródła ciepła ({{count}})",
+      "replace": "Zastąp we wszystkich budynkach ({{count}})"
     }
   },
   "locations": {
@@ -2257,6 +2317,7 @@
   },
   "drawing": {
     "clickToDraw": "Kliknij, aby rysować",
+    "buildingNotStart": "Kliknięcie otwiera ten budynek. Zacznij obszar obok.",
     "secondCorner": "Kliknij, aby umieścić drugi narożnik",
     "thirdCorner": "Kliknij, aby umieścić trzeci narożnik",
     "rightClickToFinish": "Kliknij prawym przyciskiem, aby zakończyć obszar",
@@ -2481,11 +2542,16 @@
     "techAddedToAll": "{{tech}} dodano do {{count}} budynków",
     "techAddedToBuilding": "{{tech}} dodano do budynku",
     "techRemovedFromAll": "{{tech}} usunięto z {{count}} budynków",
+    "allTechsRemoved": "Usunięto technologie z {{count}} budynków",
     "techRemovedFromBuilding": "{{tech}} usunięto z budynku",
     "techNotFound": "Technologia {{tech}} nie znaleziona",
     "techLoadFailed": "Nie udało się załadować technologii do edycji",
     "heatAutoAssigned": "Technologie cieplne zostały przypisane automatycznie.",
-    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}"
+    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}",
+    "areaOverLimit": {
+      "title": "Ten obszar zawiera {{buildings}} budynków; model może zawierać {{limit}}",
+      "description": "Zmniejsz obszar o około {{excess}} budynków. Pozostaje na mapie, a sieć zostanie pobrana, gdy zmieści się w limicie."
+    }
   },
   "gridStats": {
     "title": "Analiza Sieci",
@@ -3029,7 +3095,28 @@
     },
     "pv": {
       "shadingNotice": "Symulacja nie uwzględnia zacienienia przez drzewa ani sąsiednie budynki.",
-      "unavailable": "Nie udało się wczytać powierzchni PV budynku."
+      "unavailable": "Nie udało się wczytać powierzchni PV budynku.",
+      "otherRoof": "Dach innego budynku 3D ({{n}} z {{total}})",
+      "otherWall": "Ściana innego budynku 3D ({{n}} z {{total}})"
+    },
+    "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane.",
+    "tech": {
+      "pvCapacity": "Moc z powierzchni PV",
+      "size": "Wielkość",
+      "sizeMax": "Maksymalna wielkość",
+      "power": "Moc",
+      "powerMax": "Maksymalna moc",
+      "energy": "Energia",
+      "energyMax": "Maksymalna energia",
+      "cop": "COP",
+      "efficiency": "Sprawność",
+      "investment": "Inwestycja",
+      "price": "Cena",
+      "pvSurfaces": "Powierzchnie PV",
+      "required": "Wpisz wartość",
+      "positive": "Musi być większe od 0",
+      "notNegative": "Musi wynosić 0 lub więcej",
+      "notEditable": "Tej wartości nie można tu edytować"
     }
   }
 }

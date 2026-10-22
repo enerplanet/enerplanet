@@ -129,11 +129,43 @@ func (s *Store) SaveShared(modelID uint, osmID, standing string) error {
 	}).Create(&row).Error
 }
 
-// GetByModel returns every building demand profile row for a model.
-func (s *Store) GetByModel(modelID uint) ([]models.BuildingDemandProfile, error) {
-	var rows []models.BuildingDemandProfile
-	err := s.db.Where("model_id = ?", modelID).Find(&rows).Error
-	return rows, err
+// Summary is one building's stored outcome without its hourly profile, plus
+// the BuEM inputs the map shows, read from the stored profile's building block.
+type Summary struct {
+	OSMID              string   `gorm:"column:osm_id"`
+	Status             string   `gorm:"column:status"`
+	TabulaVariantCode  *string  `gorm:"column:tabula_variant_code"`
+	BuildingType       *string  `gorm:"column:building_type"`
+	RefurbishmentLevel string   `gorm:"column:refurbishment_level"`
+	HeatingKwhA        *float64 `gorm:"column:heating_kwh_a"`
+	CoolingKwhA        *float64 `gorm:"column:cooling_kwh_a"`
+	ElectricityKwhA    *float64 `gorm:"column:electricity_kwh_a"`
+	HotWaterKwhA       *float64 `gorm:"column:hot_water_kwh_a"`
+	KitchenKwhA        *float64 `gorm:"column:kitchen_kwh_a"`
+	ErrorMessage       *string  `gorm:"column:error_message"`
+	NStoreys           *int     `gorm:"column:n_storeys"`
+	ARefM2             *float64 `gorm:"column:a_ref_m2"`
+	HRoomM             *float64 `gorm:"column:h_room_m"`
+}
+
+// GetSummariesByModel returns a model's per-building outcomes. The hourly
+// profile (about 130 kB a building) stays in the database; Postgres extracts
+// the three inputs from it.
+func (s *Store) GetSummariesByModel(modelID uint) ([]Summary, error) {
+	var rows []Summary
+	err := s.db.Model(&models.BuildingDemandProfile{}).
+		Select(`osm_id, status, tabula_variant_code, building_type, refurbishment_level,
+			heating_kwh_a, cooling_kwh_a, electricity_kwh_a, hot_water_kwh_a, kitchen_kwh_a, error_message,
+			round((profile -> 'building' ->> 'n_storeys')::numeric)::int AS n_storeys,
+			(profile -> 'building' -> 'A_ref' ->> 'value')::float8 AS a_ref_m2,
+			(profile -> 'building' -> 'h_room' ->> 'value')::float8 AS h_room_m`).
+		Where("model_id = ?", modelID).
+		Order("osm_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("demand profile summaries of model %d: %w", modelID, err)
+	}
+	return rows, nil
 }
 
 // StatusCounts summarizes a model's resolution progress by status.

@@ -2,13 +2,7 @@ import { useCallback, useRef } from "react";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
-interface TechDialogFlowOptions {
-  multiEditSelectedIds: Set<string>;
-}
-
-export const useTechDialogFlow = ({
-  multiEditSelectedIds,
-}: TechDialogFlowOptions) => {
+export const useTechDialogFlow = () => {
   const techAddedFromBuildingDialogRef = useRef(false);
 
   const selectedBuildingFeature = useModelStore((s) => s.selectedBuildingFeature);
@@ -31,24 +25,8 @@ export const useTechDialogFlow = ({
     [selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]
   );
 
-  const handleApplyTechToSelected = useCallback(
-    (tech: Technology) => {
-      if (multiEditSelectedIds.size === 0) return;
-      if (selectedBuildingFeature) {
-        techAddedFromBuildingDialogRef.current = true;
-        setBuildingDialogOpen(false);
-        setSelectedTechForDialog(tech);
-        setSelectedBuildingForTech(selectedBuildingFeature);
-        setTechDialogStep("pick");
-        setTechDialogOpen(true);
-      }
-    },
-    [multiEditSelectedIds, selectedBuildingFeature, setBuildingDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]
-  );
-
   return {
     techAddedFromBuildingDialogRef,
     handleAddTechFromDialog,
-    handleApplyTechToSelected,
   };
 };

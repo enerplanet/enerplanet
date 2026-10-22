@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
@@ -150,6 +151,9 @@ func resolveAndLink(ctx context.Context, log *logrus.Entry, db *gorm.DB, modelID
 		saveFailures(log, profileStore, modelID, allFailed(run.buildings, fmt.Sprintf("BuEM results could not be resolved: %v", err)))
 		return nil
 	}
+	if err := combineParts(store, run.parts, run.resolved, &outcome); err != nil {
+		return err
+	}
 	saveFailures(log, profileStore, modelID, outcome.failed)
 
 	changed, err := configChanged(db, modelID, revision)
@@ -199,10 +203,13 @@ func configChanged(db *gorm.DB, modelID uint, revision string) (bool, error) {
 	return now != revision, nil
 }
 
+// allFailed fails every building of buildings with reason, recorded under its
+// OSM way: one of several 3D buildings of a way fails the way.
 func allFailed(buildings []buem.Building, reason string) map[string]string {
 	failed := make(map[string]string, len(buildings))
 	for _, b := range buildings {
-		failed[b.ID] = reason
+		way, _, _ := strings.Cut(b.ID, partSeparator)
+		failed[way] = reason
 	}
 	return failed
 }
