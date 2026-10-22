@@ -23,6 +23,12 @@ export interface StoredDemandProfile {
   kitchen_kwh_a?: number;
   /** Why it failed, or for a shared building the one it is counted under. */
   error_message?: string;
+  /** Storeys BuEM modelled, from the 3D geometry. */
+  n_storeys?: number;
+  /** Conditioned floor area BuEM modelled, m². */
+  a_ref_m2?: number;
+  /** Room height BuEM modelled, m. */
+  h_room_m?: number;
 }
 
 interface ModelDemandProfiles {

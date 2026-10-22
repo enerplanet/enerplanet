@@ -58,8 +58,8 @@ export const TOOLTIP_CONTENTS = {
   },
   buildingEnrichment: {
     title: 'Building Enrichment Data',
-    description: 'This section shows enrichment data from external sources. For the Netherlands: 3D BAG, EP-Online energy labels, and CBS demographics (postcode-area statistics). For Czech Republic: CUZK LiDAR height data (DMP1G surface + DMR5G terrain) and EUBUCCO building type. For Germany and Austria: EUBUCCO building data (height, type, estimated floors).',
-    example: 'Netherlands: BAG ID, energy labels, CBS population/households. Czech Republic: CUZK LiDAR building heights, EUBUCCO type. Germany/Austria: EUBUCCO height and building type. Sources vary by country.'
+    description: 'This section shows enrichment data for buildings in the Netherlands: 3D BAG, EP-Online energy labels, and CBS demographics (postcode-area statistics).',
+    example: 'BAG ID, energy labels, CBS population/households.'
   },
   bagFloors: {
     title: 'Number of Floors',
