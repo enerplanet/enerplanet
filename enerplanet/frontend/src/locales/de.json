@@ -1136,16 +1136,22 @@
     "published": "Veröffentlicht",
     "total": "Gesamt",
     "queue": "Warteschlange",
-    "copyOf": "Kopie von \"{{name}}\"",
     "ownedBy": "Eigentümer",
-    "parentModel": "Übergeordnetes Modell",
     "parent": "Übergeordnet",
-    "anotherModel": "einem anderen Modell",
     "demandFallbackTitle": "Einige Gebäude mit konstantem Bedarf",
     "demandFallbackWarning": "{{fallback}} von {{total}} Gebäuden hatten kein stündliches Bedarfsprofil (keine 3D-Daten) und verwenden ihren Jahresbedarf gleichmäßig über das Jahr verteilt.",
     "waiting": "Wartend",
     "queuedTooltip": "Ihr Modell ist in der Warteschlange - der Simulationsmotor verarbeitet andere Berechnungen",
-    "compareRequires2Completed": "Wählen Sie genau 2 abgeschlossene Modelle zum Vergleichen aus"
+    "compareRequires2Completed": "Wählen Sie genau 2 abgeschlossene Modelle zum Vergleichen aus",
+    "family": {
+      "show": "Kopien von {{name}} anzeigen",
+      "hide": "Kopien von {{name}} ausblenden",
+      "copies_one": "{{count}} Kopie",
+      "copies_other": "{{count}} Kopien",
+      "failed_one": "{{count}} fehlgeschlagen",
+      "failed_other": "{{count}} fehlgeschlagen",
+      "pagination": "Modellfamilien"
+    }
   },
   "polygon": {
     "drawRegion": "Zeichnen Sie Ihre Region",

@@ -213,6 +213,8 @@ class ModelService {
     workspace_id?: number;
     sort_by?: string;
     sort_order?: string;
+    /** families: limit, offset and total count originals with their copies. */
+    group?: "families";
   }): Promise<ModelListResponse> {
     const response = await axios.get(this.baseURL, { params });
     return response.data;

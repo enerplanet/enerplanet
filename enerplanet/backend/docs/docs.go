@@ -170,6 +170,15 @@ const docTemplate = `{
                         "description": "Filter by workspace ID",
                         "name": "workspace_id",
                         "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "families"
+                        ],
+                        "type": "string",
+                        "description": "families: limit, offset and total count originals with their copies, so a page never splits a family",
+                        "name": "group",
+                        "in": "query"
                     }
                 ],
                 "responses": {

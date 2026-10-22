@@ -1131,11 +1131,8 @@
     "published": "Publicado",
     "total": "Total",
     "queue": "Cola",
-    "copyOf": "Copia de \"{{name}}\"",
     "ownedBy": "Propiedad de",
-    "parentModel": "Modelo principal",
     "parent": "Principal",
-    "anotherModel": "otro modelo",
     "demandFallbackTitle": "Algunos edificios usan una demanda constante",
     "demandFallbackWarning": "{{fallback}} de {{total}} edificios no tenían perfil horario de demanda (sin datos 3D) y usan su demanda anual repartida por igual a lo largo del año.",
     "waiting": "Esperando",
@@ -1145,7 +1142,16 @@
     "bulkCopyDescription": "Crear copias de {{count}} modelo(s) seleccionado(s)",
     "bulkCopyFailed": "Algunos modelos no pudieron copiarse. Por favor, inténtelo de nuevo.",
     "bulkCopySubmit": "Crear copias",
-    "cannotCalculate": "No se puede calcular – no hay modelos elegibles seleccionados"
+    "cannotCalculate": "No se puede calcular – no hay modelos elegibles seleccionados",
+    "family": {
+      "show": "Mostrar copias de {{name}}",
+      "hide": "Ocultar copias de {{name}}",
+      "copies_one": "{{count}} copia",
+      "copies_other": "{{count}} copias",
+      "failed_one": "{{count}} fallida",
+      "failed_other": "{{count}} fallidas",
+      "pagination": "familias"
+    }
   },
   "polygon": {
     "drawRegion": "Dibuja tu región",

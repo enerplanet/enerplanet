@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Copy, FileEdit, Users, Clock, Star, AlertTriangle, Flag } from "lucide-react";
+import { FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -41,8 +41,12 @@ interface ModelTableRowProps {
   model: Model & { level: number };
   index: number;
   modelTitle: string;
-  parentModelTitle?: string;
-  hasChildren: boolean;
+  /** Copies of this original on the page; 0 for a copy or an original without copies. */
+  copyCount: number;
+  /** Failed copies among them, shown while the family is collapsed. */
+  failedCopyCount: number;
+  familyCollapsed: boolean;
+  onToggleFamily: (modelId: number) => void;
   currentUserId?: string;
   userAccessLevel?: string;
   isSelected: boolean;
@@ -72,7 +76,6 @@ interface ModelNameCellProps {
   isEditing: boolean;
   editTitle: string;
   modelTitle: string;
-  parentModelTitle?: string;
   onEditTitleChange: (value: string) => void;
   onUpdateTitle: () => void;
   onCancelEdit: () => void;
@@ -80,15 +83,12 @@ interface ModelNameCellProps {
   level: number;
   model: Model;
   isNotModelOwner: boolean | "" | 0 | null | undefined;
-  isParent: boolean;
-  hasChildren: boolean;
 }
 
 const ModelNameCell: React.FC<ModelNameCellProps> = ({
   isEditing,
   editTitle,
   modelTitle,
-  parentModelTitle,
   onEditTitleChange,
   onUpdateTitle,
   onCancelEdit,
@@ -96,8 +96,6 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
   level,
   model,
   isNotModelOwner,
-  isParent,
-  hasChildren,
 }) => {
   const { t } = useTranslation();
 
@@ -127,23 +125,11 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
         >
           {level > 0 && (
             <div className="flex items-center mr-0.5">
-              <div className="w-3 h-3 border-l border-b border-muted-foreground/40 rounded-bl-md"></div>
+              <div className="-mt-2 h-3.5 w-3.5 rounded-bl-[3px] border-b-2 border-l-2 border-slate-400 dark:border-slate-500" aria-hidden="true"></div>
             </div>
           )}
 
           <div className="flex items-center gap-1.5">
-            {model.is_copy && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md">
-                    <Copy className="w-3 h-3 text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("model.copyOf", { name: parentModelTitle || t("model.anotherModel") })}
-                </TooltipContent>
-              </Tooltip>
-            )}
             {isNotModelOwner && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -154,16 +140,6 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
                 <TooltipContent>
                   {t("model.ownedBy")}: {model.user_email || t("common.unknown")}
                 </TooltipContent>
-              </Tooltip>
-            )}
-            {isParent && hasChildren && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center justify-center w-5 h-5 bg-muted rounded-md text-xs font-semibold text-foreground">
-                    P
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t("model.parentModel")}</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -212,12 +188,58 @@ const ReportFailureButton: React.FC<{ model: Model }> = ({ model }) => {
   );
 };
 
+/** Shows or hides an original's copies; a blank of the same width for an original without copies. */
+const FamilyToggle: React.FC<{ modelId: number; title: string; copyCount: number; collapsed: boolean; onToggle: (modelId: number) => void }> = ({
+  modelId,
+  title,
+  copyCount,
+  collapsed,
+  onToggle,
+}) => {
+  const { t } = useTranslation();
+  if (copyCount === 0) return <span className="w-8 flex-shrink-0" aria-hidden="true" />;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(modelId);
+      }}
+      aria-expanded={!collapsed}
+      aria-label={t(collapsed ? "model.family.show" : "model.family.hide", { name: title })}
+      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-border bg-background transition-colors hover:bg-muted"
+    >
+      <ChevronRight className={`h-4 w-4 text-foreground transition-transform ${collapsed ? "" : "rotate-90"}`} aria-hidden="true" />
+    </button>
+  );
+};
+
+/** An original's copy count, and while its copies are hidden, how many of them failed. */
+const FamilyCounts: React.FC<{ copyCount: number; failedCopyCount: number; collapsed: boolean }> = ({ copyCount, failedCopyCount, collapsed }) => {
+  const { t } = useTranslation();
+  if (copyCount === 0) return null;
+  return (
+    <>
+      <span className="whitespace-nowrap rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-700 dark:text-slate-100">
+        {t("model.family.copies", { count: copyCount })}
+      </span>
+      {collapsed && failedCopyCount > 0 && (
+        <span className="whitespace-nowrap rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950/50 dark:text-red-300">
+          {t("model.family.failed", { count: failedCopyCount })}
+        </span>
+      )}
+    </>
+  );
+};
+
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
   index,
   modelTitle,
-  parentModelTitle,
-  hasChildren,
+  copyCount,
+  failedCopyCount,
+  familyCollapsed,
+  onToggleFamily,
   currentUserId,
   userAccessLevel,
   isSelected,
@@ -245,21 +267,21 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const toggleFavorite = useFavoriteModelsStore((s) => s.toggleFavorite);
   const isFavorite = useFavoriteModelsStore((s) => s.isFavorite);
   const favorited = isFavorite(model.id);
-  const isParent = !model.is_copy && !model.parent_model_id;
   const level = model.level || 0;
-  const indentClass = level > 0 ? "pl-8" : "";
+  // Copies sit in their family's block (ModelDashboard); only the name is indented.
+  const nameIndentClass = level > 0 ? "pl-6" : "";
   const canManageModel = canUserDeleteModel(model);
 
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
   const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${
-    level > 0 ? "border-l-2 border-border bg-muted/20" : ""
-  } ${isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""}`;
+    isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""
+  }`;
 
   return (
     <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
-      <td className={`pl-4 pr-2 py-2.5 ${indentClass}`}>
+      <td className="w-24 pl-4 pr-2 py-2.5">
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
@@ -283,13 +305,15 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`pl-2 pr-4 py-2.5 ${indentClass}`}>
+      <td className={`w-[38%] pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
         <div className="flex items-center gap-2">
+          {level === 0 && (
+            <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
+          )}
           <ModelNameCell
             isEditing={isEditing}
             editTitle={editTitle}
             modelTitle={modelTitle}
-            parentModelTitle={parentModelTitle}
             onEditTitleChange={onEditTitleChange}
             onUpdateTitle={onUpdateTitle}
             onCancelEdit={onCancelEdit}
@@ -297,19 +321,18 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             level={level}
             model={model}
             isNotModelOwner={isNotModelOwner}
-            isParent={isParent}
-            hasChildren={hasChildren}
           />
+          <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
         </div>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className="w-[24%] px-4 py-2.5">
         <div className="flex items-center gap-2">
           {model.status === "failed" ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
+                  <StatusBadge status={model.status} size="small" showIcon={false} label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="w-[340px] whitespace-normal">
@@ -317,7 +340,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <StatusBadge status={model.status} size="small" />
+            <StatusBadge status={model.status} size="small" showIcon={false} />
           )}
 
           {model.status === "failed" && (!isNotModelOwner || userAccessLevel === "expert") && <ReportFailureButton model={model} />}
@@ -376,7 +399,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="hidden px-4 py-2.5 md:table-cell">
+      <td className="hidden w-[14%] px-4 py-2.5 md:table-cell">
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
@@ -406,7 +429,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               canManageModel ? t("common.tooltips.share") : t("model.sharedCannotShare")
             }
             layout="horizontal"
-            size="small"
+            size="large"
           />
         </div>
       </td>
@@ -453,8 +476,10 @@ const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   if (!modelSnapshotEqual(prev.model, next.model)) return false;
 
   if (prev.modelTitle !== next.modelTitle) return false;
-  if (prev.parentModelTitle !== next.parentModelTitle) return false;
-  if (prev.hasChildren !== next.hasChildren) return false;
+  if (prev.copyCount !== next.copyCount) return false;
+  if (prev.failedCopyCount !== next.failedCopyCount) return false;
+  if (prev.familyCollapsed !== next.familyCollapsed) return false;
+  if (prev.onToggleFamily !== next.onToggleFamily) return false;
   if (prev.currentUserId !== next.currentUserId) return false;
   if (prev.userAccessLevel !== next.userAccessLevel) return false;
   if (prev.isSelected !== next.isSelected) return false;

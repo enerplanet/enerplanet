@@ -267,6 +267,49 @@ func (h *ModelHandler) fetchModelsWithQuery(query *gorm.DB, limit, offset int, s
 	return modelsList, total, err
 }
 
+// familyIDExpr is a model's family: its original, or itself when it is one.
+// Copies are created with the root original as parent_model_id (see
+// modelService copy in the frontend); a copy of a copy would form its own family.
+const familyIDExpr = "COALESCE(parent_model_id, id)"
+
+// fetchModelFamilies pages over families instead of models, so an original
+// and its copies are never split across pages. total counts the families
+// with a matching model; the page holds every matching model of limit
+// families, ordered by the originals' sortBy.
+func (h *ModelHandler) fetchModelFamilies(query *gorm.DB, limit, offset int, sortBy, sortOrder string) ([]models.Model, int64, error) {
+	matching := query.Session(&gorm.Session{})
+	families := matching.Model(&models.Model{}).Select("DISTINCT " + familyIDExpr)
+
+	var total int64
+	if err := h.store.DB().Table("(?) AS families", families).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("count model families: %w", err)
+	}
+
+	// Unscoped: the original of a family may be soft-deleted.
+	var pageIDs []uint
+	err := h.store.DB().Model(&models.Model{}).Unscoped().
+		Where("id IN (?)", families).
+		Order(sortBy + " " + sortOrder).Order("id " + sortOrder).
+		Limit(limit).Offset(offset).
+		Pluck("id", &pageIDs).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("page model families: %w", err)
+	}
+
+	var modelsList []models.Model
+	err = matching.
+		Where(familyIDExpr+" IN ?", pageIDs).
+		Preload(preloadWorkspaceMembers).
+		Preload(preloadWorkspaceGroups).
+		Preload("Shares").
+		Order(sortBy + " " + sortOrder).Order("id " + sortOrder).
+		Find(&modelsList).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("fetch models of %d families: %w", len(pageIDs), err)
+	}
+	return modelsList, total, nil
+}
+
 func (h *ModelHandler) includeParentModels(modelsList []models.Model) []models.Model {
 	parentIDs := h.extractParentIDs(modelsList)
 	if len(parentIDs) == 0 {

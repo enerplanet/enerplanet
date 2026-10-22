@@ -241,6 +241,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		workspace_id: currentWorkspaceId,
 		sort_by: orderBy,
 		sort_order: order,
+		group: "families",
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
@@ -422,6 +423,40 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return children;
 	}, [paginatedModels]);
+	const failedChildCountByParentID = useMemo(() => {
+		const failed = new Map<number, number>();
+		for (const model of paginatedModels) {
+			if (!model.parent_model_id || model.status !== "failed") continue;
+			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+		}
+		return failed;
+	}, [paginatedModels]);
+	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
+	const toggleFamily = useCallback((modelId: number) => {
+		setCollapsedFamilies((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(modelId)) next.add(modelId);
+			return next;
+		});
+	}, []);
+	const visibleModels = useMemo(
+		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		[paginatedModels, collapsedFamilies],
+	);
+
+	// Each original with the copies shown below it; a copy whose original is
+	// not on the page is its own family.
+	const families = useMemo(() => {
+		const list: { original: (typeof visibleModels)[number]; copies: (typeof visibleModels)[number][] }[] = [];
+		for (const model of visibleModels) {
+			const last = list.at(-1);
+			if (model.level > 0 && last && last.original.id === model.parent_model_id) last.copies.push(model);
+			else list.push({ original: model, copies: [] });
+		}
+		return list;
+	}, [visibleModels]);
+	const rowIndexByID = useMemo(() => new Map(visibleModels.map((m, i) => [m.id, i])), [visibleModels]);
+	const rowIndex = (model: Model) => rowIndexByID.get(model.id) ?? 0;
 
 	const { showBulkDeleteConfirm } = useBulkOperations({
 		selectedModels,
@@ -724,6 +759,40 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		},
 	], [getMoveTooltip, getCopyTooltip, getRunMemeTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkRunMeme, showBulkDeleteConfirm, canMoveAnySelected, canRunMemeAnySelected, canDeleteAnySelected, t]);
 
+	const renderRow = (model: (typeof visibleModels)[number]) => (
+		<ModelTableRow
+			key={model.id}
+			model={model}
+			index={rowIndex(model)}
+			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
+			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
+			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
+			familyCollapsed={collapsedFamilies.has(model.id)}
+			onToggleFamily={toggleFamily}
+			currentUserId={user?.id ? String(user.id) : undefined}
+			userAccessLevel={user?.access_level}
+			isSelected={isSelected(model)}
+			isEditing={editingModel?.id === model.id}
+			editTitle={editTitle}
+			calculationStartTimes={calculationStartTimes}
+			calculationCompletionInfo={calculationCompletionInfo}
+			canUserDeleteModel={canUserDeleteModel}
+			onSelect={handleSelectModel}
+			onStartEdit={startTitleEdit}
+			onEditTitleChange={setEditTitle}
+			onUpdateTitle={updateTitle}
+			onCancelEdit={cancelTitleEdit}
+			onView={handleView}
+			onEdit={handleEdit}
+			onDownload={handleDownload}
+			onCopy={handleCopy}
+			onRunMeme={handleRunMemeSingle}
+			onDelete={handleSingleDelete}
+			onShare={handleShare}
+			onMoveToWorkspace={handleMoveToWorkspace}
+		/>
+	);
+
 	return (
 		<Fragment>
 				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
@@ -994,7 +1063,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										<table className="w-full table-auto">
 											<thead>
 												<tr className="border-b border-border bg-muted/40">
-													<th className="w-12 px-4 py-2.5 text-center">
+													<th className="w-24 px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -1011,7 +1080,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															</TooltipContent>
 														</Tooltip>
 													</th>
-													<th className="px-4 py-2.5 text-left">
+													<th className="w-[38%] px-4 py-2.5 text-left">
 														<SortHeaderButton
 															field="title"
 															label={t('model.name')}
@@ -1020,7 +1089,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															onSort={handleSort}
 														/>
 													</th>
-													<th className="px-4 py-2.5 text-left">
+													<th className="w-[24%] px-4 py-2.5 text-left">
 														<SortHeaderButton
 															field="status"
 															label={t('model.status')}
@@ -1029,7 +1098,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															onSort={handleSort}
 														/>
 													</th>
-													<th className="hidden px-4 py-2.5 text-left md:table-cell">
+													<th className="hidden w-[14%] px-4 py-2.5 text-left md:table-cell">
 														<SortHeaderButton
 															field="created_at"
 															label={t('model.created')}
@@ -1044,36 +1113,23 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 												</tr>
 											</thead>
 											<tbody className="divide-y divide-border bg-card">
-												{paginatedModels.map((model, index) => (
-													<ModelTableRow
-														key={model.id}
-														model={model}
-														index={index}
-														modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-														parentModelTitle={model.parent_model_id ? modelTitlesByID.get(model.parent_model_id) : undefined}
-														hasChildren={(childCountByParentID.get(model.id) ?? 0) > 0}
-														currentUserId={user?.id ? String(user.id) : undefined}
-														userAccessLevel={user?.access_level}
-														isSelected={isSelected(model)}
-														isEditing={editingModel?.id === model.id}
-														editTitle={editTitle}
-														calculationStartTimes={calculationStartTimes}
-														calculationCompletionInfo={calculationCompletionInfo}
-														canUserDeleteModel={canUserDeleteModel}
-														onSelect={handleSelectModel}
-														onStartEdit={startTitleEdit}
-														onEditTitleChange={setEditTitle}
-														onUpdateTitle={updateTitle}
-														onCancelEdit={cancelTitleEdit}
-														onView={handleView}
-														onEdit={handleEdit}
-														onDownload={handleDownload}
-														onCopy={handleCopy}
-														onRunMeme={handleRunMemeSingle}
-														onDelete={handleSingleDelete}
-														onShare={handleShare}
-														onMoveToWorkspace={handleMoveToWorkspace}
-													/>
+												{families.map(({ original, copies }) => (
+													<Fragment key={original.id}>
+														{renderRow(original)}
+														{copies.length > 0 && (
+															<tr>
+																<td colSpan={5} className="p-3">
+																	<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-muted/30">
+																		<table className="w-full table-auto">
+																			<tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+																				{copies.map(renderRow)}
+																			</tbody>
+																		</table>
+																	</div>
+																</td>
+															</tr>
+														)}
+													</Fragment>
 												))}
 											</tbody>
 										</table>
@@ -1087,6 +1143,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
+											resultsLabel={t("model.family.pagination")}
 										/>
 									)}
 								</div>

@@ -1131,11 +1131,8 @@
     "published": "Publié",
     "total": "Total",
     "queue": "File d'attente",
-    "copyOf": "Copie de \"{{name}}\"",
     "ownedBy": "Propriété de",
-    "parentModel": "Modèle parent",
     "parent": "Parent",
-    "anotherModel": "un autre modèle",
     "demandFallbackTitle": "Certains bâtiments utilisent une demande constante",
     "demandFallbackWarning": "{{fallback}} bâtiments sur {{total}} n'avaient pas de profil de demande horaire (pas de données 3D) et utilisent leur demande annuelle répartie uniformément sur l'année.",
     "waiting": "En attente",
@@ -1145,7 +1142,16 @@
     "bulkCopyDescription": "Créer des copies de {{count}} modèle(s) sélectionné(s)",
     "bulkCopyFailed": "Certains modèles n'ont pas pu être copiés. Veuillez réessayer.",
     "bulkCopySubmit": "Créer les copies",
-    "cannotCalculate": "Calcul impossible – aucun modèle éligible sélectionné"
+    "cannotCalculate": "Calcul impossible – aucun modèle éligible sélectionné",
+    "family": {
+      "show": "Afficher les copies de {{name}}",
+      "hide": "Masquer les copies de {{name}}",
+      "copies_one": "{{count}} copie",
+      "copies_other": "{{count}} copies",
+      "failed_one": "{{count}} en échec",
+      "failed_other": "{{count}} en échec",
+      "pagination": "familles"
+    }
   },
   "polygon": {
     "drawRegion": "Dessinez votre région",

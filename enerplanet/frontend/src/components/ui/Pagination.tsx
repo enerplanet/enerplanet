@@ -11,6 +11,8 @@ interface PaginationProps {
 	readonly pageSizeOptions?: number[];
 	readonly className?: string;
 	readonly isLoading?: boolean;
+	/** The word after the total, for example "families"; "results" when unset. */
+	readonly resultsLabel?: string;
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -22,6 +24,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	pageSizeOptions = [5, 10, 25],
 	className = "",
 	isLoading = false,
+	resultsLabel,
 }) => {
 	const { t } = useTranslation();
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -100,7 +103,7 @@ const Pagination: React.FC<PaginationProps> = ({
 									<>
 										{t("common.pagination.showing")} <span className="font-medium text-foreground">{startItem}</span> {t("common.pagination.to")}{" "}
 										<span className="font-medium text-foreground">{endItem}</span> {t("common.pagination.of")}{" "}
-										<span className="font-medium text-foreground">{totalItems}</span> {t("common.pagination.results")}
+										<span className="font-medium text-foreground">{totalItems}</span> {resultsLabel ?? t("common.pagination.results")}
 									</>
 								)}
 							</>
