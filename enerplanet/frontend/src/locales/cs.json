@@ -799,6 +799,19 @@
     "running": "Běží",
     "completed": "Dokončeno",
     "failed": "Selhalo",
+    "failure": {
+      "service": {
+        "meme": "Simulace energetického systému (MEME) skončila předčasně.",
+        "buem": "Výpočet potřeby tepla budovy (BuEM) selhal.",
+        "pv": "Výpočet výnosu FV selhal.",
+        "city2tabula": "Pro tyto budovy nebyla nalezena 3D data budov (City2TABULA), proto nebylo možné vypočítat jejich potřebu."
+      },
+      "unknown": "Proces selhal. Zkuste to znovu později. Pokud se to opakuje, nahlaste to týmu EnerPlanET.",
+      "next": "Váš model a jeho vstupy zůstaly beze změny. Spusťte jej znovu. Pokud selže podruhé, nahlaste to týmu EnerPlanET.",
+      "nextFor": {
+        "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET."
+      }
+    },
     "pending": "Čeká",
     "queued": "Ve frontě",
     "runSimulation": "Spustit simulaci",
@@ -856,7 +869,6 @@
     "parentModel": "Nadřazený model",
     "parent": "Nadřazený",
     "anotherModel": "jiného modelu",
-    "failedDefaultMessage": "Výpočet selhal - webová služba nedostupná nebo vypršel časový limit",
     "demandFallbackTitle": "Některé budovy mají konstantní spotřebu",
     "demandFallbackWarning": "{{fallback}} z {{total}} budov nemělo hodinový profil spotřeby (chybí 3D data) a používá roční spotřebu rovnoměrně rozloženou do celého roku.",
     "waiting": "Čekání",

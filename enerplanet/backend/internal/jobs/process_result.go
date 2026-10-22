@@ -80,7 +80,7 @@ func HandleProcessResult(ctx context.Context, t *asynq.Task, db *gorm.DB, notifi
 			"status":                   commonModels.ModelStatusFailed,
 			"calculation_completed_at": now,
 			"updated_at":               now,
-			"results":                  modelstore.FailedResults(fmt.Sprintf("Failed to process result: %v", err)),
+			"results":                  modelstore.FailedResults(fmt.Sprintf("Failed to process result: %v", err), ""),
 		}).Error
 
 		releaseWebservice(ctx, wsClient, payload.WebserviceID, payload.ModelID, log)

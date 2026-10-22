@@ -239,7 +239,7 @@ func TestHandleIngestMemeResult_failureNamesTheStage(t *testing.T) {
 
 	db, mock := newStatusMockDB(t)
 	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
-		WithArgs(sqlmock.AnyArg(), containsArg("Simulation finished; reading the results failed: "),
+		WithArgs(sqlmock.AnyArg(), containsArg("Simulation finished; reading the results failed: "), "",
 			"failed", sqlmock.AnyArg(), 7, "queue", "running", "processing").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 

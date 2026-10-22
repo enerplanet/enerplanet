@@ -62,7 +62,7 @@ func HandleIngestMemePyPSAResult(ctx context.Context, t *asynq.Task, db *gorm.DB
 		if uerr := runs.UpdateStatusLeg(p.ModelID, models.MemeLegPyPSA, models.MemeRunStatusFailed, err.Error()); uerr != nil {
 			log.Errorf("model %d: failed to mark MEME pypsa run failed: %v", p.ModelID, uerr)
 		}
-		markModelFailed(db, p.ModelID, err.Error())
+		markModelFailed(db, p.ModelID, err)
 		return fmt.Errorf("ingest MEME pypsa result model_id=%d zip=%s: %w", p.ModelID, p.ZipPath, err)
 	}
 

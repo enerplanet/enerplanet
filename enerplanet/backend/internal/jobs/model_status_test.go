@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -9,6 +11,8 @@ import (
 	"gorm.io/gorm"
 
 	commonModels "platform.local/common/pkg/models"
+
+	modelstore "spatialhub_backend/internal/store/model"
 )
 
 // newStatusMockDB returns a gorm DB whose sqlmock accepts any statement and,
@@ -36,7 +40,7 @@ func TestMarkModelStatus_transitionsAreGuarded(t *testing.T) {
 	}{
 		{"running", func(db *gorm.DB) { markModelRunning(db, 18) }},
 		{"completed", func(db *gorm.DB) { markModelCompleted(db, 18) }},
-		{"failed", func(db *gorm.DB) { markModelFailed(db, 18, "target meme: HTTP 422") }},
+		{"failed", func(db *gorm.DB) { markModelFailed(db, 18, errors.New("target meme: HTTP 422")) }},
 	}
 
 	for _, tc := range cases {
@@ -59,7 +63,7 @@ func TestMarkModelFailed_recordsReason(t *testing.T) {
 	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	markModelFailed(db, 18, "target meme: HTTP 422")
+	markModelFailed(db, 18, errors.New("target meme: HTTP 422"))
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
@@ -118,10 +122,24 @@ func TestMarkModelFailed_recordsStage(t *testing.T) {
 	t.Cleanup(func() { dbConn.Close() })
 	db, err := gorm.Open(postgres.New(postgres.Config{Conn: dbConn}), &gorm.Config{SkipDefaultTransaction: true})
 	require.NoError(t, err)
-	mock.ExpectExec(`"results"=jsonb_build_object\('error', \$\d+::text, 'failed_stage', status\)`).
+	mock.ExpectExec(`"results"=jsonb_build_object\('error', \$\d+::text, 'failed_stage', status, 'failed_service', NULLIF\(\$\d+::text, ''\)\)`).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	markModelFailed(db, 18, "target meme: HTTP 422")
+	markModelFailed(db, 18, errors.New("target meme: HTTP 422"))
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// A failure marked with a service records that service next to the error.
+func TestMarkModelFailed_recordsService(t *testing.T) {
+	db, mock := newStatusMockDB(t)
+	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
+		WithArgs(sqlmock.AnyArg(), "meme job 1 via TentaCron for model 18: target_job_failed", modelstore.ServiceMeme,
+			"failed", sqlmock.AnyArg(), 18, "queue", "running", "processing").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	cause := errors.New("target_job_failed")
+	markModelFailed(db, 18, modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme job 1 via TentaCron for model 18: %w", cause)))
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }

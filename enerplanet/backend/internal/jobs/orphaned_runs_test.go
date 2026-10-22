@@ -36,7 +36,7 @@ func TestFailOrphanedRuns_failsOnlyModelsWithoutALiveTask(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(7).AddRow(9))
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "models" SET`)).WithArgs(
-		sqlmock.AnyArg(), sqlmock.AnyArg(), "failed", sqlmock.AnyArg(), uint(9), "queue", "running", "processing",
+		sqlmock.AnyArg(), sqlmock.AnyArg(), "", "failed", sqlmock.AnyArg(), uint(9), "queue", "running", "processing",
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 

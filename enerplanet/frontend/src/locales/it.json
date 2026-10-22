@@ -795,6 +795,19 @@
     "running": "In esecuzione",
     "completed": "Completato",
     "failed": "Fallito",
+    "failure": {
+      "service": {
+        "meme": "La simulazione del sistema energetico (MEME) si è interrotta prima del termine.",
+        "buem": "Il calcolo del fabbisogno di calore dell'edificio (BuEM) non è riuscito.",
+        "pv": "Il calcolo della resa fotovoltaica non è riuscito.",
+        "city2tabula": "Non sono stati trovati dati 3D degli edifici (City2TABULA) per questi edifici, quindi il loro fabbisogno non è stato calcolato."
+      },
+      "unknown": "Il processo non è riuscito. Riprova più tardi. Se si ripete, segnalalo al team EnerPlanET.",
+      "next": "Il modello e i suoi dati non sono cambiati. Eseguilo di nuovo. Se fallisce una seconda volta, segnalalo al team EnerPlanET.",
+      "nextFor": {
+        "city2tabula": "Eseguirlo di nuovo non servirà finché l'area non avrà dati 3D degli edifici. Se ti aspettavi dati qui, segnalalo al team EnerPlanET."
+      }
+    },
     "pending": "In attesa",
     "queued": "In coda",
     "runSimulation": "Avvia simulazione",
@@ -852,7 +865,6 @@
     "parentModel": "Modello principale",
     "parent": "Principale",
     "anotherModel": "un altro modello",
-    "failedDefaultMessage": "Calcolo fallito - servizio web non disponibile o timeout",
     "demandFallbackTitle": "Alcuni edifici usano una domanda costante",
     "demandFallbackWarning": "{{fallback}} edifici su {{total}} non avevano un profilo orario della domanda (nessun dato 3D) e usano la domanda annua distribuita uniformemente sull'anno.",
     "waiting": "In attesa",

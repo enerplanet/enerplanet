@@ -10,6 +10,7 @@ import ModelActions from "@/components/ui/ModelActions";
 import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
+import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === "string") return error;
@@ -175,12 +176,18 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
   );
 };
 
-/** The run stages a failure is recorded in (results.failed_stage), by the status the run had. */
-const FAILED_STAGES = new Set(["queue", "running", "processing"]);
-
-/** The failed badge's label naming the stage, or undefined to show plain "Failed". */
-const failedStageLabel = (stage: unknown, t: (key: string) => string): string | undefined =>
-  typeof stage === "string" && FAILED_STAGES.has(stage) ? t(`modelStatus.failedAt.${stage}`) : undefined;
+/** A failed run's tooltip: stage, the service that failed and the next step. */
+const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) => {
+  const { t } = useTranslation();
+  const msg = failureMessage(results, t);
+  return (
+    <div className="flex flex-col gap-1.5 text-[13px] leading-snug">
+      <strong>{msg.title}</strong>
+      <span>{msg.body}</span>
+      {msg.next && <span className="opacity-80">{msg.next}</span>}
+    </div>
+  );
+};
 
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
@@ -282,10 +289,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
                   <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
-                {model.results?.error
-                  ? `${t("model.failed")}: ${getErrorMessage(model.results.error)}`
-                  : t("model.failedDefaultMessage")}
+              <TooltipContent className="w-[340px] whitespace-normal">
+                <FailureTooltip results={model.results} />
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -410,6 +415,7 @@ const modelSnapshotEqual = (
   prev.level === next.level &&
   modelSharesSnapshot(prev) === modelSharesSnapshot(next) &&
   getErrorMessage(prev.results?.error) === getErrorMessage(next.results?.error) &&
+  prev.results?.failed_service === next.results?.failed_service &&
   JSON.stringify(prev.results?.warning) === JSON.stringify(next.results?.warning);
 
 const modelSharesSnapshot = (model: Model): string =>

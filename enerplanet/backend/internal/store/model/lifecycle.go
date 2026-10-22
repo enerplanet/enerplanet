@@ -77,7 +77,7 @@ func (s *Store) MarkFailed(ctx context.Context, modelID uint, reason string, now
 				"webservice_id":            nil,
 				"calculation_completed_at": now,
 				"updated_at":               now,
-				"results":                  FailedResults(reason),
+				"results":                  FailedResults(reason, ""),
 			})
 		if result.Error != nil {
 			return result.Error

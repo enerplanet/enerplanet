@@ -1062,6 +1062,19 @@
     "running": "Ejecutando",
     "completed": "Completado",
     "failed": "Fallido",
+    "failure": {
+      "service": {
+        "meme": "La simulación del sistema energético (MEME) se detuvo antes de terminar.",
+        "buem": "El cálculo de la demanda de calor del edificio (BuEM) ha fallado.",
+        "pv": "El cálculo del rendimiento fotovoltaico ha fallado.",
+        "city2tabula": "No se encontraron datos 3D de edificios (City2TABULA) para estos edificios, por lo que no se pudo calcular su demanda."
+      },
+      "unknown": "El proceso ha fallado. Inténtelo de nuevo más tarde. Si vuelve a ocurrir, notifíquelo al equipo de EnerPlanET.",
+      "next": "Su modelo y sus datos no han cambiado. Ejecútelo de nuevo. Si falla una segunda vez, notifíquelo al equipo de EnerPlanET.",
+      "nextFor": {
+        "city2tabula": "Volver a ejecutarlo no ayudará hasta que la zona tenga datos 3D de edificios. Si esperaba datos aquí, notifíquelo al equipo de EnerPlanET."
+      }
+    },
     "pending": "Pendiente",
     "queued": "En cola",
     "cancelled": "Cancelado",
@@ -1121,7 +1134,6 @@
     "parentModel": "Modelo principal",
     "parent": "Principal",
     "anotherModel": "otro modelo",
-    "failedDefaultMessage": "Cálculo fallido - servicio web no disponible o tiempo agotado",
     "demandFallbackTitle": "Algunos edificios usan una demanda constante",
     "demandFallbackWarning": "{{fallback}} de {{total}} edificios no tenían perfil horario de demanda (sin datos 3D) y usan su demanda anual repartida por igual a lo largo del año.",
     "waiting": "Esperando",

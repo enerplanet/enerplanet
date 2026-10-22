@@ -795,6 +795,19 @@
     "running": "Actief",
     "completed": "Voltooid",
     "failed": "Mislukt",
+    "failure": {
+      "service": {
+        "meme": "De energiesysteemsimulatie (MEME) is gestopt voordat ze klaar was.",
+        "buem": "De berekening van de warmtevraag van het gebouw (BuEM) is mislukt.",
+        "pv": "De berekening van de PV-opbrengst is mislukt.",
+        "city2tabula": "Voor deze gebouwen zijn geen 3D-gebouwgegevens (City2TABULA) gevonden, daarom kon hun vraag niet worden berekend."
+      },
+      "unknown": "Het proces is mislukt. Probeer het later opnieuw. Gebeurt het weer, meld het dan aan het EnerPlanET-team.",
+      "next": "Uw model en de invoer zijn ongewijzigd. Start het opnieuw. Mislukt het een tweede keer, meld het dan aan het EnerPlanET-team.",
+      "nextFor": {
+        "city2tabula": "Opnieuw starten helpt pas als het gebied 3D-gebouwgegevens heeft. Verwachtte u hier gegevens, meld het dan aan het EnerPlanET-team."
+      }
+    },
     "pending": "In afwachting",
     "queued": "In wachtrij",
     "runSimulation": "Simulatie starten",
@@ -852,7 +865,6 @@
     "parentModel": "Bovenliggend model",
     "parent": "Bovenliggend",
     "anotherModel": "een ander model",
-    "failedDefaultMessage": "Berekening mislukt - webservice niet beschikbaar of time-out",
     "demandFallbackTitle": "Sommige gebouwen gebruiken een constante vraag",
     "demandFallbackWarning": "{{fallback}} van {{total}} gebouwen hadden geen uurlijks vraagprofiel (geen 3D-gegevens) en gebruiken hun jaarvraag gelijk verdeeld over het jaar.",
     "waiting": "Wachtend",

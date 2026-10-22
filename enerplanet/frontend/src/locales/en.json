@@ -1062,6 +1062,19 @@
     "running": "Running",
     "completed": "Completed",
     "failed": "Failed",
+    "failure": {
+      "service": {
+        "meme": "The energy system simulation (MEME) stopped before it finished.",
+        "buem": "The building heat demand calculation (BuEM) failed.",
+        "pv": "The PV yield calculation failed.",
+        "city2tabula": "No 3D building data (City2TABULA) was found for these buildings, so their demand could not be calculated."
+      },
+      "unknown": "The process failed. Try again after some time. If it happens again, report it to the EnerPlanET team.",
+      "next": "Your model and its inputs are unchanged. Run it again. If it fails a second time, report it to the EnerPlanET team.",
+      "nextFor": {
+        "city2tabula": "Running it again will not help until the area has 3D building data. If you expected data here, report it to the EnerPlanET team."
+      }
+    },
     "pending": "Pending",
     "queued": "Queued",
     "cancelled": "Cancelled",
@@ -1126,7 +1139,6 @@
     "parentModel": "Parent Model",
     "parent": "Parent",
     "anotherModel": "another model",
-    "failedDefaultMessage": "Calculation failed - webservice unavailable or timeout",
     "demandFallbackTitle": "Some buildings use constant demand",
     "demandFallbackWarning": "{{fallback}} of {{total}} buildings had no hourly demand profile (no 3D data) and use their yearly demand spread evenly over the year.",
     "waiting": "Waiting",

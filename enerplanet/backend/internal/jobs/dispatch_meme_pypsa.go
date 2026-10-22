@@ -20,6 +20,7 @@ import (
 	pypsapass "spatialhub_backend/internal/meme/pypsapass"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
+	modelstore "spatialhub_backend/internal/store/model"
 	tentacronclient "spatialhub_backend/internal/tentacron"
 
 	commonModels "platform.local/common/pkg/models"
@@ -380,7 +381,7 @@ func HandleDispatchMemePyPSA(
 	// or it sits in 'queue' forever (see dispatch_meme.go).
 	defer func() {
 		if retErr != nil {
-			markModelFailed(db, p.ModelID, retErr.Error())
+			markModelFailed(db, p.ModelID, retErr)
 		}
 	}()
 
@@ -452,7 +453,7 @@ func HandleDispatchMemePyPSA(
 	case rec == nil || models.MemeRunFinished(rec.Status):
 		jobID, err = tc.SubmitMeme(ctx, memeTargetPyPSAOnly, jobMap, pypsaIdempotencyKey(model.ID, model.CalculationStartedAt))
 		if err != nil {
-			return fmt.Errorf("meme pypsa dispatch via TentaCron for model %d: %w", p.ModelID, err)
+			return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme pypsa dispatch via TentaCron for model %d: %w", p.ModelID, err))
 		}
 		if err := runs.SaveLeg(p.ModelID, models.MemeLegPyPSA, jobID, "running"); err != nil {
 			log.Errorf("model %d: failed to persist MEME pypsa TentaCron job %s: %v", p.ModelID, jobID, err)
@@ -468,12 +469,12 @@ func HandleDispatchMemePyPSA(
 	// 6. Long-poll by id on the meme budget, then read the raw zip via /result.
 	if err := tc.AwaitResultByID(ctx, jobID, memePollBudget); err != nil {
 		_ = runs.UpdateStatusLeg(p.ModelID, models.MemeLegPyPSA, models.MemeRunStatusFailed, err.Error())
-		return fmt.Errorf("meme pypsa job %s via TentaCron for model %d: %w", jobID, p.ModelID, err)
+		return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme pypsa job %s via TentaCron for model %d: %w", jobID, p.ModelID, err))
 	}
 	resultZip, err := tc.FetchResultByID(ctx, jobID)
 	if err != nil {
 		_ = runs.UpdateStatusLeg(p.ModelID, models.MemeLegPyPSA, models.MemeRunStatusFailed, err.Error())
-		return fmt.Errorf("fetch MEME pypsa result for model %d: %w", p.ModelID, err)
+		return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("fetch MEME pypsa result for model %d: %w", p.ModelID, err))
 	}
 
 	// 7. Store the zip under the storage/data convention, keyed to the leg so it

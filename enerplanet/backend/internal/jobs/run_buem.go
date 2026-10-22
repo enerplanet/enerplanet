@@ -96,13 +96,13 @@ func HandleRunBuem(
 	} else {
 		results, _, _, err := ResolveBuemForModel(ctx, log, c2t, c2tRuns, wx, weatherProvider, ignisClient, buemClient, model, rp.Payload, modelRefurbishmentLevel(model.Config))
 		if err != nil {
-			return failRunBuem(ctx, db, log, notificationService, model, rp, fmt.Errorf("buem-gateway call failed: %w", err))
+			return failRunBuem(ctx, db, log, notificationService, model, rp, modelstore.ServiceBuem, fmt.Errorf("buem-gateway call failed: %w", err))
 		}
 		mergeBuemResults(log, rp.Payload.Topology, results)
 	}
 
 	if err := enqueueDispatchModelCalculation(asynqClient, rp); err != nil {
-		return failRunBuem(ctx, db, log, notificationService, model, rp, err)
+		return failRunBuem(ctx, db, log, notificationService, model, rp, "", err)
 	}
 
 	return nil
@@ -818,7 +818,9 @@ func mergeBuemInto(props map[string]interface{}, result interface{}) {
 	}
 }
 
-func failRunBuem(ctx context.Context, db *gorm.DB, log *logrus.Entry, notificationService *services.NotificationService, model commonModels.Model, rp RunBuemPayload, cause error) error {
+// failRunBuem records cause as the model's failure, naming service (see
+// modelstore.FailedResults), and notifies the user.
+func failRunBuem(ctx context.Context, db *gorm.DB, log *logrus.Entry, notificationService *services.NotificationService, model commonModels.Model, rp RunBuemPayload, service string, cause error) error {
 	log.Errorf("run_buem failed for model_id=%d: %v", rp.ModelID, cause)
 
 	now := time.Now().UTC()
@@ -826,7 +828,7 @@ func failRunBuem(ctx context.Context, db *gorm.DB, log *logrus.Entry, notificati
 		"status":                   commonModels.ModelStatusFailed,
 		"calculation_completed_at": now,
 		"updated_at":               now,
-		"results":                  modelstore.FailedResults(fmt.Sprintf("BuEM run failed: %v", cause)),
+		"results":                  modelstore.FailedResults(fmt.Sprintf("BuEM run failed: %v", cause), service),
 	}).Error
 
 	if notificationService != nil {
