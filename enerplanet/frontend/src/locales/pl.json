@@ -810,7 +810,8 @@
       "next": "Model i jego dane wejściowe pozostały bez zmian. Uruchom go ponownie. Jeśli nie powiedzie się drugi raz, zgłoś to zespołowi EnerPlanET.",
       "nextFor": {
         "city2tabula": "Ponowne uruchomienie nie pomoże, dopóki obszar nie będzie miał danych 3D budynków. Jeśli oczekiwano tu danych, zgłoś to zespołowi EnerPlanET."
-      }
+      },
+      "report": "Zgłoś"
     },
     "pending": "Oczekujące",
     "queued": "W kolejce",
@@ -1405,7 +1406,15 @@
       "deleteSuccess": "Opinia \"{{subject}}\" została pomyślnie usunięta",
       "deleteError": "Nie udało się usunąć opinii. Spróbuj ponownie."
     },
-    "hasAttachment": "Ma załączony obraz"
+    "hasAttachment": "Ma załączony obraz",
+    "runReport": {
+      "title": "Nieudane uruchomienie",
+      "model": "Model",
+      "stage": "Etap",
+      "service": "Usługa",
+      "failedAt": "Niepowodzenie",
+      "openModel": "Otwórz model"
+    }
   },
   "simulation": {
     "title": "Konfiguracja symulacji",
@@ -1800,6 +1809,9 @@
         "resolved": "Rozwiązane",
         "closed": "Zamknięte"
       }
+    },
+    "runReport": {
+      "attached": "Nieudane uruchomienie, usługa, która zawiodła, i szczegóły techniczne są automatycznie dołączane do tego zgłoszenia."
     }
   },
   "technologies": {

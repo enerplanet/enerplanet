@@ -806,7 +806,8 @@
       "next": "Il modello e i suoi dati non sono cambiati. Eseguilo di nuovo. Se fallisce una seconda volta, segnalalo al team EnerPlanET.",
       "nextFor": {
         "city2tabula": "Eseguirlo di nuovo non servirà finché l'area non avrà dati 3D degli edifici. Se ti aspettavi dati qui, segnalalo al team EnerPlanET."
-      }
+      },
+      "report": "Segnala"
     },
     "pending": "In attesa",
     "queued": "In coda",
@@ -1401,7 +1402,15 @@
       "deleteSuccess": "Feedback \"{{subject}}\" eliminato con successo",
       "deleteError": "Impossibile eliminare il feedback. Riprova."
     },
-    "hasAttachment": "Ha immagine allegata"
+    "hasAttachment": "Ha immagine allegata",
+    "runReport": {
+      "title": "Esecuzione non riuscita",
+      "model": "Modello",
+      "stage": "Fase",
+      "service": "Servizio",
+      "failedAt": "Non riuscita il",
+      "openModel": "Apri il modello"
+    }
   },
   "simulation": {
     "title": "Configurazione simulazione",
@@ -1796,6 +1805,9 @@
         "resolved": "Risolto",
         "closed": "Chiuso"
       }
+    },
+    "runReport": {
+      "attached": "L'esecuzione non riuscita, il servizio coinvolto e i dettagli tecnici vengono allegati automaticamente a questa segnalazione."
     }
   },
   "technologies": {

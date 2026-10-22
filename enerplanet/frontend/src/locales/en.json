@@ -1073,7 +1073,8 @@
       "next": "Your model and its inputs are unchanged. Run it again. If it fails a second time, report it to the EnerPlanET team.",
       "nextFor": {
         "city2tabula": "Running it again will not help until the area has 3D building data. If you expected data here, report it to the EnerPlanET team."
-      }
+      },
+      "report": "Report"
     },
     "pending": "Pending",
     "queued": "Queued",
@@ -1664,6 +1665,14 @@
       "updateError": "Failed to update feedback. Please try again.",
       "deleteSuccess": "Feedback \"{{subject}}\" deleted successfully",
       "deleteError": "Failed to delete feedback. Please try again."
+    },
+    "runReport": {
+      "title": "Failed run",
+      "model": "Model",
+      "stage": "Stage",
+      "service": "Service",
+      "failedAt": "Failed at",
+      "openModel": "Open the model"
     }
   },
   "simulation": {
@@ -2059,6 +2068,9 @@
         "resolved": "Resolved",
         "closed": "Closed"
       }
+    },
+    "runReport": {
+      "attached": "The failed run, the service that failed and the technical details are attached to this report automatically."
     }
   },
   "tooltips": {

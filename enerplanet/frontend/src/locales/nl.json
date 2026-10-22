@@ -806,7 +806,8 @@
       "next": "Uw model en de invoer zijn ongewijzigd. Start het opnieuw. Mislukt het een tweede keer, meld het dan aan het EnerPlanET-team.",
       "nextFor": {
         "city2tabula": "Opnieuw starten helpt pas als het gebied 3D-gebouwgegevens heeft. Verwachtte u hier gegevens, meld het dan aan het EnerPlanET-team."
-      }
+      },
+      "report": "Melden"
     },
     "pending": "In afwachting",
     "queued": "In wachtrij",
@@ -1401,7 +1402,15 @@
       "deleteSuccess": "Feedback \"{{subject}}\" succesvol verwijderd",
       "deleteError": "Feedback verwijderen mislukt. Probeer het opnieuw."
     },
-    "hasAttachment": "Heeft bijgevoegde afbeelding"
+    "hasAttachment": "Heeft bijgevoegde afbeelding",
+    "runReport": {
+      "title": "Mislukte run",
+      "model": "Model",
+      "stage": "Fase",
+      "service": "Dienst",
+      "failedAt": "Mislukt op",
+      "openModel": "Model openen"
+    }
   },
   "simulation": {
     "title": "Simulatieconfiguratie",
@@ -1796,6 +1805,9 @@
         "resolved": "Opgelost",
         "closed": "Gesloten"
       }
+    },
+    "runReport": {
+      "attached": "De mislukte run, de dienst die faalde en de technische details worden automatisch aan deze melding toegevoegd."
     }
   },
   "technologies": {
