@@ -518,7 +518,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                 </div>
             )}
 
-            <CopyrightFooter position="bottom-left-sidebar" />
+            <CopyrightFooter />
         </>
     );
 };
