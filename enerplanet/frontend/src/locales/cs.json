@@ -219,7 +219,17 @@
       "completed": "Dokončeno",
       "published": "Publikováno",
       "modelLimit": "Limit Modelů",
-      "unlimited": "Neomezeno"
+      "unlimited": "Neomezeno",
+      "modelsCount_one": "{{count}} model",
+      "modelsCount_few": "{{count}} modely",
+      "modelsCount_many": "{{count}} modelů",
+      "modelsCount_other": "{{count}} modelů",
+      "completedCount": "{{count}} dokončeno",
+      "limitUsed": "limit {{used}}/{{limit}}",
+      "inProgressCount_one": "{{count}} probíhá",
+      "inProgressCount_few": "{{count}} probíhají",
+      "inProgressCount_many": "{{count}} probíhá",
+      "inProgressCount_other": "{{count}} probíhá"
     }
   },
   "notifications": {
@@ -838,10 +848,6 @@
     "rename": "Přejmenovat",
     "delete": "Smazat",
     "move": "Přesunout",
-    "shareWorkspace": "Sdílet tento pracovní prostor",
-    "copyWorkspace": "Vytvořit kopii tohoto pracovního prostoru",
-    "renameWorkspace": "Přejmenovat tento pracovní prostor",
-    "deleteWorkspace": "Smazat tento pracovní prostor",
     "moveToWorkspace": "Přesunout do pracovního prostoru",
     "noModelsFound": "Žádné modely nenalezeny",
     "noModelsMatch": "Žádný model neodpovídá \"{{search}}\". Zkuste upravit vyhledávání.",
@@ -892,7 +898,13 @@
       "failed_many": "{{count}} selhalo",
       "failed_other": "{{count}} selhalo",
       "pagination": "rodin modelů"
-    }
+    },
+    "workspaceActions": "Akce pracovního prostoru",
+    "selectedCount_one": "{{count}} vybrán",
+    "selectedCount_few": "{{count}} vybrány",
+    "selectedCount_many": "{{count}} vybráno",
+    "selectedCount_other": "{{count}} vybráno",
+    "clearSelection": "Zrušit výběr"
   },
   "polygon": {
     "drawRegion": "Nakreslete svůj region",

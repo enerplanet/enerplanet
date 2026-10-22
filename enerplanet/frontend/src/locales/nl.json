@@ -219,7 +219,12 @@
       "completed": "Voltooid",
       "published": "Gepubliceerd",
       "modelLimit": "Modellimiet",
-      "unlimited": "Onbeperkt"
+      "unlimited": "Onbeperkt",
+      "modelsCount_one": "{{count}} model",
+      "modelsCount_other": "{{count}} modellen",
+      "inProgressCount": "{{count}} bezig",
+      "completedCount": "{{count}} voltooid",
+      "limitUsed": "limiet {{used}}/{{limit}}"
     }
   },
   "notifications": {
@@ -834,10 +839,6 @@
     "rename": "Hernoemen",
     "delete": "Verwijderen",
     "move": "Verplaatsen",
-    "shareWorkspace": "Deze werkruimte delen",
-    "copyWorkspace": "Een kopie van deze werkruimte maken",
-    "renameWorkspace": "Deze werkruimte hernoemen",
-    "deleteWorkspace": "Deze werkruimte verwijderen",
     "moveToWorkspace": "Naar werkruimte verplaatsen",
     "noModelsFound": "Geen modellen gevonden",
     "noModelsMatch": "Geen modellen komen overeen met \"{{search}}\". Probeer je zoekopdracht aan te passen.",
@@ -884,7 +885,11 @@
       "failed_one": "{{count}} mislukt",
       "failed_other": "{{count}} mislukt",
       "pagination": "families"
-    }
+    },
+    "workspaceActions": "Werkruimte-acties",
+    "selectedCount_one": "{{count}} geselecteerd",
+    "selectedCount_other": "{{count}} geselecteerd",
+    "clearSelection": "Selectie wissen"
   },
   "polygon": {
     "drawRegion": "Teken je regio",

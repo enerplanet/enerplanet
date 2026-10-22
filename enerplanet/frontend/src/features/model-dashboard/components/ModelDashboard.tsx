@@ -18,6 +18,7 @@ import {
 	AlertCircle,
 	GitCompareArrows,
 	Zap,
+	MoreHorizontal,
 } from "lucide-react";
 
 import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
@@ -26,14 +27,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/Skeletons";
 import {
 	CARD_CLASS,
-	DANGER_BUTTON_CLASS,
 	PAGE_SHELL_CLASS,
 	PRIMARY_BUTTON_CLASS,
 	SEARCH_INPUT_CLASS,
 	TOOLBAR_BUTTON_CLASS,
 	TOOLBAR_ICON_BUTTON_CLASS,
 } from "@/components/ui/toolbar";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import Pagination from "@/components/ui/Pagination";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import Chip from "@/components/ui/Chip";
@@ -866,7 +866,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					{/* Main Content Card */}
 					<div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
-						<div className="flex flex-wrap items-center gap-2 p-4 sm:px-5">
+						<div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5">
 							{/* Search */}
 							<div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -880,7 +880,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							</div>
 
 								{/* Workspace Controls */}
-								<div className="flex flex-wrap items-center gap-2">
+								<div className="flex items-center gap-2">
 									{isLoadingWorkspace ? (
 										<div className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm shadow-sm">
 											<RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -923,111 +923,43 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										</>
 									)}
 
-									{/* Compare button - always visible */}
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="inline-flex">
-												<button
-													onClick={handleCompareSelected}
-													disabled={!canCompareSelected}
-													className={TOOLBAR_BUTTON_CLASS}
-												>
-													<GitCompareArrows className="h-4 w-4 text-muted-foreground" />
-													<span className="hidden sm:inline">{t('model.compare')}</span>
-												</button>
-											</span>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p>{canCompareSelected ? t('model.compare') : t('model.compareRequires2Completed')}</p>
-										</TooltipContent>
-									</Tooltip>
-
 									{currentWorkspace && (
-										<>
-											{canManageWorkspace && (
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<button
-															onClick={() => setIsShareWsOpen(true)}
-															className={TOOLBAR_BUTTON_CLASS}
-														>
-															<Share className="w-4 h-4 text-muted-foreground" />
-															<span className="hidden sm:inline">{t('model.share')}</span>
-														</button>
-													</TooltipTrigger>
-													<TooltipContent>
-														{t('model.shareWorkspace')}
-													</TooltipContent>
-												</Tooltip>
-											)}
-
+										<DropdownMenu>
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<button
-														onClick={() => setIsCopyWsOpen(true)}
-														className={TOOLBAR_BUTTON_CLASS}
-													>
-														<Copy className="w-4 h-4 text-muted-foreground" />
-														<span className="hidden sm:inline">{t('model.copy')}</span>
-													</button>
+													<DropdownMenuTrigger asChild>
+														<button className={TOOLBAR_ICON_BUTTON_CLASS} aria-label={t("model.workspaceActions")}>
+															<MoreHorizontal className="h-4 w-4" />
+														</button>
+													</DropdownMenuTrigger>
 												</TooltipTrigger>
-												<TooltipContent>
-													{t('model.copyWorkspace')}
-												</TooltipContent>
+												<TooltipContent>{t("model.workspaceActions")}</TooltipContent>
 											</Tooltip>
-
-											{!currentWorkspace.is_default && canManageWorkspace && (
-												<>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={() => setIsRenameWsOpen(true)}
-																className={TOOLBAR_BUTTON_CLASS}
-															>
-																<Edit className="w-4 h-4 text-muted-foreground" />
-																<span className="hidden sm:inline">{t('model.rename')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.renameWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={handleDeleteWorkspace}
-																className={DANGER_BUTTON_CLASS}
-															>
-																<Trash2 className="h-4 w-4" />
-																<span className="hidden sm:inline">{t('model.delete')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.deleteWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-												</>
-											)}
-										</>
-									)}
-
-									{/* Bulk Actions - placed after workspace delete button */}
-									{selectedModels.length > 0 && (
-										<div className="md-fade-in flex h-9 items-center gap-2 rounded-full border border-border bg-muted/40 pl-1.5 pr-1.5 shadow-sm">
-											<span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-foreground">
-												{selectedModels.length}
-											</span>
-											<span className="hidden text-xs font-medium text-muted-foreground lg:inline">
-												{t('model.selected')}
-											</span>
-											<span className="h-4 w-px bg-border" aria-hidden="true" />
-											<ModelActionGroup
-												actions={bulkActions}
-												layout="horizontal"
-												size="small"
-											/>
-										</div>
+											<DropdownMenuContent align="start" className="w-40">
+												{canManageWorkspace && (
+													<DropdownMenuItem className="cursor-pointer" onClick={() => setIsShareWsOpen(true)}>
+														<Share className="h-4 w-4" />
+														{t("model.share")}
+													</DropdownMenuItem>
+												)}
+												<DropdownMenuItem className="cursor-pointer" onClick={() => setIsCopyWsOpen(true)}>
+													<Copy className="h-4 w-4" />
+													{t("model.copy")}
+												</DropdownMenuItem>
+												{!currentWorkspace.is_default && canManageWorkspace && (
+													<>
+														<DropdownMenuItem className="cursor-pointer" onClick={() => setIsRenameWsOpen(true)}>
+															<Edit className="h-4 w-4" />
+															{t("model.rename")}
+														</DropdownMenuItem>
+														<DropdownMenuItem className="cursor-pointer text-red-700 focus:text-red-700 dark:text-red-400" onClick={handleDeleteWorkspace}>
+															<Trash2 className="h-4 w-4" />
+															{t("model.delete")}
+														</DropdownMenuItem>
+													</>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
 									)}
 								</div>
 
@@ -1062,7 +994,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									<div className="w-full overflow-auto">
 										<table className="w-full table-auto">
 											<thead>
-												<tr className="border-b border-border bg-muted/40">
+												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted/40"}`}>
 													<th className="w-24 px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
@@ -1080,36 +1012,65 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															</TooltipContent>
 														</Tooltip>
 													</th>
-													<th className="w-[38%] px-4 py-2.5 text-left">
-														<SortHeaderButton
-															field="title"
-															label={t('model.name')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="w-[24%] px-4 py-2.5 text-left">
-														<SortHeaderButton
-															field="status"
-															label={t('model.status')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="hidden w-[14%] px-4 py-2.5 text-left md:table-cell">
-														<SortHeaderButton
-															field="created_at"
-															label={t('model.created')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="px-4 py-2.5 text-left">
-														<span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
-													</th>
+													{selectedModels.length > 0 ? (
+														<th colSpan={4} className="px-4 py-1 text-left">
+															<div className="flex items-center gap-2">
+																<span className="mr-2 text-sm font-semibold text-foreground">
+																	{t("model.selectedCount", { count: selectedModels.length })}
+																</span>
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<span className="inline-flex">
+																			<button onClick={handleCompareSelected} disabled={!canCompareSelected} className={TOOLBAR_BUTTON_CLASS}>
+																				<GitCompareArrows className="h-4 w-4 text-muted-foreground" />
+																				{t("model.compare")}
+																			</button>
+																		</span>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{canCompareSelected ? t("model.compare") : t("model.compareRequires2Completed")}</p>
+																	</TooltipContent>
+																</Tooltip>
+																<ModelActionGroup actions={bulkActions} layout="horizontal" size="medium" />
+																<button onClick={clearSelection} className="ml-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+																	{t("model.clearSelection")}
+																</button>
+															</div>
+														</th>
+													) : (
+														<>
+															<th className="w-[38%] px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="title"
+																	label={t('model.name')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="w-[24%] px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="status"
+																	label={t('model.status')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="hidden w-[14%] px-4 py-2.5 text-left md:table-cell">
+																<SortHeaderButton
+																	field="created_at"
+																	label={t('model.created')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="px-4 py-2.5 text-left">
+																<span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
+															</th>
+														</>
+													)}
 												</tr>
 											</thead>
 											<tbody className="divide-y divide-border bg-card">
