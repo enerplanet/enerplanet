@@ -77,8 +77,9 @@ import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
 import { AreaLimitWarning } from "./components/AreaLimitWarning";
+import { useModelDemandProfiles } from "@/features/configurator/building-config/modelDemandProfiles";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
-import { BuildingPanelHost } from "@/features/configurator/building-config";
+import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
 const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
@@ -509,6 +510,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
+  // Read again after a save, which starts a BuEM run, and after the configurator
+  // closes, where a building's run may have been repeated.
+  const { buildingId: openBuildingId } = useConfiguratorParams();
+  const demandProfiles = useModelDemandProfiles(existingModelId, `${state.isSaving}|${openBuildingId ?? ""}`);
+
   // ── Drawing helpers ──────────────────────────────────────────────
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
 
@@ -637,6 +643,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               />
             )}
             <MapOverlays
+              demandProfiles={demandProfiles}
               drawHintKey={drawHint}
               deleteHintKey={deleteHint}
               mapRef={mapRef}

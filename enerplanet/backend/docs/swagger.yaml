@@ -193,6 +193,9 @@ definitions:
     type: object
   spatialhub_backend_internal_api_contracts.BuildingDemandProfile:
     properties:
+      a_ref_m2:
+        example: 6648.84
+        type: number
       building_type:
         description: |-
           building_type is what was modelled: a TABULA residential type (SFH, TH,
@@ -210,6 +213,9 @@ definitions:
       error_message:
         example: no City2TABULA envelope for this building
         type: string
+      h_room_m:
+        example: 2.5
+        type: number
       heating_kwh_a:
         example: 4823.5
         type: number
@@ -217,6 +223,12 @@ definitions:
         type: number
       kitchen_kwh_a:
         type: number
+      n_storeys:
+        description: |-
+          The BuEM inputs of a resolved building: storeys and room height from its
+          3D geometry, and the conditioned floor area A_ref in m2.
+        example: 6
+        type: integer
       osm_id:
         example: "240054621"
         type: string
