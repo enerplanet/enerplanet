@@ -295,7 +295,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
 
   return (
     <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
-      <td className="w-24 pl-4 pr-2 py-2.5">
+      <td className="pl-4 pr-2 py-2.5">
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
@@ -319,7 +319,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`w-[38%] pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
+      <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
             <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
@@ -340,7 +340,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="w-[24%] px-4 py-2.5">
+      <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           {model.status === "failed" ? (
             <Tooltip>
@@ -413,7 +413,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="hidden w-[14%] px-4 py-2.5 md:table-cell">
+      <td className="hidden px-4 py-2.5 md:table-cell">
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
