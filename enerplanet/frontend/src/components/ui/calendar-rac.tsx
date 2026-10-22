@@ -1,8 +1,8 @@
 "use client"
 
-import { ComponentProps, useState } from "react"
-import { getLocalTimeZone, today, CalendarDate } from "@internationalized/date"
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDown } from "lucide-react"
+import { ComponentProps } from "react"
+import { getLocalTimeZone, today } from "@internationalized/date"
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import {
   Button,
   CalendarCell as CalendarCellRac,
@@ -10,8 +10,9 @@ import {
   CalendarGridHeader as CalendarGridHeaderRac,
   CalendarGrid as CalendarGridRac,
   CalendarHeaderCell as CalendarHeaderCellRac,
+  CalendarMonthPicker,
+  CalendarYearPicker,
   composeRenderProps,
-  Heading as HeadingRac,
   RangeCalendar as RangeCalendarRac,
 } from "react-aria-components"
 
@@ -27,44 +28,43 @@ type RangeCalendarProps = ComponentProps<typeof RangeCalendarRac> &
     maxYear?: number
   }
 
-function CalendarHeader({ minYear = 1980, maxYear = 2025, onYearChange }: Readonly<{ minYear?: number; maxYear?: number; onYearChange?: (year: number) => void }>) {
-  const [showYearPicker, setShowYearPicker] = useState(false)
-  const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i)
+const PICKER_SELECT =
+  "h-8 rounded-md border border-input bg-background px-2 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
+function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYear: number }>) {
   return (
-    <header className="flex w-full items-center gap-1 pb-1 relative">
+    <header className="flex w-full items-center gap-1 pb-1">
       <Button
         slot="previous"
         className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
       >
         <ChevronLeftIcon size={16} />
       </Button>
-      <div className="grow text-center relative">
-        <button
-          type="button"
-          onClick={() => setShowYearPicker(!showYearPicker)}
-          className="inline-flex items-center gap-1 text-sm font-medium hover:bg-accent px-2 py-1 rounded-md transition-colors"
-        >
-          <HeadingRac className="pointer-events-none" />
-          <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showYearPicker && "rotate-180")} />
-        </button>
-        {showYearPicker && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto w-24">
-            {years.map((year) => (
-              <button
-                key={year}
-                type="button"
-                onClick={() => {
-                  onYearChange?.(year)
-                  setShowYearPicker(false)
-                }}
-                className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="flex grow justify-center gap-1">
+        <CalendarMonthPicker format="long">
+          {({ items, value, onChange, "aria-label": label }) => (
+            <select aria-label={label} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} className={PICKER_SELECT}>
+              {items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.formatted}
+                </option>
+              ))}
+            </select>
+          )}
+        </CalendarMonthPicker>
+        <CalendarYearPicker visibleYears={2 * (maxYear - minYear) + 1}>
+          {({ items, value, onChange, "aria-label": label }) => (
+            <select aria-label={label} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} className={PICKER_SELECT}>
+              {items
+                .filter((item) => item.date.year >= minYear && item.date.year <= maxYear)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.formatted}
+                  </option>
+                ))}
+            </select>
+          )}
+        </CalendarYearPicker>
       </div>
       <Button
         slot="next"
@@ -114,24 +114,18 @@ function CalendarGridComponent({ isRange = false }: Readonly<{ isRange?: boolean
 }
 
 function RangeCalendar({ className, minYear = 1980, maxYear = 2025, ...props }: RangeCalendarProps) {
-  const [focusedDate, setFocusedDate] = useState<CalendarDate | undefined>(undefined)
-  
-  const handleYearChange = (year: number) => {
-    const currentDate = focusedDate || today(getLocalTimeZone())
-    setFocusedDate(new CalendarDate(year, currentDate.month, 1))
-  }
-
   return (
     <RangeCalendarRac
       {...props}
-      focusedValue={focusedDate}
-      onFocusChange={setFocusedDate}
       className={composeRenderProps(className, (className) =>
         cn("w-fit", className)
       )}
     >
-      <CalendarHeader minYear={minYear} maxYear={maxYear} onYearChange={handleYearChange} />
-      <CalendarGridComponent isRange />
+      <CalendarHeader minYear={minYear} maxYear={maxYear} />
+      {/* Room for a header row and six weeks, so the popover keeps its height in every month. */}
+      <div className="min-h-[calc(2.25rem_+_6*(2.25rem_+_2px))]">
+        <CalendarGridComponent isRange />
+      </div>
     </RangeCalendarRac>
   )
 }

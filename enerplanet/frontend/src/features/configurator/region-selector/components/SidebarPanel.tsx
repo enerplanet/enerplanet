@@ -2,6 +2,7 @@ import {
   DateRangePicker,
   Dialog,
   Group,
+  I18nProvider,
   Label,
   Popover,
   Button as Trigger,
@@ -108,7 +109,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   operateIssues = [],
   onFixOperateIssue,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const appLang = i18n.language?.split("-")[0] || "en";
   const cookingCarrier = useModelStore((s) => s.cookingCarrier);
   const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
   const runMode = useModelStore((s) => s.runMode);
@@ -242,21 +244,24 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               {t("simulation.simulationPeriod")}
             </Label>
             <div className="flex">
-              <Group
-                className={cn(
-                  DATE_INPUT_STYLE,
-                  "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
-                )}
-              >
-                <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
-                <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
-                  -
-                </span>
-                <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
-                <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:border-ring data-focus-visible:ring-ring/50 absolute inset-0 flex items-center justify-end pr-3 transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
-                  <CalendarIcon size={16} />
-                </Trigger>
-              </Group>
+              {/* English uses en-CH for DD.MM.YYYY fields; other languages keep their own date order. */}
+              <I18nProvider locale={appLang === "en" ? "en-CH" : appLang}>
+                <Group
+                  className={cn(
+                    DATE_INPUT_STYLE,
+                    "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
+                  )}
+                >
+                  <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
+                  <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
+                    -
+                  </span>
+                  <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
+                  <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
+                    <CalendarIcon size={16} />
+                  </Trigger>
+                </Group>
+              </I18nProvider>
             </div>
             <Popover
               className="bg-background dark:bg-gray-800 text-popover-foreground data-entering:animate-in data-exiting:animate-out data-[entering]:fade-in-0 data-[exiting]:fade-out-0 data-[entering]:zoom-in-95 data-[exiting]:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 z-50 rounded-md border border-border shadow-lg outline-hidden"
