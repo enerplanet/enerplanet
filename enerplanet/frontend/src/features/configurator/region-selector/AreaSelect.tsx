@@ -60,6 +60,7 @@ import {
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { GridStatsBadge } from "./components/GridStatsBadge";
+import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -71,7 +72,6 @@ import { ProductPickerDialog } from "./components/ProductPickerDialog";
 import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
 import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
 import { HeatScopeDialog } from "./components/HeatScopeDialog";
-import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
@@ -335,6 +335,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
   const activeMode = useModelStore((s) => s.activeMode);
+  const siteMode = useModelStore((s) => s.siteMode);
   suppressDialogOnClickRef.current = activeMode !== null;
 
   const markModified = useCallback(() => setIsModified(true), [setIsModified]);
@@ -612,7 +613,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         mapOverlays={
           <>
             {gridResultIds.length > 0 && (
-              <div className="md-fade-in absolute top-4 z-30 w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
+              <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
                 <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
               </div>
             )}
@@ -667,7 +668,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               />
             )}
             <GridActionBar
-              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+              hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}
               onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
               isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
@@ -725,7 +726,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           />
         }
         showSidebar={true}
-        sidebarWidth="26rem"
+        sidebarWidth="clamp(18rem, 30vw, 26rem)"
         controlsPlacement="top-left"
       />
 

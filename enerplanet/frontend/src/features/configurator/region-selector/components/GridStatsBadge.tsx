@@ -130,7 +130,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
             </div>
 
             {wholeGrid && (
-                <p className="px-3 pb-2 text-[10px] text-muted-foreground">
+                <p className="hidden px-3 pb-2 text-[10px] text-muted-foreground xl:block">
                     {t("gridStats.selectionNote", {
                         buildings: wholeGrid.buildings.count,
                         cables: wholeGrid.cables.count,
