@@ -35,10 +35,14 @@ var allowedImageTypes = map[string]string{
 
 type FeedbackHandler struct {
 	feedbackStore *feedbackstore.Store
+	db            *gorm.DB
+	notifier      RunReportNotifier
 }
 
-func NewFeedbackHandler(db *gorm.DB) *FeedbackHandler {
-	return &FeedbackHandler{feedbackStore: feedbackstore.NewStore(db)}
+// NewFeedbackHandler serves the feedback routes. notifier is told about
+// reported runs; nil leaves the experts unnotified.
+func NewFeedbackHandler(db *gorm.DB, notifier RunReportNotifier) *FeedbackHandler {
+	return &FeedbackHandler{feedbackStore: feedbackstore.NewStore(db), db: db, notifier: notifier}
 }
 
 func parsePagination(c *gin.Context) feedbackstore.PaginationParams {
@@ -158,7 +162,7 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 		httputil.BadRequest(c, "Subject is required")
 		return
 	}
-	if message == "" {
+	if message == "" && c.PostForm("model_id") == "" {
 		httputil.BadRequest(c, "Message is required")
 		return
 	}
@@ -171,6 +175,11 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 			httputil.BadRequest(c, "Rating must be a number between 0 and 5")
 			return
 		}
+	}
+
+	report, ok := h.runReportFromForm(c, userCtx)
+	if !ok {
+		return
 	}
 
 	feedback := &models.Feedback{
@@ -210,6 +219,7 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 			httputil.InternalError(c, "Failed to create feedback")
 			return
 		}
+		h.attachRunReport(feedback, report)
 
 		// Save all images
 		type imageInfo struct {
@@ -257,6 +267,7 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 		httputil.InternalError(c, "Failed to create feedback")
 		return
 	}
+	h.attachRunReport(feedback, report)
 
 	httputil.Created(c, gin.H{
 		"message":  "Feedback submitted successfully",

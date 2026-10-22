@@ -199,6 +199,22 @@ func (s *Store) ListUsers(authToken string, params ListUsersParams) ([]User, err
 	return s.getKeycloakUsers(authToken, url)
 }
 
+// ListUserIDsByAttribute returns the ids of the users whose attribute key
+// has value, up to 1000.
+func (s *Store) ListUserIDsByAttribute(authToken, key, value string) ([]string, error) {
+	url := fmt.Sprintf("%s/admin/realms/%s/users?briefRepresentation=true&max=1000&q=%s",
+		s.cfg.Auth.BaseURL, s.cfg.Auth.Realm, urlpkg.QueryEscape(key+":"+value))
+	users, err := s.getKeycloakUsers(authToken, url)
+	if err != nil {
+		return nil, fmt.Errorf("list users with %s=%s: %w", key, value, err)
+	}
+	ids := make([]string, len(users))
+	for i, u := range users {
+		ids[i] = u.ID
+	}
+	return ids, nil
+}
+
 func (s *Store) CreateUser(authToken string, req CreateUserRequest) (string, error) {
 	// Get default model limit based on access level
 	modelLimit := getDefaultModelLimit(req.AccessLevel)
