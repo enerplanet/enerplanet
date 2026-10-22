@@ -864,7 +864,6 @@
     "queue": "Coda",
     "copyOf": "Copia di \"{{name}}\"",
     "ownedBy": "Di proprietà di",
-    "parentModel": "Modello principale",
     "parent": "Principale",
     "anotherModel": "un altro modello",
     "demandFallbackTitle": "Alcuni edifici usano una domanda costante",
@@ -878,7 +877,16 @@
     "bulkCopySubmit": "Crea copie",
     "cannotCalculate": "Impossibile calcolare – nessun modello idoneo selezionato",
     "cancelled": "Annullato",
-    "modified": "Modificato"
+    "modified": "Modificato",
+    "family": {
+      "show": "Mostra le copie di {{name}}",
+      "hide": "Nascondi le copie di {{name}}",
+      "copies_one": "{{count}} copia",
+      "copies_other": "{{count}} copie",
+      "failed_one": "{{count}} non riuscita",
+      "failed_other": "{{count}} non riuscite",
+      "pagination": "famiglie"
+    }
   },
   "polygon": {
     "drawRegion": "Disegna la tua regione",

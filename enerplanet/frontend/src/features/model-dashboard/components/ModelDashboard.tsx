@@ -241,6 +241,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		workspace_id: currentWorkspaceId,
 		sort_by: orderBy,
 		sort_order: order,
+		group: "families",
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
@@ -422,6 +423,26 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return children;
 	}, [paginatedModels]);
+	const failedChildCountByParentID = useMemo(() => {
+		const failed = new Map<number, number>();
+		for (const model of paginatedModels) {
+			if (!model.parent_model_id || model.status !== "failed") continue;
+			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+		}
+		return failed;
+	}, [paginatedModels]);
+	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
+	const toggleFamily = useCallback((modelId: number) => {
+		setCollapsedFamilies((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(modelId)) next.add(modelId);
+			return next;
+		});
+	}, []);
+	const visibleModels = useMemo(
+		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		[paginatedModels, collapsedFamilies],
+	);
 
 	const { showBulkDeleteConfirm } = useBulkOperations({
 		selectedModels,
@@ -1044,14 +1065,17 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 												</tr>
 											</thead>
 											<tbody className="divide-y divide-border bg-card">
-												{paginatedModels.map((model, index) => (
+												{visibleModels.map((model, index) => (
 													<ModelTableRow
 														key={model.id}
 														model={model}
 														index={index}
 														modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
 														parentModelTitle={model.parent_model_id ? modelTitlesByID.get(model.parent_model_id) : undefined}
-														hasChildren={(childCountByParentID.get(model.id) ?? 0) > 0}
+														copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
+														failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
+														familyCollapsed={collapsedFamilies.has(model.id)}
+														onToggleFamily={toggleFamily}
 														currentUserId={user?.id ? String(user.id) : undefined}
 														userAccessLevel={user?.access_level}
 														isSelected={isSelected(model)}
@@ -1087,6 +1111,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
+											resultsLabel={t("model.family.pagination")}
 										/>
 									)}
 								</div>

@@ -864,7 +864,6 @@
     "queue": "Wachtrij",
     "copyOf": "Kopie van \"{{name}}\"",
     "ownedBy": "Eigendom van",
-    "parentModel": "Bovenliggend model",
     "parent": "Bovenliggend",
     "anotherModel": "een ander model",
     "demandFallbackTitle": "Sommige gebouwen gebruiken een constante vraag",
@@ -878,7 +877,16 @@
     "bulkCopySubmit": "Kopieën maken",
     "cannotCalculate": "Kan niet berekenen – geen geschikte modellen geselecteerd",
     "cancelled": "Geannuleerd",
-    "modified": "Gewijzigd"
+    "modified": "Gewijzigd",
+    "family": {
+      "show": "Kopieën van {{name}} tonen",
+      "hide": "Kopieën van {{name}} verbergen",
+      "copies_one": "{{count}} kopie",
+      "copies_other": "{{count}} kopieën",
+      "failed_one": "{{count}} mislukt",
+      "failed_other": "{{count}} mislukt",
+      "pagination": "families"
+    }
   },
   "polygon": {
     "drawRegion": "Teken je regio",

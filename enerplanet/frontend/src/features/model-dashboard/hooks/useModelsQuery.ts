@@ -18,6 +18,8 @@ export const useModelsQuery = (params?: {
 	workspace_id?: number;
 	sort_by?: string;
 	sort_order?: string;
+	/** families: limit, offset and total count originals with their copies. */
+	group?: "families";
 }, options?: { requireWorkspace?: boolean }) => {
 	const requireWorkspace = options?.requireWorkspace ?? true;
 	return useQuery({

@@ -869,7 +869,6 @@
     "queue": "Kolejka",
     "copyOf": "Kopia \"{{name}}\"",
     "ownedBy": "Właściciel",
-    "parentModel": "Model nadrzędny",
     "parent": "Nadrzędny",
     "anotherModel": "innego modelu",
     "demandFallbackTitle": "Niektóre budynki mają stałe zapotrzebowanie",
@@ -882,7 +881,20 @@
     "bulkCopyFailed": "Nie udało się skopiować niektórych modeli. Spróbuj ponownie.",
     "bulkCopySubmit": "Utwórz kopie",
     "cannotCalculate": "Nie można obliczyć – nie wybrano odpowiednich modeli",
-    "modified": "Zmodyfikowano"
+    "modified": "Zmodyfikowano",
+    "family": {
+      "show": "Pokaż kopie modelu {{name}}",
+      "hide": "Ukryj kopie modelu {{name}}",
+      "copies_one": "{{count}} kopia",
+      "copies_few": "{{count}} kopie",
+      "copies_many": "{{count}} kopii",
+      "copies_other": "{{count}} kopii",
+      "failed_one": "{{count}} nieudana",
+      "failed_few": "{{count}} nieudane",
+      "failed_many": "{{count}} nieudanych",
+      "failed_other": "{{count}} nieudanych",
+      "pagination": "rodzin modeli"
+    }
   },
   "polygon": {
     "drawRegion": "Narysuj swój region",

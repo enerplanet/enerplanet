@@ -868,7 +868,6 @@
     "queue": "Fronta",
     "copyOf": "Kopie \"{{name}}\"",
     "ownedBy": "Vlastník",
-    "parentModel": "Nadřazený model",
     "parent": "Nadřazený",
     "anotherModel": "jiného modelu",
     "demandFallbackTitle": "Některé budovy mají konstantní spotřebu",
@@ -882,7 +881,20 @@
     "bulkCopySubmit": "Vytvořit kopie",
     "cannotCalculate": "Nelze vypočítat – nejsou vybrány žádné vhodné modely",
     "cancelled": "Zrušeno",
-    "modified": "Upraveno"
+    "modified": "Upraveno",
+    "family": {
+      "show": "Zobrazit kopie modelu {{name}}",
+      "hide": "Skrýt kopie modelu {{name}}",
+      "copies_one": "{{count}} kopie",
+      "copies_few": "{{count}} kopie",
+      "copies_many": "{{count}} kopií",
+      "copies_other": "{{count}} kopií",
+      "failed_one": "{{count}} selhala",
+      "failed_few": "{{count}} selhaly",
+      "failed_many": "{{count}} selhalo",
+      "failed_other": "{{count}} selhalo",
+      "pagination": "rodin modelů"
+    }
   },
   "polygon": {
     "drawRegion": "Nakreslete svůj region",

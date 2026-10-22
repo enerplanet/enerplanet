@@ -1138,14 +1138,22 @@
     "queue": "Queue",
     "copyOf": "Copy of \"{{name}}\"",
     "ownedBy": "Owned by",
-    "parentModel": "Parent Model",
     "parent": "Parent",
     "anotherModel": "another model",
     "demandFallbackTitle": "Some buildings use constant demand",
     "demandFallbackWarning": "{{fallback}} of {{total}} buildings had no hourly demand profile (no 3D data) and use their yearly demand spread evenly over the year.",
     "waiting": "Waiting",
     "queuedTooltip": "Your model is in the queue - the simulation engine is processing other calculations",
-    "compareRequires2Completed": "Select exactly 2 completed models to compare"
+    "compareRequires2Completed": "Select exactly 2 completed models to compare",
+    "family": {
+      "show": "Show copies of {{name}}",
+      "hide": "Hide copies of {{name}}",
+      "copies_one": "{{count}} copy",
+      "copies_other": "{{count}} copies",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "pagination": "families"
+    }
   },
   "polygon": {
     "drawRegion": "Draw Your Region",
