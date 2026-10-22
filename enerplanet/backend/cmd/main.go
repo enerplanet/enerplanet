@@ -777,16 +777,20 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {
 	api.POST("/feedback", handler.CreateFeedback)
-	api.GET("/feedback", handler.GetFeedbackList)
 	api.GET("/feedback/my", handler.GetMyFeedback)
-	api.GET("/feedback/search", handler.SearchFeedback)
-	api.GET("/feedback/stats", handler.GetFeedbackStats)
-	api.GET("/feedback/user/:user_id", handler.GetUserFeedback)
+	// The image handlers let the feedback's author or an expert through.
 	api.GET(routeFeedbackByID+"/image", handler.GetFeedbackImage)
 	api.GET(routeFeedbackByID+"/images/:index", handler.GetFeedbackImageByIndex)
-	api.GET(routeFeedbackByID, handler.GetFeedbackByID)
-	api.PUT(routeFeedbackByID, handler.UpdateFeedback)
-	api.DELETE(routeFeedbackByID, handler.DeleteFeedback)
+
+	// These act on every user's feedback.
+	expert := api.Group("", middleware.RequireExpert())
+	expert.GET("/feedback", handler.GetFeedbackList)
+	expert.GET("/feedback/search", handler.SearchFeedback)
+	expert.GET("/feedback/stats", handler.GetFeedbackStats)
+	expert.GET("/feedback/user/:user_id", handler.GetUserFeedback)
+	expert.GET(routeFeedbackByID, handler.GetFeedbackByID)
+	expert.PUT(routeFeedbackByID, handler.UpdateFeedback)
+	expert.DELETE(routeFeedbackByID, handler.DeleteFeedback)
 }
 
 func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
