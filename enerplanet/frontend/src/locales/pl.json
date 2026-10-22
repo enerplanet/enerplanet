@@ -822,7 +822,9 @@
       "nextFor": {
         "city2tabula": "Ponowne uruchomienie nie pomoże, dopóki obszar nie będzie miał danych 3D budynków. Jeśli oczekiwano tu danych, zgłoś to zespołowi EnerPlanET."
       },
-      "report": "Zgłoś"
+      "report": "Zgłoś",
+      "reported": "Zgłoszono",
+      "reportedHint": "Zgłoszono zespołowi EnerPlanET. Otrzymasz powiadomienie, gdy problem zostanie rozwiązany."
     },
     "pending": "Oczekujące",
     "queued": "W kolejce",
@@ -1355,6 +1357,7 @@
     "subtitle": "Przeglądaj i odpowiadaj na opinie użytkowników",
     "refresh": "Odśwież",
     "noFeedbackFound": "Nie znaleziono opinii",
+    "unseen": "Jeszcze nieotwarte przez żadnego administratora",
     "noFeedbackDescription": "Opinie użytkowników pojawią się tutaj po przesłaniu.",
     "filters": {
       "label": "Filtry:",
@@ -1385,7 +1388,6 @@
       "category": "Kategoria",
       "priority": "Priorytet",
       "status": "Status",
-      "rating": "Ocena",
       "user": "Użytkownik",
       "created": "Utworzono",
       "actions": "Akcje"
@@ -1400,7 +1402,6 @@
       "title": "Szczegóły Opinii",
       "subtitle": "Zobacz pełne informacje o opinii",
       "message": "Wiadomość:",
-      "rating": "Ocena:",
       "submitted": "Przesłano",
       "adminResponse": "Odpowiedź Administratora:",
       "respondedOn": "Odpowiedziano:",
@@ -1813,6 +1814,7 @@
     "errors": {
       "loginRequired": "Zaloguj się, aby wysłać opinię",
       "submitFailed": "Nie udało się wysłać opinii. Spróbuj ponownie później.",
+      "alreadyReported": "Ten model ma już otwarte zgłoszenie. Otrzymasz powiadomienie, gdy zostanie rozwiązane.",
       "invalidImageType": "Wybierz prawidłowy plik obrazu (PNG, JPG, GIF)",
       "imageTooLarge": "Rozmiar obrazu musi być mniejszy niż 15MB"
     },

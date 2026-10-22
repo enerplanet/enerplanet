@@ -36,12 +36,12 @@ var allowedImageTypes = map[string]string{
 type FeedbackHandler struct {
 	feedbackStore *feedbackstore.Store
 	db            *gorm.DB
-	notifier      RunReportNotifier
+	notifier      FeedbackNotifier
 }
 
-// NewFeedbackHandler serves the feedback routes. notifier is told about
-// reported runs; nil leaves the experts unnotified.
-func NewFeedbackHandler(db *gorm.DB, notifier RunReportNotifier) *FeedbackHandler {
+// NewFeedbackHandler serves the feedback routes. notifier sends the in-app
+// notifications; nil sends none.
+func NewFeedbackHandler(db *gorm.DB, notifier FeedbackNotifier) *FeedbackHandler {
 	return &FeedbackHandler{feedbackStore: feedbackstore.NewStore(db), db: db, notifier: notifier}
 }
 
@@ -191,6 +191,9 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 		Message:   message,
 		Rating:    rating,
 	}
+	if report != nil {
+		feedback.Priority = "high"
+	}
 
 	// Collect all uploaded images (supports both "image" and "images" field names)
 	form, _ := c.MultipartForm()
@@ -219,7 +222,7 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 			httputil.InternalError(c, "Failed to create feedback")
 			return
 		}
-		h.attachRunReport(feedback, report)
+		h.afterCreate(feedback, report)
 
 		// Save all images
 		type imageInfo struct {
@@ -267,7 +270,7 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 		httputil.InternalError(c, "Failed to create feedback")
 		return
 	}
-	h.attachRunReport(feedback, report)
+	h.afterCreate(feedback, report)
 
 	httputil.Created(c, gin.H{
 		"message":  "Feedback submitted successfully",
@@ -367,10 +370,16 @@ func (h *FeedbackHandler) UpdateFeedback(c *gin.Context) {
 		return
 	}
 
+	before, err := h.feedbackStore.GetFeedbackByID(id)
+	if err != nil {
+		httputil.HandleError(c, err)
+		return
+	}
 	if err := h.feedbackStore.UpdateFeedback(id, updates); err != nil {
 		httputil.HandleError(c, err)
 		return
 	}
+	h.notifyIfClosed(*before, req.Status)
 	httputil.SuccessMessage(c, "Feedback updated successfully")
 }
 

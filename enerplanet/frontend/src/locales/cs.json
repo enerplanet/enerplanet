@@ -822,7 +822,9 @@
       "nextFor": {
         "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET."
       },
-      "report": "Nahlásit"
+      "report": "Nahlásit",
+      "reported": "Nahlášeno",
+      "reportedHint": "Nahlášeno týmu EnerPlanET. Po vyřešení dostanete oznámení."
     },
     "pending": "Čeká",
     "queued": "Ve frontě",
@@ -1355,6 +1357,7 @@
     "subtitle": "Kontrolujte a odpovídejte na zpětnou vazbu uživatelů",
     "refresh": "Obnovit",
     "noFeedbackFound": "Žádná zpětná vazba nenalezena",
+    "unseen": "Zatím jej neotevřel žádný správce",
     "noFeedbackDescription": "Zpětná vazba uživatelů se zde zobrazí po odeslání.",
     "filters": {
       "label": "Filtry:",
@@ -1385,7 +1388,6 @@
       "category": "Kategorie",
       "priority": "Priorita",
       "status": "Stav",
-      "rating": "Hodnocení",
       "user": "Uživatel",
       "created": "Vytvořeno",
       "actions": "Akce"
@@ -1400,7 +1402,6 @@
       "title": "Detaily Zpětné Vazby",
       "subtitle": "Zobrazit kompletní informace o zpětné vazbě",
       "message": "Zpráva:",
-      "rating": "Hodnocení:",
       "submitted": "Odesláno",
       "adminResponse": "Odpověď Administrátora:",
       "respondedOn": "Odpovězeno:",
@@ -1813,6 +1814,7 @@
     "errors": {
       "loginRequired": "Pro odeslání zpětné vazby se prosím přihlaste",
       "submitFailed": "Odeslání zpětné vazby se nezdařilo. Zkuste to prosím později.",
+      "alreadyReported": "Tento model již má otevřené hlášení. Po vyřešení dostanete oznámení.",
       "invalidImageType": "Vyberte prosím platný obrazový soubor (PNG, JPG, GIF)",
       "imageTooLarge": "Velikost obrázku musí být menší než 15MB"
     },

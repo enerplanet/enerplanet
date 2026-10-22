@@ -680,7 +680,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 		c.Status(http.StatusOK)
 	})
 
-	feedbackHandler := feedback.NewFeedbackHandler(deps.DB, services.RunReportNotifier{
+	feedbackHandler := feedback.NewFeedbackHandler(deps.DB, services.FeedbackNotifier{
 		Notifications: deps.NotificationService,
 		Users:         usersstore.New(deps.Cfg),
 		Tokens:        deps.AdminTokenProvider,
@@ -783,6 +783,7 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {
 	api.POST("/feedback", handler.CreateFeedback)
 	api.GET("/feedback/my", handler.GetMyFeedback)
+	api.GET("/feedback/my/open-run-reports", handler.GetMyOpenRunReports)
 	// The image handlers let the feedback's author or an expert through.
 	api.GET(routeFeedbackByID+"/image", handler.GetFeedbackImage)
 	api.GET(routeFeedbackByID+"/images/:index", handler.GetFeedbackImageByIndex)
@@ -792,9 +793,11 @@ func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHand
 	expert.GET("/feedback", handler.GetFeedbackList)
 	expert.GET("/feedback/search", handler.SearchFeedback)
 	expert.GET("/feedback/stats", handler.GetFeedbackStats)
+	expert.GET("/feedback/unseen", handler.GetUnseenFeedback)
 	expert.GET("/feedback/user/:user_id", handler.GetUserFeedback)
 	expert.GET(routeFeedbackByID, handler.GetFeedbackByID)
 	expert.GET(routeFeedbackByID+"/run-report", handler.GetRunReport)
+	expert.POST(routeFeedbackByID+"/seen", handler.MarkFeedbackSeen)
 	expert.PUT(routeFeedbackByID, handler.UpdateFeedback)
 	expert.DELETE(routeFeedbackByID, handler.DeleteFeedback)
 }

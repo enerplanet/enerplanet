@@ -152,17 +152,6 @@ func (fs *Store) UpdateFeedback(id uint, updates map[string]interface{}) error {
 	return nil
 }
 
-func (fs *Store) DeleteFeedback(id uint) error {
-	result := fs.db.Delete(&models.Feedback{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("delete feedback: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return errFeedbackNotFound
-	}
-	return nil
-}
-
 func (fs *Store) GetFeedbackStats() (map[string]int64, error) {
 	var stats []struct {
 		Status string
@@ -208,15 +197,4 @@ func (fs *Store) SearchFeedback(queryStr string, filters Filters, pagination Pag
 	}
 
 	return buildListResponse(feedbacks, total, pagination), nil
-}
-
-// DeleteClosedOlderThan permanently deletes closed/resolved feedback older than the given number of days.
-func (fs *Store) DeleteClosedOlderThan(days int) (int64, error) {
-	result := fs.db.Unscoped().
-		Where("status IN (?, ?) AND updated_at < NOW() - INTERVAL '1 day' * ?", "closed", "resolved", days).
-		Delete(&models.Feedback{})
-	if result.Error != nil {
-		return 0, fmt.Errorf("cleanup old feedback: %w", result.Error)
-	}
-	return result.RowsAffected, nil
 }

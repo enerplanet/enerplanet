@@ -9,6 +9,7 @@ import (
 
 	"spatialhub_backend/internal/config"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
+	feedbackstore "spatialhub_backend/internal/store/feedback"
 	usersstore "spatialhub_backend/internal/store/users"
 
 	"github.com/sirupsen/logrus"
@@ -848,7 +849,7 @@ func (h *Handler) cleanupUserGroups(ctx context.Context, userID string) {
 	}
 }
 
-// cleanupUserDatabaseRecords removes workspace members and model shares for the user
+// cleanupUserDatabaseRecords removes workspace members, model shares and feedback for the user
 func (h *Handler) cleanupUserDatabaseRecords(userID, userEmail string) {
 	log := applogger.ForComponent("users")
 
@@ -860,6 +861,10 @@ func (h *Handler) cleanupUserDatabaseRecords(userID, userEmail string) {
 	if err := h.db.Where(sqlUserIDOrEmail, userID, userEmail).
 		Delete(&models.ModelShare{}).Error; err != nil {
 		log.Warnf("failed to cleanup model shares for user id=%s err=%v", userID, err)
+	}
+
+	if _, err := feedbackstore.NewStore(h.db).DeleteUserFeedback(userID, userEmail); err != nil {
+		log.Warnf("failed to cleanup feedback for user id=%s err=%v", userID, err)
 	}
 }
 

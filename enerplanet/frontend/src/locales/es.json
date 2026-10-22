@@ -1081,7 +1081,9 @@
       "nextFor": {
         "city2tabula": "Volver a ejecutarlo no ayudará hasta que la zona tenga datos 3D de edificios. Si esperaba datos aquí, notifíquelo al equipo de EnerPlanET."
       },
-      "report": "Informar"
+      "report": "Informar",
+      "reported": "Notificado",
+      "reportedHint": "Notificado al equipo de EnerPlanET. Recibirá un aviso cuando se resuelva."
     },
     "pending": "Pendiente",
     "queued": "En cola",
@@ -1608,6 +1610,7 @@
     "subtitle": "Revisar y responder a los comentarios de los usuarios",
     "refresh": "Actualizar",
     "noFeedbackFound": "No se encontraron comentarios",
+    "unseen": "Ningún administrador lo ha abierto todavía",
     "noFeedbackDescription": "Los comentarios de los usuarios aparecerán aquí cuando se envíen.",
     "filters": {
       "label": "Filtros:",
@@ -1638,7 +1641,6 @@
       "category": "Categoría",
       "priority": "Prioridad",
       "status": "Estado",
-      "rating": "Calificación",
       "user": "Usuario",
       "created": "Creado",
       "actions": "Acciones"
@@ -1653,7 +1655,6 @@
       "title": "Detalles del Comentario",
       "subtitle": "Ver información completa del comentario",
       "message": "Mensaje:",
-      "rating": "Calificación:",
       "submitted": "Enviado",
       "adminResponse": "Respuesta del Administrador:",
       "respondedOn": "Respondido el:",
@@ -2066,6 +2067,7 @@
     "errors": {
       "loginRequired": "Por favor inicie sesión para enviar comentarios",
       "submitFailed": "No se pudieron enviar los comentarios. Por favor intente más tarde.",
+      "alreadyReported": "Este modelo ya tiene un informe abierto. Recibirá un aviso cuando se resuelva.",
       "invalidImageType": "Por favor seleccione un archivo de imagen válido (PNG, JPG, GIF)",
       "imageTooLarge": "El tamaño de la imagen debe ser menor a 15MB"
     },

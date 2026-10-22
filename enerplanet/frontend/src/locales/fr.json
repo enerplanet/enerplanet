@@ -1081,7 +1081,9 @@
       "nextFor": {
         "city2tabula": "Le relancer n'aidera pas tant que la zone n'a pas de données 3D de bâtiments. Si vous attendiez des données ici, signalez-le à l'équipe EnerPlanET."
       },
-      "report": "Signaler"
+      "report": "Signaler",
+      "reported": "Signalé",
+      "reportedHint": "Signalé à l'équipe EnerPlanET. Vous recevrez une notification une fois le problème résolu."
     },
     "pending": "En attente",
     "queued": "En file d'attente",
@@ -1608,6 +1610,7 @@
     "subtitle": "Examiner et répondre aux retours des utilisateurs",
     "refresh": "Actualiser",
     "noFeedbackFound": "Aucun retour trouvé",
+    "unseen": "Pas encore ouvert par un administrateur",
     "noFeedbackDescription": "Les retours des utilisateurs apparaîtront ici une fois soumis.",
     "filters": {
       "label": "Filtres :",
@@ -1638,7 +1641,6 @@
       "category": "Catégorie",
       "priority": "Priorité",
       "status": "Statut",
-      "rating": "Note",
       "user": "Utilisateur",
       "created": "Créé",
       "actions": "Actions"
@@ -1653,7 +1655,6 @@
       "title": "Détails du Retour",
       "subtitle": "Voir les informations complètes du retour",
       "message": "Message :",
-      "rating": "Note :",
       "submitted": "Soumis",
       "adminResponse": "Réponse de l'Administrateur :",
       "respondedOn": "Répondu le :",
@@ -2066,6 +2067,7 @@
     "errors": {
       "loginRequired": "Veuillez vous connecter pour envoyer des commentaires",
       "submitFailed": "Échec de l'envoi des commentaires. Veuillez réessayer plus tard.",
+      "alreadyReported": "Ce modèle a déjà un signalement ouvert. Vous recevrez une notification une fois le problème résolu.",
       "invalidImageType": "Veuillez sélectionner un fichier image valide (PNG, JPG, GIF)",
       "imageTooLarge": "La taille de l'image doit être inférieure à 15Mo"
     },
