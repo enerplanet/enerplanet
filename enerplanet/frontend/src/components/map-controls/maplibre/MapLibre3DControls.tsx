@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { RotateCcw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@spatialhub/ui';
 import { useTranslation } from '@spatialhub/i18n';

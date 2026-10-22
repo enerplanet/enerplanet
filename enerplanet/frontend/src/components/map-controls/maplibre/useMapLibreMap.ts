@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import type { Map as OlMap } from 'ol';
 import { DoubleClickZoom, DragPan, MouseWheelZoom, PinchZoom } from 'ol/interaction';
 import { BASE_STYLE } from './maplibre-styles';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+
+// maplibre-gl loads its worker relative to its own module, which Vite's dependency
+// bundling moves; the worker file is self-contained, so its own URL works in dev and build.
+maplibregl.setWorkerUrl(workerUrl);
 
 /**
  * Hook: Initialize and manage the MapLibre map instance.
