@@ -1074,7 +1074,8 @@
       "next": "Ihr Modell und seine Eingaben sind unverändert. Starten Sie es erneut. Schlägt es ein zweites Mal fehl, melden Sie es dem EnerPlanET-Team.",
       "nextFor": {
         "city2tabula": "Ein erneuter Start hilft erst, wenn für das Gebiet 3D-Gebäudedaten vorliegen. Wenn Sie hier Daten erwartet haben, melden Sie es dem EnerPlanET-Team."
-      }
+      },
+      "report": "Melden"
     },
     "pending": "Ausstehend",
     "queued": "In Warteschlange",
@@ -1665,7 +1666,15 @@
       "deleteSuccess": "Feedback \"{{subject}}\" erfolgreich gelöscht",
       "deleteError": "Feedback konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
     },
-    "hasAttachment": "Hat angehängtes Bild"
+    "hasAttachment": "Hat angehängtes Bild",
+    "runReport": {
+      "title": "Fehlgeschlagener Lauf",
+      "model": "Modell",
+      "stage": "Phase",
+      "service": "Dienst",
+      "failedAt": "Fehlgeschlagen am",
+      "openModel": "Modell öffnen"
+    }
   },
   "simulation": {
     "title": "Simulationskonfiguration",
@@ -2060,6 +2069,9 @@
         "resolved": "Gelöst",
         "closed": "Geschlossen"
       }
+    },
+    "runReport": {
+      "attached": "Der fehlgeschlagene Lauf, der betroffene Dienst und die technischen Details werden dieser Meldung automatisch angehängt."
     }
   },
   "tooltips": {

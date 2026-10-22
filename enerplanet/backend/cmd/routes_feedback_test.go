@@ -24,7 +24,7 @@ func newFeedbackRouter(t *testing.T, accessLevel string) *gin.Engine {
 		c.Set("access_level", accessLevel)
 		c.Next()
 	})
-	registerFeedbackRoutes(api, feedback.NewFeedbackHandler(db))
+	registerFeedbackRoutes(api, feedback.NewFeedbackHandler(db, nil))
 	return r
 }
 
@@ -37,6 +37,7 @@ func TestFeedbackAdminRoutes_requireExpert(t *testing.T) {
 		{http.MethodGet, "/api/feedback/stats"},
 		{http.MethodGet, "/api/feedback/user/u2"},
 		{http.MethodGet, "/api/feedback/7"},
+		{http.MethodGet, "/api/feedback/7/run-report"},
 		{http.MethodPut, "/api/feedback/7"},
 		{http.MethodDelete, "/api/feedback/7"},
 	}

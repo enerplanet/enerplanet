@@ -1074,7 +1074,8 @@
       "next": "Votre modèle et ses données sont inchangés. Relancez-le. S'il échoue une deuxième fois, signalez-le à l'équipe EnerPlanET.",
       "nextFor": {
         "city2tabula": "Le relancer n'aidera pas tant que la zone n'a pas de données 3D de bâtiments. Si vous attendiez des données ici, signalez-le à l'équipe EnerPlanET."
-      }
+      },
+      "report": "Signaler"
     },
     "pending": "En attente",
     "queued": "En file d'attente",
@@ -1669,7 +1670,15 @@
       "deleteSuccess": "Retour \"{{subject}}\" supprimé avec succès",
       "deleteError": "Échec de la suppression du retour. Veuillez réessayer."
     },
-    "hasAttachment": "Contient une image jointe"
+    "hasAttachment": "Contient une image jointe",
+    "runReport": {
+      "title": "Exécution échouée",
+      "model": "Modèle",
+      "stage": "Étape",
+      "service": "Service",
+      "failedAt": "Échec le",
+      "openModel": "Ouvrir le modèle"
+    }
   },
   "simulation": {
     "title": "Configuration de simulation",
@@ -2064,6 +2073,9 @@
         "resolved": "Résolu",
         "closed": "Fermé"
       }
+    },
+    "runReport": {
+      "attached": "L'exécution échouée, le service en cause et les détails techniques sont joints automatiquement à ce signalement."
     }
   },
   "tooltips": {

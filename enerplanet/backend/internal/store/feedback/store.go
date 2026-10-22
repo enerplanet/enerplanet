@@ -8,11 +8,16 @@ import (
 
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/models"
+	backendModels "spatialhub_backend/internal/models"
 
 	"gorm.io/gorm"
 )
 
-var errFeedbackNotFound = errors.New("feedback not found")
+var (
+	errFeedbackNotFound = errors.New("feedback not found")
+	// ErrRunReportNotFound is returned for a feedback entry without a failed run.
+	ErrRunReportNotFound = errors.New("run report not found")
+)
 
 type Store struct {
 	db *gorm.DB
@@ -85,6 +90,26 @@ func (fs *Store) GetFeedbackByID(id uint) (*models.Feedback, error) {
 		return nil, fmt.Errorf("get feedback: %w", err)
 	}
 	return &feedback, nil
+}
+
+// CreateRunReport stores the failed run attached to a feedback entry.
+func (fs *Store) CreateRunReport(report *backendModels.FeedbackRunReport) error {
+	if err := fs.db.Create(report).Error; err != nil {
+		return fmt.Errorf("create run report for feedback %d: %w", report.FeedbackID, err)
+	}
+	return nil
+}
+
+// GetRunReport returns the failed run attached to feedback id.
+func (fs *Store) GetRunReport(id uint) (*backendModels.FeedbackRunReport, error) {
+	var report backendModels.FeedbackRunReport
+	if err := fs.db.First(&report, "feedback_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrRunReportNotFound
+		}
+		return nil, fmt.Errorf("get run report for feedback %d: %w", id, err)
+	}
+	return &report, nil
 }
 
 func buildListResponse(feedbacks []models.Feedback, total int64, pagination PaginationParams) *ListResponse {

@@ -49,6 +49,7 @@ import (
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
 	seriesstore "spatialhub_backend/internal/store/series"
+	usersstore "spatialhub_backend/internal/store/users"
 	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
@@ -636,7 +637,7 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	api.GET("/v1/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
 
 	// Public feedback endpoint (landing page contact form, no auth required)
-	publicFeedbackHandler := feedback.NewFeedbackHandler(db)
+	publicFeedbackHandler := feedback.NewFeedbackHandler(db, nil)
 	api.POST("/feedback/public", publicFeedbackHandler.CreatePublicFeedback)
 }
 
@@ -679,7 +680,11 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 		c.Status(http.StatusOK)
 	})
 
-	feedbackHandler := feedback.NewFeedbackHandler(deps.DB)
+	feedbackHandler := feedback.NewFeedbackHandler(deps.DB, services.RunReportNotifier{
+		Notifications: deps.NotificationService,
+		Users:         usersstore.New(deps.Cfg),
+		Tokens:        deps.AdminTokenProvider,
+	})
 	usersHandler := usershandler.New(deps.Cfg, deps.DB, deps.SessionStore, deps.AdminTokenProvider)
 	settingsHandler := settingshandler.NewSettingsHandler(deps.DB)
 	notificationsHandler := notificationshandler.NewHandlerWithAsynqAndRedis(deps.DB, deps.AsynqClient, deps.RedisClient)
@@ -789,6 +794,7 @@ func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHand
 	expert.GET("/feedback/stats", handler.GetFeedbackStats)
 	expert.GET("/feedback/user/:user_id", handler.GetUserFeedback)
 	expert.GET(routeFeedbackByID, handler.GetFeedbackByID)
+	expert.GET(routeFeedbackByID+"/run-report", handler.GetRunReport)
 	expert.PUT(routeFeedbackByID, handler.UpdateFeedback)
 	expert.DELETE(routeFeedbackByID, handler.DeleteFeedback)
 }

@@ -32,12 +32,15 @@ import {
   ChevronUp,
   Shield,
   Loader2,
+  Info,
 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth-store";
 import axios from "@/lib/axios";
 import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { RUN_REPORT_STATE_KEY, type RunReportTarget } from "./runReport";
 
 // Types
 interface FeedbackFormData {
@@ -352,12 +355,16 @@ export const FeedbackComponent: React.FC = () => {
   useDocumentTitle(t('feedback.title'));
   
   const { user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const reportRun = (location.state as Record<string, RunReportTarget | undefined> | null)?.[RUN_REPORT_STATE_KEY];
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [feedbackData, setFeedbackData] = useState<FeedbackFormData>({
-    category: "",
-    subject: "",
+    category: reportRun ? "bug" : "",
+    // feedbacks.subject holds 255 characters.
+    subject: reportRun ? `${reportRun.stage ? t(`modelStatus.failedAt.${reportRun.stage}`) : t("model.failed")}: ${reportRun.title}`.slice(0, 255) : "",
     message: "",
     rating: 0,
     images: [],
@@ -588,6 +595,9 @@ export const FeedbackComponent: React.FC = () => {
       formData.append('category', feedbackData.category);
       formData.append('subject', feedbackData.subject);
       formData.append('message', feedbackData.message);
+      if (reportRun) {
+        formData.append('model_id', String(reportRun.id));
+      }
       formData.append('rating', feedbackData.rating.toString());
       for (const image of feedbackData.images) {
         formData.append('images', image);
@@ -600,6 +610,10 @@ export const FeedbackComponent: React.FC = () => {
       });
 
       if (data.success) {
+        if (reportRun) {
+          // Drop the report target so the next feedback from this page is not attached to the run.
+          navigate(location.pathname, { replace: true, state: null });
+        }
         setSubmitted(true);
         setHistoryRefresh(prev => prev + 1);
         setSnackbar({
@@ -641,7 +655,7 @@ export const FeedbackComponent: React.FC = () => {
     }
   };
 
-  const isFormValid = feedbackData.category && feedbackData.subject && feedbackData.message;
+  const isFormValid = feedbackData.category && feedbackData.subject && (feedbackData.message || reportRun);
 
   if (submitted) {
     return <SuccessScreen t={t} />;
@@ -724,7 +738,7 @@ export const FeedbackComponent: React.FC = () => {
         </FormSection>
 
         {/* Message with Markdown Editor */}
-        <FormSection title={t("feedback.message")} required>
+        <FormSection title={t("feedback.message")} required={!reportRun}>
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Toolbar */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 px-2 py-1.5">
@@ -951,6 +965,13 @@ export const FeedbackComponent: React.FC = () => {
                 <div className="w-full bg-muted rounded-full h-1.5">
                   <div className="bg-primary h-1.5 rounded-full animate-pulse w-2/3" />
                 </div>
+              </div>
+            )}
+
+            {reportRun && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 px-3.5 py-3 text-sm text-foreground/90">
+                <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span>{t("feedback.runReport.attached")}</span>
               </div>
             )}
 

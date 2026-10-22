@@ -36,6 +36,7 @@ import { formatDateTime24h, formatDate } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { RunReportPanel } from "./components/RunReportPanel";
 import {
   useFeedbackList,
   useUpdateFeedback,
@@ -1013,6 +1014,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                           </ReactMarkdown>
                         </div>
                       </div>
+
+                      {selectedFeedback.category === "bug" && <RunReportPanel feedbackId={selectedFeedback.id} />}
 
                       {/* Attached Images Gallery */}
                       {(() => {

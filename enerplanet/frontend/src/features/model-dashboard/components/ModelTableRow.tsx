@@ -1,5 +1,6 @@
 import React, { memo } from "react";
-import { Copy, FileEdit, Users, Clock, Star, AlertTriangle } from "lucide-react";
+import { Copy, FileEdit, Users, Clock, Star, AlertTriangle, Flag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
@@ -11,6 +12,7 @@ import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
+import { RUN_REPORT_STATE_KEY, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === "string") return error;
@@ -189,6 +191,27 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
   );
 };
 
+/** Opens the feedback form as a bug report about this failed run. */
+const ReportFailureButton: React.FC<{ model: Model }> = ({ model }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const stage = model.results?.failed_stage;
+  const target: RunReportTarget = { id: model.id, title: model.title, stage: typeof stage === "string" ? stage : undefined };
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate("/app/feedback", { state: { [RUN_REPORT_STATE_KEY]: target } });
+      }}
+      className="inline-flex h-7 items-center gap-1 rounded-md border border-red-200 bg-background px-2 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+    >
+      <Flag className="h-3.5 w-3.5" aria-hidden="true" />
+      {t("model.failure.report")}
+    </button>
+  );
+};
+
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
   index,
@@ -296,6 +319,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
           ) : (
             <StatusBadge status={model.status} size="small" />
           )}
+
+          {model.status === "failed" && (!isNotModelOwner || userAccessLevel === "expert") && <ReportFailureButton model={model} />}
 
           {model.status === "completed" && getDemandFallback(model.results) && (
             <Tooltip>

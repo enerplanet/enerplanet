@@ -811,7 +811,8 @@
       "next": "Váš model a jeho vstupy zůstaly beze změny. Spusťte jej znovu. Pokud selže podruhé, nahlaste to týmu EnerPlanET.",
       "nextFor": {
         "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET."
-      }
+      },
+      "report": "Nahlásit"
     },
     "pending": "Čeká",
     "queued": "Ve frontě",
@@ -1406,7 +1407,15 @@
       "deleteSuccess": "Zpětná vazba \"{{subject}}\" úspěšně smazána",
       "deleteError": "Nepodařilo se smazat zpětnou vazbu. Zkuste to prosím znovu."
     },
-    "hasAttachment": "Má přiložený obrázek"
+    "hasAttachment": "Má přiložený obrázek",
+    "runReport": {
+      "title": "Neúspěšný běh",
+      "model": "Model",
+      "stage": "Fáze",
+      "service": "Služba",
+      "failedAt": "Selhalo",
+      "openModel": "Otevřít model"
+    }
   },
   "simulation": {
     "title": "Konfigurace simulace",
@@ -1801,6 +1810,9 @@
         "resolved": "Vyřešeno",
         "closed": "Uzavřeno"
       }
+    },
+    "runReport": {
+      "attached": "Neúspěšný běh, služba, která selhala, a technické podrobnosti se k tomuto hlášení připojí automaticky."
     }
   },
   "technologies": {
