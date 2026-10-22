@@ -284,19 +284,20 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const isFavorite = useFavoriteModelsStore((s) => s.isFavorite);
   const favorited = isFavorite(model.id);
   const level = model.level || 0;
-  const indentClass = level > 0 ? "pl-8" : "";
+  // Copies sit in their family's block (ModelDashboard); only the name is indented.
+  const nameIndentClass = level > 0 ? "pl-6" : "";
   const canManageModel = canUserDeleteModel(model);
 
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
   const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${
-    level > 0 ? "border-l-4 border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-muted/30" : ""
-  } ${isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""}`;
+    isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""
+  }`;
 
   return (
     <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
-      <td className={`pl-4 pr-2 py-2.5 ${indentClass}`}>
+      <td className="w-24 pl-4 pr-2 py-2.5">
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
@@ -320,7 +321,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`pl-2 pr-4 py-2.5 ${indentClass}`}>
+      <td className={`w-[38%] pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
             <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
@@ -342,7 +343,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className="w-[24%] px-4 py-2.5">
         <div className="flex items-center gap-2">
           {model.status === "failed" ? (
             <Tooltip>
@@ -415,7 +416,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="hidden px-4 py-2.5 md:table-cell">
+      <td className="hidden w-[14%] px-4 py-2.5 md:table-cell">
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
