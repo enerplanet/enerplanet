@@ -1118,7 +1118,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														{renderRow(original)}
 														{copies.length > 0 && (
 															<tr>
-																<td colSpan={5} className="px-3 pb-3 pt-0">
+																<td colSpan={5} className="p-3">
 																	<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-muted/30">
 																		<table className="w-full table-auto">
 																			<tbody className="divide-y divide-slate-200 dark:divide-slate-700">
