@@ -15,8 +15,8 @@ import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings
 import { createBuildingStyleFunction, createBuildingHighlightStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { isBuildingDisabled } from "@/features/configurator/hooks/useBuildingSelection";
 
-/** How long the pointer rests on a feature before its tooltip appears. */
-const HOVER_DELAY_MS = 500;
+/** Delay between the pointer entering a feature and its tooltip appearing. */
+const HOVER_DELAY_MS = 300;
 
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -136,11 +136,13 @@ export const useMapClickHandlers = ({
       }
     };
 
-    // A tooltip appears once the pointer has rested on one feature for
-    // HOVER_DELAY_MS and stays where it appeared, so sweeping across buildings
-    // renders nothing. The hand cursor still follows every move.
+    // A tooltip appears HOVER_DELAY_MS after the pointer enters a feature,
+    // however it moves within it, and stays where it appeared. Leaving the
+    // feature first cancels it, so sweeping across buildings renders nothing.
     let pending: ReturnType<typeof setTimeout> | undefined;
-    let shown: unknown = null;
+    let target: unknown = null;
+    let shown = false;
+    let lastPixel: number[] = [];
     const clearTooltips = () => { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); };
     const showTooltip = (feature: any, pixel: number[]) => {
       const type = feature.get('feature_type');
@@ -148,22 +150,28 @@ export const useMapClickHandlers = ({
       if (type === 'transformer') setTransformerTooltip(createTransformerTooltip(feature, pixel, pylovoLayersRef.current));
       else if (type === 'building') setBuildingTooltip(createBuildingTooltip(feature, pixel));
       else if (type === 'mv_line') setMvLineTooltip(createMvLineTooltip(feature, pixel));
-      shown = feature;
+      shown = true;
     };
     const hide = () => {
       clearTimeout(pending);
-      if (shown) { clearTooltips(); shown = null; }
+      if (shown) clearTooltips();
+      shown = false;
+      target = null;
     };
 
     const handlePointerMove = (evt: any) => {
       if (evt.dragging || isDrawing) { hide(); return; }
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
       map.getTargetElement().style.cursor = feature ? 'pointer' : '';
-      if (feature && feature === shown) return;
+      if (feature && feature === target) {
+        if (!shown) lastPixel = evt.pixel;
+        return;
+      }
       hide();
       if (!feature) return;
-      const pixel = evt.pixel;
-      pending = setTimeout(() => showTooltip(feature, pixel), HOVER_DELAY_MS);
+      target = feature;
+      lastPixel = evt.pixel;
+      pending = setTimeout(() => showTooltip(feature, lastPixel), HOVER_DELAY_MS);
     };
 
     map.on('click', handleClick);
