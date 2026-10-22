@@ -69,7 +69,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
 		return t(`modelStatus.${s}`);
 	};
 	
-	const displayLabel = status ? getTranslatedStatusLabel(status) : (text || labelProp || "");
+	const displayLabel = labelProp ?? (status ? getTranslatedStatusLabel(status) : (text || ""));
 	const shouldShowSpinner = status && showSpinner && isActiveStatus(status);
 	const displayIcon = status && showIcon && !shouldShowSpinner 
 		? <StatusIcon status={status} size={size} /> 

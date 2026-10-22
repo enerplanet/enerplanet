@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import { UniversalForm } from "@spatialhub/forms";
 import { getPylovoFormSections, validatePylovoForm } from "@/configuration/formConfigurations";
@@ -35,12 +35,6 @@ interface PylovoManagementProps {
 	readOnly?: boolean;
 }
 
-interface NotificationState {
-	open: boolean;
-	message: string;
-	severity: "success" | "error" | "warning";
-}
-
 const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false }) => {
 	const { t } = useTranslation();
 
@@ -71,11 +65,7 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const confirm = useConfirm();
 
-	const [notification, setNotification] = useState<NotificationState>({
-		open: false,
-		message: "",
-		severity: "success",
-	});
+	const { setNotification } = useNotification();
 
 	const [formData, setFormData] = useState<PylovoFormData>({
 		name: "",
@@ -649,15 +639,6 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 				errors={formErrors}
 				maxWidth="xl"
 			/>
-
-			<div className="fixed top-16 right-4 z-[9999]">
-				<Notification
-					isOpen={notification.open}
-					message={notification.message}
-					severity={notification.severity}
-					onClose={() => setNotification({ ...notification, open: false })}
-				/>
-			</div>
 		</div>
 	);
 };

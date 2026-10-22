@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { pylovoService } from '@/features/configurator/services/pylovoService';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useAvailableRegions } from '@/features/configurator/hooks/useAvailableRegions';
 import { modelService } from '@/features/model-dashboard/services/modelService';
 import { reprojectGeoJSON } from '@/components/map-controls/maplibre/maplibre-utils';
 
@@ -15,37 +15,33 @@ interface MapPageLayerData {
  * model polygons (private) for display on the /map page.
  */
 export function useMapPageLayers(isAuthenticated: boolean): MapPageLayerData {
-  const [data, setData] = useState<MapPageLayerData>({
-    regionCount: 0,
-    modelCount: 0,
-  });
+  const [models, setModels] = useState<{ fc: GeoJSON.FeatureCollection | null; count: number }>();
   const fetchedRef = useRef(false);
 
-  const fetchRegions = useCallback(async () => {
-    try {
-      const response = await pylovoService.getAvailableRegions();
-      if (response.status !== 'success' || !response.regions?.length) return undefined;
+  // Regions come from the shared query, which retries a failed load; the
+  // user's model polygons are fetched once.
+  const { data: regionsResponse } = useAvailableRegions();
+  const regions = useMemo(() => {
+    const response = regionsResponse;
+    if (!response?.regions?.length) return undefined;
 
-      const features = response.regions
-        .filter(r => r.boundary && r.region?.name)
-        .map(r => ({
-          ...r.boundary!,
-          properties: {
-            ...(r.boundary!.properties ?? {}),
-            name: r.region!.name,
-            grid_count: r.grid_count,
-            _boundary_role: 'available',
-          },
-        }));
+    const features = response.regions
+      .filter(r => r.boundary && r.region?.name)
+      .map(r => ({
+        ...r.boundary!,
+        properties: {
+          ...(r.boundary!.properties ?? {}),
+          name: r.region!.name,
+          grid_count: r.grid_count,
+          _boundary_role: 'available',
+        },
+      }));
 
-      if (features.length === 0) return undefined;
+    if (features.length === 0) return undefined;
 
-      const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
-      return { fc: reprojectGeoJSON(fc), count: response.regions.length };
-    } catch {
-      return undefined;
-    }
-  }, []);
+    const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+    return { fc: reprojectGeoJSON(fc), count: response.regions.length };
+  }, [regionsResponse]);
 
   const fetchUserModels = useCallback(async () => {
     if (!isAuthenticated) return undefined;
@@ -84,17 +80,13 @@ export function useMapPageLayers(isAuthenticated: boolean): MapPageLayerData {
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
+    void fetchUserModels().then(setModels);
+  }, [fetchUserModels]);
 
-    (async () => {
-      const [regions, models] = await Promise.all([fetchRegions(), fetchUserModels()]);
-      setData({
-        availableBoundaryGeoJSON: regions?.fc ?? undefined,
-        userModelGeoJSON: models?.fc ?? undefined,
-        regionCount: regions?.count ?? 0,
-        modelCount: models?.count ?? 0,
-      });
-    })();
-  }, [fetchRegions, fetchUserModels]);
-
-  return data;
+  return useMemo(() => ({
+    availableBoundaryGeoJSON: regions?.fc ?? undefined,
+    userModelGeoJSON: models?.fc ?? undefined,
+    regionCount: regions?.count ?? 0,
+    modelCount: models?.count ?? 0,
+  }), [regions, models]);
 }

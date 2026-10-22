@@ -2,6 +2,11 @@ import { FC, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { CarrierProdRecord, CarrierConRecord } from '@/features/model-results/types';
+import {
+  carrierDisplay,
+  carrierEnergyAxis,
+  formatCarrierEnergy,
+} from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
@@ -9,6 +14,8 @@ import { getTechColor } from '@/constants/tech-colors';
 interface EnergyBalanceChartProps {
   production: CarrierProdRecord[];
   consumption: CarrierConRecord[];
+  /** Carrier the records belong to — drives units and the production wording. */
+  carrier?: string;
   height?: number;
 }
 
@@ -38,10 +45,12 @@ function formatAxisEnergy(value: number): string {
 export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
   production,
   consumption,
+  carrier,
   height = 350,
 }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const isGeneration = carrierDisplay(carrier).generation;
 
   const chartData = useMemo(() => {
     // Input data is now already aggregated by date (daily totals) from the backend
@@ -148,20 +157,20 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
           );
           let totalRenewable = 0;
           if (renewableItems.length > 0) {
-            html += `<div style="font-weight: 500; color: #059669; margin: 4px 0;">${t('results.energy.renewableProduction')}</div>`;
+            html += `<div style="font-weight: 500; color: #059669; margin: 4px 0;">${isGeneration ? t('results.energy.renewableProduction') : t('results.energy.production')}</div>`;
             renewableItems.forEach((item: any) => {
               if (item.value > 0.1) {
                 totalRenewable += item.value;
                 html += `<div style="display: flex; justify-content: space-between; gap: 20px; margin: 2px 0; color: ${themeColors.text};">
                   <span>${item.marker} ${item.seriesName}</span>
-                  <span style="font-weight: 500;">${item.value.toFixed(1)} kWh</span>
+                  <span style="font-weight: 500;">${formatCarrierEnergy(item.value, carrier)}</span>
                 </div>`;
               }
             });
             if (totalRenewable > 0) {
               html += `<div style="display: flex; justify-content: space-between; gap: 20px; margin: 4px 0; padding-top: 4px; border-top: 1px dashed ${themeColors.border}; color: ${themeColors.text};">
-                <span style="font-weight: 500;">${t('results.energy.totalRenewable')}</span>
-                <span style="font-weight: 600; color: #059669;">${totalRenewable.toFixed(1)} kWh</span>
+                <span style="font-weight: 500;">${isGeneration ? t('results.energy.totalRenewable') : t('results.energy.production')}</span>
+                <span style="font-weight: 600; color: #059669;">${formatCarrierEnergy(totalRenewable, carrier)}</span>
               </div>`;
             }
           }
@@ -171,7 +180,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
             html += `<div style="font-weight: 500; color: ${themeColors.textMuted}; margin: 8px 0 4px;">${t('results.energy.gridImport')}</div>`;
             html += `<div style="display: flex; justify-content: space-between; gap: 20px; color: ${themeColors.text};">
               <span>${gridItem.marker} ${t('results.energy.fromGrid')}</span>
-              <span style="font-weight: 500;">${gridItem.value.toFixed(1)} kWh</span>
+              <span style="font-weight: 500;">${formatCarrierEnergy(gridItem.value, carrier)}</span>
             </div>`;
           }
 
@@ -180,25 +189,29 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
             html += `<div style="font-weight: 500; color: #dc2626; margin: 8px 0 4px;">${t('results.energy.consumption')}</div>`;
             html += `<div style="display: flex; justify-content: space-between; gap: 20px; color: ${themeColors.text};">
               <span>${conItem.marker} ${t('results.energy.totalDemand')}</span>
-              <span style="font-weight: 600; color: #dc2626;">${Math.abs(conItem.value).toFixed(1)} kWh</span>
+              <span style="font-weight: 600; color: #dc2626;">${formatCarrierEnergy(Math.abs(conItem.value), carrier)}</span>
             </div>`;
           }
 
-          const consumption = conData[dateIdx];
-          const selfSuff = consumption > 0 ? Math.min(100, (totalRenewable / consumption) * 100) : 0;
+          const consumptionValue = conData[dateIdx];
+          const selfSuff = consumptionValue > 0 ? Math.min(100, (totalRenewable / consumptionValue) * 100) : 0;
 
           const netItem = params.find((p: any) => p.seriesId === SERIES_KEYS.netBalance);
           if (netItem) {
             const isPositive = netItem.value >= 0;
-            html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${themeColors.border}; color: ${themeColors.text};">
-              <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 4px;">
+            html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${themeColors.border}; color: ${themeColors.text};">`;
+            // Self-sufficiency compares on-site generation with demand — it is
+            // only meaningful for a generating carrier, not for a heat load.
+            if (isGeneration) {
+              html += `<div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 4px;">
                 <span style="font-weight: 500;">${t('results.energy.selfSufficiency')}</span>
                 <span style="font-weight: 600; color: #059669;">${selfSuff.toFixed(1)}%</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; gap: 20px;">
+              </div>`;
+            }
+            html += `<div style="display: flex; justify-content: space-between; gap: 20px;">
                 <span style="font-weight: 500;">${t('results.energy.netBalance')}</span>
                 <span style="font-weight: 700; color: ${isPositive ? '#059669' : '#dc2626'};">
-                  ${isPositive ? '+' : ''}${netItem.value.toFixed(1)} kWh
+                  ${isPositive ? '+' : ''}${formatCarrierEnergy(netItem.value, carrier)}
                 </span>
               </div>
             </div>`;
@@ -233,7 +246,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
       yAxis: [
         {
           type: 'value',
-          name: t('results.energy.energyKwh'),
+          name: carrierEnergyAxis(t('results.energy.energy'), carrier),
           nameLocation: 'middle',
           nameGap: 50,
           nameTextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -248,7 +261,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
         },
         {
           type: 'value',
-          name: t('results.energy.netKwh'),
+          name: carrierEnergyAxis(t('results.energy.netBalance'), carrier),
           nameLocation: 'middle',
           nameGap: 45,
           nameTextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -332,7 +345,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
         },
       ],
     };
-  }, [chartData, t, themeColors, SERIES_KEYS.consumption, SERIES_KEYS.gridImport, SERIES_KEYS.netBalance]);
+  }, [chartData, t, themeColors, carrier, isGeneration, SERIES_KEYS.consumption, SERIES_KEYS.gridImport, SERIES_KEYS.netBalance]);
 
   if (chartData.dates.length === 0) {
     return (

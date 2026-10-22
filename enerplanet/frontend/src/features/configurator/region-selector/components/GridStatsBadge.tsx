@@ -1,21 +1,29 @@
 import { useState, useEffect, type FC } from "react";
 import { Building2, Zap, Cable, Activity, Euro, Loader2, Info } from "lucide-react";
-import { pylovoService, type GridStatistics } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope, type GridStatistics } from "@/features/configurator/services/pylovoService";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@spatialhub/i18n";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 
 interface GridStatsBadgeProps {
     gridResultIds: number[];
+    /** Selected buildings; the figures are scoped to them when given. */
+    buildingOsmIds?: string[];
     buildingsCount?: number;
     peakLoadKw?: number;
     className?: string;
 }
 
-export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, className }) => {
+export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildingOsmIds, className }) => {
     const { t } = useTranslation();
     const [statistics, setStatistics] = useState<GridStatistics | null>(null);
     const [loading, setLoading] = useState(false);
+    // Joined so a new array with the same ids does not refetch.
+    const selectionKey = buildingOsmIds?.join(",") ?? "";
+    const site = siteScope(useModelStore((s) => s.pylovoGridData));
+    const siteId = site?.site_id;
+    const siteRevision = site?.revision;
 
     useEffect(() => {
         if (gridResultIds.length === 0) {
@@ -26,7 +34,11 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
         const fetchStatistics = async () => {
             setLoading(true);
             try {
-                const stats = await pylovoService.getGridStatistics(gridResultIds);
+                const stats = await pylovoService.getGridStatistics(
+                    gridResultIds,
+                    selectionKey ? selectionKey.split(",") : undefined,
+                    siteId && siteRevision ? { site_id: siteId, revision: siteRevision } : undefined
+                );
                 setStatistics(stats);
             } catch (err) {
                 console.error("Failed to load grid statistics:", err);
@@ -36,7 +48,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
         };
 
         fetchStatistics();
-    }, [gridResultIds]);
+    }, [gridResultIds, selectionKey, siteId, siteRevision]);
 
     if (loading) {
         return (
@@ -55,6 +67,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
     const buildingsCountValue = statistics.buildings?.count ?? 0;
     const peakLoadKwValue = statistics.buildings?.total_peak_load_kw ?? 0;
     const simultaneousLoadKwValue = statistics.buildings?.simultaneous_load_kw ?? 0;
+    const wholeGrid = statistics.whole_grid;
 
     return (
         <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
@@ -78,7 +91,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
-                        <p className="text-xs">Total buildings detected from OpenStreetMap within the selected area. Each building's energy demand is estimated by PyLoVo using area, floors, household size, and energy label.</p>
+                        <p className="text-xs">{t("gridStats.buildingsTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -90,7 +103,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
-                        <p className="text-xs">Transformers sized by PyLoVo to handle the simultaneous load. Standard sizes (100–630 kVA) are selected from German equipment catalogs. Cost is looked up per size from installed equipment prices.</p>
+                        <p className="text-xs">{t("gridStats.trafosTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -102,7 +115,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
-                        <p className="text-xs">LV distribution cables routed by PyLoVo between buildings and transformers. Cost = length (m) × cost per meter (€/m) from the equipment catalog, varying by cable type.</p>
+                        <p className="text-xs">{t("gridStats.cablesTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -114,10 +127,21 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
-                        <p className="text-xs">Total length of all LV cables in the grid. Routing is based on shortest-path between building connection points and transformer positions.</p>
+                        <p className="text-xs">{t("gridStats.lengthTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
             </div>
+
+            {wholeGrid && (
+                <p className="px-3 pb-2 text-[10px] text-muted-foreground">
+                    {t("gridStats.selectionNote", {
+                        buildings: wholeGrid.buildings.count,
+                        cables: wholeGrid.cables.count,
+                        km: wholeGrid.cables.total_length_km.toFixed(1),
+                        utilisation: wholeGrid.transformers.utilization_percent.toFixed(1),
+                    })}
+                </p>
+            )}
 
             {/* Load & Utilization */}
             <div className="px-3 py-2 space-y-2 border-t border-border">
@@ -134,14 +158,14 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs">
-                        <p className="text-xs">Sum of all building peak electrical loads (kW). Derived from each building's estimated annual demand using standard load profiles (VDI 3807 / DIN 18599).</p>
+                        <p className="text-xs">{t("gridStats.peakLoadTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <div className="flex items-center justify-between text-xs cursor-help">
                             <span className="text-muted-foreground flex items-center gap-1">
-                                Simult. Load
+                                {t("gridStats.simultaneousLoad")}
                                 <Info className="w-3 h-3 text-muted-foreground/60" />
                             </span>
                             <span className="font-medium text-foreground">
@@ -150,7 +174,8 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs">
-                        <p className="text-xs">Realistic concurrent load using a simultaneity factor: <span className="font-mono">SF = 0.07 + 0.93 × n^(−0.75)</span> where n = number of buildings. Accounts for the fact that not all buildings draw peak load at the same time.</p>
+                        <p className="text-xs">{t("gridStats.simultaneousLoadTooltip")}</p>
+                        <p className="text-xs font-mono">SF = 0.07 + 0.93 × n^(−0.75)</p>
                     </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -166,7 +191,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                         </div>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs">
-                        <p className="text-xs">Total rated power of all transformers (kVA). Transformers are selected from standard German LV sizes to cover the simultaneous load with a safety margin.</p>
+                        <p className="text-xs">{t("gridStats.capacityTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
                 
@@ -185,7 +210,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                             </div>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
-                            <p className="text-xs">Transformer utilization = Simultaneous Load ÷ Total Capacity × 100%. Values above 80% may indicate the need for additional transformer capacity.</p>
+                            <p className="text-xs">{t("gridStats.utilizationTooltip")}</p>
                         </TooltipContent>
                     </Tooltip>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -218,7 +243,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                             </span>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-xs">Cable installation cost based on cable type and length. Prices from German LV equipment catalogs include material, trenching, and installation (€/m).</p>
+                            <p className="text-xs">{t("gridStats.cableCostTooltip")}</p>
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -229,13 +254,13 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, classNa
                             </span>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-xs">Transformer procurement and installation cost. Prices per kVA size from German distribution equipment catalogs with nearest-size matching.</p>
+                            <p className="text-xs">{t("gridStats.trafoCostTooltip")}</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>
                 <p className="text-[9px] text-muted-foreground pt-0.5 flex items-center gap-1">
                     <Info className="w-3 h-3 shrink-0" />
-                    Estimated by PyLoVo grid engine. Costs from German LV equipment catalogs. Utilization based on simultaneous load.
+                    {t("gridStats.sourceNote")}
                 </p>
             </div>
         </div>

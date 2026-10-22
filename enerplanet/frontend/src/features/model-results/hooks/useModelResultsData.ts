@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   fetchModelWithResults,
   fetchStructuredResults,
@@ -10,6 +10,7 @@ import { ModelInfo, ModelResults, StructuredModelResults } from '@/features/mode
 import technologyService from '@/features/technologies/services/technologyService';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
+import { buildModelMenu } from '@/features/model-results/utils/modelMenu';
 
 // Wind turbine data interface
 export interface WindTurbineInfo {
@@ -70,8 +71,9 @@ export const useTurbineData = () => {
  * Custom hook for loading completed models filtered by workspace
  */
 export const useCompletedModels = (currentWorkspace: Workspace | null) => {
-  const [completedModels, setCompletedModels] = useState<Model[]>([]);
+  const [workspaceModels, setWorkspaceModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const modelMenu = useMemo(() => buildModelMenu(workspaceModels), [workspaceModels]);
 
   useEffect(() => {
     const loadCompletedModels = async () => {
@@ -83,12 +85,11 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
         }
         const response = await modelService.getModels(params);
         if (response.success) {
-          const completed = response.data.filter(m => m.status === 'completed');
-          setCompletedModels(completed);
+          setWorkspaceModels(response.data);
         }
       } catch (err) {
         console.error('Failed to load models:', err);
-        setCompletedModels([]);
+        setWorkspaceModels([]);
       } finally {
         setIsLoadingModels(false);
       }
@@ -96,11 +97,15 @@ export const useCompletedModels = (currentWorkspace: Workspace | null) => {
     loadCompletedModels();
   }, [currentWorkspace]);
 
-  return { completedModels, isLoadingModels };
+  return { modelMenu, isLoadingModels };
 };
 
 /**
- * Custom hook for loading model data including results and PyPSA data
+ * Custom hook for loading model data including results and PyPSA data.
+ * Supports energy carrier switching: `carrier` filters the structured
+ * results fetch (backend defaults to power). `availableCarriers` is derived
+ * from the unfiltered response's `carrier_summaries` — the truth about what
+ * the webservice actually delivered, not a hard-coded list.
  */
 export const useModelData = (modelId: number | null) => {
   const [model, setModel] = useState<ModelInfo | null>(null);
@@ -111,6 +116,11 @@ export const useModelData = (modelId: number | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initialWorkspace, setInitialWorkspace] = useState<Workspace | null>(null);
+
+  // Active energy carrier. '' = default (backend serves "power").
+  const [carrier, setCarrier] = useState<string>('');
+  // Carriers present in the results, from the unfiltered response.
+  const [availableCarriers, setAvailableCarriers] = useState<string[]>(['power']);
 
   useEffect(() => {
     if (!modelId) {
@@ -130,7 +140,7 @@ export const useModelData = (modelId: number | null) => {
         // Run all three independent requests in parallel
         const [modelData, structuredData, pypsa] = await Promise.all([
           fetchModelWithResults(modelId, controller.signal),
-          fetchStructuredResults(modelId, controller.signal),
+          fetchStructuredResults(modelId, undefined, controller.signal),
           fetchPyPSAResults(modelId, controller.signal),
         ]);
 
@@ -147,6 +157,14 @@ export const useModelData = (modelId: number | null) => {
           setStructuredResults(structuredData);
           const legacyResults = convertStructuredToLegacy(structuredData);
           setResults(legacyResults);
+
+          // Derive available carriers from what the backend actually served.
+          const summaries = structuredData.carrier_summaries;
+          if (summaries && Object.keys(summaries).length > 0) {
+            setAvailableCarriers(Object.keys(summaries));
+          } else {
+            setAvailableCarriers(['power']);
+          }
         }
 
         if (pypsa) {
@@ -173,6 +191,22 @@ export const useModelData = (modelId: number | null) => {
     };
   }, [modelId]);
 
+  // Re-fetch structured results when the carrier toggle changes.
+  // '' (default) already fetched above; only non-default carriers need this.
+  useEffect(() => {
+    if (!modelId || carrier === '') return;
+
+    let cancelled = false;
+    fetchStructuredResults(modelId, carrier).then((data) => {
+      if (cancelled || !data) return;
+      setStructuredResults(data);
+      setResults(convertStructuredToLegacy(data));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [modelId, carrier]);
+
   return {
     model,
     results,
@@ -183,5 +217,8 @@ export const useModelData = (modelId: number | null) => {
     loading,
     error,
     initialWorkspace,
+    carrier,
+    setCarrier,
+    availableCarriers,
   };
 };

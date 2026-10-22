@@ -1,5 +1,6 @@
 import { Building, Loader2 } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
+import { isPreparing, useAreaPreparationStore, usePreparationStepText } from "@/features/configurator/building-config/useAreaPreparation";
 
 interface MapInteractionBannersProps {
   isAddTransformerMode: boolean;
@@ -27,13 +28,15 @@ export const MapInteractionBanners = ({
   onCancelAddTransformer,
 }: MapInteractionBannersProps) => {
   const { t } = useTranslation();
+  const preparation = useAreaPreparationStore((s) => s.status);
+  const preparationStep = usePreparationStepText();
 
   return (
     <>
       {/* Show hint when in add transformer mode */}
       {isAddTransformerMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
-          <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
+          <div className="flex items-center gap-3 bg-card border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
             <span className="flex items-center justify-center w-7 h-7 rounded-full bg-muted">
               <img
                 src="/images/transformer-icon-dark.svg"
@@ -61,7 +64,7 @@ export const MapInteractionBanners = ({
       {/* Show banner when in multi-building assignment mode */}
       {isBuildingAssignMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
-          <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
+          <div className="flex items-center gap-3 bg-card border border-border/50 rounded-full pl-2 pr-1.5 py-1.5 shadow-lg">
             {!isAssigning && assignStep === "select-buildings" ? (
               <>
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-muted">
@@ -132,13 +135,25 @@ export const MapInteractionBanners = ({
       {/* Power flow calculating banner */}
       {isRunningPowerFlow && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-          <div className="flex items-center gap-3 bg-card/95 backdrop-blur-md border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
+          <div className="flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
             <div className="relative w-5 h-5">
               <div className="absolute inset-0 rounded-full border-2 border-amber-500/20" />
               <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-amber-500 animate-spin" />
             </div>
             <span className="text-sm font-medium text-foreground whitespace-nowrap">
               {t("simulation.powerFlow.calculating")}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 3D data preparation banner; sits below the top slot the banners above share. */}
+      {isPreparing(preparation) && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40">
+          <div className="flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground whitespace-nowrap">
+              {preparationStep ?? t(`simulation.prepare3d.${preparation}`)}
             </span>
           </div>
         </div>

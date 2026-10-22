@@ -90,7 +90,20 @@
     "monetary_inv_cost_storage_cap": "Investeringskosten per eenheid opslagcapaciteit.",
     "monetary_purchase_cost_sum": "Totale aanschafkosten inclusief alle componenten.",
     "monetary_sale_cost_sum": "Totale opbrengsten uit verkoop van energie of diensten.",
-    "defaultDescription": "{{alias}} - Configureer deze parameter op basis van uw eisen."
+    "defaultDescription": "{{alias}} - Configureer deze parameter op basis van uw eisen.",
+    "advanced": {
+      "title": "Geavanceerde parameters",
+      "description": "Stel geavanceerde parameters in voor uw energiebeoordeling",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Minimumwaarde verlagen",
+      "increaseMinimum": "Minimumwaarde verhogen",
+      "decreaseMaximum": "Maximumwaarde verlagen",
+      "increaseMaximum": "Maximumwaarde verhogen",
+      "selectOption": "Optie selecteren",
+      "resetToDefaults": "Standaardwaarden herstellen",
+      "applyChanges": "Wijzigingen toepassen"
+    }
   },
   "common": {
     "save": "Opslaan",
@@ -175,6 +188,7 @@
     "modelActions": {
       "viewResults": "Resultaten Bekijken",
       "downloadResults": "Resultaten Downloaden",
+      "downloadFailed": "Downloaden mislukt: {{reason}}",
       "copyConfiguration": "Configuratie Kopiëren",
       "editConfiguration": "Configuratie Bewerken",
       "cannotEditCompleted": "Kan voltooid model niet bewerken",
@@ -182,9 +196,8 @@
       "shareModel": "Model Delen",
       "delete": "Verwijderen",
       "cannotDelete": "Kan niet verwijderen - alleen de eigenaar of een expert kan verwijderen",
-      "retryCalculation": "Berekening Opnieuw",
-      "startCalculation": "Berekening Starten",
-      "engineNotAvailable": "Simulatiemotor is niet beschikbaar"
+      "runWithMeme": "Uitvoeren met Calliope",
+      "runPypsaOnMeme": "Vermogensstroom uitvoeren (PyPSA)"
     },
     "pagination": {
       "showing": "Weergave",
@@ -259,15 +272,33 @@
     "published": "Gepubliceerd",
     "failed": "Mislukt",
     "cancelled": "Geannuleerd",
-    "modified": "Gewijzigd"
+    "modified": "Gewijzigd",
+    "failedAt": {
+      "queue": "Voorbereiding mislukt",
+      "running": "Simulatie mislukt",
+      "processing": "Verwerking mislukt"
+    }
   },
   "results": {
     "title": "Simulatieresultaten",
     "unableToLoad": "Kan resultaten niet laden",
     "modelNotFound": "Model niet gevonden",
     "backToDashboard": "Terug naar Dashboard",
+    "carrier": {
+      "toggleLabel": "Energiedrager",
+      "electricity": "Elektriciteit",
+      "heat": "Warmte",
+      "gas": "Gas",
+      "oil": "Olie",
+      "toggleItemHint": "Resultaten voor deze energiedrager tonen"
+    },
     "selectModel": "Selecteer Model",
     "completedSimulations": "Voltooide Simulaties",
+    "copies_one": "{{count}} kopie",
+    "copies_other": "{{count}} kopieën",
+    "notRun": "niet uitgevoerd",
+    "inModels_one": "in {{count}} model",
+    "inModels_other": "in {{count}} modellen",
     "loadingModels": "Modellen laden...",
     "noCompletedSimulations": "Geen voltooide simulaties in deze werkruimte",
     "noCompletedModels": "Geen voltooide modellen",
@@ -339,6 +370,9 @@
       "industryG2": "Industrie G2",
       "g3Demand": "G3 Vraag",
       "gridConnection": "Netaansluiting",
+      "gridElectricity": "Inkoop van netstroom",
+      "householdSupply": "Levering aan huishoudens",
+      "nonHouseholdSupply": "Levering aan niet-huishoudens",
       "windTurbine": "Windturbine",
       "powerLines": "Elektriciteitsleidingen",
       "sfhDemand": "Vraag vrijstaand huis",
@@ -388,6 +422,7 @@
       "noData": "Geen energiegegevens beschikbaar",
       "dailyEnergyBalance": "Dagelijkse Energiebalans",
       "dailyEnergyBalanceDesc": "Toont de dagelijkse balans tussen energieproductie en -verbruik voor alle technologieën in het systeem.",
+      "dailyEnergyBalanceDescHeat": "Toont de dagelijkse balans tussen geleverde warmte (bijv. door warmtepompen) en warmtevraag over alle technologieën in het systeem.",
       "production": "Productie",
       "productionDesc": "Energie opgewekt door zon, wind en andere bronnen",
       "consumption": "Verbruik",
@@ -400,10 +435,12 @@
       "selfSufficiency": "Zelfvoorziening",
       "netBalance": "Nettobalans",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Geen energiebalansgegevens beschikbaar",
       "dailyLoadProfile": "Dagelijks Belastingprofiel",
       "dailyLoadProfileDesc": "Toont elektriciteitsverbruikspatronen over een periode van 24 uur met automatische detectie van piekperiodes.",
+      "dailyLoadProfileDescHeat": "Toont warmtevraagpatronen over 24 uur met automatische detectie van piekperiodes.",
       "peakPeriods": "Piekperiodes",
       "peakPeriodsDesc": "Ochtend (07:00-10:00) en avond (17:00-21:00) periodes van hoge vraag",
       "offPeak": "Daluren",
@@ -433,6 +470,10 @@
       "eveningPeak": "Avondpiek",
       "peakPeriod": "Piekperiode",
       "noDataLoadProfile": "Geen gegevens beschikbaar voor dagelijks belastingprofiel",
+      "generationDurationCurve": "Productieduurcurve",
+      "generationDurationCurveDesc": "Sorteert de hernieuwbare productie per uur van hoog naar laag, zodat de piekproductie en het verloop over het jaar zichtbaar worden.",
+      "demandDurationCurve": "Vraagduurcurve",
+      "demandDurationCurveDesc": "Sorteert de warmtevraag per uur van hoog naar laag, zodat de piekvraag en het verloop over het jaar zichtbaar worden.",
       "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve"
     },
     "grid": {
@@ -489,7 +530,11 @@
       "max": "Max",
       "avg": "Gem",
       "loading": "Belasting",
-      "noLoadingData": "Geen belastingsgegevens beschikbaar"
+      "noLoadingData": "Geen belastingsgegevens beschikbaar",
+      "notInResult": "Niet in dit resultaat",
+      "transmissionUtilization": "Transmissiebenutting",
+      "overloadedConnection": "Overbelaste leiding",
+      "loadingPreliminary": "Voorlopig: elke leiding wordt beoordeeld tegen de zwakste kabel in het net, dus een hoge benutting overschat de werkelijke kabel."
     },
     "system": {
       "noData": "Geen systeemgegevens beschikbaar",
@@ -509,6 +554,8 @@
       "unmetDemandDesc": "Energievraag die niet kon worden vervuld door het beschikbare aanbod. Lagere waarden duiden op betere betrouwbaarheid.",
       "unmetEnergy": "Onvervulde Energie",
       "unmetEnergyDesc": "Vraag die beschikbaar aanbod overschrijdt",
+      "energy": "Energie",
+      "unmet": "Onvervuld",
       "unmetKwh": "Onvervuld (kWh)",
       "powerFlowAnalysis": "Vermogenstroomanalyse",
       "powerFlow": "Vermogensstroom",
@@ -562,12 +609,44 @@
       "transmission": "Transmissie",
       "investmentCost": "Investering (CAPEX)",
       "operatingCost": "Exploitatie (OPEX)",
-      "systemLCOE": "Systeem LCOE"
+      "systemLCOE": "Systeem LCOE",
+      "simulationPeriod": "Simulatieperiode",
+      "simulationPeriodCost": "Kosten voor de simulatieperiode",
+      "annualizedCost": "Jaarlijkse kosten (geprojecteerd)",
+      "perLocation": "per locatie",
+      "locations": "Locaties",
+      "capex": "Apparatuur en installatie",
+      "opex": "Gebruikskosten",
+      "costPerKw": "Kosten per kW/jaar",
+      "costPerKwh": "Kosten per kWh",
+      "costSplit": "Apparatuur / gebruik",
+      "energyProduced": "Geproduceerde energie",
+      "cheaperThanAvg": "goedkoper dan het systeemgemiddelde",
+      "moreExpensiveThanAvg": "duurder dan gemiddeld",
+      "days": "dagen",
+      "hours": "uur"
+    },
+    "costInfo": {
+      "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
+      "simulationPeriodShort": "Simulatieperiode van {{days}} dagen",
+      "costBreakdownTooltip": "De getoonde kosten gelden alleen voor de gesimuleerde periode, niet voor een heel jaar. Apparatuurkosten worden over de levensduur verdeeld, terwijl gebruikskosten (bijv. stroom uit het net) het werkelijke gebruik in de periode weergeven. In korte simulaties lijken technologieën met hoge gebruikskosten daardoor naar verhouding groter.",
+      "annualProjection": "Geschat per jaar: {{value}}",
+      "equipmentCostNote": "Apparatuurkosten worden over de levensduur verdeeld; alleen het deel voor deze simulatieperiode wordt getoond.",
+      "equipmentCostDesc": "Zonnepanelen, batterijen en andere apparatuur. De aanschafprijs wordt over de levensduur verdeeld (bijv. 25 jaar voor zonne-energie).",
+      "runningCostDesc": "Stroom uit het net, onderhoud en andere doorlopende uitgaven die van het gebruik afhangen.",
+      "systemCostSummaryDesc": "Toont de gemiddelde energiekosten (ct/kWh) en hoe de totale kosten verdeeld zijn over apparatuur en gebruik. Minder ct/kWh betekent goedkopere energie in het geheel.",
+      "lcoeComparisonDesc": "Vergelijkt de energiekosten per bron in ct/kWh. Zon en wind zijn goedkoop omdat zonlicht en wind gratis zijn; alleen de apparatuur kost geld. De stippellijn toont het systeemgemiddelde.",
+      "investmentBreakdownDesc": "Toont de kosten per technologie, verdeeld in apparatuur (eenmalige aankoop, verdeeld over de levensduur) en gebruik (netstroom, onderhoud). Hernieuwbare bronnen hebben meestal alleen apparatuurkosten."
     },
     "buildingDetail": {
       "building": "Gebouw",
       "production": "Productie",
       "demand": "Vraag",
+      "electricityDemand": "Elektriciteit",
+      "heatDemand": "Warmte",
+      "yearlyElectricityDemand": "Jaarlijkse elektriciteitsvraag",
+      "yearlyHeatDemand": "Jaarlijkse warmtevraag",
+      "estimated": "geschat",
       "balance": "Balans",
       "energyProfile": "Energieprofiel",
       "costs": "Kosten",
@@ -774,6 +853,8 @@
     "parent": "Bovenliggend",
     "anotherModel": "een ander model",
     "failedDefaultMessage": "Berekening mislukt - webservice niet beschikbaar of time-out",
+    "demandFallbackTitle": "Sommige gebouwen gebruiken een constante vraag",
+    "demandFallbackWarning": "{{fallback}} van {{total}} gebouwen hadden geen uurlijks vraagprofiel (geen 3D-gegevens) en gebruiken hun jaarvraag gelijk verdeeld over het jaar.",
     "waiting": "Wachtend",
     "queuedTooltip": "Uw model staat in de wachtrij - de simulatie-engine verwerkt andere berekeningen",
     "compareRequires2Completed": "Selecteer precies 2 voltooide modellen om te vergelijken",
@@ -781,9 +862,7 @@
     "bulkCopyDescription": "Kopieën maken van {{count}} geselecteerd(e) model(len)",
     "bulkCopyFailed": "Sommige modellen konden niet worden gekopieerd. Probeer het opnieuw.",
     "bulkCopySubmit": "Kopieën maken",
-    "calculate": "Berekenen",
     "cannotCalculate": "Kan niet berekenen – geen geschikte modellen geselecteerd",
-    "noWebserviceAvailable": "Geen simulatie-engine beschikbaar",
     "cancelled": "Geannuleerd",
     "modified": "Gewijzigd"
   },
@@ -800,15 +879,32 @@
     "escToCancel": "om tekenen te annuleren",
     "pointsAdded": "{{count}} toegevoegd",
     "editPolygon": "Polygoon bewerken",
-    "moveVertex": "Hoeken verplaatsen",
+    "moveVertex": "Sleep een hoek om deze te verplaatsen",
     "moveVertexHint": "Sleep een hoekpunt om aan te passen",
-    "addVertex": "Punt toevoegen",
+    "addVertex": "Sleep een rand om een hoek toe te voegen",
     "addVertexHint": "Klik op een rand",
     "removeVertex": "Punt verwijderen",
-    "removeVertexHint": "klik op een hoekpunt",
-    "escToClear": "om polygoon te wissen"
+    "removeVertexHint": "klik op een hoek om deze te verwijderen",
+    "removePolygonHint": "klik op een polygoon om deze te verwijderen",
+    "shortcuts": "Sneltoetsen",
+    "groupDrawing": "Tekenen",
+    "groupDeleting": "Verwijderen",
+    "groupNavigating": "Navigeren",
+    "rotate3dDrag": "slepen om de 3D-weergave te draaien",
+    "spacePanHint": "slepen om de kaart te verschuiven",
+    "rightClickCloseHint": "om de polygoon te sluiten",
+    "keyRightClick": "Rechtermuisklik",
+    "keySpace": "Spatie",
+    "dismissGuide": "Handleiding sluiten",
+    "groupBuildings": "Gebouwen",
+    "disableBuildingHint": "klik op een gebouw om het uit of in te schakelen",
+    "selectBuildingHint": "klik op gebouwen om ze te selecteren",
+    "disableSelectedHint": "schakelt de geselecteerde gebouwen uit",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "workflow": {
+    "optional": "optioneel",
     "title": "Werkstroom",
     "gridGeneration": "Netwerk genereren",
     "gridGenerationHint": "Gebouwen analyseren & netwerk aanmaken",
@@ -828,7 +924,12 @@
     "addTransformerAction": "Trafo toevoegen",
     "assignBuildingsAction": "Gebouwen toewijzen",
     "runPowerFlowAction": "Vermogensanalyse",
-    "rerunPowerFlowAction": "Opnieuw berekenen"
+    "rerunPowerFlowAction": "Opnieuw berekenen",
+    "resolveHeatAction": "Warmte toewijzen",
+    "auto": "automatisch",
+    "clickAddTransformer": "Klik op de knop in de onderste balk",
+    "clickOnMapInPolygon": "Klik op de kaart binnen de polygoon",
+    "clickToSelectBuilding": "Klik om een gebouw te selecteren"
   },
   "time": {
     "justNow": "Zojuist",
@@ -1305,17 +1406,15 @@
     "technologies": "Technologieën",
     "parameters": "Parameters",
     "pypsaSimulation": "PyPSA-simulatie",
-    "summary": {
-      "title": "Simulatieoverzicht",
-      "region": "Regio",
-      "areaDefined": "Gebied gedefinieerd",
-      "drawn": "Getekend",
-      "notDrawn": "Niet getekend",
-      "customLocations": "Aangepaste locaties",
-      "found": "gevonden",
-      "from": "Van",
-      "to": "Tot",
-      "resolution": "Resolutie"
+    "prepare3d": {
+      "pending": "Wachten op het voorbereiden van 3D-gebouwgegevens voor dit gebied...",
+      "running": "3D-gebouwgegevens voor dit gebied worden voorbereid...",
+      "step": "Stap {{index}} van {{count}}: {{label}}",
+      "stages": {
+        "import": "3D-gebouwgegevens laden",
+        "extract_features": "Daken, muren en vloeren opmeten",
+        "link_buildings": "3D-gebouwen aan de kaart koppelen"
+      }
     },
     "actions": {
       "saveAndExit": "Opslaan & Afsluiten",
@@ -1323,17 +1422,27 @@
       "update": "Energiesimulatie bijwerken",
       "creating": "Simulatie wordt gemaakt...",
       "updating": "Simulatie wordt bijgewerkt...",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "regenerateFirst": "Genereer het net opnieuw voordat u opslaat."
     },
-    "tip": "Tip: Klik op de kaart om uw interessegebied te tekenen. Het systeem voert de energiesimulatie uit voor de geselecteerde regio gedurende de opgegeven periode.",
     "mapHeader": {
-      "public": "Openbaar",
       "myBuildings": "Mijn gebouwen",
-      "multiplePolygons": "Meerdere polygonen",
-      "clearAll": "Alles wissen",
-      "togglePublicBuildings": "Openbare gebouwen aan/uit",
+      "clearAll": "Alle polygonen verwijderen",
       "toggleMyBuildings": "Mijn gebouwen aan/uit",
-      "toggleMultiplePolygons": "Meerdere polygonen aan/uit"
+      "disableSelected": "Geselecteerde gebouwen uitschakelen",
+      "importArea": "Gebied importeren",
+      "exportArea": "Gebied exporteren",
+      "regenerateGrid": "Net opnieuw genereren",
+      "regenerateGridHint": "Het gebied of de transformatoren zijn gewijzigd. Genereer opnieuw om de gebouwen eromheen te clusteren en het net bij te werken.",
+      "importAreaError": {
+        "invalid": "Het bestand is geen geldige GeoJSON.",
+        "noPolygon": "Het bestand bevat geen polygoon.",
+        "unknownCrs": "Het coördinatenstelsel {{detail}} wordt niet ondersteund; exporteer het gebied in EPSG:4326.",
+        "notGeoJSON": "Alleen GeoJSON-bestanden kunnen worden geïmporteerd: een .geojson- of .json-bestand.",
+        "tooLarge": "Het bestand is te groot ({{detail}}); bestanden tot 5 MB kunnen worden geïmporteerd.",
+        "tooComplex": "Het gebied is te gedetailleerd ({{detail}} polygonen / punten); tot 100 polygonen en 10.000 punten kunnen worden geïmporteerd.",
+        "outOfRange": "Een coördinaat ({{detail}}) valt buiten het bereik van lengte- en breedtegraad. Gebruikt het bestand meters, dan moet het zijn coördinatenstelsel (crs) noemen."
+      }
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",
@@ -1359,7 +1468,20 @@
       "clickToCancel": "Klik om toevoegen transformator te annuleren",
       "clickToMove": "Klik om te verplaatsen",
       "movingSuccess": "Transformator succesvol verplaatst",
-      "movingFailed": "Verplaatsen transformator mislukt"
+      "movingFailed": "Verplaatsen transformator mislukt",
+      "userPlaced": "Door gebruiker geplaatst",
+      "dialogDescription": "Transformatorinstellingen bekijken en wijzigen. Wijzigingen hebben invloed op aangesloten gebouwen.",
+      "gridId": "Net-ID",
+      "voltageTransformation": "Spanningstransformatie",
+      "mediumVoltage": "Middenspanning",
+      "lowVoltage": "Laagspanning",
+      "mvShort": "MS",
+      "lvShort": "LS",
+      "mvDescription": "Middenspanning vanuit het onderstation van de netbeheerder, driefasige wisselstroom verdeeld via ondergrondse kabels of bovengrondse lijnen",
+      "lvDescription": "Laagspanningsuitgang: 400 V tussen fasen (driefasig) of 230 V tussen fase en nul (enkelfasig) voor woon- en bedrijfsgebouwen",
+      "stepDownNote": "Deze transformator verlaagt de spanning voor veilige verdeling naar gebouwen met behoud van vermogen.",
+      "ratedPower": "Nominaal vermogen",
+      "selectKva": "kVA selecteren"
     },
     "building": {
       "assignSuccess": "Gebouw toegewezen aan transformator",
@@ -1374,7 +1496,102 @@
       "assignPartialSuccess": "{{success}} van {{total}} gebouwen toegewezen",
       "cancelAssign": "Annuleren",
       "nextStep": "Volgende",
-      "finish": "Voltooien"
+      "finish": "Voltooien",
+      "back": "Terug"
+    },
+    "mapOverlay": {
+      "analyzingArea": "Gebied wordt geanalyseerd",
+      "canHostChargers": "Mogelijke laadpunten: {{count}}",
+      "limitedChargers": "Beperkt, laadpunten: {{count}}",
+      "connectedBuildings": "Aangesloten gebouwen",
+      "types": "Typen",
+      "moreCount": "+{{count}} meer",
+      "clickForDetails": "Klik voor meer details",
+      "class": "Klasse",
+      "estimatedShort": "geschat",
+      "buemTotal": "Totaal: {{value}}",
+      "kitchenGas": "Kookgas: {{value}}",
+      "geometry3d": "3D-geometrie: City2TABULA",
+      "asModelled": "Gebouw, zoals gemodelleerd",
+      "storeys": "Bouwlagen (3D-geometrie)",
+      "floorArea": "Vloeroppervlak",
+      "roomHeight": "Verdiepingshoogte",
+      "envelope": "Referentie-schil (TABULA)",
+      "useType": {
+        "SFH": "Vrijstaande woning",
+        "TH": "Rijwoning",
+        "MFH": "Meergezinswoning",
+        "AB": "Appartementencomplex",
+        "bakery": "Bakkerij",
+        "clinic": "Kliniek",
+        "hotel": "Hotel",
+        "office": "Kantoor",
+        "restaurant": "Restaurant",
+        "school": "School",
+        "supermarket": "Supermarkt",
+        "warehouse": "Magazijn"
+      },
+      "buemFailed": "BuEM mislukt: {{reason}}",
+      "buemShared": "Meegeteld bij een ander gebouw: {{detail}}",
+      "buemPending": "BuEM-resultaat in behandeling",
+      "floors": "Verdiepingen",
+      "height": "Hoogte",
+      "heightMedian": "Hoogte (mediaan)",
+      "built": "Bouwjaar",
+      "label": "Label",
+      "energyIndex": "Energie-index",
+      "labelDate": "Labeldatum",
+      "population": "Inwoners",
+      "households": "Huishoudens",
+      "avgHouseholdSize": "Gem. huishoudgrootte",
+      "cbsNote": "CBS-waarden zijn statistieken per postcodegebied (bij voorkeur PC6, anders PC4), geen waarden van één gebouw.",
+      "sourcesNl": "Bronnen: {{epOnline}} (voorwaarden van toepassing) en {{cbs}}.",
+      "technologiesCount": "Technologieën ({{count}})",
+      "dropToAddTech": "Loslaten om technologie toe te voegen",
+      "clickToEdit": "Klik om details te bewerken",
+      "mvLine": "MS-lijn",
+      "normallyOpen": "Normaal open",
+      "length": "Lengte",
+      "type": "Type",
+      "bus": "Knooppunt",
+      "disabled": "Uitgeschakeld"
+    },
+    "unsavedChanges": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "description": "U hebt niet-opgeslagen wijzigingen in dit model. Sla ze handmatig op voordat u vertrekt of verwerp uw wijzigingen.",
+      "continueEditing": "Doorgaan met bewerken",
+      "discard": "Wijzigingen verwerpen"
+    },
+    "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
+    "cooking": {
+      "label": "Koken",
+      "electric": "Elektrisch",
+      "gas": "Gas",
+      "hint": "Bij gas wordt het koken in de gebouwen een gasvraag uit een gaslevering"
+    },
+    "runMode": {
+      "label": "Rekenmodus",
+      "plan": "Plannen",
+      "operate": "Bedrijven",
+      "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
+      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren",
+      "unsized": "Gebouwen die een grootte nodig hebben voor de bedrijfsmodus: {{count}}. Klik op een regel om die in te stellen.",
+      "unsizedEntry": "Gebouw {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximale grootte",
+        "cont_storage_cap_max": "opslaggrootte"
+      },
+      "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
+      "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
+    },
+    "siteMode": {
+      "label": "Eigen net",
+      "hint": "Plaats eigen transformatoren en bouw het net voor dit gebied daaruit op, in plaats van het vooraf gegenereerde net. Alleen gebouwen met 3D-gegevens, maximaal 150.",
+      "locked": "Wis het getekende gebied om de modus te wijzigen."
+    },
+    "largeModel": {
+      "title": "Dit model heeft {{count}} gebouwen",
+      "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
     }
   },
   "mapLayers": {
@@ -1387,7 +1604,11 @@
       "osmHumanitarian": "Humanitaire stijl OpenStreetMap",
       "cartoPositron": "Lichte thema basiskaart van CartoDB",
       "cartoVoyager": "Gedetailleerde basiskaart van CartoDB",
-      "openTopoMap": "Topografische stijlkaart"
+      "openTopoMap": "Topografische stijlkaart",
+      "maplibreDark": "Donkere vectorondergrond",
+      "maplibreVoyager": "Gedetailleerde vectorondergrond (Voyager)",
+      "cartoDark": "Donkere rasterondergrond van CartoDB",
+      "maplibre3d": "3D-gebouwen op satellietbeelden"
     },
     "dataLayers": {
       "title": "Datalagen",
@@ -1566,6 +1787,26 @@
     }
   },
   "technologies": {
+    "types": {
+      "pv_supply": "Zonnepanelen",
+      "battery_storage": "Batterijopslag",
+      "air_source_heat_pump": "Luchtwarmtepomp",
+      "ground_source_heat_pump": "Bodemwarmtepomp",
+      "electric_boilers": "Elektrische ketel",
+      "gas_boiler": "Gasketel",
+      "air_conditioner": "Airconditioner",
+      "gas_supply": "Gaslevering"
+    },
+    "products": {
+      "title": "Kies een product: {{type}}",
+      "applyToBuilding": "Kies een product voor dit gebouw. De parameters komen mee; met \"Zelf definiëren\" wijzigt u ze.",
+      "applyToAll": "Kies een product voor alle gebouwen. De parameters komen mee; met \"Zelf definiëren\" wijzigt u ze.",
+      "efficiency": "Rendement {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} jaar",
+      "defineOwn": "Zelf definiëren",
+      "count": "Producten: {{count}}"
+    },
     "title": "Technologieën",
     "subtitle": "Energietechnologieën voor uw simulaties",
     "loading": "Technologieën laden...",
@@ -1722,10 +1963,66 @@
     },
     "dragInstruction": "Sleep technologieën hierheen om ze aan uw model toe te voegen",
     "noTechnologies": "Geen technologieën toegevoegd",
+    "carrierToggleLabel": "Energiedrager van de technologie",
+    "carriers": {
+      "electricity": "Elektriciteit",
+      "heat": "Warmte"
+    },
+    "heatSourceHint": "Warmtetechnologieën komen uit OpenTech-DB en worden door Calliope geoptimaliseerd.",
+    "noHeatTechnologies": "Geen warmtetechnologieën beschikbaar",
+    "searchPlaceholder": "Technologieën zoeken…",
+    "noSearchResults": "Geen technologieën gevonden voor deze zoekopdracht",
+    "otdbElectricityHint": "Toevoegingen uit OpenTech-DB: Calliope optimaliseert hun capaciteit.",
     "categories": {
       "supply": "Productie",
       "storage": "Opslag",
-      "other": "Overig"
+      "other": "Overig",
+      "conversion": "Conversie",
+      "networks": "Netwerken",
+      "otdbAdditions": "Toevoegingen uit OpenTech-DB"
+    },
+    "heatBootstrap": {
+      "title": "Warmtetechnologieën",
+      "description": "Kies hoe u warmtetechnologieën aan de gebouwen toevoegt.",
+      "prompt": "De warmtevraag is aan de gebouwen toegewezen. Hoe wilt u verwarmingstechnologieën toevoegen?",
+      "autoAssign": "Automatisch toewijzen",
+      "autoAssignDescription": "Geeft elk gebouw de verwarmingstechnologie die bij zijn type past (bijv. warmtepomp voor woningen, gasketel voor appartementen, WKK voor industrie). U kunt elke toewijzing achteraf wijzigen.",
+      "manual": "Handmatig",
+      "manualDescription": "Technologieën leeg laten. Kies daarna zelf de verwarmingstechnologie voor elk gebouw."
+    },
+    "addToAllBuildings": "Aan alle gebouwen toevoegen",
+    "removeFromAllBuildings": "Van alle gebouwen verwijderen",
+    "removeAll": "Alle technologieën verwijderen",
+    "removeAllConfirmTitle": "Alle technologieën verwijderen?",
+    "removeAllConfirmDescription": "Verwijdert elke technologie en warmteverbinding van {{count}} gebouwen in dit model, ook automatisch toegewezen. Sla het model op om de wijziging te behouden.",
+    "paramCount": "Parameters: {{count}}",
+    "paramDialog": {
+      "description": "Stel de technologieparameters voor dit gebouw in",
+      "turbineSummary": "{{power}} kW · rotor {{diameter}} m",
+      "selectPlaceholder": "Selecteren...",
+      "searchTurbines": "Windturbines zoeken...",
+      "noTurbinesMatch": "Geen turbines gevonden voor deze zoekopdracht",
+      "noTurbinesAvailable": "Geen turbines beschikbaar",
+      "turbinesShown": "Getoonde turbines: {{shown}} van {{total}}",
+      "selectHeight": "Hoogte selecteren",
+      "required": "Verplicht",
+      "minValue": "Min: {{value}}",
+      "maxValue": "Max: {{value}}",
+      "infinity": "Onbeperkt",
+      "applyingTo": "Wordt toegepast op:",
+      "allBuildings": "Alle gebouwen",
+      "osmId": "(OSM: {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (standaardprijs externe brandstof)",
+      "totalCount": "Totaal: {{count}}",
+      "constraints": "Beperkingen",
+      "applyToAllBuildings": "Op alle gebouwen toepassen",
+      "applyTechnology": "Technologie toepassen"
+    },
+    "heatScope": {
+      "title": "{{tech}} aan alle gebouwen toevoegen?",
+      "description": "Een gebouw heeft één warmtevoorziening. {{withHeat}} gebouwen hebben er al een, {{without}} hebben er geen.",
+      "missing": "Alleen gebouwen zonder warmtevoorziening ({{count}})",
+      "replace": "Op alle gebouwen vervangen ({{count}})"
     }
   },
   "locations": {
@@ -1735,55 +2032,15 @@
     "newLocation": "Nieuwe Locatie",
     "newLocationTooltip": "Maak een nieuwe aangepaste locatie",
     "searchPlaceholder": "Zoek locaties...",
-    "tabs": {
-      "my": "Mijn Locaties",
-      "public": "Openbaar"
-    },
     "stats": {
       "total": "Totaal",
       "totalArea": "Totale Oppervlakte",
       "totalDemand": "Totale Vraag",
-      "public": "Openbaar",
       "private": "Privé"
     },
     "empty": {
       "title": "Geen locaties gevonden",
-      "description": "Maak uw eerste aangepaste locatie om te beginnen",
-      "publicTitle": "Geen openbare locaties",
-      "publicDescription": "Openbare locaties gedeeld door andere gebruikers verschijnen hier. Zet een locatie op openbaar om te delen."
-    },
-    "toggle": {
-      "makePublic": "Privé - Klik om openbaar te maken",
-      "makePrivate": "Openbaar - Klik om privé te maken",
-      "nowPublic": "Locatie is nu openbaar",
-      "nowPrivate": "Locatie is nu privé"
-    },
-    "share": {
-      "title": "Locatie delen",
-      "description": "\"{{name}}\" delen met gebruikers, werkruimtes of groepen",
-      "tabs": {
-        "users": "Gebruikers",
-        "workspaces": "Werkruimtes",
-        "groups": "Groepen"
-      },
-      "userEmail": "E-mail gebruiker",
-      "selectWorkspace": "Werkruimte selecteren",
-      "selectGroup": "Groep selecteren",
-      "addUser": "Delen met gebruiker",
-      "addWorkspace": "Delen met werkruimte",
-      "addGroup": "Delen met groep",
-      "sharedWithUsers": "Gedeeld met gebruikers",
-      "sharedWithWorkspaces": "Gedeeld met werkruimtes",
-      "sharedWithGroups": "Gedeeld met groepen",
-      "noUsersYet": "Nog niet gedeeld met gebruikers",
-      "noWorkspacesYet": "Nog niet gedeeld met werkruimtes",
-      "noGroupsYet": "Nog niet gedeeld met groepen",
-      "removeAccess": "Toegang verwijderen",
-      "totalShares": "{{count}} deling(en) in totaal",
-      "alreadySharedWithUser": "Deze locatie is al gedeeld met deze gebruiker",
-      "alreadySharedWithWorkspace": "Deze locatie is al gedeeld met deze werkruimte",
-      "alreadySharedWithGroup": "Deze locatie is al gedeeld met deze groep",
-      "failedToShare": "Delen mislukt. Probeer het opnieuw."
+      "description": "Maak uw eerste aangepaste locatie om te beginnen"
     }
   },
   "weather": {
@@ -2053,19 +2310,24 @@
     "deny": "Weigeren",
     "accept": "Accepteren"
   },
-  "areaStats": {
-    "title": "Gebiedsoverzicht",
-    "area": "Oppervlakte",
-    "perimeter": "Omtrek",
-    "solarPotential": "Zonnepotentieel",
-    "estGeneration": "Geschatte Opwekking",
-    "co2Offset": "CO₂ Compensatie",
-    "regions": "Regio's"
-  },
   "drawing": {
     "clickToDraw": "Klik om te tekenen",
+    "buildingNotStart": "Klik opent dit gebouw. Begin het gebied ernaast.",
+    "secondCorner": "Klik om de tweede hoek te plaatsen",
+    "thirdCorner": "Klik om de derde hoek te plaatsen",
+    "rightClickToFinish": "Klik met de rechtermuisknop om het gebied af te ronden",
+    "needThreeCorners": "Een gebied heeft minstens drie hoeken nodig.",
+    "cornersInLine": "Deze hoeken liggen op één rechte lijn. Plaats een hoek buiten de lijn om een gebied te maken.",
+    "clickToDelete": "Klik om deze polygoon te verwijderen",
+    "clickToDeleteCorner": "Klik om deze hoek te verwijderen",
+    "clickToDeleteTriangle": "Klik om deze polygoon te verwijderen (minimaal drie hoeken)",
+    "polygonNoArea": "De hoeken van dit gebied lagen op één rechte lijn, daarom is het niet bewaard.",
     "clickToClose": "Klik om te sluiten",
-    "start": "Start"
+    "start": "Start",
+    "clickToDisableBuilding": "Klik om dit gebouw uit te schakelen",
+    "clickToEnableBuilding": "Klik om dit gebouw weer in te schakelen",
+    "clickToSelectBuilding": "Klik om dit gebouw te selecteren",
+    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen"
   },
   "forms": {
     "user": {
@@ -2275,9 +2537,16 @@
     "techAddedToAll": "{{tech}} toegevoegd aan {{count}} gebouwen",
     "techAddedToBuilding": "{{tech}} toegevoegd aan gebouw",
     "techRemovedFromAll": "{{tech}} verwijderd van {{count}} gebouwen",
+    "allTechsRemoved": "Technologieën verwijderd van {{count}} gebouwen",
     "techRemovedFromBuilding": "{{tech}} verwijderd van gebouw",
     "techNotFound": "Technologie {{tech}} niet gevonden",
-    "techLoadFailed": "Technologie laden voor bewerking mislukt"
+    "techLoadFailed": "Technologie laden voor bewerking mislukt",
+    "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
+    "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
+    "areaOverLimit": {
+      "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
+      "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
+    }
   },
   "gridStats": {
     "title": "Netwerkanalyse",
@@ -2293,19 +2562,22 @@
     "estCost": "Geschatte Kosten",
     "cablesLabel": "Kabels",
     "trafosLabel": "Transformatoren",
-    "costDescription": "Infrastructuurkosten incl. kabels & transformatoren"
+    "costDescription": "Infrastructuurkosten incl. kabels & transformatoren",
+    "buildingsTooltip": "Alle gebouwen uit OpenStreetMap in het geselecteerde gebied. PyLoVo schat de energievraag van elk gebouw op basis van oppervlakte, verdiepingen, huishoudgrootte en energielabel.",
+    "trafosTooltip": "Transformatoren die PyLoVo dimensioneert op de gelijktijdige belasting. Standaardmaten (100 tot 630 kVA) komen uit Duitse apparatuurcatalogi. De kosten per maat komen uit prijzen van geïnstalleerde apparatuur.",
+    "cablesTooltip": "LS-distributiekabels die PyLoVo tussen gebouwen en transformatoren legt. De kosten zijn lengte (m) maal prijs per meter (€/m) uit de catalogus, afhankelijk van het kabeltype.",
+    "lengthTooltip": "Totale lengte van alle LS-kabels in het net. De route volgt het kortste pad tussen de aansluitpunten van gebouwen en de transformatoren.",
+    "selectionNote": "Geselecteerde gebouwen en de kabels naar hun transformatoren. Hele net: {{buildings}} gebouwen, {{cables}} kabels, {{km}} km, {{utilisation}}% benutting.",
+    "simultaneousLoad": "Gelijktijdige last",
+    "peakLoadTooltip": "Som van de elektrische piekbelastingen van alle gebouwen (kW), afgeleid uit de geschatte jaarvraag van elk gebouw met standaardlastprofielen (VDI 3807 / DIN 18599).",
+    "simultaneousLoadTooltip": "Realistische gelijktijdige belasting met een gelijktijdigheidsfactor, waarbij n het aantal gebouwen is. Niet alle gebouwen bereiken tegelijk hun piekbelasting.",
+    "capacityTooltip": "Totaal nominaal vermogen van alle transformatoren (kVA). Transformatoren worden gekozen uit Duitse LS-standaardmaten om de gelijktijdige last met een veiligheidsmarge te dekken.",
+    "utilizationTooltip": "Benutting van transformatoren = gelijktijdige last ÷ totale capaciteit × 100%. Waarden boven 80% kunnen betekenen dat extra capaciteit nodig is.",
+    "cableCostTooltip": "Kabelkosten op basis van kabeltype en lengte. Prijzen uit Duitse LS-catalogi omvatten materiaal, graafwerk en aanleg (€/m).",
+    "trafoCostTooltip": "Kosten voor aanschaf en installatie van transformatoren. Prijzen per kVA-maat komen uit Duitse catalogi voor distributieapparatuur, gekoppeld aan de dichtstbijzijnde maat.",
+    "sourceNote": "Geschat door de PyLoVo-netberekening. Kosten uit Duitse LS-catalogi. Benutting op basis van gelijktijdige last."
   },
   "tooltips": {
-    "multiplePolygons": {
-      "title": "Meerdere Polygonen",
-      "description": "Schakel deze optie in om meerdere aparte gebieden op de kaart te tekenen voor uw energiebeoordeling. Indien uitgeschakeld, zal het tekenen van een nieuwe polygoon de vorige vervangen. Indien ingeschakeld, kunt u meerdere afzonderlijke gebieden definiëren die allemaal in de analyse worden opgenomen.",
-      "example": "Gebruik dit om energiesimulaties over meerdere niet-aaneengesloten gebieden tegelijkertijd te analyseren."
-    },
-    "publicBuildings": {
-      "title": "Openbare Aangepaste Gebouwen",
-      "description": "Neem gebouwen op die door andere gebruikers zijn gedeeld in de netwerkberekening. Dit zijn aangepaste gebouwen die andere gebruikers openbaar beschikbaar hebben gemaakt.",
-      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
-    },
     "privateBuildings": {
       "title": "Mijn Aangepaste Gebouwen",
       "description": "Neem uw privé aangepaste gebouwen op in de netwerkberekening. Dit zijn gebouwen die u hebt gemaakt en opgeslagen in uw account.",
@@ -2546,9 +2818,58 @@
     "coverageHigh": "Hoge gegevensdekking",
     "coverageMedium": "Gemiddelde gegevensdekking",
     "coverageLow": "Lage gegevensdekking",
-    "summaryFooter": "{{countries}} landen · {{regions}} regio's · {{grids}} rasters"
-  }
-,
+    "summaryFooter": "{{countries}} landen · {{regions}} regio's · {{grids}} rasters",
+    "3dBuildingData": "LiDAR-3D-gebouwhoogten beschikbaar",
+    "buildingDialog": {
+      "title": "Gebouwdetails",
+      "description": "Bekijk en bewerk de gegevens van het geselecteerde gebouw, inclusief type, energievraag en technologieën.",
+      "classLabel": "Klasse:",
+      "buildingType": "Gebouwtype (fClass)",
+      "selectType": "Selecteer type",
+      "detected": "Gedetecteerd",
+      "allTypes": "Alle typen",
+      "geometry": "Gebouwgeometrie",
+      "floorArea": "Vloeroppervlak",
+      "floors": "Verdiepingen",
+      "householdSize": "Huishoudgrootte",
+      "peopleShort": "pers.",
+      "constructionYearShort": "Bouwjaar",
+      "sourceHeights": "{{source}}-hoogten",
+      "buildingHeights": "Gebouwhoogten",
+      "heightMedian": "Mediane hoogte",
+      "heightMax": "Maximale hoogte",
+      "heightGround": "Maaiveldhoogte",
+      "energyLabel": "Energielabel",
+      "detectedLabel": "(gedetecteerd: {{label}})",
+      "energyIndex": "Energie-index:",
+      "electricHotWater": "Elektrisch warm water",
+      "recalculating": "Opnieuw berekenen...",
+      "recalculateDemand": "Vraag opnieuw berekenen",
+      "totalFloorArea": "{{floors}} verd. × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "Nog geen technologieën toegevoegd.",
+      "parameterCount": "Parameters: {{count}}",
+      "editParameters": "Parameters bewerken",
+      "removeTechnology": "Technologie verwijderen",
+      "availableTechnologies": "Beschikbare technologieën",
+      "added": "Toegevoegd",
+      "labelDate": "Labeldatum:",
+      "cbsPostcodeData": "CBS- / postcodegegevens",
+      "population": "Bevolking",
+      "households": "Huishoudens",
+      "avgHouseholdSize": "Gem. huishoudgrootte",
+      "heightsFrom": "Hoogten uit",
+      "attributionBy": "door {{name}}",
+      "energyLabelsFrom": "Energielabels uit",
+      "demographicsFrom": "Demografische gegevens uit",
+      "cuzkName": "Tsjechisch Bureau voor Landmeetkunde, Kartografie en Kadaster",
+      "enrichedWith": "Gebouwgegevens aangevuld met",
+      "licensedUnder": "Gelicentieerd onder",
+      "include": "Opnemen",
+      "exclude": "Uitsluiten",
+      "includeTooltip": "Dit aangepaste gebouw opnemen in het net (vereist opnieuw genereren)",
+      "excludeTooltip": "Dit aangepaste gebouw uitsluiten van het net (vereist opnieuw genereren)"
+    }
+  },
   "landing": {
     "nav": {
       "features": "Functies",
@@ -2737,6 +3058,60 @@
       "acknowledgements": "Dankbetuigingen",
       "thirdPartyLicenses": "Licenties van derden",
       "copyright": "© {{year}} EnerPlanET — Technische Hochschule Deggendorf. Dit project heeft financiering ontvangen van de Europese Unie. De geuite standpunten en meningen zijn echter uitsluitend die van de auteur(s) en komen niet noodzakelijk overeen met die van de Europese Unie."
+    }
+  },
+  "transformer": {
+    "onlyInsidePolygon": "Transformatoren kunnen alleen binnen het geselecteerde gebied worden geplaatst"
+  },
+  "powerFlowLegend": {
+    "customTransformers": "Eigen transformatoren",
+    "transformer": "Transformator {{number}}",
+    "buildingCount": "Gebouwen: {{count}}",
+    "loadUtilization": "Belasting",
+    "low": "Laag",
+    "moderate": "Matig",
+    "medium": "Gemiddeld",
+    "high": "Hoog",
+    "overloaded": "Overbelast",
+    "mvLines": "MS-lijnen"
+  },
+  "buildingConfig": {
+    "backToMap": "Terug naar de kaart",
+    "preparing": "De 3D-gegevens van dit gebouw worden voorbereid. City2TABULA haalt de gebouwen in het gebied op en koppelt ze, wat de eerste keer dat een gebied wordt gebruikt enkele minuten kan duren. Het gebouw wordt hier geopend zodra het klaar is.",
+    "loading": "Gebouw laden…",
+    "noGeometry": "City2TABULA bevat de 3D-geometrie van dit gebouw niet meer.",
+    "credit3dData": "3D-gegevens",
+    "modifiedBy": "gewijzigd door {{name}}",
+    "reset": {
+      "notice": "De opgeslagen wijzigingen van dit gebouw horen bij een oudere versie van de 3D-gegevens, dus de vlakken kunnen niet worden getoond.",
+      "action": "Terugzetten naar actuele 3D-gegevens",
+      "confirmTitle": "Opgeslagen wijzigingen verwijderen?",
+      "confirmDescription": "De opgeslagen wijzigingen aan de gebouwschil worden verwijderd en het gebouw wordt geladen uit de actuele 3D-gegevens. Door het model op te slaan wordt dit definitief."
+    },
+    "pv": {
+      "shadingNotice": "De simulatie houdt geen rekening met schaduw van bomen of naburige gebouwen.",
+      "unavailable": "De pv-vlakken van het gebouw konden niet worden geladen.",
+      "otherRoof": "Dak van een ander 3D-gebouw ({{n}} van {{total}})",
+      "otherWall": "Gevel van een ander 3D-gebouw ({{n}} van {{total}})"
+    },
+    "sharedOutline": "Deze omtrek omvat {{count}} 3D-gebouwen. Getoond en bewerkbaar: het grootste. De warmtevraag wordt voor elk berekend en opgeteld.",
+    "tech": {
+      "pvCapacity": "Vermogen uit de PV-vlakken",
+      "size": "Grootte",
+      "sizeMax": "Maximale grootte",
+      "power": "Vermogen",
+      "powerMax": "Maximaal vermogen",
+      "energy": "Energie",
+      "energyMax": "Maximale energie",
+      "cop": "COP",
+      "efficiency": "Rendement",
+      "investment": "Investering",
+      "price": "Prijs",
+      "pvSurfaces": "PV-vlakken",
+      "required": "Voer een waarde in",
+      "positive": "Moet groter dan 0 zijn",
+      "notNegative": "Moet 0 of meer zijn",
+      "notEditable": "Deze waarde kan hier niet worden bewerkt"
     }
   }
 }

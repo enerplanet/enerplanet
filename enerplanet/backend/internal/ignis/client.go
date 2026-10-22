@@ -1,0 +1,360 @@
+// Package ignis resolves TABULA variants and heat demand from the ignis
+// microservice (THD-Spatial-AI/ignis), reached through the TentaCron
+// orchestrator - the backend makes no direct ignis call. Used by backend jobs
+// (run_buem, the heat-demand resolve endpoint) that need a TABULA variant
+// resolved or calculated.
+//
+// This is separate from internal/handler/ignis, the public HTTP proxy the
+// frontend form calls for its dropdown data; that proxy also goes through
+// TentaCron.
+package ignis
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"spatialhub_backend/internal/tentacron"
+)
+
+// TentaCron target names for the three ignis calls. Each is a proxy target
+// with response.mode direct (ignis answers synchronously); TentaCron maps the
+// payload onto the ignis URL per its target config.
+const (
+	targetCalculate     = "ignis-calculate"
+	targetVariantsMatch = "ignis-variants-match"
+	targetData          = "ignis-data"
+)
+
+// Client resolves ignis data through TentaCron.
+type Client struct {
+	tc *tentacron.Client
+}
+
+// NewClient returns a Client that reaches ignis through the given TentaCron
+// client.
+func NewClient(tc *tentacron.Client) *Client {
+	return &Client{tc: tc}
+}
+
+// ErrNoVariant is returned by ExistingStateVariant when the building type has
+// no TABULA archetype for the resolved construction period - a real outcome
+// (residential coverage varies by country and period), not a request error.
+var ErrNoVariant = errors.New("ignis: no TABULA variant for this type and year")
+
+// BadRequestError is an ignis-side rejection or failure carried through with
+// its message: an unsupported country or query param (ignis 400), an unknown
+// variant code (ignis 404), or an ignis timeout. The heat-demand resolver
+// treats it the same as any ignis miss and falls back to the estimate.
+type BadRequestError struct {
+	Message string
+}
+
+func (e *BadRequestError) Error() string {
+	return "ignis rejected the request: " + e.Message
+}
+
+// ignisRejectionCodes are the TentaCron job error codes that mean ignis
+// itself declined or failed the call. Other codes (unknown_target,
+// invalid_payload, max_attempts_exceeded, internal) are backend or
+// infrastructure faults and are returned as the raw *tentacron.TargetError so
+// a misconfiguration is not silently indistinguishable from an ignis "no".
+var ignisRejectionCodes = map[string]bool{
+	"target_error":      true,
+	"target_job_failed": true,
+	"target_timeout":    true,
+}
+
+// asIgnisError maps a TentaCron *TargetError from an ignis rejection to a
+// *BadRequestError carrying ignis's own message. Anything that is not an ignis
+// rejection is returned unchanged.
+func asIgnisError(err error) error {
+	te, ok := tentacron.AsTargetError(err)
+	if !ok || !ignisRejectionCodes[te.Code] {
+		return err
+	}
+	return &BadRequestError{Message: te.UpstreamMessage()}
+}
+
+// isoByCountry maps geo.NormalizeCountry's canonical country names to the
+// ISO 3166-1 alpha-2 codes ignis's TABULA tables key on. Limited to the
+// countries geo.NormalizeCountry itself recognises, not ignis's full range.
+var isoByCountry = map[string]string{
+	"germany": "DE", "france": "FR", "austria": "AT", "switzerland": "CH",
+	"netherlands": "NL", "belgium": "BE", "poland": "PL", "sweden": "SE",
+	"norway": "NO", "finland": "FI", "denmark": "DK", "ireland": "IE",
+	"czechia": "CZ", "romania": "RO", "hungary": "HU", "greece": "GR",
+	"croatia": "HR", "bulgaria": "BG", "slovakia": "SK", "slovenia": "SI",
+	"luxembourg": "LU", "estonia": "EE", "latvia": "LV", "lithuania": "LT",
+	"spain": "ES", "italy": "IT", "portugal": "PT", "uk": "GB",
+}
+
+// ISO2ForCountry returns the ISO 3166-1 alpha-2 code for a canonical country
+// name (as geo.NormalizeCountry produces it), or false if unknown to ignis.
+func ISO2ForCountry(country string) (string, bool) {
+	code, ok := isoByCountry[strings.ToLower(strings.TrimSpace(country))]
+	return code, ok
+}
+
+// VariantMatch is one refurbishment-level variant for a building type and
+// construction period.
+type VariantMatch struct {
+	Code  string `json:"code"`
+	Label string `json:"label"`
+}
+
+// MatchVariants resolves the construction year to a TABULA period and returns
+// its refurbishment variants (existing state first), via the
+// ignis-variants-match target (GET /api/v1/variants/{iso2}/match?type=&year=).
+func (c *Client) MatchVariants(ctx context.Context, iso2, buildingType string, year int) ([]VariantMatch, error) {
+	payload := map[string]any{"iso2": iso2, "type": buildingType, "year": year}
+	var body struct {
+		Data []VariantMatch `json:"data"`
+	}
+	if err := c.tc.Do(ctx, targetVariantsMatch, payload, &body); err != nil {
+		return nil, asIgnisError(err)
+	}
+	return body.Data, nil
+}
+
+// ExistingStateVariant returns the existing-state (first, unrefurbished)
+// variant code for a building type and construction year, or ErrNoVariant if
+// TABULA has no archetype covering it.
+func (c *Client) ExistingStateVariant(ctx context.Context, iso2, buildingType string, year int) (string, error) {
+	matches, err := c.MatchVariants(ctx, iso2, buildingType, year)
+	if err != nil {
+		return "", err
+	}
+	if len(matches) == 0 {
+		return "", ErrNoVariant
+	}
+	return matches[0].Code, nil
+}
+
+// EnvelopeUValues is the subset of a TABULA variant's physical inputs run_buem
+// needs to make BuEM accept a building: per-type effective U-values and
+// adjacency correction factors for the three envelope categories it sends
+// (wall, roof, floor), plus the envelope-level thermal-bridging surcharge and
+// the archetype's window/door properties.
+//
+// U* come from ignis's U_Actual_*_1, the post-measure-blend transmittance ignis
+// uses for conduction - not the base U_*_1, which for some NL periods carries
+// the wall value on all three opaque fields. BTrans* are ignis's b_Transmission_*_1 (1.0 for elements facing
+// outside, lower for elements against unheated space - typically ~0.5 on the
+// ground floor). Bridging is one envelope-wide scalar; BuEM has no bridging
+// surcharge of its own, so the caller adds it to each element's U
+// (delta x total_area == sum of delta x element_area).
+type EnvelopeUValues struct {
+	UWall  float64 // W/(m2.K), U_Actual before the bridging surcharge
+	URoof  float64
+	UFloor float64
+
+	BTransWall  float64 // dimensionless, TABULA b_Transmission
+	BTransRoof  float64
+	BTransFloor float64
+
+	// UWindow/UDoor/GGlWindow describe the archetype's openings. BuEM
+	// synthesizes windows and doors rather than receiving them as elements,
+	// so these are sent as building-level values, not per element. UWindow is
+	// U_Actual_Window_1, the same post-measure blend ignis itself multiplies
+	// by window area for H_Transmission_Window_1; GGlWindow is
+	// g_gl_n_Window_1, the field BuEM reads from a TABULA row when it
+	// resolves an archetype on its own.
+	UWindow   float64 // W/(m2.K)
+	UDoor     float64 // W/(m2.K)
+	GGlWindow float64 // dimensionless, solar energy transmittance
+
+	Bridging float64 // W/(m2.K), envelope-level thermal-bridging delta to add per element
+
+	// YearFrom/YearTo are ignis's Year1_Building/Year2_Building: the
+	// construction-period range this TABULA variant covers. 0 means
+	// open-ended oldest, 9999 means open-ended newest - see
+	// DefaultConstructionYear.
+	YearFrom int
+	YearTo   int
+
+	// Apartments is ignis's n_Apartment: the archetype's dwelling count.
+	// 0 means unknown (the field is absent before ignis exposes it, and some
+	// archetypes carry no count), never zero dwellings.
+	Apartments int
+}
+
+// GetEnvelopeUValues fetches a TABULA variant's data and extracts the effective
+// per-type wall/roof/floor U-values (U_Actual_*_1), their b_Transmission
+// factors, the envelope thermal-bridging delta, the window/door U-values and
+// window solar transmittance, and the variant's construction-period year
+// range, via the ignis-data target (GET /api/v1/data/{code}).
+func (c *Client) GetEnvelopeUValues(ctx context.Context, variantCode string) (EnvelopeUValues, error) {
+	var body struct {
+		TabulaData struct {
+			BasicParameters struct {
+				BuildingAppearance struct {
+					Year1_Building int
+					Year2_Building int
+					N_Apartment    int `json:"n_Apartment"`
+				}
+			}
+			AdvancedParameters struct {
+				Uvalues struct {
+					U_Actual_Wall_1   float64
+					U_Actual_Roof_1   float64
+					U_Actual_Floor_1  float64
+					U_Actual_Window_1 float64
+					U_Actual_Door_1   float64
+				}
+				SolarTransmittance struct {
+					G_gl_n_Window_1 float64 `json:"g_gl_n_Window_1"`
+				}
+				HeatLosses struct {
+					B_Transmission_Wall_1  float64
+					B_Transmission_Roof_1  float64
+					B_Transmission_Floor_1 float64
+				}
+				ThermalBridges struct {
+					DeltaU float64 `json:"delta_U_ThermalBridging_Original"`
+				}
+			}
+		} `json:"tabula_data"`
+	}
+	if err := c.tc.Do(ctx, targetData, map[string]any{"code": variantCode}, &body); err != nil {
+		return EnvelopeUValues{}, asIgnisError(err)
+	}
+	ap := body.TabulaData.AdvancedParameters
+	appearance := body.TabulaData.BasicParameters.BuildingAppearance
+	return EnvelopeUValues{
+		UWall:       ap.Uvalues.U_Actual_Wall_1,
+		URoof:       ap.Uvalues.U_Actual_Roof_1,
+		UFloor:      ap.Uvalues.U_Actual_Floor_1,
+		BTransWall:  ap.HeatLosses.B_Transmission_Wall_1,
+		BTransRoof:  ap.HeatLosses.B_Transmission_Roof_1,
+		BTransFloor: ap.HeatLosses.B_Transmission_Floor_1,
+		UWindow:     ap.Uvalues.U_Actual_Window_1,
+		UDoor:       ap.Uvalues.U_Actual_Door_1,
+		GGlWindow:   ap.SolarTransmittance.G_gl_n_Window_1,
+		Bridging:    ap.ThermalBridges.DeltaU,
+		YearFrom:    appearance.Year1_Building,
+		YearTo:      appearance.Year2_Building,
+		Apartments:  appearance.N_Apartment,
+	}, nil
+}
+
+// RefurbishmentLevel selects which TABULA refurbishment scenario a variant's
+// U-values should reflect.
+type RefurbishmentLevel string
+
+const (
+	RefurbishmentExisting RefurbishmentLevel = "existing"
+	RefurbishmentMedium   RefurbishmentLevel = "medium"
+	RefurbishmentAdvanced RefurbishmentLevel = "advanced"
+)
+
+// refurbishmentSuffix is the trailing variant-code segment for each
+// refurbishment level above the existing (baseline, ".001") state.
+var refurbishmentSuffix = map[RefurbishmentLevel]string{
+	RefurbishmentMedium:   "002",
+	RefurbishmentAdvanced: "003",
+}
+
+// WithRefurbishmentLevel swaps an existing-state variant code's trailing
+// ".001" for the given level's suffix (".002" medium, ".003" advanced) - a
+// suffix swap, not a separate ignis lookup: /match would return a different
+// sub-form and must not be used here. existingStateCode must end in ".001";
+// City2TABULA's classifier only ever emits that suffix, since its import
+// filter loads only Number_BuildingVariant=1 rows into the lookup table
+// (city2tabula sql/scripts/supplementary/01_extract_tabula_attributes.sql:59).
+// A code that doesn't end in ".001" is rejected rather than swapped, in case
+// that import filter ever changes.
+func WithRefurbishmentLevel(existingStateCode string, level RefurbishmentLevel) (string, error) {
+	if level == "" || level == RefurbishmentExisting {
+		return existingStateCode, nil
+	}
+	suffix, ok := refurbishmentSuffix[level]
+	if !ok {
+		return "", fmt.Errorf("ignis: unknown refurbishment level %q", level)
+	}
+	if !strings.HasSuffix(existingStateCode, ".001") {
+		return "", fmt.Errorf("ignis: %q is not an existing-state (.001) variant code, cannot derive its %s-refurbishment code", existingStateCode, level)
+	}
+	return strings.TrimSuffix(existingStateCode, "001") + suffix, nil
+}
+
+// EnvelopeUValuesResult is GetEnvelopeUValuesForLevel's result: the resolved
+// U-values plus the refurbishment level they actually came from, which can
+// differ from the level requested - see GetEnvelopeUValuesForLevel.
+type EnvelopeUValuesResult struct {
+	EnvelopeUValues
+	Level RefurbishmentLevel
+}
+
+// GetEnvelopeUValuesForLevel resolves U-values at the requested refurbishment
+// level. TABULA has no medium or advanced variant for every archetype (17%
+// of groups have no .002, 15% no .003, per a TABULA workbook audit): a
+// rejection of the swapped code is treated as that scenario being unavailable
+// for this specific building, not an error, and falls back to the existing
+// state. Result.Level says which level was actually used.
+func (c *Client) GetEnvelopeUValuesForLevel(ctx context.Context, existingStateCode string, level RefurbishmentLevel) (EnvelopeUValuesResult, error) {
+	code, err := WithRefurbishmentLevel(existingStateCode, level)
+	if err != nil {
+		return EnvelopeUValuesResult{}, err
+	}
+	actual := level
+	if actual == "" {
+		actual = RefurbishmentExisting
+	}
+
+	u, err := c.GetEnvelopeUValues(ctx, code)
+	if err != nil {
+		var badReq *BadRequestError
+		if actual != RefurbishmentExisting && errors.As(err, &badReq) {
+			u, err = c.GetEnvelopeUValues(ctx, existingStateCode)
+			actual = RefurbishmentExisting
+		}
+		if err != nil {
+			return EnvelopeUValuesResult{}, err
+		}
+	}
+	return EnvelopeUValuesResult{EnvelopeUValues: u, Level: actual}, nil
+}
+
+// DefaultConstructionYear derives a single representative construction year
+// from a TABULA variant's construction-period range (EnvelopeUValues.
+// YearFrom/YearTo, ignis's Year1_Building/Year2_Building) - for a building
+// whose only construction-year source is its TABULA period classification,
+// not a user-entered year. yearFrom == 0 is an open-ended oldest period, so
+// the period's own end year is the better estimate; yearTo == 9999 is
+// open-ended newest, so the start year is used instead; otherwise the
+// midpoint of the range.
+func DefaultConstructionYear(yearFrom, yearTo int) int {
+	switch {
+	case yearFrom == 0:
+		return yearTo
+	case yearTo == 9999:
+		return yearFrom
+	default:
+		return (yearFrom + yearTo) / 2
+	}
+}
+
+// CalculateResult is ignis's annual specific heating demand for a variant.
+type CalculateResult struct {
+	VariantCode string  `json:"variant_code"`
+	QHNDKwhM2a  float64 `json:"q_h_nd"`
+}
+
+// Calculate runs the ISO 13790 pipeline for a variant with an empty override
+// body: every archetype row already carries country climate, room height,
+// envelope areas and U-values, so {} is the correct minimal call. Do not pass
+// A_ref - sending it alone distorts q_h_nd/m2 against a fixed archetype
+// envelope (verified: 13.22 -> 1.55 kWh/(m2.a) for A_ref 150 -> 300 with no
+// matching surface change). Multiply the returned q_h_nd by the caller's
+// actual floor area for the absolute annual figure. Via the ignis-calculate
+// target (POST /api/v1/calculate/{code}).
+func (c *Client) Calculate(ctx context.Context, variantCode string) (CalculateResult, error) {
+	payload := map[string]any{"code": variantCode}
+	var result CalculateResult
+	if err := c.tc.Do(ctx, targetCalculate, payload, &result); err != nil {
+		return CalculateResult{}, asIgnisError(err)
+	}
+	return result, nil
+}

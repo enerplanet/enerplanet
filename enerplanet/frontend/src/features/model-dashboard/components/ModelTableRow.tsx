@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Copy, FileEdit, Users, Clock, Star } from "lucide-react";
+import { Copy, FileEdit, Users, Clock, Star, AlertTriangle } from "lucide-react";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
@@ -25,6 +25,13 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
+// Set by dispatch_meme when some buildings ran without a BuEM series.
+const getDemandFallback = (results: Model["results"]): { fallback: number; total: number } | null => {
+  const warning = results?.warning as { code?: string; fallback?: number; total?: number } | undefined;
+  if (warning?.code !== "demand_fallback") return null;
+  return { fallback: warning.fallback ?? 0, total: warning.total ?? 0 };
+};
+
 type CompletionInfo = { startTime: string; endTime: string; totalSeconds: number };
 
 interface ModelTableRowProps {
@@ -41,7 +48,6 @@ interface ModelTableRowProps {
   calculationStartTimes: Record<number, string>;
   calculationCompletionInfo: Record<number, CompletionInfo>;
   canUserDeleteModel: (model: Model) => boolean;
-  hasAvailableWebservice: boolean;
   onSelect: (model: Model) => void;
   onStartEdit: (model: Model) => void;
   onEditTitleChange: (value: string) => void;
@@ -51,7 +57,9 @@ interface ModelTableRowProps {
   onEdit: (model: Model) => void;
   onDownload: (model: Model) => void;
   onCopy: (model: Model) => void;
-  onCalculate: (model: Model) => void;
+  onRunMeme: (model: Model) => void;
+  // Not passed while the PyPSA leg is withheld; ModelActions hides it then.
+  onRunMemePypsa?: (model: Model) => void;
   onDelete: (model: Model) => void;
   onShare: (model: Model) => void;
   onMoveToWorkspace: (model: Model) => void;
@@ -112,7 +120,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
       <TooltipTrigger asChild>
         <button
           onClick={onStartEdit}
-          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-muted transition-colors group/title max-w-[240px]"
+          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-muted transition-colors group/title max-w-[360px] text-left"
         >
           {level > 0 && (
             <div className="flex items-center mr-0.5">
@@ -157,7 +165,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             )}
           </div>
 
-          <span className="font-medium text-sm text-foreground truncate">{modelTitle}</span>
+          <span className="font-medium text-sm text-foreground line-clamp-2 break-words">{modelTitle}</span>
 
           <FileEdit className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" />
         </button>
@@ -166,6 +174,13 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
     </Tooltip>
   );
 };
+
+/** The run stages a failure is recorded in (results.failed_stage), by the status the run had. */
+const FAILED_STAGES = new Set(["queue", "running", "processing"]);
+
+/** The failed badge's label naming the stage, or undefined to show plain "Failed". */
+const failedStageLabel = (stage: unknown, t: (key: string) => string): string | undefined =>
+  typeof stage === "string" && FAILED_STAGES.has(stage) ? t(`modelStatus.failedAt.${stage}`) : undefined;
 
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
@@ -181,7 +196,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   calculationStartTimes,
   calculationCompletionInfo,
   canUserDeleteModel,
-  hasAvailableWebservice,
   onSelect,
   onStartEdit,
   onEditTitleChange,
@@ -191,7 +205,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   onEdit,
   onDownload,
   onCopy,
-  onCalculate,
+  onRunMeme,
+  onRunMemePypsa,
   onDelete,
   onShare,
   onMoveToWorkspace,
@@ -264,7 +279,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <StatusBadge status={model.status} size="small" />
+                  <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -275,6 +290,17 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             </Tooltip>
           ) : (
             <StatusBadge status={model.status} size="small" />
+          )}
+
+          {model.status === "completed" && getDemandFallback(model.results) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertTriangle className="h-4 w-4 text-amber-500" aria-label={t("model.demandFallbackTitle")} />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("model.demandFallbackWarning", getDemandFallback(model.results) ?? undefined)}
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {model.status === "running" && calculationStartTimes[model.id] && (
@@ -334,7 +360,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             onEdit={onEdit}
             onDownload={onDownload}
             onCopy={onCopy}
-            onCalculate={onCalculate}
+            onRunMeme={onRunMeme}
+            onRunMemePypsa={onRunMemePypsa}
             onDelete={onDelete}
             onShare={onShare}
             onMoveToWorkspace={onMoveToWorkspace}
@@ -348,7 +375,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             shareTooltip={
               canManageModel ? t("common.tooltips.share") : t("model.sharedCannotShare")
             }
-            hasAvailableWebservice={hasAvailableWebservice}
             layout="horizontal"
             size="small"
           />
@@ -383,7 +409,8 @@ const modelSnapshotEqual = (
   prev.parent_model_id === next.parent_model_id &&
   prev.level === next.level &&
   modelSharesSnapshot(prev) === modelSharesSnapshot(next) &&
-  getErrorMessage(prev.results?.error) === getErrorMessage(next.results?.error);
+  getErrorMessage(prev.results?.error) === getErrorMessage(next.results?.error) &&
+  JSON.stringify(prev.results?.warning) === JSON.stringify(next.results?.warning);
 
 const modelSharesSnapshot = (model: Model): string =>
   (model.shares ?? [])
@@ -402,7 +429,6 @@ const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.editTitle !== next.editTitle) return false;
-  if (prev.hasAvailableWebservice !== next.hasAvailableWebservice) return false;
   if (prev.canUserDeleteModel(prev.model) !== next.canUserDeleteModel(next.model)) return false;
 
   const modelID = prev.model.id;

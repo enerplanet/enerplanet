@@ -1,5 +1,5 @@
 import { useState, useEffect, type FC } from "react";
-import { X, MousePointer2, CircleDot, Check, Move, Plus, Trash2, Edit3, Grid3X3, Building2, Activity, Loader2, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { X, MousePointer2, CircleDot, Check, Keyboard, Grid3X3, Building2, Activity, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
 
@@ -17,6 +17,62 @@ const TransformerIcon: FC<{ className?: string }> = ({ className }) => (
 		<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 	</svg>
 );
+
+/** One gesture in the Shortcuts card: optional key, optional "+", and what it does. */
+type ShortcutRow = { keys?: string; plus?: boolean; action: string };
+
+/** Shortcut groups by what a gesture does: green draws, red deletes, blue moves the view. */
+const buildShortcutGroups = (
+	t: (key: string, fallback: string) => string,
+	isMapLibre3D: boolean,
+): { key: string; title: string; titleClass: string; barClass: string; rows: ShortcutRow[] }[] => {
+	return [
+		{
+			key: 'drawing',
+			title: t('polygon.groupDrawing', 'Drawing'),
+			titleClass: 'text-emerald-600 dark:text-emerald-400',
+			barClass: 'border-emerald-500',
+			rows: [
+				{ action: t('polygon.moveVertex', 'Drag a corner to move it') },
+				{ action: t('polygon.addVertex', 'Drag an edge to add a corner') },
+				{ keys: t('polygon.keyRightClick', 'Right-click'), action: t('polygon.rightClickCloseHint', 'to close the polygon') },
+				{ keys: 'Esc', action: t('polygon.escToCancel', 'to cancel drawing') },
+			],
+		},
+		{
+			key: 'deleting',
+			title: t('polygon.groupDeleting', 'Deleting'),
+			titleClass: 'text-red-600 dark:text-red-400',
+			barClass: 'border-red-500',
+			rows: [
+				{ keys: 'Alt', plus: true, action: t('polygon.removeVertexHint', 'click on a corner to delete it') },
+				{ keys: 'Shift', plus: true, action: t('polygon.removePolygonHint', 'click on polygon to delete it') },
+			],
+		},
+		// Building gestures are handled on the 2D map only.
+		...(isMapLibre3D ? [] : [{
+			key: 'buildings',
+			title: t('polygon.groupBuildings', 'Buildings'),
+			titleClass: 'text-amber-600 dark:text-amber-400',
+			barClass: 'border-amber-500',
+			rows: [
+				{ keys: 'Alt', plus: true, action: t('polygon.disableBuildingHint', 'click a building to disable or enable it') },
+				{ keys: t('polygon.keyCtrl', 'Ctrl'), plus: true, action: t('polygon.selectBuildingHint', 'click buildings to select them') },
+				{ keys: t('polygon.keyDelete', 'Delete'), action: t('polygon.disableSelectedHint', 'disables the selected buildings') },
+			],
+		}]),
+		{
+			key: 'navigating',
+			title: t('polygon.groupNavigating', 'Navigating'),
+			titleClass: 'text-blue-600 dark:text-blue-400',
+			barClass: 'border-blue-500',
+			rows: [
+				{ keys: t('polygon.keySpace', 'Space'), plus: true, action: t('polygon.spacePanHint', 'drag to pan the map') },
+				...(isMapLibre3D ? [{ keys: t('polygon.keyRightClick', 'Right-click'), plus: true, action: t('polygon.rotate3dDrag', 'drag to rotate the 3D view') }] : []),
+			],
+		},
+	];
+};
 
 interface PolygonDrawingGuideProps {
 	/** Whether polygon drawing is available (no polygon exists yet or multiple allowed) */
@@ -37,6 +93,8 @@ interface PolygonDrawingGuideProps {
 	isRunningPowerFlow?: boolean;
 	/** Whether power flow results are available */
 	hasPowerFlowResults?: boolean;
+	/** Whether the user has placed a transformer; assigning buildings only applies then */
+	hasAddedTransformer?: boolean;
 }
 
 export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
@@ -49,15 +107,17 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 	hasGridData = false,
 	isRunningPowerFlow = false,
 	hasPowerFlowResults = false,
+	hasAddedTransformer = false,
 }) => {
 	const { t } = useTranslation();
+	const stepLabel = (step: number) => t('workflow.illustrationStep', { step });
 	const [isDrawGuideVisible, setIsDrawGuideVisible] = useState(true);
 	const [isDrawGuideDismissed, setIsDrawGuideDismissed] = useState(false);
 	const [isEditGuideVisible, setIsEditGuideVisible] = useState(false);
 	const [isEditGuideDismissed, setIsEditGuideDismissed] = useState(false);
-	const [isEditExpanded, setIsEditExpanded] = useState(true);
+	const [isEditExpanded, setIsEditExpanded] = useState(false);
 	const [isWorkflowExpanded, setIsWorkflowExpanded] = useState(true);
-	const [expandedStep, setExpandedStep] = useState<string | null>('transformer');
+	const [expandedStep, setExpandedStep] = useState<string | null>(null);
 	const isMapLibre3D = useMapStore(s => s.selectedBaseLayerId === 'maplibre_3d');
 
 	// Determine current step based on drawing state
@@ -144,6 +204,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 	// Edit guide (shown when polygon exists)
 	if (isEditGuideVisible) {
+		const shortcutGroups = buildShortcutGroups(t, isMapLibre3D);
 		const workflowSteps = [
 			{
 				key: 'grid' as const,
@@ -165,6 +226,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 				title: t('workflow.addTransformer', 'Add Transformer'),
 				description: t('workflow.addTransformerHint', 'Place transformers on the map'),
 				auto: false,
+				optional: true,
 			},
 			{
 				key: 'buildings' as const,
@@ -173,94 +235,32 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 				description: t('workflow.assignBuildingsHint', 'Link buildings to transformers'),
 				auto: false,
 			},
-		];
+		].filter((step) => step.key !== 'buildings' || hasAddedTransformer);
 
 		return (
 			<div
-				className="absolute z-40 animate-in slide-in-from-right-2 fade-in duration-300 flex flex-col"
+				className="absolute z-40 animate-in slide-in-from-right-2 fade-in duration-300 flex flex-col gap-2"
 				style={{
 					top: "10rem",
-					maxHeight: "calc(100vh - 14rem)",
+					// Ends above the grid action bar at the bottom of the map.
+					maxHeight: "calc(100vh - 17rem)",
 					right: "calc(1rem + var(--sidebar-offset, 0rem))"
 				}}
 			>
-				<div className="relative w-64 max-h-full flex flex-col bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden">
+				<div className="relative w-64 min-h-0 shrink flex flex-col bg-card border border-border rounded-lg shadow-xl overflow-hidden">
 					{/* Close button */}
 					<button
 						onClick={handleDismissEditGuide}
 						className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground z-10 bg-card/80"
-						aria-label="Dismiss guide"
+						aria-label={t('polygon.dismissGuide')}
 					>
 						<X className="w-3.5 h-3.5" />
 					</button>
 
 					{/* Scrollable Content */}
 					<div className="overflow-y-auto flex-1 p-4">
-						{/* Edit Polygon Section - Collapsible */}
-						<button
-							onClick={() => setIsEditExpanded(!isEditExpanded)}
-							className="w-full flex items-center justify-between mb-2"
-						>
-							<h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-								<Edit3 className="w-4 h-4 text-primary" />
-								{t('polygon.editPolygon', 'Edit Polygon')}
-							</h4>
-							{isEditExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-						</button>
-
-						{isEditExpanded && (
-							<div className="space-y-2 mb-3">
-								{/* Move vertices */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Move className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">{t('polygon.moveVertex', 'Move corners')}</p>
-									</div>
-								</div>
-
-								{/* Add vertex */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Plus className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">{t('polygon.addVertex', 'Add point')}</p>
-									</div>
-								</div>
-
-								{/* Remove vertex */}
-								<div className="flex items-center gap-2">
-									<div className="flex-shrink-0 w-6 h-6 rounded bg-muted flex items-center justify-center">
-										<Trash2 className="w-3.5 h-3.5 text-foreground" />
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-xs font-medium text-foreground">
-											<kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">CTRL</kbd>
-											<span className="mx-1">+</span>
-											<span>{t('polygon.removeVertexHint', 'click on vertex')}</span>
-										</p>
-									</div>
-								</div>
-
-								{/* 3D rotation hint — only when 3D buildings map is active */}
-								{isMapLibre3D && (
-									<div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-										<div className="flex-shrink-0 w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
-											<RotateCcw className="w-3.5 h-3.5 text-primary" />
-										</div>
-										<div className="flex-1 min-w-0">
-											<p className="text-xs font-semibold text-foreground/90">{t('polygon.rotate3d', '3D View')}</p>
-											<p className="text-[10px] text-muted-foreground">{t('polygon.rotate3dHint', 'Right-click + drag to rotate and see buildings in 3D')}</p>
-										</div>
-									</div>
-								)}
-							</div>
-						)}
-
 						{/* Workflow Section - Collapsible */}
-						<div className="border-t border-border/50 pt-3">
+						<div>
 							<button
 								onClick={() => setIsWorkflowExpanded(!isWorkflowExpanded)}
 								className="w-full flex items-center justify-between mb-2"
@@ -320,7 +320,10 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 													}`}>
 														{step.title}
 														{step.auto && status === 'active' && (
-															<span className="ml-1 text-[10px] text-amber-500 animate-pulse">auto</span>
+															<span className="ml-1 text-[10px] text-amber-500 animate-pulse">{t('workflow.auto')}</span>
+														)}
+														{'optional' in step && step.optional && (
+															<span className="ml-1 text-[10px] font-normal text-muted-foreground">{t('workflow.optional', 'optional')}</span>
 														)}
 													</p>
 
@@ -349,7 +352,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 																	<rect x="15.5" y="3" width="1.5" height="5" rx="0.5" fill="currentColor"/>
 																	<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 																</svg>
-																Step 1: {t('workflow.clickAddTransformer', 'Click button in bottom bar')}
+																{stepLabel(1)}: {t('workflow.clickAddTransformer', 'Click button in bottom bar')}
 															</p>
 															<div className="flex justify-center">
 																<div className="flex items-center gap-1.5 bg-card border border-border rounded-full px-2 py-1 shadow-sm">
@@ -383,7 +386,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 																	<rect x="15.5" y="3" width="1.5" height="5" rx="0.5" fill="currentColor"/>
 																	<circle cx="16.25" cy="2.5" r="1" fill="currentColor"/>
 																</svg>
-																Step 2: {t('workflow.clickOnMapInPolygon', 'Click on map inside polygon')}
+																{stepLabel(2)}: {t('workflow.clickOnMapInPolygon', 'Click on map inside polygon')}
 															</p>
 															<svg width="100%" height="55" viewBox="0 0 180 55" className="text-foreground">
 																{/* Map area */}
@@ -432,7 +435,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 													<div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-300 space-y-2 bg-muted/30 rounded-lg p-2">
 														{/* Step 1: Click buildings */}
 														<div className="space-y-1.5">
-															<p className="text-[10px] font-semibold text-primary">Step 1: {t('workflow.clickToSelectBuilding', 'Click to select a building')}</p>
+															<p className="text-[10px] font-semibold text-primary">{stepLabel(1)}: {t('workflow.clickToSelectBuilding', 'Click to select a building')}</p>
 															<svg width="100%" height="55" viewBox="0 0 140 45" className="text-foreground">
 																{/* Building 1 — selected */}
 																<rect x="15" y="5" width="35" height="28" rx="4" className="fill-blue-500/25 stroke-blue-500" strokeWidth="2">
@@ -469,7 +472,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 
 														{/* Step 2: Click transformer */}
 														<div className="space-y-1.5">
-															<p className="text-[10px] font-semibold text-amber-500">Step 2: {t('workflow.clickTransformer', 'Click transformer')}</p>
+															<p className="text-[10px] font-semibold text-amber-500">{stepLabel(2)}: {t('workflow.clickTransformer', 'Click transformer')}</p>
 															<svg width="100%" height="55" viewBox="0 0 140 50" className="text-foreground">
 																{/* Buildings on left side */}
 																<rect x="5" y="5" width="22" height="16" rx="2" className="fill-primary/15 stroke-primary/40" strokeWidth="1" />
@@ -528,6 +531,37 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 						</div>
 					</div>
 				</div>
+
+				<div className="relative w-64 min-h-0 shrink-0 max-h-[50%] overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-3">
+						{/* Shortcuts - collapsed by default */}
+						<button
+							onClick={() => setIsEditExpanded(!isEditExpanded)}
+							className="w-full flex items-center justify-between"
+						>
+							<h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<Keyboard className="w-4 h-4 text-primary" />
+								{t('polygon.shortcuts', 'Shortcuts')}
+							</h4>
+							{isEditExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+						</button>
+
+						{isEditExpanded && (
+							<div className="space-y-3 mt-2">
+								{shortcutGroups.map((group) => (
+									<div key={group.key} className="space-y-1">
+										<p className={`text-[10px] font-semibold uppercase tracking-wider ${group.titleClass}`}>{group.title}</p>
+										{group.rows.map((row) => (
+											<p key={row.action} className={`flex items-baseline gap-1 border-l-2 pl-2 text-xs text-foreground ${group.barClass}`}>
+												{row.keys && <kbd className="shrink-0 px-1.5 py-0.5 bg-muted border border-border rounded text-[10px] font-mono">{row.keys}</kbd>}
+												{row.keys && row.plus && <span className="shrink-0">+</span>}
+												<span>{row.action}</span>
+											</p>
+										))}
+									</div>
+								))}
+							</div>
+						)}
+				</div>
 			</div>
 		);
 	}
@@ -543,12 +577,12 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 				right: "calc(1rem + var(--sidebar-offset, 0rem))"
 			}}
 		>
-			<div className="relative w-64 bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden">
+			<div className="relative w-64 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
 				{/* Close button */}
 				<button
 					onClick={handleDismissDrawGuide}
 					className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
-					aria-label="Dismiss guide"
+					aria-label={t('polygon.dismissGuide')}
 				>
 					<X className="w-3.5 h-3.5" />
 				</button>

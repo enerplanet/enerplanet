@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { toLonLat } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { useTranslation } from "@spatialhub/i18n";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
+import { addSiteStation } from "@/features/configurator/utils/siteStations";
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -28,7 +29,6 @@ export interface AddTransformerModeState {
   isAddTransformerMode: boolean;
   newTransformerCoords: [number, number] | null;
   addTransformerDialogOpen: boolean;
-  transformerCursorPos: { x: number; y: number } | null;
   toggleAddTransformerMode: () => void;
   setAddTransformerDialogOpen: (open: boolean) => void;
   setNewTransformerCoords: (coords: [number, number] | null) => void;
@@ -58,7 +58,6 @@ export const useAddTransformerMode = ({
   const setNewTransformerCoords = useModelStore((s) => s.setNewTransformerCoords);
   const addTransformerDialogOpen = useModelStore((s) => s.addTransformerDialogOpen);
   const setAddTransformerDialogOpen = useModelStore((s) => s.setAddTransformerDialogOpen);
-  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
   const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
 
   const isAddTransformerMode = activeMode === "add-transformer";
@@ -89,17 +88,23 @@ export const useAddTransformerMode = ({
 
       try {
         const userId = user?.id ? String(user.id) : undefined;
-        const result = await pylovoService.addTransformer({
-          coordinates: newTransformerCoords,
-          kva,
-          grid_result_ids: gridResultIds,
-          reassign_radius_m: 0,
-          user_id: userId,
-          model_id: existingModelId,
-          draft_id: draftId,
-        });
-
-        notification.showSuccess(result.message || `Added transformer with ${kva} kVA`);
+        const grid = useModelStore.getState().pylovoGridData;
+        const site = siteScope(grid);
+        if (site && grid) {
+          await addSiteStation(site.site_id, grid, newTransformerCoords, kva);
+          notification.showSuccess(`Added transformer with ${kva} kVA`);
+        } else {
+          const result = await pylovoService.addTransformer({
+            coordinates: newTransformerCoords,
+            kva,
+            grid_result_ids: gridResultIds,
+            reassign_radius_m: 0,
+            user_id: userId,
+            model_id: existingModelId,
+            draft_id: draftId,
+          });
+          notification.showSuccess(result.message || `Added transformer with ${kva} kVA`);
+        }
 
         if (allPolygons.length > 0) {
           await refreshGrid();
@@ -108,7 +113,7 @@ export const useAddTransformerMode = ({
         resetAddTransformerMode();
       } catch (error: any) {
         console.error("Failed to add transformer:", error);
-        notification.showError(error?.message || "Failed to add transformer");
+        notification.showError(error?.response?.data?.error || error?.message || "Failed to add transformer");
       }
     },
     [
@@ -193,7 +198,6 @@ export const useAddTransformerMode = ({
     isAddTransformerMode,
     newTransformerCoords,
     addTransformerDialogOpen,
-    transformerCursorPos,
     toggleAddTransformerMode,
     setAddTransformerDialogOpen,
     setNewTransformerCoords,
@@ -225,7 +229,6 @@ interface MoveTransformerOptions {
 export interface MoveTransformerModeState {
   isMoveTransformerMode: boolean;
   transformerToMove: number | null;
-  transformerCursorPos: { x: number; y: number } | null;
   startMoveTransformer: (gridResultId: number) => void;
   setTransformerToMove: (id: number | null) => void;
   setIsMoveTransformerMode: (active: boolean) => void;
@@ -259,7 +262,6 @@ export const useMoveTransformerMode = ({
   const setActiveMode = useModelStore((s) => s.setActiveMode);
   const transformerToMove = useModelStore((s) => s.transformerToMove);
   const setTransformerToMove = useModelStore((s) => s.setTransformerToMove);
-  const transformerCursorPos = useModelStore((s) => s.transformerCursorPos);
   const setTransformerCursorPos = useModelStore((s) => s.setTransformerCursorPos);
 
   const isMoveTransformerMode = activeMode === "move-transformer";
@@ -360,7 +362,6 @@ export const useMoveTransformerMode = ({
   return {
     isMoveTransformerMode,
     transformerToMove,
-    transformerCursorPos,
     startMoveTransformer,
     setTransformerToMove,
     setIsMoveTransformerMode,

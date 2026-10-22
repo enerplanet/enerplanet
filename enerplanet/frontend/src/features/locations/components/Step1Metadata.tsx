@@ -1,12 +1,9 @@
 import type { FC, ChangeEvent } from 'react';
-import { Globe, Lock, X, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, Plus } from 'lucide-react';
 
 interface Step1MetadataProps {
   title: string;
   setTitle: (v: string) => void;
-  isPublic: boolean;
-  setIsPublic: (v: boolean) => void;
   tags: string[];
   setTags: (v: string[]) => void;
   tagInput: string;
@@ -14,7 +11,7 @@ interface Step1MetadataProps {
 }
 
 const Step1Metadata: FC<Step1MetadataProps> = ({
-  title, setTitle, isPublic, setIsPublic, tags, setTags, tagInput, setTagInput,
+  title, setTitle, tags, setTags, tagInput, setTagInput,
 }) => {
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -44,40 +41,6 @@ const Step1Metadata: FC<Step1MetadataProps> = ({
           className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors"
         />
         <p className="text-xs text-muted-foreground mt-1">Give your location a descriptive name</p>
-      </div>
-
-      {/* Visibility */}
-      <div>
-        <span className="block text-sm font-medium text-foreground mb-1.5">Visibility</span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setIsPublic(false)}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors',
-              !isPublic
-                ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'border-border hover:bg-muted text-muted-foreground',
-            )}
-          >
-            <Lock className="w-4 h-4" /> Private
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsPublic(true)}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors',
-              isPublic
-                ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'border-border hover:bg-muted text-muted-foreground',
-            )}
-          >
-            <Globe className="w-4 h-4" /> Public
-          </button>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          {isPublic ? 'Visible to all users' : 'Only visible to you'}
-        </p>
       </div>
 
       {/* Tags */}

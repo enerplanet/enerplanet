@@ -19,6 +19,7 @@ interface ImportMetaEnv {
   readonly VITE_KEYCLOAK_IDP_HINT?: string;
   readonly VITE_KEYCLOAK_REDIRECT_URI?: string;
   readonly VITE_CARTO_BASEMAP_API_KEY?: string;
+  readonly VITE_SHOW_RESULT_GAPS?: string;
 }
 
 interface ImportMeta {

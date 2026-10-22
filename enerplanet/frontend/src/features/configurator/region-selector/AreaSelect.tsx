@@ -8,12 +8,13 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
+import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
-import Notification from "@/components/ui/Notification";
 import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
 import { GridActionBar } from "@/components/map-controls/GridActionBar";
 import { useMapProvider } from "@/providers/map-context";
@@ -22,7 +23,7 @@ import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { useDefaultRegionStore } from "@/features/configurator/region-selector/store/default-region";
 import { useReassignmentLine } from "@/features/configurator/hooks/useMapDisplay";
 import { generateUUID } from "@/utils/uuid";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import {
   usePolygonLimitsStore,
   type AccessLevel,
@@ -34,13 +35,17 @@ import {
   useMoveTransformerMode,
 } from "@/features/configurator/hooks/useTransformerMode";
 import { useBuildingAssignMode } from "@/features/configurator/hooks/useBuildingAssignMode";
-import { useMultiEditMode } from "@/features/configurator/hooks/useMultiEditMode";
+import { useBuildingSelection } from "@/features/configurator/hooks/useBuildingSelection";
 import { useBuildingDemandRecalculation } from "@/features/configurator/hooks/useBuildingDemandRecalculation";
-import { useRegionName, useRegionSelection } from "@/features/configurator/hooks/useRegion";
+import { useRegionSelection } from "@/features/configurator/hooks/useRegion";
 import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hooks/useMapDisplay";
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
+import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { AreaImportError, areaToGeoJSON, readAreaFile } from "@/features/configurator/utils/areaGeoJSON";
+import { downloadBlob } from "@/utils/fileDownload";
+import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 
 // Extracted selectors
 import {
@@ -49,6 +54,7 @@ import {
   useGridIdToPeakLoad,
   useGridIdToConnectedBuildings,
   useBuildingsInPolygonCount,
+  useBuildingOsmIdsInPolygon,
   usePeakLoadInPolygonKw,
   useCustomTransformers,
 } from "@/features/configurator/region-selector/selectors/gridDataSelectors";
@@ -62,10 +68,19 @@ import { TransformerDialog } from "./components/TransformerDialog";
 import { AddTransformerDialog } from "./components/AddTransformerDialog";
 import { BuildingDialog } from "./components/BuildingDialog";
 import { TechParameterDialog } from "./components/TechParameterDialog";
+import { ProductPickerDialog } from "./components/ProductPickerDialog";
+import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
+import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
+import { HeatScopeDialog } from "./components/HeatScopeDialog";
 import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
+import { LargeModelWarning } from "./components/LargeModelWarning";
+import { AreaLimitWarning } from "./components/AreaLimitWarning";
+import { useModelDemandProfiles } from "@/features/configurator/building-config/modelDemandProfiles";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
+import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
+import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
 const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
 
@@ -82,6 +97,48 @@ interface AreaSelectProps {
   editMode?: boolean;
   existingModelId?: number;
 }
+
+/** pylovo gives user-placed transformers an osm_id of the form "user/<timestamp>". */
+const hasUserTransformer = (grid: PylovoGridData | undefined): boolean =>
+  (grid?.transformers?.features ?? []).some((f) => String(f.properties?.osm_id ?? "").startsWith("user/"));
+
+/** Buildings of the grid that take part in the model: disabled ones do not. */
+const activeBuildingCount = (grid: PylovoGridData | undefined): number =>
+  (grid?.buildings?.features ?? []).filter((f) => f.properties?.activated !== false).length;
+
+/** Translation key of the hint beside the cursor: where to click next while drawing an area. */
+const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, pointerOnMap: boolean): string | null => {
+  if (!pointerOnMap) return null;
+  if (!drawing) {
+    if (target === "outside") return "drawing.clickToDraw";
+    return target === "building" ? "drawing.buildingNotStart" : null;
+  }
+  if (corners <= 1) return "drawing.secondCorner";
+  if (corners === 2) return "drawing.thirdCorner";
+  return "drawing.rightClickToFinish";
+};
+
+interface HeldKeys { shift: boolean; alt: boolean; ctrl: boolean }
+
+/** The building under the pointer, as far as the modifier hints need it. */
+interface HoveredBuilding { disabled: boolean; selected: boolean }
+
+const isCorner = (target: PointerTarget): boolean => target === "corner" || target === "triangle-corner";
+
+/** The hovered building's state, from the map tooltip and the current selection. */
+const hoveredBuildingOf = (osmId: string | null, disabled: boolean, selected: ReadonlySet<string>): HoveredBuilding | null =>
+  osmId === null ? null : { disabled, selected: selected.has(osmId) };
+
+/** Translation key of the hint for what a click does with the held modifier: delete, disable or select. */
+const deleteHintKey = (target: PointerTarget, keys: HeldKeys, building: HoveredBuilding | null, pointerOnMap: boolean): string | null => {
+  if (!pointerOnMap) return null;
+  if (target === "corner" && keys.alt) return "drawing.clickToDeleteCorner";
+  if (target === "triangle-corner" && keys.alt) return "drawing.clickToDeleteTriangle";
+  if (building && keys.alt) return building.disabled ? "drawing.clickToEnableBuilding" : "drawing.clickToDisableBuilding";
+  if (building && keys.ctrl) return building.selected ? "drawing.clickToDeselectBuilding" : "drawing.clickToSelectBuilding";
+  if (target === "polygon" && keys.shift) return "drawing.clickToDelete";
+  return null;
+};
 
 export const AreaSelect: FC<AreaSelectProps> = ({
   onAreaSelected,
@@ -113,6 +170,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
+  const [pointerTarget, setPointerTarget] = useState<PointerTarget>("outside");
+  const [heldKeys, setHeldKeys] = useState<HeldKeys>({ shift: false, alt: false, ctrl: false });
+  const cornerUnderPointerRef = useRef(false);
+  cornerUnderPointerRef.current = isCorner(pointerTarget);
 
   // Draft ID for scoping user-placed transformers to this model session
   const [draftId, setDraftId] = useState<string | undefined>(() => {
@@ -160,7 +221,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     techOperations,
     mapInteractions,
     notification,
-    setCursorPos,
+    setPointerOnMap,
     map,
     mapRef,
     unsavedDialog,
@@ -174,6 +235,17 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     suppressDialogOnClickRef,
     draftId,
   });
+  useAreaPreparation();
+
+  const runMode = useModelStore((s) => s.runMode);
+  const gridStale = useModelStore((s) => s.gridStale);
+  const setGridStale = useModelStore((s) => s.setGridStale);
+  const operateIssues = useOperateSizes(pylovoLayers.pylovoLayersRef, runMode, pylovoLayers.pylovoGridData);
+  const fixOperateIssue = useCallback((issue: OperateIssue, techKey: string) => {
+    const extent = issue.feature.getGeometry()?.getExtent();
+    if (map && extent) map.getView().fit(extent, { maxZoom: 19, duration: 300, padding: [80, 80, 80, 80] });
+    techOperations.handleEditTechFromDialog(techKey, issue.feature);
+  }, [map, techOperations]);
 
   // Fly to default region immediately when map is ready (before saved map location kicks in)
   const hasAppliedDefaultRegion = useRef(false);
@@ -193,8 +265,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     });
   }, [map, defaultRegion, editMode]);
 
-  // Unsaved changes guard — skip when navigating due to session expiry
-  const isDirty = state.isModified;
+  // Unsaved changes guard, skipped when navigating due to session expiry. A
+  // saved model always has a polygon, so in edit mode only real edits count.
+  const isDirty = editMode ? state.isModified : state.allPolygons.length > 0;
 
   useEffect(() => {
     if (!isDirty || typeof window === "undefined") return;
@@ -212,10 +285,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   // ── Extracted hooks ──────────────────────────────────────────────
 
   const refreshGrid = useCallback(async () => {
-    if (state.allPolygons.length > 0) {
-      await actions.handlePolygonModified(state.allPolygons);
-    }
-  }, [state.allPolygons, actions]);
+    // A site edit (station added, buildings assigned) waits for Regenerate grid,
+    // which re-clusters the site; a default-mode grid is fetched again at once.
+    if (siteScope(pylovoLayers.pylovoGridData)) setGridStale(true);
+    else if (state.allPolygons.length > 0) await actions.handlePolygonModified(state.allPolygons);
+  }, [state.allPolygons, actions, pylovoLayers.pylovoGridData, setGridStale]);
 
   const addTransformer = useAddTransformerMode({
     map,
@@ -246,8 +320,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     draftId,
   });
 
-  const multiEdit = useMultiEditMode();
-
   const buildingDemand = useBuildingDemandRecalculation({
     pylovoLayers,
     notification,
@@ -260,12 +332,29 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
   const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
   const buildingsInPolygonCount = useBuildingsInPolygonCount(pylovoLayers.pylovoGridData);
+  const buildingOsmIdsInPolygon = useBuildingOsmIdsInPolygon(pylovoLayers.pylovoGridData);
   const peakLoadInPolygonKw = usePeakLoadInPolygonKw(pylovoLayers.pylovoGridData);
   const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
   const activeMode = useModelStore((s) => s.activeMode);
   suppressDialogOnClickRef.current = activeMode !== null;
+
+  const markModified = useCallback(() => setIsModified(true), [setIsModified]);
+  const buildingSelection = useBuildingSelection({
+    map,
+    pylovoLayersRef: pylovoLayers.pylovoLayersRef,
+    isDrawing: state.isDrawing,
+    cornerUnderPointerRef,
+    onBuildingsChanged: markModified,
+  });
+  const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
+
+  // ── Heat-add bootstrap (one-time "auto-assign vs manual" prompt) ──
+  const heatBootstrapOpen = useModelStore((s) => s.heatBootstrapOpen);
+  const setHeatBootstrapOpen = useModelStore((s) => s.setHeatBootstrapOpen);
+  const setHeatBootstrapPrompted = useModelStore((s) => s.setHeatBootstrapPrompted);
+  const setHeatResolutionMode = useModelStore((s) => s.setHeatResolutionMode);
 
   // ── Available transformer sizes from API ─────────────────────────
   const [transformerSizes, setTransformerSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
@@ -279,7 +368,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, []);
 
   // ── Reverse geocode polygon centroid to get region name ──────────
-  const regionName = useRegionName(state.allPolygons);
 
   // ── Map resize handling ──────────────────────────────────────────
   useMapResize(map, mapRef);
@@ -306,9 +394,42 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   });
 
   // ── Tech dialog flow ─────────────────────────────────────────────
-  const techDialogFlow = useTechDialogFlow({
-    multiEditSelectedIds: multiEdit.multiEditSelectedIds,
+  const techDialogFlow = useTechDialogFlow();
+
+  // ── Heat resolution (expected-fit auto-resolve) ───────────────────
+  const heatResolution = useHeatResolution({
+    pylovoLayersRef: pylovoLayers.pylovoLayersRef,
+    setIsModified,
   });
+
+  // One-time "auto-assign vs manual" choice (fires after grid data loads).
+  const handleHeatBootstrapAutoAssign = useCallback(async () => {
+    setHeatResolutionMode("expected");
+    await heatResolution.resolveAllBuildingsHeat();
+    setHeatBootstrapPrompted(true);
+    setHeatBootstrapOpen(false);
+    notification.showSuccess(t("gridNotifications.heatAutoAssigned"));
+  }, [setHeatResolutionMode, heatResolution, setHeatBootstrapPrompted,
+    setHeatBootstrapOpen, notification, t]);
+
+  const handleHeatBootstrapManual = useCallback(() => {
+    setHeatResolutionMode("manual");
+    setHeatBootstrapPrompted(true);
+    setHeatBootstrapOpen(false);
+  }, [setHeatResolutionMode, setHeatBootstrapPrompted, setHeatBootstrapOpen]);
+
+  // Toolbar "Resolve heat" — re-run the expected-fit auto-assign on demand.
+  const [isResolvingHeat, setIsResolvingHeat] = useState(false);
+  const handleResolveAllHeat = useCallback(async () => {
+    if (isResolvingHeat) return;
+    setIsResolvingHeat(true);
+    try {
+      const count = await heatResolution.resolveAllBuildingsHeat();
+      notification.showSuccess(t("gridNotifications.heatResolved", { count }));
+    } finally {
+      setIsResolvingHeat(false);
+    }
+  }, [isResolvingHeat, heatResolution, notification, t]);
 
   // ── 3D MapLibre handlers ─────────────────────────────────────────
   const ml3d = useMapLibre3DHandlers({
@@ -319,22 +440,35 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     t,
   });
 
-  // ── Mouse tracking for overlays ──────────────────────────────────
+  // Modified clicks delete (Shift, Alt on a corner), disable (Alt) or select (Ctrl); the overlay says which before the click.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => setHeldKeys({ shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey || e.metaKey });
+    const onBlur = () => setHeldKeys({ shift: false, alt: false, ctrl: false });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  // ── Pointer over the map, for the hints ──────────────────────────
+  // Only enter and leave are stored. The position is tracked in CursorHint,
+  // so a mouse move does not re-render the configurator.
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
     if (!el) return;
-    const onMove = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      setCursorPos({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
-    };
-    const onLeave = () => setCursorPos(null);
-    el.addEventListener("mousemove", onMove);
+    const onEnter = () => setPointerOnMap(true);
+    const onLeave = () => setPointerOnMap(false);
+    el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
     return () => {
-      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseenter", onEnter);
       el.removeEventListener("mouseleave", onLeave);
     };
-  }, [mapRef, setCursorPos]);
+  }, [mapRef, setPointerOnMap]);
 
   // ── Cleanup polygon on unmount ───────────────────────────────────
   useEffect(() => {
@@ -376,11 +510,19 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
+  // Read again after a save, which starts a BuEM run, and after the configurator
+  // closes, where a building's run may have been repeated.
+  const { buildingId: openBuildingId } = useConfiguratorParams();
+  const demandProfiles = useModelDemandProfiles(existingModelId, `${state.isSaving}|${openBuildingId ?? ""}`);
+
   // ── Drawing helpers ──────────────────────────────────────────────
-  const showDrawHint =
-    state.cursorPos &&
-    !state.isDrawing &&
-    (state.allowMultiplePolygons || state.allPolygons.length === 0);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
+
+  // Primitive selectors: they change when another building is hovered, not on every move.
+  const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
+  const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
+  const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -389,17 +531,50 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     await actions.handlePolygonDrawn(coordinates, allPolygons);
   };
 
+  // An imported area replaces the drawn ones and is handled like a finished drawing.
+  const [importedPolygons, setImportedPolygons] = useState<[number, number][][]>();
+  const handleImportArea = async (file: File) => {
+    try {
+      const rings = await readAreaFile(file);
+      setImportedPolygons(rings);
+      await handlePolygonDrawnWithLimit(rings[rings.length - 1], rings);
+    } catch (error) {
+      const reason = error instanceof AreaImportError ? error.reason : "invalid";
+      notification.showError(t(`simulation.mapHeader.importAreaError.${reason}`, { detail: error instanceof AreaImportError ? error.detail : "" }));
+    }
+  };
+
+  // Shares the area without sharing the model: anyone can import the file into their own model.
+  const handleExportArea = () => {
+    const name = state.modelName.trim();
+    const blob = new Blob([areaToGeoJSON(state.allPolygons, name)], { type: "application/geo+json" });
+    downloadBlob(blob, name && `${name}.geojson`, "area.geojson");
+  };
+
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
+
+  const closeTechDialog = () => {
+    techOperations.setTechDialogOpen(false);
+    techOperations.setSelectedTechForDialog(null);
+    techOperations.setSelectedBuildingForTech(null);
+    techOperations.setIsAddingTechToAll(false);
+    if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
+      techDialogFlow.techAddedFromBuildingDialogRef.current = false;
+      const feat = mapInteractions.selectedBuildingFeature;
+      if (feat) {
+        const updatedTechs = feat.get("techs") || {};
+        mapInteractions.setSelectedBuilding(
+          (prev: typeof mapInteractions.selectedBuilding) =>
+            prev ? { ...prev, techs: { ...updatedTechs } } : null
+        );
+      }
+      mapInteractions.setBuildingDialogOpen(true);
+    }
+  };
 
   // ── Render ───────────────────────────────────────────────────────
   return (
     <Fragment>
-      <Notification
-        isOpen={notification.data.open}
-        message={notification.data.message}
-        severity={notification.data.severity}
-        onClose={notification.hide}
-      />
       <LoadingOverlay isOpen={editMode && state.isLoadingModel} />
 
       <MapContainer
@@ -427,13 +602,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onTechDragEnd={techOperations.handleTechDragEnd}
             onAddTechToAll={techOperations.handleAddTechToAll}
             onRemoveTechFromAll={techOperations.handleRemoveTechFromAll}
+            onRemoveAllTechs={techOperations.handleRemoveAllTechs}
+            techBuildingCount={techOperations.techBuildingCount}
             appliedTechKeys={techOperations.appliedTechKeys}
             gridResultIds={gridResultIds}
             buildingsCount={buildingsInPolygonCount}
+            buildingOsmIds={buildingOsmIdsInPolygon}
             peakLoadKw={peakLoadInPolygonKw}
-            regionName={regionName}
-            polygonCoordinates={state.allPolygons}
             isModified={state.isModified}
+            operateIssues={operateIssues}
+            onFixOperateIssue={fixOperateIssue}
           />
         }
         onDrop={techOperations.handleMapDrop}
@@ -465,11 +643,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               />
             )}
             <MapOverlays
-              showDrawHint={Boolean(showDrawHint)}
-              cursorPos={state.cursorPos}
-              transformerTooltip={mapInteractions.transformerTooltip}
-              buildingTooltip={mapInteractions.buildingTooltip}
-              mvLineTooltip={mapInteractions.mvLineTooltip}
+              demandProfiles={demandProfiles}
+              drawHintKey={drawHint}
+              deleteHintKey={deleteHint}
+              mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
               isGeneratingGrid={state.isGeneratingGrid}
               simulateEV={simulateEV}
@@ -478,7 +655,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             />
             {!editMode && (
               <PolygonDrawingGuide
-                canDraw={state.allowMultiplePolygons || state.allPolygons.length === 0}
+                canDraw
                 isDrawing={state.isDrawing}
                 polygonCount={state.allPolygons.length}
                 currentPointCount={currentPointCount}
@@ -487,6 +664,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
                 isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
                 hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
               />
             )}
             <GridActionBar
@@ -498,6 +676,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onRunPowerFlow={handleRunPowerFlow}
               isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
               hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+              onResolveAllHeat={handleResolveAllHeat}
+              isResolvingHeat={isResolvingHeat}
             />
             <MapInteractionBanners
               isAddTransformerMode={addTransformer.isAddTransformerMode}
@@ -515,28 +695,34 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
+            {state.areaOverLimit
+              ? <AreaLimitWarning overLimit={state.areaOverLimit} />
+              : <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />}
           </>
         }
         mapHeader={
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
-            allowMultiplePolygons={state.allowMultiplePolygons}
-            onToggleAllowMultiplePolygons={actions.setAllowMultiplePolygons}
             onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            onImportArea={handleImportArea}
+            onExportArea={handleExportArea}
+            onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}
+            isGeneratingGrid={state.isGeneratingGrid}
+            selectedBuildingCount={buildingSelection.selectedCount}
+            onDisableSelectedBuildings={buildingSelection.disableSelected}
             isLoadingPreference={isLoadingPreference}
             currentWorkspace={currentWorkspace}
             preferredWorkspaceId={preferredWorkspaceId ?? undefined}
             normalizedWorkspaceId={normalizedWorkspaceId}
             onWorkspaceChange={handleWorkspaceChange}
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
-            includePublicBuildings={state.includePublicBuildings}
             includePrivateBuildings={state.includePrivateBuildings}
-            onTogglePublicBuildings={actions.setIncludePublicBuildings}
             onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
             availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
             onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
+            modelRegionName={editMode ? pylovoLayers.regionBoundary?.name : undefined}
           />
         }
         showSidebar={true}
@@ -555,10 +741,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDrawingChange={actions.setIsDrawing}
         onPointCountChange={setCurrentPointCount}
         onClearAll={regionSelection.handleClearAllWithModes}
-        allowMultiple={state.allowMultiplePolygons}
+        onPointerTargetChange={setPointerTarget}
+        onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
+        onSketchCannotClose={(reason) => notification.showError(t(reason === "too-few-corners" ? "drawing.needThreeCorners" : "drawing.cornersInLine"))}
+        suspended={activeMode !== null}
+        allowMultiple
         clearTrigger={state.clearTrigger}
-        initialPolygons={editMode ? state.loadedCoordinates : undefined}
-        disableAfterDraw={!state.allowMultiplePolygons}
+        initialPolygons={importedPolygons ?? (editMode ? state.loadedCoordinates : undefined)}
         enableEditing={true}
         labels={{
           clickToClose: t("drawing.clickToClose"),
@@ -604,6 +793,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         selectedBuilding={mapInteractions.selectedBuilding}
         onClose={mapInteractions.handleCloseBuildingDialog}
         onFClassDemandChange={buildingDemand.handleFClassDemandChange}
+        onHeatDemandChange={buildingDemand.handleHeatDemandChange}
         onSelectedFClassChange={buildingDemand.handleSelectedFClassChange}
         onOpenChange={mapInteractions.setBuildingDialogOpen}
         onEditTech={(techKey) => {
@@ -630,15 +820,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onAreaChange={buildingDemand.handleAreaChange}
         onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
         onRecalculateDemand={buildingDemand.handleRecalculateDemand}
-        onAddTech={
-          multiEdit.isMultiEdit
-            ? techDialogFlow.handleApplyTechToSelected
-            : techDialogFlow.handleAddTechFromDialog
-        }
-        isMultiEdit={multiEdit.isMultiEdit}
-        onToggleMultiEdit={multiEdit.toggleMultiEdit}
-        multiEditCount={multiEdit.multiEditSelectedIds.size}
-        onApplyTechToAll={techDialogFlow.handleApplyTechToSelected}
+        onAddTech={techDialogFlow.handleAddTechFromDialog}
         isExcluded={(() => {
           const osmId = mapInteractions.selectedBuilding?.osmId;
           if (!osmId) return false;
@@ -647,18 +829,29 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         })()}
         onToggleExclude={actions.toggleBuildingExclusion}
         onSave={() => setIsModified(true)}
-        onApplyTemplate={(templateTechs) => {
-          if (mapInteractions.selectedBuildingFeature) {
-            const feature = mapInteractions.selectedBuildingFeature;
-            for (const [techKey, techData] of Object.entries(templateTechs)) {
-              feature.set(`tech_${techKey}`, JSON.stringify(techData));
-            }
-            mapInteractions.setSelectedBuilding((prev: typeof mapInteractions.selectedBuilding) =>
-              prev ? { ...prev, techs: { ...prev.techs, ...templateTechs } } : null
-            );
-          }
-          setIsModified(true);
+      />
+
+      <BuildingPanelHost
+        modelId={existingModelId}
+        draftId={draftId}
+        onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
+        onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
+        pvFor={pylovoLayers.buildingPv}
+        onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        techsFor={pylovoLayers.buildingTechs}
+        onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
+      />
+
+      <HeatScopeDialog request={techOperations.heatScopeRequest} onChoose={techOperations.resolveHeatScope} />
+
+      <HeatBootstrapDialog
+        open={heatBootstrapOpen}
+        onOpenChange={(open) => {
+          setHeatBootstrapOpen(open);
+          if (!open) setHeatBootstrapPrompted(true);
         }}
+        onAutoAssign={handleHeatBootstrapAutoAssign}
+        onManual={handleHeatBootstrapManual}
       />
 
       <CreateWorkspaceModal
@@ -670,41 +863,36 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         }}
       />
 
+      <ProductPickerDialog
+        open={techOperations.techDialogOpen && techOperations.techDialogStep === "pick"}
+        type={techOperations.selectedTechForDialog?.key ?? null}
+        current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
+        applyToAll={techOperations.isAddingTechToAll}
+        onPick={(product) => {
+          const tech = asBuildingTechnology(product);
+          techOperations.handleSaveTechToBuildingBulk(tech.key, defaultConstraints(product), techOperations.isAddingTechToAll, tech);
+          closeTechDialog();
+        }}
+        onDefineOwn={(product) => {
+          techOperations.setSelectedTechForDialog(asBuildingTechnology(product));
+          techOperations.setTechDialogStep("define");
+        }}
+        onClose={closeTechDialog}
+      />
+
       <TechParameterDialog
-        open={techOperations.techDialogOpen}
+        open={techOperations.techDialogOpen && techOperations.techDialogStep === "define"}
         onOpenChange={techOperations.setTechDialogOpen}
         technology={techOperations.selectedTechForDialog}
         building={techOperations.selectedBuildingForTech}
         onSave={techOperations.handleSaveTechToBuildingBulk}
-        onClose={() => {
-          techOperations.setTechDialogOpen(false);
-          techOperations.setSelectedTechForDialog(null);
-          techOperations.setSelectedBuildingForTech(null);
-          techOperations.setIsAddingTechToAll(false);
-          if (techDialogFlow.techAddedFromBuildingDialogRef.current) {
-            techDialogFlow.techAddedFromBuildingDialogRef.current = false;
-            const feat = mapInteractions.selectedBuildingFeature;
-            if (feat) {
-              const updatedTechs = feat.get("techs") || {};
-              mapInteractions.setSelectedBuilding(
-                (prev: typeof mapInteractions.selectedBuilding) =>
-                  prev ? { ...prev, techs: { ...updatedTechs } } : null
-              );
-            }
-            mapInteractions.setBuildingDialogOpen(true);
-          }
-        }}
+        onClose={closeTechDialog}
         showApplyToAll={techOperations.isAddingTechToAll}
       />
 
       <TransformerCursorOverlay
         isAddTransformerMode={addTransformer.isAddTransformerMode}
         isMoveTransformerMode={moveTransformer.isMoveTransformerMode}
-        cursorPos={
-          addTransformer.isAddTransformerMode
-            ? addTransformer.transformerCursorPos
-            : moveTransformer.transformerCursorPos
-        }
       />
 
       <UnsavedChangesDialog

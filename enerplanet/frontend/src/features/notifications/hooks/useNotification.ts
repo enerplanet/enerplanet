@@ -1,56 +1,37 @@
-import { useState, useCallback } from 'react';
-
-type NotificationSeverity = "success" | "error" | "warning" | "info";
+import { useCallback } from 'react';
+import { usePageMessages, type PageMessageSeverity } from '@/features/notifications/pageMessages';
 
 interface NotificationState {
     open: boolean;
     message: string;
-    severity: NotificationSeverity;
+    severity: PageMessageSeverity;
 }
 
-/** Hook to manage notification state and helpers (success, error, warning, info). */
+/** Shows page messages (success, error, warning, info) in the header next to the bell. */
 export const useNotification = () => {
-    const [notification, setNotification] = useState<NotificationState>({
-        open: false,
-        message: "",
-        severity: "success",
-    });
+    const { show, dismiss } = usePageMessages();
 
-    /** Show a notification with message and severity */
-    const show = useCallback((message: string, severity: NotificationSeverity = "info") => {
-        setNotification({ open: true, message, severity });
-    }, []);
+    const showSuccess = useCallback((message: string) => show(message, "success"), [show]);
+    const showError = useCallback((message: string) => show(message, "error"), [show]);
+    const showWarning = useCallback((message: string) => show(message, "warning"), [show]);
+    const showInfo = useCallback((message: string) => show(message, "info"), [show]);
 
-    /** Convenience helpers */
-    const showSuccess = useCallback((message: string) => {
-        show(message, "success");
-    }, [show]);
-
-    const showError = useCallback((message: string) => {
-        show(message, "error");
-    }, [show]);
-
-    const showWarning = useCallback((message: string) => {
-        show(message, "warning");
-    }, [show]);
-
-    const showInfo = useCallback((message: string) => {
-        show(message, "info");
-    }, [show]);
-
-    /** Hide the current notification */
-    const hide = useCallback(() => {
-        setNotification(prev => ({ ...prev, open: false }));
-    }, []);
+    /** Shows the message when `open`, otherwise closes the current one. */
+    const setNotification = useCallback((state: NotificationState) => {
+        if (state.open) {
+            show(state.message, state.severity);
+        } else {
+            dismiss();
+        }
+    }, [show, dismiss]);
 
     return {
-        notification,
         show,
         showSuccess,
         showError,
         showWarning,
         showInfo,
-        hide,
-        setNotification, // For backwards compatibility
+        hide: dismiss,
+        setNotification,
     };
 };

@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 
 	"spatialhub_backend/internal/bearerauth"
 
@@ -17,29 +19,27 @@ const (
 )
 
 type Config struct {
-	Auth                  auth.Config
-	BearerAuth            bearerauth.Options
-	RedisConfig           goredis.Options
-	AppPort               string
-	AppHost               string
-	AppURL                string
-	AppEnv                string
-	AppTimezone           string
-	CookieDomain          string
-	Database              platformconfig.DatabaseConfig
-	SessionTTLMinutes     int // Session timeout in minutes
-	Email                 platformconfig.EmailSettings
-	AuthServiceURL        string // URL of the auth-service
-	WebserviceServiceURL  string // URL of the webservice microservice
-	PylovoServiceURL      string // URL of the pylovo microservice
-	City2TabulaServiceURL string // URL of City2TABULA's on-request 3D-data server
-	WeatherServiceURL     string // URL of weather-serve
-	WeatherAPIKey         string // X-API-Key for weather-serve — required, checked by weather-serve itself
-	WeatherProvider       string // provider passed on every weather-serve call — required, weather-serve has no server-side default
-	BuemServiceURL        string // URL of buem-gateway
-	BuemAPIKey            string // X-Api-Key for buem-gateway — only needed if BuemServiceURL goes through its reverse proxy, not a direct container call; see internal/buem.NewClient
-	OpenTechDBServiceURL  string // URL of the OpenTech-DB service
-	CallbackSecret        string // Shared secret for webservice callback authentication
+	Auth                 auth.Config
+	BearerAuth           bearerauth.Options
+	RedisConfig          goredis.Options
+	AppPort              string
+	AppHost              string
+	AppURL               string
+	AppEnv               string
+	AppTimezone          string
+	CookieDomain         string
+	Database             platformconfig.DatabaseConfig
+	SessionTTLMinutes    int // Session timeout in minutes
+	Email                platformconfig.EmailSettings
+	AuthServiceURL       string // URL of the auth-service
+	WebserviceServiceURL string // URL of the webservice microservice
+	PylovoServiceURL     string // URL of the pylovo microservice
+	WeatherProvider      string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
+	BuemVersion          string // BuEM release the stored results are keyed for; must match the deployed buem-model
+	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v1/ignis/* proxy) routes through it
+	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
+	OpenTechDBServiceURL string // URL of the OpenTech-DB service
+	CallbackSecret       string // Shared secret for webservice callback authentication
 }
 
 func LoadFromEnv() (*Config, error) {
@@ -74,16 +74,14 @@ func LoadFromEnv() (*Config, error) {
 		AuthServiceURL:       platformconfig.GetEnv("AUTH_SERVICE_URL", "http://auth-service:8001"),
 		WebserviceServiceURL: normalizeWebserviceURL(platformconfig.GetEnv("WEBSERVICE_SERVICE_URL", defaultWebserviceURL)),
 		PylovoServiceURL:     platformconfig.GetEnv("PYLOVO_SERVICE_URL", "http://localhost:8086"),
-		// 5000 matches City2TABULA's own SERVER_PORT default (cmd/server/main.go).
-		City2TabulaServiceURL: platformconfig.GetEnv("CITY2TABULA_SERVICE_URL", "http://localhost:5000"),
-		// 8090 matches weather-serve's own WEATHER_API_PORT default (docker-compose.serve.yml).
-		WeatherServiceURL: platformconfig.GetEnv("WEATHER_SERVICE_URL", "http://localhost:8090"),
-		WeatherAPIKey:     os.Getenv("WEATHER_API_KEY"),
-		WeatherProvider:   platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
-		// No default: buem-gateway's real deployment URL/port is unconfirmed (see the
-		// on-request-3d-pipeline plan's risk #6) — empty fails loudly instead of guessing.
-		BuemServiceURL:       os.Getenv("BUEM_SERVICE_URL"),
-		BuemAPIKey:           os.Getenv("BUEM_API_KEY"),
+		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
+		BuemVersion:          platformconfig.GetEnv("BUEM_VERSION", ""),
+		// 8400 is TentaCron's slot in the dev port allocation (repos.conf),
+		// a range chosen to avoid the crowded 8080 and 9000 neighbourhoods.
+		// The Makefile publishes it there; TentaCron's own default is 8080,
+		// which Keycloak holds in this stack.
+		TentacronServiceURL:  platformconfig.GetEnv("TENTACRON_SERVICE_URL", "http://localhost:8400"),
+		TentacronAPIKey:      os.Getenv("TENTACRON_API_KEY"),
 		OpenTechDBServiceURL: platformconfig.GetEnv("OPENTECH_DB_SERVICE_URL", defaultOpenTechDBURL),
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
 	}
@@ -108,4 +106,21 @@ func normalizeWebserviceURL(raw string) string {
 		return defaultWebserviceURL
 	}
 	return raw
+}
+
+// buemReleaseVersion is the form BuEM reports as model_version for a release
+// image (buem-model:6.10.0 reports "6.10.0"); other tags report other strings.
+var buemReleaseVersion = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+// ValidateBuemVersion reports why v cannot key stored BuEM results: a result
+// is stored only when BuEM's model_version equals it, so it must be the
+// release version of the deployed buem-model image.
+func ValidateBuemVersion(v string) error {
+	if v == "" {
+		return fmt.Errorf("BUEM_VERSION is not set; set it to the buem-model release in repos.conf (BUEM_MODEL_IMAGE_TAG), or no BuEM result is stored")
+	}
+	if !buemReleaseVersion.MatchString(v) {
+		return fmt.Errorf("BUEM_VERSION %q is not a release version X.Y.Z; BuEM reports X.Y.Z only for release images, so no BuEM result would be stored", v)
+	}
+	return nil
 }

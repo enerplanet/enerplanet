@@ -6,6 +6,7 @@ import {
   Wind,
   Leaf,
   Flame,
+  Snowflake,
   Droplets,
   Home,
   Building2,
@@ -49,7 +50,6 @@ import {
   TOOLBAR_BUTTON_CLASS,
   TOOLBAR_ICON_BUTTON_CLASS,
 } from "@/components/ui/toolbar";
-import Notification from "@/components/ui/Notification";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import AddParameterModal from "./components/AddParameterModal";
 import AddTechnologyModal from "./components/AddTechnologyModal";
@@ -102,6 +102,7 @@ const iconMap: Record<string, LucideIcon> = {
   wind: Wind,
   leaf: Leaf,
   flame: Flame,
+  snowflake: Snowflake,
   droplets: Droplets,
   home: Home,
   "building-2": Building2,
@@ -117,6 +118,7 @@ const iconOptions = [
   { value: "wind", label: "Wind", icon: Wind },
   { value: "leaf", label: "Leaf", icon: Leaf },
   { value: "flame", label: "Flame", icon: Flame },
+  { value: "snowflake", label: "Snowflake", icon: Snowflake },
   { value: "droplets", label: "Droplets", icon: Droplets },
   { value: "home", label: "Home", icon: Home },
   { value: "building-2", label: "Building", icon: Building2 },
@@ -166,7 +168,7 @@ export default function TechnologiesPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('technologies.title'), " | EnerPlanET");
   const confirm = useConfirm();
-  const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const user = useAuthStore((state) => state.user);
 
   const [technologies, setTechnologies] = useState<Technology[]>([]);
@@ -540,6 +542,7 @@ export default function TechnologiesPage() {
     try {
       const newTech = await technologyService.create({
         key: copyKey,
+        type: techToCopy.type ?? techToCopy.key,
         alias: copyAlias,
         icon: techToCopy.icon,
         description: techToCopy.description,
@@ -672,8 +675,6 @@ export default function TechnologiesPage() {
 
   return (
     <div className={PAGE_SHELL_CLASS}>
-        <Notification isOpen={notification.open} message={notification.message} severity={notification.severity} onClose={hideNotification} />
-
         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
 
         <PageHeader

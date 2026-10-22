@@ -246,7 +246,8 @@ interface SummaryData {
   self_sufficiency_rate: number;
   grid_dependency_rate: number;
   total_cost_eur: number;
-  lcoe_eur_kwh: number;
+  /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
+  lcoe_eur_mwh: number;
 }
 
 interface OverviewPanelProps {
@@ -324,7 +325,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_kwh}
+                lcoe={summary?.lcoe_eur_mwh}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}

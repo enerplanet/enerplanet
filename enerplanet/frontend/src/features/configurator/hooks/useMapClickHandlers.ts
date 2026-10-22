@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useConfiguratorParams } from "@/features/configurator/building-config";
 import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
@@ -7,10 +8,15 @@ import { useModelStore } from "@/features/configurator/store/modelStore";
 import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { extractBuildingEnrichmentFromProps, extractPeakLoadFromProps, extractSelectedFClassFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
+import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { extractTransformerId } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { createBuildingStyleFunction, createBuildingHighlightStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
+import { isBuildingDisabled } from "@/features/configurator/hooks/useBuildingSelection";
+
+/** Delay between the pointer entering a feature and its tooltip appearing. */
+const HOVER_DELAY_MS = 300;
 
 const extractYearlyDemandKwh = (props: Record<string, unknown>): number => extractYearlyDemandAll(props);
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -27,7 +33,8 @@ const createBuildingTooltip = (feature: any, pixel: number[]) => {
   const props = feature.getProperties() as Record<string, unknown>;
   const fClasses = getFeatureFClasses(props);
   const primary = getPrimaryFClass(props) || 'unknown';
-  return { x: pixel[0], y: pixel[1], type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
+  const heat = estimateYearlyHeatDemand(primary, props.area as number, explicitHeatDemandKwh(props));
+  return { x: pixel[0], y: pixel[1], osmId: String(feature.get('osm_id') ?? ''), disabled: isBuildingDisabled(feature), type: primary, fClass: primary, fClasses, yearlyDemandKwh: extractYearlyDemandKwh(props), yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated, techs: feature.get('techs') || {}, gridResultId: feature.get('grid_result_id') ?? feature.get('transformer_id'), selectedFClass: extractSelectedFClass(props, fClasses, primary), ...extractBuildingEnrichment(props) };
 };
 
 const createMvLineTooltip = (feature: any, pixel: number[]) => ({
@@ -48,11 +55,17 @@ interface MapClickOptions {
 export const useMapClickHandlers = ({
   map, isDrawing, pylovoLayersRef, suppressDialogOnClickRef, suppressMapInteractions = false,
 }: MapClickOptions) => {
+  // The map click effect below re-registers only when the map or the drawing
+  // mode changes. A ref keeps it reading the current opener without widening
+  // that to every URL change, which is when react-router rebuilds it.
+  const { openBuilding } = useConfiguratorParams();
+  const openBuildingRef = useRef(openBuilding);
+  openBuildingRef.current = openBuilding;
+
   const transformerDialogOpen = useModelStore((s) => s.transformerDialogOpen);
   const setTransformerDialogOpen = useModelStore((s) => s.setTransformerDialogOpen);
   const selectedTransformer = useModelStore((s) => s.selectedTransformer);
   const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
-  const transformerTooltip = useModelStore((s) => s.transformerTooltip);
   const setTransformerTooltip = useModelStore((s) => s.setTransformerTooltip);
   const buildingDialogOpen = useModelStore((s) => s.buildingDialogOpen);
   const setBuildingDialogOpen = useModelStore((s) => s.setBuildingDialogOpen);
@@ -60,9 +73,7 @@ export const useMapClickHandlers = ({
   const setSelectedBuilding = useModelStore((s) => s.setSelectedBuilding);
   const selectedBuildingFeature = useModelStore((s) => s.selectedBuildingFeature);
   const setSelectedBuildingFeature = useModelStore((s) => s.setSelectedBuildingFeature);
-  const buildingTooltip = useModelStore((s) => s.buildingTooltip);
   const setBuildingTooltip = useModelStore((s) => s.setBuildingTooltip);
-  const mvLineTooltip = useModelStore((s) => s.mvLineTooltip);
   const setMvLineTooltip = useModelStore((s) => s.setMvLineTooltip);
 
   const highlightedBuildingsRef = useRef<Feature<Geometry>[]>([]);
@@ -87,7 +98,9 @@ export const useMapClickHandlers = ({
     if (suppressMapInteractions) { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
 
     const handleClick = (evt: any) => {
-      if (isDrawing || suppressDialogOnClickRef?.current) return;
+      // Modified clicks belong to the polygon drawer (Shift, Alt on a corner) and useBuildingSelection (Alt, Ctrl, Cmd).
+      const e = evt.originalEvent;
+      if (isDrawing || suppressDialogOnClickRef?.current || e?.shiftKey || e?.altKey || e?.ctrlKey || e?.metaKey) return;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building') return f; return null; });
       if (!feature) return;
       const type = feature.get('feature_type');
@@ -102,44 +115,84 @@ export const useMapClickHandlers = ({
         const totalDemand = extractYearlyDemandKwh(props);
         const totalPeak = extractPeakLoadKw(props);
         const effectiveFClasses = fClasses.length > 0 ? fClasses : [primaryFClass];
+        const heat = estimateYearlyHeatDemand(primaryFClass, Number(props.area) || 0, explicitHeatDemandKwh(props));
         setSelectedBuilding({
           osmId: feature.get('osm_id'), type: primaryFClass, fClass: primaryFClass, fClasses, yearlyDemandKwh: totalDemand,
+          yearlyHeatDemandKwh: heat.kwh, heatDemandEstimated: heat.estimated,
           peakLoadKw: totalPeak, area: feature.get('area') || 0, gridResultId: feature.get('grid_result_id'),
           techs: feature.get('techs') || {}, fClassDetails: buildFClassDetails(effectiveFClasses, totalDemand, totalPeak, props.f_class_demands ?? props.fclass_details),
           selectedFClass: extractSelectedFClass(props, effectiveFClasses, primaryFClass), ...enrichment,
         });
         setSelectedBuildingFeature(feature as Feature<Geometry>);
-        setBuildingDialogOpen(true);
+        // The configurator is URL-driven, so opening it is a query-string
+        // change rather than dialog state. A building with no osm_id has
+        // nothing to resolve an envelope by, so it keeps the older dialog.
+        const osmId = feature.get('osm_id');
+        if (osmId != null && String(osmId) !== '') {
+          openBuildingRef.current(String(osmId));
+        } else {
+          setBuildingDialogOpen(true);
+        }
       }
     };
 
-    const handlePointerMove = (evt: any) => {
-      const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
-      if (!feature) { map.getTargetElement().style.cursor = ''; setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
-      map.getTargetElement().style.cursor = 'pointer';
+    // A tooltip appears HOVER_DELAY_MS after the pointer enters a feature,
+    // however it moves within it, and stays where it appeared. Leaving the
+    // feature first cancels it, so sweeping across buildings renders nothing.
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    let target: unknown = null;
+    let shown = false;
+    let lastPixel: number[] = [];
+    const clearTooltips = () => { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); };
+    const showTooltip = (feature: any, pixel: number[]) => {
       const type = feature.get('feature_type');
-      if (type === 'transformer') { setTransformerTooltip(createTransformerTooltip(feature, evt.pixel, pylovoLayersRef.current)); setBuildingTooltip(null); setMvLineTooltip(null); }
-      else if (type === 'building') { setBuildingTooltip(createBuildingTooltip(feature, evt.pixel)); setTransformerTooltip(null); setMvLineTooltip(null); }
-      else if (type === 'mv_line') { setMvLineTooltip(createMvLineTooltip(feature, evt.pixel)); setTransformerTooltip(null); setBuildingTooltip(null); }
+      clearTooltips();
+      if (type === 'transformer') setTransformerTooltip(createTransformerTooltip(feature, pixel, pylovoLayersRef.current));
+      else if (type === 'building') setBuildingTooltip(createBuildingTooltip(feature, pixel));
+      else if (type === 'mv_line') setMvLineTooltip(createMvLineTooltip(feature, pixel));
+      shown = true;
+    };
+    const hide = () => {
+      clearTimeout(pending);
+      if (shown) clearTooltips();
+      shown = false;
+      target = null;
+    };
+
+    const handlePointerMove = (evt: any) => {
+      if (evt.dragging || isDrawing) { hide(); return; }
+      const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
+      map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      if (feature && feature === target) {
+        if (!shown) lastPixel = evt.pixel;
+        return;
+      }
+      hide();
+      if (!feature) return;
+      target = feature;
+      lastPixel = evt.pixel;
+      pending = setTimeout(() => showTooltip(feature, lastPixel), HOVER_DELAY_MS);
     };
 
     map.on('click', handleClick);
     map.on('pointermove', handlePointerMove);
-    return () => { map.un('click', handleClick); map.un('pointermove', handlePointerMove); };
+    return () => { clearTimeout(pending); map.un('click', handleClick); map.un('pointermove', handlePointerMove); };
   }, [map, isDrawing, suppressMapInteractions]);
 
   const handleCloseTransformerDialog = useCallback(() => { setTransformerDialogOpen(false); setSelectedTransformer(null); }, [setTransformerDialogOpen, setSelectedTransformer]);
   const handleCloseBuildingDialog = useCallback(() => { setBuildingDialogOpen(false); setSelectedBuilding(null); setSelectedBuildingFeature(null); }, [setBuildingDialogOpen, setSelectedBuilding, setSelectedBuildingFeature]);
 
+  // Hover tooltips change on every pointer move, so they are read in
+  // MapOverlays; reading them here would re-render the configurator.
   return {
     transformerDialogOpen, setTransformerDialogOpen,
     selectedTransformer, setSelectedTransformer,
-    transformerTooltip, setTransformerTooltip,
+    setTransformerTooltip,
     buildingDialogOpen, setBuildingDialogOpen,
     selectedBuilding, setSelectedBuilding,
     selectedBuildingFeature, setSelectedBuildingFeature,
-    buildingTooltip, setBuildingTooltip,
-    mvLineTooltip, setMvLineTooltip,
+    setBuildingTooltip,
+    setMvLineTooltip,
     handleCloseTransformerDialog, handleCloseBuildingDialog,
   };
 };

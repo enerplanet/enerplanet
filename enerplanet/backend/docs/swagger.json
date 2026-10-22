@@ -1,4 +1,7 @@
 {
+    "schemes": [
+        "http"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "Unified API for the EnerPlanET energy planning platform.\nIncludes native backend endpoints and proxied Pylovo (grid/boundary) services.",
@@ -6,6 +9,7 @@
         "contact": {},
         "version": "1.0"
     },
+    "host": "localhost:8000",
     "basePath": "/api",
     "paths": {
         "/auth/whoami": {
@@ -43,6 +47,71 @@
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/drafts/{draft_id}/buildings/{building_ref}/buem": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "As the model route, for a model not saved yet. The result is linked to the draft\nand moves to the model when it is saved (POST /models/{id}/series/claim-draft).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for one building of an unsaved model and store the result",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Draft id the frontend created for the unsaved model",
+                        "name": "draft_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
                     }
                 }
@@ -109,6 +178,325 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/buem": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs the building with the block the caller supplies, as POST /v1/buem/building\ndoes, then stores the result once under its request key and links it to the\nbuilding as source user. A request whose key is already stored makes no BuEM call.\nReturns the building's demand summary. Needs edit permission on the model.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for one building of a model and store the result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/demand-profile": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns, for each series linked to the building, its total, peak and daily, weekly\nand monthly energy. Full series are not returned; use the week endpoint or the CSV\ndownload. 404 when the building has no stored series in this model yet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get one building's demand profile summary",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/series.csv": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "One row per time step: a UTC timestamp, then one column per series named\n\"\u003cseries\u003e [\u003cunit\u003e]\". Cooling is written positive. 404 when the building has no\nstored series in this model.",
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Download one building's series as CSV",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/buildings/{building_ref}/series/{series}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the power values of one week of a series, for the hourly chart. week 0 is\nthe first seven days from the series' start. 400 for a week outside the series,\n404 when the building or series is not stored in this model.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get one week of a building's series",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Building OSM id, or c2t:\u003cobject_id\u003e",
+                        "name": "building_ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Series name, for example heating",
+                        "name": "series",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Week from the start, default 0",
+                        "name": "week",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Roof face, for a PV series",
+                        "name": "part",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.SeriesWindowResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/demand-profiles": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every building's resolved annual energy profile for a model, along with\nresolution progress. Profiles are produced automatically whenever the model's\nconfig is saved with a non-empty building list; poll this endpoint until status\nis \"completed\" to show a progress bar. A building with status \"failed\" carries\nerror_message explaining why (no envelope match, BuEM rejected it, etc.) - that is\na per-building outcome, not an endpoint error.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Get a model's per-building BuEM energy profiles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
@@ -189,7 +577,836 @@
                 }
             }
         },
-        "/v2/pylovo/boundary": {
+        "/models/{id}/series.zip": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "One CSV per building, in the format of the per-building CSV download. 404 when\nno building of the model has stored series yet.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Download every building's series of a model as a ZIP of CSV files",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/series/claim-draft": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Links stored for the draft id the frontend created before the model's first save\nmove to the model; a link the model already has for the same building and series\nis kept. Call once after creating the model. Needs edit permission on the model.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Move an unsaved model's stored series to the saved model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Draft id",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/buem/building": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs one building through BuEM with the envelope the caller supplies, and returns\nBuEM's block for it including the hourly series. Unlike a model run, the envelope\nis taken from the request rather than looked up in City2TABULA, so a building that\nhas no 3D match, or whose surfaces a user has edited, can still be run. The\nbuilding block is forwarded to buem-gateway as sent and must be complete: no\nU-value resolution or archetype default is applied here. The one addition: a block\nthat sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.\nweather_provider selects the weather archive; omitted, the backend default applies.\nweather_scenario (p10, p50, p90) or weather_year selects the weather, at most one;\nwith neither, p50. The run covers that full calendar year hourly (1900 for a\nscenario); start_date and end_date are ignored.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "BuEM"
+                ],
+                "summary": "Run BuEM for a single building",
+                "parameters": [
+                    {
+                        "description": "Building geometry and BuEM building block",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/enrich": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)\nreturns a per-osm_id\nmerge map of BuEM envelope data. Returns 200 \"completed\" when every osm_id is already\nlinked, or 202 \"running\" with a run_id when a bbox-scoped pipeline run was triggered\n(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Resolve City2TABULA 3D data for a drawn area",
+                "parameters": [
+                    {
+                        "description": "Drawn area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/enrich/area": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every LOD2 building City2TABULA holds inside the bbox with its BuEM\nenvelope and footprint, keyed by object_id. Unlike the osm_ids endpoint this\nneeds no building list, so a caller with only an area can fetch 3D data. The\ntrade-off is identity: City2TABULA's area query cannot report the PyLovo link,\nso the result carries no osm_id and cannot be joined to demand profiles.\nFootprints are in the country's storage CRS, not WGS84.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Resolve City2TABULA 3D data for an area, without osm_ids",
+                "parameters": [
+                    {
+                        "description": "Area",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/enrich/{run_id}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Proxies the City2TABULA run status. When the run has completed and country and\nosm_ids are given as query parameters, also returns the merge map for those buildings,\nso the client polls one endpoint and gets data when ready.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Poll a City2TABULA enrich run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run id from the 202 enrich response",
+                        "name": "run_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country, required to receive data on completion",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated osm_ids, required to receive data on completion",
+                        "name": "osm_ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No run with this id (stale or mistyped)",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/geometry": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the building's footprint and every envelope surface polygon, for\nrendering it in 3D. Surface ids are the City2TABULA surface row ids that the\nBuEM envelope elements carry, so a clicked face resolves back to its element\nwithout a second lookup. Geometry is in the country's storage CRS, not WGS84.\nOne building per call.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Envelope surface geometry for a building",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Country name or ISO2 code",
+                        "name": "country",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "City2TABULA building object_id",
+                        "name": "object_ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.GeometryResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/city2tabula/pv-surfaces": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's\nsurfaces are returned, each with the object_id of its building.\nEmpty when City2TABULA has no 3D data for the building.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Roof and wall surfaces of a building for PV",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OSM id of the building",
+                        "name": "osm_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Country name or ISO2 code; resolved from lon and lat when absent",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building longitude (WGS84), when country is absent",
+                        "name": "lon",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Building latitude (WGS84), when country is absent",
+                        "name": "lat",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/heat-demand/resolve": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Given a building's usage class, floor area, and (for a residential building)\nits TABULA type / construction year / country, returns its annual space-heating\ndemand (kWh/a), the specific demand (kWh/m2.a) and a source flag (\"ignis\" when a\nTABULA archetype matched, \"estimate\" otherwise). tabula_variant_code is set only\nfor source \"ignis\". hourly_profile is currently always null (source \"buem\" is not\nyet wired). A residential building that falls back to the estimate carries a\nwarning naming why.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "HeatDemand"
+                ],
+                "summary": "Resolve a building's annual space-heating demand",
+                "parameters": [
+                    {
+                        "description": "Building inputs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/heat/availability": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Answers, for a drawn area, whether it can be modelled now (\"ready\"), needs only a\nCity2TABULA link run over data that is already there (\"linkable\"), or is missing one\nof the two datasets entirely (\"partial\"). has_3d_data and has_grid say which half is\nmissing in the last case.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "Report whether heat modelling is available for an area",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "netherlands",
+                        "description": "Country",
+                        "name": "country",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area west edge (WGS84 lon)",
+                        "name": "xmin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area south edge (WGS84 lat)",
+                        "name": "ymin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area east edge (WGS84 lon)",
+                        "name": "xmax",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "Area north edge (WGS84 lat)",
+                        "name": "ymax",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ignis/calculate/{code}": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Runs ignis's EN ISO 13790 pipeline for a variant code, with any TABULA inputs the\ncaller overrides in the body. Returns the annual specific heat demand.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Run the TABULA annual heat-demand calculation for a variant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL.N.SFH.05.Gen.ReEx.001.001",
+                        "description": "TABULA variant code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "TABULA input overrides",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ignis/data/{code}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns every TABULA input for a variant code: the U-values, areas and\nappearance parameters the configurator shows and edits.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Get one TABULA variant's full record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL.N.SFH.05.Gen.ReEx.001.001",
+                        "description": "TABULA variant code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ignis/fields": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns the country-independent TABULA input-field catalogue (label, unit) used\nto label the heat-demand form's inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "Get the TABULA input-field catalogue",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ignis/variants/{country_iso2}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Lists every TABULA archetype variant code ignis has for a country, for the\nheat-demand form's building-type dropdown.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "List a country's TABULA variant codes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "DE",
+                        "description": "ISO 3166-1 alpha-2 country code",
+                        "name": "country_iso2",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/ignis/variants/{country_iso2}/match": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Resolves a construction year to its TABULA period and returns that period's\nrefurbishment variants for the building type, existing state first. This is the\nlist behind the building configurator's refurbishment-level selector.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ignis"
+                ],
+                "summary": "List the TABULA refurbishment variants matching a building",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "NL",
+                        "description": "ISO 3166-1 alpha-2 country code",
+                        "name": "country_iso2",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "SFH",
+                        "description": "TABULA building type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "example": 1975,
+                        "description": "Construction year",
+                        "name": "year",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Gen",
+                        "description": "TABULA subtype; ignis uses Gen when absent",
+                        "name": "subtype",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ignis declined the request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "ignis unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/pylovo/boundary": {
             "get": {
                 "description": "Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.\nThis is a public endpoint — no authentication required.",
                 "produces": [
@@ -268,6 +1485,78 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.AreaBuilding": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "dataset_id": {
+                    "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
+                    "type": "string",
+                    "example": "nl-3dbag-loenen"
+                },
+                "default_construction_year": {
+                    "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
+                    "type": "integer",
+                    "example": 1963
+                },
+                "footprint_geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "match_type": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "object_id": {
+                    "type": "string",
+                    "example": "DEBW_1"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.AreaEnrichRequest": {
+            "type": "object",
+            "properties": {
+                "bbox": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "netherlands"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.AreaEnrichResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.AreaBuilding"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 249
+                },
+                "with_geometry": {
+                    "type": "integer",
+                    "example": 249
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.BoundaryData": {
             "type": "object",
             "properties": {
@@ -312,6 +1601,366 @@
                 }
             }
         },
+        "spatialhub_backend_internal_api_contracts.BuemBuilding": {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemEnvelope"
+                },
+                "footprint_area": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity"
+                },
+                "h_room": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity"
+                },
+                "n_storeys": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest": {
+            "type": "object",
+            "properties": {
+                "building": {
+                    "type": "object"
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2018-12-31T23:00:00Z"
+                },
+                "geometry": {
+                    "type": "object"
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                },
+                "outputs": {
+                    "description": "Outputs selects the load profiles to compute (heating, cooling,\nelectricity, hot_water, kitchen: none, summary or series), forwarded as\nproperties.buem.outputs; omitted, BuEM computes its default set.",
+                    "type": "object"
+                },
+                "resolution": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "solver": {
+                    "description": "Solver is BuEM's solver block, forwarded as properties.buem.solver;\nomitted, BuEM uses its default solver.",
+                    "type": "object"
+                },
+                "start_date": {
+                    "description": "StartDate and EndDate are ignored: the run covers the full calendar year\nof the weather choice below.",
+                    "type": "string",
+                    "example": "2018-01-01T00:00:00Z"
+                },
+                "weather_provider": {
+                    "description": "WeatherProvider is the model's weather archive, so the run uses the same\nseries as the model run; omitted, the backend default applies.",
+                    "type": "string",
+                    "enum": [
+                        "cosmo-rea6",
+                        "era5-land",
+                        "merra-2"
+                    ],
+                    "example": "merra-2"
+                },
+                "weather_scenario": {
+                    "description": "WeatherScenario and WeatherYear are the model's weather: a scenario, or\na real year for validation runs. At most one; with neither, p50.",
+                    "type": "string",
+                    "enum": [
+                        "p10",
+                        "p50",
+                        "p90"
+                    ],
+                    "example": "p50"
+                },
+                "weather_year": {
+                    "type": "integer",
+                    "example": 2019
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "type": "object"
+                },
+                "osm_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemEnvelope": {
+            "type": "object",
+            "properties": {
+                "elements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.EnvelopeElement"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuemNode": {
+            "type": "object",
+            "properties": {
+                "building": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuildingDemandProfile": {
+            "type": "object",
+            "properties": {
+                "a_ref_m2": {
+                    "type": "number",
+                    "example": 6648.84
+                },
+                "building_type": {
+                    "description": "building_type is what was modelled: a TABULA residential type (SFH, TH,\nMFH, AB) or a BuEM service id (bakery, clinic, hotel, office,\nrestaurant, school, supermarket, warehouse). For a service id\nhot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.",
+                    "type": "string",
+                    "example": "SFH"
+                },
+                "cooling_kwh_a": {
+                    "type": "number",
+                    "example": 312.4
+                },
+                "electricity_kwh_a": {
+                    "type": "number",
+                    "example": 2105
+                },
+                "error_message": {
+                    "type": "string",
+                    "example": "no City2TABULA envelope for this building"
+                },
+                "h_room_m": {
+                    "type": "number",
+                    "example": 2.5
+                },
+                "heating_kwh_a": {
+                    "type": "number",
+                    "example": 4823.5
+                },
+                "hot_water_kwh_a": {
+                    "type": "number"
+                },
+                "kitchen_kwh_a": {
+                    "type": "number"
+                },
+                "n_storeys": {
+                    "description": "The BuEM inputs of a resolved building: storeys and room height from its\n3D geometry, and the conditioned floor area A_ref in m2.",
+                    "type": "integer",
+                    "example": 6
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                },
+                "refurbishment_level": {
+                    "type": "string",
+                    "example": "existing"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "resolved"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse": {
+            "type": "object",
+            "properties": {
+                "building_ref": {
+                    "type": "string",
+                    "example": "268426401"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.SeriesSummary"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest": {
+            "type": "object",
+            "required": [
+                "draft_id"
+            ],
+            "properties": {
+                "draft_id": {
+                    "type": "string",
+                    "example": "3f6c2a1e-8b1d-4c2e-9a7f-1e2d3c4b5a69"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse": {
+            "type": "object",
+            "properties": {
+                "moved": {
+                    "type": "integer",
+                    "example": 24
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichBbox": {
+            "type": "object",
+            "properties": {
+                "xmax": {
+                    "type": "number",
+                    "example": 6.13
+                },
+                "xmin": {
+                    "type": "number",
+                    "example": 6.09
+                },
+                "ymax": {
+                    "type": "number",
+                    "example": 51.93
+                },
+                "ymin": {
+                    "type": "number",
+                    "example": 51.9
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichQuantity": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "type": "string",
+                    "example": "m"
+                },
+                "value": {
+                    "type": "number",
+                    "example": 2.5
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichRequest": {
+            "type": "object",
+            "properties": {
+                "bbox": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "osm_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "240054621",
+                        "240054622"
+                    ]
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichResponse": {
+            "type": "object",
+            "properties": {
+                "attributions": {
+                    "description": "Attributions credits every dataset the buildings in data come from, and\nTABULA when any of them carries a TABULA type, as City2TABULA returns them.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit"
+                    }
+                },
+                "country": {
+                    "description": "Country is the database the buildings came from, as given or resolved\nfrom the bbox centre; GET /v1/city2tabula/geometry takes the same value.",
+                    "type": "string",
+                    "example": "netherlands"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.EnrichedBuilding"
+                    }
+                },
+                "missing": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "240054999"
+                    ]
+                },
+                "resolved": {
+                    "type": "integer",
+                    "example": 40
+                },
+                "run_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4"
+                },
+                "stage": {
+                    "type": "string",
+                    "example": "extract_features"
+                },
+                "stage_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "stage_index": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "stage_label": {
+                    "type": "string",
+                    "example": "Extracting building features"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.EnrichedBuilding": {
+            "type": "object",
+            "properties": {
+                "buem": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuemNode"
+                },
+                "building_count": {
+                    "description": "BuildingCount is how many 3D buildings this OSM way covers, as a\nterraced row mapped as one outline does. The fields above describe the\nlargest of them; heat demand is computed for each and summed.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "dataset_id": {
+                    "description": "DatasetID names the source dataset; its credit is the attributions entry\nwith the same dataset_id.",
+                    "type": "string",
+                    "example": "nl-3dbag-loenen"
+                },
+                "default_construction_year": {
+                    "description": "Derived from the TABULA variant's construction-period range (ignis\nYear1_Building/Year2_Building); set only when TabulaVariantCode\nresolved and ignis had year data for it. A user-entered construction\nyear, once saved, takes precedence over this estimate.",
+                    "type": "integer",
+                    "example": 1963
+                },
+                "match_type": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "object_id": {
+                    "type": "string",
+                    "example": "DEBW_1"
+                },
+                "tabula_variant_code": {
+                    "type": "string",
+                    "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -326,6 +1975,30 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BoundaryData"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisVariantsData"
                 },
                 "success": {
                     "type": "boolean",
@@ -361,6 +2034,252 @@
                 "total": {
                     "type": "integer",
                     "example": 25
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "grid_regions": {
+                    "description": "GridRegions names the PyLovo regions whose extent overlaps the area, as\n\"\u003ccountry_code\u003e/\u003cstate_code\u003e\". Empty when HasGrid is false.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "DE/bremen"
+                    ]
+                },
+                "has_3d_data": {
+                    "description": "Has3DData is true when City2TABULA holds LOD2 buildings here at all,\nmatched or not.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_grid": {
+                    "description": "HasGrid is true when PyLovo reports generated grids for a region covering\nthis area. Status does not imply it: City2TABULA links 3D buildings to\nPyLovo's input buildings (res/oth), never to generated grids, so an area\ncan be ready with HasGrid false. Demand modelling needs only the link; a\nnode-based caller needs HasGrid too, since nodes are transformer areas.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "linked_buildings": {
+                    "description": "LinkedBuildings is City2TABULA's coverage count for the area, above zero\nexactly when Status is ready. It counts attempted matches rather than\nsuccessful ones, so both it and a ready status overstate coverage until\nCity2TABULA excludes the rows where 3D and OSM failed to pair.",
+                    "type": "integer",
+                    "example": 0
+                },
+                "status": {
+                    "type": "string",
+                    "example": "linkable"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile": {
+            "type": "object",
+            "properties": {
+                "resolution_minutes": {
+                    "type": "integer"
+                },
+                "start": {
+                    "type": "string"
+                },
+                "summary": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary"
+                },
+                "timeseries_ref": {
+                    "type": "string"
+                },
+                "vectors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho": {
+            "type": "object",
+            "properties": {
+                "building_type": {
+                    "type": "string"
+                },
+                "construction_year": {
+                    "type": "integer"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "f_class": {
+                    "type": "string"
+                },
+                "floor_area_m2": {
+                    "type": "number"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary": {
+            "type": "object",
+            "properties": {
+                "cooling_total_kwh": {
+                    "type": "number"
+                },
+                "electricity_total_kwh": {
+                    "type": "number"
+                },
+                "heating_total_kwh": {
+                    "type": "number"
+                },
+                "peak_cooling_kw": {
+                    "type": "number"
+                },
+                "peak_heating_kw": {
+                    "type": "number"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest": {
+            "type": "object",
+            "properties": {
+                "building_type": {
+                    "type": "string",
+                    "example": "SFH"
+                },
+                "construction_year": {
+                    "type": "integer",
+                    "example": 1975
+                },
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "f_class": {
+                    "type": "string",
+                    "example": "detached"
+                },
+                "floor_area_m2": {
+                    "type": "number",
+                    "example": 120
+                },
+                "osm_id": {
+                    "type": "string",
+                    "example": "240054621"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse": {
+            "type": "object",
+            "properties": {
+                "heating_demand_kwh_a": {
+                    "type": "integer",
+                    "example": 12000
+                },
+                "hourly_profile": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile"
+                },
+                "inputs_echoed": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho"
+                },
+                "osm_id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "estimate"
+                },
+                "specific_heating_demand_kwh_m2a": {
+                    "type": "number",
+                    "example": 100
+                },
+                "tabula_variant_code": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.IgnisFieldMetadata": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "A_C_Ref_Input"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Reference floor area"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "m2"
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadata"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.IgnisVariantsData": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "DE.N.SFH.01.Gen"
+                    ]
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse": {
+            "type": "object",
+            "properties": {
+                "buildings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile"
+                    }
+                },
+                "failed": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "pending": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "resolved": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "shared": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "type": "string",
+                    "example": "resolving"
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },
@@ -430,6 +2349,296 @@
                 "workspace_id": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.PVSurfacesResponse": {
+            "type": "object",
+            "properties": {
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_pv.Surface"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.SeriesSummary": {
+            "type": "object",
+            "properties": {
+                "daily": {
+                    "description": "Daily holds one value per calendar day from Start, Monthly one per\ncalendar month. Weekly holds one per seven days from Start, the last\npossibly shorter.",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "energy_unit": {
+                    "description": "EnergyUnit is the unit of Total, Daily, Weekly and Monthly (kWh for kW).",
+                    "type": "string"
+                },
+                "monthly": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "name": {
+                    "description": "name is the series: heating, cooling, electricity, hot_water, kitchen.",
+                    "type": "string",
+                    "example": "heating"
+                },
+                "part": {
+                    "description": "part is the roof face for a PV series, empty for a whole-building series.",
+                    "type": "string"
+                },
+                "peak": {
+                    "type": "number"
+                },
+                "peak_time": {
+                    "type": "string"
+                },
+                "peak_unit": {
+                    "type": "string"
+                },
+                "producer_version": {
+                    "type": "string",
+                    "example": "6.10.0+21f79d7ce08016a6df43e81aaad6aa7493c40c25"
+                },
+                "resolution_minutes": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "user",
+                        "uploaded"
+                    ],
+                    "example": "default"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "1900-01-01T00:00:00Z"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "weekly": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.SeriesWindowResponse": {
+            "type": "object",
+            "properties": {
+                "building_ref": {
+                    "type": "string",
+                    "example": "268426401"
+                },
+                "part": {
+                    "type": "string"
+                },
+                "resolution_minutes": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "series": {
+                    "type": "string",
+                    "example": "heating"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "1900-01-01T00:00:00Z"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "kW"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "week": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.BuildingGeometry": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {
+                    "type": "string"
+                },
+                "footprint_geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "object_id": {
+                    "type": "string"
+                },
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.SurfaceGeometry"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.DatasetCredit": {
+            "type": "object",
+            "properties": {
+                "changes": {
+                    "type": "string"
+                },
+                "credit": {
+                    "type": "string"
+                },
+                "credit_url": {
+                    "type": "string"
+                },
+                "dataset": {
+                    "type": "string"
+                },
+                "dataset_id": {
+                    "type": "string"
+                },
+                "licence": {
+                    "type": "string"
+                },
+                "licence_url": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "terms_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.EnvelopeElement": {
+            "type": "object",
+            "properties": {
+                "U": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "area": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "azimuth": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "b_transmission": {
+                    "description": "TABULA b_Transmission: adjacency correction for elements next to unheated space",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                        }
+                    ]
+                },
+                "id": {
+                    "type": "string",
+                    "example": "w1"
+                },
+                "tilt": {
+                    "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.Quantity"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "wall"
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.GeometryResult": {
+            "type": "object",
+            "properties": {
+                "attributions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit"
+                    }
+                },
+                "buildings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.BuildingGeometry"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.Quantity": {
+            "type": "object",
+            "properties": {
+                "unit": {
+                    "type": "string",
+                    "example": "m2"
+                },
+                "value": {
+                    "type": "number",
+                    "example": 30
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.SurfaceGeometry": {
+            "type": "object",
+            "properties": {
+                "geojson": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_pv.Surface": {
+            "type": "object",
+            "properties": {
+                "area": {
+                    "type": "number"
+                },
+                "azimuth": {
+                    "type": "number"
+                },
+                "capacity_kw": {
+                    "type": "number"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "object_id": {
+                    "description": "ObjectID is the 3D building the surface belongs to; an OSM way can cover several.",
+                    "type": "string"
+                },
+                "qualifies": {
+                    "type": "boolean"
+                },
+                "suggested": {
+                    "type": "boolean"
+                },
+                "surface_id": {
+                    "type": "string"
+                },
+                "tilt": {
+                    "type": "number"
+                },
+                "usable_share": {
+                    "type": "number"
                 }
             }
         }

@@ -1,9 +1,10 @@
-import { Fragment, useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingWizard from "@/features/onboarding/OnboardingWizard";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import { closeNotificationStream } from "@/features/notifications/hooks/useNotificationsQuery";
+import { HeaderMessage, PageMessagesProvider } from "@/features/notifications/pageMessages";
 import { useTranslation } from "@spatialhub/i18n";
 
 import {
@@ -253,7 +254,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   } as React.CSSProperties;
 
   return (
-    <Fragment>
+    <PageMessagesProvider>
       <OnboardingWizard isOpen={showOnboarding} onComplete={completeOnboarding} />
 
       <div
@@ -276,7 +277,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </a>
             </div>
 
-            <div className="flex-1" />
+            <div className="flex-1 flex justify-end min-w-0 px-4">
+              <HeaderMessage />
+            </div>
 
             <div className="flex items-center gap-1 mr-4" data-tour="navigation">
               <Authorized>
@@ -456,7 +459,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="w-full h-full overflow-y-auto overflow-x-hidden">{children}</div>
         </main>
       </div>
-    </Fragment>
+    </PageMessagesProvider>
   );
 };
 

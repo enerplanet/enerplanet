@@ -2,12 +2,26 @@ import { FC, useMemo, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { CarrierConRecord, CarrierProdRecord } from '@/features/model-results/types';
+import {
+  carrierDisplay,
+  carrierPowerAxis,
+  formatCarrierPower,
+  sameCarrier,
+} from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 
 interface LoadDurationCurveProps {
   consumption?: CarrierConRecord[];
   production?: CarrierProdRecord[];
+  /** Carrier the records belong to — drives filtering, units and labels. */
+  carrier?: string;
+  /**
+   * Which side of the balance to profile. `supply` (default) plots production
+   * by technology; `demand` profiles the consumption side and is what a
+   * non-generating carrier (heat) needs.
+   */
+  variant?: 'supply' | 'demand';
   height?: number;
   title?: string;
 }
@@ -27,17 +41,14 @@ const extractHourFromTimestamp = (timestamp: string): number | null => {
   return parsed.getUTCHours();
 };
 
-const formatPower = (valueKw: number): string => {
-  if (!Number.isFinite(valueKw)) return '0';
-  const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(2)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(valueKw * 1_000_000).toFixed(1)} mW`;
-};
+const formatPower = (valueKw: number, carrier?: string): string => formatCarrierPower(valueKw, carrier);
 
-const formatAxisPower = (valueKw: number): string => {
+const formatAxisPower = (valueKw: number, carrier?: string): string => {
+  if (carrierDisplay(carrier).kind === 'volume') {
+    return Number.isFinite(valueKw)
+      ? valueKw.toLocaleString(undefined, { maximumFractionDigits: 1 })
+      : '0';
+  }
   if (!Number.isFinite(valueKw)) return '0';
   const abs = Math.abs(valueKw);
   if (abs >= 1000) return `${(valueKw / 1000).toFixed(1)} MW`;
@@ -49,6 +60,8 @@ const formatAxisPower = (valueKw: number): string => {
 export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
   consumption,
   production,
+  carrier,
+  variant = 'supply',
   height = 320,
   title = 'Load Duration Curve',
 }) => {
@@ -64,13 +77,17 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
     { id: 'geothermal', label: t('results.energy.geothermal'), color: '#ef4444' },
   ];
 
+  // Technology filters only apply to the supply side; a demand profile has no
+  // PV/wind split to filter by.
+  const showTechFilters = variant === 'supply';
+
   const chartData = useMemo(() => {
-    const data = production || consumption;
+    const data = variant === 'demand' ? (consumption || production) : (production || consumption);
     if (!data || data.length === 0) return null;
 
     // Filter by selected technology
     const filterTech = (techs: string): boolean => {
-      if (selectedTech === 'all') return true;
+      if (!showTechFilters || selectedTech === 'all') return true;
       const lowerTechs = techs.toLowerCase();
       switch (selectedTech) {
         case 'pv': return lowerTechs.includes('pv') || lowerTechs.includes('solar');
@@ -85,7 +102,10 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
     const timestampTotals = new Map<string, number>();
 
     data.forEach(record => {
-      if (record.carrier !== 'power' || !record.techs || record.techs.includes('power_transmission')) return;
+      // Records for other carriers can be present in the same payload; only
+      // profile the active one.
+      if (!sameCarrier(record.carrier, carrier)) return;
+      if (!record.techs || record.techs.includes('power_transmission')) return;
       if (!filterTech(record.techs)) return;
 
       timestampTotals.set(
@@ -134,7 +154,7 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
     if (minLoad === Infinity) minLoad = 0;
 
     return { hourlyAvg, peakLoad, minLoad, avgLoad };
-  }, [consumption, production, selectedTech]);
+  }, [consumption, production, selectedTech, carrier, variant, showTechFilters]);
 
   const selectedColor = TECH_FILTERS.find(t => t.id === selectedTech)?.color || '#3b82f6';
 
@@ -162,9 +182,9 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
           if (!data) return '';
           return `
             <div style="font-weight: 600; margin-bottom: 6px; color: ${themeColors.text};">${hours[data.hour]}</div>
-            <div style="margin-bottom: 4px; color: ${themeColors.text};">${t('results.energy.average')}: <b>${formatPower(data.avg)}</b></div>
-            <div style="margin-bottom: 4px; color: ${themeColors.text};">${t('results.energy.peak')}: <b>${formatPower(data.max)}</b></div>
-            <div style="color: ${themeColors.text};">${t('results.energy.min')}: <b>${formatPower(data.min)}</b></div>
+            <div style="margin-bottom: 4px; color: ${themeColors.text};">${t('results.energy.average')}: <b>${formatPower(data.avg, carrier)}</b></div>
+            <div style="margin-bottom: 4px; color: ${themeColors.text};">${t('results.energy.peak')}: <b>${formatPower(data.max, carrier)}</b></div>
+            <div style="color: ${themeColors.text};">${t('results.energy.min')}: <b>${formatPower(data.min, carrier)}</b></div>
           `;
         },
       },
@@ -190,14 +210,14 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
       },
       yAxis: {
         type: 'value',
-        name: t('results.energy.power'),
+        name: carrierPowerAxis(t('results.energy.power'), carrier),
         nameLocation: 'center',
         nameGap: 45,
         nameTextStyle: { fontSize: 11, color: themeColors.textMuted },
         axisLabel: {
           fontSize: 10,
           color: themeColors.textSubtle,
-          formatter: (value: number) => formatAxisPower(value),
+          formatter: (value: number) => formatAxisPower(value, carrier),
         },
         axisLine: { lineStyle: { color: themeColors.border } },
         splitLine: { lineStyle: { color: themeColors.gridLine } },
@@ -247,7 +267,7 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
         },
       ],
     };
-  }, [chartData, title, selectedColor, t, themeColors]);
+  }, [chartData, title, selectedColor, t, themeColors, carrier]);
 
   if (!chartData) {
     return (
@@ -259,23 +279,25 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
 
   return (
     <div>
-      {/* Technology Filter */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {TECH_FILTERS.map(tech => (
-          <button
-            key={tech.id}
-            onClick={() => setSelectedTech(tech.id)}
-            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-              selectedTech === tech.id
-                ? 'text-white'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-            style={selectedTech === tech.id ? { backgroundColor: tech.color } : {}}
-          >
-            {tech.label}
-          </button>
-        ))}
-      </div>
+      {/* Technology Filter (supply profiles only) */}
+      {showTechFilters && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {TECH_FILTERS.map(tech => (
+            <button
+              key={tech.id}
+              onClick={() => setSelectedTech(tech.id)}
+              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                selectedTech === tech.id
+                  ? 'text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+              style={selectedTech === tech.id ? { backgroundColor: tech.color } : {}}
+            >
+              {tech.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <ReactECharts
         option={option}
@@ -283,10 +305,10 @@ export const LoadDurationCurve: FC<LoadDurationCurveProps> = ({
         opts={{ renderer: 'canvas' }}
       />
 
-      <div className="flex justify-center gap-6 text-xs text-muted-foreground mt-2">
-        <span>{t('results.energy.peak')}: <b style={{ color: selectedColor }}>{formatPower(chartData.peakLoad)}</b></span>
-        <span>{t('results.energy.average')}: <b style={{ color: selectedColor }}>{formatPower(chartData.avgLoad)}</b></span>
-        <span>{t('results.energy.min')}: <b style={{ color: selectedColor }}>{formatPower(chartData.minLoad)}</b></span>
+      <div className="flex flex-wrap justify-center gap-6 text-xs text-muted-foreground mt-2">
+        <span>{t('results.energy.peak')}: <b style={{ color: selectedColor }}>{formatPower(chartData.peakLoad, carrier)}</b></span>
+        <span>{t('results.energy.average')}: <b style={{ color: selectedColor }}>{formatPower(chartData.avgLoad, carrier)}</b></span>
+        <span>{t('results.energy.min')}: <b style={{ color: selectedColor }}>{formatPower(chartData.minLoad, carrier)}</b></span>
       </div>
     </div>
   );

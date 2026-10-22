@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Building2, Activity, Loader2, Check } from "lucide-react";
+import { Building2, Activity, Loader2, Check, Flame } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 
@@ -27,6 +27,8 @@ interface GridActionBarProps {
     onRunPowerFlow: () => Promise<boolean>;
     isRunningPowerFlow: boolean;
     hasPowerFlowResults: boolean;
+    onResolveAllHeat: () => Promise<void>;
+    isResolvingHeat: boolean;
 }
 
 export const GridActionBar: FC<GridActionBarProps> = ({
@@ -38,14 +40,16 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     onRunPowerFlow,
     isRunningPowerFlow,
     hasPowerFlowResults,
+    onResolveAllHeat,
+    isResolvingHeat,
 }) => {
     const { t } = useTranslation();
 
     if (!hasGridData) return null;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="flex items-center bg-card/95 backdrop-blur-md border border-border rounded-full shadow-lg">
+        <div className="absolute bottom-10 left-4 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
+            <div className="flex items-center bg-card border border-border rounded-full shadow-lg">
                 {/* Add Transformer */}
                 <button
                     type="button"
@@ -85,6 +89,28 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                         <div className="w-px h-6 bg-border/50" />
                     </>
                 )}
+
+                {/* Resolve heat (refresh heat tech assignment) */}
+                <button
+                    type="button"
+                    onClick={() => void onResolveAllHeat()}
+                    disabled={isResolvingHeat}
+                    className="
+                        flex items-center gap-2 px-4 py-2.5 text-foreground hover:bg-muted/80 transition-colors
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                    "
+                >
+                    {isResolvingHeat ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Flame className="w-4 h-4 text-orange-500" />
+                    )}
+                    <span className="text-xs font-medium whitespace-nowrap">
+                        {t("workflow.resolveHeatAction") || "Resolve heat"}
+                    </span>
+                </button>
+
+                <div className="w-px h-6 bg-border/50" />
 
                 {/* Power Flow */}
                 <button

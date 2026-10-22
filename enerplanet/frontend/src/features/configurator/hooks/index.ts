@@ -15,10 +15,8 @@ export type { BuildingDemandHandlers } from "./useBuildingDemandRecalculation";
 
 export { useMapResize, useReassignmentLine, useMapLibre3DHandlers } from "./useMapDisplay";
 
-export { useMultiEditMode } from "./useMultiEditMode";
-export type { MultiEditModeState } from "./useMultiEditMode";
 
-export { useRegionName, useRegionSelection } from "./useRegion";
+export { useRegionSelection } from "./useRegion";
 
 export { useTechDialogFlow } from "./useTechDialogFlow";
 
@@ -27,6 +25,12 @@ export { useTransformerActions } from "./useTransformerActions";
 // Extracted internal hooks
 export { useCustomLocationLayers } from "./useCustomLocationLayers";
 export { usePylovoLayers } from "./usePylovoLayers";
+export { useHeatResolution } from "./useHeatResolution";
+export type { HeatResolutionHandlers } from "./useHeatResolution";
+
+export { useHeatLinkMode } from "./useHeatLinkMode";
+export type { HeatLinkModeState } from "./useHeatLinkMode";
+
 export { useTechDragDrop } from "./useTechDragDrop";
 export { useMapClickHandlers } from "./useMapClickHandlers";
 

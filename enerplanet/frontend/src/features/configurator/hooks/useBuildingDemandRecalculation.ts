@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { normalizeFClass, isResidentialFClass } from "@/features/configurator/utils/fClassUtils";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
+import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface BuildingDemandOptions {
@@ -28,6 +29,8 @@ export interface BuildingDemandHandlers {
     energyLabel?: string,
     hotWaterElectric?: boolean
   ) => Promise<void>;
+  /** Set an explicit per-building heat demand (alongside the electricity one). */
+  handleHeatDemandChange: (heatKwh: number) => void;
   handleSelectedFClassChange: (fClass: string) => void;
 }
 
@@ -111,6 +114,23 @@ export const useBuildingDemandRecalculation = ({
       );
       setSelectedBuilding((prev: any) =>
         prev ? { ...prev, householdSize } : null
+      );
+    },
+    [selectedBuilding, pylovoLayers, setSelectedBuilding]
+  );
+
+  // Handle explicit heat-demand change from BuildingDialog. Heat demand is a
+  // single per-building value (not split by f-class), present by default.
+  const handleHeatDemandChange = useCallback(
+    (heatKwh: number) => {
+      if (!selectedBuilding) return;
+      const value = Math.max(0, Math.round(toFiniteNumber(heatKwh) ?? 0));
+      const osmId = selectedBuilding.osmId;
+      pylovoLayers.updateBuildingProperty(osmId, "demand_heat", value);
+      pylovoLayers.updateBuildingProperty(osmId, "yearly_heat_demand_kwh", value);
+      pylovoLayers.updateBuildingProperty(osmId, "heat_demand_estimated", false);
+      setSelectedBuilding((prev: any) =>
+        prev ? { ...prev, yearlyHeatDemandKwh: value, heatDemandEstimated: false } : null
       );
     },
     [selectedBuilding, pylovoLayers, setSelectedBuilding]
@@ -233,6 +253,13 @@ export const useBuildingDemandRecalculation = ({
         pylovoLayers.updateBuildingProperty(osmId, "area", requestedArea);
         pylovoLayers.updateBuildingProperty(osmId, "floors", requestedFloors);
         pylovoLayers.updateBuildingProperty(osmId, "floors_3dbag", requestedFloors);
+
+        // Only a user-entered heat demand is stored on the feature; an estimate
+        // is recomputed for display, and the backend estimates on its own.
+        const enteredHeat = selectedBuilding.heatDemandEstimated
+          ? undefined
+          : toFiniteNumber(selectedBuilding.yearlyHeatDemandKwh) ?? undefined;
+        const heat = estimateYearlyHeatDemand(selectedFClass, requestedArea, enteredHeat);
         if (shouldUseHouseholdSize) {
           pylovoLayers.updateBuildingProperty(
             osmId,
@@ -269,6 +296,8 @@ export const useBuildingDemandRecalculation = ({
             ? {
               ...prev,
               yearlyDemandKwh: totalYearlyDemand,
+              yearlyHeatDemandKwh: heat.kwh,
+              heatDemandEstimated: heat.estimated,
               peakLoadKw: totalPeakLoad,
               area: requestedArea,
               floors: requestedFloors,
@@ -314,6 +343,7 @@ export const useBuildingDemandRecalculation = ({
     handleAreaChange,
     handleHouseholdSizeChange,
     handleRecalculateDemand,
+    handleHeatDemandChange,
     handleSelectedFClassChange,
   };
 };

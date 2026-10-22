@@ -28,7 +28,7 @@ import { IconX } from "@tabler/icons-react";
 import Pagination from "@/components/ui/Pagination";
 import ModelActionGroup from "@/components/shared/ModelActionGroup";
 import { UniversalForm, FormSection } from "@spatialhub/forms";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import { useConfirm } from "@/hooks/useConfirmDialog";
@@ -165,22 +165,13 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   const [formLoading, setFormLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Notification state
-  const [notification, setNotification] = useState({
-    isOpen: false,
-    message: "",
-    severity: "success" as "success" | "error" | "warning" | "info",
-  });
+  const { show } = useNotification();
 
   const showNotification = (
     message: string,
     severity: "success" | "error" | "warning" | "info" = "success"
   ) => {
-    setNotification({
-      isOpen: true,
-      message,
-      severity,
-    });
+    show(message, severity);
   };
 
   // Handle form changes
@@ -1293,14 +1284,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
         loading={formLoading}
         errors={formErrors}
         maxWidth="lg"
-      />
-
-      {/* Notification */}
-      <Notification
-        isOpen={notification.isOpen}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
       />
     </div>
   );

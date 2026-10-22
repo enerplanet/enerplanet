@@ -10,8 +10,11 @@ import (
 	_ "spatialhub_backend/internal/api/contracts" // swagger response types
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/geo"
+	"spatialhub_backend/internal/jobs"
 	resultservice "spatialhub_backend/internal/result/service"
+	"spatialhub_backend/internal/store/demandprofile"
 	modelstore "spatialhub_backend/internal/store/model"
+	seriesstore "spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/webservice"
 
 	"platform.local/common/pkg/constants"
@@ -74,6 +77,8 @@ type ModelHandler struct {
 	wsClient      *webservice.Client
 	keycloakCache *cache.KeycloakCacheService
 	syncCache     *cache.SyncCacheService
+	profileStore  *demandprofile.Store
+	seriesStore   *seriesstore.Store
 }
 
 func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminTokenProvider *pkgauth.AdminTokenProvider, keycloakBaseURL, realm string, wsClient *webservice.Client, keycloakCache *cache.KeycloakCacheService, syncCache *cache.SyncCacheService) *ModelHandler {
@@ -84,8 +89,64 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 		wsClient:      wsClient,
 		keycloakCache: keycloakCache,
 		syncCache:     syncCache,
+		profileStore:  demandprofile.NewStore(db),
+		seriesStore:   seriesstore.NewStore(db),
 	}
 }
+
+// triggerDemandProfileResolve enqueues a best-effort resolve_demand_profiles job
+// for a model whose config was just saved - the only server-side signal that
+// a building list might now exist (grid generation itself is a stateless
+// pylovo proxy; the frontend PATCHes the result into config separately, see
+// PylovoHandler.GenerateGrid). Fire-and-forget: an enqueue failure is
+// logged, never surfaced to the caller - saving the model must not fail
+// because this optional refresh could not be scheduled, and the job itself
+// is a no-op when the config turns out to have no buildings. Not enqueued at
+// all when config.heatSource is "estimate": that model uses the usage-class
+// estimate and manual heat demand instead of BuEM.
+func (h *ModelHandler) triggerDemandProfileResolve(modelID uint, config json.RawMessage) {
+	if h.asynqClient == nil || jobs.ModelHeatSource(config) == jobs.HeatSourceEstimate {
+		return
+	}
+	body, err := json.Marshal(jobs.ResolveDemandProfilesPayload{ModelID: modelID})
+	if err != nil {
+		logger.ForComponent("model").Errorf("failed to marshal resolve_demand_profiles payload model_id=%d err=%v", modelID, err)
+		return
+	}
+	if _, err := h.asynqClient.Enqueue(asynq.NewTask(jobs.TypeResolveDemandProfiles, body),
+		asynq.Queue("buem"),
+		asynq.MaxRetry(3),
+		asynq.Timeout(30*time.Minute),
+		asynq.Retention(24*time.Hour),
+	); err != nil {
+		logger.ForComponent("model").Errorf("failed to enqueue resolve_demand_profiles model_id=%d err=%v", modelID, err)
+	}
+}
+
+// triggerCity2TabulaRun enqueues a trigger_city2tabula_run job for a model
+// whose polygon was just created or changed, so City2TABULA prepares the
+// area's 3D data before the first calculation or per-building request. No
+// retries: a City2TABULA run is not idempotent, and run_buem still triggers
+// one itself when none is recorded. Skipped for heatSource=estimate.
+func (h *ModelHandler) triggerCity2TabulaRun(modelID uint, config json.RawMessage) {
+	if h.asynqClient == nil || jobs.ModelHeatSource(config) == jobs.HeatSourceEstimate {
+		return
+	}
+	body, err := json.Marshal(jobs.TriggerCity2TabulaRunPayload{ModelID: modelID})
+	if err != nil {
+		logger.ForComponent("model").Errorf("failed to marshal trigger_city2tabula_run payload model_id=%d err=%v", modelID, err)
+		return
+	}
+	if _, err := h.asynqClient.Enqueue(asynq.NewTask(jobs.TypeTriggerCity2TabulaRun, body),
+		asynq.Queue("buem"),
+		asynq.MaxRetry(0),
+		asynq.Timeout(5*time.Minute),
+		asynq.Retention(24*time.Hour),
+	); err != nil {
+		logger.ForComponent("model").Errorf("failed to enqueue trigger_city2tabula_run model_id=%d err=%v", modelID, err)
+	}
+}
+
 func (h *ModelHandler) CreateModel(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
 	if !ok {
@@ -152,6 +213,12 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		httputil.BadRequest(c, "coordinates are required to resolve country")
 		return
 	}
+	coords, verr := geo.ValidateArea(req.Coordinates)
+	if verr != nil {
+		httputil.BadRequest(c, verr.Error())
+		return
+	}
+	req.Coordinates = coords
 	resolver := geo.NewNominatimResolver(h.store.DB())
 	resolvedCountry, rerr := resolver.Resolve(c.Request.Context(), json.RawMessage(req.Coordinates))
 	if rerr != nil {
@@ -218,6 +285,11 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	}
 	model.CreatedAt = modelMap["created_at"].(time.Time)
 	model.UpdatedAt = modelMap["updated_at"].(time.Time)
+
+	h.triggerCity2TabulaRun(model.ID, req.Config)
+	if len(req.Config) > 0 {
+		h.triggerDemandProfileResolve(model.ID, req.Config)
+	}
 
 	httputil.Created(c, model)
 }
@@ -339,6 +411,15 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 		return
 	}
 
+	if len(req.Coordinates) > 0 {
+		coords, verr := geo.ValidateArea(req.Coordinates)
+		if verr != nil {
+			httputil.BadRequest(c, verr.Error())
+			return
+		}
+		req.Coordinates = coords
+	}
+
 	updates := make(map[string]any)
 
 	applySimpleStringUpdates(&req, updates)
@@ -376,6 +457,17 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 			httputil.InternalError(c, "Failed to update model")
 			return
 		}
+	}
+
+	if len(req.Coordinates) > 0 {
+		config := req.Config
+		if len(config) == 0 {
+			config = json.RawMessage(model.Config)
+		}
+		h.triggerCity2TabulaRun(model.ID, config)
+	}
+	if len(req.Config) > 0 {
+		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}
 
 	h.respondWithPreloadedModel(c, id, model)
@@ -745,6 +837,86 @@ func (h *ModelHandler) StartCalculation(c *gin.Context) {
 			httputil.BadRequest(c, msg)
 		case strings.Contains(msg, "webservice"):
 			httputil.BadGateway(c, "Calculation webservice error")
+		default:
+			httputil.InternalError(c, "Failed to start calculation")
+		}
+		return
+	}
+
+	httputil.SuccessResponse(c, updated)
+}
+
+// StartMemeCalculation dispatches the model to MEME (via TentaCron's durable
+// queue) instead of the legacy webservice. Same contract as StartCalculation so
+// the UI's Run affordance can target either engine.
+func (h *ModelHandler) StartMemeCalculation(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+	modelSvc := h.newModelService()
+
+	// Optional framework set: "pypsa" runs the PyPSA leg only (TentaCron target
+	// meme-pypsa); anything else (or absent) runs the Calliope default
+	// (meme-calliope). The combined pypsa,calliope run was removed. Accepted as a
+	// query param or a JSON body so the UI can post either way.
+	frameworks := c.Query("frameworks")
+	if frameworks == "" {
+		var body struct {
+			Frameworks string `json:"frameworks"`
+		}
+		_ = c.ShouldBindJSON(&body) // body is optional; a parse miss means "no preference"
+		frameworks = body.Frameworks
+	}
+
+	updated, err := modelSvc.StartMemeCalculation(c.Request.Context(), userCtx.UserID, userCtx.AccessLevel, c.Param("id"), frameworks, h.asynqClient)
+	if err != nil {
+		msg := err.Error()
+		switch {
+		case strings.Contains(msg, "not found"):
+			httputil.NotFound(c, errModelNotFound)
+		case strings.Contains(msg, "access denied"):
+			httputil.Forbidden(c, "Access denied")
+		case strings.Contains(msg, "already in progress"):
+			httputil.Conflict(c, "Model calculation already in progress")
+		case strings.Contains(msg, "country"):
+			httputil.BadRequest(c, msg)
+		default:
+			httputil.InternalError(c, "Failed to start calculation")
+		}
+		return
+	}
+
+	httputil.SuccessResponse(c, updated)
+}
+
+// StartMemePyPSACalculation dispatches the isolated PyPSA power-flow leg: the
+// model is sent to MEME's `meme-pypsa` target with a job built from the parsed
+// Calliope results, in its own leg-keyed run record. It shares
+// StartMemeCalculation's response contract, but is GATED at request time —
+// without a successful (completed) Calliope leg it returns 400 and never
+// enqueues the derived run.
+func (h *ModelHandler) StartMemePyPSACalculation(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+	modelSvc := h.newModelService()
+
+	updated, err := modelSvc.StartMemePyPSACalculation(c.Request.Context(), userCtx.UserID, userCtx.AccessLevel, c.Param("id"), h.asynqClient)
+	if err != nil {
+		msg := err.Error()
+		switch {
+		case strings.Contains(msg, "not found"):
+			httputil.NotFound(c, errModelNotFound)
+		case strings.Contains(msg, "access denied"):
+			httputil.Forbidden(c, "Access denied")
+		case strings.Contains(msg, "already in progress"):
+			httputil.Conflict(c, "Model calculation already in progress")
+		case strings.Contains(msg, "calliope leg"):
+			httputil.BadRequest(c, msg)
+		case strings.Contains(msg, "country"):
+			httputil.BadRequest(c, msg)
 		default:
 			httputil.InternalError(c, "Failed to start calculation")
 		}

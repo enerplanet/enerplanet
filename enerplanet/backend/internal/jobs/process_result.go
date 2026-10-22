@@ -15,6 +15,7 @@ import (
 	"spatialhub_backend/internal/events"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
+	modelstore "spatialhub_backend/internal/store/model"
 	"spatialhub_backend/internal/webservice"
 )
 
@@ -79,9 +80,7 @@ func HandleProcessResult(ctx context.Context, t *asynq.Task, db *gorm.DB, notifi
 			"status":                   commonModels.ModelStatusFailed,
 			"calculation_completed_at": now,
 			"updated_at":               now,
-			"results": map[string]interface{}{
-				"error": fmt.Sprintf("Failed to process result: %v", err),
-			},
+			"results":                  modelstore.FailedResults(fmt.Sprintf("Failed to process result: %v", err)),
 		}).Error
 
 		releaseWebservice(ctx, wsClient, payload.WebserviceID, payload.ModelID, log)

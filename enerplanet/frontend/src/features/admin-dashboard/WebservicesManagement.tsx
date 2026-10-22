@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import { UniversalForm } from "@spatialhub/forms";
 import { getWebserviceFormSections, validateWebserviceForm } from "@/configuration/formConfigurations";
@@ -39,12 +39,6 @@ import {
 interface WebservicesManagementProps {
 	onWebserviceAction?: (action: string, serviceId: number) => void;
 	readOnly?: boolean;
-}
-
-interface NotificationState {
-	open: boolean;
-	message: string;
-	severity: "success" | "error" | "warning";
 }
 
 const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserviceAction, readOnly = false }) => {
@@ -100,11 +94,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const confirm = useConfirm();
 
-	const [notification, setNotification] = useState<NotificationState>({
-		open: false,
-		message: "",
-		severity: "success",
-	});
+	const { setNotification } = useNotification();
 
 	const [formData, setFormData] = useState<WebserviceFormData>({
 		name: "",
@@ -796,15 +786,6 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 				errors={formErrors}
 				maxWidth="xl"
 			/>
-
-			<div className="fixed top-16 right-4 z-[9999]">
-				<Notification
-					isOpen={notification.open}
-					message={notification.message}
-					severity={notification.severity}
-					onClose={() => setNotification({ ...notification, open: false })}
-				/>
-			</div>
 		</div>
 	);
 };
