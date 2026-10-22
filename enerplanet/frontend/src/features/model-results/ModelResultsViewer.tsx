@@ -852,7 +852,7 @@ export const ModelResultsViewer = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {model.resolution}h {t('results.resolution')}
+                    {model.resolution} min {t('results.resolution')}
                   </span>
                 </div>
               )}
