@@ -59,6 +59,8 @@ import {
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { GridStatsBadge } from "./components/GridStatsBadge";
+import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -575,7 +577,18 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <MapContainer
         key={editMode ? `edit-${existingModelId}` : "create"}
         modal={false}
-        topBar={null}
+        topBar={
+          state.allPolygons.length > 0 ? (
+            <WorkflowBar
+              isGeneratingGrid={state.isGeneratingGrid}
+              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
+              hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
+              siteMode={siteMode}
+              hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+            />
+          ) : null
+        }
         sidebar={
           <SidebarPanel
             state={state}
@@ -656,12 +669,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 isDrawing={state.isDrawing}
                 polygonCount={state.allPolygons.length}
                 currentPointCount={currentPointCount}
-                enableEditing={true}
-                isGeneratingGrid={state.isGeneratingGrid}
-                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
-                hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
-                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
               />
             )}
             <GridActionBar
@@ -721,6 +728,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         showSidebar={true}
         sidebarWidth="clamp(18rem, 30vw, 26rem)"
         controlsPlacement="top-left"
+        controlsExtra={<ShortcutsMenu />}
       />
 
       <AreaSelectTour

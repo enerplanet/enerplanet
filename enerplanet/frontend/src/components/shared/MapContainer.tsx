@@ -19,6 +19,8 @@ interface MapContainerProps {
 	onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
 	sidebarWidth?: string;
 	controlsPlacement?: MapControlsPlacement;
+	/** Further map buttons in the zoom and centre column. */
+	controlsExtra?: ReactNode;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -35,6 +37,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 	onDragOver,
 	sidebarWidth = "20rem",
 	controlsPlacement,
+	controlsExtra,
 }) => {
 	const { mapRef, initMapInstance, MapControls } = useMapProvider();
 	const { map } = useMapStore();
@@ -79,7 +82,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 									onDragOver={onDragOver}
 								/>
 
-								{map && !muted && <MapControls placement={controlsPlacement} />}
+								{map && !muted && <MapControls placement={controlsPlacement}>{controlsExtra}</MapControls>}
 
 								{mapOverlays}
 

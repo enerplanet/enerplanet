@@ -97,10 +97,11 @@ export const NotificationDropdown: React.FC = () => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="relative p-1.5 rounded-md transition-colors group bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
+              aria-label={t('notifications.title')}
+              className="relative flex h-11 w-11 items-center justify-center rounded-button transition-colors group text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
             >
               <Bell className={cn(
-                "w-4 h-4 transition-transform duration-200",
+                "w-6 h-6 transition-transform duration-200",
                 unreadCount > 0 && "group-hover:rotate-12"
               )} />
               {unreadCount > 0 && (
@@ -116,10 +117,10 @@ export const NotificationDropdown: React.FC = () => {
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">
+        <TooltipContent side="right">
           <p>{t('notifications.title')}</p>
         </TooltipContent>
-      <DropdownMenuContent align="end" className="w-80 p-0 rounded-xl border border-border shadow-xl overflow-hidden bg-card z-[52]">
+      <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-80 p-0 rounded-xl border border-border shadow-xl overflow-hidden bg-card z-[52]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
           <h3 className="font-semibold text-sm text-foreground">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBrowserNotifications } from '@/features/notifications/hooks/useBrowserNotifications';
-import NotificationPanel from './NotificationPanel';
+import IncomingNotifications from './IncomingNotifications';
 import { settingsService } from '@/features/settings/services/settings';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -44,7 +44,7 @@ const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <>
       {children}
-      <NotificationPanel
+      <IncomingNotifications
         notification={currentNotification}
         onClose={clearNotification}
       />

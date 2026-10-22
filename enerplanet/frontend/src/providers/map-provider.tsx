@@ -24,15 +24,18 @@ interface MapControlsWrapperProps {
 	onZoomOut: () => void;
 	onCenterMap: () => void;
 	placement?: MapControlsPlacement;
+	children?: React.ReactNode;
 }
 
-const MapControlsWrapper: React.FC<MapControlsWrapperProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement }) => (
+const MapControlsWrapper: React.FC<MapControlsWrapperProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement, children }) => (
 	<MapControls
 		onZoomIn={onZoomIn}
 		onZoomOut={onZoomOut}
 		onCenterMap={onCenterMap}
 		placement={placement}
-	/>
+	>
+		{children}
+	</MapControls>
 );
 
 // Separate component factory to avoid creating components inside parent
@@ -41,13 +44,15 @@ const createMapControlsComponent = (
 	zoomOut: () => void,
 	centerMap: () => void
 ) => {
-	const MapControlsComponent = ({ placement }: { placement?: MapControlsPlacement }) => (
+	const MapControlsComponent = ({ placement, children }: { placement?: MapControlsPlacement; children?: React.ReactNode }) => (
 		<MapControlsWrapper
 			onZoomIn={zoomIn}
 			onZoomOut={zoomOut}
 			onCenterMap={centerMap}
 			placement={placement}
-		/>
+		>
+			{children}
+		</MapControlsWrapper>
 	);
 	return MapControlsComponent;
 };

@@ -8,7 +8,7 @@ interface MapContextValue {
   centerMap: () => void;
   initMapInstance: () => Promise<void>;
   clearDrawingLayers: () => void;
-  MapControls: React.FC<{ placement?: MapControlsPlacement }>;
+  MapControls: React.FC<{ placement?: MapControlsPlacement; children?: React.ReactNode }>;
   mapRef: React.RefObject<HTMLDivElement | null>;
 }
 

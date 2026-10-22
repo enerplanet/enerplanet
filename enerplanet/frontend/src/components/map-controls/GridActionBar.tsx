@@ -1,7 +1,8 @@
-import type { FC } from "react";
+import { useEffect, type FC } from "react";
 import { Building2, Activity, Loader2, Check, Flame } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
+import { useToastStore } from "@/features/notifications/toastStore";
 
 // Custom transformer icon matching the SVG asset
 const TransformerIcon: FC<{ className?: string }> = ({ className }) => (
@@ -44,6 +45,13 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     isResolvingHeat,
 }) => {
     const { t } = useTranslation();
+    const setToastsLifted = useToastStore((s) => s.setLifted);
+
+    // Toasts sit above the bar rather than over its buttons.
+    useEffect(() => {
+        setToastsLifted(hasGridData);
+        return () => setToastsLifted(false);
+    }, [hasGridData, setToastsLifted]);
 
     if (!hasGridData) return null;
 
