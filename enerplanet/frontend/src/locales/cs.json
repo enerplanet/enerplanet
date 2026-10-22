@@ -1387,7 +1387,6 @@
       "category": "Kategorie",
       "priority": "Priorita",
       "status": "Stav",
-      "rating": "Hodnocení",
       "user": "Uživatel",
       "created": "Vytvořeno",
       "actions": "Akce"
@@ -1402,7 +1401,6 @@
       "title": "Detaily Zpětné Vazby",
       "subtitle": "Zobrazit kompletní informace o zpětné vazbě",
       "message": "Zpráva:",
-      "rating": "Hodnocení:",
       "submitted": "Odesláno",
       "adminResponse": "Odpověď Administrátora:",
       "respondedOn": "Odpovězeno:",

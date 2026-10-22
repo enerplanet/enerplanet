@@ -1640,7 +1640,6 @@
       "category": "Catégorie",
       "priority": "Priorité",
       "status": "Statut",
-      "rating": "Note",
       "user": "Utilisateur",
       "created": "Créé",
       "actions": "Actions"
@@ -1655,7 +1654,6 @@
       "title": "Détails du Retour",
       "subtitle": "Voir les informations complètes du retour",
       "message": "Message :",
-      "rating": "Note :",
       "submitted": "Soumis",
       "adminResponse": "Réponse de l'Administrateur :",
       "respondedOn": "Répondu le :",

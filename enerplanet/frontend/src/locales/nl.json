@@ -1372,7 +1372,6 @@
       "category": "Categorie",
       "priority": "Prioriteit",
       "status": "Status",
-      "rating": "Beoordeling",
       "user": "Gebruiker",
       "created": "Aangemaakt",
       "actions": "Acties"
@@ -1387,7 +1386,6 @@
       "title": "Feedbackdetails",
       "subtitle": "Bekijk volledige feedbackinformatie",
       "message": "Bericht:",
-      "rating": "Beoordeling:",
       "submitted": "Ingediend",
       "adminResponse": "Admin Reactie:",
       "respondedOn": "Gereageerd op:",

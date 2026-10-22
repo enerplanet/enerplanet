@@ -1640,7 +1640,6 @@
       "category": "Categoría",
       "priority": "Prioridad",
       "status": "Estado",
-      "rating": "Calificación",
       "user": "Usuario",
       "created": "Creado",
       "actions": "Acciones"
@@ -1655,7 +1654,6 @@
       "title": "Detalles del Comentario",
       "subtitle": "Ver información completa del comentario",
       "message": "Mensaje:",
-      "rating": "Calificación:",
       "submitted": "Enviado",
       "adminResponse": "Respuesta del Administrador:",
       "respondedOn": "Respondido el:",

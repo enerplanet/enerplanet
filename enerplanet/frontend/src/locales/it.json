@@ -1373,7 +1373,6 @@
       "category": "Categoria",
       "priority": "Priorità",
       "status": "Stato",
-      "rating": "Valutazione",
       "user": "Utente",
       "created": "Creato",
       "actions": "Azioni"
@@ -1388,7 +1387,6 @@
       "title": "Dettagli Feedback",
       "subtitle": "Visualizza informazioni complete del feedback",
       "message": "Messaggio:",
-      "rating": "Valutazione:",
       "submitted": "Inviato",
       "adminResponse": "Risposta Amministratore:",
       "respondedOn": "Risposto il:",

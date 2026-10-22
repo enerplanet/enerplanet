@@ -1635,7 +1635,6 @@
       "category": "Category",
       "priority": "Priority",
       "status": "Status",
-      "rating": "Rating",
       "user": "User",
       "created": "Created",
       "actions": "Actions"
@@ -1651,7 +1650,6 @@
       "title": "Feedback Details",
       "subtitle": "View complete feedback information",
       "message": "Message:",
-      "rating": "Rating:",
       "submitted": "Submitted",
       "adminResponse": "Admin Response:",
       "respondedOn": "Responded on:",

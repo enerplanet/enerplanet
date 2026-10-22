@@ -32,7 +32,7 @@ import { useNotification } from "@/features/notifications/hooks/useNotification"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import { useConfirm } from "@/hooks/useConfirmDialog";
-import { formatDateTime24h, formatDate } from "@/utils/dateHelpers";
+import { formatDateTime24h } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -387,19 +387,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
     }
   };
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-4 h-4 ${star <= rating ? "text-gray-700 fill-gray-700" : "text-gray-300"}`}
-          />
-        ))}
-      </div>
-    );
-  };
-
   const getStatusCounts = () => {
     const pending = allFeedbacks.filter((f: FeedbackItem) => f.status === "pending").length;
     const inProgress = allFeedbacks.filter((f: FeedbackItem) => f.status === "in_progress").length;
@@ -688,9 +675,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   {t("feedbackManagement.table.status")}
                 </th>
                 <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("feedbackManagement.table.rating")}
-                </th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.user")}
                 </th>
                 <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -704,7 +688,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
             <tbody className="divide-y divide-border">
               {feedbacks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center">
+                  <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="md-fade-in flex flex-col items-center justify-center gap-3">
                       <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center border border-border shadow-sm">
                         <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-300" />
@@ -730,7 +714,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                       key={feedback.id}
                       className="transition-colors duration-150 hover:bg-muted/40"
                     >
-                      <td className="px-6 py-4 max-w-[200px]">
+                      <td className="px-6 py-4 max-w-[260px]">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <div
@@ -819,7 +803,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                             );
                           })()}
                       </td>
-                      <td className="px-6 py-4">{renderStars(feedback.rating)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center text-white text-xs font-medium">
@@ -838,8 +821,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-foreground">
-                          {formatDate(feedback.created_at)}
+                        <span className="text-sm text-foreground whitespace-nowrap">
+                          {formatDateTime24h(feedback.created_at)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -1095,14 +1078,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                           </div>
                         );
                       })()}
-
-                      {/* Rating */}
-                      <div>
-                        <h5 className="text-sm font-medium text-foreground mb-2">
-                          {t("feedbackManagement.viewDialog.rating")}
-                        </h5>
-                        <div>{renderStars(selectedFeedback.rating)}</div>
-                      </div>
 
                       {/* User & Date Info */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
