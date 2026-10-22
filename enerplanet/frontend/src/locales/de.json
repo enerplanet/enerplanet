@@ -1062,6 +1062,19 @@
     "running": "Läuft",
     "completed": "Abgeschlossen",
     "failed": "Fehlgeschlagen",
+    "failure": {
+      "service": {
+        "meme": "Die Energiesystemsimulation (MEME) wurde vor dem Ende abgebrochen.",
+        "buem": "Die Berechnung des Gebäudewärmebedarfs (BuEM) ist fehlgeschlagen.",
+        "pv": "Die Berechnung des PV-Ertrags ist fehlgeschlagen.",
+        "city2tabula": "Für diese Gebäude wurden keine 3D-Gebäudedaten (City2TABULA) gefunden, daher konnte ihr Bedarf nicht berechnet werden."
+      },
+      "unknown": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es später erneut. Tritt es wieder auf, melden Sie es dem EnerPlanET-Team.",
+      "next": "Ihr Modell und seine Eingaben sind unverändert. Starten Sie es erneut. Schlägt es ein zweites Mal fehl, melden Sie es dem EnerPlanET-Team.",
+      "nextFor": {
+        "city2tabula": "Ein erneuter Start hilft erst, wenn für das Gebiet 3D-Gebäudedaten vorliegen. Wenn Sie hier Daten erwartet haben, melden Sie es dem EnerPlanET-Team."
+      }
+    },
     "pending": "Ausstehend",
     "queued": "In Warteschlange",
     "cancelled": "Abgebrochen",
@@ -1126,7 +1139,6 @@
     "parentModel": "Übergeordnetes Modell",
     "parent": "Übergeordnet",
     "anotherModel": "einem anderen Modell",
-    "failedDefaultMessage": "Berechnung fehlgeschlagen - Webservice nicht verfügbar oder Zeitüberschreitung",
     "demandFallbackTitle": "Einige Gebäude mit konstantem Bedarf",
     "demandFallbackWarning": "{{fallback}} von {{total}} Gebäuden hatten kein stündliches Bedarfsprofil (keine 3D-Daten) und verwenden ihren Jahresbedarf gleichmäßig über das Jahr verteilt.",
     "waiting": "Wartend",

@@ -1062,6 +1062,19 @@
     "running": "En cours",
     "completed": "Terminé",
     "failed": "Échoué",
+    "failure": {
+      "service": {
+        "meme": "La simulation du système énergétique (MEME) s'est arrêtée avant la fin.",
+        "buem": "Le calcul des besoins de chaleur du bâtiment (BuEM) a échoué.",
+        "pv": "Le calcul du rendement photovoltaïque a échoué.",
+        "city2tabula": "Aucune donnée 3D de bâtiment (City2TABULA) n'a été trouvée pour ces bâtiments, leurs besoins n'ont donc pas pu être calculés."
+      },
+      "unknown": "Le traitement a échoué. Réessayez plus tard. Si cela se reproduit, signalez-le à l'équipe EnerPlanET.",
+      "next": "Votre modèle et ses données sont inchangés. Relancez-le. S'il échoue une deuxième fois, signalez-le à l'équipe EnerPlanET.",
+      "nextFor": {
+        "city2tabula": "Le relancer n'aidera pas tant que la zone n'a pas de données 3D de bâtiments. Si vous attendiez des données ici, signalez-le à l'équipe EnerPlanET."
+      }
+    },
     "pending": "En attente",
     "queued": "En file d'attente",
     "cancelled": "Annulé",
@@ -1121,7 +1134,6 @@
     "parentModel": "Modèle parent",
     "parent": "Parent",
     "anotherModel": "un autre modèle",
-    "failedDefaultMessage": "Calcul échoué - service web indisponible ou délai dépassé",
     "demandFallbackTitle": "Certains bâtiments utilisent une demande constante",
     "demandFallbackWarning": "{{fallback}} bâtiments sur {{total}} n'avaient pas de profil de demande horaire (pas de données 3D) et utilisent leur demande annuelle répartie uniformément sur l'année.",
     "waiting": "En attente",
