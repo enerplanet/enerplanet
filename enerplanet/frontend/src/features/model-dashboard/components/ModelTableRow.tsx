@@ -445,7 +445,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               canManageModel ? t("common.tooltips.share") : t("model.sharedCannotShare")
             }
             layout="horizontal"
-            size="small"
+            size="large"
           />
         </div>
       </td>
