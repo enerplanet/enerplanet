@@ -41,6 +41,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { OPEN_RUN_REPORTS_KEY, RUN_REPORT_STATE_KEY, type RunReportTarget } from "./runReport";
 
 // Types
@@ -368,6 +369,7 @@ export const FeedbackComponent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showSuccess } = useNotification();
   const reportRun = (location.state as Record<string, RunReportTarget | undefined> | null)?.[RUN_REPORT_STATE_KEY];
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -623,8 +625,9 @@ export const FeedbackComponent: React.FC = () => {
       if (data.success) {
         if (reportRun) {
           queryClient.invalidateQueries({ queryKey: OPEN_RUN_REPORTS_KEY });
-          // Drop the report target so the next feedback from this page is not attached to the run.
-          navigate(location.pathname, { replace: true, state: null });
+          showSuccess(t("model.failure.reportedHint"));
+          navigate("/app/model-dashboard", { replace: true });
+          return;
         }
         setSubmitted(true);
         setHistoryRefresh(prev => prev + 1);
