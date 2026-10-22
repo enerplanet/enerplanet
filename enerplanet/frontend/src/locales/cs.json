@@ -2611,24 +2611,13 @@
     "cables": "Kabely",
     "peakLoad": "Špičková Zátěž",
     "capacity": "Kapacita",
-    "utilization": "Využití",
-    "estCost": "Odhadované Náklady",
-    "cablesLabel": "Kabely",
-    "trafosLabel": "Transformátory",
-    "costDescription": "Náklady na infrastrukturu včetně kabelů a transformátorů",
     "buildingsTooltip": "Počet budov z OpenStreetMap ve vybrané oblasti. Spotřebu energie každé budovy odhaduje PyLoVo podle plochy, počtu podlaží, velikosti domácnosti a energetického štítku.",
-    "trafosTooltip": "Transformátory dimenzované nástrojem PyLoVo na souběžné zatížení. Standardní velikosti (100 až 630 kVA) se vybírají z německých katalogů zařízení. Cena se určuje podle velikosti z cen instalovaných zařízení.",
-    "cablesTooltip": "Rozvodné kabely NN vedené nástrojem PyLoVo mezi budovami a transformátory. Cena je délka (m) krát cena za metr (€/m) z katalogu zařízení, podle typu kabelu.",
+    "trafosTooltip": "Transformátory dimenzované nástrojem PyLoVo na souběžné zatížení. Standardní velikosti (100 až 630 kVA) se vybírají z německých katalogů zařízení.",
+    "cablesTooltip": "Rozvodné kabely NN vedené nástrojem PyLoVo mezi budovami a transformátory.",
     "lengthTooltip": "Celková délka všech kabelů NN v síti. Trasa vede nejkratší cestou mezi přípojkami budov a polohami transformátorů.",
-    "selectionNote": "Vybrané budovy a kabely, které je spojují s jejich transformátory. Celá síť: budovy {{buildings}}, kabely {{cables}}, {{km}} km, vytížení {{utilisation}} %.",
-    "simultaneousLoad": "Souběžné zatížení",
-    "peakLoadTooltip": "Součet špičkových elektrických zatížení všech budov (kW), odvozený z odhadované roční spotřeby každé budovy pomocí standardních zátěžových profilů (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistické souběžné zatížení s koeficientem soudobosti, kde n je počet budov. Ne všechny budovy odebírají špičkový výkon ve stejnou chvíli.",
+    "selectionNote": "Vybrané budovy a kabely, které je spojují s jejich transformátory. Celá síť: budovy {{buildings}}, kabely {{cables}}, {{km}} km.",
     "capacityTooltip": "Celkový jmenovitý výkon všech transformátorů (kVA). Transformátory se vybírají ze standardních německých velikostí NN tak, aby pokryly souběžné zatížení s rezervou.",
-    "utilizationTooltip": "Vytížení transformátorů = souběžné zatížení ÷ celkový výkon × 100 %. Hodnoty nad 80 % mohou znamenat potřebu dalšího výkonu transformátorů.",
-    "cableCostTooltip": "Náklady na instalaci kabelů podle typu a délky kabelu. Ceny z německých katalogů zařízení NN zahrnují materiál, výkop a instalaci (€/m).",
-    "trafoCostTooltip": "Náklady na pořízení a instalaci transformátorů. Ceny podle velikosti v kVA pocházejí z německých katalogů distribučních zařízení, přiřazené k nejbližší velikosti.",
-    "sourceNote": "Odhad nástroje PyLoVo. Ceny z německých katalogů zařízení NN. Vytížení vychází ze souběžného zatížení."
+    "sourceNote": "Odhad nástroje PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {

@@ -2611,24 +2611,13 @@
     "cables": "Kable",
     "peakLoad": "Szczytowe Obciążenie",
     "capacity": "Pojemność",
-    "utilization": "Wykorzystanie",
-    "estCost": "Szacowany Koszt",
-    "cablesLabel": "Kable",
-    "trafosLabel": "Transformatory",
-    "costDescription": "Koszty infrastruktury w tym kable i transformatory",
     "buildingsTooltip": "Łączna liczba budynków z OpenStreetMap w wybranym obszarze. PyLoVo szacuje zapotrzebowanie na energię każdego budynku na podstawie powierzchni, liczby kondygnacji, wielkości gospodarstwa domowego i etykiety energetycznej.",
-    "trafosTooltip": "Transformatory dobrane przez PyLoVo do obciążenia jednoczesnego. Standardowe rozmiary (od 100 do 630 kVA) pochodzą z niemieckich katalogów urządzeń. Koszt dla każdego rozmiaru pochodzi z cen zainstalowanych urządzeń.",
-    "cablesTooltip": "Kable dystrybucyjne nN poprowadzone przez PyLoVo między budynkami a transformatorami. Koszt to długość (m) razy koszt za metr (€/m) z katalogu, zależnie od typu kabla.",
+    "trafosTooltip": "Transformatory dobrane przez PyLoVo do obciążenia jednoczesnego. Standardowe rozmiary (od 100 do 630 kVA) pochodzą z niemieckich katalogów urządzeń.",
+    "cablesTooltip": "Kable dystrybucyjne nN poprowadzone przez PyLoVo między budynkami a transformatorami.",
     "lengthTooltip": "Łączna długość wszystkich kabli nN w sieci. Trasa biegnie najkrótszą drogą między przyłączami budynków a transformatorami.",
-    "selectionNote": "Wybrane budynki i kable łączące je z transformatorami. Cała sieć: budynki {{buildings}}, kable {{cables}}, {{km}} km, wykorzystanie {{utilisation}}%.",
-    "simultaneousLoad": "Obciążenie jednoczesne",
-    "peakLoadTooltip": "Suma szczytowych obciążeń elektrycznych wszystkich budynków (kW), wyznaczona z szacowanego rocznego zapotrzebowania każdego budynku przy użyciu standardowych profili obciążenia (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistyczne obciążenie jednoczesne ze współczynnikiem jednoczesności, gdzie n to liczba budynków. Nie wszystkie budynki osiągają szczyt w tym samym czasie.",
+    "selectionNote": "Wybrane budynki i kable łączące je z transformatorami. Cała sieć: budynki {{buildings}}, kable {{cables}}, {{km}} km.",
     "capacityTooltip": "Łączna moc znamionowa wszystkich transformatorów (kVA). Transformatory dobiera się ze standardowych niemieckich rozmiarów nN, aby pokryć obciążenie jednoczesne z zapasem.",
-    "utilizationTooltip": "Wykorzystanie transformatorów = obciążenie jednoczesne ÷ moc całkowita × 100%. Wartości powyżej 80% mogą oznaczać potrzebę dodatkowej mocy.",
-    "cableCostTooltip": "Koszt instalacji kabli zależny od typu i długości. Ceny z niemieckich katalogów nN obejmują materiał, wykop i montaż (€/m).",
-    "trafoCostTooltip": "Koszt zakupu i instalacji transformatorów. Ceny dla rozmiarów kVA pochodzą z niemieckich katalogów urządzeń dystrybucyjnych, dopasowane do najbliższego rozmiaru.",
-    "sourceNote": "Szacunek silnika sieci PyLoVo. Koszty z niemieckich katalogów nN. Wykorzystanie na podstawie obciążenia jednoczesnego."
+    "sourceNote": "Szacunek silnika sieci PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {

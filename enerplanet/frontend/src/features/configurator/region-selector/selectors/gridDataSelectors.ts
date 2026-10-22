@@ -88,15 +88,6 @@ export const useGridIdToPeakLoad = (
     return lookup;
   }, [pylovoGridData]);
 
-/** Count of buildings in the current polygon. */
-export const useBuildingsInPolygonCount = (
-  pylovoGridData: PylovoGridData | undefined
-): number =>
-  useMemo(() => {
-    const features = (pylovoGridData as any)?.buildings?.features;
-    return Array.isArray(features) ? features.length : 0;
-  }, [pylovoGridData]);
-
 /** OSM ids of the buildings in the current polygon. */
 export const useBuildingOsmIdsInPolygon = (
   pylovoGridData: PylovoGridData | undefined
@@ -105,20 +96,6 @@ export const useBuildingOsmIdsInPolygon = (
     const features = pylovoGridData?.buildings?.features;
     if (!Array.isArray(features)) return [];
     return features.map((f: any) => f?.properties?.osm_id).filter(Boolean).map(String);
-  }, [pylovoGridData]);
-
-/** Total peak load (kW) across all buildings in the polygon. */
-export const usePeakLoadInPolygonKw = (
-  pylovoGridData: PylovoGridData | undefined
-): number =>
-  useMemo(() => {
-    const features = (pylovoGridData as any)?.buildings?.features;
-    if (!Array.isArray(features)) return 0;
-    return features.reduce((sum: number, f: any) => {
-      const props = f?.properties;
-      const peakKw = props?.peak_load_in_kw ?? props?.peak_load_kw ?? 0;
-      return sum + Number(peakKw);
-    }, 0);
   }, [pylovoGridData]);
 
 /** Connected building stats per transformer (count + types) for 3D hover tooltips. */

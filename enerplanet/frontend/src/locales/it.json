@@ -2597,24 +2597,13 @@
     "cables": "Cavi",
     "peakLoad": "Carico di Picco",
     "capacity": "Capacità",
-    "utilization": "Utilizzo",
-    "estCost": "Costo Stimato",
-    "cablesLabel": "Cavi",
-    "trafosLabel": "Trasformatori",
-    "costDescription": "Costi infrastruttura incl. cavi e trasformatori",
     "buildingsTooltip": "Totale degli edifici di OpenStreetMap nell'area selezionata. PyLoVo stima la domanda di energia di ogni edificio in base a superficie, piani, dimensione del nucleo familiare ed etichetta energetica.",
-    "trafosTooltip": "Trasformatori dimensionati da PyLoVo per il carico contemporaneo. Le taglie standard (da 100 a 630 kVA) sono scelte da cataloghi di apparecchiature tedeschi. Il costo per taglia deriva dai prezzi degli impianti installati.",
-    "cablesTooltip": "Cavi di distribuzione BT tracciati da PyLoVo tra edifici e trasformatori. Il costo è la lunghezza (m) per il costo al metro (€/m) dal catalogo, in base al tipo di cavo.",
+    "trafosTooltip": "Trasformatori dimensionati da PyLoVo per il carico contemporaneo. Le taglie standard (da 100 a 630 kVA) sono scelte da cataloghi di apparecchiature tedeschi.",
+    "cablesTooltip": "Cavi di distribuzione BT tracciati da PyLoVo tra edifici e trasformatori.",
     "lengthTooltip": "Lunghezza totale di tutti i cavi BT della rete. Il percorso segue il cammino più breve tra i punti di allaccio degli edifici e i trasformatori.",
-    "selectionNote": "Edifici selezionati e cavi che li collegano ai loro trasformatori. Intera rete: {{buildings}} edifici, {{cables}} cavi, {{km}} km, utilizzo {{utilisation}}%.",
-    "simultaneousLoad": "Carico contemporaneo",
-    "peakLoadTooltip": "Somma dei carichi elettrici di picco di tutti gli edifici (kW), ricavata dalla domanda annua stimata di ogni edificio con profili di carico standard (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Carico contemporaneo realistico con un fattore di contemporaneità, dove n è il numero di edifici. Non tutti gli edifici raggiungono il picco nello stesso momento.",
+    "selectionNote": "Edifici selezionati e cavi che li collegano ai loro trasformatori. Intera rete: {{buildings}} edifici, {{cables}} cavi, {{km}} km.",
     "capacityTooltip": "Potenza nominale totale di tutti i trasformatori (kVA). I trasformatori sono scelti tra le taglie BT standard tedesche per coprire il carico contemporaneo con un margine di sicurezza.",
-    "utilizationTooltip": "Utilizzo dei trasformatori = carico contemporaneo ÷ capacità totale × 100%. Valori oltre l'80% possono indicare la necessità di ulteriore capacità.",
-    "cableCostTooltip": "Costo di posa dei cavi in base a tipo e lunghezza. I prezzi dei cataloghi BT tedeschi includono materiale, scavo e posa (€/m).",
-    "trafoCostTooltip": "Costo di acquisto e installazione dei trasformatori. I prezzi per taglia in kVA provengono da cataloghi tedeschi di apparecchiature di distribuzione, alla taglia più vicina.",
-    "sourceNote": "Stimato dal motore di rete PyLoVo. Costi da cataloghi BT tedeschi. Utilizzo basato sul carico contemporaneo."
+    "sourceNote": "Stimato dal motore di rete PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {

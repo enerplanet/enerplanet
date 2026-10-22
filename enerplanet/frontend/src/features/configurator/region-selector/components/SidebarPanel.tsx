@@ -36,7 +36,6 @@ import {
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
-import { GridStatsBadge } from "./GridStatsBadge";
 import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -68,10 +67,6 @@ interface SidebarPanelProps {
   onRemoveAllTechs?: () => void;
   techBuildingCount?: number;
   appliedTechKeys?: string[];
-  gridResultIds?: number[];
-  buildingOsmIds?: string[];
-  buildingsCount?: number;
-  peakLoadKw?: number;
   isModified?: boolean;
   /** Buildings whose technologies lack a size for operate mode. */
   operateIssues?: OperateIssue[];
@@ -101,10 +96,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onRemoveAllTechs,
   techBuildingCount = 0,
   appliedTechKeys = [],
-  gridResultIds = [],
-  buildingOsmIds,
-  buildingsCount,
-  peakLoadKw,
   isModified = false,
   operateIssues = [],
   onFixOperateIssue,
@@ -122,7 +113,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const siteModeLocked = state.allPolygons.length > 0;
 
   return (
-    <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
+    <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
       <div className="flex items-center px-3 pt-4">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
       </div>
@@ -194,18 +185,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
       )}
 
       <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
-        {/* Grid Statistics - compact badge shown when grid data is available */}
-        {gridResultIds.length > 0 && (
-          <div className="md-fade-in">
-            <GridStatsBadge
-              gridResultIds={gridResultIds}
-              buildingOsmIds={buildingOsmIds}
-              buildingsCount={buildingsCount}
-              peakLoadKw={peakLoadKw}
-            />
-          </div>
-        )}
-
         <div className="relative" data-tour="model-name">
           <label
             htmlFor="model-name-input"

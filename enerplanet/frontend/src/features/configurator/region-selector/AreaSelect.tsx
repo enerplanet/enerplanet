@@ -53,14 +53,13 @@ import {
   useGridIdToTrafoCapacity,
   useGridIdToPeakLoad,
   useGridIdToConnectedBuildings,
-  useBuildingsInPolygonCount,
   useBuildingOsmIdsInPolygon,
-  usePeakLoadInPolygonKw,
   useCustomTransformers,
 } from "@/features/configurator/region-selector/selectors/gridDataSelectors";
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
+import { GridStatsBadge } from "./components/GridStatsBadge";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -331,9 +330,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const gridIdToTrafoCapacity = useGridIdToTrafoCapacity(pylovoLayers.pylovoGridData);
   const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
   const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
-  const buildingsInPolygonCount = useBuildingsInPolygonCount(pylovoLayers.pylovoGridData);
   const buildingOsmIdsInPolygon = useBuildingOsmIdsInPolygon(pylovoLayers.pylovoGridData);
-  const peakLoadInPolygonKw = usePeakLoadInPolygonKw(pylovoLayers.pylovoGridData);
   const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
@@ -605,10 +602,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onRemoveAllTechs={techOperations.handleRemoveAllTechs}
             techBuildingCount={techOperations.techBuildingCount}
             appliedTechKeys={techOperations.appliedTechKeys}
-            gridResultIds={gridResultIds}
-            buildingsCount={buildingsInPolygonCount}
-            buildingOsmIds={buildingOsmIdsInPolygon}
-            peakLoadKw={peakLoadInPolygonKw}
             isModified={state.isModified}
             operateIssues={operateIssues}
             onFixOperateIssue={fixOperateIssue}
@@ -618,9 +611,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
+            {gridResultIds.length > 0 && (
+              <div className="md-fade-in absolute top-4 z-30 w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
+                <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
+              </div>
+            )}
             {map && isMapLibre3D && (
               <MapLibre3DOverlay
                 olMap={map}
+                controlsPlacement="top-left"
                 buildingsGeoJSON={pylovoLayers.pylovoGridData?.buildings}
                 linesGeoJSON={pylovoLayers.pylovoGridData?.lines}
                 mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
@@ -726,6 +725,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           />
         }
         showSidebar={true}
+        sidebarWidth="26rem"
+        controlsPlacement="top-left"
       />
 
       <AreaSelectTour

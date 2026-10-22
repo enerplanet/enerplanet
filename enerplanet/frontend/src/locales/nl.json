@@ -2596,24 +2596,13 @@
     "cables": "Kabels",
     "peakLoad": "Piekbelasting",
     "capacity": "Capaciteit",
-    "utilization": "Benutting",
-    "estCost": "Geschatte Kosten",
-    "cablesLabel": "Kabels",
-    "trafosLabel": "Transformatoren",
-    "costDescription": "Infrastructuurkosten incl. kabels & transformatoren",
     "buildingsTooltip": "Alle gebouwen uit OpenStreetMap in het geselecteerde gebied. PyLoVo schat de energievraag van elk gebouw op basis van oppervlakte, verdiepingen, huishoudgrootte en energielabel.",
-    "trafosTooltip": "Transformatoren die PyLoVo dimensioneert op de gelijktijdige belasting. Standaardmaten (100 tot 630 kVA) komen uit Duitse apparatuurcatalogi. De kosten per maat komen uit prijzen van geïnstalleerde apparatuur.",
-    "cablesTooltip": "LS-distributiekabels die PyLoVo tussen gebouwen en transformatoren legt. De kosten zijn lengte (m) maal prijs per meter (€/m) uit de catalogus, afhankelijk van het kabeltype.",
+    "trafosTooltip": "Transformatoren die PyLoVo dimensioneert op de gelijktijdige belasting. Standaardmaten (100 tot 630 kVA) komen uit Duitse apparatuurcatalogi.",
+    "cablesTooltip": "LS-distributiekabels die PyLoVo tussen gebouwen en transformatoren legt.",
     "lengthTooltip": "Totale lengte van alle LS-kabels in het net. De route volgt het kortste pad tussen de aansluitpunten van gebouwen en de transformatoren.",
-    "selectionNote": "Geselecteerde gebouwen en de kabels naar hun transformatoren. Hele net: {{buildings}} gebouwen, {{cables}} kabels, {{km}} km, {{utilisation}}% benutting.",
-    "simultaneousLoad": "Gelijktijdige last",
-    "peakLoadTooltip": "Som van de elektrische piekbelastingen van alle gebouwen (kW), afgeleid uit de geschatte jaarvraag van elk gebouw met standaardlastprofielen (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistische gelijktijdige belasting met een gelijktijdigheidsfactor, waarbij n het aantal gebouwen is. Niet alle gebouwen bereiken tegelijk hun piekbelasting.",
+    "selectionNote": "Geselecteerde gebouwen en de kabels naar hun transformatoren. Hele net: {{buildings}} gebouwen, {{cables}} kabels, {{km}} km.",
     "capacityTooltip": "Totaal nominaal vermogen van alle transformatoren (kVA). Transformatoren worden gekozen uit Duitse LS-standaardmaten om de gelijktijdige last met een veiligheidsmarge te dekken.",
-    "utilizationTooltip": "Benutting van transformatoren = gelijktijdige last ÷ totale capaciteit × 100%. Waarden boven 80% kunnen betekenen dat extra capaciteit nodig is.",
-    "cableCostTooltip": "Kabelkosten op basis van kabeltype en lengte. Prijzen uit Duitse LS-catalogi omvatten materiaal, graafwerk en aanleg (€/m).",
-    "trafoCostTooltip": "Kosten voor aanschaf en installatie van transformatoren. Prijzen per kVA-maat komen uit Duitse catalogi voor distributieapparatuur, gekoppeld aan de dichtstbijzijnde maat.",
-    "sourceNote": "Geschat door de PyLoVo-netberekening. Kosten uit Duitse LS-catalogi. Benutting op basis van gelijktijdige last."
+    "sourceNote": "Geschat door de PyLoVo-netberekening."
   },
   "tooltips": {
     "privateBuildings": {
