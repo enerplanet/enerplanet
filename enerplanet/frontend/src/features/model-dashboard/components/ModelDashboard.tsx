@@ -129,6 +129,27 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 	);
 }
 
+// Copies sit in a box inset by its cell's p-3 (0.75rem) and the box's 1px border.
+const COPY_INSET = "0.75rem + 1px";
+
+/**
+ * Column widths shared by the model table and the copies' table inside it. The
+ * name column takes the rest; with inset, the outer columns shrink by
+ * COPY_INSET so every copy column lines up with the parent rows.
+ */
+function ModelColumns({ inset = false }: { inset?: boolean }) {
+	const edge = (width: string) => (inset ? `calc(${width} - (${COPY_INSET}))` : width);
+	return (
+		<colgroup>
+			<col style={{ width: edge("5rem") }} />
+			<col />
+			<col style={{ width: "18rem" }} />
+			<col className="hidden md:table-column" style={{ width: "10rem" }} />
+			<col style={{ width: edge("22rem") }} />
+		</colgroup>
+	);
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity -- Large component with complex state management, permission checks, and UI logic
 export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const { t } = useTranslation();
@@ -992,10 +1013,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									{!isLoading && filteredModels.length > 0 ? (
 										<div className="md-fade-in overflow-hidden rounded-xl border border-border">
 									<div className="w-full overflow-auto">
-										<table className="w-full table-auto">
+										<table className="w-full min-w-[69rem] table-fixed">
+											<ModelColumns />
 											<thead>
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted/40"}`}>
-													<th className="w-24 px-4 py-2.5 text-center">
+													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -1039,7 +1061,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														</th>
 													) : (
 														<>
-															<th className="w-[38%] px-4 py-2.5 text-left">
+															<th className="px-4 py-2.5 text-left">
 																<SortHeaderButton
 																	field="title"
 																	label={t('model.name')}
@@ -1048,7 +1070,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	onSort={handleSort}
 																/>
 															</th>
-															<th className="w-[24%] px-4 py-2.5 text-left">
+															<th className="px-4 py-2.5 text-left">
 																<SortHeaderButton
 																	field="status"
 																	label={t('model.status')}
@@ -1057,7 +1079,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	onSort={handleSort}
 																/>
 															</th>
-															<th className="hidden w-[14%] px-4 py-2.5 text-left md:table-cell">
+															<th className="hidden px-4 py-2.5 text-left md:table-cell">
 																<SortHeaderButton
 																	field="created_at"
 																	label={t('model.created')}
@@ -1081,7 +1103,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															<tr>
 																<td colSpan={5} className="p-3">
 																	<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-muted/30">
-																		<table className="w-full table-auto">
+																		<table className="w-full table-fixed">
+																			<ModelColumns inset />
 																			<tbody className="divide-y divide-slate-200 dark:divide-slate-700">
 																				{copies.map(renderRow)}
 																			</tbody>
