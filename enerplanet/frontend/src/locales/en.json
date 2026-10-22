@@ -486,7 +486,12 @@
       "completed": "Completed",
       "published": "Published",
       "modelLimit": "Model Limit",
-      "unlimited": "Unlimited"
+      "unlimited": "Unlimited",
+      "modelsCount_one": "{{count}} model",
+      "modelsCount_other": "{{count}} models",
+      "inProgressCount": "{{count}} in progress",
+      "completedCount": "{{count}} completed",
+      "limitUsed": "limit {{used}}/{{limit}}"
     }
   },
   "notifications": {
@@ -1103,10 +1108,6 @@
     "rename": "Rename",
     "delete": "Delete",
     "move": "Move",
-    "shareWorkspace": "Share this workspace with other users",
-    "copyWorkspace": "Create a copy of this workspace with all its models",
-    "renameWorkspace": "Rename this workspace",
-    "deleteWorkspace": "Delete this workspace",
     "moveToWorkspace": "Move to workspace",
     "noModelsFound": "No models found",
     "noModelsMatch": "No models match \"{{search}}\". Try adjusting your search.",
@@ -1151,7 +1152,11 @@
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
       "pagination": "families"
-    }
+    },
+    "workspaceActions": "Workspace actions",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "clearSelection": "Clear selection"
   },
   "polygon": {
     "drawRegion": "Draw Your Region",

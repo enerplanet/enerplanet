@@ -486,7 +486,12 @@
       "completed": "Abgeschlossen",
       "published": "Veröffentlicht",
       "modelLimit": "Modelllimit",
-      "unlimited": "Unbegrenzt"
+      "unlimited": "Unbegrenzt",
+      "modelsCount_one": "{{count}} Modell",
+      "modelsCount_other": "{{count}} Modelle",
+      "inProgressCount": "{{count}} in Bearbeitung",
+      "completedCount": "{{count}} abgeschlossen",
+      "limitUsed": "Limit {{used}}/{{limit}}"
     }
   },
   "notifications": {
@@ -1103,10 +1108,6 @@
     "rename": "Umbenennen",
     "delete": "Löschen",
     "move": "Verschieben",
-    "shareWorkspace": "Diesen Arbeitsbereich teilen",
-    "copyWorkspace": "Eine Kopie dieses Arbeitsbereichs erstellen",
-    "renameWorkspace": "Diesen Arbeitsbereich umbenennen",
-    "deleteWorkspace": "Diesen Arbeitsbereich löschen",
     "moveToWorkspace": "In Arbeitsbereich verschieben",
     "noModelsFound": "Keine Modelle gefunden",
     "noModelsMatch": "Keine Modelle entsprechen \"{{search}}\". Versuchen Sie, Ihre Suche anzupassen.",
@@ -1151,7 +1152,11 @@
       "failed_one": "{{count}} fehlgeschlagen",
       "failed_other": "{{count}} fehlgeschlagen",
       "pagination": "Modellfamilien"
-    }
+    },
+    "workspaceActions": "Arbeitsbereich-Aktionen",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt",
+    "clearSelection": "Auswahl aufheben"
   },
   "polygon": {
     "drawRegion": "Zeichnen Sie Ihre Region",

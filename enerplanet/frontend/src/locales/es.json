@@ -486,7 +486,13 @@
       "completed": "Completado",
       "published": "Publicado",
       "modelLimit": "Límite de Modelos",
-      "unlimited": "Ilimitado"
+      "unlimited": "Ilimitado",
+      "modelsCount_one": "{{count}} modelo",
+      "modelsCount_other": "{{count}} modelos",
+      "inProgressCount": "{{count}} en curso",
+      "limitUsed": "límite {{used}}/{{limit}}",
+      "completedCount_one": "{{count}} completado",
+      "completedCount_other": "{{count}} completados"
     }
   },
   "notifications": {
@@ -1103,10 +1109,6 @@
     "rename": "Renombrar",
     "delete": "Eliminar",
     "move": "Mover",
-    "shareWorkspace": "Compartir este espacio de trabajo",
-    "copyWorkspace": "Crear una copia de este espacio de trabajo",
-    "renameWorkspace": "Renombrar este espacio de trabajo",
-    "deleteWorkspace": "Eliminar este espacio de trabajo",
     "moveToWorkspace": "Mover al espacio de trabajo",
     "noModelsFound": "No se encontraron modelos",
     "noModelsMatch": "Ningún modelo coincide con \"{{search}}\". Intenta ajustar tu búsqueda.",
@@ -1151,7 +1153,11 @@
       "failed_one": "{{count}} fallida",
       "failed_other": "{{count}} fallidas",
       "pagination": "familias"
-    }
+    },
+    "workspaceActions": "Acciones del espacio de trabajo",
+    "selectedCount_one": "{{count}} seleccionado",
+    "selectedCount_other": "{{count}} seleccionados",
+    "clearSelection": "Quitar selección"
   },
   "polygon": {
     "drawRegion": "Dibuja tu región",
