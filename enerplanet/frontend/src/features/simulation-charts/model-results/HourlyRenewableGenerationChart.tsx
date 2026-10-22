@@ -2,11 +2,18 @@ import { FC, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption, SeriesOption } from 'echarts';
 import { CarrierProdRecord } from '@/features/model-results/types';
+import {
+  carrierEnergyAxis,
+  formatCarrierEnergy,
+  sameCarrier,
+} from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { createDataZoomWithStyle, useThemeColors } from '../pypsa/chartUtils';
 
 interface HourlyRenewableGenerationChartProps {
   production: CarrierProdRecord[];
+  /** Carrier the production records belong to (electricity unless switched). */
+  carrier?: string;
   height?: number;
 }
 
@@ -31,16 +38,6 @@ function normalizeEnergyValue(value: number, precision: number = 4): number {
 
   const normalized = Number(value.toFixed(precision));
   return Math.abs(normalized) < FLOATING_POINT_EPSILON ? 0 : normalized;
-}
-
-function formatEnergy(value: number): string {
-  const normalized = normalizeEnergyValue(value, 2);
-  const abs = Math.abs(normalized);
-
-  if (normalized === 0) return '0 kWh';
-  if (abs >= 1000) return `${(normalized / 1000).toFixed(2)} MWh`;
-  if (abs >= 10) return `${normalized.toFixed(1)} kWh`;
-  return `${normalized.toFixed(2)} kWh`;
 }
 
 function formatAxisEnergy(value: number): string {
@@ -102,6 +99,7 @@ function extractDateString(timestamp: string): string {
 
 export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartProps> = ({
   production,
+  carrier,
   height = 340,
 }) => {
   const { t } = useTranslation();
@@ -117,7 +115,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
     };
 
     production.forEach((record) => {
-      if (record.carrier !== 'power') return;
+      if (!sameCarrier(record.carrier, carrier)) return;
 
       const techKey = categorizeRenewableTech(record.techs || '');
       if (!techKey) return;
@@ -175,7 +173,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
       series,
       timestamps,
     };
-  }, [production, t]);
+  }, [production, t, carrier]);
 
   const option: EChartsOption = useMemo(() => {
     if (!chartData.hasData) return {};
@@ -250,7 +248,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
               total += value;
               return `<div style="display:flex;justify-content:space-between;gap:20px;margin:3px 0;color:${themeColors.text};">
                 <span>${item.marker} ${item.seriesName}</span>
-                <span style="font-weight:600;">${formatEnergy(value)}</span>
+                <span style="font-weight:600;">${formatCarrierEnergy(value, carrier)}</span>
               </div>`;
             })
             .filter(Boolean)
@@ -265,7 +263,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
             ${rows}
             <div style="display:flex;justify-content:space-between;gap:20px;margin-top:8px;padding-top:8px;border-top:1px solid ${themeColors.border};color:${themeColors.text};">
               <span style="font-weight:500;">${t('results.energy.totalRenewable', 'Total renewable')}</span>
-              <span style="font-weight:700;color:#059669;">${formatEnergy(total)}</span>
+              <span style="font-weight:700;color:#059669;">${formatCarrierEnergy(total, carrier)}</span>
             </div>
           `;
         },
@@ -290,7 +288,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
       },
       yAxis: {
         type: 'value',
-        name: t('results.energy.energyKwh', 'Energy (kWh)'),
+        name: carrierEnergyAxis(t('results.energy.energy'), carrier),
         nameLocation: 'middle',
         nameGap: 52,
         nameTextStyle: { color: themeColors.textMuted, fontSize: 11 },
@@ -310,7 +308,7 @@ export const HourlyRenewableGenerationChart: FC<HourlyRenewableGenerationChartPr
       },
       series,
     };
-  }, [chartData, t, themeColors]);
+  }, [chartData, t, themeColors, carrier]);
 
   if (!chartData.hasData) {
     return (

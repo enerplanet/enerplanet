@@ -1,6 +1,6 @@
-import { Flame, Zap } from 'lucide-react';
+import { Flame, Fuel, Zap } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
-import { CARRIER_LABELS } from '../types';
+import { carrierDisplay, normalizeCarrier } from '../carrierUnits';
 
 interface CarrierToggleProps {
   /** Carriers present in the results (raw labels from backend). */
@@ -11,10 +11,11 @@ interface CarrierToggleProps {
 }
 
 /**
- * Segmented control to switch between energy carriers (electricity / heat).
- * Hidden entirely when only one carrier is available. Carriers are treated
- * as bucket labels — the only special-casing is the display icon; anything
- * that is not heat/thermal gets the electricity icon.
+ * Segmented control to switch between energy carriers (electricity / heat /
+ * gas). Hidden entirely when only one carrier is available. Carriers are
+ * treated as bucket labels — the only special-casing is the display icon and
+ * the unit shown in the button tooltip; anything not heat/volumetric gets the
+ * electricity icon.
  */
 export const CarrierToggle = ({ carriers, activeCarrier, onSelect }: CarrierToggleProps) => {
   const { t } = useTranslation();
@@ -22,16 +23,20 @@ export const CarrierToggle = ({ carriers, activeCarrier, onSelect }: CarrierTogg
   if (carriers.length <= 1) return null;
 
   // Normalize '' (default) to the first available carrier for display.
-  const active = activeCarrier === '' ? carriers[0] : activeCarrier;
+  const active = normalizeCarrier(activeCarrier);
+  const activeIndex = carriers.findIndex((carrier) => normalizeCarrier(carrier) === active);
+  const activeLabel = activeIndex >= 0 ? carriers[activeIndex] : carriers[0];
 
   const labelFor = (carrier: string): string => {
-    const key = CARRIER_LABELS[carrier.toLowerCase()];
-    return key ? t(key) : carrier;
+    const { labelKey } = carrierDisplay(carrier);
+    return labelKey ? t(labelKey) : carrier;
   };
 
-  const isHeat = (carrier: string): boolean => {
-    const c = carrier.toLowerCase();
-    return c === 'heat' || c === 'thermal';
+  const iconFor = (carrier: string) => {
+    const display = carrierDisplay(carrier);
+    if (display.generation) return { Icon: Zap, className: 'text-primary' };
+    if (display.kind === 'volume') return { Icon: Fuel, className: 'text-amber-600 dark:text-amber-400' };
+    return { Icon: Flame, className: 'text-orange-500' };
   };
 
   return (
@@ -41,22 +46,25 @@ export const CarrierToggle = ({ carriers, activeCarrier, onSelect }: CarrierTogg
       aria-label={t('results.carrier.toggleLabel')}
     >
       {carriers.map((carrier) => {
-        const selected = carrier === active;
-        const Icon = isHeat(carrier) ? Flame : Zap;
+        const selected = normalizeCarrier(carrier) === normalizeCarrier(activeLabel);
+        const { Icon, className } = iconFor(carrier);
+        const label = labelFor(carrier);
+        const { energyUnit } = carrierDisplay(carrier);
         return (
           <button
             key={carrier}
             role="tab"
             aria-selected={selected}
             onClick={() => onSelect(carrier)}
+            title={t('results.carrier.toggleItemHint', `${label} · ${energyUnit}`)}
             className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-all duration-150 ${
               selected
                 ? 'bg-card text-foreground shadow-sm border border-border'
                 : 'text-muted-foreground hover:text-foreground border border-transparent'
             }`}
           >
-            <Icon className={`h-3.5 w-3.5 ${isHeat(carrier) ? 'text-orange-500' : 'text-primary'}`} />
-            {labelFor(carrier)}
+            <Icon className={`h-3.5 w-3.5 ${className}`} />
+            {label}
           </button>
         );
       })}

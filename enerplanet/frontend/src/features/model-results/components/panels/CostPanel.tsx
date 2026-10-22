@@ -12,6 +12,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
 import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import { energyKwhFromCost } from '../../lcoeUnits';
 
 
 const COST_TECH_I18N_KEYS: Record<string, string> = {
@@ -53,7 +54,8 @@ interface CostPanelProps {
   structuredResults: StructuredModelResults | null | undefined;
   summary?: {
     total_cost_eur: number;
-    lcoe_eur_kwh: number;
+    /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
+    lcoe_eur_mwh: number;
   } | null;
   simulationPeriod?: {
     from_date: string;
@@ -124,7 +126,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         const totalCost = costByTech[tech] || 0;
         const investCost = investByTech[tech] || 0;
         const variableCost = Math.max(0, totalCost - investCost);
-        const energyProduced = lcoe > 0 ? totalCost / lcoe : 0; // kWh
+        const energyProduced = energyKwhFromCost(totalCost, lcoe); // kWh
         return {
           tech,
           label: getTechLabel(tech, t),
@@ -238,7 +240,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_kwh}
+                lcoe={summary?.lcoe_eur_mwh}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}

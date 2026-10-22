@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
+import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
 
 interface SystemCostSummaryChartProps {
   systemLCOE?: number;
@@ -40,7 +41,8 @@ export const SystemCostSummaryChart: FC<SystemCostSummaryChartProps> = ({
       return `${v.toFixed(0)} €`;
     };
 
-    const lcoeCtkwh = systemLCOE ? (systemLCOE * 100).toFixed(2) : '—';
+    // Stored LCOE is EUR/MWh; ct/kWh is a tenth of it (300 → 30).
+    const lcoeCtkwh = systemLCOE ? lcoeToCtkwh(systemLCOE).toFixed(2) : '—';
     const periodLabel = isPartialYear && simulationDays
       ? ` (${simulationDays} ${t('results.chartLabels.days')})`
       : '';

@@ -554,7 +554,10 @@
     "carrier": {
       "toggleLabel": "Vecteur énergétique",
       "electricity": "Électricité",
-      "heat": "Chaleur"
+      "heat": "Chaleur",
+      "gas": "Gaz",
+      "oil": "Fioul",
+      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique"
     },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
@@ -686,6 +689,7 @@
       "noData": "Aucune donnée énergétique disponible",
       "dailyEnergyBalance": "Bilan Énergétique Quotidien",
       "dailyEnergyBalanceDesc": "Montre le bilan quotidien entre production et consommation d'énergie pour toutes les technologies du système.",
+      "dailyEnergyBalanceDescHeat": "Affiche l'équilibre quotidien entre la chaleur fournie (par ex. par des pompes à chaleur) et la demande de chaleur pour toutes les technologies du système.",
       "production": "Production",
       "productionDesc": "Énergie générée par le solaire, l'éolien et d'autres sources",
       "consumption": "Consommation",
@@ -698,10 +702,12 @@
       "selfSufficiency": "Autosuffisance",
       "netBalance": "Bilan Net",
       "energyKwh": "Énergie (kWh)",
+      "energy": "Énergie",
       "netKwh": "Net (kWh)",
       "noEnergyBalanceData": "Aucune donnée de bilan énergétique disponible",
       "dailyLoadProfile": "Profil de Charge Quotidien",
       "dailyLoadProfileDesc": "Montre les modèles de consommation électrique sur une période de 24 heures avec détection automatique des périodes de pointe.",
+      "dailyLoadProfileDescHeat": "Affiche les profils de demande de chaleur sur 24 heures avec détection automatique des périodes de pointe.",
       "peakPeriods": "Périodes de Pointe",
       "peakPeriodsDesc": "Matin (07:00-10:00) et soir (17:00-21:00) périodes de forte demande",
       "offPeak": "Heures Creuses",
@@ -731,6 +737,10 @@
       "eveningPeak": "Pic du Soir",
       "peakPeriod": "Période de Pointe",
       "noDataLoadProfile": "Aucune donnée disponible pour le profil de charge quotidien",
+      "generationDurationCurve": "Courbe de durée de la production",
+      "generationDurationCurveDesc": "Classe la production renouvelable horaire de la plus élevée à la plus faible afin de visualiser le pic de production et son évolution sur l'année.",
+      "demandDurationCurve": "Courbe de durée de la demande",
+      "demandDurationCurveDesc": "Classe la demande de chaleur horaire de la plus élevée à la plus faible afin de visualiser la pointe et son évolution sur l'année.",
       "noDataLoadCurve": "Aucune donnée disponible pour la courbe de charge"
     },
     "grid": {
@@ -811,6 +821,8 @@
       "unmetDemandDesc": "Demande d'énergie qui n'a pas pu être satisfaite par l'offre disponible. Valeurs plus basses indiquent meilleure fiabilité.",
       "unmetEnergy": "Énergie Non Satisfaite",
       "unmetEnergyDesc": "Demande dépassant l'offre disponible",
+      "energy": "Énergie",
+      "unmet": "Non couvert",
       "unmetKwh": "Non Satisfaite (kWh)",
       "powerFlowAnalysis": "Analyse du Flux de Puissance",
       "powerFlow": "Flux de Puissance",

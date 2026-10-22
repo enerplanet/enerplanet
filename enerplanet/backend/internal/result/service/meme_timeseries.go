@@ -37,7 +37,13 @@ var (
 // source).
 //
 // A missing CSV file (or a missing csv dir, e.g. a PyPSA-only bundle) is not an
-// error: that table is simply skipped. A malformed row is skipped. POWER series
+// error: that table is simply skipped. The exception is a CALLIOPE export — one
+// that carries results_flow_out.csv, the same marker the PyPSA pass uses to
+// locate it. There the two levelised-cost tables are required: the cost UI
+// cannot render a cost per carrier/technology without them, and a silently
+// empty table reads as "this model has no cost". A PyPSA-only export requires
+// nothing (see readMemeCSVRequired).
+// A malformed row is skipped. POWER series
 // (carrier_prod/con) are scaled MW -> kW at write time (the R2 contract is kW);
 // ratios, levelised costs and currencies are stored unscaled.
 func streamMemeTimeSeries(tx *gorm.DB, modelID uint, csvDir string, parents map[string]string) error {
@@ -48,7 +54,18 @@ func streamMemeTimeSeries(tx *gorm.DB, modelID uint, csvDir string, parents map[
 		return nil
 	}
 
-	w := &memeTimeSeriesWriter{tx: tx, modelID: modelID, csvDir: csvDir, parents: parents}
+	// A Calliope export is identified by its flow table — the same marker the
+	// PyPSA pass uses to locate the bundle. Only then are the levelised-cost
+	// tables required; a PyPSA-only export stays fully optional.
+	_, markerErr := os.Stat(filepath.Join(csvDir, "results_flow_out.csv"))
+
+	w := &memeTimeSeriesWriter{
+		tx:                   tx,
+		modelID:              modelID,
+		csvDir:               csvDir,
+		parents:              parents,
+		requireLevelisedCost: markerErr == nil,
+	}
 
 	steps := []struct {
 		name string
@@ -75,6 +92,19 @@ type memeTimeSeriesWriter struct {
 	modelID uint
 	csvDir  string
 	parents map[string]string
+	// requireLevelisedCost makes the two levelised-cost tables mandatory. It is
+	// true only for a Calliope export, so a PyPSA-only bundle still ingests with
+	// whatever tables it happens to carry.
+	requireLevelisedCost bool
+}
+
+// readCostCSV reads a levelised-cost table, required or optional depending on
+// the bundle: see requireLevelisedCost.
+func (w *memeTimeSeriesWriter) readCostCSV(filename string, process func(cols map[string]int, row []string) error) error {
+	if w.requireLevelisedCost {
+		return readMemeCSVRequired(w.csvDir, filename, process)
+	}
+	return readMemeCSV(w.csvDir, filename, process)
 }
 
 // normMemeCarrier maps the MEME carrier vocabulary to the store/frontend default.
@@ -178,6 +208,33 @@ func readMemeCSV(csvDir, filename string, process func(cols map[string]int, row 
 		if err := process(cols, row); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// readMemeCSVRequired is readMemeCSV for a table the results UI cannot render
+// without (the levelised-cost tables). A missing file, an unreadable header or a
+// table with no data rows is an error naming the file — a silently empty table
+// would surface as "this model has no cost", which the UI cannot distinguish
+// from a real zero.
+func readMemeCSVRequired(csvDir, filename string, process func(cols map[string]int, row []string) error) error {
+	if _, err := os.Stat(filepath.Join(csvDir, filename)); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("required MEME result file %q is missing from %s", filename, csvDir)
+		}
+		return fmt.Errorf("stat required MEME result file %q: %w", filename, err)
+	}
+
+	rows := 0
+	counted := func(cols map[string]int, row []string) error {
+		rows++
+		return process(cols, row)
+	}
+	if err := readMemeCSV(csvDir, filename, counted); err != nil {
+		return fmt.Errorf("read required MEME result file %q: %w", filename, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("required MEME result file %q has no data rows", filename)
 	}
 	return nil
 }
@@ -351,7 +408,7 @@ func (w *memeTimeSeriesWriter) streamModelCapacityFactor() error {
 // results_systemwide_levelised_cost.csv -> results_model_levelised_cost
 func (w *memeTimeSeriesWriter) streamModelLevelisedCost() error {
 	batch := make([]models.ResultsModelLevelisedCost, 0, memeStreamBatchSize)
-	err := readMemeCSV(w.csvDir, "results_systemwide_levelised_cost.csv", func(cols map[string]int, row []string) error {
+	err := w.readCostCSV("results_systemwide_levelised_cost.csv", func(cols map[string]int, row []string) error {
 		value, ok := memeFloat(row, cols, "systemwide_levelised_cost")
 		if !ok {
 			return nil
@@ -381,7 +438,7 @@ func (w *memeTimeSeriesWriter) streamModelLevelisedCost() error {
 // results_total_levelised_cost.csv -> results_model_total_levelised_cost
 func (w *memeTimeSeriesWriter) streamModelTotalLevelisedCost() error {
 	batch := make([]models.ResultsModelTotalLevelisedCost, 0, memeStreamBatchSize)
-	err := readMemeCSV(w.csvDir, "results_total_levelised_cost.csv", func(cols map[string]int, row []string) error {
+	err := w.readCostCSV("results_total_levelised_cost.csv", func(cols map[string]int, row []string) error {
 		value, ok := memeFloat(row, cols, "total_levelised_cost")
 		if !ok {
 			return nil

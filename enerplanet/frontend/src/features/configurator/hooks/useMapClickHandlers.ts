@@ -133,7 +133,19 @@ export const useMapClickHandlers = ({
       }
     };
 
+    let dragHoverCleared = false;
     const handlePointerMove = (evt: any) => {
+      if (evt.dragging) {
+        if (!dragHoverCleared) {
+          dragHoverCleared = true;
+          setTransformerTooltip(null);
+          setBuildingTooltip(null);
+          setMvLineTooltip(null);
+        }
+        return;
+      }
+      dragHoverCleared = false;
+      if (isDrawing) return;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
       if (!feature) { map.getTargetElement().style.cursor = ''; setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
       map.getTargetElement().style.cursor = 'pointer';

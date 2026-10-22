@@ -58,6 +58,13 @@ const CARTO_ATTR = '© <a href="https://carto.com/attributions">CARTO</a>';
 
 const baseLayers: BaseLayerInfo[] = [
 	{
+		id: "maplibre_3d",
+		name: "3D Satellite",
+		description: "3D buildings on satellite imagery",
+		source: new XYZ({ url: '' }),
+		accessLevel: "very_low",
+	},
+	{
 		id: "osm_standard",
 		name: "OSM Standard",
 		description: "Standard OpenStreetMap layer",
@@ -138,13 +145,6 @@ const baseLayers: BaseLayerInfo[] = [
 		}),
 		accessLevel: "intermediate",
 	},
-	{
-		id: "maplibre_3d",
-		name: "3D Satellite",
-		description: "3D buildings on satellite imagery",
-		source: new XYZ({ url: '' }),
-		accessLevel: "very_low",
-	},
 ];
 
 export const layers: LayerInfo[] = [
@@ -171,7 +171,7 @@ export const useMapStore = create<MapStore>()(
 			layers: baseLayers,
 			baseLayer: null,
 			setBaseLayer: (layer) => set({ baseLayer: layer }),
-			selectedBaseLayerId: "osm_standard",
+			selectedBaseLayerId: "maplibre_3d",
 			setSelectedBaseLayerId: (id) => set({ selectedBaseLayerId: id }),
 			overlayLayers: [],
 			addOverlayLayer: (layer) => {

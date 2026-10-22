@@ -3,6 +3,11 @@ import { Activity, AlertTriangle, Zap, ArrowLeftRight, Info } from 'lucide-react
 import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, UnmetDemandRecord, ResourceConRecord, LineFlowRecord, TransformerFlowRecord, CarrierProdRecord, CarrierConRecord } from '../../types';
 import { fetchCarrierTimeSeries, fetchSystemTimeSeries } from '../../api';
+import {
+  carrierEnergyAxis,
+  formatCarrierEnergy,
+  formatCarrierPower,
+} from '../../carrierUnits';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { 
@@ -140,25 +145,6 @@ const isRenewableTech = (tech: string): boolean => {
   return ['pv_supply', 'wind_onshore', 'water_supply', 'biomass_supply', 'geothermal_supply'].includes(base);
 };
 
-const formatPowerValue = (valueKw: number): string => {
-  if (!Number.isFinite(valueKw)) return '0';
-  const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(2)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(valueKw * 1_000_000).toFixed(1)} mW`;
-};
-
-const formatEnergyValue = (valueKwh: number): string => {
-  if (!Number.isFinite(valueKwh)) return '0';
-  const abs = Math.abs(valueKwh);
-  if (abs >= 1_000_000) return `${(valueKwh / 1_000_000).toFixed(2)} GWh`;
-  if (abs >= 1_000) return `${(valueKwh / 1_000).toFixed(2)} MWh`;
-  if (abs >= 1) return `${valueKwh.toFixed(2)} kWh`;
-  if (abs >= 0.001) return `${(valueKwh * 1000).toFixed(1)} Wh`;
-  return `${(valueKwh * 1_000_000).toFixed(1)} mWh`;
-};
 
 const formatCurrencyValue = (value: number): string => {
   if (!Number.isFinite(value)) return '€0';
@@ -192,6 +178,10 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
 
   // Active carrier label; '' (default) maps to the backend's "power".
   const activeCarrier = carrier === '' ? 'power' : carrier;
+
+  // Formatters read the carrier's unit family (kWh/kW vs m³) from the shared table.
+  const fmtEnergy = (value: number) => formatCarrierEnergy(value, carrier);
+  const fmtPower = (value: number) => formatCarrierPower(value, carrier);
 
   // Lazy-load system time-series data when this panel is first rendered.
   // Re-fetches when the active carrier changes. The system-timeseries
@@ -518,7 +508,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                     const rows = params.map((param) => `
                       <div style="display: flex; justify-content: space-between; gap: 20px;">
                         <span>${param.marker} ${param.seriesName}</span>
-                        <span style="font-weight: 600;">${formatEnergyValue(param.value)}</span>
+                        <span style="font-weight: 600;">${fmtEnergy(param.value)}</span>
                       </div>
                     `).join('');
                     return `<div style="font-weight: 600; margin-bottom: 8px;">${date}</div>${rows}`;
@@ -544,7 +534,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                 },
                 yAxis: {
                   type: 'value',
-                  name: t('results.system.energyKwh', 'Energy (kWh)'),
+                  name: carrierEnergyAxis(t('results.system.energy'), carrier),
                   nameLocation: 'middle',
                   nameGap: 42,
                   nameTextStyle: { fontSize: 11, color: '#6b7280' },
@@ -552,7 +542,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                   axisTick: axisStyles.hiddenTick,
                   axisLabel: {
                     ...axisStyles.label,
-                    formatter: (value: number) => formatEnergyValue(value),
+                    formatter: (value: number) => fmtEnergy(value),
                   },
                   splitLine: axisStyles.splitLine,
                 },
@@ -629,7 +619,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                             return `
                               <div style="display: flex; justify-content: space-between; gap: 20px;">
                                 <span>${p.marker} ${p.seriesName}</span>
-                                <span style="font-weight: 600;">${formatEnergyValue(p.value)}</span>
+                                <span style="font-weight: 600;">${fmtEnergy(p.value)}</span>
                               </div>
                             `;
                           }).join('');
@@ -639,7 +629,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                           ${params.length > 1 ? `
                             <div style="border-top: 1px solid rgba(128,128,128,0.2); margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; gap: 20px;">
                               <span style="font-weight: 600;">Total</span>
-                              <span style="font-weight: 700; color: #f59e0b;">${formatEnergyValue(total)}</span>
+                              <span style="font-weight: 700; color: #f59e0b;">${fmtEnergy(total)}</span>
                             </div>
                           ` : ''}
                         `;
@@ -665,7 +655,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                     },
                     yAxis: {
                       type: 'value',
-                      name: t('results.system.unmetKwh'),
+                      name: carrierEnergyAxis(t('results.system.unmet'), carrier),
                       nameLocation: 'middle',
                       nameGap: 35,
                       nameTextStyle: { fontSize: 11, color: '#6b7280' },
@@ -673,7 +663,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                       axisTick: axisStyles.hiddenTick,
                       axisLabel: {
                         ...axisStyles.label,
-                        formatter: (value: number) => formatEnergyValue(value),
+                        formatter: (value: number) => fmtEnergy(value),
                       },
                       splitLine: axisStyles.splitLine,
                     },
@@ -737,10 +727,10 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                               </span>
                             </td>
                             <td className="text-right px-3 py-2 font-semibold text-amber-600 dark:text-amber-400">
-                              {formatEnergyValue(item.totalKwh)}
+                              {fmtEnergy(item.totalKwh)}
                             </td>
                             <td className="text-right px-3 py-2 text-foreground">
-                              {formatPowerValue(item.peakKw)}
+                              {fmtPower(item.peakKw)}
                             </td>
                             <td className="text-right px-3 py-2 text-foreground">
                               {item.hoursAffected}h
@@ -833,7 +823,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                       const linesHtml = params.map((p) =>
                         `<div style="display:flex;justify-content:space-between;gap:20px;">
                           <span>${p.marker} ${p.seriesName}</span>
-                          <span style="font-weight:600;">${formatPowerValue(p.value)}</span>
+                          <span style="font-weight:600;">${fmtPower(p.value)}</span>
                         </div>`
                       ).join('');
                       return `<div style="font-weight: 600; margin-bottom: 8px;">${label}</div>${linesHtml}`;
@@ -868,7 +858,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                     axisTick: axisStyles.hiddenTick,
                     axisLabel: {
                       ...axisStyles.label,
-                      formatter: (value: number) => formatPowerValue(value),
+                      formatter: (value: number) => fmtPower(value),
                     },
                     splitLine: axisStyles.splitLine,
                   },
@@ -959,7 +949,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{formatShare(item.value, resourceTotal)}</span>
-                        <span className="text-sm font-semibold text-foreground">{formatEnergyValue(item.value)}</span>
+                        <span className="text-sm font-semibold text-foreground">{fmtEnergy(item.value)}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
@@ -977,7 +967,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
 
               <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">{t('results.system.totalConsumption')}</span>
-                <span className="text-lg font-bold text-foreground">{formatEnergyValue(resourceTotal)}</span>
+                <span className="text-lg font-bold text-foreground">{fmtEnergy(resourceTotal)}</span>
               </div>
             </div>
 
@@ -995,7 +985,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                           <div style="font-weight: 600; margin-bottom: 6px;">${name}</div>
                           <div style="display:flex;justify-content:space-between;gap:16px;">
                             <span>${t('results.chartLabels.value')}:</span>
-                            <span style="font-weight:600;">${formatEnergyValue(value)}</span>
+                            <span style="font-weight:600;">${fmtEnergy(value)}</span>
                           </div>
                           <div style="display:flex;justify-content:space-between;gap:16px;">
                             <span>${t('results.chartLabels.share')}:</span>
@@ -1016,7 +1006,7 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
                           show: true,
                           formatter: (params: any) => {
                             const pct = formatShare(params.value, resourceTotal);
-                            return `{name|${params.name}}\n{value|${formatEnergyValue(params.value)}}\n{pct|${pct}}`;
+                            return `{name|${params.name}}\n{value|${fmtEnergy(params.value)}}\n{pct|${pct}}`;
                           },
                           rich: {
                             name: { fontSize: 13, fontWeight: 600, color: '#fff', lineHeight: 20 },

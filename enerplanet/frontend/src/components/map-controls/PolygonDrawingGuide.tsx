@@ -247,7 +247,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 					right: "calc(1rem + var(--sidebar-offset, 0rem))"
 				}}
 			>
-				<div className="relative w-64 min-h-0 shrink flex flex-col bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden">
+				<div className="relative w-64 min-h-0 shrink flex flex-col bg-card border border-border rounded-lg shadow-xl overflow-hidden">
 					{/* Close button */}
 					<button
 						onClick={handleDismissEditGuide}
@@ -532,7 +532,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 					</div>
 				</div>
 
-				<div className="relative w-64 min-h-0 shrink-0 max-h-[50%] overflow-y-auto bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-xl p-3">
+				<div className="relative w-64 min-h-0 shrink-0 max-h-[50%] overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-3">
 						{/* Shortcuts - collapsed by default */}
 						<button
 							onClick={() => setIsEditExpanded(!isEditExpanded)}
@@ -577,7 +577,7 @@ export const PolygonDrawingGuide: FC<PolygonDrawingGuideProps> = ({
 				right: "calc(1rem + var(--sidebar-offset, 0rem))"
 			}}
 		>
-			<div className="relative w-64 bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden">
+			<div className="relative w-64 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
 				{/* Close button */}
 				<button
 					onClick={handleDismissDrawGuide}
