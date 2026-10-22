@@ -66,6 +66,7 @@ import {
 } from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
+import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
@@ -1021,6 +1022,8 @@ export const ModelResultsViewer = () => {
               visible={isMapLibre3D}
             />
           )}
+
+          <CopyrightFooter />
 
           {/* Map Info Panel - shows on hover (tooltip) or click (selectedBuilding) */}
           {model && (

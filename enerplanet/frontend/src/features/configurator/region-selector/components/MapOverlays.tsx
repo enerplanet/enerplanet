@@ -1,5 +1,4 @@
 import MapSearchBar from "@/features/interactive-map/MapSearchBar";
-import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -517,8 +516,6 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     </div>
                 </div>
             )}
-
-            <CopyrightFooter />
         </>
     );
 };
