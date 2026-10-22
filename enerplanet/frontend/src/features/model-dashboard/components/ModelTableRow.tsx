@@ -125,7 +125,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
         >
           {level > 0 && (
             <div className="flex items-center mr-0.5">
-              <div className="w-3 h-3 border-l border-b border-muted-foreground/40 rounded-bl-md"></div>
+              <div className="-mt-2 h-3.5 w-3.5 rounded-bl-[3px] border-b-2 border-l-2 border-slate-400 dark:border-slate-500" aria-hidden="true"></div>
             </div>
           )}
 
