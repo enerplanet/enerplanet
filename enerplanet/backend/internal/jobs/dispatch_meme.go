@@ -13,6 +13,7 @@ import (
 	"spatialhub_backend/internal/meme"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
+	modelstore "spatialhub_backend/internal/store/model"
 	tentacronclient "spatialhub_backend/internal/tentacron"
 
 	commonModels "platform.local/common/pkg/models"
@@ -145,7 +146,7 @@ func HandleDispatchMeme(
 	// and it never runs when dispatch fails early).
 	defer func() {
 		if retErr != nil {
-			markModelFailed(db, p.ModelID, retErr.Error())
+			markModelFailed(db, p.ModelID, retErr)
 		}
 	}()
 
@@ -159,7 +160,7 @@ func HandleDispatchMeme(
 	//    and a run started before that finishes would read none.
 	further, err := resolver.Resolve(ctx, model.ID)
 	if err != nil {
-		return fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err)
+		return modelstore.ServiceFailed(modelstore.ServiceBuem, fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err))
 	}
 	built, err := payload.BuildCalculationPayload(&model)
 	if err != nil {
@@ -172,14 +173,14 @@ func HandleDispatchMeme(
 		covered := dropFurtherWayDemand(calc.Topology, further)
 		warning, err := checkDemandCoverage(calc.Topology, covered)
 		if err != nil {
-			return fmt.Errorf("model %d: %w", p.ModelID, err)
+			return modelstore.ServiceFailed(modelstore.ServiceCity2TABULA, fmt.Errorf("model %d: %w", p.ModelID, err))
 		}
 		if warning != nil {
 			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)
 		}
 		setModelWarning(db, p.ModelID, warning)
 		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
-			return err
+			return modelstore.ServiceFailed(modelstore.ServicePV, err)
 		}
 		if calc.Mode == "operate" {
 			if err := checkOperateSizes(calc.Topology); err != nil {
@@ -228,7 +229,7 @@ func HandleDispatchMeme(
 		// TentaCron creates a NEW request/job for this solve.
 		jobID, err = tc.SubmitMeme(ctx, target, memeJob, memeIdempotencyKey(model.ID, model.CalculationStartedAt))
 		if err != nil {
-			return fmt.Errorf("meme dispatch via TentaCron for model %d: %w", p.ModelID, err)
+			return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme dispatch via TentaCron for model %d: %w", p.ModelID, err))
 		}
 		if err := runs.Save(p.ModelID, jobID, "running"); err != nil {
 			log.Errorf("model %d: failed to persist MEME TentaCron job %s: %v", p.ModelID, jobID, err)
@@ -251,12 +252,12 @@ func HandleDispatchMeme(
 	//    failed TentaCron job.
 	if err := tc.AwaitResultByID(ctx, jobID, memePollBudget); err != nil {
 		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
-		return fmt.Errorf("meme job %s via TentaCron for model %d: %w", jobID, p.ModelID, err)
+		return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme job %s via TentaCron for model %d: %w", jobID, p.ModelID, err))
 	}
 	resultZip, err := tc.FetchResultByID(ctx, jobID)
 	if err != nil {
 		_ = runs.UpdateStatus(p.ModelID, models.MemeRunStatusFailed, err.Error())
-		return fmt.Errorf("fetch MEME result for model %d: %w", p.ModelID, err)
+		return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("fetch MEME result for model %d: %w", p.ModelID, err))
 	}
 
 	// 5. Store the zip under the storage/data convention.

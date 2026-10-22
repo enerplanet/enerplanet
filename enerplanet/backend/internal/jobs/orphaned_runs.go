@@ -57,7 +57,7 @@ func FailOrphanedRuns(db *gorm.DB, live liveModelTasks, now time.Time) ([]uint, 
 		if alive[id] {
 			continue
 		}
-		markModelFailed(db, id, orphanReason)
+		markModelFailed(db, id, errors.New(orphanReason))
 		failed = append(failed, id)
 	}
 	return failed, nil

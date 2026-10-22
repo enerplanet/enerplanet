@@ -40,15 +40,17 @@ func markModelCompleted(db *gorm.DB, modelID uint) {
 	markModelStatus(db, modelID, commonModels.ModelStatusCompleted, &now, nil)
 }
 
-func markModelFailed(db *gorm.DB, modelID uint, reason string) {
+// markModelFailed records failure's message, and the service it is marked
+// with (modelstore.ServiceFailed), as the model's failure.
+func markModelFailed(db *gorm.DB, modelID uint, failure error) {
 	now := time.Now().UTC()
-	markModelStatus(db, modelID, commonModels.ModelStatusFailed, &now, &reason)
+	markModelStatus(db, modelID, commonModels.ModelStatusFailed, &now, failure)
 }
 
 // markModelStatus applies a status transition to a model that is still in the
 // MEME lifecycle (queue|running|processing), so a late failure can never clobber a model
 // another path already finished.
-func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time.Time, reason *string) {
+func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time.Time, failure error) {
 	updates := map[string]interface{}{
 		"status":     status,
 		"updated_at": time.Now().UTC(),
@@ -56,8 +58,8 @@ func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time
 	if completedAt != nil {
 		updates["calculation_completed_at"] = *completedAt
 	}
-	if reason != nil {
-		updates["results"] = modelstore.FailedResults(*reason)
+	if failure != nil {
+		updates["results"] = modelstore.FailedResults(failure.Error(), modelstore.FailedService(failure))
 	}
 
 	err := db.Model(&commonModels.Model{}).
