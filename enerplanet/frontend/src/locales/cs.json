@@ -1357,6 +1357,7 @@
     "subtitle": "Kontrolujte a odpovídejte na zpětnou vazbu uživatelů",
     "refresh": "Obnovit",
     "noFeedbackFound": "Žádná zpětná vazba nenalezena",
+    "unseen": "Zatím jej neotevřel žádný správce",
     "noFeedbackDescription": "Zpětná vazba uživatelů se zde zobrazí po odeslání.",
     "filters": {
       "label": "Filtry:",

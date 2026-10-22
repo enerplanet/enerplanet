@@ -1610,6 +1610,7 @@
     "subtitle": "Examiner et répondre aux retours des utilisateurs",
     "refresh": "Actualiser",
     "noFeedbackFound": "Aucun retour trouvé",
+    "unseen": "Pas encore ouvert par un administrateur",
     "noFeedbackDescription": "Les retours des utilisateurs apparaîtront ici une fois soumis.",
     "filters": {
       "label": "Filtres :",

@@ -43,6 +43,8 @@ import {
   useDeleteFeedback,
   FeedbackItem,
   useAllFeedback,
+  useUnseenFeedback,
+  useMarkFeedbackSeen,
 } from "@/features/admin-dashboard/hooks/useFeedbackQuery";
 
 const COLOR_GRAY_NEUTRAL = "text-gray-500 dark:text-gray-400";
@@ -149,6 +151,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
     ? rawFeedbacks.filter((f) => f.subject.toLowerCase().includes(searchQuery.toLowerCase()))
     : rawFeedbacks;
   const allFeedbacks = useAllFeedback().data || [];
+  const unseen = useUnseenFeedback().data;
+  const markSeen = useMarkFeedbackSeen();
   const totalCount = feedbackData?.total || 0;
 
   // Edit form state
@@ -290,6 +294,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   };
 
   const handleViewFeedback = (feedback: FeedbackItem) => {
+    if (unseen?.has(feedback.id)) markSeen.mutate(feedback.id);
     setSelectedFeedback(feedback);
     setImageLoadFailed({});
     setLightboxImageIndex(0);
@@ -709,6 +714,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   const displayUserName =
                     feedback.user?.name || feedback.user_name || t("common.unknown");
                   const displayUserEmail = feedback.user?.email || feedback.user_email || "";
+                  const isUnseen = unseen?.has(feedback.id) ?? false;
                   return (
                     <tr
                       key={feedback.id}
@@ -717,8 +723,16 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                       <td className="px-6 py-4 max-w-[260px]">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
+                            {isUnseen && (
+                              <span
+                                className="w-2 h-2 flex-shrink-0 rounded-full bg-blue-600"
+                                role="img"
+                                aria-label={t("feedbackManagement.unseen")}
+                                title={t("feedbackManagement.unseen")}
+                              />
+                            )}
                             <div
-                              className="text-sm font-medium text-foreground truncate"
+                              className={`text-sm text-foreground truncate ${isUnseen ? "font-semibold" : "font-medium"}`}
                               title={feedback.subject}
                             >
                               {truncateWords(feedback.subject, 4)}

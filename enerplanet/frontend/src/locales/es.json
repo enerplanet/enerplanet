@@ -1610,6 +1610,7 @@
     "subtitle": "Revisar y responder a los comentarios de los usuarios",
     "refresh": "Actualizar",
     "noFeedbackFound": "No se encontraron comentarios",
+    "unseen": "Ningún administrador lo ha abierto todavía",
     "noFeedbackDescription": "Los comentarios de los usuarios aparecerán aquí cuando se envíen.",
     "filters": {
       "label": "Filtros:",

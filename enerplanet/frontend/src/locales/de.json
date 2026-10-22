@@ -1605,6 +1605,7 @@
     "subtitle": "Bewerten und beantworten Sie Benutzer-Feedback",
     "refresh": "Aktualisieren",
     "noFeedbackFound": "Kein Feedback gefunden",
+    "unseen": "Noch von keinem Admin geöffnet",
     "noFeedbackDescription": "Benutzer-Feedback wird hier angezeigt, sobald es eingereicht wurde.",
     "filters": {
       "label": "Filter:",

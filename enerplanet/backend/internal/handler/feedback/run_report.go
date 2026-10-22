@@ -134,6 +134,37 @@ func (h *FeedbackHandler) GetMyOpenRunReports(c *gin.Context) {
 	httputil.SuccessResponse(c, gin.H{"model_ids": ids})
 }
 
+// GetUnseenFeedback returns the ids of the feedback no expert has opened yet. Expert only.
+func (h *FeedbackHandler) GetUnseenFeedback(c *gin.Context) {
+	ids, err := h.feedbackStore.UnseenIDs()
+	if err != nil {
+		httputil.InternalError(c, "Failed to read unseen feedback")
+		return
+	}
+	httputil.SuccessResponse(c, gin.H{"ids": ids})
+}
+
+// MarkFeedbackSeen records that the signed-in expert opened a feedback entry. Expert only.
+func (h *FeedbackHandler) MarkFeedbackSeen(c *gin.Context) {
+	userCtx, ok := httputil.GetUserContext(c)
+	if !ok {
+		return
+	}
+	id, ok := httputil.ParseUintParam(c, "id", errInvalidFeedbackID)
+	if !ok {
+		return
+	}
+	if _, err := h.feedbackStore.GetFeedbackByID(id); err != nil {
+		httputil.HandleError(c, err)
+		return
+	}
+	if err := h.feedbackStore.MarkSeen(id, userCtx.UserID); err != nil {
+		httputil.InternalError(c, "Failed to mark feedback seen")
+		return
+	}
+	httputil.SuccessMessage(c, "Feedback marked seen")
+}
+
 // GetRunReport returns the failed run attached to a feedback entry. Expert only.
 func (h *FeedbackHandler) GetRunReport(c *gin.Context) {
 	id, ok := httputil.ParseUintParam(c, "id", errInvalidFeedbackID)

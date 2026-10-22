@@ -1605,6 +1605,7 @@
     "subtitle": "Review and respond to user feedback",
     "refresh": "Refresh",
     "noFeedbackFound": "No feedback found",
+    "unseen": "Not opened by any admin yet",
     "noFeedbackDescription": "User feedback will appear here when submitted.",
     "filters": {
       "label": "Filters:",

@@ -1357,6 +1357,7 @@
     "subtitle": "Przeglądaj i odpowiadaj na opinie użytkowników",
     "refresh": "Odśwież",
     "noFeedbackFound": "Nie znaleziono opinii",
+    "unseen": "Jeszcze nieotwarte przez żadnego administratora",
     "noFeedbackDescription": "Opinie użytkowników pojawią się tutaj po przesłaniu.",
     "filters": {
       "label": "Filtry:",

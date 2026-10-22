@@ -1342,6 +1342,7 @@
     "subtitle": "Bekijk en reageer op gebruikersfeedback",
     "refresh": "Vernieuwen",
     "noFeedbackFound": "Geen feedback gevonden",
+    "unseen": "Nog door geen beheerder geopend",
     "noFeedbackDescription": "Gebruikersfeedback verschijnt hier wanneer het wordt ingediend.",
     "filters": {
       "label": "Filters:",

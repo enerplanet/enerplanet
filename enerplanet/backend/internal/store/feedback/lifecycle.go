@@ -46,6 +46,27 @@ func (fs *Store) OpenRunReportModelIDs(userID string) ([]uint, error) {
 	return ids, nil
 }
 
+// MarkSeen records expertID as the first expert who opened feedback id; later opens change nothing.
+func (fs *Store) MarkSeen(id uint, expertID string) error {
+	err := fs.db.Exec("INSERT INTO feedback_seen (feedback_id, seen_by) VALUES (?, ?) ON CONFLICT (feedback_id) DO NOTHING", id, expertID).Error
+	if err != nil {
+		return fmt.Errorf("mark feedback %d seen: %w", id, err)
+	}
+	return nil
+}
+
+// UnseenIDs returns the feedback no expert has opened yet.
+func (fs *Store) UnseenIDs() ([]uint, error) {
+	var ids []uint
+	err := fs.db.Model(&models.Feedback{}).
+		Where("NOT EXISTS (SELECT 1 FROM feedback_seen s WHERE s.feedback_id = feedbacks.id)").
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, fmt.Errorf("list unseen feedback: %w", err)
+	}
+	return ids, nil
+}
+
 // DeleteFeedback permanently deletes feedback id with its images.
 func (fs *Store) DeleteFeedback(id uint) error {
 	n, err := fs.purge("id = ?", id)

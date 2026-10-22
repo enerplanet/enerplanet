@@ -1343,6 +1343,7 @@
     "subtitle": "Rivedi e rispondi ai feedback degli utenti",
     "refresh": "Aggiorna",
     "noFeedbackFound": "Nessun feedback trovato",
+    "unseen": "Non ancora aperto da nessun amministratore",
     "noFeedbackDescription": "I feedback degli utenti appariranno qui una volta inviati.",
     "filters": {
       "label": "Filtri:",

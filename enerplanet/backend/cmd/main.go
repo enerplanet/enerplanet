@@ -793,9 +793,11 @@ func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHand
 	expert.GET("/feedback", handler.GetFeedbackList)
 	expert.GET("/feedback/search", handler.SearchFeedback)
 	expert.GET("/feedback/stats", handler.GetFeedbackStats)
+	expert.GET("/feedback/unseen", handler.GetUnseenFeedback)
 	expert.GET("/feedback/user/:user_id", handler.GetUserFeedback)
 	expert.GET(routeFeedbackByID, handler.GetFeedbackByID)
 	expert.GET(routeFeedbackByID+"/run-report", handler.GetRunReport)
+	expert.POST(routeFeedbackByID+"/seen", handler.MarkFeedbackSeen)
 	expert.PUT(routeFeedbackByID, handler.UpdateFeedback)
 	expert.DELETE(routeFeedbackByID, handler.DeleteFeedback)
 }
