@@ -1,14 +1,14 @@
 package jobs
 
 import (
-	"encoding/json"
 	"time"
 
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	commonModels "platform.local/common/pkg/models"
 	"platform.local/platform/logger"
+
+	modelstore "spatialhub_backend/internal/store/model"
 )
 
 // The MEME pipeline owns the model's terminal status. StartMemeCalculation puts
@@ -57,10 +57,7 @@ func markModelStatus(db *gorm.DB, modelID uint, status string, completedAt *time
 		updates["calculation_completed_at"] = *completedAt
 	}
 	if reason != nil {
-		res, err := json.Marshal(map[string]string{"error": *reason})
-		if err == nil {
-			updates["results"] = datatypes.JSON(res)
-		}
+		updates["results"] = modelstore.FailedResults(*reason)
 	}
 
 	err := db.Model(&commonModels.Model{}).

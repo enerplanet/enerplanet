@@ -272,7 +272,12 @@
     "published": "Gepubliceerd",
     "failed": "Mislukt",
     "cancelled": "Geannuleerd",
-    "modified": "Gewijzigd"
+    "modified": "Gewijzigd",
+    "failedAt": {
+      "queue": "Voorbereiding mislukt",
+      "running": "Simulatie mislukt",
+      "processing": "Verwerking mislukt"
+    }
   },
   "results": {
     "title": "Simulatieresultaten",
@@ -289,6 +294,11 @@
     },
     "selectModel": "Selecteer Model",
     "completedSimulations": "Voltooide Simulaties",
+    "copies_one": "{{count}} kopie",
+    "copies_other": "{{count}} kopieën",
+    "notRun": "niet uitgevoerd",
+    "inModels_one": "in {{count}} model",
+    "inModels_other": "in {{count}} modellen",
     "loadingModels": "Modellen laden...",
     "noCompletedSimulations": "Geen voltooide simulaties in deze werkruimte",
     "noCompletedModels": "Geen voltooide modellen",
@@ -2278,6 +2288,7 @@
   },
   "drawing": {
     "clickToDraw": "Klik om te tekenen",
+    "buildingNotStart": "Klik opent dit gebouw. Begin het gebied ernaast.",
     "secondCorner": "Klik om de tweede hoek te plaatsen",
     "thirdCorner": "Klik om de derde hoek te plaatsen",
     "rightClickToFinish": "Klik met de rechtermuisknop om het gebied af te ronden",
@@ -2507,7 +2518,11 @@
     "techNotFound": "Technologie {{tech}} niet gevonden",
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
     "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
-    "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}"
+    "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
+    "areaOverLimit": {
+      "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
+      "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
+    }
   },
   "gridStats": {
     "title": "Netwerkanalyse",

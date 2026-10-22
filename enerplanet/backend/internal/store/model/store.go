@@ -1,6 +1,9 @@
 package model
 
 import (
+	"fmt"
+	"strconv"
+
 	backendModels "spatialhub_backend/internal/models"
 
 	commonModels "platform.local/common/pkg/models"
@@ -119,6 +122,20 @@ func (s *Store) FindByIDs(ids []uint) ([]commonModels.Model, error) {
 	var models []commonModels.Model
 	err := s.db.Where("id IN ?", ids).Find(&models).Error
 	return models, err
+}
+
+// ModelsUsingSite returns the titles of the saved models whose grid is the
+// pylovo site siteID (config.site.site_id).
+func (s *Store) ModelsUsingSite(siteID int) ([]string, error) {
+	var titles []string
+	err := s.db.Model(&commonModels.Model{}).
+		Where("config -> 'site' ->> 'site_id' = ?", strconv.Itoa(siteID)).
+		Order("id").
+		Pluck("title", &titles).Error
+	if err != nil {
+		return nil, fmt.Errorf("models using site %d: %w", siteID, err)
+	}
+	return titles, nil
 }
 
 // ---------------------------------------------------------------------------

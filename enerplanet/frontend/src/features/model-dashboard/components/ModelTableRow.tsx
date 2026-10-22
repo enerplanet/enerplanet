@@ -120,7 +120,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
       <TooltipTrigger asChild>
         <button
           onClick={onStartEdit}
-          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-muted transition-colors group/title max-w-[240px]"
+          className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg hover:bg-muted transition-colors group/title max-w-[360px] text-left"
         >
           {level > 0 && (
             <div className="flex items-center mr-0.5">
@@ -165,7 +165,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             )}
           </div>
 
-          <span className="font-medium text-sm text-foreground truncate">{modelTitle}</span>
+          <span className="font-medium text-sm text-foreground line-clamp-2 break-words">{modelTitle}</span>
 
           <FileEdit className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" />
         </button>
@@ -174,6 +174,13 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
     </Tooltip>
   );
 };
+
+/** The run stages a failure is recorded in (results.failed_stage), by the status the run had. */
+const FAILED_STAGES = new Set(["queue", "running", "processing"]);
+
+/** The failed badge's label naming the stage, or undefined to show plain "Failed". */
+const failedStageLabel = (stage: unknown, t: (key: string) => string): string | undefined =>
+  typeof stage === "string" && FAILED_STAGES.has(stage) ? t(`modelStatus.failedAt.${stage}`) : undefined;
 
 const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   model,
@@ -272,7 +279,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
-                  <StatusBadge status={model.status} size="small" />
+                  <StatusBadge status={model.status} size="small" label={failedStageLabel(model.results?.failed_stage, t)} />
                 </div>
               </TooltipTrigger>
               <TooltipContent>

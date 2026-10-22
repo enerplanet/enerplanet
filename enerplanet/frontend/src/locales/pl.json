@@ -272,7 +272,12 @@
     "published": "Opublikowane",
     "failed": "Niepowodzenie",
     "cancelled": "Anulowane",
-    "modified": "Zmodyfikowany"
+    "modified": "Zmodyfikowany",
+    "failedAt": {
+      "queue": "Przygotowanie nie powiodło się",
+      "running": "Symulacja nie powiodła się",
+      "processing": "Przetwarzanie nie powiodło się"
+    }
   },
   "results": {
     "title": "Wyniki Symulacji",
@@ -289,6 +294,15 @@
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
+    "copies_one": "{{count}} kopia",
+    "copies_few": "{{count}} kopie",
+    "copies_many": "{{count}} kopii",
+    "copies_other": "{{count}} kopii",
+    "notRun": "nieuruchomiony",
+    "inModels_one": "w {{count}} modelu",
+    "inModels_few": "w {{count}} modelach",
+    "inModels_many": "w {{count}} modelach",
+    "inModels_other": "w {{count}} modelach",
     "loadingModels": "Ładowanie modeli...",
     "noCompletedSimulations": "Brak ukończonych symulacji w tej przestrzeni roboczej",
     "noCompletedModels": "Brak ukończonych modeli",
@@ -2278,6 +2292,7 @@
   },
   "drawing": {
     "clickToDraw": "Kliknij, aby rysować",
+    "buildingNotStart": "Kliknięcie otwiera ten budynek. Zacznij obszar obok.",
     "secondCorner": "Kliknij, aby umieścić drugi narożnik",
     "thirdCorner": "Kliknij, aby umieścić trzeci narożnik",
     "rightClickToFinish": "Kliknij prawym przyciskiem, aby zakończyć obszar",
@@ -2507,7 +2522,11 @@
     "techNotFound": "Technologia {{tech}} nie znaleziona",
     "techLoadFailed": "Nie udało się załadować technologii do edycji",
     "heatAutoAssigned": "Technologie cieplne zostały przypisane automatycznie.",
-    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}"
+    "heatResolved": "Technologie cieplne przypisane. Zaktualizowane budynki: {{count}}",
+    "areaOverLimit": {
+      "title": "Ten obszar zawiera {{buildings}} budynków; model może zawierać {{limit}}",
+      "description": "Zmniejsz obszar o około {{excess}} budynków. Pozostaje na mapie, a sieć zostanie pobrana, gdy zmieści się w limicie."
+    }
   },
   "gridStats": {
     "title": "Analiza Sieci",

@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Click to draw",
+    "buildingNotStart": "Click opens this building. Start the area next to it.",
     "secondCorner": "Click to place the second corner",
     "thirdCorner": "Click to place the third corner",
     "rightClickToFinish": "Right-click to finish the area",
@@ -169,7 +170,11 @@
     "techNotFound": "Technology {{tech}} not found",
     "techLoadFailed": "Failed to load technology for editing",
     "heatAutoAssigned": "Heat technologies assigned automatically.",
-    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}"
+    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
+    "areaOverLimit": {
+      "title": "This area holds {{buildings}} buildings; a model may hold {{limit}}",
+      "description": "Reduce the area by about {{excess}} buildings. It stays on the map, and the grid is fetched once it fits."
+    }
   },
   "common": {
     "save": "Save",
@@ -534,7 +539,12 @@
     "published": "Published",
     "failed": "Failed",
     "cancelled": "Cancelled",
-    "modified": "Modified"
+    "modified": "Modified",
+    "failedAt": {
+      "queue": "Preparation failed",
+      "running": "Simulation failed",
+      "processing": "Processing failed"
+    }
   },
   "results": {
     "title": "Simulation Results",
@@ -551,6 +561,11 @@
     },
     "selectModel": "Select Model",
     "completedSimulations": "Completed Simulations",
+    "copies_one": "{{count}} copy",
+    "copies_other": "{{count}} copies",
+    "notRun": "not run",
+    "inModels_one": "in {{count}} model",
+    "inModels_other": "in {{count}} models",
     "loadingModels": "Loading models...",
     "noCompletedSimulations": "No completed simulations in this workspace",
     "noCompletedModels": "No completed models",

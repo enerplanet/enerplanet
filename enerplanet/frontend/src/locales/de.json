@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Klicken zum Zeichnen",
+    "buildingNotStart": "Klick öffnet dieses Gebäude. Gebiet daneben beginnen.",
     "secondCorner": "Klicken, um die zweite Ecke zu setzen",
     "thirdCorner": "Klicken, um die dritte Ecke zu setzen",
     "rightClickToFinish": "Rechtsklick, um die Fläche abzuschließen",
@@ -169,7 +170,11 @@
     "techNotFound": "Technologie {{tech}} nicht gefunden",
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
     "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
-    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}"
+    "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}",
+    "areaOverLimit": {
+      "title": "Dieses Gebiet enthält {{buildings}} Gebäude; ein Modell darf {{limit}} enthalten",
+      "description": "Verkleinern Sie das Gebiet um etwa {{excess}} Gebäude. Es bleibt auf der Karte, und das Netz wird geladen, sobald es passt."
+    }
   },
   "common": {
     "save": "Speichern",
@@ -534,7 +539,12 @@
     "published": "Veröffentlicht",
     "failed": "Fehlgeschlagen",
     "cancelled": "Abgebrochen",
-    "modified": "Bearbeitet"
+    "modified": "Bearbeitet",
+    "failedAt": {
+      "queue": "Vorbereitung fehlgeschlagen",
+      "running": "Simulation fehlgeschlagen",
+      "processing": "Auswertung fehlgeschlagen"
+    }
   },
   "results": {
     "title": "Simulationsergebnisse",
@@ -551,6 +561,11 @@
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
+    "copies_one": "{{count}} Kopie",
+    "copies_other": "{{count}} Kopien",
+    "notRun": "nicht ausgeführt",
+    "inModels_one": "in {{count}} Modell",
+    "inModels_other": "in {{count}} Modellen",
     "loadingModels": "Modelle werden geladen...",
     "noCompletedSimulations": "Keine abgeschlossenen Simulationen in diesem Arbeitsbereich",
     "noCompletedModels": "Keine abgeschlossenen Modelle",

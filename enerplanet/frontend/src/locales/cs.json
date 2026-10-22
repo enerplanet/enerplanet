@@ -272,7 +272,12 @@
     "published": "Publikováno",
     "failed": "Selhalo",
     "cancelled": "Zrušeno",
-    "modified": "Upraveno"
+    "modified": "Upraveno",
+    "failedAt": {
+      "queue": "Příprava selhala",
+      "running": "Simulace selhala",
+      "processing": "Zpracování selhalo"
+    }
   },
   "results": {
     "title": "Výsledky Simulace",
@@ -289,6 +294,15 @@
     },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
+    "copies_one": "{{count}} kopie",
+    "copies_few": "{{count}} kopie",
+    "copies_many": "{{count}} kopie",
+    "copies_other": "{{count}} kopií",
+    "notRun": "nespuštěno",
+    "inModels_one": "v {{count}} modelu",
+    "inModels_few": "v {{count}} modelech",
+    "inModels_many": "v {{count}} modelu",
+    "inModels_other": "v {{count}} modelech",
     "loadingModels": "Načítání modelů...",
     "noCompletedSimulations": "Žádné dokončené simulace v tomto pracovním prostoru",
     "noCompletedModels": "Žádné dokončené modely",
@@ -2278,6 +2292,7 @@
   },
   "drawing": {
     "clickToDraw": "Klikněte pro kreslení",
+    "buildingNotStart": "Kliknutí otevře tuto budovu. Oblast začněte vedle ní.",
     "secondCorner": "Klikněte a umístěte druhý roh",
     "thirdCorner": "Klikněte a umístěte třetí roh",
     "rightClickToFinish": "Kliknutím pravým tlačítkem oblast dokončíte",
@@ -2507,7 +2522,11 @@
     "techNotFound": "Technologie {{tech}} nenalezena",
     "techLoadFailed": "Nepodařilo se načíst technologii pro úpravu",
     "heatAutoAssigned": "Tepelné technologie byly přiřazeny automaticky.",
-    "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}"
+    "heatResolved": "Tepelné technologie přiřazeny. Aktualizované budovy: {{count}}",
+    "areaOverLimit": {
+      "title": "Tato oblast obsahuje {{buildings}} budov; model smí obsahovat {{limit}}",
+      "description": "Zmenšete oblast přibližně o {{excess}} budov. Zůstane na mapě a síť se načte, jakmile se vejde do limitu."
+    }
   },
   "gridStats": {
     "title": "Analýza Sítě",

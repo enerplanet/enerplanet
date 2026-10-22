@@ -379,6 +379,15 @@ export const pylovoService = {
     },
 
     /**
+     * The number of buildings generate-grid would take for the area, without
+     * generating a grid; pylovo stops counting at 10,000 and sets capped.
+     */
+    countBuildings: async (polygons: number[][][]): Promise<{ count: number; capped: boolean }> => {
+        const response = await axios.post<{ data: { count: number; capped: boolean } }>("/v1/pylovo/building-count", { geom: polygonsToGeom(polygons) });
+        return response.data.data;
+    },
+
+    /**
      * Creates a pylovo site for the area, generates its grid and returns it in the
      * /generate-grid shape with meta.mode "site". Rejects with the backend's message
      * when the area is refused (no 3D-linked buildings, over the limit) or generation fails.

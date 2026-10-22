@@ -128,6 +128,7 @@ export interface AreaSelectState {
 	showAdvancedParams: boolean;
 	isDrawing: boolean;
 	clearTrigger: number;
+	pointerOnMap: boolean;
 	isGeneratingGrid: boolean;
 	// Custom building filters
 	includePrivateBuildings: boolean;

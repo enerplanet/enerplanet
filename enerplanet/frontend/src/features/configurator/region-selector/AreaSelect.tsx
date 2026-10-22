@@ -76,6 +76,7 @@ import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
+import { AreaLimitWarning } from "./components/AreaLimitWarning";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
@@ -107,7 +108,10 @@ const activeBuildingCount = (grid: PylovoGridData | undefined): number =>
 /** Translation key of the hint beside the cursor: where to click next while drawing an area. */
 const drawHintKey = (drawing: boolean, corners: number, target: PointerTarget, pointerOnMap: boolean): string | null => {
   if (!pointerOnMap) return null;
-  if (!drawing) return target === "outside" ? "drawing.clickToDraw" : null;
+  if (!drawing) {
+    if (target === "outside") return "drawing.clickToDraw";
+    return target === "building" ? "drawing.buildingNotStart" : null;
+  }
   if (corners <= 1) return "drawing.secondCorner";
   if (corners === 2) return "drawing.thirdCorner";
   return "drawing.rightClickToFinish";
@@ -121,8 +125,8 @@ interface HoveredBuilding { disabled: boolean; selected: boolean }
 const isCorner = (target: PointerTarget): boolean => target === "corner" || target === "triangle-corner";
 
 /** The hovered building's state, from the map tooltip and the current selection. */
-const hoveredBuildingOf = (tooltip: { osmId?: string; disabled?: boolean } | null, selected: ReadonlySet<string>): HoveredBuilding | null =>
-  tooltip ? { disabled: tooltip.disabled === true, selected: selected.has(tooltip.osmId ?? "") } : null;
+const hoveredBuildingOf = (osmId: string | null, disabled: boolean, selected: ReadonlySet<string>): HoveredBuilding | null =>
+  osmId === null ? null : { disabled, selected: selected.has(osmId) };
 
 /** Translation key of the hint for what a click does with the held modifier: delete, disable or select. */
 const deleteHintKey = (target: PointerTarget, keys: HeldKeys, building: HoveredBuilding | null, pointerOnMap: boolean): string | null => {
@@ -216,7 +220,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     techOperations,
     mapInteractions,
     notification,
-    setCursorPos,
+    setPointerOnMap,
     map,
     mapRef,
     unsavedDialog,
@@ -449,38 +453,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     };
   }, []);
 
-  // ── Mouse tracking for overlays ──────────────────────────────────
-  const [pointerOverMap, setPointerOverMap] = useState(false);
+  // ── Pointer over the map, for the hints ──────────────────────────
+  // Only enter and leave are stored. The position is tracked in CursorHint,
+  // so a mouse move does not re-render the configurator.
   useEffect(() => {
     const el = mapRef?.current as HTMLElement | null;
     if (!el) return;
-    let frame = 0;
-    let last: { x: number; y: number } | null = null;
-    const onMove = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      last = { x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 };
-      if (!frame) frame = requestAnimationFrame(() => {
-        frame = 0;
-        if (last) setCursorPos(last);
-      });
-    };
-    const onEnter = () => setPointerOverMap(true);
-    const onLeave = () => {
-      setPointerOverMap(false);
-      last = null;
-      if (frame) { cancelAnimationFrame(frame); frame = 0; }
-      setCursorPos(null);
-    };
-    el.addEventListener("mousemove", onMove);
+    const onEnter = () => setPointerOnMap(true);
+    const onLeave = () => setPointerOnMap(false);
     el.addEventListener("mouseenter", onEnter);
     el.addEventListener("mouseleave", onLeave);
     return () => {
-      if (frame) cancelAnimationFrame(frame);
-      el.removeEventListener("mousemove", onMove);
       el.removeEventListener("mouseenter", onEnter);
       el.removeEventListener("mouseleave", onLeave);
     };
-  }, [mapRef, setCursorPos]);
+  }, [mapRef, setPointerOnMap]);
 
   // ── Cleanup polygon on unmount ───────────────────────────────────
   useEffect(() => {
@@ -523,10 +510,13 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [pylovoLayers, notification, t]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, pointerOverMap && activeMode === null);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
 
-  const hoveredBuilding = hoveredBuildingOf(mapInteractions.buildingTooltip, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, pointerOverMap && !state.isDrawing && activeMode === null);
+  // Primitive selectors: they change when another building is hovered, not on every move.
+  const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
+  const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
+  const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -649,9 +639,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             <MapOverlays
               drawHintKey={drawHint}
               deleteHintKey={deleteHint}
-              transformerTooltip={mapInteractions.transformerTooltip}
-              buildingTooltip={mapInteractions.buildingTooltip}
-              mvLineTooltip={mapInteractions.mvLineTooltip}
+              mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
               isGeneratingGrid={state.isGeneratingGrid}
               simulateEV={simulateEV}
@@ -700,7 +688,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               visible={pylovoLayers.powerFlowResults.size > 0}
               customTransformers={customTransformers}
             />
-            <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />
+            {state.areaOverLimit
+              ? <AreaLimitWarning overLimit={state.areaOverLimit} />
+              : <LargeModelWarning buildingCount={activeBuildingCount(pylovoLayers.pylovoGridData)} />}
           </>
         }
         mapHeader={
@@ -896,11 +886,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <TransformerCursorOverlay
         isAddTransformerMode={addTransformer.isAddTransformerMode}
         isMoveTransformerMode={moveTransformer.isMoveTransformerMode}
-        cursorPos={
-          addTransformer.isAddTransformerMode
-            ? addTransformer.transformerCursorPos
-            : moveTransformer.transformerCursorPos
-        }
       />
 
       <UnsavedChangesDialog

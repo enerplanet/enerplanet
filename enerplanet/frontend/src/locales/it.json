@@ -272,7 +272,12 @@
     "published": "Pubblicato",
     "failed": "Fallito",
     "cancelled": "Annullato",
-    "modified": "Modificato"
+    "modified": "Modificato",
+    "failedAt": {
+      "queue": "Preparazione non riuscita",
+      "running": "Simulazione non riuscita",
+      "processing": "Elaborazione non riuscita"
+    }
   },
   "results": {
     "title": "Risultati della Simulazione",
@@ -289,6 +294,11 @@
     },
     "selectModel": "Seleziona Modello",
     "completedSimulations": "Simulazioni Completate",
+    "copies_one": "{{count}} copia",
+    "copies_other": "{{count}} copie",
+    "notRun": "non eseguito",
+    "inModels_one": "in {{count}} modello",
+    "inModels_other": "in {{count}} modelli",
     "loadingModels": "Caricamento modelli...",
     "noCompletedSimulations": "Nessuna simulazione completata in questo spazio di lavoro",
     "noCompletedModels": "Nessun modello completato",
@@ -2278,6 +2288,7 @@
   },
   "drawing": {
     "clickToDraw": "Clicca per disegnare",
+    "buildingNotStart": "Il clic apre questo edificio. Inizia l'area accanto.",
     "secondCorner": "Fai clic per posizionare il secondo vertice",
     "thirdCorner": "Fai clic per posizionare il terzo vertice",
     "rightClickToFinish": "Fai clic destro per completare l'area",
@@ -2507,7 +2518,11 @@
     "techNotFound": "Tecnologia {{tech}} non trovata",
     "techLoadFailed": "Impossibile caricare la tecnologia per la modifica",
     "heatAutoAssigned": "Le tecnologie termiche sono state assegnate automaticamente.",
-    "heatResolved": "Tecnologie termiche assegnate. Edifici aggiornati: {{count}}"
+    "heatResolved": "Tecnologie termiche assegnate. Edifici aggiornati: {{count}}",
+    "areaOverLimit": {
+      "title": "Quest'area contiene {{buildings}} edifici; un modello può contenerne {{limit}}",
+      "description": "Riduci l'area di circa {{excess}} edifici. Resta sulla mappa e la rete viene caricata quando rientra nel limite."
+    }
   },
   "gridStats": {
     "title": "Analisi Rete",

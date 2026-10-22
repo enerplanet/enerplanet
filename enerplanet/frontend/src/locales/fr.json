@@ -136,6 +136,7 @@
   },
   "drawing": {
     "clickToDraw": "Cliquer pour dessiner",
+    "buildingNotStart": "Un clic ouvre ce bâtiment. Commencez la zone à côté.",
     "secondCorner": "Cliquez pour placer le deuxième coin",
     "thirdCorner": "Cliquez pour placer le troisième coin",
     "rightClickToFinish": "Clic droit pour terminer la zone",
@@ -169,7 +170,11 @@
     "techNotFound": "Technologie {{tech}} non trouvée",
     "techLoadFailed": "Échec du chargement de la technologie pour modification",
     "heatAutoAssigned": "Les technologies de chaleur ont été attribuées automatiquement.",
-    "heatResolved": "Technologies de chaleur attribuées. Bâtiments mis à jour : {{count}}"
+    "heatResolved": "Technologies de chaleur attribuées. Bâtiments mis à jour : {{count}}",
+    "areaOverLimit": {
+      "title": "Cette zone contient {{buildings}} bâtiments ; un modèle peut en contenir {{limit}}",
+      "description": "Réduisez la zone d'environ {{excess}} bâtiments. Elle reste sur la carte et le réseau est chargé dès qu'elle respecte la limite."
+    }
   },
   "common": {
     "save": "Enregistrer",
@@ -534,7 +539,12 @@
     "published": "Publié",
     "failed": "Échoué",
     "cancelled": "Annulé",
-    "modified": "Modifié"
+    "modified": "Modifié",
+    "failedAt": {
+      "queue": "Échec de la préparation",
+      "running": "Échec de la simulation",
+      "processing": "Échec du traitement"
+    }
   },
   "results": {
     "title": "Résultats de Simulation",
@@ -551,6 +561,11 @@
     },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
+    "copies_one": "{{count}} copie",
+    "copies_other": "{{count}} copies",
+    "notRun": "non exécuté",
+    "inModels_one": "dans {{count}} modèle",
+    "inModels_other": "dans {{count}} modèles",
     "loadingModels": "Chargement des modèles...",
     "noCompletedSimulations": "Aucune simulation terminée dans cet espace de travail",
     "noCompletedModels": "Aucun modèle terminé",

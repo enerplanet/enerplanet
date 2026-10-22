@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/whoami": {
+            "get": {
+                "security": [
+                    {
+                        "SpatialHubBearer": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "SpatialHub subject and effective API permissions; never returns credentials.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Resolve the current API identity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_middleware.WhoAmIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/drafts/{draft_id}/buildings/{building_ref}/buem": {
             "post": {
                 "security": [
@@ -85,6 +125,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "SessionAuth": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SpatialHubBearer": []
                     }
                 ],
                 "description": "Returns a paginated list of energy planning models the user has access to,\nfiltered by workspace and search query. Includes shared and workspace-scoped models.",
@@ -462,6 +508,73 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{id}/results": {
+            "get": {
+                "security": [
+                    {
+                        "SpatialHubBearer": []
+                    },
+                    {
+                        "APITokenAuth": []
+                    },
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Read results for an accessible model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -860,7 +973,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV.\nEmpty when City2TABULA has no 3D data for the building.",
+                "description": "Returns every roof and outer wall of the building with its area, tilt from horizontal\nand azimuth clockwise from north, whether automatic PV placement uses it (roofs only)\nand whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's\nsurfaces are returned, each with the object_id of its building.\nEmpty when City2TABULA has no 3D data for the building.",
                 "produces": [
                     "application/json"
                 ],
@@ -1265,6 +1378,13 @@ const docTemplate = `{
                         "name": "year",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "Gen",
+                        "description": "TABULA subtype; ignis uses Gen when absent",
+                        "name": "subtype",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1348,6 +1468,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "internal_middleware.WhoAmIResponse": {
+            "type": "object",
+            "properties": {
+                "access_level": {
+                    "type": "string"
+                },
+                "authentication_method": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
         "spatialhub_backend_internal_api_contracts.AreaBuilding": {
             "type": "object",
             "properties": {
@@ -2471,6 +2611,10 @@ const docTemplate = `{
                 "kind": {
                     "type": "string"
                 },
+                "object_id": {
+                    "description": "ObjectID is the 3D building the surface belongs to; an OSM way can cover several.",
+                    "type": "string"
+                },
                 "qualifies": {
                     "type": "boolean"
                 },
@@ -2501,6 +2645,12 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "session_id",
             "in": "cookie"
+        },
+        "SpatialHubBearer": {
+            "description": "Bearer \u003cSpatialHub access token\u003e, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
