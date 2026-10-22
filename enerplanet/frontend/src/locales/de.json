@@ -554,7 +554,10 @@
     "carrier": {
       "toggleLabel": "Energieträger",
       "electricity": "Strom",
-      "heat": "Wärme"
+      "heat": "Wärme",
+      "gas": "Gas",
+      "oil": "Öl",
+      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen"
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
@@ -694,6 +697,7 @@
       "noData": "Keine Energiedaten verfügbar",
       "dailyEnergyBalance": "Tägliche Energiebilanz",
       "dailyEnergyBalanceDesc": "Zeigt die tägliche Bilanz zwischen Energieerzeugung und -verbrauch über alle Technologien im System.",
+      "dailyEnergyBalanceDescHeat": "Zeigt die tägliche Bilanz zwischen bereitgestellter Wärme (z. B. durch Wärmepumpen) und Wärmebedarf über alle Technologien im System.",
       "production": "Erzeugung",
       "productionDesc": "Energie erzeugt durch Solar, Wind und andere Quellen",
       "consumption": "Verbrauch",
@@ -706,10 +710,12 @@
       "selfSufficiency": "Eigenversorgungsgrad",
       "netBalance": "Nettobilanz",
       "energyKwh": "Energie (kWh)",
+      "energy": "Energie",
       "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Keine Energiebilanzdaten verfügbar",
       "dailyLoadProfile": "Tägliches Lastprofil",
       "dailyLoadProfileDesc": "Zeigt Stromverbrauchsmuster über einen 24-Stunden-Zeitraum mit automatischer Erkennung von Spitzenlastzeiten.",
+      "dailyLoadProfileDescHeat": "Zeigt Wärmebedarfsmuster über einen 24-Stunden-Zeitraum mit automatischer Erkennung von Spitzenlastzeiten.",
       "peakPeriods": "Spitzenzeiten",
       "peakPeriodsDesc": "Morgens (07:00-10:00) und abends (17:00-21:00) Zeiten hoher Nachfrage",
       "offPeak": "Schwachlastzeit",
@@ -739,6 +745,10 @@
       "morningPeak": "Morgenspitze",
       "eveningPeak": "Abendspitze",
       "noDataLoadProfile": "Keine Daten für tägliches Lastprofil verfügbar",
+      "generationDurationCurve": "Erzeugungsdauerlinie",
+      "generationDurationCurveDesc": "Sortiert die stündliche regenerative Erzeugung vom höchsten zum niedrigsten Wert, sodass Spitzenerzeugung und Jahresverlauf sichtbar werden.",
+      "demandDurationCurve": "Bedarf-Dauerlinie",
+      "demandDurationCurveDesc": "Sortiert den stündlichen Wärmebedarf vom höchsten zum niedrigsten Wert, sodass Spitzenbedarf und Jahresverlauf sichtbar werden.",
       "noDataLoadCurve": "Keine Daten für Lastkurve verfügbar"
     },
     "grid": {
@@ -819,6 +829,8 @@
       "unmetDemandDesc": "Energiebedarf, der nicht durch das verfügbare Angebot gedeckt werden konnte. Niedrigere Werte zeigen bessere Systemzuverlässigkeit.",
       "unmetEnergy": "Ungedeckte Energie",
       "unmetEnergyDesc": "Bedarf übersteigt verfügbares Angebot",
+      "energy": "Energie",
+      "unmet": "Ungedeckt",
       "unmetKwh": "Ungedeckt (kWh)",
       "powerFlowAnalysis": "Leistungsflussanalyse",
       "powerFlow": "Leistungsfluss",

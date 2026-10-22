@@ -168,6 +168,84 @@ func TestStreamMemeTimeSeries_MapsAndNormalises(t *testing.T) {
 	require.Contains(t, costVar, "9.1")
 }
 
+// TestStreamMemeTimeSeries_RequiresLevelisedCost guards the two tables the cost
+// UI cannot render without: a CSV dir that exists but lacks them (or carries no
+// rows) must fail the ingest by name, not silently produce a model with no cost.
+func TestStreamMemeTimeSeries_RequiresLevelisedCost(t *testing.T) {
+	newDB := func(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
+		t.Helper()
+		conn, mock, err := sqlmock.New(
+			sqlmock.QueryMatcherOption(sqlmock.QueryMatcherFunc(func(_, _ string) error { return nil })),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() { conn.Close() })
+		db, err := gorm.Open(postgres.New(postgres.Config{Conn: conn}), &gorm.Config{SkipDefaultTransaction: true})
+		require.NoError(t, err)
+		return db, mock
+	}
+
+	// The Calliope marker: a flow table is what makes a csv dir "the Calliope
+	// export", and only then are the levelised-cost tables required.
+	writeCalliopeMarker := func(t *testing.T, dir string) {
+		t.Helper()
+		writeMemeCSV(t, dir, "results_flow_out.csv",
+			"nodes,techs,carriers,timesteps,flow_out\n"+
+				"n1,pv_supply_1,electricity,2020-01-01T00:00:00,5.5\n")
+	}
+
+	t.Run("per-technology table missing", func(t *testing.T) {
+		dir := t.TempDir()
+		writeCalliopeMarker(t, dir)
+		db, mock := newDB(t)
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_carrier_prod
+		err := streamMemeTimeSeries(db, 7, dir, map[string]string{})
+		require.ErrorContains(t, err, "results_systemwide_levelised_cost.csv")
+	})
+
+	t.Run("system total table missing", func(t *testing.T) {
+		dir := t.TempDir()
+		writeCalliopeMarker(t, dir)
+		writeMemeCSV(t, dir, "results_systemwide_levelised_cost.csv",
+			"techs,costs,carriers,systemwide_levelised_cost\n"+
+				"pv_supply_1,monetary,electricity,55.5\n")
+
+		db, mock := newDB(t)
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_carrier_prod
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_model_levelised_cost
+		err := streamMemeTimeSeries(db, 7, dir, map[string]string{})
+		require.ErrorContains(t, err, "results_total_levelised_cost.csv")
+	})
+
+	t.Run("header only counts as empty", func(t *testing.T) {
+		dir := t.TempDir()
+		writeCalliopeMarker(t, dir)
+		writeMemeCSV(t, dir, "results_systemwide_levelised_cost.csv",
+			"techs,costs,carriers,systemwide_levelised_cost\n"+
+				"pv_supply_1,monetary,electricity,55.5\n")
+		writeMemeCSV(t, dir, "results_total_levelised_cost.csv",
+			"costs,carriers,total_levelised_cost\n")
+
+		db, mock := newDB(t)
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_carrier_prod
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_model_levelised_cost
+		err := streamMemeTimeSeries(db, 7, dir, map[string]string{})
+		require.ErrorContains(t, err, "has no data rows")
+	})
+
+	// A PyPSA-only export carries no levelised-cost tables and must stay
+	// ingestible: nothing about it is required.
+	t.Run("pypsa only export requires nothing", func(t *testing.T) {
+		dir := t.TempDir()
+		writeMemeCSV(t, dir, "results_cost_operation_variable.csv",
+			"nodes,techs,costs,timesteps,cost_operation_variable\n"+
+				"n1,pv_supply_1,monetary,2020-01-01T00:00:00,9.1\n")
+
+		db, mock := newDB(t)
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil)) // results_cost_var only
+		require.NoError(t, streamMemeTimeSeries(db, 7, dir, map[string]string{}))
+	})
+}
+
 // TestStreamMemeTimeSeries_MissingDirSkips guards a PyPSA-only bundle (no CSV
 // dir): the streaming is a no-op and issues no statements.
 func TestStreamMemeTimeSeries_MissingDirSkips(t *testing.T) {

@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { useMapProvider } from "@/providers/map-context";
 import { initializeMap } from '@/features/interactive-map/utils/mapUtils';
+import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 
 interface MapContainerProps {
 	topBar: ReactNode;
@@ -76,6 +77,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 								{map && !muted && <MapControls />}
 
 								{mapOverlays}
+
+								{/* Attribution lives with the map, cleared of any sidebar overlay. */}
+								<CopyrightFooter
+									style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
+								/>
 							</div>
 						</div>
 					</div>
