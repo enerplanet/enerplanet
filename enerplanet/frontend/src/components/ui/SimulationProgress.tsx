@@ -57,7 +57,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
                 }`}
               />
               <span
-                className={`text-[10px] ${
+                className={`whitespace-nowrap text-[10px] ${
                   isActive
                     ? "text-blue-600 dark:text-blue-400 font-medium"
                     : isCompleted

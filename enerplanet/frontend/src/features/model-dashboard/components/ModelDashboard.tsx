@@ -143,7 +143,7 @@ function ModelColumns({ inset = false }: { inset?: boolean }) {
 		<colgroup>
 			<col style={{ width: edge("5rem") }} />
 			<col />
-			<col style={{ width: "18rem" }} />
+			<col style={{ width: "24rem" }} />
 			<col className="hidden md:table-column" style={{ width: "10rem" }} />
 			<col style={{ width: edge("22rem") }} />
 		</colgroup>
@@ -1013,7 +1013,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									{!isLoading && filteredModels.length > 0 ? (
 										<div className="md-fade-in overflow-hidden rounded-xl border border-border">
 									<div className="w-full overflow-auto">
-										<table className="w-full min-w-[69rem] table-fixed">
+										<table className="w-full min-w-[75rem] table-fixed">
 											<ModelColumns />
 											<thead>
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted/40"}`}>

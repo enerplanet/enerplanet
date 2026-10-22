@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { FileEdit, Users, Clock, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
+import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -12,6 +12,7 @@ import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
+import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
 import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
@@ -164,6 +165,24 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
       <span>{msg.body}</span>
       {msg.next && <span className="opacity-80">{msg.next}</span>}
     </div>
+  );
+};
+
+/** The run's stage graph, shown in place of the status tag while the run is in progress. */
+const RunStages: React.FC<{ status: Model["status"] }> = ({ status }) => {
+  const { t } = useTranslation();
+  if (status !== "queue") return <SimulationProgress status={status} />;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div>
+          <SimulationProgress status={status} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{t("model.queuedTooltip")}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -342,7 +361,9 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
 
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
-          {model.status === "failed" ? (
+          {isActiveStatus(model.status) ? (
+            <RunStages status={model.status} />
+          ) : model.status === "failed" ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div>
@@ -380,26 +401,6 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
               />
             </div>
           )}
-
-          {model.status === "queue" && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="relative flex items-center justify-center w-6 h-6 cursor-pointer">
-                  <span className="absolute w-5 h-5 bg-amber-100 dark:bg-amber-900/30 rounded-full"></span>
-                  <span className="absolute w-5 h-5 bg-amber-300 dark:bg-amber-600 rounded-full animate-ping opacity-50"></span>
-                  <Clock className="relative w-3 h-3 text-amber-600 dark:text-amber-400" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t("model.queuedTooltip")}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {(model.status === "queue" ||
-            model.status === "calculating" ||
-            model.status === "running" ||
-            model.status === "processing") && <SimulationProgress status={model.status} />}
 
           {(model.status === "completed" ||
             model.status === "failed" ||
