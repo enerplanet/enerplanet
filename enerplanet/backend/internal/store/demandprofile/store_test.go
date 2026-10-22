@@ -16,23 +16,29 @@ func TestNewStore(t *testing.T) {
 	assert.NotNil(t, store)
 }
 
-func TestGetByModel(t *testing.T) {
+// The summaries leave the hourly profile in the database and carry the
+// storeys, floor area and room height Postgres reads from it.
+func TestGetSummariesByModel(t *testing.T) {
 	db, mock := testutil.NewMockDB(t)
 	store := NewStore(db)
 
-	rows := sqlmock.NewRows([]string{"id", "model_id", "osm_id", "status"}).
-		AddRow(1, 42, "12345", "resolved").
-		AddRow(2, 42, "12346", "pending")
-	mock.ExpectQuery(`SELECT \* FROM "building_demand_profiles" WHERE model_id = \$1`).
+	rows := sqlmock.NewRows([]string{"osm_id", "status", "refurbishment_level", "n_storeys", "a_ref_m2", "h_room_m"}).
+		AddRow("12345", "resolved", "existing", 6, 6648.84, 2.5).
+		AddRow("12346", "pending", "existing", nil, nil, nil)
+	mock.ExpectQuery(`SELECT osm_id, status, .*profile -> 'building' ->> 'n_storeys'.* FROM "building_demand_profiles" WHERE model_id = \$1 ORDER BY osm_id`).
 		WithArgs(42).
 		WillReturnRows(rows)
 
-	got, err := store.GetByModel(42)
+	got, err := store.GetSummariesByModel(42)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, "12345", got[0].OSMID)
-	assert.Equal(t, "resolved", got[0].Status)
+	require.NotNil(t, got[0].NStoreys)
+	assert.Equal(t, 6, *got[0].NStoreys)
+	assert.InDelta(t, 6648.84, *got[0].ARefM2, 1e-9)
+	assert.InDelta(t, 2.5, *got[0].HRoomM, 1e-9)
 	assert.Equal(t, "pending", got[1].Status)
+	assert.Nil(t, got[1].NStoreys)
 }
 
 func TestGetStatusCounts(t *testing.T) {

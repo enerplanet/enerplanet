@@ -1712,6 +1712,10 @@
         "spatialhub_backend_internal_api_contracts.BuildingDemandProfile": {
             "type": "object",
             "properties": {
+                "a_ref_m2": {
+                    "type": "number",
+                    "example": 6648.84
+                },
                 "building_type": {
                     "description": "building_type is what was modelled: a TABULA residential type (SFH, TH,\nMFH, AB) or a BuEM service id (bakery, clinic, hotel, office,\nrestaurant, school, supermarket, warehouse). For a service id\nhot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.",
                     "type": "string",
@@ -1729,6 +1733,10 @@
                     "type": "string",
                     "example": "no City2TABULA envelope for this building"
                 },
+                "h_room_m": {
+                    "type": "number",
+                    "example": 2.5
+                },
                 "heating_kwh_a": {
                     "type": "number",
                     "example": 4823.5
@@ -1738,6 +1746,11 @@
                 },
                 "kitchen_kwh_a": {
                     "type": "number"
+                },
+                "n_storeys": {
+                    "description": "The BuEM inputs of a resolved building: storeys and room height from its\n3D geometry, and the conditioned floor area A_ref in m2.",
+                    "type": "integer",
+                    "example": 6
                 },
                 "osm_id": {
                     "type": "string",

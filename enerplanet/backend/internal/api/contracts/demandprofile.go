@@ -24,6 +24,11 @@ type BuildingDemandProfile struct {
 	HotWaterKwhA       *float64 `json:"hot_water_kwh_a,omitempty"`
 	KitchenKwhA        *float64 `json:"kitchen_kwh_a,omitempty"`
 	ErrorMessage       *string  `json:"error_message,omitempty" example:"no City2TABULA envelope for this building"`
+	// The BuEM inputs of a resolved building: storeys and room height from its
+	// 3D geometry, and the conditioned floor area A_ref in m2.
+	NStoreys *int     `json:"n_storeys,omitempty" example:"6"`
+	ARefM2   *float64 `json:"a_ref_m2,omitempty" example:"6648.84"`
+	HRoomM   *float64 `json:"h_room_m,omitempty" example:"2.5"`
 }
 
 // ModelDemandProfilesResponse is the response for GET /models/{id}/demand-profiles.

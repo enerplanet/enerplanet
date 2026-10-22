@@ -9,7 +9,6 @@ import (
 	"platform.local/common/pkg/httputil"
 
 	"spatialhub_backend/internal/api/contracts"
-	backendModels "spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/store/demandprofile"
 )
 
@@ -48,7 +47,7 @@ func (h *ModelHandler) GetModelDemandProfiles(c *gin.Context) {
 		return
 	}
 
-	rows, err := h.profileStore.GetByModel(model.ID)
+	rows, err := h.profileStore.GetSummariesByModel(model.ID)
 	if err != nil {
 		httputil.InternalError(c, "failed to load demand profiles")
 		return
@@ -84,7 +83,7 @@ func overallDemandProfileStatus(counts demandprofile.StatusCounts) string {
 	}
 }
 
-func mapDemandProfiles(rows []backendModels.BuildingDemandProfile) []contracts.BuildingDemandProfile {
+func mapDemandProfiles(rows []demandprofile.Summary) []contracts.BuildingDemandProfile {
 	out := make([]contracts.BuildingDemandProfile, len(rows))
 	for i, r := range rows {
 		out[i] = contracts.BuildingDemandProfile{
@@ -99,6 +98,9 @@ func mapDemandProfiles(rows []backendModels.BuildingDemandProfile) []contracts.B
 			HotWaterKwhA:       r.HotWaterKwhA,
 			KitchenKwhA:        r.KitchenKwhA,
 			ErrorMessage:       r.ErrorMessage,
+			NStoreys:           r.NStoreys,
+			ARefM2:             r.ARefM2,
+			HRoomM:             r.HRoomM,
 		}
 	}
 	return out
