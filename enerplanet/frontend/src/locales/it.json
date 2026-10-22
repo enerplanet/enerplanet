@@ -382,7 +382,8 @@
       "commercialDemand": "Domanda commerciale",
       "publicDemand": "Domanda edificio pubblico",
       "industrialDemand": "Domanda industriale",
-      "agriculturalDemand": "Domanda agricola"
+      "agriculturalDemand": "Domanda agricola",
+      "otherBuildings": "Altri edifici"
     },
     "charts": {
       "systemPerformance": "Prestazioni del Sistema",
