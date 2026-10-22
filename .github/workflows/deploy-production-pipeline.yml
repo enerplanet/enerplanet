@@ -275,15 +275,10 @@ jobs:
           echo '=== [PROD] Building Enerplanet (Frontend + Backend) ==='
           # Built straight into the production Docker daemon: the runner is the
           # deploy server, so there is no registry push and no image transfer.
+          # The image is environment-agnostic: the frontend reads /config.js at
+          # runtime (backend serves it from FRONTEND_* env vars written into
+          # .env.prod by deploy-app), so no build args are baked here.
           docker build --no-cache --provenance=false --sbom=false \
-            --build-arg VITE_SSO_ENABLED="true" \
-            --build-arg VITE_KEYCLOAK_URL="${SERVER_URL_PROD}/keycloak" \
-            --build-arg VITE_KEYCLOAK_REALM="${KEYCLOAK_REALM}" \
-            --build-arg VITE_KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID}" \
-            --build-arg VITE_KEYCLOAK_IDP_HINT="${{ vars.VITE_KEYCLOAK_IDP_HINT || 'renvolveit' }}" \
-            --build-arg VITE_KEYCLOAK_REDIRECT_URI="${SERVER_URL_PROD}/app/map" \
-            --build-arg VITE_API_BASE_URL="${{ vars.VITE_API_BASE_URL }}" \
-            --build-arg VITE_CARTO_BASEMAP_API_KEY="${{ secrets.VITE_CARTO_BASEMAP_API_KEY }}" \
             -t "enerplanet:${GITHUB_SHA::8}" -t "enerplanet:latest" -f Dockerfile.ci .
           docker image prune -f
           echo '=== [PROD] Build complete ==='
@@ -327,6 +322,10 @@ jobs:
           set_env "$ENV_PROD" COOKIE_DOMAIN "${COOKIE_DOMAIN_PROD}"
           set_env "$ENV_PROD" KEYCLOAK_REALM "${KEYCLOAK_REALM}"
           set_env "$ENV_PROD" KEYCLOAK_CLIENT_ID "${KEYCLOAK_CLIENT_ID}"
+          # Frontend runtime config (/config.js): the rest falls back to
+          # APP_URL + KEYCLOAK_* above; the carto basemap key has no fallback.
+          [ -n "${{ secrets.VITE_CARTO_BASEMAP_API_KEY }}" ] && \
+            set_env "$ENV_PROD" FRONTEND_CARTO_BASEMAP_API_KEY "${{ secrets.VITE_CARTO_BASEMAP_API_KEY }}" || true
           # RENvolveIT toolbox bearer tokens; all three or none.
           set_env "$ENV_PROD" KEYCLOAK_API_ISSUER "${SERVER_URL_PROD}/keycloak/realms/${KEYCLOAK_REALM}"
           set_env "$ENV_PROD" KEYCLOAK_API_AUDIENCE enerplanet-api

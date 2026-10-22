@@ -1,24 +1,26 @@
-const ssoEnabled = import.meta.env.VITE_SSO_ENABLED?.toLowerCase() === "true";
+import { runtimeConfig } from "@/configuration/runtime";
 
-function ssoSetting(name: string, value: string | undefined): string {
+const ssoEnabled = runtimeConfig.sso.enabled;
+
+function ssoSetting(name: string, value: string): string {
 	const setting = value?.trim() ?? "";
 	if (ssoEnabled && !setting) {
-		throw new Error(`${name} is required when VITE_SSO_ENABLED=true`);
+		throw new Error(`${name} is required when SSO is enabled`);
 	}
 	return setting;
 }
 
 export const auth = {
-	access: ["very_low", "intermediate","expert"],
+	access: ["very_low", "intermediate", "expert"],
 	sso: {
 		enabled: ssoEnabled,
-		url: ssoSetting("VITE_KEYCLOAK_URL", import.meta.env.VITE_KEYCLOAK_URL),
-		realm: ssoSetting("VITE_KEYCLOAK_REALM", import.meta.env.VITE_KEYCLOAK_REALM),
-		clientId: ssoSetting("VITE_KEYCLOAK_CLIENT_ID", import.meta.env.VITE_KEYCLOAK_CLIENT_ID),
-		idpHint: ssoSetting("VITE_KEYCLOAK_IDP_HINT", import.meta.env.VITE_KEYCLOAK_IDP_HINT),
+		url: ssoSetting("keycloak url", runtimeConfig.sso.url),
+		realm: ssoSetting("keycloak realm", runtimeConfig.sso.realm),
+		clientId: ssoSetting("keycloak client id", runtimeConfig.sso.clientId),
+		idpHint: ssoSetting("keycloak idp hint", runtimeConfig.sso.idpHint),
 		redirectUri: ssoSetting(
-			"VITE_KEYCLOAK_REDIRECT_URI",
-			import.meta.env.VITE_KEYCLOAK_REDIRECT_URI
+			"keycloak redirect uri",
+			runtimeConfig.sso.redirectUri
 		),
 	},
 };
