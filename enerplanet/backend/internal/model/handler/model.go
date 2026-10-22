@@ -305,6 +305,7 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 // @Param        offset       query  int     false  "Pagination offset"    default(0)
 // @Param        search       query  string  false  "Search models by title (case-insensitive)"
 // @Param        workspace_id query  int     false  "Filter by workspace ID"
+// @Param        group        query  string  false  "families: limit, offset and total count originals with their copies, so a page never splits a family"  Enums(families)
 // @Success      200  {object}  contracts.GetModelsResponse
 // @Failure      401  {object}  contracts.ErrorResponse
 // @Failure      500  {object}  contracts.ErrorResponse
@@ -339,7 +340,11 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 
 	query = h.applySearchFilter(query, search)
 
-	modelsList, total, err := h.fetchModelsWithQuery(query, limit, offset, sortBy, sortOrder)
+	fetch := h.fetchModelsWithQuery
+	if c.Query("group") == "families" {
+		fetch = h.fetchModelFamilies
+	}
+	modelsList, total, err := fetch(query, limit, offset, sortBy, sortOrder)
 	if err != nil {
 		httputil.InternalError(c, "Failed to fetch models")
 		return
