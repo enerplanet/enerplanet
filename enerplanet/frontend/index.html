@@ -13,6 +13,14 @@
         document.documentElement.classList.add(theme);
       })();
     </script>
+    <!-- Runtime configuration (radarr-style): the backend serves /config.js
+         from its own env vars, so one image runs any environment. In dev the
+         vite server has no /config.js and the app falls back to build-time
+         import.meta.env values. -->
+    <script
+      src="/config.js"
+      onerror="console.info('[enerplanet] /config.js not loaded - expected in dev mode (vite serves no /config.js; the app falls back to build-time env values). If you see this on a deployed build, the backend /config.js route is unavailable.');"
+    ></script>
   </head>
   <body>
     <div id="root"></div>
