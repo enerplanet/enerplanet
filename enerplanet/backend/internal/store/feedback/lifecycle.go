@@ -12,8 +12,39 @@ import (
 	"platform.local/common/pkg/models"
 )
 
+// openStatuses are the statuses of feedback no expert has finished with.
+var openStatuses = []string{"pending", "in_progress"}
+
 // imagesDir is where feedback images are stored, relative to constants.StorageDataDir.
 const imagesDir = "feedback_images"
+
+// HasOpenRunReport reports whether modelID has a run report whose feedback is still open.
+func (fs *Store) HasOpenRunReport(modelID uint) (bool, error) {
+	var n int64
+	err := fs.db.Table("feedback_run_reports AS r").
+		Joins("JOIN feedbacks f ON f.id = r.feedback_id").
+		Where("r.model_id = ? AND f.status IN ? AND f.deleted_at IS NULL", modelID, openStatuses).
+		Count(&n).Error
+	if err != nil {
+		return false, fmt.Errorf("check open run report of model %d: %w", modelID, err)
+	}
+	return n > 0, nil
+}
+
+// OpenRunReportModelIDs returns the models with an open run report that userID
+// filed or owns the model of.
+func (fs *Store) OpenRunReportModelIDs(userID string) ([]uint, error) {
+	var ids []uint
+	err := fs.db.Table("feedback_run_reports AS r").
+		Joins("JOIN feedbacks f ON f.id = r.feedback_id").
+		Where("f.status IN ? AND f.deleted_at IS NULL", openStatuses).
+		Where("f.user_id = ? OR r.model_id IN (SELECT id FROM models WHERE user_id = ?)", userID, userID).
+		Distinct().Pluck("r.model_id", &ids).Error
+	if err != nil {
+		return nil, fmt.Errorf("list open run reports of user %s: %w", userID, err)
+	}
+	return ids, nil
+}
 
 // DeleteFeedback permanently deletes feedback id with its images.
 func (fs *Store) DeleteFeedback(id uint) error {
