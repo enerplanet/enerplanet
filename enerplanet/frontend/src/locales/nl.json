@@ -168,7 +168,7 @@
       "moveToWorkspace": "Verplaatsen naar Werkruimte",
       "profile": "Profiel",
       "documentation": "Documentatie",
-      "restartTour": "Tour herstarten",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
       "theme": "Thema"
     },
@@ -181,7 +181,8 @@
     "menu": {
       "settings": "Instellingen",
       "privacyTerms": "Privacy en voorwaarden",
-      "logout": "Uitloggen"
+      "logout": "Uitloggen",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Resultaten Bekijken",

@@ -168,7 +168,7 @@
       "moveToWorkspace": "Přesunout do Pracovního Prostoru",
       "profile": "Profil",
       "documentation": "Dokumentace",
-      "restartTour": "Restartovat prohlídku",
+      "restartTour": "Product Tour",
       "feedback": "Zpětná vazba",
       "theme": "Motiv"
     },
@@ -181,7 +181,8 @@
     "menu": {
       "settings": "Nastavení",
       "privacyTerms": "Soukromí a podmínky",
-      "logout": "Odhlásit"
+      "logout": "Odhlásit",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Zobrazit Výsledky",

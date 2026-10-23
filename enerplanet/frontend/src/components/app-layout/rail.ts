@@ -14,5 +14,8 @@ export const RAIL_HIDE =
 /** The name beside a rail icon. */
 export const RAIL_LABEL = `min-w-0 truncate whitespace-nowrap text-sm font-medium ${RAIL_SHOW}`;
 
+/** Declared only while the rail is expanded, and takes no width while collapsed. */
+export const RAIL_SHOW_SHRINK = `${RAIL_SHOW} w-0 overflow-hidden group-hover/rail:w-11 group-data-[expanded=true]/rail:w-11 group-has-[[data-rail-expand]:focus-visible]/rail:w-11 motion-reduce:transition-none`;
+
 /** The fixed 2.75rem slot that keeps each icon in place while the rail widens. */
 export const RAIL_ICON_SLOT = "relative flex w-11 shrink-0 items-center justify-center";

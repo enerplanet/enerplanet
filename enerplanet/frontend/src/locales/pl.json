@@ -168,7 +168,7 @@
       "moveToWorkspace": "Przenieś do Przestrzeni Roboczej",
       "profile": "Profil",
       "documentation": "Dokumentacja",
-      "restartTour": "Ponownie rozpocznij wycieczkę",
+      "restartTour": "Product Tour",
       "feedback": "Opinie",
       "theme": "Motyw"
     },
@@ -181,7 +181,8 @@
     "menu": {
       "settings": "Ustawienia",
       "privacyTerms": "Prywatność i warunki",
-      "logout": "Wyloguj"
+      "logout": "Wyloguj",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Zobacz Wyniki",

@@ -228,7 +228,7 @@
       "moveToWorkspace": "In Arbeitsbereich verschieben",
       "profile": "Profil",
       "documentation": "Dokumentation",
-      "restartTour": "Tour neu starten",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
       "theme": "Design"
     },
@@ -241,7 +241,8 @@
     "menu": {
       "settings": "Einstellungen",
       "privacyTerms": "Datenschutz & Bedingungen",
-      "logout": "Abmelden"
+      "logout": "Abmelden",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Ergebnisse anzeigen",

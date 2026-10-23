@@ -34,13 +34,12 @@ import {
   Button,
 } from "@spatialhub/ui";
 import SidebarButton from "@/components/ui/SidebarButton";
-import { RAIL_HIDE, RAIL_ICON_SLOT, RAIL_LABEL, RAIL_SHOW } from "@/components/app-layout/rail";
+import { RAIL_HIDE, RAIL_ICON_SLOT, RAIL_LABEL, RAIL_SHOW, RAIL_SHOW_SHRINK } from "@/components/app-layout/rail";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
-import ThemeToggle from "@/components/ui/ThemeToggle";
+import ThemeToggle, { ThemeToggleButton } from "@/components/ui/ThemeToggle";
 import { useProductTour } from "@/features/guided-tour/hooks/useProductTour";
 import { Authorized } from "@/middleware/authorized";
 import { useAuthStore } from "@/store/auth-store";
-import { SessionTimer } from "@/components/ui/SessionTimer";
 import { SessionExpiryBanner } from "@/components/ui/SessionExpiryBanner";
 
 interface AppLayoutProps {
@@ -101,7 +100,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     () => ({
       settings: () => navigate("/app/settings"),
       legal: () => navigate("/legal"),
-      dashboard: () => navigate(ADMIN_PATH),
       login: () => navigate("/login"),
       feedback: () => navigate("/app/feedback"),
       documentation: () => window.open(DOCUMENTATION_URL, "_blank", "noopener,noreferrer"),
@@ -167,14 +165,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const userMenuItems: UserMenuItem[] = useMemo(
     () => [
       {
-        icon: Settings,
-        label: t("common.menu.settings"),
-        onClick: navigationHandlers.settings,
+        icon: BookOpen,
+        label: t("common.tooltips.documentation"),
+        onClick: navigationHandlers.documentation,
       },
       {
         icon: Shield,
         label: t("common.menu.privacyTerms"),
         onClick: navigationHandlers.legal,
+      },
+      {
+        icon: Settings,
+        label: t("common.menu.settings"),
+        onClick: navigationHandlers.settings,
       },
       {
         icon: LogOut,
@@ -255,6 +258,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <Authorized>
               <NotificationDropdown onOpenChange={setBellOpen} />
             </Authorized>
+            {/* Admin Panel: rare for normal users, reachable at a glance for admins. */}
+            <Authorized access={["manager", "expert"]}>
+              <SidebarButton
+                icon={LayoutGrid}
+                label={t("common.menu.adminPanel")}
+                onClick={() => navigate(ADMIN_PATH)}
+                isActive={isActive(ADMIN_PATH)}
+              />
+            </Authorized>
             {!user && (
               <div className="flex w-11 flex-col items-center gap-3">
                 <ThemeToggle />
@@ -283,16 +295,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </Tooltip>
               </div>
             )}
-            {/* Profile avatar + dropdown (session timer, theme, menu). Lives at
-                the bottom of the left rail; the menu opens to the right of it. */}
+            {/* Profile avatar + dropdown (session timer, menu) with the theme
+                button beside it. Both live at the bottom of the left rail; the
+                menu opens to the right of them. */}
             <Authorized>
-              <div className="relative" data-tour="profile">
+              <div className="flex items-center" data-tour="profile">
                 <DropdownMenu onOpenChange={setProfileOpen}>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
                       aria-label={t("common.tooltips.profile")}
-                      className="group flex h-11 w-full cursor-pointer items-center rounded-full text-left transition-colors hover:bg-muted"
+                      className="group flex h-11 min-w-0 flex-1 cursor-pointer items-center rounded-full text-left transition-colors hover:bg-muted"
                     >
                       <span className={RAIL_ICON_SLOT}>
                         <span className="flex size-11 items-center justify-center rounded-full border border-gray-200 bg-gradient-to-br from-gray-100 to-gray-200 text-base font-semibold text-gray-700 shadow-sm dark:border-gray-600 dark:from-gray-700 dark:to-gray-800 dark:text-gray-200">
@@ -303,25 +316,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={24}>
-                    {/* Session Timer at top of dropdown */}
-                    <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700">
-                      <SessionTimer warningThreshold={5} compact />
-                    </div>
-                    {/* Theme Toggle */}
-                    <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                      <span className="text-sm text-foreground">{t("common.tooltips.theme")}</span>
-                      <ThemeToggle />
-                    </div>
-                    <Authorized access={["manager", "expert"]}>
-                      <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.dashboard}>
-                        <LayoutGrid className="w-4 h-4" />
-                        Dashboard
-                      </DropdownMenuItem>
-                    </Authorized>
-                    <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.documentation}>
-                      <BookOpen className="w-4 h-4" />
-                      {t("common.tooltips.documentation")}
-                    </DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer" onClick={handleSmartRestartTour}>
                       <GraduationCap className="w-4 h-4" />
                       {t("common.tooltips.restartTour")}
@@ -343,6 +337,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {/* Sun/moon theme button, revealed with the rail and gone while it is collapsed. */}
+                <span className={`${RAIL_SHOW_SHRINK} ml-1 flex items-center justify-center`}>
+                  <ThemeToggleButton />
+                </span>
               </div>
             </Authorized>
 
