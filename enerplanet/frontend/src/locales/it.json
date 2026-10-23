@@ -1636,6 +1636,7 @@
       "done": "Edifici analizzati: {{count}}",
       "failed": "non analizzati: {{count}} (passa il mouse su un edificio per il motivo)",
       "notYet": "Non ancora analizzato. L'analisi calcola il fabbisogno di riscaldamento, raffrescamento ed elettricità di ogni edificio.",
+      "needsInputs": "Inserisci un nome del modello e un periodo di simulazione per analizzare gli edifici.",
       "saveFailed": "Impossibile salvare il modello, quindi l'analisi non è stata avviata.",
       "startFailed": "Impossibile avviare l'analisi."
     },

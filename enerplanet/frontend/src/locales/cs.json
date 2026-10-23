@@ -1650,6 +1650,7 @@
       "done": "Analyzované budovy: {{count}}",
       "failed": "neanalyzováno: {{count}} (důvod se zobrazí po najetí na budovu)",
       "notYet": "Zatím neanalyzováno. Analýza vypočítá potřebu vytápění, chlazení a elektřiny každé budovy.",
+      "needsInputs": "Pro analýzu budov zadejte název modelu a období simulace.",
       "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
       "startFailed": "Analýzu se nepodařilo spustit."
     },

@@ -1635,6 +1635,7 @@
       "done": "Geanalyseerde gebouwen: {{count}}",
       "failed": "niet geanalyseerd: {{count}} (beweeg over een gebouw voor de reden)",
       "notYet": "Nog niet geanalyseerd. De analyse berekent de warmte-, koel- en elektriciteitsvraag van elk gebouw.",
+      "needsInputs": "Voer een modelnaam en een simulatieperiode in om de gebouwen te analyseren.",
       "saveFailed": "Het model kon niet worden opgeslagen, dus de analyse is niet gestart.",
       "startFailed": "De analyse kon niet worden gestart."
     },

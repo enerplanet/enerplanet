@@ -1892,6 +1892,7 @@
       "done": "Bâtiments analysés : {{count}}",
       "failed": "non analysés : {{count}} (survolez un bâtiment pour la raison)",
       "notYet": "Pas encore analysé. L'analyse calcule la demande de chauffage, de refroidissement et d'électricité de chaque bâtiment.",
+      "needsInputs": "Saisissez un nom de modèle et une période de simulation pour analyser les bâtiments.",
       "saveFailed": "Le modèle n'a pas pu être enregistré, l'analyse n'a donc pas démarré.",
       "startFailed": "L'analyse n'a pas pu démarrer."
     },

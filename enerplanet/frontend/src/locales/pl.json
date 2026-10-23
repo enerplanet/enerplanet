@@ -1650,6 +1650,7 @@
       "done": "Przeanalizowane budynki: {{count}}",
       "failed": "nieprzeanalizowane: {{count}} (najedź na budynek, aby zobaczyć powód)",
       "notYet": "Jeszcze nie przeanalizowano. Analiza oblicza zapotrzebowanie każdego budynku na ogrzewanie, chłodzenie i energię elektryczną.",
+      "needsInputs": "Wprowadź nazwę modelu i okres symulacji, aby przeanalizować budynki.",
       "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
       "startFailed": "Nie udało się rozpocząć analizy."
     },

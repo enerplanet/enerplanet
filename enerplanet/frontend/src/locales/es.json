@@ -1892,6 +1892,7 @@
       "done": "Edificios analizados: {{count}}",
       "failed": "sin analizar: {{count}} (pase el ratón sobre un edificio para ver el motivo)",
       "notYet": "Aún no analizado. El análisis calcula la demanda de calefacción, refrigeración y electricidad de cada edificio.",
+      "needsInputs": "Introduzca un nombre de modelo y un periodo de simulación para analizar los edificios.",
       "saveFailed": "No se pudo guardar el modelo, por lo que el análisis no se inició.",
       "startFailed": "No se pudo iniciar el análisis."
     },

@@ -1887,6 +1887,7 @@
       "done": "Buildings analysed: {{count}}",
       "failed": "not analysed: {{count}} (hover a building for the reason)",
       "notYet": "Not analysed yet. Analysing calculates each building's heating, cooling and electricity demand.",
+      "needsInputs": "Enter a model name and a simulation period to analyse the buildings.",
       "saveFailed": "The model could not be saved, so the analysis did not start.",
       "startFailed": "The analysis could not be started."
     },

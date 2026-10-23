@@ -1887,6 +1887,7 @@
       "done": "Analysierte Gebäude: {{count}}",
       "failed": "nicht analysiert: {{count}} (Grund beim Überfahren eines Gebäudes)",
       "notYet": "Noch nicht analysiert. Die Analyse berechnet den Heiz-, Kühl- und Strombedarf jedes Gebäudes.",
+      "needsInputs": "Geben Sie einen Modellnamen und einen Simulationszeitraum ein, um die Gebäude zu analysieren.",
       "saveFailed": "Das Modell konnte nicht gespeichert werden, daher wurde die Analyse nicht gestartet.",
       "startFailed": "Die Analyse konnte nicht gestartet werden."
     },

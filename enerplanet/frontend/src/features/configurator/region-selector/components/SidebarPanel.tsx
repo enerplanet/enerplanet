@@ -127,6 +127,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const setRunMode = useModelStore((s) => s.setRunMode);
   const siteMode = useModelStore((s) => s.siteMode);
   const gridStale = useModelStore((s) => s.gridStale);
+  const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
@@ -208,9 +209,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           <Button
             onClick={onAnalyse}
             disabled={
-              !state.fromDate ||
-              !state.toDate ||
-              !state.modelName.trim() ||
+              missingInputs ||
               state.isSaving ||
               gridStale ||
               isStartingAnalysis ||
@@ -227,7 +226,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             )}
             {t("simulation.analysis.button")}
           </Button>
-          <p className="text-xs text-muted-foreground" aria-live="polite">{analysisText(analysisProgress, t)}</p>
+          <p className="text-xs text-muted-foreground" aria-live="polite">{missingInputs ? t("simulation.analysis.needsInputs") : analysisText(analysisProgress, t)}</p>
         </div>
       )}
 
