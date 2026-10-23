@@ -223,3 +223,33 @@ func TestPVResolverDropsPVWhenNoRoofQualifies(t *testing.T) {
 	assert.Nil(t, sim.requests, "nothing to simulate")
 	assert.Empty(t, store.links, "the model's earlier PV links are removed")
 }
+
+func TestAnnualYieldSumsArraysAndSimulatesOnlyChangedOnes(t *testing.T) {
+	store := newFakePVStore()
+	b := BuildingYield{OSMID: "7", Location: pv.Location{Lat: 48.8, Lon: 12.9}, Period: weather.DefaultPeriod, Arrays: []pv.Array{
+		{SurfaceID: "south", Tilt: 35, Azimuth: 180, AreaSqm: 25, UsableShare: 0.5},
+		{SurfaceID: "east", Tilt: 35, Azimuth: 90, AreaSqm: 40, UsableShare: 0.8, CapacityKW: f64(3)},
+	}}
+	// fakePV's hourly profile sums to this over the year.
+	yearSum := 8759.0 * 8760 / 2 / 10000
+	yield := func(sim *fakePV) float64 {
+		kwh, err := PVResolver{Weather: &fakePVWeather{}, PV: sim, Series: store, Version: "test"}.AnnualYield(context.Background(), b)
+		require.NoError(t, err)
+		return kwh
+	}
+
+	first := &fakePV{}
+	assert.InDelta(t, (25*0.5*0.2+3)*yearSum, yield(first), 0.5, "2.5 kW on the usable area plus a fixed 3 kW")
+	assert.Len(t, first.requests, 2)
+
+	b.Arrays[0].UsableShare = 0.6
+	shareOnly := &fakePV{}
+	assert.InDelta(t, (25*0.6*0.2+3)*yearSum, yield(shareOnly), 0.5)
+	assert.Empty(t, shareOnly.requests, "a profile is per kWp, so a new share reuses it")
+
+	b.Arrays[1].Tilt = 20
+	tilted := &fakePV{}
+	yield(tilted)
+	require.Len(t, tilted.requests, 1)
+	assert.Equal(t, 20.0, tilted.requests[0].Tilt)
+}

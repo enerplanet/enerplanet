@@ -196,8 +196,7 @@ func pvCells(modelID uint, refs []*pvArrayRef) (map[pv.Location][]*pvArrayRef, e
 }
 
 // storedProfiles returns each array's profile by request id, and the links
-// for them. Per weather cell it reads the weather once, reuses the profiles
-// stored by key and simulates and stores only the missing ones.
+// for them, one weather cell at a time (see cellProfiles).
 func (r PVResolver) storedProfiles(ctx context.Context, model *commonModels.Model, refs []*pvArrayRef, resolution int) (map[string][]float32, []series.Link, error) {
 	if len(refs) == 0 {
 		return nil, nil, nil
@@ -208,59 +207,123 @@ func (r PVResolver) storedProfiles(ctx context.Context, model *commonModels.Mode
 	}
 	period := modelWeatherPeriod(model.Config)
 	provider := modelWeatherProvider(model.Config, r.WeatherProvider)
-	start, end := period.Range()
-	periodStart, err := time.Parse(time.RFC3339, start)
-	if err != nil {
-		return nil, nil, fmt.Errorf("PV of model %d: weather period start %q: %w", model.ID, start, err)
-	}
-	// A value stands for its step and is stamped at the step's middle, as BuEM's
-	// are, so a building's PV and demand series share one time axis.
-	startTime := periodStart.Add(time.Duration(resolution) * time.Minute / 2)
 	profiles := map[string][]float32{}
 	var links []series.Link
 	for cell, cellRefs := range cells {
-		wx, err := r.Weather.GetPVWeather(ctx, cell.Lat, cell.Lon, period, provider)
-		if err != nil {
-			return nil, nil, fmt.Errorf("weather for the PV of model %d at %v: %w", model.ID, cell, err)
-		}
-		shared, err := pv.NewSharedInputs(wx, cell, start, end, resolution, r.Version)
+		ids, vals, err := r.cellProfiles(ctx, cell, period, provider, cellRefs, resolution)
 		if err != nil {
 			return nil, nil, fmt.Errorf("PV of model %d: %w", model.ID, err)
 		}
-		keys := make([]string, len(cellRefs))
-		for i, ref := range cellRefs {
-			if keys[i], err = pv.RequestKey(ref.surfaceID, ref.request, shared); err != nil {
-				return nil, nil, fmt.Errorf("key the PV array %s of model %d: %w", ref.request.ID, model.ID, err)
-			}
-		}
-		stored, err := r.Series.StoredKeys(keys)
-		if err != nil {
-			return nil, nil, fmt.Errorf("look up the stored PV profiles of model %d: %w", model.ID, err)
-		}
-		var missing []pv.ArrayRequest
-		for i, ref := range cellRefs {
-			if _, ok := stored[keys[i]]; !ok {
-				missing = append(missing, ref.request)
-			}
-		}
-		simulated := map[string][]float64{}
-		if len(missing) > 0 {
-			if simulated, err = r.PV.Simulate(ctx, cell, wx, missing); err != nil {
-				return nil, nil, fmt.Errorf("PV simulation of model %d: %w", model.ID, err)
-			}
-		}
-		for i, ref := range cellRefs {
-			id, vals, err := r.profile(keys[i], stored, simulated[ref.request.ID], startTime, resolution)
-			if err != nil {
-				return nil, nil, fmt.Errorf("PV array %s of model %d: %w", ref.request.ID, model.ID, err)
-			}
-			stored[keys[i]] = id
-			profiles[ref.request.ID] = vals
-			links = append(links, series.Link{BuildingRef: ref.building.osmID, Part: ref.part, Series: pvSeries, ProfileID: id, Source: models.SeriesSourceDefault})
+		for _, ref := range cellRefs {
+			profiles[ref.request.ID] = vals[ref.request.ID]
+			links = append(links, series.Link{BuildingRef: ref.building.osmID, Part: ref.part, Series: pvSeries, ProfileID: ids[ref.request.ID], Source: models.SeriesSourceDefault})
 		}
 	}
 	return profiles, links, nil
 }
+
+// cellProfiles returns the profiles of refs, all in one weather cell, and
+// their stored ids, both by request id. It reads the weather once, reuses the
+// profiles stored by key and simulates and stores only the missing ones.
+func (r PVResolver) cellProfiles(ctx context.Context, cell pv.Location, period weather.Period, provider string, refs []*pvArrayRef, resolution int) (map[string]int64, map[string][]float32, error) {
+	start, end := period.Range()
+	periodStart, err := time.Parse(time.RFC3339, start)
+	if err != nil {
+		return nil, nil, fmt.Errorf("weather period start %q: %w", start, err)
+	}
+	// A value stands for its step and is stamped at the step's middle, as BuEM's
+	// are, so a building's PV and demand series share one time axis.
+	startTime := periodStart.Add(time.Duration(resolution) * time.Minute / 2)
+	wx, err := r.Weather.GetPVWeather(ctx, cell.Lat, cell.Lon, period, provider)
+	if err != nil {
+		return nil, nil, fmt.Errorf("weather at %v: %w", cell, err)
+	}
+	shared, err := pv.NewSharedInputs(wx, cell, start, end, resolution, r.Version)
+	if err != nil {
+		return nil, nil, err
+	}
+	keys := make([]string, len(refs))
+	for i, ref := range refs {
+		if keys[i], err = pv.RequestKey(ref.surfaceID, ref.request, shared); err != nil {
+			return nil, nil, fmt.Errorf("key the PV array %s: %w", ref.request.ID, err)
+		}
+	}
+	stored, err := r.Series.StoredKeys(keys)
+	if err != nil {
+		return nil, nil, fmt.Errorf("look up the stored PV profiles: %w", err)
+	}
+	var missing []pv.ArrayRequest
+	for i, ref := range refs {
+		if _, ok := stored[keys[i]]; !ok {
+			missing = append(missing, ref.request)
+		}
+	}
+	simulated := map[string][]float64{}
+	if len(missing) > 0 {
+		if simulated, err = r.PV.Simulate(ctx, cell, wx, missing); err != nil {
+			return nil, nil, fmt.Errorf("PV simulation: %w", err)
+		}
+	}
+	ids := make(map[string]int64, len(refs))
+	vals := make(map[string][]float32, len(refs))
+	for i, ref := range refs {
+		id, v, err := r.profile(keys[i], stored, simulated[ref.request.ID], startTime, resolution)
+		if err != nil {
+			return nil, nil, fmt.Errorf("PV array %s: %w", ref.request.ID, err)
+		}
+		stored[keys[i]] = id
+		ids[ref.request.ID], vals[ref.request.ID] = id, v
+	}
+	return ids, vals, nil
+}
+
+// BuildingYield is one building's PV arrays and weather, for AnnualYield.
+type BuildingYield struct {
+	OSMID    string
+	Location pv.Location
+	Period   weather.Period
+	// Provider is the weather archive; empty uses the resolver's default.
+	Provider string
+	// Module holds the building's pv_supply settings; a missing one takes the analysis default.
+	Module map[string]interface{}
+	Arrays []pv.Array
+}
+
+// AnnualYield returns the building's PV generation over the weather period's
+// calendar year, in kWh. Its profiles come from and go to the analysis's store,
+// so an array whose inputs did not change is read back, not simulated.
+func (r PVResolver) AnnualYield(ctx context.Context, b BuildingYield) (float64, error) {
+	building := &pvBuilding{osmID: b.OSMID, module: b.Module, arrays: b.Arrays, lat: b.Location.Lat, lon: b.Location.Lon, located: true}
+	refs := pvArrayRefs([]*pvBuilding{building})
+	if len(refs) == 0 {
+		return 0, nil
+	}
+	provider := b.Provider
+	if provider == "" {
+		provider = r.WeatherProvider
+	}
+	_, profiles, err := r.cellProfiles(ctx, pv.SnapLocation(b.Location), b.Period, provider, refs, pvYieldResolution)
+	if err != nil {
+		return 0, fmt.Errorf("PV yield of building %s: %w", b.OSMID, err)
+	}
+	total := 0.0
+	for j, a := range b.Arrays {
+		capacity := a.MaxCapacityKW()
+		if a.CapacityKW != nil {
+			capacity = *a.CapacityKW
+		}
+		sum := 0.0
+		for _, v := range profiles[refs[j].request.ID] {
+			sum += float64(v)
+		}
+		total += capacity * sum * pvYieldResolution / 60
+	}
+	return total, nil
+}
+
+// pvYieldResolution is the step AnnualYield reads profiles at: hourly, the step
+// of a model at its default resolution, so the analysis reuses them.
+const pvYieldResolution = 60
 
 // profile returns the stored profile under key, or stores the simulated one.
 func (r PVResolver) profile(key string, stored map[string]int64, hourly []float64, start time.Time, resolution int) (int64, []float32, error) {
