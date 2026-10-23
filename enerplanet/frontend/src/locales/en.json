@@ -2489,12 +2489,13 @@
       "title": "Map Location",
       "subtitle": "Saved positions",
       "syncing": "Syncing...",
-      "searchPlaceholder": "Search for a location...",
+      "searchPlaceholder": "Search a place, or enter lat, lon",
       "current": "Current",
       "noLocation": "No location set",
       "savedLocations": "Saved Locations",
       "clearAll": "Clear All",
-      "syncNote": "Locations sync to your account"
+      "syncNote": "Locations sync to your account",
+      "pickHint": "Or click the map to set the location."
     },
     "locationSearch": {
       "placeholder": "Search location...",

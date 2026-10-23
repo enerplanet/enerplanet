@@ -2120,12 +2120,13 @@
       "title": "Kaartlocatie",
       "subtitle": "Opgeslagen posities",
       "syncing": "Synchroniseren...",
-      "searchPlaceholder": "Zoek locatie...",
+      "searchPlaceholder": "Zoek een plaats of voer lat, lon in",
       "current": "Huidig",
       "noLocation": "Geen locatie ingesteld",
       "savedLocations": "Opgeslagen Locaties",
       "clearAll": "Alles wissen",
-      "syncNote": "Locaties worden gesynchroniseerd met uw account"
+      "syncNote": "Locaties worden gesynchroniseerd met uw account",
+      "pickHint": "Of klik op de kaart om de locatie in te stellen."
     },
     "locationSearch": {
       "placeholder": "Zoek locatie...",

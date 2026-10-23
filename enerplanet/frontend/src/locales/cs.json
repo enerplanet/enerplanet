@@ -2135,12 +2135,13 @@
       "title": "Poloha Mapy",
       "subtitle": "Uložené pozice",
       "syncing": "Synchronizace...",
-      "searchPlaceholder": "Vyhledat polohu...",
+      "searchPlaceholder": "Hledat místo nebo zadat šířku, délku",
       "current": "Aktuální",
       "noLocation": "Není nastavena žádná poloha",
       "savedLocations": "Uložené Polohy",
       "clearAll": "Smazat vše",
-      "syncNote": "Polohy se synchronizují s vaším účtem"
+      "syncNote": "Polohy se synchronizují s vaším účtem",
+      "pickHint": "Nebo klikněte do mapy a nastavte polohu."
     },
     "locationSearch": {
       "placeholder": "Vyhledat polohu...",

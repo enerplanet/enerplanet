@@ -2489,12 +2489,13 @@
       "title": "Kartenstandort",
       "subtitle": "Gespeicherte Positionen",
       "syncing": "Synchronisiere...",
-      "searchPlaceholder": "Standort suchen...",
+      "searchPlaceholder": "Ort suchen oder Breite, Länge eingeben",
       "current": "Aktuell",
       "noLocation": "Kein Standort festgelegt",
       "savedLocations": "Gespeicherte Standorte",
       "clearAll": "Alle löschen",
-      "syncNote": "Standorte werden mit Ihrem Konto synchronisiert"
+      "syncNote": "Standorte werden mit Ihrem Konto synchronisiert",
+      "pickHint": "Oder auf die Karte klicken, um den Standort festzulegen."
     },
     "locationSearch": {
       "placeholder": "Standort suchen...",

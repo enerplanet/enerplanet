@@ -2121,12 +2121,13 @@
       "title": "Posizione Mappa",
       "subtitle": "Posizioni salvate",
       "syncing": "Sincronizzazione...",
-      "searchPlaceholder": "Cerca posizione...",
+      "searchPlaceholder": "Cerca un luogo o inserisci lat, lon",
       "current": "Attuale",
       "noLocation": "Nessuna posizione impostata",
       "savedLocations": "Posizioni Salvate",
       "clearAll": "Cancella tutto",
-      "syncNote": "Le posizioni si sincronizzano con il tuo account"
+      "syncNote": "Le posizioni si sincronizzano con il tuo account",
+      "pickHint": "Oppure fai clic sulla mappa per impostare la posizione."
     },
     "locationSearch": {
       "placeholder": "Cerca posizione...",

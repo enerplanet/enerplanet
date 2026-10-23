@@ -2494,12 +2494,13 @@
       "title": "Emplacement Carte",
       "subtitle": "Positions enregistrées",
       "syncing": "Synchronisation...",
-      "searchPlaceholder": "Rechercher un emplacement...",
+      "searchPlaceholder": "Rechercher un lieu ou saisir lat, lon",
       "current": "Actuel",
       "noLocation": "Aucun emplacement défini",
       "savedLocations": "Emplacements Enregistrés",
       "clearAll": "Tout effacer",
-      "syncNote": "Les emplacements sont synchronisés avec votre compte"
+      "syncNote": "Les emplacements sont synchronisés avec votre compte",
+      "pickHint": "Ou cliquez sur la carte pour définir l'emplacement."
     },
     "locationSearch": {
       "placeholder": "Rechercher un emplacement...",

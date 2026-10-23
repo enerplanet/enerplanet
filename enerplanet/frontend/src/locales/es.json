@@ -2494,12 +2494,13 @@
       "title": "Ubicación del Mapa",
       "subtitle": "Posiciones guardadas",
       "syncing": "Sincronizando...",
-      "searchPlaceholder": "Buscar ubicación...",
+      "searchPlaceholder": "Buscar un lugar o introducir lat, lon",
       "current": "Actual",
       "noLocation": "Sin ubicación establecida",
       "savedLocations": "Ubicaciones Guardadas",
       "clearAll": "Borrar todo",
-      "syncNote": "Las ubicaciones se sincronizan con tu cuenta"
+      "syncNote": "Las ubicaciones se sincronizan con tu cuenta",
+      "pickHint": "O haga clic en el mapa para fijar la ubicación."
     },
     "locationSearch": {
       "placeholder": "Buscar ubicación...",

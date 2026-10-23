@@ -2135,12 +2135,13 @@
       "title": "Lokalizacja Mapy",
       "subtitle": "Zapisane pozycje",
       "syncing": "Synchronizacja...",
-      "searchPlaceholder": "Szukaj lokalizacji...",
+      "searchPlaceholder": "Szukaj miejsca lub wpisz szer., dł.",
       "current": "Aktualna",
       "noLocation": "Nie ustawiono lokalizacji",
       "savedLocations": "Zapisane Lokalizacje",
       "clearAll": "Wyczyść wszystko",
-      "syncNote": "Lokalizacje synchronizują się z Twoim kontem"
+      "syncNote": "Lokalizacje synchronizują się z Twoim kontem",
+      "pickHint": "Albo kliknij mapę, aby ustawić lokalizację."
     },
     "locationSearch": {
       "placeholder": "Szukaj lokalizacji...",
