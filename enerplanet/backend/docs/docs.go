@@ -1022,7 +1022,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Country name or ISO2 code",
+                        "description": "Country name, e.g. germany; case-insensitive. ISO2 codes are rejected",
                         "name": "country",
                         "in": "query",
                         "required": true
@@ -1082,7 +1082,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Country name or ISO2 code; resolved from lon and lat when absent",
+                        "description": "Country name, e.g. germany; case-insensitive. ISO2 codes are rejected. Resolved from lon and lat when absent",
                         "name": "country",
                         "in": "query"
                     },

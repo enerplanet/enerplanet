@@ -170,7 +170,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const services = useMemo(() => configuratorServicesFor(ownerPath, setDemandProfile), [ownerPath, setDemandProfile]);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
   const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t);
@@ -225,6 +225,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         pvSurfaceIds={pvSurfaceIds}
         technologies={technologies}
         defaultMode={isExpert(user) ? 'expert' : 'basic'}
+        language={i18n.language}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
       {buildingCount > 1 && <SharedOutlineNotice count={buildingCount} />}

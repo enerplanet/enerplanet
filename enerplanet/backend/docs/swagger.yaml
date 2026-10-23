@@ -1595,7 +1595,8 @@ paths:
         without a second lookup. Geometry is in the country's storage CRS, not WGS84.
         One building per call.
       parameters:
-      - description: Country name or ISO2 code
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected
         in: query
         name: country
         required: true
@@ -1639,7 +1640,8 @@ paths:
         name: osm_id
         required: true
         type: string
-      - description: Country name or ISO2 code; resolved from lon and lat when absent
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected. Resolved from lon and lat when absent
         in: query
         name: country
         type: string
