@@ -27,7 +27,7 @@ import (
 //	@Tags			City2TABULA
 //	@Produce		json
 //	@Param			osm_id	query		string	true	"OSM id of the building"
-//	@Param			country	query		string	false	"Country name or ISO2 code; resolved from lon and lat when absent"
+//	@Param			country	query		string	false	"Country name, e.g. germany; case-insensitive. ISO2 codes are rejected. Resolved from lon and lat when absent"
 //	@Param			lon		query		number	false	"Building longitude (WGS84), when country is absent"
 //	@Param			lat		query		number	false	"Building latitude (WGS84), when country is absent"
 //	@Success		200		{object}	contracts.PVSurfacesResponse
