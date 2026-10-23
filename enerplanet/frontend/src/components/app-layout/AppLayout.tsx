@@ -284,10 +284,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       <span className="text-sm text-foreground">{t("common.tooltips.theme")}</span>
                       <ThemeToggle />
                     </div>
-                    <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.dashboard}>
-                      <LayoutGrid className="w-4 h-4" />
-                      Dashboard
-                    </DropdownMenuItem>
+                    <Authorized access={["manager", "expert"]}>
+                      <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.dashboard}>
+                        <LayoutGrid className="w-4 h-4" />
+                        Dashboard
+                      </DropdownMenuItem>
+                    </Authorized>
                     <DropdownMenuItem className="cursor-pointer" onClick={navigationHandlers.documentation}>
                       <BookOpen className="w-4 h-4" />
                       {t("common.tooltips.documentation")}

@@ -26,6 +26,7 @@ const SimulationCharts = lazy(() => import("@/features/simulation-charts").then(
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
 const LandingPage = lazy(() => import("./features/landing"));
 
+import { Authorized } from "@/middleware/authorized";
 import { ProductTour } from "@/features/guided-tour/ProductTour";
 import NotificationProvider from "@/features/notifications/components/NotificationProvider";
 
@@ -96,7 +97,11 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/locations/view/:id" element={<LocationViewer />} />
                   <Route path="/app/locations/edit/:id" element={<LocationCreator editMode={true} />} />
                   <Route path="/app/profile" element={<ProfilePage />} />
-                  <Route path="/app/admin-dashboard" element={<Dashboard />} />
+                  <Route path="/app/admin-dashboard" element={
+                      <Authorized access={["manager", "expert"]} fallback={<Navigate to="/app/model-dashboard" replace />}>
+                        <Dashboard />
+                      </Authorized>
+                  } />
                   <Route path="/app/settings" element={<SettingsPage />} />
                   <Route path="/app/notifications" element={<NotificationsPage />} />
                 </Route>
