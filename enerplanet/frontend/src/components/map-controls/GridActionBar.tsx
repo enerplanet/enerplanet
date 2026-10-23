@@ -48,12 +48,15 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     if (!hasGridData) return null;
 
     return (
-        <div className="absolute bottom-10 left-4 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="flex items-center bg-card border border-border rounded-full shadow-lg">
+        // Centred under the visible map, which ends where the sidebar starts.
+        <div className="absolute bottom-10 z-40 -translate-x-1/2" style={{ left: "calc((100% - var(--sidebar-offset, 0rem)) / 2)" }}>
+            <div className="flex items-center bg-card border border-border rounded-full shadow-lg animate-in slide-in-from-bottom-2 fade-in duration-300">
                 {/* Add Transformer */}
                 <button
                     type="button"
                     onClick={onToggleAddTransformerMode}
+                    aria-label={t("workflow.addTransformerAction")}
+                    title={t("workflow.addTransformerAction")}
                     className={`
                         flex items-center gap-2 px-4 py-2.5 rounded-l-full transition-colors
                         ${isAddTransformerMode
@@ -63,7 +66,7 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     `}
                 >
                     <TransformerIcon className={`w-4 h-4 ${isAddTransformerMode ? "text-primary" : ""}`} />
-                    <span className="text-xs font-medium whitespace-nowrap">
+                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                         {t("workflow.addTransformerAction")}
                     </span>
                     <InfoIcon tooltipKey="addTransformer" position="top" />
@@ -77,10 +80,12 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                         <button
                             type="button"
                             onClick={onStartBuildingAssignMode}
+                    aria-label={t("workflow.assignBuildingsAction")}
+                    title={t("workflow.assignBuildingsAction")}
                             className="flex items-center gap-2 px-4 py-2.5 text-foreground hover:bg-muted/80 transition-colors"
                         >
                             <Building2 className="w-4 h-4" />
-                            <span className="text-xs font-medium whitespace-nowrap">
+                            <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                                 {t("workflow.assignBuildingsAction")}
                             </span>
                             <InfoIcon tooltipKey="assignBuildings" position="top" />
@@ -94,6 +99,8 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                 <button
                     type="button"
                     onClick={() => void onResolveAllHeat()}
+                    aria-label={t("workflow.resolveHeatAction") || "Resolve heat"}
+                    title={t("workflow.resolveHeatAction") || "Resolve heat"}
                     disabled={isResolvingHeat}
                     className="
                         flex items-center gap-2 px-4 py-2.5 text-foreground hover:bg-muted/80 transition-colors
@@ -105,7 +112,7 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     ) : (
                         <Flame className="w-4 h-4 text-orange-500" />
                     )}
-                    <span className="text-xs font-medium whitespace-nowrap">
+                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                         {t("workflow.resolveHeatAction") || "Resolve heat"}
                     </span>
                 </button>
@@ -116,6 +123,8 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                 <button
                     type="button"
                     onClick={onRunPowerFlow}
+                    aria-label={hasPowerFlowResults ? t("workflow.rerunPowerFlowAction") : t("workflow.runPowerFlowAction")}
+                    title={hasPowerFlowResults ? t("workflow.rerunPowerFlowAction") : t("workflow.runPowerFlowAction")}
                     disabled={isRunningPowerFlow}
                     className={`
                         flex items-center gap-2 px-4 py-2.5 rounded-r-full transition-colors
@@ -133,7 +142,7 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     ) : (
                         <Activity className="w-4 h-4" />
                     )}
-                    <span className="text-xs font-medium whitespace-nowrap">
+                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                         {hasPowerFlowResults
                             ? t("workflow.rerunPowerFlowAction")
                             : t("workflow.runPowerFlowAction")

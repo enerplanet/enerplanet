@@ -1476,7 +1476,9 @@
         "tooLarge": "Het bestand is te groot ({{detail}}); bestanden tot 5 MB kunnen worden geïmporteerd.",
         "tooComplex": "Het gebied is te gedetailleerd ({{detail}} polygonen / punten); tot 100 polygonen en 10.000 punten kunnen worden geïmporteerd.",
         "outOfRange": "Een coördinaat ({{detail}}) valt buiten het bereik van lengte- en breedtegraad. Gebruikt het bestand meters, dan moet het zijn coördinatenstelsel (crs) noemen."
-      }
+      },
+      "importAreaHint": "Laadt een modelgebied uit een GeoJSON-bestand (.geojson of .json) met Polygon- of MultiPolygon-features. Coördinaten in WGS 84 (EPSG:4326) of een nationaal raster zoals ETRS89 / UTM, zoals QGIS ze exporteert. Maximaal 100 polygonen, 10.000 punten en 5 MB. Het bestand vervangt het getekende gebied.",
+      "exportAreaHint": "Downloadt het getekende gebied als GeoJSON-bestand (WGS 84, EPSG:4326). Het kan in een ander model worden geïmporteerd of in QGIS worden geopend."
     },
     "powerFlow": {
       "run": "Vermogensstroomanalyse uitvoeren",
@@ -1542,7 +1544,6 @@
       "moreCount": "+{{count}} meer",
       "clickForDetails": "Klik voor meer details",
       "class": "Klasse",
-      "estimatedShort": "geschat",
       "buemTotal": "Totaal: {{value}}",
       "kitchenGas": "Kookgas: {{value}}",
       "geometry3d": "3D-geometrie: City2TABULA",
@@ -1588,7 +1589,8 @@
       "length": "Lengte",
       "type": "Type",
       "bus": "Knooppunt",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "notAnalysed": "Nog niet geanalyseerd"
     },
     "unsavedChanges": {
       "title": "Niet-opgeslagen wijzigingen",
@@ -1626,7 +1628,19 @@
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
       "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
-    }
+    },
+    "analysis": {
+      "button": "Gebouwen analyseren",
+      "running": "Vraag berekenen: {{done}} van {{total}} gebouwen",
+      "done": "Geanalyseerde gebouwen: {{count}}",
+      "failed": "niet geanalyseerd: {{count}} (beweeg over een gebouw voor de reden)",
+      "notYet": "Nog niet geanalyseerd. De analyse berekent de warmte-, koel- en elektriciteitsvraag van elk gebouw.",
+      "needsInputs": "Voer een modelnaam en een simulatieperiode in om de gebouwen te analyseren.",
+      "saveFailed": "Het model kon niet worden opgeslagen, dus de analyse is niet gestart.",
+      "startFailed": "De analyse kon niet worden gestart."
+    },
+    "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}.",
+    "periodYear": "Jaar"
   },
   "mapLayers": {
     "title": "Kaartlagen",
@@ -2596,24 +2610,13 @@
     "cables": "Kabels",
     "peakLoad": "Piekbelasting",
     "capacity": "Capaciteit",
-    "utilization": "Benutting",
-    "estCost": "Geschatte Kosten",
-    "cablesLabel": "Kabels",
-    "trafosLabel": "Transformatoren",
-    "costDescription": "Infrastructuurkosten incl. kabels & transformatoren",
     "buildingsTooltip": "Alle gebouwen uit OpenStreetMap in het geselecteerde gebied. PyLoVo schat de energievraag van elk gebouw op basis van oppervlakte, verdiepingen, huishoudgrootte en energielabel.",
-    "trafosTooltip": "Transformatoren die PyLoVo dimensioneert op de gelijktijdige belasting. Standaardmaten (100 tot 630 kVA) komen uit Duitse apparatuurcatalogi. De kosten per maat komen uit prijzen van geïnstalleerde apparatuur.",
-    "cablesTooltip": "LS-distributiekabels die PyLoVo tussen gebouwen en transformatoren legt. De kosten zijn lengte (m) maal prijs per meter (€/m) uit de catalogus, afhankelijk van het kabeltype.",
+    "trafosTooltip": "Transformatoren die PyLoVo dimensioneert op de gelijktijdige belasting. Standaardmaten (100 tot 630 kVA) komen uit Duitse apparatuurcatalogi.",
+    "cablesTooltip": "LS-distributiekabels die PyLoVo tussen gebouwen en transformatoren legt.",
     "lengthTooltip": "Totale lengte van alle LS-kabels in het net. De route volgt het kortste pad tussen de aansluitpunten van gebouwen en de transformatoren.",
-    "selectionNote": "Geselecteerde gebouwen en de kabels naar hun transformatoren. Hele net: {{buildings}} gebouwen, {{cables}} kabels, {{km}} km, {{utilisation}}% benutting.",
-    "simultaneousLoad": "Gelijktijdige last",
-    "peakLoadTooltip": "Som van de elektrische piekbelastingen van alle gebouwen (kW), afgeleid uit de geschatte jaarvraag van elk gebouw met standaardlastprofielen (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistische gelijktijdige belasting met een gelijktijdigheidsfactor, waarbij n het aantal gebouwen is. Niet alle gebouwen bereiken tegelijk hun piekbelasting.",
+    "selectionNote": "Geselecteerde gebouwen en de kabels naar hun transformatoren. Hele net: {{buildings}} gebouwen, {{cables}} kabels, {{km}} km.",
     "capacityTooltip": "Totaal nominaal vermogen van alle transformatoren (kVA). Transformatoren worden gekozen uit Duitse LS-standaardmaten om de gelijktijdige last met een veiligheidsmarge te dekken.",
-    "utilizationTooltip": "Benutting van transformatoren = gelijktijdige last ÷ totale capaciteit × 100%. Waarden boven 80% kunnen betekenen dat extra capaciteit nodig is.",
-    "cableCostTooltip": "Kabelkosten op basis van kabeltype en lengte. Prijzen uit Duitse LS-catalogi omvatten materiaal, graafwerk en aanleg (€/m).",
-    "trafoCostTooltip": "Kosten voor aanschaf en installatie van transformatoren. Prijzen per kVA-maat komen uit Duitse catalogi voor distributieapparatuur, gekoppeld aan de dichtstbijzijnde maat.",
-    "sourceNote": "Geschat door de PyLoVo-netberekening. Kosten uit Duitse LS-catalogi. Benutting op basis van gelijktijdige last."
+    "sourceNote": "Geschat door de PyLoVo-netberekening."
   },
   "tooltips": {
     "privateBuildings": {
@@ -3101,18 +3104,6 @@
   "transformer": {
     "onlyInsidePolygon": "Transformatoren kunnen alleen binnen het geselecteerde gebied worden geplaatst",
     "onlyNearPolygon": "Transformatoren kunnen tot 200 m buiten het geselecteerde gebied worden geplaatst"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Eigen transformatoren",
-    "transformer": "Transformator {{number}}",
-    "buildingCount": "Gebouwen: {{count}}",
-    "loadUtilization": "Belasting",
-    "low": "Laag",
-    "moderate": "Matig",
-    "medium": "Gemiddeld",
-    "high": "Hoog",
-    "overloaded": "Overbelast",
-    "mvLines": "MS-lijnen"
   },
   "buildingConfig": {
     "backToMap": "Terug naar de kaart",

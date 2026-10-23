@@ -9,7 +9,7 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import VectorSource from "ol/source/Vector";
 import Draw from "ol/interaction/Draw";
 import { MAP_ZOOM } from "@/features/interactive-map/utils/mapUtils";
-import { MapControls } from "@/components/map-controls/MapControls";
+import { MapControls, type MapControlsPlacement } from "@/components/map-controls/MapControls";
 
 import { MapContext } from "@/providers/map-context";
 
@@ -23,13 +23,15 @@ interface MapControlsWrapperProps {
 	onZoomIn: () => void;
 	onZoomOut: () => void;
 	onCenterMap: () => void;
+	placement?: MapControlsPlacement;
 }
 
-const MapControlsWrapper: React.FC<MapControlsWrapperProps> = ({ onZoomIn, onZoomOut, onCenterMap }) => (
+const MapControlsWrapper: React.FC<MapControlsWrapperProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement }) => (
 	<MapControls
 		onZoomIn={onZoomIn}
 		onZoomOut={onZoomOut}
 		onCenterMap={onCenterMap}
+		placement={placement}
 	/>
 );
 
@@ -39,11 +41,12 @@ const createMapControlsComponent = (
 	zoomOut: () => void,
 	centerMap: () => void
 ) => {
-	const MapControlsComponent = () => (
+	const MapControlsComponent = ({ placement }: { placement?: MapControlsPlacement }) => (
 		<MapControlsWrapper
 			onZoomIn={zoomIn}
 			onZoomOut={zoomOut}
 			onCenterMap={centerMap}
+			placement={placement}
 		/>
 	);
 	return MapControlsComponent;

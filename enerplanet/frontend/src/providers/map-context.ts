@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type React from "react";
+import type { MapControlsPlacement } from "@/components/map-controls/MapControls";
 
 interface MapContextValue {
   zoomIn: () => void;
@@ -7,7 +8,7 @@ interface MapContextValue {
   centerMap: () => void;
   initMapInstance: () => Promise<void>;
   clearDrawingLayers: () => void;
-  MapControls: React.FC;
+  MapControls: React.FC<{ placement?: MapControlsPlacement }>;
   mapRef: React.RefObject<HTMLDivElement | null>;
 }
 

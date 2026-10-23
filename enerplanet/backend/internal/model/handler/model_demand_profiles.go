@@ -16,8 +16,8 @@ import (
 //
 //	@Summary		Get a model's per-building BuEM energy profiles
 //	@Description	Returns every building's resolved annual energy profile for a model, along with
-//	@Description	resolution progress. Profiles are produced automatically whenever the model's
-//	@Description	config is saved with a non-empty building list; poll this endpoint until status
+//	@Description	resolution progress. Profiles are produced by POST /models/{id}/analyse and by a
+//	@Description	simulation run; poll this endpoint until status
 //	@Description	is "completed" to show a progress bar. A building with status "failed" carries
 //	@Description	error_message explaining why (no envelope match, BuEM rejected it, etc.) - that is
 //	@Description	a per-building outcome, not an endpoint error.

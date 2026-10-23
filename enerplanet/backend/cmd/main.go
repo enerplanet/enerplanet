@@ -300,7 +300,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
 	coatiRunner := resultservice.SubprocessCoatiRunner{}
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, cfg.PVVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
@@ -314,6 +314,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go startOrphanedRunSweep(db, jobs.AsynqLiveTasks{Inspector: asynq.NewInspector(asynqRedisOpt), Queues: []string{"buem", "results"}}, log)
+	go startSeriesSweep(db, log)
 
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
@@ -710,7 +711,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
-	weatherHandler := weather.NewWeatherHandler()
+	weatherHandler := weather.NewWeatherHandler(weatherclient.NewClient(deps.TentacronClient), deps.Cfg.WeatherProvider)
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
@@ -883,6 +884,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
+	api.POST(routeModelByID+"/analyse", modelHandler.AnalyseModel)
 	api.GET(routeModelByID+"/demand-profiles", modelHandler.GetModelDemandProfiles)
 	api.GET(routeModelByID+"/buildings/:building_ref/demand-profile", modelHandler.GetBuildingDemandProfile)
 	api.GET(routeModelByID+"/buildings/:building_ref/series/:series", modelHandler.GetBuildingSeriesWeek)
@@ -934,6 +936,7 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 	weatherRoutes := api.Group("/weather")
 	weatherRoutes.GET("", handler.GetWeather)
 	weatherRoutes.GET("/current", handler.GetCurrentWeather)
+	weatherRoutes.GET("/years", handler.GetYears)
 }
 
 // registerCity2TabulaRoutes wires the on-request 3D-data endpoints: the enrich
@@ -1056,6 +1059,23 @@ func startOrphanedRunSweep(db *gorm.DB, live jobs.AsynqLiveTasks, log *logrus.Lo
 			log.Errorf("orphaned run sweep failed: %v", err)
 		} else if len(failed) > 0 {
 			log.Warnf("orphaned run sweep: marked models %v failed, their runs had no task left", failed)
+		}
+		<-ticker.C
+	}
+}
+
+// startSeriesSweep deletes, at startup and daily, the BuEM and PV profiles
+// older than a day that no link refers to. Uploaded profiles are kept.
+func startSeriesSweep(db *gorm.DB, log *logrus.Logger) {
+	store := seriesstore.NewStore(db)
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		deleted, err := store.DeleteUnreferenced(time.Now().UTC().Add(-24 * time.Hour))
+		if err != nil {
+			log.Errorf("series sweep failed: %v", err)
+		} else if deleted > 0 {
+			log.Infof("series sweep: deleted %d unreferenced generated profiles", deleted)
 		}
 		<-ticker.C
 	}

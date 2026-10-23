@@ -110,7 +110,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
   // Without a stacking order the header loses to the map canvas below it; 30
   // clears the map while staying under the z-50 notification toast.
   return (
-    <div className="md-fade-in relative z-30 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
+    <div className="md-fade-in relative z-30 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-1.5">
       <div className="flex items-center gap-2">
         {!isLoadingPreference && (
           <Tooltip>
@@ -148,7 +148,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {selectedBuildingCount > 0 && onDisableSelectedBuildings && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
             <button
@@ -160,20 +160,28 @@ export const MapHeader: FC<MapHeaderProps> = ({
           </div>
         )}
         {onImportArea && (
-          <label className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
-            <FileUp className="w-3.5 h-3.5" />
-            {t("simulation.mapHeader.importArea")}
-            <input
-              type="file"
-              accept=".geojson,.json,application/geo+json,application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onImportArea(file);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <label
+                aria-label={t("simulation.mapHeader.importArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileUp className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.importArea")}</span>
+                <input
+                  type="file"
+                  accept=".geojson,.json,application/geo+json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onImportArea(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.importAreaHint")}</TooltipContent>
+          </Tooltip>
         )}
         {onRegenerateGrid && (
           <button
@@ -188,20 +196,26 @@ export const MapHeader: FC<MapHeaderProps> = ({
           </button>
         )}
         {onExportArea && allPolygonsCount > 0 && (
-          <button
-            type="button"
-            onClick={onExportArea}
-            className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            {t("simulation.mapHeader.exportArea")}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onExportArea}
+                aria-label={t("simulation.mapHeader.exportArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.exportArea")}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.exportAreaHint")}</TooltipContent>
+          </Tooltip>
         )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
             <button
               onClick={onClearAllPolygons}
-              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap"
             >
               {t("simulation.mapHeader.clearAll")} ({allPolygonsCount})
             </button>
@@ -211,7 +225,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
         {/* Custom Building Filters */}
         {onTogglePrivateBuildings && (
           <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+            <span className="text-xs font-medium text-foreground flex items-center gap-1 whitespace-nowrap">
               {t("simulation.mapHeader.myBuildings")}
               <InfoIcon tooltipKey="privateBuildings" position="bottom" />
             </span>

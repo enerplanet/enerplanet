@@ -3,6 +3,7 @@ import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { useMapProvider } from "@/providers/map-context";
 import { initializeMap } from '@/features/interactive-map/utils/mapUtils';
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
+import type { MapControlsPlacement } from "@/components/map-controls/MapControls";
 
 interface MapContainerProps {
 	topBar: ReactNode;
@@ -16,6 +17,8 @@ interface MapContainerProps {
     headerOffsetPx?: number;
 	onDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
 	onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
+	sidebarWidth?: string;
+	controlsPlacement?: MapControlsPlacement;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -30,6 +33,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 	headerOffsetPx = 56,
 	onDrop,
 	onDragOver,
+	sidebarWidth = "20rem",
+	controlsPlacement,
 }) => {
 	const { mapRef, initMapInstance, MapControls } = useMapProvider();
 	const { map } = useMapStore();
@@ -48,15 +53,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 					...(modal ? { paddingTop: `${headerOffsetPx}px` } : {}),
 					// Expose sidebar width as a CSS variable so overlays (MapControls) can offset
 					// @ts-expect-error: CSS custom property for sidebar offset
-					['--sidebar-offset']: showSidebar ? '20rem' : '0rem',
+					['--sidebar-offset']: showSidebar ? sidebarWidth : '0rem',
 				}}
 			>
-				<div className={`flex-shrink-0 ${showSidebar ? 'pr-80' : ''}`}>
+				<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
 					{topBar}
 				</div>
 
 				{mapHeader && (
-					<div className={`flex-shrink-0 ${showSidebar ? 'pr-80' : ''}`}>
+					<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
 						{mapHeader}
 					</div>
 				)}
@@ -74,7 +79,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 									onDragOver={onDragOver}
 								/>
 
-								{map && !muted && <MapControls />}
+								{map && !muted && <MapControls placement={controlsPlacement} />}
 
 								{mapOverlays}
 
@@ -89,8 +94,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
 				{showSidebar && (
 					<div
-						className="absolute right-0 w-80 z-40 bg-white border-l border-gray-200"
-						style={modal ? { top: `${headerOffsetPx}px`, height: `calc(100% - ${headerOffsetPx}px)` } : { top: 0, height: '100%' }}
+						className="absolute right-0 z-40 bg-white border-l border-gray-200"
+						style={{ width: sidebarWidth, ...(modal ? { top: `${headerOffsetPx}px`, height: `calc(100% - ${headerOffsetPx}px)` } : { top: 0, height: '100%' }) }}
 					>
 						{sidebar}
 					</div>
