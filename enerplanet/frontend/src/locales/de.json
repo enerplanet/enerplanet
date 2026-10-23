@@ -1891,7 +1891,8 @@
       "saveFailed": "Das Modell konnte nicht gespeichert werden, daher wurde die Analyse nicht gestartet.",
       "startFailed": "Die Analyse konnte nicht gestartet werden."
     },
-    "periodWithinYear": "Mehrjährige Simulationen werden noch nicht unterstützt, daher liegen jetzt beide Daten in {{year}}."
+    "periodWithinYear": "Mehrjährige Simulationen werden noch nicht unterstützt, daher liegen jetzt beide Daten in {{year}}.",
+    "periodYear": "Jahr"
   },
   "mapLayers": {
     "title": "Kartenebenen",

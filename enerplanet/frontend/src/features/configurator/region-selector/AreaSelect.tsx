@@ -1,6 +1,5 @@
 import { useEffect, Fragment, useCallback, useMemo, useState, useRef, type FC } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { parseDate } from "@internationalized/date";
 import { transformExtent } from "ol/proj";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -79,14 +78,6 @@ import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay"
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
-const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
-
-const getDateBounds = () => ({
-  minValue: parseDate(`${DATE_BOUNDS.minYear}-01-01`),
-  maxValue: parseDate(`${DATE_BOUNDS.maxYear}-12-31`),
-  minYear: DATE_BOUNDS.minYear,
-  maxYear: DATE_BOUNDS.maxYear,
-});
 
 interface AreaSelectProps {
   onAreaSelected?: (areaData: AreaData) => void;
@@ -601,7 +592,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onAdvancedParamsChange={actions.setAdvancedParams}
             onResetAdvancedParams={actions.handleResetAdvancedParams}
             handleModelNameChange={(e) => actions.setModelName(e.target.value)}
-            getDateBounds={getDateBounds}
             editMode={editMode}
             showTechDrawer={techOperations.showTechDrawer}
             onOpenTechDrawer={() => techOperations.setShowTechDrawer(true)}

@@ -1639,7 +1639,8 @@
       "saveFailed": "Het model kon niet worden opgeslagen, dus de analyse is niet gestart.",
       "startFailed": "De analyse kon niet worden gestart."
     },
-    "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}."
+    "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}.",
+    "periodYear": "Jaar"
   },
   "mapLayers": {
     "title": "Kaartlagen",

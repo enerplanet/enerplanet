@@ -1654,7 +1654,8 @@
       "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
       "startFailed": "Analýzu se nepodařilo spustit."
     },
-    "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}."
+    "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}.",
+    "periodYear": "Rok"
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

@@ -1654,7 +1654,8 @@
       "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
       "startFailed": "Nie udało się rozpocząć analizy."
     },
-    "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}."
+    "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}.",
+    "periodYear": "Rok"
   },
   "mapLayers": {
     "title": "Warstwy mapy",

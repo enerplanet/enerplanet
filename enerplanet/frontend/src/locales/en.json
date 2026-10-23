@@ -1891,7 +1891,8 @@
       "saveFailed": "The model could not be saved, so the analysis did not start.",
       "startFailed": "The analysis could not be started."
     },
-    "periodWithinYear": "Multi-year simulation is not supported yet, so both dates are now in {{year}}."
+    "periodWithinYear": "Multi-year simulation is not supported yet, so both dates are now in {{year}}.",
+    "periodYear": "Year"
   },
   "mapLayers": {
     "title": "Map Layers",

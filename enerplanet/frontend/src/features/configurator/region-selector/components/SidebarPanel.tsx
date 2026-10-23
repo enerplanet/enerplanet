@@ -41,7 +41,8 @@ import { useModelStore, type CookingCarrier, type RunMode } from "@/features/con
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
-import type { FC, ChangeEvent } from "react";
+import { useEffect, type FC, type ChangeEvent } from "react";
+import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
@@ -57,7 +58,6 @@ interface SidebarPanelProps {
   onAdvancedParamsChange: (params: ReturnType<typeof getDefaultAdvancedParameters>) => void;
   onResetAdvancedParams: () => void;
   handleModelNameChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  getDateBounds: () => { minValue: any; maxValue: any; minYear: number; maxYear: number };
   editMode: boolean;
   showTechDrawer: boolean;
   onOpenTechDrawer: () => void;
@@ -78,6 +78,55 @@ interface SidebarPanelProps {
   isStartingAnalysis: boolean;
   onAnalyse: () => void;
 }
+
+// The period lies in one year with weather data: the year is chosen from those
+// years, day and month are typed. A saved model keeps its year listed even when
+// the weather archive no longer has it, and a new model starts with the latest
+// full year that has weather data.
+function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editMode: boolean | undefined) {
+  const weatherYears = useWeatherYears();
+  const periodYear = state.fromDate ? Number(state.fromDate.slice(0, 4)) : undefined;
+  const yearOptions = periodYear && !weatherYears.includes(periodYear)
+    ? [...weatherYears, periodYear].sort((a, b) => a - b)
+    : weatherYears;
+  const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
+  const choosePeriodYear = (year: number) => {
+    if (!state.fromDate || !state.toDate) return actions.handleUpdateRange(fullYear(year));
+    actions.handleUpdateRange({ start: parseDate(state.fromDate).set({ year }), end: parseDate(state.toDate).set({ year }) });
+  };
+  const latestYear = weatherYears.at(-1);
+  useEffect(() => {
+    if (!editMode && !state.fromDate && latestYear) actions.handleUpdateRange(fullYear(latestYear));
+    // Only the first answer fills an empty period; later edits are the user's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestYear]);
+  // The calendar's first and last selectable days.
+  const yearBounds = yearOptions.length
+    ? { start: fullYear(yearOptions[0]).start, end: fullYear(yearOptions[yearOptions.length - 1]).end }
+    : undefined;
+  return { periodYear, yearOptions, yearBounds, choosePeriodYear };
+}
+
+/** The simulation period's year, chosen from the years with weather data. */
+const PeriodYearSelect: FC<{ year: number | undefined; years: number[]; onChange: (year: number) => void }> = ({ year, years, onChange }) => {
+  const { t } = useTranslation();
+  return (
+    <select
+      aria-label={t("simulation.periodYear")}
+      value={year ?? ""}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-full shrink-0 cursor-pointer border-r border-border bg-transparent pl-3 pr-1 text-xs font-medium text-foreground outline-none"
+    >
+      {year === undefined && <option value="">{t("simulation.periodYear")}</option>}
+      {years.map((y) => (
+        <option key={y} value={y}>{y}</option>
+      ))}
+    </select>
+  );
+};
+
+// Hides a date field's year segment and the separator before it, in every locale's order.
+const HIDE_YEAR_SEGMENT = "[&_[data-type=year]]:hidden [&_[data-type=literal]:has(+[data-type=year])]:hidden";
 
 /** The analysis state under the Analyse buildings button. */
 const analysisText = (progress: AnalysisProgress | null, t: (key: string, opts?: Record<string, unknown>) => string): string => {
@@ -100,7 +149,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onAdvancedParamsChange,
   onResetAdvancedParams,
   handleModelNameChange,
-  getDateBounds,
   editMode,
   showTechDrawer,
   onOpenTechDrawer,
@@ -128,6 +176,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const siteMode = useModelStore((s) => s.siteMode);
   const gridStale = useModelStore((s) => s.gridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
+
+  const { periodYear, yearOptions, yearBounds, choosePeriodYear } = usePeriodYear(state, actions, editMode);
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
@@ -277,11 +327,13 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                     "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
                   )}
                 >
-                  <DateInput slot="start" unstyled className="text-xs pl-3 py-2" />
+                  <PeriodYearSelect year={periodYear} years={yearOptions} onChange={choosePeriodYear} />
+                  {/* Day and month are typed; the year comes from the select above. */}
+                  <DateInput slot="start" unstyled className={cn("text-xs pl-3 py-2", HIDE_YEAR_SEGMENT)} />
                   <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
                     -
                   </span>
-                  <DateInput slot="end" unstyled className="text-xs pr-10 py-2" />
+                  <DateInput slot="end" unstyled className={cn("text-xs pr-10 py-2", HIDE_YEAR_SEGMENT)} />
                   <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
                     <CalendarIcon size={16} />
                   </Trigger>
@@ -297,10 +349,9 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                   onChange={(range) =>
                     actions.handleUpdateRange({ start: range.start, end: range.end })
                   }
-                  minValue={getDateBounds().minValue}
-                  maxValue={getDateBounds().maxValue}
-                  minYear={getDateBounds().minYear}
-                  maxYear={getDateBounds().maxYear}
+                  minValue={yearBounds?.start}
+                  maxValue={yearBounds?.end}
+                  years={yearOptions}
                   withinStartYear
                 />
               </Dialog>
