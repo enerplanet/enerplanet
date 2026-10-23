@@ -20,7 +20,6 @@ import {
   OVERVIEW_ZOOM,
   boundaryStyleFunction,
   selectedBoundaryStyleFunction,
-  searchBoundaryStyleFunction,
   boundaryLabelStyle,
 } from '@/features/interactive-map/utils/mapStyleUtils';
 
@@ -448,77 +447,6 @@ export const highlightSelectedRegionBoundary = (
     vectorLayer.setVisible(regionName === null || hasTarget);
     src.changed();
   });
-};
-
-/**
- * Load a search result boundary onto the map.
- * Uses a distinct teal/cyan style so it stands out from region boundaries.
- */
-export const loadSearchBoundaryLayer = (
-  map: OLMap,
-  geojsonGeometry: GeoJSON.GeoJsonObject,
-  name?: string
-): VectorLayer<VectorSource> => {
-  // Remove any existing search boundary
-  removeSearchBoundaryLayer(map);
-
-  const geojsonFormat = new GeoJSON();
-
-  // Wrap the geometry in a Feature if it's just a geometry object
-  const featureCollection = (geojsonGeometry as any).type === 'Feature' || (geojsonGeometry as any).type === 'FeatureCollection'
-    ? geojsonGeometry
-    : {
-        type: 'FeatureCollection',
-        features: [{
-          type: 'Feature',
-          geometry: geojsonGeometry,
-          properties: {}
-        }]
-      };
-
-  const features = geojsonFormat.readFeatures(featureCollection, {
-    dataProjection: 'EPSG:4326',
-    featureProjection: 'EPSG:3857'
-  });
-
-  if (name && features[0]) {
-    features[0].set('name', name);
-  }
-
-  const source = new VectorSource({ features });
-
-  const layer = new VectorLayer({
-    source,
-    style: (feature: FeatureLike, resolution: number): ReturnType<StyleFunction> => {
-      const styles = searchBoundaryStyleFunction(feature as Feature<Geometry>, resolution);
-
-      const featureName = feature.get('name');
-      const geom = (feature as Feature<Geometry>).getGeometry();
-      if (featureName && geom) {
-        styles.push(boundaryLabelStyle(featureName, geom, resolution));
-      }
-
-      return styles;
-    },
-    zIndex: 55,
-    properties: { name: 'search-boundary' }
-  });
-
-  map.addLayer(layer);
-  return layer;
-};
-
-/**
- * Remove search boundary layer from map
- */
-export const removeSearchBoundaryLayer = (map: OLMap): void => {
-  const toRemove: any[] = [];
-  map.getLayers().forEach((layer) => {
-    if (layer.get('name') === 'search-boundary') {
-      toRemove.push(layer);
-    }
-  });
-  toRemove.forEach(layer => map.removeLayer(layer));
 };
 
 

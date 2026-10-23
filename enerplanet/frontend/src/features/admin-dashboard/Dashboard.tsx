@@ -10,7 +10,6 @@ import {
 	UserCog,
 	Brain,
 	Layers,
-	MapPin,
 	Zap,
 	LayoutDashboard,
 	ChevronRight,
@@ -389,7 +388,6 @@ export const Dashboard: React.FC = () => {
 
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 								{[
-									{ icon: MapPin, label: t('adminDashboard.quickActions.interactiveMap'), description: t('adminDashboard.quickActions.viewRiskMap'), path: "/app/map" },
 									{ icon: Brain, label: t('adminDashboard.quickActions.riskModels'), description: t('adminDashboard.quickActions.manageRiskModels'), path: "/app/model-dashboard" },
 									{ icon: Settings, label: t('adminDashboard.quickActions.settings'), description: t('adminDashboard.quickActions.configurePreferences'), path: "/app/settings" },
 								].map((action) => (

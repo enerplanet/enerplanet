@@ -170,8 +170,7 @@
       "documentation": "Dokumentace",
       "restartTour": "Restartovat prohlídku",
       "feedback": "Zpětná vazba",
-      "theme": "Motiv",
-      "searchLocation": "Hledat místo"
+      "theme": "Motiv"
     },
     "sidebar": {
       "energySimulations": "Energetické Simulace",
@@ -1063,8 +1062,6 @@
     "quickActions": {
       "title": "Rychlé Akce",
       "subtitle": "Přejít na klíčové funkce",
-      "interactiveMap": "Interaktivní Mapa",
-      "viewRiskMap": "Zobrazit mapu hodnocení rizik",
       "riskModels": "Modely Rizik",
       "manageRiskModels": "Spravovat modely rizik",
       "settings": "Nastavení",
@@ -2343,14 +2340,10 @@
     "resetTopDown": "Obnovit pohled shora",
     "rightClickRotate": "Pravé tlačítko + táhnout pro otočení",
     "regions": "regiony",
-    "myModels": "moje modely",
     "grids": "mřížky",
     "countries": "země"
   },
   "privacy": {
-    "dataAndPrivacy": "Data a soukromí",
-    "acceptTerms": "Přijmout podmínky ochrany soukromí",
-    "openSettings": "Otevřít nastavení dat a soukromí",
     "dialogTitle": "Zpracování dat a soukromí",
     "cartoDescription": "Pro poskytování našich služeb využíváme CARTO a OSMF jako poskytovatele mapových služeb třetí strany.",
     "sharedWithCarto": "Přijetím budou s CARTO a OSMF sdíleny následující údaje:",

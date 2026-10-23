@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [init, reset, applyUser]);
 
   // Bootstrap the session from the cookie when we land on a protected route
-  // without a cached user — e.g. after the SSO callback redirects to /app/map.
+  // without a cached user, e.g. after the SSO callback redirects to /app/model-dashboard.
   useEffect(() => {
     if (!isProtectedRoute || storeUser) {
       setIsLoading(false);

@@ -230,8 +230,7 @@
       "documentation": "Dokumentation",
       "restartTour": "Tour neu starten",
       "feedback": "Feedback",
-      "theme": "Design",
-      "searchLocation": "Standort suchen"
+      "theme": "Design"
     },
     "sidebar": {
       "energySimulations": "Energiesimulationen",
@@ -1305,8 +1304,6 @@
     "quickActions": {
       "title": "Schnellaktionen",
       "subtitle": "Zu wichtigen Funktionen navigieren",
-      "interactiveMap": "Interaktive Karte",
-      "viewRiskMap": "Risikobewertungskarte anzeigen",
       "riskModels": "Risikomodelle",
       "manageRiskModels": "Risikomodelle verwalten",
       "settings": "Einstellungen",
@@ -2697,14 +2694,10 @@
     "resetTopDown": "Auf Draufsicht zurücksetzen",
     "rightClickRotate": "Rechtsklick + ziehen zum Drehen",
     "regions": "Regionen",
-    "myModels": "Meine Modelle",
     "grids": "Raster",
     "countries": "Länder"
   },
   "privacy": {
-    "dataAndPrivacy": "Daten & Datenschutz",
-    "acceptTerms": "Datenschutzbedingungen akzeptieren",
-    "openSettings": "Daten- & Datenschutzeinstellungen öffnen",
     "dialogTitle": "Datenverarbeitung & Datenschutz",
     "cartoDescription": "Um Ihnen unsere Dienste anbieten zu können, nutzen wir CARTO und OSMF als Drittanbieter für Kartendienste.",
     "sharedWithCarto": "Mit der Annahme werden folgende Daten mit CARTO und OSMF geteilt:",

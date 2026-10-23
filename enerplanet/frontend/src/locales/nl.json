@@ -170,8 +170,7 @@
       "documentation": "Documentatie",
       "restartTour": "Tour herstarten",
       "feedback": "Feedback",
-      "theme": "Thema",
-      "searchLocation": "Zoek locatie"
+      "theme": "Thema"
     },
     "sidebar": {
       "energySimulations": "Energiesimulaties",
@@ -1048,8 +1047,6 @@
     "quickActions": {
       "title": "Snelle Acties",
       "subtitle": "Navigeer naar belangrijke functies",
-      "interactiveMap": "Interactieve Kaart",
-      "viewRiskMap": "Bekijk risicobeoordelingskaart",
       "riskModels": "Risicomodellen",
       "manageRiskModels": "Beheer risicomodellen",
       "settings": "Instellingen",
@@ -2328,14 +2325,10 @@
     "resetTopDown": "Terug naar bovenaanzicht",
     "rightClickRotate": "Rechtsklik + slepen om te draaien",
     "regions": "regio's",
-    "myModels": "mijn modellen",
     "grids": "rasters",
     "countries": "landen"
   },
   "privacy": {
-    "dataAndPrivacy": "Gegevens & Privacy",
-    "acceptTerms": "Privacyvoorwaarden accepteren",
-    "openSettings": "Gegevens- en privacy-instellingen openen",
     "dialogTitle": "Gegevensverwerking & Privacy",
     "cartoDescription": "Om u onze diensten te kunnen leveren, maken we gebruik van CARTO en OSMF als externe kaartproviders.",
     "sharedWithCarto": "Door te accepteren worden de volgende gegevens gedeeld met CARTO en OSMF:",
