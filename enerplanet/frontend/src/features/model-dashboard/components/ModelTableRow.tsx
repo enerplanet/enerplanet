@@ -301,14 +301,17 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const isFavorite = useFavoriteModelsStore((s) => s.isFavorite);
   const favorited = isFavorite(model.id);
   const level = model.level || 0;
-  // Copies sit in their family's block (ModelDashboard); only the name is indented.
+  // Copies follow their original; only the name is indented.
   const nameIndentClass = level > 0 ? "pl-6" : "";
+  // An original starts below a full-width line; a copy's line starts at the
+  // name column, so the family reads as one block.
+  const copyDivider = level > 0 ? "border-t border-border/60" : "";
   const canManageModel = canUserDeleteModel(model);
 
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
-  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${
+  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${level === 0 ? "border-t border-border" : ""} ${
     isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""
   }`;
 
@@ -338,7 +341,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
+      <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass} ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
             <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
@@ -359,7 +362,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {isActiveStatus(model.status) ? (
             <RunStages status={model.status} />
@@ -414,11 +417,11 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="hidden px-4 py-2.5 md:table-cell">
+      <td className={`hidden px-4 py-2.5 md:table-cell ${copyDivider}`}>
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
           <ModelActions
             model={model}

@@ -129,23 +129,15 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 	);
 }
 
-// Copies sit in a box inset by its cell's p-3 (0.75rem) and the box's 1px border.
-const COPY_INSET = "0.75rem + 1px";
-
-/**
- * Column widths shared by the model table and the copies' table inside it. The
- * name column takes the rest; with inset, the outer columns shrink by
- * COPY_INSET so every copy column lines up with the parent rows.
- */
-function ModelColumns({ inset = false }: { inset?: boolean }) {
-	const edge = (width: string) => (inset ? `calc(${width} - (${COPY_INSET}))` : width);
+/** Column widths of the model table; the name column takes the rest. */
+function ModelColumns() {
 	return (
 		<colgroup>
-			<col style={{ width: edge("5rem") }} />
+			<col style={{ width: "5rem" }} />
 			<col />
 			<col style={{ width: "24rem" }} />
 			<col className="hidden md:table-column" style={{ width: "10rem" }} />
-			<col style={{ width: edge("22rem") }} />
+			<col style={{ width: "22rem" }} />
 		</colgroup>
 	);
 }
@@ -884,10 +876,10 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 						</div>
 					)}
 
-					{/* Main Content Card */}
-					<div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: "60ms" }}>
+					{/* Toolbar and table, each in its own card */}
+					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
-						<div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5">
+						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
 							{/* Search */}
 							<div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -991,7 +983,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							</div>
 
 							{/* Table */}
-							<div className="border-t border-border p-4 sm:px-5 sm:pb-5">
+							<div>
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
 								<div className="space-y-3">
@@ -1011,7 +1003,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className="md-fade-in overflow-hidden rounded-xl border border-border">
+										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
 									<div className="w-full overflow-auto">
 										<table className="w-full min-w-[75rem] table-fixed">
 											<ModelColumns />
@@ -1095,24 +1087,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 													)}
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-border bg-card">
+											<tbody className="bg-card">
 												{families.map(({ original, copies }) => (
 													<Fragment key={original.id}>
 														{renderRow(original)}
-														{copies.length > 0 && (
-															<tr>
-																<td colSpan={5} className="p-3">
-																	<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-muted/30">
-																		<table className="w-full table-fixed">
-																			<ModelColumns inset />
-																			<tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-																				{copies.map(renderRow)}
-																			</tbody>
-																		</table>
-																	</div>
-																</td>
-															</tr>
-														)}
+														{copies.map(renderRow)}
 													</Fragment>
 												))}
 											</tbody>
