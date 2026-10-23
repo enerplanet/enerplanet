@@ -466,6 +466,13 @@ func (c *Client) GetSurfaceGeometryByObjectIDs(ctx context.Context, country stri
 	return c.getGeometry(ctx, country, objectIDs, map[string]any{"include": "surfaces"})
 }
 
+// GetSurfaceGeometryWGS84 is GetSurfaceGeometryByObjectIDs reprojected to
+// EPSG:4326, for drawing on a web map. Surfaces keep their z, the height above
+// sea level; the footprint is 2D. Ask for one building at a time, as above.
+func (c *Client) GetSurfaceGeometryWGS84(ctx context.Context, country string, objectIDs []string) (GeometryResult, error) {
+	return c.getGeometry(ctx, country, objectIDs, map[string]any{"include": "surfaces", "srid": "4326"})
+}
+
 // getGeometry backs every variant. Unconsumed payload fields reach City2TABULA
 // as query parameters, so the options in extra travel without any target
 // configuration.
