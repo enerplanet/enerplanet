@@ -1,4 +1,3 @@
-import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
@@ -267,8 +266,6 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
 
     return (
         <>
-            <MapSearchBar />
-
             {/* Grid Generation Loader - minimal floating pill at top center */}
             {isGeneratingGrid && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">

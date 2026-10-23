@@ -14,7 +14,7 @@ interface MapLibre3DControlsProps {
 // also leaves room for the configurator's shortcuts button in that column.
 const RESET_STYLE: Record<MapControlsPlacement, { className: string; style: React.CSSProperties }> = {
   "top-right": { className: "absolute z-[60] pointer-events-auto", style: { top: 152, right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
-  "top-left": { className: "absolute z-[5] pointer-events-auto", style: { top: "13.5rem", left: "1rem" } },
+  "top-left": { className: "absolute z-[5] pointer-events-auto", style: { top: "11rem", left: "1rem" } },
 };
 
 /**
