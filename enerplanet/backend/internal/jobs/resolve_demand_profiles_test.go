@@ -2,11 +2,15 @@ package jobs
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	commonModels "platform.local/common/pkg/models"
 
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/ignis"
@@ -186,4 +190,27 @@ func TestModelWeatherPeriod(t *testing.T) {
 	for config, want := range cases {
 		assert.Equal(t, want, modelWeatherPeriod([]byte(config)), config)
 	}
+}
+
+// DemandBuildings lists the buildings an analysis marks pending: the building of
+// the topology, not its transformers, with the model's refurbishment level.
+func TestDemandBuildings(t *testing.T) {
+	country := "netherlands"
+	model := &commonModels.Model{
+		Country:  &country,
+		FromDate: time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC),
+		ToDate:   time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC),
+		Config:   []byte(strings.Replace(memeTopologyConfig, `{"topology"`, `{"refurbishmentLevel":"medium","topology"`, 1)),
+	}
+
+	osmIDs, refurbishment, err := DemandBuildings(model)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"268428040"}, osmIDs)
+	assert.Equal(t, string(ignis.RefurbishmentMedium), refurbishment)
+}
+
+func TestDemandBuildings_withoutCountryIsAnError(t *testing.T) {
+	_, _, err := DemandBuildings(&commonModels.Model{Config: []byte(memeTopologyConfig)})
+	require.Error(t, err)
 }

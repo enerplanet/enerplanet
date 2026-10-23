@@ -317,6 +317,16 @@ func (t *energyTotal) value() *float64 {
 // buildCalculationPayload builds model's calculation payload and asserts its
 // concrete type - BuildCalculationPayload always returns a payload.CalculationPayload
 // wrapped as interface{}; the assertion only fails if that ever stops holding.
+// DemandBuildings returns the osm ids of the buildings a demand resolve of the
+// model covers, and the refurbishment level it records for them.
+func DemandBuildings(model *commonModels.Model) ([]string, string, error) {
+	calcPayload, err := buildCalculationPayload(model)
+	if err != nil {
+		return nil, "", err
+	}
+	return buildingOSMIDs(calcPayload.Topology), string(modelRefurbishmentLevel(model.Config)), nil
+}
+
 func buildCalculationPayload(model *commonModels.Model) (payload.CalculationPayload, error) {
 	iface, err := payload.BuildCalculationPayload(model)
 	if err != nil {

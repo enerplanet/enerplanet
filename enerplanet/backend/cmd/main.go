@@ -883,6 +883,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
+	api.POST(routeModelByID+"/analyse", modelHandler.AnalyseModel)
 	api.GET(routeModelByID+"/demand-profiles", modelHandler.GetModelDemandProfiles)
 	api.GET(routeModelByID+"/buildings/:building_ref/demand-profile", modelHandler.GetBuildingDemandProfile)
 	api.GET(routeModelByID+"/buildings/:building_ref/series/:series", modelHandler.GetBuildingSeriesWeek)

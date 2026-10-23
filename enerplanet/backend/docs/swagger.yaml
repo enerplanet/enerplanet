@@ -600,6 +600,15 @@ definitions:
           type: string
         type: array
     type: object
+  spatialhub_backend_internal_api_contracts.ModelAnalysisResponse:
+    properties:
+      buildings:
+        example: 42
+        type: integer
+      status:
+        example: queued
+        type: string
+    type: object
   spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse:
     properties:
       buildings:
@@ -1012,6 +1021,55 @@ paths:
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
+  /models/{id}/analyse:
+    post:
+      description: |-
+        Starts the BuEM demand analysis of every building in the saved model. Saving a
+        model does not start it. Poll GET /models/{id}/demand-profiles for progress until
+        its status is "completed". A request while an analysis of the model is still
+        running returns status "running" and starts nothing new.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelAnalysisResponse'
+        "403":
+          description: Not allowed to edit the model
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Model not found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "409":
+          description: The model uses the estimated heat demand
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "422":
+          description: The model has no buildings to analyse
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "503":
+          description: The job queue is not configured
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Analyse every building of a model
+      tags:
+      - EnerPlanET
   /models/{id}/buildings/{building_ref}/buem:
     post:
       consumes:
@@ -1202,8 +1260,8 @@ paths:
     get:
       description: |-
         Returns every building's resolved annual energy profile for a model, along with
-        resolution progress. Profiles are produced automatically whenever the model's
-        config is saved with a non-empty building list; poll this endpoint until status
+        resolution progress. Profiles are produced by POST /models/{id}/analyse and by a
+        simulation run; poll this endpoint until status
         is "completed" to show a progress bar. A building with status "failed" carries
         error_message explaining why (no envelope match, BuEM rejected it, etc.) - that is
         a per-building outcome, not an endpoint error.

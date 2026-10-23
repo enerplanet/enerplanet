@@ -203,6 +203,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/models/{id}/analyse": {
+            "post": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Starts the BuEM demand analysis of every building in the saved model. Saving a\nmodel does not start it. Poll GET /models/{id}/demand-profiles for progress until\nits status is \"completed\". A request while an analysis of the model is still\nrunning returns status \"running\" and starts nothing new.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Analyse every building of a model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ModelAnalysisResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Not allowed to edit the model",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Model not found",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The model uses the estimated heat demand",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The model has no buildings to analyse",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "The job queue is not configured",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/models/{id}/buildings/{building_ref}/buem": {
             "post": {
                 "security": [
@@ -477,7 +547,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns every building's resolved annual energy profile for a model, along with\nresolution progress. Profiles are produced automatically whenever the model's\nconfig is saved with a non-empty building list; poll this endpoint until status\nis \"completed\" to show a progress bar. A building with status \"failed\" carries\nerror_message explaining why (no envelope match, BuEM rejected it, etc.) - that is\na per-building outcome, not an endpoint error.",
+                "description": "Returns every building's resolved annual energy profile for a model, along with\nresolution progress. Profiles are produced by POST /models/{id}/analyse and by a\nsimulation run; poll this endpoint until status\nis \"completed\" to show a progress bar. A building with status \"failed\" carries\nerror_message explaining why (no envelope match, BuEM rejected it, etc.) - that is\na per-building outcome, not an endpoint error.",
                 "produces": [
                     "application/json"
                 ],
@@ -2257,6 +2327,19 @@ const docTemplate = `{
                     "example": [
                         "DE.N.SFH.01.Gen"
                     ]
+                }
+            }
+        },
+        "spatialhub_backend_internal_api_contracts.ModelAnalysisResponse": {
+            "type": "object",
+            "properties": {
+                "buildings": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "status": {
+                    "type": "string",
+                    "example": "queued"
                 }
             }
         },
