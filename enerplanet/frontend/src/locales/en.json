@@ -235,7 +235,6 @@
     "sidebar": {
       "energySimulations": "Energy Simulations",
       "map": "Map",
-      "locations": "Locations",
       "simulationReports": "Model Comparison",
       "technologies": "Technologies"
     },

@@ -99,7 +99,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onOp
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="group flex h-11 w-full cursor-pointer items-center rounded-button text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="group flex h-11 w-full cursor-pointer items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <span className={RAIL_ICON_SLOT}>
                 <Bell className={cn(

@@ -139,7 +139,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {
         path: "/app/locations",
         icon: MapPinHouse,
-        title: t("common.sidebar.locations"),
+        title: t("locations.title"),
         color: "#ef4444",
         bgColor: "#fee2e2",
         dataTour: "locations",
@@ -218,8 +218,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               data-rail-expand
               className="relative mb-8 block h-11 rounded-lg transition-opacity hover:opacity-80"
             >
-              <img src="/brand/enerplanet-mark-green-outline.svg" alt="" className={`absolute left-0.5 top-0.5 h-10 w-auto dark:hidden ${RAIL_HIDE}`} />
-              <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="" className={`absolute left-0.5 top-0.5 hidden h-10 w-auto dark:block ${RAIL_HIDE}`} />
+              <span className="absolute inset-y-0 left-0 flex w-11 items-center justify-center">
+                <img src="/brand/enerplanet-mark-green-outline.svg" alt="" className={`h-10 w-auto dark:hidden ${RAIL_HIDE}`} />
+                <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="" className={`hidden h-10 w-auto dark:block ${RAIL_HIDE}`} />
+              </span>
               <img src="/brand/enerplanet-lockup-green-outline.svg" alt="" className={`absolute left-0 top-0.5 h-10 w-auto max-w-none dark:hidden ${RAIL_SHOW}`} />
               <img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="" className={`absolute left-0 top-0.5 hidden h-10 w-auto max-w-none dark:block ${RAIL_SHOW}`} />
             </a>

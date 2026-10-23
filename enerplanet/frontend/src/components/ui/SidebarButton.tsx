@@ -28,7 +28,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     data-rail-expand
     aria-current={isActive ? "page" : undefined}
     className={cn(
-      "flex h-11 w-full cursor-pointer items-center rounded-button transition-colors duration-normal",
+      "flex h-11 w-full cursor-pointer items-center rounded-lg transition-colors duration-normal",
       isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
       className
     )}
