@@ -95,6 +95,9 @@
 }
 
 .dark {
+  /* Native controls (select option lists, scrollbars) take their colours from the
+     browser, not from the tokens below. */
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
