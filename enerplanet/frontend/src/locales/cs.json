@@ -1444,7 +1444,6 @@
     "title": "Konfigurace simulace",
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
-    "modelNameHint": "Dejte své simulaci popisný název",
     "simulationPeriod": "Období simulace",
     "duration": "Trvání",
     "days": "dní",
