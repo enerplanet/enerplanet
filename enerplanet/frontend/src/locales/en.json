@@ -1835,12 +1835,6 @@
       "discard": "Discard changes"
     },
     "resolutionComingSoon": "30-minute resolution coming in a future release",
-    "cooking": {
-      "label": "Cooking",
-      "electric": "Electric",
-      "gas": "Gas",
-      "hint": "With gas, the buildings' cooking becomes a gas demand bought from a gas supply"
-    },
     "runMode": {
       "label": "Run mode",
       "plan": "Plan",

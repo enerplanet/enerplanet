@@ -1840,12 +1840,6 @@
       "discard": "Descartar cambios"
     },
     "resolutionComingSoon": "La resolución de 30 minutos llegará en una versión futura",
-    "cooking": {
-      "label": "Cocina",
-      "electric": "Eléctrica",
-      "gas": "Gas",
-      "hint": "Con gas, la cocina de los edificios pasa a ser una demanda de gas comprada a un suministro de gas"
-    },
     "runMode": {
       "label": "Modo de cálculo",
       "plan": "Planificar",

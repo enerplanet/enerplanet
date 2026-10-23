@@ -1584,12 +1584,6 @@
       "discard": "Annulla modifiche"
     },
     "resolutionComingSoon": "La risoluzione a 30 minuti arriverà in una versione futura",
-    "cooking": {
-      "label": "Cottura",
-      "electric": "Elettrica",
-      "gas": "Gas",
-      "hint": "Con il gas, la cottura degli edifici diventa una domanda di gas acquistata da una fornitura di gas"
-    },
     "runMode": {
       "label": "Modalità di calcolo",
       "plan": "Pianificare",

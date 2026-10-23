@@ -1598,12 +1598,6 @@
       "discard": "Odrzuć zmiany"
     },
     "resolutionComingSoon": "Rozdzielczość 30-minutowa pojawi się w przyszłej wersji",
-    "cooking": {
-      "label": "Gotowanie",
-      "electric": "Elektryczne",
-      "gas": "Gaz",
-      "hint": "Przy gazie gotowanie w budynkach staje się zapotrzebowaniem na gaz kupowany z dostawy gazu"
-    },
     "runMode": {
       "label": "Tryb obliczeń",
       "plan": "Planowanie",

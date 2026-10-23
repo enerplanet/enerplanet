@@ -29,7 +29,7 @@ import {
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
-import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
+import { useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon, TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -107,8 +107,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const appLang = i18n.language?.split("-")[0] || "en";
-  const cookingCarrier = useModelStore((s) => s.cookingCarrier);
-  const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
   const siteMode = useModelStore((s) => s.siteMode);
@@ -288,18 +286,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             options={[
               { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
               { value: "60", label: "60 min" },
-            ]}
-          />
-        </SettingRow>
-
-        <SettingRow label={t("simulation.cooking.label")} hint={t("simulation.cooking.hint")}>
-          <SegmentedControl
-            aria-label={t("simulation.cooking.label")}
-            value={cookingCarrier}
-            onChange={(value) => setCookingCarrier(value as CookingCarrier)}
-            options={[
-              { value: "electric", label: t("simulation.cooking.electric") },
-              { value: "gas", label: t("simulation.cooking.gas") },
             ]}
           />
         </SettingRow>
