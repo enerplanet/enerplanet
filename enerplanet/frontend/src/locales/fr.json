@@ -3044,7 +3044,7 @@
   },
   "buildingConfig": {
     "backToMap": "Retour à la carte",
-    "preparing": "Préparation des données 3D de ce bâtiment. City2TABULA extrait et relie les bâtiments de la zone, ce qui peut prendre quelques minutes la première fois qu'une zone est utilisée. Le bâtiment s'ouvrira ici dès qu'il sera prêt.",
+    "preparing": "Préparation des données 3D de ce bâtiment.",
     "loading": "Chargement du bâtiment…",
     "noGeometry": "City2TABULA ne contient plus la géométrie 3D de ce bâtiment.",
     "credit3dData": "Données 3D",

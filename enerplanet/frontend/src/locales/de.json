@@ -3039,7 +3039,7 @@
   },
   "buildingConfig": {
     "backToMap": "Zurück zur Karte",
-    "preparing": "Die 3D-Daten dieses Gebäudes werden vorbereitet. City2TABULA extrahiert und verknüpft die Gebäude des Gebiets. Beim ersten Aufruf eines Gebiets kann das einige Minuten dauern. Das Gebäude öffnet sich hier, sobald es bereit ist.",
+    "preparing": "3D-Daten für dieses Gebäude werden vorbereitet.",
     "loading": "Gebäude wird geladen…",
     "noGeometry": "City2TABULA enthält die 3D-Geometrie dieses Gebäudes nicht mehr.",
     "credit3dData": "3D-Daten",

@@ -3064,7 +3064,7 @@
   },
   "buildingConfig": {
     "backToMap": "Zpět na mapu",
-    "preparing": "Připravují se 3D data této budovy. City2TABULA extrahuje a propojuje budovy v oblasti, což může při prvním použití oblasti trvat několik minut. Budova se zde otevře, jakmile bude připravena.",
+    "preparing": "Připravujeme 3D data pro tuto budovu.",
     "loading": "Načítání budovy…",
     "noGeometry": "City2TABULA již neobsahuje 3D geometrii této budovy.",
     "credit3dData": "3D data",

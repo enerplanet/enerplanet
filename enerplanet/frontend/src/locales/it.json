@@ -3050,7 +3050,7 @@
   },
   "buildingConfig": {
     "backToMap": "Torna alla mappa",
-    "preparing": "Preparazione dei dati 3D di questo edificio. City2TABULA sta estraendo e collegando gli edifici dell'area: la prima volta che un'area viene usata può richiedere alcuni minuti. L'edificio si aprirà qui quando sarà pronto.",
+    "preparing": "Preparazione dei dati 3D di questo edificio.",
     "loading": "Caricamento dell'edificio…",
     "noGeometry": "City2TABULA non contiene più la geometria 3D di questo edificio.",
     "credit3dData": "Dati 3D",
