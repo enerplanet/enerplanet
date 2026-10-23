@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import MapSettings from "@/features/settings/MapLocationSettings";
 import NotificationSettings from "@/features/settings/NotificationSettings";
-import DataDisplaySettings from "@/features/settings/DataDisplaySettings";
 import LanguageSettings from "@/features/settings/LanguageSettings";
 import NotificationManagement from "@/features/settings/NotificationManagement";
 import PolygonLimitsSettings from "@/features/settings/PolygonLimitsSettings";
@@ -18,7 +17,6 @@ import {
   Globe,
   MapPin,
   Bell,
-  Sliders,
   Send,
   ArrowLeft,
   Building2,
@@ -32,7 +30,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import LegalPage from "@/pages/legal/LegalPage";
 
-type TabKey = "general" | "display" | "notifications" | "privacyTerms" | "advanced";
+type TabKey = "general" | "notifications" | "privacyTerms" | "advanced";
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -46,7 +44,6 @@ const SettingsPage: React.FC = () => {
   // Tab configuration with dark icons
   const TABS: { key: string; label: string; icon: typeof LayoutGrid; expertOnly?: boolean }[] = [
     { key: "general", label: t("settings.tabs.general"), icon: LayoutGrid },
-    { key: "display", label: t("settings.tabs.display"), icon: Monitor },
     { key: "notifications", label: t("settings.tabs.notifications"), icon: Bell },
     { key: "privacyTerms", label: "Privacy & Terms", icon: Shield },
     { key: "advanced", label: t("settings.tabs.advanced"), icon: Cog, expertOnly: true },
@@ -247,28 +244,6 @@ const SettingsPage: React.FC = () => {
                     </div>
                   </div>
                   <MapSettings />
-                </div>
-              </div>
-            )}
-
-            {activeTab === "display" && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {/* Data & Display */}
-                <div className="md-rise bg-gradient-to-br from-muted/50 to-card rounded-lg p-3 border border-border transition-shadow duration-200 hover:shadow-md">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 bg-muted rounded">
-                      <Sliders className="w-3.5 h-3.5 text-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-semibold text-foreground">
-                        {t("settings.dataDisplay.title")}
-                      </h3>
-                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">
-                        {t("settings.dataDisplay.subtitle")}
-                      </p>
-                    </div>
-                  </div>
-                  <DataDisplaySettings />
                 </div>
               </div>
             )}

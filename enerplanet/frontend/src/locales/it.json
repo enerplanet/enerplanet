@@ -2120,7 +2120,6 @@
     "goBack": "Indietro",
     "tabs": {
       "general": "Generale",
-      "display": "Visualizzazione",
       "notifications": "Notifiche",
       "advanced": "Avanzate"
     },
@@ -2158,20 +2157,6 @@
       "searching": "Ricerca...",
       "noResults": "Nessuna posizione trovata",
       "searchFailed": "Ricerca fallita"
-    },
-    "dataDisplay": {
-      "title": "Dati e Visualizzazione",
-      "subtitle": "Unità e formattazione",
-      "temperature": "Temperatura",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Distanza",
-      "kilometers": "Chilometri",
-      "miles": "Miglia",
-      "windSpeed": "Velocità del Vento",
-      "knots": "nodi",
-      "dataRefresh": "Aggiornamento Dati",
-      "min": "min"
     },
     "notifications": {
       "title": "Notifiche",

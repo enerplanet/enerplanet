@@ -2488,7 +2488,6 @@
     "goBack": "Go back",
     "tabs": {
       "general": "General",
-      "display": "Display",
       "notifications": "Notifications",
       "advanced": "Advanced"
     },
@@ -2526,20 +2525,6 @@
       "searching": "Searching...",
       "noResults": "No locations found",
       "searchFailed": "Search failed"
-    },
-    "dataDisplay": {
-      "title": "Data & Display",
-      "subtitle": "Units and formatting",
-      "temperature": "Temperature",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Distance",
-      "kilometers": "Kilometers",
-      "miles": "Miles",
-      "windSpeed": "Wind Speed",
-      "knots": "knots",
-      "dataRefresh": "Data Refresh",
-      "min": "min"
     },
     "notifications": {
       "title": "Notifications",

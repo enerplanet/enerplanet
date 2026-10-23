@@ -2134,7 +2134,6 @@
     "goBack": "Zpět",
     "tabs": {
       "general": "Obecné",
-      "display": "Zobrazení",
       "notifications": "Oznámení",
       "advanced": "Pokročilé"
     },
@@ -2172,20 +2171,6 @@
       "searching": "Vyhledávání...",
       "noResults": "Nebyly nalezeny žádné polohy",
       "searchFailed": "Vyhledávání selhalo"
-    },
-    "dataDisplay": {
-      "title": "Data a Zobrazení",
-      "subtitle": "Jednotky a formátování",
-      "temperature": "Teplota",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Vzdálenost",
-      "kilometers": "Kilometry",
-      "miles": "Míle",
-      "windSpeed": "Rychlost Větru",
-      "knots": "uzly",
-      "dataRefresh": "Obnovení Dat",
-      "min": "min"
     },
     "notifications": {
       "title": "Oznámení",

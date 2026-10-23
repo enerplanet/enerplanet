@@ -2488,7 +2488,6 @@
     "goBack": "Zurück",
     "tabs": {
       "general": "Allgemein",
-      "display": "Anzeige",
       "notifications": "Benachrichtigungen",
       "advanced": "Erweitert"
     },
@@ -2526,20 +2525,6 @@
       "searching": "Suche...",
       "noResults": "Keine Standorte gefunden",
       "searchFailed": "Suche fehlgeschlagen"
-    },
-    "dataDisplay": {
-      "title": "Daten & Anzeige",
-      "subtitle": "Einheiten und Formatierung",
-      "temperature": "Temperatur",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Entfernung",
-      "kilometers": "Kilometer",
-      "miles": "Meilen",
-      "windSpeed": "Windgeschwindigkeit",
-      "knots": "Knoten",
-      "dataRefresh": "Datenaktualisierung",
-      "min": "Min"
     },
     "notifications": {
       "title": "Benachrichtigungen",

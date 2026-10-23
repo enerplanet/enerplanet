@@ -2493,7 +2493,6 @@
     "goBack": "Volver",
     "tabs": {
       "general": "General",
-      "display": "Visualización",
       "notifications": "Notificaciones",
       "advanced": "Avanzado"
     },
@@ -2531,20 +2530,6 @@
       "searching": "Buscando...",
       "noResults": "No se encontraron ubicaciones",
       "searchFailed": "Búsqueda fallida"
-    },
-    "dataDisplay": {
-      "title": "Datos y Visualización",
-      "subtitle": "Unidades y formato",
-      "temperature": "Temperatura",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Distancia",
-      "kilometers": "Kilómetros",
-      "miles": "Millas",
-      "windSpeed": "Velocidad del Viento",
-      "knots": "nudos",
-      "dataRefresh": "Actualización de Datos",
-      "min": "min"
     },
     "notifications": {
       "title": "Notificaciones",

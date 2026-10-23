@@ -2119,7 +2119,6 @@
     "goBack": "Terug",
     "tabs": {
       "general": "Algemeen",
-      "display": "Weergave",
       "notifications": "Meldingen",
       "advanced": "Geavanceerd"
     },
@@ -2157,20 +2156,6 @@
       "searching": "Zoeken...",
       "noResults": "Geen locaties gevonden",
       "searchFailed": "Zoeken mislukt"
-    },
-    "dataDisplay": {
-      "title": "Data en Weergave",
-      "subtitle": "Eenheden en opmaak",
-      "temperature": "Temperatuur",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Afstand",
-      "kilometers": "Kilometers",
-      "miles": "Mijlen",
-      "windSpeed": "Windsnelheid",
-      "knots": "knopen",
-      "dataRefresh": "Data Verversing",
-      "min": "min"
     },
     "notifications": {
       "title": "Meldingen",
