@@ -1,5 +1,6 @@
 import type { FC } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@spatialhub/ui";
+import { Info } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -37,23 +38,12 @@ export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChan
     <div className="space-y-3 rounded-lg border border-border p-3" data-tour="weather">
       <p className="text-sm font-medium text-foreground">{t("simulation.weather.title")}</p>
 
-      <div role="radiogroup" aria-label={t("simulation.weather.mode.label")} className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
-        {[true, false].map((option) => (
-          <button
-            key={String(option)}
-            type="button"
-            role="radio"
-            aria-checked={scenario === option}
-            onClick={() => scenario !== option && onModeChange(option)}
-            className={cn(
-              "h-7 cursor-pointer rounded text-xs font-medium transition-colors",
-              scenario === option ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t(`simulation.weather.mode.${option ? "scenario" : "year"}`)}
-          </button>
-        ))}
-      </div>
+      <ChoiceToggle
+        label={t("simulation.weather.mode.label")}
+        value={scenario ? "scenario" : "year"}
+        options={["scenario", "year"].map((mode) => ({ value: mode, label: t(`simulation.weather.mode.${mode}`) }))}
+        onChange={(mode) => onModeChange(mode === "scenario")}
+      />
 
       {scenario ? (
         <div>
@@ -83,31 +73,67 @@ export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChan
   );
 };
 
-/** The weather archive, listing each archive that has years with its range. */
+interface ChoiceOption { value: string; label: string }
+
+/** A row of mutually exclusive choices, one click each. */
+const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (
+  <div role="radiogroup" aria-label={label} className="flex gap-1 rounded-md bg-muted p-1">
+    {options.map((option) => (
+      <button
+        key={option.value}
+        type="button"
+        role="radio"
+        aria-checked={value === option.value}
+        onClick={() => value !== option.value && onChange(option.value)}
+        className={cn(
+          "h-7 flex-1 cursor-pointer rounded px-2 text-xs font-medium transition-colors",
+          value === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
+
+/** The weather archive by name; its coverage is behind the info icon. */
 const ArchiveSelect: FC = () => {
   const { t } = useTranslation();
   const weather = useModelStore((s) => s.weather);
   const setWeather = useModelStore((s) => s.setWeather);
   const { defaultProvider, archives } = useWeatherArchives();
   const archive = weather.provider ?? defaultProvider ?? "";
+  const names = Object.keys(archives);
 
   return (
     <div>
-      <label htmlFor="weather-archive-select" className="mb-1 block text-xs font-medium text-muted-foreground">
+      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
         {t("simulation.weather.archive")}
-      </label>
-      <Select value={archive} onValueChange={(value: string) => setWeather({ ...weather, provider: value === defaultProvider ? null : value })}>
-        <SelectTrigger id="weather-archive-select" className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.keys(archives).map((name) => (
-            <SelectItem key={name} value={name}>
-              {ARCHIVE_NAMES[name] ?? name} · {archives[name][0]}–{archives[name].at(-1)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" aria-label={t("simulation.weather.coverage")} className="cursor-help">
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs space-y-1">
+            <p className="font-medium">{t("simulation.weather.coverage")}</p>
+            {names.map((name) => (
+              <p key={name}>
+                {ARCHIVE_NAMES[name] ?? name}: {t("simulation.weather.historicYears", { count: archives[name].length, range: yearRange(archives[name]) })}
+              </p>
+            ))}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <ChoiceToggle
+        label={t("simulation.weather.archive")}
+        value={archive}
+        options={names.map((name) => ({ value: name, label: ARCHIVE_NAMES[name] ?? name }))}
+        onChange={(value) => setWeather({ ...weather, provider: value === defaultProvider ? null : value })}
+      />
     </div>
   );
 };
+
+/** First and last year, or the one year when they are the same. */
+const yearRange = (years: number[]): string => (years.length > 1 ? `${years[0]}–${years.at(-1)}` : String(years[0]));

@@ -1918,7 +1918,10 @@
         "label": "Modo meteorológico",
         "scenario": "Escenario",
         "year": "Año histórico"
-      }
+      },
+      "coverage": "Cobertura",
+      "historicYears_one": "año histórico {{range}}",
+      "historicYears_other": "años históricos {{range}} ({{count}} años)"
     },
     "periodParts": {
       "label": "Periodo",
