@@ -162,4 +162,6 @@ export interface AreaSelectActions {
 	toggleBuildingExclusion: (buildingId: number) => void;
 	clearExcludedBuildings: () => void;
 	handleQuickSave: () => Promise<void>;
+	/** Saves a new or changed model, then starts the analysis of its buildings; resolves to whether it started. */
+	handleAnalyse: () => Promise<boolean>;
 }

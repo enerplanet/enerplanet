@@ -1,6 +1,5 @@
 import { useEffect, Fragment, useCallback, useMemo, useState, useRef, type FC } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { parseDate } from "@internationalized/date";
 import { transformExtent } from "ol/proj";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -53,14 +52,12 @@ import {
   useGridIdToTrafoCapacity,
   useGridIdToPeakLoad,
   useGridIdToConnectedBuildings,
-  useBuildingsInPolygonCount,
   useBuildingOsmIdsInPolygon,
-  usePeakLoadInPolygonKw,
-  useCustomTransformers,
 } from "@/features/configurator/region-selector/selectors/gridDataSelectors";
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
+import { GridStatsBadge } from "./components/GridStatsBadge";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -72,7 +69,6 @@ import { ProductPickerDialog } from "./components/ProductPickerDialog";
 import { asBuildingTechnology, defaultConstraints } from "@/features/technologies/catalogue";
 import { HeatBootstrapDialog } from "./components/HeatBootstrapDialog";
 import { HeatScopeDialog } from "./components/HeatScopeDialog";
-import { PowerFlowLegend } from "./components/PowerFlowLegend";
 import { LoadingOverlay } from "./components/LoadingOverlay";
 import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
@@ -82,14 +78,6 @@ import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay"
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
-const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
-
-const getDateBounds = () => ({
-  minValue: parseDate(`${DATE_BOUNDS.minYear}-01-01`),
-  maxValue: parseDate(`${DATE_BOUNDS.maxYear}-12-31`),
-  minYear: DATE_BOUNDS.minYear,
-  maxYear: DATE_BOUNDS.maxYear,
-});
 
 interface AreaSelectProps {
   onAreaSelected?: (areaData: AreaData) => void;
@@ -334,13 +322,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const gridIdToTrafoCapacity = useGridIdToTrafoCapacity(pylovoLayers.pylovoGridData);
   const gridIdToPeakLoad = useGridIdToPeakLoad(pylovoLayers.pylovoGridData);
   const gridIdToConnectedBuildings = useGridIdToConnectedBuildings(pylovoLayers.pylovoGridData);
-  const buildingsInPolygonCount = useBuildingsInPolygonCount(pylovoLayers.pylovoGridData);
   const buildingOsmIdsInPolygon = useBuildingOsmIdsInPolygon(pylovoLayers.pylovoGridData);
-  const peakLoadInPolygonKw = usePeakLoadInPolygonKw(pylovoLayers.pylovoGridData);
-  const customTransformers = useCustomTransformers(pylovoLayers.pylovoGridData);
 
   // ── Update ref so useMapInteractions reads the latest value at click time ──
   const activeMode = useModelStore((s) => s.activeMode);
+  const siteMode = useModelStore((s) => s.siteMode);
   suppressDialogOnClickRef.current = activeMode !== null;
 
   const markModified = useCallback(() => setIsModified(true), [setIsModified]);
@@ -513,10 +499,23 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
-  // Read again after a save, which starts a BuEM run, and after the configurator
+  // Read again after a save, after an analysis starts, and after the configurator
   // closes, where a building's run may have been repeated.
   const { buildingId: openBuildingId } = useConfiguratorParams();
-  const demandProfiles = useModelDemandProfiles(existingModelId, `${state.isSaving}|${openBuildingId ?? ""}`);
+  const [analysisKey, setAnalysisKey] = useState(0);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const { profiles: demandProfiles, progress: analysisProgress } = useModelDemandProfiles(
+    existingModelId,
+    `${state.isSaving}|${openBuildingId ?? ""}|${analysisKey}`
+  );
+  const handleAnalyseBuildings = useCallback(async () => {
+    setIsStartingAnalysis(true);
+    try {
+      if (await actions.handleAnalyse()) setAnalysisKey((k) => k + 1);
+    } finally {
+      setIsStartingAnalysis(false);
+    }
+  }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
@@ -596,7 +595,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onAdvancedParamsChange={actions.setAdvancedParams}
             onResetAdvancedParams={actions.handleResetAdvancedParams}
             handleModelNameChange={(e) => actions.setModelName(e.target.value)}
-            getDateBounds={getDateBounds}
             editMode={editMode}
             showTechDrawer={techOperations.showTechDrawer}
             onOpenTechDrawer={() => techOperations.setShowTechDrawer(true)}
@@ -608,22 +606,27 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onRemoveAllTechs={techOperations.handleRemoveAllTechs}
             techBuildingCount={techOperations.techBuildingCount}
             appliedTechKeys={techOperations.appliedTechKeys}
-            gridResultIds={gridResultIds}
-            buildingsCount={buildingsInPolygonCount}
-            buildingOsmIds={buildingOsmIdsInPolygon}
-            peakLoadKw={peakLoadInPolygonKw}
             isModified={state.isModified}
             operateIssues={operateIssues}
             onFixOperateIssue={fixOperateIssue}
+            analysisProgress={analysisProgress}
+            isStartingAnalysis={isStartingAnalysis}
+            onAnalyse={handleAnalyseBuildings}
           />
         }
         onDrop={techOperations.handleMapDrop}
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
+            {gridResultIds.length > 0 && (
+              <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
+                <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
+              </div>
+            )}
             {map && isMapLibre3D && (
               <MapLibre3DOverlay
                 olMap={map}
+                controlsPlacement="top-left"
                 buildingsGeoJSON={pylovoLayers.pylovoGridData?.buildings}
                 linesGeoJSON={pylovoLayers.pylovoGridData?.lines}
                 mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
@@ -671,7 +674,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               />
             )}
             <GridActionBar
-              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+              hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}
               onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
               isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
@@ -693,10 +696,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onBackStep={() => buildingAssign.setAssignStep("select-buildings")}
               onCancelAssign={buildingAssign.clearBuildingAssignMode}
               onCancelAddTransformer={addTransformer.resetAddTransformerMode}
-            />
-            <PowerFlowLegend
-              visible={pylovoLayers.powerFlowResults.size > 0}
-              customTransformers={customTransformers}
             />
             {state.areaOverLimit
               ? <AreaLimitWarning overLimit={state.areaOverLimit} />
@@ -729,6 +728,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           />
         }
         showSidebar={true}
+        sidebarWidth="clamp(18rem, 30vw, 26rem)"
+        controlsPlacement="top-left"
       />
 
       <AreaSelectTour

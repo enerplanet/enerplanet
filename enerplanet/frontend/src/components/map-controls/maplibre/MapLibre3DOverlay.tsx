@@ -6,11 +6,14 @@ import { useMapLibreLayers, type LayerData } from './useMapLibreLayers';
 import { useMapLibreInteractions, type InteractionCallbacks } from './useMapLibreInteractions';
 import { useOlLayerSync } from './useOlLayerSync';
 import { MapLibre3DControls } from './MapLibre3DControls';
+import type { MapControlsPlacement } from '@/components/map-controls/MapControls';
 
 interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
   olMap: OlMap;
   visible: boolean;
   isDrawing?: boolean;
+  /** Placement of the map's zoom buttons; the reset button sits under them. */
+  controlsPlacement?: MapControlsPlacement;
 }
 
 /**
@@ -21,6 +24,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   olMap,
   visible,
   isDrawing = false,
+  controlsPlacement,
   // Layer data
   buildingsGeoJSON,
   linesGeoJSON,
@@ -76,7 +80,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
         }}
       />
       {/* 3D pitch/bearing/reset controls */}
-      <MapLibre3DControls mapRef={mapRef} />
+      <MapLibre3DControls mapRef={mapRef} placement={controlsPlacement} />
     </>
   );
 };

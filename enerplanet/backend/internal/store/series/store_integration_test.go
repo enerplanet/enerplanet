@@ -192,3 +192,54 @@ func TestMoveDraft_HandsLinksToTheModel(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, left)
 }
+
+func TestReplaceLinks_dropsLinksOfTheSeriesNotGivenAndKeepsOthers(t *testing.T) {
+	s := NewStore(scratchDB(t))
+	a, err := s.Save(buemProfile("key-a", 1))
+	require.NoError(t, err)
+	draft := Owner{DraftID: "draft-pv"}
+	heat := Link{BuildingRef: "b1", Series: "heating", ProfileID: a, Source: "default"}
+	oldRoof := Link{BuildingRef: "b1", Part: "roof-old", Series: "pv", ProfileID: a, Source: "default"}
+	keptRoof := Link{BuildingRef: "b1", Part: "roof-1", Series: "pv", ProfileID: a, Source: "default"}
+	require.NoError(t, s.Link(draft, "rev-1", []Link{heat, oldRoof, keptRoof}))
+
+	require.NoError(t, s.ReplaceLinks(draft, "rev-2", "pv", []Link{keptRoof}))
+
+	links, err := s.Links(draft)
+	require.NoError(t, err)
+	require.Len(t, links, 2)
+	assert.Equal(t, "heating", links[0].Series, "another series is not touched")
+	assert.Equal(t, "roof-1", links[1].Part)
+	assert.Equal(t, "rev-2", links[1].Revision)
+
+	assert.Error(t, s.ReplaceLinks(draft, "rev-3", "pv", []Link{heat}), "a link of another series is refused")
+}
+
+func TestDeleteUnreferenced_keepsLinkedNewAndUploadedProfiles(t *testing.T) {
+	tx := scratchDB(t)
+	s := NewStore(tx)
+	linked, err := s.Save(buemProfile("key-linked", 1))
+	require.NoError(t, err)
+	orphan, err := s.Save(buemProfile("key-orphan", 1))
+	require.NoError(t, err)
+	fresh, err := s.Save(buemProfile("key-fresh", 1))
+	require.NoError(t, err)
+	uploaded := buemProfile("key-uploaded", 1)
+	uploaded.Origin, uploaded.OwnerUserID = "uploaded", "u1"
+	upload, err := s.Save(uploaded)
+	require.NoError(t, err)
+	require.NoError(t, s.Link(Owner{DraftID: "d"}, "rev", []Link{{BuildingRef: "b", Series: "heating", ProfileID: linked, Source: "default"}}))
+	old := time.Now().Add(-48 * time.Hour)
+	require.NoError(t, tx.Exec("UPDATE series_profiles SET created_at = ? WHERE id IN ?", old, []int64{linked, orphan, upload}).Error)
+
+	deleted, err := s.DeleteUnreferenced(time.Now().Add(-24 * time.Hour))
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), deleted)
+	left, err := s.StoredKeys([]string{"key-linked", "key-orphan", "key-fresh", "key-uploaded"})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int64{"key-linked": linked, "key-fresh": fresh, "key-uploaded": upload}, left)
+	var values int64
+	require.NoError(t, tx.Raw("SELECT count(*) FROM series_values WHERE profile_id = ?", orphan).Scan(&values).Error)
+	assert.Zero(t, values, "the deleted profile's values go with it")
+}

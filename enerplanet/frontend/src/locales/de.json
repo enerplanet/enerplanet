@@ -115,24 +115,13 @@
     "cables": "Kabel",
     "peakLoad": "Spitzenlast",
     "capacity": "Kapazität",
-    "utilization": "Auslastung",
-    "estCost": "Gesch. Kosten",
-    "cablesLabel": "Kabel",
-    "trafosLabel": "Trafos",
-    "costDescription": "Infrastrukturkosten inkl. Kabel & Transformatoren",
     "buildingsTooltip": "Alle Gebäude aus OpenStreetMap im ausgewählten Gebiet. Den Energiebedarf jedes Gebäudes schätzt PyLoVo anhand von Fläche, Geschossen, Haushaltsgröße und Energieausweis.",
-    "trafosTooltip": "Von PyLoVo auf die Gleichzeitigkeitslast ausgelegte Transformatoren. Standardgrößen (100 bis 630 kVA) stammen aus deutschen Gerätekatalogen. Die Kosten je Größe kommen aus Preisen installierter Anlagen.",
-    "cablesTooltip": "Von PyLoVo verlegte NS-Verteilkabel zwischen Gebäuden und Transformatoren. Kosten sind Länge (m) mal Preis pro Meter (€/m) aus dem Gerätekatalog, je nach Kabeltyp.",
+    "trafosTooltip": "Von PyLoVo auf die Gleichzeitigkeitslast ausgelegte Transformatoren. Standardgrößen (100 bis 630 kVA) stammen aus deutschen Gerätekatalogen.",
+    "cablesTooltip": "Von PyLoVo verlegte NS-Verteilkabel zwischen Gebäuden und Transformatoren.",
     "lengthTooltip": "Gesamtlänge aller NS-Kabel im Netz. Die Trasse folgt dem kürzesten Weg zwischen Gebäudeanschlüssen und Transformatorstandorten.",
-    "selectionNote": "Ausgewählte Gebäude und die Kabel zu ihren Transformatoren. Gesamtes Netz: {{buildings}} Gebäude, {{cables}} Kabel, {{km}} km, {{utilisation}} % Auslastung.",
-    "simultaneousLoad": "Gleichzeitigkeitslast",
-    "peakLoadTooltip": "Summe der elektrischen Spitzenlasten aller Gebäude (kW), abgeleitet aus dem geschätzten Jahresbedarf jedes Gebäudes mit Standardlastprofilen (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistische gleichzeitige Last mit einem Gleichzeitigkeitsfaktor, wobei n die Anzahl der Gebäude ist. Nicht alle Gebäude erreichen ihre Spitzenlast zur selben Zeit.",
+    "selectionNote": "Ausgewählte Gebäude und die Kabel zu ihren Transformatoren. Gesamtes Netz: {{buildings}} Gebäude, {{cables}} Kabel, {{km}} km.",
     "capacityTooltip": "Gesamte Nennleistung aller Transformatoren (kVA). Transformatoren werden aus deutschen NS-Standardgrößen gewählt, um die Gleichzeitigkeitslast mit Sicherheitsreserve zu decken.",
-    "utilizationTooltip": "Transformatorauslastung = Gleichzeitigkeitslast ÷ Gesamtkapazität × 100 %. Werte über 80 % können auf zusätzlichen Transformatorbedarf hinweisen.",
-    "cableCostTooltip": "Kabelkosten nach Kabeltyp und Länge. Preise aus deutschen NS-Gerätekatalogen enthalten Material, Tiefbau und Verlegung (€/m).",
-    "trafoCostTooltip": "Kosten für Beschaffung und Installation der Transformatoren. Preise je kVA-Größe aus deutschen Katalogen für Verteilnetzgeräte, zugeordnet zur nächsten Größe.",
-    "sourceNote": "Geschätzt von der PyLoVo-Netzberechnung. Kosten aus deutschen NS-Gerätekatalogen. Auslastung auf Basis der Gleichzeitigkeitslast."
+    "sourceNote": "Geschätzt von der PyLoVo-Netzberechnung."
   },
   "drawing": {
     "clickToDraw": "Klicken zum Zeichnen",
@@ -1794,7 +1783,9 @@
         "tooLarge": "Die Datei ist zu groß ({{detail}}); importiert werden können Dateien bis 5 MB.",
         "tooComplex": "Das Gebiet ist zu detailliert ({{detail}} Polygone / Stützpunkte); importiert werden können bis zu 100 Polygone und 10.000 Stützpunkte.",
         "outOfRange": "Eine Koordinate ({{detail}}) liegt außerhalb des Längen- und Breitengradbereichs. Verwendet die Datei Meter, muss sie ihr Koordinatensystem (crs) angeben."
-      }
+      },
+      "importAreaHint": "Lädt ein Modellgebiet aus einer GeoJSON-Datei (.geojson oder .json) mit Polygon- oder MultiPolygon-Features. Koordinaten in WGS 84 (EPSG:4326) oder einem nationalen Gitter wie ETRS89 / UTM, wie QGIS sie exportiert. Bis zu 100 Polygone, 10.000 Punkte und 5 MB. Die Datei ersetzt das gezeichnete Gebiet.",
+      "exportAreaHint": "Lädt das gezeichnete Gebiet als GeoJSON-Datei herunter (WGS 84, EPSG:4326). Sie lässt sich in ein anderes Modell importieren oder in QGIS öffnen."
     },
     "mapOverlay": {
       "analyzingArea": "Gebiet wird analysiert",
@@ -1805,7 +1796,6 @@
       "moreCount": "+{{count}} weitere",
       "clickForDetails": "Klicken Sie für weitere Details",
       "class": "Klasse",
-      "estimatedShort": "geschätzt",
       "buemTotal": "Gesamt: {{value}}",
       "kitchenGas": "Küchengas: {{value}}",
       "geometry3d": "3D-Geometrie: City2TABULA",
@@ -1851,7 +1841,8 @@
       "length": "Länge",
       "type": "Typ",
       "bus": "Knoten",
-      "disabled": "Deaktiviert"
+      "disabled": "Deaktiviert",
+      "notAnalysed": "Noch nicht analysiert"
     },
     "unsavedChanges": {
       "title": "Ungespeicherte Änderungen",
@@ -1889,7 +1880,19 @@
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
       "description": "Modelle mit mehr als {{limit}} Gebäuden brauchen deutlich länger: Jedes Gebäude läuft durch BuEM, und Calliope löst den stündlichen Bedarf jedes Gebäudes. Ein ganzes Jahr kann Dutzende Minuten dauern. Sie können es trotzdem speichern und ausführen."
-    }
+    },
+    "analysis": {
+      "button": "Gebäude analysieren",
+      "running": "Bedarf wird berechnet: {{done}} von {{total}} Gebäuden",
+      "done": "Analysierte Gebäude: {{count}}",
+      "failed": "nicht analysiert: {{count}} (Grund beim Überfahren eines Gebäudes)",
+      "notYet": "Noch nicht analysiert. Die Analyse berechnet den Heiz-, Kühl- und Strombedarf jedes Gebäudes.",
+      "needsInputs": "Geben Sie einen Modellnamen und einen Simulationszeitraum ein, um die Gebäude zu analysieren.",
+      "saveFailed": "Das Modell konnte nicht gespeichert werden, daher wurde die Analyse nicht gestartet.",
+      "startFailed": "Die Analyse konnte nicht gestartet werden."
+    },
+    "periodWithinYear": "Mehrjährige Simulationen werden noch nicht unterstützt, daher liegen jetzt beide Daten in {{year}}.",
+    "periodYear": "Jahr"
   },
   "mapLayers": {
     "title": "Kartenebenen",
@@ -3091,18 +3094,6 @@
   "transformer": {
     "onlyInsidePolygon": "Transformatoren können nur innerhalb des ausgewählten Gebiets platziert werden",
     "onlyNearPolygon": "Transformatoren können bis zu 200 m außerhalb des ausgewählten Gebiets platziert werden"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Eigene Transformatoren",
-    "transformer": "Transformator {{number}}",
-    "buildingCount": "Gebäude: {{count}}",
-    "loadUtilization": "Auslastung",
-    "low": "Niedrig",
-    "moderate": "Mäßig",
-    "medium": "Mittel",
-    "high": "Hoch",
-    "overloaded": "Überlastet",
-    "mvLines": "MS-Leitungen"
   },
   "buildingConfig": {
     "backToMap": "Zurück zur Karte",

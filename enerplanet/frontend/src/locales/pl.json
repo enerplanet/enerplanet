@@ -1491,7 +1491,9 @@
         "tooLarge": "Plik jest za duży ({{detail}}); można importować pliki do 5 MB.",
         "tooComplex": "Obszar jest zbyt szczegółowy ({{detail}} wielokątów / wierzchołków); można importować do 100 wielokątów i 10 000 wierzchołków.",
         "outOfRange": "Współrzędna ({{detail}}) leży poza zakresem długości i szerokości geograficznej. Jeśli plik używa metrów, musi podawać swój układ współrzędnych (crs)."
-      }
+      },
+      "importAreaHint": "Wczytuje obszar modelu z pliku GeoJSON (.geojson lub .json) z obiektami Polygon lub MultiPolygon. Współrzędne w WGS 84 (EPSG:4326) lub w siatce krajowej, np. ETRS89 / UTM, tak jak eksportuje je QGIS. Do 100 wielokątów, 10 000 punktów i 5 MB. Plik zastępuje narysowany obszar.",
+      "exportAreaHint": "Pobiera narysowany obszar jako plik GeoJSON (WGS 84, EPSG:4326). Można go zaimportować do innego modelu lub otworzyć w QGIS."
     },
     "powerFlow": {
       "run": "Uruchom analizę przepływu mocy",
@@ -1557,7 +1559,6 @@
       "moreCount": "+{{count}} więcej",
       "clickForDetails": "Kliknij, aby zobaczyć szczegóły",
       "class": "Klasa",
-      "estimatedShort": "szac.",
       "buemTotal": "Łącznie: {{value}}",
       "kitchenGas": "Gaz kuchenny: {{value}}",
       "geometry3d": "Geometria 3D: City2TABULA",
@@ -1603,7 +1604,8 @@
       "length": "Długość",
       "type": "Typ",
       "bus": "Węzeł",
-      "disabled": "Wyłączony"
+      "disabled": "Wyłączony",
+      "notAnalysed": "Jeszcze nie przeanalizowano"
     },
     "unsavedChanges": {
       "title": "Niezapisane zmiany",
@@ -1641,7 +1643,19 @@
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
       "description": "Modele z ponad {{limit}} budynkami liczą się znacznie dłużej: każdy budynek przechodzi przez BuEM, a Calliope rozwiązuje godzinowe zapotrzebowanie każdego budynku. Cały rok może trwać kilkadziesiąt minut. Nadal możesz go zapisać i uruchomić."
-    }
+    },
+    "analysis": {
+      "button": "Analizuj budynki",
+      "running": "Obliczanie zapotrzebowania: {{done}} z {{total}} budynków",
+      "done": "Przeanalizowane budynki: {{count}}",
+      "failed": "nieprzeanalizowane: {{count}} (najedź na budynek, aby zobaczyć powód)",
+      "notYet": "Jeszcze nie przeanalizowano. Analiza oblicza zapotrzebowanie każdego budynku na ogrzewanie, chłodzenie i energię elektryczną.",
+      "needsInputs": "Wprowadź nazwę modelu i okres symulacji, aby przeanalizować budynki.",
+      "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
+      "startFailed": "Nie udało się rozpocząć analizy."
+    },
+    "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}.",
+    "periodYear": "Rok"
   },
   "mapLayers": {
     "title": "Warstwy mapy",
@@ -2611,24 +2625,13 @@
     "cables": "Kable",
     "peakLoad": "Szczytowe Obciążenie",
     "capacity": "Pojemność",
-    "utilization": "Wykorzystanie",
-    "estCost": "Szacowany Koszt",
-    "cablesLabel": "Kable",
-    "trafosLabel": "Transformatory",
-    "costDescription": "Koszty infrastruktury w tym kable i transformatory",
     "buildingsTooltip": "Łączna liczba budynków z OpenStreetMap w wybranym obszarze. PyLoVo szacuje zapotrzebowanie na energię każdego budynku na podstawie powierzchni, liczby kondygnacji, wielkości gospodarstwa domowego i etykiety energetycznej.",
-    "trafosTooltip": "Transformatory dobrane przez PyLoVo do obciążenia jednoczesnego. Standardowe rozmiary (od 100 do 630 kVA) pochodzą z niemieckich katalogów urządzeń. Koszt dla każdego rozmiaru pochodzi z cen zainstalowanych urządzeń.",
-    "cablesTooltip": "Kable dystrybucyjne nN poprowadzone przez PyLoVo między budynkami a transformatorami. Koszt to długość (m) razy koszt za metr (€/m) z katalogu, zależnie od typu kabla.",
+    "trafosTooltip": "Transformatory dobrane przez PyLoVo do obciążenia jednoczesnego. Standardowe rozmiary (od 100 do 630 kVA) pochodzą z niemieckich katalogów urządzeń.",
+    "cablesTooltip": "Kable dystrybucyjne nN poprowadzone przez PyLoVo między budynkami a transformatorami.",
     "lengthTooltip": "Łączna długość wszystkich kabli nN w sieci. Trasa biegnie najkrótszą drogą między przyłączami budynków a transformatorami.",
-    "selectionNote": "Wybrane budynki i kable łączące je z transformatorami. Cała sieć: budynki {{buildings}}, kable {{cables}}, {{km}} km, wykorzystanie {{utilisation}}%.",
-    "simultaneousLoad": "Obciążenie jednoczesne",
-    "peakLoadTooltip": "Suma szczytowych obciążeń elektrycznych wszystkich budynków (kW), wyznaczona z szacowanego rocznego zapotrzebowania każdego budynku przy użyciu standardowych profili obciążenia (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistyczne obciążenie jednoczesne ze współczynnikiem jednoczesności, gdzie n to liczba budynków. Nie wszystkie budynki osiągają szczyt w tym samym czasie.",
+    "selectionNote": "Wybrane budynki i kable łączące je z transformatorami. Cała sieć: budynki {{buildings}}, kable {{cables}}, {{km}} km.",
     "capacityTooltip": "Łączna moc znamionowa wszystkich transformatorów (kVA). Transformatory dobiera się ze standardowych niemieckich rozmiarów nN, aby pokryć obciążenie jednoczesne z zapasem.",
-    "utilizationTooltip": "Wykorzystanie transformatorów = obciążenie jednoczesne ÷ moc całkowita × 100%. Wartości powyżej 80% mogą oznaczać potrzebę dodatkowej mocy.",
-    "cableCostTooltip": "Koszt instalacji kabli zależny od typu i długości. Ceny z niemieckich katalogów nN obejmują materiał, wykop i montaż (€/m).",
-    "trafoCostTooltip": "Koszt zakupu i instalacji transformatorów. Ceny dla rozmiarów kVA pochodzą z niemieckich katalogów urządzeń dystrybucyjnych, dopasowane do najbliższego rozmiaru.",
-    "sourceNote": "Szacunek silnika sieci PyLoVo. Koszty z niemieckich katalogów nN. Wykorzystanie na podstawie obciążenia jednoczesnego."
+    "sourceNote": "Szacunek silnika sieci PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {
@@ -3116,18 +3119,6 @@
   "transformer": {
     "onlyInsidePolygon": "Transformatory można umieszczać tylko wewnątrz wybranego obszaru",
     "onlyNearPolygon": "Transformatory można umieścić do 200 m poza wybranym obszarem"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Własne transformatory",
-    "transformer": "Transformator {{number}}",
-    "buildingCount": "Budynki: {{count}}",
-    "loadUtilization": "Obciążenie",
-    "low": "Niskie",
-    "moderate": "Umiarkowane",
-    "medium": "Średnie",
-    "high": "Wysokie",
-    "overloaded": "Przeciążone",
-    "mvLines": "Linie SN"
   },
   "buildingConfig": {
     "backToMap": "Powrót do mapy",

@@ -94,35 +94,6 @@ func NewModelHandlerWithCache(db *gorm.DB, asynqClient *asynq.Client, adminToken
 	}
 }
 
-// triggerDemandProfileResolve enqueues a best-effort resolve_demand_profiles job
-// for a model whose config was just saved - the only server-side signal that
-// a building list might now exist (grid generation itself is a stateless
-// pylovo proxy; the frontend PATCHes the result into config separately, see
-// PylovoHandler.GenerateGrid). Fire-and-forget: an enqueue failure is
-// logged, never surfaced to the caller - saving the model must not fail
-// because this optional refresh could not be scheduled, and the job itself
-// is a no-op when the config turns out to have no buildings. Not enqueued at
-// all when config.heatSource is "estimate": that model uses the usage-class
-// estimate and manual heat demand instead of BuEM.
-func (h *ModelHandler) triggerDemandProfileResolve(modelID uint, config json.RawMessage) {
-	if h.asynqClient == nil || jobs.ModelHeatSource(config) == jobs.HeatSourceEstimate {
-		return
-	}
-	body, err := json.Marshal(jobs.ResolveDemandProfilesPayload{ModelID: modelID})
-	if err != nil {
-		logger.ForComponent("model").Errorf("failed to marshal resolve_demand_profiles payload model_id=%d err=%v", modelID, err)
-		return
-	}
-	if _, err := h.asynqClient.Enqueue(asynq.NewTask(jobs.TypeResolveDemandProfiles, body),
-		asynq.Queue("buem"),
-		asynq.MaxRetry(3),
-		asynq.Timeout(30*time.Minute),
-		asynq.Retention(24*time.Hour),
-	); err != nil {
-		logger.ForComponent("model").Errorf("failed to enqueue resolve_demand_profiles model_id=%d err=%v", modelID, err)
-	}
-}
-
 // triggerCity2TabulaRun enqueues a trigger_city2tabula_run job for a model
 // whose polygon was just created or changed, so City2TABULA prepares the
 // area's 3D data before the first calculation or per-building request. No
@@ -287,9 +258,6 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 	model.UpdatedAt = modelMap["updated_at"].(time.Time)
 
 	h.triggerCity2TabulaRun(model.ID, req.Config)
-	if len(req.Config) > 0 {
-		h.triggerDemandProfileResolve(model.ID, req.Config)
-	}
 
 	httputil.Created(c, model)
 }
@@ -470,9 +438,6 @@ func (h *ModelHandler) UpdateModel(c *gin.Context) {
 			config = json.RawMessage(model.Config)
 		}
 		h.triggerCity2TabulaRun(model.ID, config)
-	}
-	if len(req.Config) > 0 {
-		h.triggerDemandProfileResolve(model.ID, req.Config)
 	}
 
 	h.respondWithPreloadedModel(c, id, model)
