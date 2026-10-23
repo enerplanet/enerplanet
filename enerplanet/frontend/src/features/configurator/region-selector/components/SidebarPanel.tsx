@@ -329,18 +329,18 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         </div>
 
         <div className="flex gap-2" data-tour="technologies-parameters">
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={onOpenTechDrawer}
-            className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg bg-primary px-3 py-2 text-left text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            className="h-auto flex-1 cursor-pointer justify-start gap-3 px-3 py-2 text-left"
           >
             <CircuitBoard className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{t("simulation.technologies")}</span>
-              <span className="block text-xs opacity-80">{t("technologies.dragInstruction")}</span>
+              <span className="block whitespace-normal text-xs font-normal text-muted-foreground">{t("technologies.dragInstruction")}</span>
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0 opacity-80" aria-hidden="true" />
-          </button>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </Button>
           {/* <Button
                         variant="outline"
                         onClick={onOpenAdvancedParams}
