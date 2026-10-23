@@ -2347,7 +2347,9 @@
     "rightClickRotate": "Clic destro + trascinare per ruotare",
     "regions": "regioni",
     "grids": "griglie",
-    "countries": "paesi"
+    "countries": "paesi",
+    "footprintOnlyBuildings_one": "{{count}} edificio non ha dati 3D e mostra solo la sua impronta",
+    "footprintOnlyBuildings_other": "{{count}} edifici non hanno dati 3D e mostrano solo la loro impronta"
   },
   "privacy": {
     "dialogTitle": "Elaborazione dati e privacy",

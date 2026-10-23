@@ -1670,8 +1670,9 @@ paths:
         Returns the building's footprint and every envelope surface polygon, for
         rendering it in 3D. Surface ids are the City2TABULA surface row ids that the
         BuEM envelope elements carry, so a clicked face resolves back to its element
-        without a second lookup. Geometry is in the country's storage CRS, not WGS84.
-        One building per call.
+        without a second lookup. Geometry is in the country's storage CRS, or in WGS84
+        with srid=4326, where surfaces keep z as height above sea level and the
+        footprint is 2D. One building per call.
       parameters:
       - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
           rejected
@@ -1683,6 +1684,10 @@ paths:
         in: query
         name: object_ids
         required: true
+        type: string
+      - description: 4326 for WGS84; omitted, the country's storage CRS
+        in: query
+        name: srid
         type: string
       produces:
       - application/json

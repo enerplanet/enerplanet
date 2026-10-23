@@ -2365,7 +2365,11 @@
     "rightClickRotate": "Prawy przycisk + przeciągnij, aby obrócić",
     "regions": "regiony",
     "grids": "siatki",
-    "countries": "kraje"
+    "countries": "kraje",
+    "footprintOnlyBuildings_one": "{{count}} budynek nie ma danych 3D i pokazuje tylko obrys",
+    "footprintOnlyBuildings_few": "{{count}} budynki nie mają danych 3D i pokazują tylko obrys",
+    "footprintOnlyBuildings_many": "{{count}} budynków nie ma danych 3D i pokazuje tylko obrys",
+    "footprintOnlyBuildings_other": "{{count}} budynku nie ma danych 3D i pokazuje tylko obrys"
   },
   "privacy": {
     "dialogTitle": "Przetwarzanie danych i prywatność",

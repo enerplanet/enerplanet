@@ -2365,7 +2365,11 @@
     "rightClickRotate": "Pravé tlačítko + táhnout pro otočení",
     "regions": "regiony",
     "grids": "mřížky",
-    "countries": "země"
+    "countries": "země",
+    "footprintOnlyBuildings_one": "{{count}} budova nemá 3D data a ukazuje jen půdorys",
+    "footprintOnlyBuildings_few": "{{count}} budovy nemají 3D data a ukazují jen půdorys",
+    "footprintOnlyBuildings_many": "{{count}} budovy nemá 3D data a ukazuje jen půdorys",
+    "footprintOnlyBuildings_other": "{{count}} budov nemá 3D data a ukazuje jen půdorys"
   },
   "privacy": {
     "dialogTitle": "Zpracování dat a soukromí",

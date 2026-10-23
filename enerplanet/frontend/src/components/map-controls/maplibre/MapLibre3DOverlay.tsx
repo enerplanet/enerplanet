@@ -51,7 +51,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible, isDrawing);
 
   // 2. Data layers
-  useMapLibreLayers(mapRef, {
+  const { footprintOnly } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
     transformersGeoJSON, availableBoundaryGeoJSON, selectedBoundaryFeature, showBoundary, polygonCoordinates,
     selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick,
@@ -80,7 +80,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
         }}
       />
       {/* 3D pitch/bearing/reset controls */}
-      <MapLibre3DControls mapRef={mapRef} placement={controlsPlacement} />
+      <MapLibre3DControls mapRef={mapRef} placement={controlsPlacement} footprintOnly={footprintOnly} />
     </>
   );
 };

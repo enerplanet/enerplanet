@@ -47,11 +47,12 @@ type fakeC2T struct {
 	runNotFound         bool   // c2t-run-status fails as an upstream 404
 	triggerFails        bool   // c2t-trigger-run fails as an upstream 500
 	triggeredRuns       int
-	coverageCount       int    // count returned by c2t-coverage
-	coverageFails       bool   // c2t-coverage fails as an upstream 500
-	coverageExhausted   bool   // c2t-coverage gives up after its attempt cap
-	geometryJSON        string // target_response for c2t-geometry
-	geometryFails       bool   // c2t-geometry fails as an upstream 500
+	coverageCount       int            // count returned by c2t-coverage
+	coverageFails       bool           // c2t-coverage fails as an upstream 500
+	coverageExhausted   bool           // c2t-coverage gives up after its attempt cap
+	geometryJSON        string         // target_response for c2t-geometry
+	geometryFails       bool           // c2t-geometry fails as an upstream 500
+	geometryPayload     map[string]any // payload of the last c2t-geometry request
 }
 
 func (f *fakeC2T) client(t *testing.T) *c2t.Client {
@@ -60,11 +61,15 @@ func (f *fakeC2T) client(t *testing.T) *c2t.Client {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/requests":
 			var req struct {
-				Target string `json:"target"`
+				Target  string         `json:"target"`
+				Payload map[string]any `json:"payload"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 			if req.Target == "c2t-trigger-run" {
 				f.triggeredRuns++
+			}
+			if req.Target == "c2t-geometry" {
+				f.geometryPayload = req.Payload
 			}
 			w.WriteHeader(http.StatusAccepted)
 			_, _ = fmt.Fprintf(w, `{"id":%q}`, req.Target)

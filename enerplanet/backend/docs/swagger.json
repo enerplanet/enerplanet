@@ -1008,7 +1008,7 @@
                         "SessionAuth": []
                     }
                 ],
-                "description": "Returns the building's footprint and every envelope surface polygon, for\nrendering it in 3D. Surface ids are the City2TABULA surface row ids that the\nBuEM envelope elements carry, so a clicked face resolves back to its element\nwithout a second lookup. Geometry is in the country's storage CRS, not WGS84.\nOne building per call.",
+                "description": "Returns the building's footprint and every envelope surface polygon, for\nrendering it in 3D. Surface ids are the City2TABULA surface row ids that the\nBuEM envelope elements carry, so a clicked face resolves back to its element\nwithout a second lookup. Geometry is in the country's storage CRS, or in WGS84\nwith srid=4326, where surfaces keep z as height above sea level and the\nfootprint is 2D. One building per call.",
                 "produces": [
                     "application/json"
                 ],
@@ -1030,6 +1030,12 @@
                         "name": "object_ids",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "4326 for WGS84; omitted, the country's storage CRS",
+                        "name": "srid",
+                        "in": "query"
                     }
                 ],
                 "responses": {

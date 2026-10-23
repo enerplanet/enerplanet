@@ -2346,7 +2346,9 @@
     "rightClickRotate": "Rechtsklik + slepen om te draaien",
     "regions": "regio's",
     "grids": "rasters",
-    "countries": "landen"
+    "countries": "landen",
+    "footprintOnlyBuildings_one": "{{count}} gebouw heeft geen 3D-stadsdata en toont alleen de plattegrond",
+    "footprintOnlyBuildings_other": "{{count}} gebouwen hebben geen 3D-stadsdata en tonen alleen de plattegrond"
   },
   "privacy": {
     "dialogTitle": "Gegevensverwerking & Privacy",
