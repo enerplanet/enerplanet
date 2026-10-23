@@ -101,7 +101,7 @@ const ArchiveSelect: FC = () => {
   const { t } = useTranslation();
   const weather = useModelStore((s) => s.weather);
   const setWeather = useModelStore((s) => s.setWeather);
-  const { defaultProvider, archives } = useWeatherArchives();
+  const { defaultProvider, archives, scenarioYears } = useWeatherArchives();
   const archive = weather.provider ?? defaultProvider ?? "";
   const names = Object.keys(archives);
 
@@ -118,9 +118,13 @@ const ArchiveSelect: FC = () => {
           <TooltipContent className="max-w-xs space-y-1">
             <p className="font-medium">{t("simulation.weather.coverage")}</p>
             {names.map((name) => (
-              <p key={name}>
-                {ARCHIVE_NAMES[name] ?? name}: {t("simulation.weather.historicYears", { count: archives[name].length, range: yearRange(archives[name]) })}
-              </p>
+              <div key={name}>
+                <p className="font-medium">{ARCHIVE_NAMES[name] ?? name}</p>
+                <p>{t("simulation.weather.historicYears", { count: archives[name].length, range: yearRange(archives[name]) })}</p>
+                {scenarioYears[name]?.length > 0 && (
+                  <p>{t("simulation.weather.scenarioYears", { count: scenarioYears[name].length, range: yearRange(scenarioYears[name]) })}</p>
+                )}
+              </div>
             ))}
           </TooltipContent>
         </Tooltip>

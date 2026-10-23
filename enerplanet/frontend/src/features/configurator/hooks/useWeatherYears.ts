@@ -6,6 +6,7 @@ interface WeatherYearsResponse {
   data: {
     default_provider: string;
     providers: Record<string, number[]>;
+    scenario_coverage?: Record<string, { scenarios: string[] | null; source_years: number[] | null }>;
   };
 }
 
@@ -19,6 +20,8 @@ export interface WeatherArchives {
   defaultProvider: string | null;
   /** Archives that have at least one year, each with its years ascending. */
   archives: Record<string, number[]>;
+  /** Per archive, the years its scenarios draw months from, ascending; empty when not reported. */
+  scenarioYears: Record<string, number[]>;
 }
 
 /**
@@ -37,7 +40,11 @@ export function useWeatherArchives(): WeatherArchives & { failed: boolean } {
   for (const [name, years] of Object.entries(data?.providers ?? {})) {
     if (years.length > 0) archives[name] = [...years].sort((a, b) => a - b);
   }
-  return { defaultProvider: data?.default_provider ?? null, archives, failed: isError };
+  const scenarioYears: Record<string, number[]> = {};
+  for (const [name, coverage] of Object.entries(data?.scenario_coverage ?? {})) {
+    scenarioYears[name] = coverage.source_years ?? [];
+  }
+  return { defaultProvider: data?.default_provider ?? null, archives, scenarioYears, failed: isError };
 }
 
 /**

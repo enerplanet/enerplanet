@@ -1651,7 +1651,9 @@
       },
       "coverage": "Dekking",
       "historicYears_one": "historisch jaar {{range}}",
-      "historicYears_other": "historische jaren {{range}} ({{count}} jaar)"
+      "historicYears_other": "historische jaren {{range}} ({{count}} jaar)",
+      "scenarioYears_one": "scenario's uit het jaar {{range}}",
+      "scenarioYears_other": "scenario's uit {{count}} jaren, {{range}}"
     },
     "periodParts": {
       "label": "Periode",
