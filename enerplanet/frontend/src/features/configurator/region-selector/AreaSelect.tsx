@@ -645,7 +645,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
             {isMapLibre3D && (
-              <div className="pointer-events-none absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs font-medium text-white shadow-md">
+              <div className="pointer-events-none absolute top-16 z-30 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs font-medium text-white shadow-md" style={MAP_TOP_CENTRE}>
                 {t("drawing.view3dOnly", "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.")}
               </div>
             )}
