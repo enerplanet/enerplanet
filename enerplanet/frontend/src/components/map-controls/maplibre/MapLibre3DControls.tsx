@@ -26,7 +26,7 @@ export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef }
     <>
       {/* Reset button below map controls */}
       <div
-        className="absolute z-[60] pointer-events-auto"
+        className="absolute z-50 pointer-events-auto"
         style={{ top: 152, right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
       >
         <Tooltip>
@@ -43,7 +43,7 @@ export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef }
 
       {/* Persistent hint on the map */}
       <div
-        className="absolute z-[60] pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[11px] shadow-md"
+        className="absolute z-50 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[11px] shadow-md"
         style={{ bottom: 40, right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
       >
         <RotateCcw className="w-3 h-3 opacity-80" />
