@@ -6,15 +6,18 @@ interface SettingsRowProps {
   children: ReactNode;
 }
 
-/** One setting: its name and description on the left, its control on the right, stacked on narrow screens. */
+/**
+ * One setting, styled like the Feedback form sections: the name and a muted
+ * description on top, the control below on its own line, no card or borders.
+ */
 export function SettingsRow({ title, description, children }: SettingsRowProps) {
   return (
-    <div className="grid gap-2 border-b border-border px-4 py-4 last:border-b-0 md:grid-cols-[16rem_1fr] md:gap-6">
+    <section className="space-y-2">
       <div>
-        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
-      <div className="min-w-0 max-w-2xl">{children}</div>
-    </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   );
 }

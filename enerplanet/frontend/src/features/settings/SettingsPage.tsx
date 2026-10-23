@@ -1,104 +1,68 @@
 import React, { useState } from "react";
-import { Bell, Cog, LayoutGrid, Settings, User } from "lucide-react";
+import { Bell, LayoutGrid, User } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { CARD_CLASS, PAGE_SHELL_CLASS } from "@/components/ui/toolbar";
+import SectionShell from "@/components/ui/SectionShell";
 import ProfileSettings from "@/features/settings/ProfileSettings";
 import MapSettings from "@/features/settings/MapLocationSettings";
 import NotificationSettings from "@/features/settings/NotificationSettings";
 import LanguageSettings from "@/features/settings/LanguageSettings";
 import NotificationManagement from "@/features/settings/NotificationManagement";
-import PolygonLimitsSettings from "@/features/settings/PolygonLimitsSettings";
-import RegionManagement from "@/features/settings/RegionManagement";
 import { SettingsRow } from "@/features/settings/SettingsRow";
 import { useAuthStore } from "@/store/auth-store";
 import { useTranslation } from "@spatialhub/i18n";
-import { cn } from "@/lib/utils";
+import type { ShellTab } from "@/components/ui/SectionShell";
 
-type TabKey = "profile" | "general" | "notifications" | "advanced";
+type TabKey = "profile" | "general" | "notifications";
 
-/** The user's profile and preferences on one page, one tab per group; Advanced is for experts. */
+/** The user's profile and preferences on one page, one tab per group. */
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
   useDocumentTitle(t("settings.title"));
   const isExpert = useAuthStore((state) => state.user?.access_level === "expert");
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
 
-  const tabs: { key: TabKey; label: string; icon: typeof User }[] = [
-    { key: "profile", label: t("settings.tabs.profile"), icon: User },
-    { key: "general", label: t("settings.tabs.general"), icon: LayoutGrid },
-    { key: "notifications", label: t("settings.tabs.notifications"), icon: Bell },
-    ...(isExpert ? [{ key: "advanced" as const, label: t("settings.tabs.advanced"), icon: Cog }] : []),
+  const tabs: ShellTab[] = [
+    { key: "profile", label: t("settings.tabs.profile"), icon: <User className="w-5 h-5" /> },
+    { key: "general", label: t("settings.tabs.general"), icon: <LayoutGrid className="w-5 h-5" /> },
+    { key: "notifications", label: t("settings.tabs.notifications"), icon: <Bell className="w-5 h-5" /> },
   ];
 
   return (
-    <div className={PAGE_SHELL_CLASS}>
-      <PageHeader icon={Settings} title={t("settings.title")} subtitle={t("settings.subtitle")} />
+    <SectionShell
+      title={t("settings.title")}
+      subtitle={t("settings.subtitle")}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(key) => setActiveTab(key as TabKey)}
+    >
+      <div key={activeTab} className="md-fade-in space-y-6">
+        {activeTab === "profile" && <ProfileSettings />}
 
-      <div className={cn("md-rise overflow-hidden", CARD_CLASS)}>
-        <div className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border bg-muted px-2 pt-2" role="tablist">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === key}
-              onClick={() => setActiveTab(key)}
-              className={cn(
-                "-mb-px flex items-center gap-1.5 whitespace-nowrap rounded-t-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors",
-                activeTab === key
-                  ? "border-border border-b-card bg-card text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+        {activeTab === "general" && (
+          <>
+            <SettingsRow title={t("settings.language.title")} description={t("settings.language.subtitle")}>
+              <LanguageSettings />
+            </SettingsRow>
+            <SettingsRow title={t("settings.mapLocation.title")} description={t("settings.mapLocation.subtitle")}>
+              <MapSettings />
+            </SettingsRow>
+          </>
+        )}
 
-        <div key={activeTab} className="md-fade-in" role="tabpanel">
-          {activeTab === "profile" && <ProfileSettings />}
-
-          {activeTab === "general" && (
-            <>
-              <SettingsRow title={t("settings.language.title")} description={t("settings.language.subtitle")}>
-                <LanguageSettings />
+        {activeTab === "notifications" && (
+          <>
+            <SettingsRow title={t("settings.notifications.title")} description={t("settings.notifications.subtitle")}>
+              <NotificationSettings />
+            </SettingsRow>
+            {isExpert && (
+              <SettingsRow title={t("settings.sendNotification.title")} description={t("settings.sendNotification.subtitle")}>
+                <NotificationManagement />
               </SettingsRow>
-              <SettingsRow title={t("settings.mapLocation.title")} description={t("settings.mapLocation.subtitle")}>
-                <div className="max-w-md">
-                  <MapSettings />
-                </div>
-              </SettingsRow>
-            </>
-          )}
-
-          {activeTab === "notifications" && (
-            <>
-              <SettingsRow title={t("settings.notifications.title")} description={t("settings.notifications.subtitle")}>
-                <NotificationSettings />
-              </SettingsRow>
-              {isExpert && (
-                <SettingsRow title={t("settings.sendNotification.title")} description={t("settings.sendNotification.subtitle")}>
-                  <NotificationManagement />
-                </SettingsRow>
-              )}
-            </>
-          )}
-
-          {activeTab === "advanced" && isExpert && (
-            <>
-              <SettingsRow title={t("settings.polygonLimits.title")} description={t("settings.polygonLimits.subtitle")}>
-                <PolygonLimitsSettings />
-              </SettingsRow>
-              <SettingsRow title="Cached Regions" description="Pipeline Data Management">
-                <RegionManagement />
-              </SettingsRow>
-            </>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </SectionShell>
   );
 };
 

@@ -1,11 +1,10 @@
 import { ReactNode } from "react";
-import { LucideIcon } from "lucide-react";
 
 export interface ShellTab {
   key: string;
   label: string;
-  /** A LucideIcon component, or an already-instantiated icon node. */
-  icon: LucideIcon | ReactNode;
+  /** An already-instantiated icon node, e.g. `<User className="w-5 h-5" />`. */
+  icon: ReactNode;
 }
 
 interface SectionShellProps {
@@ -43,7 +42,6 @@ export function SectionShell({
           <nav className="flex-1 p-4">
             <div className="space-y-2">
               {tabs.map((tab) => {
-                const Icon = tab.icon;
                 return (
                   <button
                     key={tab.key}
@@ -55,7 +53,7 @@ export function SectionShell({
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    {typeof Icon === "function" ? <Icon className="w-5 h-5" /> : Icon}
+                    {tab.icon}
                     <span className="text-sm font-medium">{tab.label}</span>
                   </button>
                 );

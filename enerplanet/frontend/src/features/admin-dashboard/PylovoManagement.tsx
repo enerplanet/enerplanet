@@ -11,6 +11,7 @@ import { AdminManagementSkeleton } from "./components/AdminManagementSkeleton";
 import { PylovoFilters, PylovoFormData, PylovoInstance } from "@/features/admin-dashboard/types";
 import type { FormDataConvertible } from "@/hooks/useForm";
 import { usePylovo } from "@/features/admin-dashboard/hooks/usePylovo";
+import RegionManagement from "@/features/settings/RegionManagement";
 import { formatDateTime24h } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import {
@@ -610,6 +611,15 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 					}}
 					isLoading={loading}
 				/>
+			</div>
+
+			{/* Cached Regions — pipeline data management */}
+			<div className="md-rise space-y-3" style={{ animationDelay: "160ms" }}>
+				<div>
+					<h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Cached Regions</h2>
+					<p className="mt-0.5 text-sm text-muted-foreground">Pipeline Data Management</p>
+				</div>
+				<RegionManagement />
 			</div>
 
 			<UniversalForm
