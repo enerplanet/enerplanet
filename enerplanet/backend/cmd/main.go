@@ -314,6 +314,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
 
 	go startOrphanedRunSweep(db, jobs.AsynqLiveTasks{Inspector: asynq.NewInspector(asynqRedisOpt), Queues: []string{"buem", "results"}}, log)
+	go startSeriesSweep(db, log)
 
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
@@ -1057,6 +1058,23 @@ func startOrphanedRunSweep(db *gorm.DB, live jobs.AsynqLiveTasks, log *logrus.Lo
 			log.Errorf("orphaned run sweep failed: %v", err)
 		} else if len(failed) > 0 {
 			log.Warnf("orphaned run sweep: marked models %v failed, their runs had no task left", failed)
+		}
+		<-ticker.C
+	}
+}
+
+// startSeriesSweep deletes, at startup and daily, the BuEM and PV profiles
+// older than a day that no link refers to. Uploaded profiles are kept.
+func startSeriesSweep(db *gorm.DB, log *logrus.Logger) {
+	store := seriesstore.NewStore(db)
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		deleted, err := store.DeleteUnreferenced(time.Now().UTC().Add(-24 * time.Hour))
+		if err != nil {
+			log.Errorf("series sweep failed: %v", err)
+		} else if deleted > 0 {
+			log.Infof("series sweep: deleted %d unreferenced generated profiles", deleted)
 		}
 		<-ticker.C
 	}
