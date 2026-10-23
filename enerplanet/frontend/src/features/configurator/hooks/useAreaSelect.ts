@@ -52,7 +52,8 @@ export const useAreaSelect = ({
     const editModeInitializedRef = useRef(false);
 
     // Reset global store on mount — prevents stale data from a previous model session
-    useEffect(() => { useModelStore.getState().reset(); }, []);
+    // The configurator always opens on the standard 2D map, whichever base map was last chosen.
+    useEffect(() => { useModelStore.getState().reset(); useMapStore.getState().setSelectedBaseLayerId('osm_standard'); }, []);
 
     // ── Store-bound state ──
     const modelName = useModelStore((s) => s.modelName); const setModelName = useModelStore((s) => s.setModelName);
