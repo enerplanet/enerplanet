@@ -21,8 +21,9 @@ interface ToastState {
 	setLifted: (lifted: boolean) => void;
 }
 
-/** Errors stay until closed; other toasts close this long after they arrive, shown or not. */
+/** Toasts close this long after they arrive, shown or not; errors stay twice as long. Notifications stay in the bell. */
 const AUTO_HIDE_MS = 5000;
+const ERROR_AUTO_HIDE_MS = 10000;
 
 let nextId = 1;
 
@@ -33,7 +34,7 @@ export const useToastStore = create<ToastState>((set, get) => ({
 	push: (toast) => {
 		const id = nextId++;
 		set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
-		if (toast.severity !== "error") setTimeout(() => get().dismiss(id), AUTO_HIDE_MS);
+		setTimeout(() => get().dismiss(id), toast.severity === "error" ? ERROR_AUTO_HIDE_MS : AUTO_HIDE_MS);
 	},
 	dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 	dismissOldest: () => set((s) => ({ toasts: s.toasts.slice(1) })),

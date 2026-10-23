@@ -20,7 +20,7 @@ const ICONS: Record<ToastSeverity, React.ReactNode> = {
 	info: <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />,
 };
 
-/** One toast with its close button; the store closes non-errors on its own. */
+/** One toast with its close button; the store also closes it on its own. */
 const ToastItem: React.FC<{ toast: Toast }> = ({ toast }) => {
 	const { t } = useTranslation();
 	const dismiss = useToastStore((s) => s.dismiss);
