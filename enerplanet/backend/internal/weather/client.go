@@ -52,6 +52,25 @@ type Period struct {
 // DefaultPeriod is the typical scenario, for a model that chose none.
 var DefaultPeriod = Period{Scenario: "p50"}
 
+// RequestedPeriod is the period a request names with weather_scenario or
+// weather_year, at most one of them; with neither it is DefaultPeriod.
+func RequestedPeriod(scenario string, year int) (Period, error) {
+	switch {
+	case scenario != "" && year != 0:
+		return Period{}, fmt.Errorf("send weather_scenario or weather_year, not both; got %q and %d", scenario, year)
+	case year < 0:
+		return Period{}, fmt.Errorf("weather_year must be a positive year, got %d", year)
+	case year > 0:
+		return Period{Year: year}, nil
+	case scenario == "":
+		return DefaultPeriod, nil
+	case !IsScenario(scenario):
+		return Period{}, fmt.Errorf("weather_scenario must be p10, p50 or p90, got %q", scenario)
+	default:
+		return Period{Scenario: scenario}, nil
+	}
+}
+
 // Range returns the run's first and last hour as RFC 3339 timestamps.
 func (p Period) Range() (start, end string) {
 	year := p.Year
