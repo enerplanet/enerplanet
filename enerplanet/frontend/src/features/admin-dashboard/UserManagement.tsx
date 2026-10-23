@@ -50,6 +50,7 @@ import {
 import { getPaginationParams, filterByGroup, paginateArray } from "@/utils/paginationUtils";
 import { useTranslation } from "@spatialhub/i18n";
 import { useUserSelection } from "@/features/admin-dashboard/hooks/useUserSelection";
+import PolygonLimitsSettings from "@/features/settings/PolygonLimitsSettings";
 
 function getUsersEmptyMessage(
   t: (key: string, params?: Record<string, string>) => string,
@@ -1288,6 +1289,15 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
           }}
           isLoading={loading}
         />
+      </div>
+
+      {/* Polygon limits per role */}
+      <div className="md-rise space-y-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("settings.polygonLimits.title")}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("settings.polygonLimits.subtitle")}</p>
+        </div>
+        <PolygonLimitsSettings />
       </div>
 
       <UniversalForm

@@ -11,7 +11,7 @@ const LanguageSettings: React.FC = () => {
       value={currentLang}
       onChange={(e) => changeLanguage(e.target.value as LanguageCode, 'enerplanet_language')}
       aria-label={t('settings.language.title')}
-      className="h-9 w-full max-w-xs rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-sm hover:border-muted-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="w-full px-4 py-2.5 border border-border rounded-lg bg-background dark:bg-input text-foreground focus:ring-2 focus:ring-ring focus:border-transparent transition-colors shadow-sm"
     >
       {languages.map((language) => (
         <option key={language.code} value={language.code}>

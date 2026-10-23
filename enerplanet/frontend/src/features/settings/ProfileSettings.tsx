@@ -6,6 +6,10 @@ import { useNotification } from "@/features/notifications/hooks/useNotification"
 import { ApiTokensDialog } from "@/features/api-tokens/ApiTokensDialog";
 import { PRIMARY_BUTTON_CLASS, TOOLBAR_BUTTON_CLASS } from "@/components/ui/toolbar";
 import { SettingsRow } from "@/features/settings/SettingsRow";
+import {
+  OverviewStatsCards,
+  AccessPermissionsCard,
+} from "@/features/admin-dashboard/OverviewPanel";
 
 interface ProfileData {
   id: string;
@@ -15,10 +19,7 @@ interface ProfileData {
 }
 
 const INPUT_CLASS =
-  "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-
-// access_level as stored, to its key under settings.polygonLimits.levels and profile.accessLevels.
-const LEVEL_KEYS: Record<string, string> = { very_low: "basic", intermediate: "intermediate", manager: "manager", expert: "expert" };
+  "w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent transition-colors bg-background dark:bg-input text-foreground placeholder-muted-foreground";
 
 const apiError = (err: unknown, fallback: string): string =>
   (err as { response?: { data?: { error?: string } } }).response?.data?.error ?? fallback;
@@ -68,12 +69,14 @@ const ProfileSettings: React.FC = () => {
     );
   }
 
-  const level = LEVEL_KEYS[profile.access_level] ?? "basic";
-
   return (
     <>
+      <div className="space-y-5">
+        <OverviewStatsCards />
+        <AccessPermissionsCard />
+      </div>
       <SettingsRow title={t("profile.fields.fullName")}>
-        <form onSubmit={saveName} className="flex max-w-md gap-2">
+        <form onSubmit={saveName} className="flex gap-2">
           <input
             type="text"
             value={name}
@@ -89,11 +92,6 @@ const ProfileSettings: React.FC = () => {
       </SettingsRow>
       <SettingsRow title={t("profile.fields.email")} description={t("profile.readOnly")}>
         <p className="text-sm text-foreground">{profile.email}</p>
-      </SettingsRow>
-      <SettingsRow title={t("profile.accessLevel")} description={t(`profile.accessLevels.${level}Description`, "")}>
-        <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-          {t(`settings.polygonLimits.levels.${level}`)}
-        </span>
       </SettingsRow>
       <SettingsRow title={t("apiTokens.title", "API Tokens")} description={t("apiTokens.profileDescription", "Create and revoke your API tokens to access your models and results from scripts or other apps.")}>
         <button type="button" onClick={() => setTokensOpen(true)} className={TOOLBAR_BUTTON_CLASS}>

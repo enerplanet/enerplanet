@@ -11,6 +11,7 @@ import { AdminManagementSkeleton } from "./components/AdminManagementSkeleton";
 import { PylovoFilters, PylovoFormData, PylovoInstance } from "@/features/admin-dashboard/types";
 import type { FormDataConvertible } from "@/hooks/useForm";
 import { usePylovo } from "@/features/admin-dashboard/hooks/usePylovo";
+import RegionManagement from "@/features/settings/RegionManagement";
 import { formatDateTime24h } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import {
@@ -333,30 +334,8 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 
 	return (
 		<div className="space-y-6">
-			{/* Summary Cards */}
-			<div className="md-rise grid grid-cols-2 md:grid-cols-4 gap-3">
-				{[
-					{ icon: Server, label: t("pylovoManagement.summary.total"), value: summary?.total || 0 },
-					{ icon: Wifi, label: t("pylovoManagement.summary.online"), value: summary?.online || 0 },
-					{ icon: Clock, label: t("pylovoManagement.summary.available"), value: summary?.available || 0 },
-					{ icon: WifiOff, label: t("pylovoManagement.summary.offline"), value: summary?.offline || 0 },
-				].map((stat) => (
-					<div key={stat.label} className="bg-card rounded-xl p-3 border border-border shadow-sm hover:shadow-md transition-all duration-200">
-						<div className="flex items-center gap-3">
-							<div className="p-2 rounded-lg bg-muted flex-shrink-0">
-								<stat.icon className="w-4 h-4 text-muted-foreground" />
-							</div>
-							<div className="flex-1 min-w-0">
-								<p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-								<p className="text-lg font-bold text-foreground">{stat.value}</p>
-							</div>
-						</div>
-					</div>
-				))}
-			</div>
-
-			{/* Header with filters */}
-			<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
+			{/* Title */}
+			<div className="md-rise" style={{ animationDelay: "60ms" }}>
 				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 					<div className="flex items-center gap-3.5">
 						<div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
@@ -399,6 +378,29 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 						)}
 					</div>
 				</div>
+			</div>
+
+			{/* Summary Cards */}
+			<div className="md-rise grid grid-cols-2 md:grid-cols-4 gap-3">
+				{[
+					{ icon: Server, label: t("pylovoManagement.summary.total"), value: summary?.total || 0 },
+					{ icon: Wifi, label: t("pylovoManagement.summary.online"), value: summary?.online || 0 },
+					{ icon: Clock, label: t("pylovoManagement.summary.available"), value: summary?.available || 0 },
+					{ icon: WifiOff, label: t("pylovoManagement.summary.offline"), value: summary?.offline || 0 },
+				].map((stat) => (
+					<div key={stat.label} className="bg-card rounded-xl p-3 border border-border shadow-sm hover:shadow-md transition-all duration-200">
+						<div className="flex items-center gap-3">
+							<div className="p-2 rounded-lg bg-muted flex-shrink-0">
+								<stat.icon className="w-4 h-4 text-muted-foreground" />
+							</div>
+							<div className="flex-1 min-w-0">
+								<p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+								<p className="text-lg font-bold text-foreground">{stat.value}</p>
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
 
 				{/* Filters */}
 				<div className="flex flex-col sm:flex-row gap-3">
@@ -438,9 +440,8 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 						/>
 					</div>
 				</div>
-			</div>
 
-			{/* Table */}
+				{/* Table */}
 			<div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
 				{loading && (
 					<div className="h-1 bg-muted overflow-hidden">
@@ -610,6 +611,15 @@ const PylovoManagement: React.FC<PylovoManagementProps> = ({ readOnly = false })
 					}}
 					isLoading={loading}
 				/>
+			</div>
+
+			{/* Cached Regions — pipeline data management */}
+			<div className="md-rise space-y-3" style={{ animationDelay: "160ms" }}>
+				<div>
+					<h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Cached Regions</h2>
+					<p className="mt-0.5 text-sm text-muted-foreground">Pipeline Data Management</p>
+				</div>
+				<RegionManagement />
 			</div>
 
 			<UniversalForm

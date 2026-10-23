@@ -86,7 +86,7 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({
           placeholder={placeholder || t('settings.locationSearch.placeholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm border-2 border-input rounded-lg bg-card text-foreground placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:border-foreground focus:outline-none transition-colors duration-150"
+          className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg bg-background dark:bg-input text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring transition-colors duration-150"
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               setSearch("");

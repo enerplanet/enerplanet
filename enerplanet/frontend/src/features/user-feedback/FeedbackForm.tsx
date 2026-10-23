@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   Send,
-  MessageSquare,
   Bug,
   Lightbulb,
   Star,
@@ -38,6 +37,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth-store";
 import axios from "@/lib/axios";
 import { useTranslation } from "@spatialhub/i18n";
+import SectionShell from "@/components/ui/SectionShell";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useQueryClient } from "@tanstack/react-query";
@@ -212,7 +212,8 @@ const Snackbar: React.FC<SnackbarState & { onClose: () => void }> = ({
 };
 
 const SuccessScreen: React.FC<{ t: (key: string) => string }> = ({ t }) => (
-  <div className="max-w-2xl mx-auto p-6 animate-fade-in">
+  <SectionShell title={t("feedback.title")} subtitle={t("feedback.subtitle")}>
+    <div className="md-scope max-w-2xl mx-auto p-6 animate-fade-in">
     <div className="bg-card text-card-foreground rounded-xl p-8 shadow-sm border border-border text-center">
       <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center mx-auto mb-5">
         <CheckCircle className="w-7 h-7 text-primary-foreground" />
@@ -225,7 +226,8 @@ const SuccessScreen: React.FC<{ t: (key: string) => string }> = ({ t }) => (
         {t("feedback.success.reference")}: FB-{Date.now().toString().slice(-6)}
       </p>
     </div>
-  </div>
+    </div>
+  </SectionShell>
 );
 
 const FormSection: React.FC<{
@@ -233,14 +235,14 @@ const FormSection: React.FC<{
   required?: boolean;
   children: React.ReactNode;
 }> = ({ title, required, children }) => (
-  <div className="bg-card text-card-foreground rounded-xl p-5 shadow-sm border border-border">
+  <section className="space-y-3">
     {title && (
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+      <h3 className="text-sm font-semibold text-foreground">
         {title} {required && <span className="text-red-500">*</span>}
       </h3>
     )}
     {children}
-  </div>
+  </section>
 );
 
 // Types for user feedback history
@@ -375,7 +377,7 @@ export const FeedbackComponent: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [feedbackData, setFeedbackData] = useState<FeedbackFormData>({
-    category: reportRun ? "bug" : "",
+    category: reportRun ? "bug" : "general",
     // feedbacks.subject holds 255 characters.
     subject: reportRun ? `${reportRun.stage ? t(`modelStatus.failedAt.${reportRun.stage}`) : t("model.failed")}: ${reportRun.title}`.slice(0, 255) : "",
     message: "",
@@ -640,7 +642,7 @@ export const FeedbackComponent: React.FC = () => {
         // Reset form after 3 seconds
         setTimeout(() => {
           setFeedbackData({
-            category: "",
+            category: "general",
             subject: "",
             message: "",
             rating: 0,
@@ -670,70 +672,40 @@ export const FeedbackComponent: React.FC = () => {
     return <SuccessScreen t={t} />;
   }
 
-  // Category config with translated labels
-  const getCategoryConfig = (key: CategoryKey) => ({
-    icon: CATEGORY_ICONS[key],
+  // Categories double as the left-rail items, matching the Legal tab rail.
+  const categoryTabs = (Object.keys(CATEGORY_ICONS) as CategoryKey[]).map((key) => ({
+    key,
     label: t(`feedback.categories.${key}`),
-    description: t(`feedback.categories.${key}Description`)
-  });
+    icon: CATEGORY_ICONS[key],
+  }));
 
   return (
-    <div className="md-scope max-w-3xl mx-auto p-6 bg-background text-foreground">
-      {/* Header */}
-      <div className="md-rise bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black rounded-xl p-6 mb-6 text-white shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
-            <MessageSquare className="w-6 h-6" />
+    <SectionShell
+      title={t("feedback.title")}
+      subtitle={t("feedback.subtitle")}
+      tabs={categoryTabs}
+      activeTab={feedbackData.category}
+      onTabChange={(key) => updateField("category", key)}
+    >
+      <div className="container mx-auto px-4 py-8 text-foreground">
+        <header className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="flex h-8 w-8 items-center justify-center text-primary">
+              {CATEGORY_ICONS[feedbackData.category as CategoryKey]}
+            </span>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t(`feedback.categories.${feedbackData.category}`)}
+            </h1>
           </div>
-          <div>
-            <h1 className="text-xl font-bold">{t("feedback.title")}</h1>
-            <p className="text-gray-300 text-sm">{t("feedback.subtitle")}</p>
-          </div>
-        </div>
-      </div>
+          <p className="text-sm text-muted-foreground">
+            {t(`feedback.categories.${feedbackData.category}Description`)}
+          </p>
+        </header>
 
       {/* My Feedback History */}
       {user?.id && <MyFeedbackHistory userId={String(user.id)} refreshTrigger={historyRefresh} />}
 
       <form onSubmit={handleSubmit} className="md-rise space-y-4" style={{ animationDelay: "120ms" }}>
-        {/* Category Selection */}
-        <FormSection title={t("feedback.category")} required>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {(Object.keys(CATEGORY_ICONS) as CategoryKey[]).map((key) => {
-                const config = getCategoryConfig(key);
-                const isSelected = feedbackData.category === key;
-                
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => updateField("category", key)}
-                    className={`
-                      p-4 rounded-xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left
-                      ${isSelected 
-                        ? 'border-primary bg-accent' 
-                        : 'border-border hover:border-muted-foreground bg-card'
-                      }
-                    `}
-                  >
-                    <div className={`p-2 rounded-lg inline-flex mb-2 ${isSelected ? 'bg-primary' : 'bg-muted'}`}>
-                      <span className={isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}>
-                        {config.icon}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground">
-                      {config.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {config.description}
-                    </p>
-                  </button>
-                );
-              }
-            )}
-          </div>
-        </FormSection>
-
         {/* Subject */}
         <FormSection title={t("feedback.subject")} required>
           <input
@@ -1008,6 +980,7 @@ export const FeedbackComponent: React.FC = () => {
         {...snackbar}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       />
-    </div>
+      </div>
+    </SectionShell>
   );
 };
