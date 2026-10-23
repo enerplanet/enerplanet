@@ -228,7 +228,7 @@
       "moveToWorkspace": "Move to Workspace",
       "profile": "Profile",
       "documentation": "Documentation",
-      "restartTour": "Restart tour",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
       "theme": "Theme"
     },
@@ -241,7 +241,8 @@
     "menu": {
       "settings": "Settings",
       "privacyTerms": "Privacy & Terms",
-      "logout": "Log out"
+      "logout": "Log out",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "View Results",
