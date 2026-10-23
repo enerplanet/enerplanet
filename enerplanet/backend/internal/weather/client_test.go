@@ -17,6 +17,12 @@ import (
 // the status GET with statusBody. It records the submit payload it received.
 func fakeTentacron(t *testing.T, statusBody string) (*tentacron.Client, *map[string]any) {
 	t.Helper()
+	return fakeTentacronFor(t, "weather-point", statusBody)
+}
+
+// fakeTentacronFor is fakeTentacron for the given TentaCron target.
+func fakeTentacronFor(t *testing.T, target, statusBody string) (*tentacron.Client, *map[string]any) {
+	t.Helper()
 	var gotPayload map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -26,7 +32,7 @@ func fakeTentacron(t *testing.T, statusBody string) (*tentacron.Client, *map[str
 				Payload map[string]any `json:"payload"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			assert.Equal(t, "weather-point", body.Target)
+			assert.Equal(t, target, body.Target)
 			gotPayload = body.Payload
 			w.WriteHeader(http.StatusAccepted)
 			_, _ = w.Write([]byte(`{"id":"req-1"}`))
@@ -111,4 +117,15 @@ func TestPeriod_RangeCoversTheFullCalendarYear(t *testing.T) {
 	start, end = Period{Year: 2019}.Range()
 	assert.Equal(t, "2019-01-01T00:00:00Z", start)
 	assert.Equal(t, "2019-12-31T23:00:00Z", end)
+}
+
+func TestYears_ListsEachArchiveAndSkipsAFailedOne(t *testing.T) {
+	listing := `{"providers":{"merra-2":{"years":[2018,2019]},"cosmo-rea6":{"years":[2018]},` +
+		`"era5-land":{"error":{"code":"provider_listing_failed","message":"disk"}}}}`
+	tc, _ := fakeTentacronFor(t, "weather-providers", `{"state":"completed","result":{"target_status":200,"target_response":`+listing+`}}`)
+
+	years, err := NewClient(tc).Years(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, map[string][]int{"merra-2": {2018, 2019}, "cosmo-rea6": {2018}}, years)
 }

@@ -711,7 +711,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
-	weatherHandler := weather.NewWeatherHandler()
+	weatherHandler := weather.NewWeatherHandler(weatherclient.NewClient(deps.TentacronClient), deps.Cfg.WeatherProvider)
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
@@ -936,6 +936,7 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 	weatherRoutes := api.Group("/weather")
 	weatherRoutes.GET("", handler.GetWeather)
 	weatherRoutes.GET("/current", handler.GetCurrentWeather)
+	weatherRoutes.GET("/years", handler.GetYears)
 }
 
 // registerCity2TabulaRoutes wires the on-request 3D-data endpoints: the enrich

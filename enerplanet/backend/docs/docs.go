@@ -1544,6 +1544,46 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/weather/years": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Per weather archive (provider), the years with processed weather data, and the archive runs use by default. A simulation period must lie within one of these years.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EnerPlanET"
+                ],
+                "summary": "Weather years available for simulations",
+                "responses": {
+                    "200": {
+                        "description": "default_provider and providers: {name: [years]}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "502": {
+                        "description": "The weather service could not be reached; retrying later may help",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
