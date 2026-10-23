@@ -92,7 +92,8 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 
 		// Read at creation only: depending on the view state would recreate this
 		// callback on every pan, and MapContainer re-initialises the map when it changes.
-		const { layers: baseLayers, selectedBaseLayerId: selectedId, position: startPosition, zoom: startZoom } = useMapStore.getState();
+		const { layers: baseLayers, selectedBaseLayerId: selectedId } = useMapStore.getState();
+		const start = useMapLocationStore.getState().location;
 		const baseLayerInfo = baseLayers.find((l) => l.id === selectedId) ?? baseLayers[0];
 		const initialBaseLayer = new TileLayer({ source: baseLayerInfo.source });
 
@@ -100,8 +101,8 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 			target: mapRef.current,
 			layers: [initialBaseLayer],
 			view: new View({
-				center: fromLonLat(startPosition),
-				zoom: startZoom,
+				center: fromLonLat([start.longitude, start.latitude]),
+				zoom: MAP_ZOOM.LOCATION,
 				maxZoom: MAP_ZOOM.MAX,
 				minZoom: MAP_ZOOM.MIN,
 			}),
@@ -183,7 +184,7 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 			if (hasChanged) {
 				view.animate({
 					center: newCenter,
-					zoom: mapLocation.zoom,
+					zoom: MAP_ZOOM.LOCATION,
 					duration: 500,
 				});
 			}
@@ -224,7 +225,7 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 		const savedCenter = fromLonLat([mapLocation.longitude, mapLocation.latitude]);
 		map.getView().animate({
 			center: savedCenter,
-			zoom: mapLocation.zoom || map.getView().getZoom(),
+			zoom: MAP_ZOOM.LOCATION,
 			duration: 1000,
 		});
 	}, [map, mapLocation]);
