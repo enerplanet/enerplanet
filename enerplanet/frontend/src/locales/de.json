@@ -2717,7 +2717,9 @@
     "rightClickRotate": "Rechtsklick + ziehen zum Drehen",
     "regions": "Regionen",
     "grids": "Raster",
-    "countries": "Länder"
+    "countries": "Länder",
+    "boxedBuildings_one": "{{count}} Gebäude als Quader dargestellt: keine 3D-Stadtdaten",
+    "boxedBuildings_other": "{{count}} Gebäude als Quader dargestellt: keine 3D-Stadtdaten"
   },
   "privacy": {
     "dialogTitle": "Datenverarbeitung & Datenschutz",

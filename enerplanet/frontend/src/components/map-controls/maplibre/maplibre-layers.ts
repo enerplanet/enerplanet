@@ -106,6 +106,10 @@ const heightExpr: maplibregl.ExpressionSpecification = [
   0,
 ];
 
+// A building drawn from its LoD2 surfaces (see maplibre-lod2) keeps a flat
+// footprint here, which still takes clicks and shows its grid colour.
+const footprintHeightExpr: maplibregl.ExpressionSpecification = ['case', ['==', ['get', '_lod2'], true], 0, heightExpr];
+
 const separatorWidthExpr: maplibregl.ExpressionSpecification = [
   'interpolate',
   ['linear'],
@@ -121,6 +125,7 @@ export function addOrUpdateBuildings(
   geojson: any,
   colorMap: Map<string, string>,
   selectedBuildingOsmIds: string[] = [],
+  lod2OsmIds: ReadonlySet<string> = new Set(),
 ): void {
   if (!geojson?.features?.length) {
     clearSource(map, 'buildings-3d');
@@ -142,6 +147,7 @@ export function addOrUpdateBuildings(
       const rawOsmId = f.properties.osm_id;
       const osmId = rawOsmId === undefined || rawOsmId === null ? '' : String(rawOsmId).trim();
       f.properties._assign_selected = selectedSet.has(osmId);
+      f.properties._lod2 = lod2OsmIds.has(osmId);
 
       polygons.push(f);
     }
@@ -183,7 +189,7 @@ export function addOrUpdateBuildings(
       source: 'buildings-3d',
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': heightExpr,
+        'fill-extrusion-height': footprintHeightExpr,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.92,
         'fill-extrusion-vertical-gradient': true,
@@ -213,7 +219,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_cluster_key'], '__none__'],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', heightExpr, 2.4],
+        'fill-extrusion-height': ['+', footprintHeightExpr, 2.4],
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.98,
       },
@@ -250,7 +256,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_assign_selected'], true],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', heightExpr, 3.2],
+        'fill-extrusion-height': ['+', footprintHeightExpr, 3.2],
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.82,
       },

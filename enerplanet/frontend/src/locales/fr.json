@@ -2722,7 +2722,9 @@
     "rightClickRotate": "Clic droit + glisser pour pivoter",
     "regions": "régions",
     "grids": "grilles",
-    "countries": "pays"
+    "countries": "pays",
+    "boxedBuildings_one": "{{count}} bâtiment affiché en bloc : pas de données urbaines 3D",
+    "boxedBuildings_other": "{{count}} bâtiments affichés en blocs : pas de données urbaines 3D"
   },
   "privacy": {
     "dialogTitle": "Traitement des données et confidentialité",

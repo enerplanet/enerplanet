@@ -2345,7 +2345,9 @@
     "rightClickRotate": "Rechtsklik + slepen om te draaien",
     "regions": "regio's",
     "grids": "rasters",
-    "countries": "landen"
+    "countries": "landen",
+    "boxedBuildings_one": "{{count}} gebouw als blok getoond: geen 3D-stadsgegevens",
+    "boxedBuildings_other": "{{count}} gebouwen als blokken getoond: geen 3D-stadsgegevens"
   },
   "privacy": {
     "dialogTitle": "Gegevensverwerking & Privacy",

@@ -2717,7 +2717,9 @@
     "rightClickRotate": "Right-click + drag to rotate",
     "regions": "regions",
     "grids": "grids",
-    "countries": "countries"
+    "countries": "countries",
+    "boxedBuildings_one": "{{count}} building shown as a box: no 3D city data",
+    "boxedBuildings_other": "{{count}} buildings shown as boxes: no 3D city data"
   },
   "privacy": {
     "dialogTitle": "Data Processing & Privacy",

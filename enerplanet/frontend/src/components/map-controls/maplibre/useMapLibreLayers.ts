@@ -14,6 +14,8 @@ import {
   setupUserModelInteractions,
 } from './maplibre-layers';
 import { reprojectGeoJSON } from './maplibre-utils';
+import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
+import { useLod2Surfaces } from './useLod2Surfaces';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
@@ -75,13 +77,19 @@ export function useMapLibreLayers(
   const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
 
+  // Buildings City2TABULA has LoD2 surfaces for are drawn from them (Lod2Layer)
+  // and keep only a flat footprint in the extrusion; the rest stay extruded.
+  const { surfaces: lod2, loading: lod2Loading } = useLod2Surfaces(buildings, mapReady);
+  const lod2OsmIds = useMemo(() => new Set(lod2.keys()), [lod2]);
+  const lod2LayerRef = useRef<Lod2Layer | null>(null);
+
   const loadAll = useCallback((map: maplibregl.Map) => {
     if (!map.isStyleLoaded()) return;
 
     // Use pre-reprojected data
     const colorMap = buildClusterColorMap(buildings, lines, transformers);
 
-    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds);
+    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds, lod2OsmIds);
     addOrUpdateLvLines(map, lines, colorMap);
     addOrUpdateMvLines(map, mvLines);
     addOrUpdateTransformers(map, transformers, colorMap);
@@ -105,7 +113,8 @@ export function useMapLibreLayers(
     selectedBoundaryFeature,
     showBoundary,
     polygonCoordinates,
-    selectedBuildingOsmIds
+    selectedBuildingOsmIds,
+    lod2OsmIds,
   ]);
 
   // Combined effect for initial load and data updates
@@ -113,12 +122,29 @@ export function useMapLibreLayers(
     const map = mapRef.current;
     if (!map) return;
 
+    // isStyleLoaded is false while any source is still loading, and 'load' fires
+    // only once per map, so a late call waits for the map to settle instead.
     if (map.isStyleLoaded()) {
       loadAll(map);
     } else {
-      map.once('load', () => loadAll(map));
+      map.once('idle', () => loadAll(map));
     }
   }, [mapRef, mapReady, loadAll]);
+
+  // A recreated map has no LoD2 layer yet, so one is added to each new map.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      if (!lod2LayerRef.current || !map.getLayer(LOD2_LAYER_ID)) {
+        lod2LayerRef.current = new Lod2Layer();
+        map.addLayer(lod2LayerRef.current);
+      }
+      lod2LayerRef.current.setBuildings(lod2);
+    };
+    if (map.isStyleLoaded()) apply();
+    else map.once('idle', apply);
+  }, [mapRef, mapReady, lod2]);
 
   // Interactions setup
   useEffect(() => {
@@ -248,5 +274,8 @@ export function useMapLibreLayers(
     };
   }, [mapRef, mapReady, isBuildingAssignMode, selectedBuildingOsmIds]);
 
-  return { loadAll };
+  // Buildings still drawn as extruded boxes once the LoD2 lookup has finished.
+  const boxedBuildings = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
+
+  return { loadAll, boxedBuildings };
 }

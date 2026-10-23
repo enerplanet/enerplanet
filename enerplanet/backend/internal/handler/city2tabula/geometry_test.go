@@ -98,3 +98,21 @@ func TestSplitObjectIDs(t *testing.T) {
 	assert.Empty(t, splitObjectIDs(" , "))
 	assert.Equal(t, []string{"a"}, splitObjectIDs("a,"), "a trailing comma is not a missing id")
 }
+
+// TestGeometry_Srid4326AsksForWGS84 checks that srid=4326 reaches City2TABULA
+// with the surfaces, and that any other srid is refused before the call.
+func TestGeometry_Srid4326AsksForWGS84(t *testing.T) {
+	fake := &fakeC2T{geometryJSON: surfaceGeometry}
+	h := &Handler{client: fake.client(t)}
+
+	w := getGeometry(t, h, "country=germany&object_ids=DE.A&srid=4326")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "4326", fake.geometryPayload["srid"])
+	assert.Equal(t, "surfaces", fake.geometryPayload["include"])
+
+	w = getGeometry(t, h, "country=germany&object_ids=DE.A")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.NotContains(t, fake.geometryPayload, "srid")
+
+	assert.Equal(t, http.StatusBadRequest, getGeometry(t, h, "country=germany&object_ids=DE.A&srid=3857").Code)
+}
