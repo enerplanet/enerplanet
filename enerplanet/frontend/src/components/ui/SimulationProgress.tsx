@@ -9,7 +9,6 @@ const STAGES = [
   { key: "queued", label: "Queued" },
   { key: "simulating", label: "Simulating" },
   { key: "processing", label: "Processing results" },
-  { key: "done", label: "Done" },
 ] as const;
 
 const getActiveStage = (status: ModelStatus): number => {
