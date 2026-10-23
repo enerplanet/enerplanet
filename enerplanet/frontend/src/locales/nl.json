@@ -1651,12 +1651,16 @@
       "choices": {
         "p50": "Typisch jaar (P50)",
         "p10": "Jaar met weinig zon (P10)",
-        "p90": "Jaar met veel zon (P90)",
-        "year": "Echt weer van {{year}}"
+        "p90": "Jaar met veel zon (P90)"
       },
       "hints": {
         "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
-        "year": "Het door het archief gemeten weer in het jaar van de periode."
+        "year": "Kies het historische jaar in de simulatieperiode hieronder; de berekening gebruikt het gemeten weer van dat jaar."
+      },
+      "mode": {
+        "label": "Weermodus",
+        "scenario": "Scenario",
+        "year": "Historisch jaar"
       }
     },
     "periodParts": {
@@ -1666,7 +1670,9 @@
       "q2": "K2",
       "q3": "K3",
       "q4": "K4"
-    }
+    },
+    "periodScenarioYear": "Scenariojaar",
+    "periodScenarioHint": "Scenarioweer hoort bij geen kalenderjaar. Kies de dagen en maanden om te simuleren; de datums worden opgeslagen in een vast referentiejaar."
   },
   "mapLayers": {
     "title": "Kaartlagen",
