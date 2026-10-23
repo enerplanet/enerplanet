@@ -180,6 +180,7 @@
     },
     "menu": {
       "settings": "Instellingen",
+      "privacyTerms": "Privacy en voorwaarden",
       "logout": "Uitloggen"
     },
     "modelActions": {

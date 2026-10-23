@@ -240,6 +240,7 @@
     },
     "menu": {
       "settings": "Einstellungen",
+      "privacyTerms": "Datenschutz & Bedingungen",
       "logout": "Abmelden"
     },
     "modelActions": {

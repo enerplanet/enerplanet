@@ -240,6 +240,7 @@
     },
     "menu": {
       "settings": "Paramètres",
+      "privacyTerms": "Confidentialité et conditions",
       "logout": "Déconnexion"
     },
     "modelActions": {

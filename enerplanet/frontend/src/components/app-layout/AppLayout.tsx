@@ -12,6 +12,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import {
   LogOut,
   Settings,
+  Shield,
   BookOpen,
   GraduationCap,
   MessageSquareText,
@@ -99,6 +100,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigationHandlers = useMemo(
     () => ({
       settings: () => navigate("/app/settings"),
+      legal: () => navigate("/legal"),
       dashboard: () => navigate(ADMIN_PATH),
       login: () => navigate("/login"),
       feedback: () => navigate("/app/feedback"),
@@ -168,6 +170,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         icon: Settings,
         label: t("common.menu.settings"),
         onClick: navigationHandlers.settings,
+      },
+      {
+        icon: Shield,
+        label: t("common.menu.privacyTerms"),
+        onClick: navigationHandlers.legal,
       },
       {
         icon: LogOut,

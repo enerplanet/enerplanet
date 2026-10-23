@@ -240,6 +240,7 @@
     },
     "menu": {
       "settings": "Settings",
+      "privacyTerms": "Privacy & Terms",
       "logout": "Log out"
     },
     "modelActions": {

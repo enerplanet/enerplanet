@@ -240,6 +240,7 @@
     },
     "menu": {
       "settings": "Configuración",
+      "privacyTerms": "Privacidad y condiciones",
       "logout": "Cerrar Sesión"
     },
     "modelActions": {

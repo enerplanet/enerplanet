@@ -180,6 +180,7 @@
     },
     "menu": {
       "settings": "Impostazioni",
+      "privacyTerms": "Privacy e termini",
       "logout": "Esci"
     },
     "modelActions": {
