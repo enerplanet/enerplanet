@@ -13,7 +13,8 @@ edit_uri: edit/main/docs/
 # Theme configuration
 theme:
   name: material
-  logo: assets/Logo_of_the_Technical_University_of_Munich.svg
+  logo: assets/logo/enerplanet-lockup-green-dark-outline.svg
+  favicon: assets/logo/favicon.ico
   features:
     - announce.dismiss
     - content.action.edit
@@ -38,20 +39,22 @@ theme:
   language: en
   palette:
     - media: "(prefers-color-scheme)"
+      primary: custom
+      accent: custom
       toggle:
         icon: material/link
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: black
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/toggle-switch-off
         name: Switch to system preference
@@ -131,6 +134,9 @@ nav:
       - Energy Technologies: webservice/technologies.md
   - Open Source:
       - Checklist: getting-started/open-source-checklist.md
+
+extra_css:
+  - stylesheets/extra.css
 
 # Copyright
 copyright: |
