@@ -1,34 +1,58 @@
-import type { FC } from "react";
-import { Keyboard } from "lucide-react";
+import { useState, type FC } from "react";
+import { Keyboard, X } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
+import { cn } from "@/lib/utils";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { buildShortcutGroups } from "./shortcutGroups";
 
-/** The map's keyboard and mouse shortcuts behind a button in the map tool column. */
+/**
+ * The map's keyboard and mouse shortcuts in a panel below a button in the map tool
+ * column. The panel stays open while the map is used, as a reference during drawing,
+ * and closes with the button or its own close button.
+ */
 export const ShortcutsMenu: FC = () => {
 	const { t } = useTranslation();
+	const [open, setOpen] = useState(false);
 	const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 	const groups = buildShortcutGroups(t, isMapLibre3D);
+	const label = t("polygon.shortcuts", "Shortcuts");
 
 	return (
-		<Tooltip>
-			<DropdownMenu>
+		<div className="relative">
+			<Tooltip>
 				<TooltipTrigger asChild>
-					<DropdownMenuTrigger asChild>
-						<button
-							type="button"
-							aria-label={t("polygon.shortcuts", "Shortcuts")}
-							className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80"
-						>
-							<Keyboard className="h-4 w-4" />
-						</button>
-					</DropdownMenuTrigger>
+					<button
+						type="button"
+						onClick={() => setOpen((o) => !o)}
+						aria-label={label}
+						aria-expanded={open}
+						className={cn(
+							"flex size-8 cursor-pointer items-center justify-center rounded-full border border-border shadow-sm",
+							open ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+						)}
+					>
+						<Keyboard className="h-4 w-4" />
+					</button>
 				</TooltipTrigger>
 				<TooltipContent side="right" sideOffset={8}>
-					{t("polygon.shortcuts", "Shortcuts")}
+					{label}
 				</TooltipContent>
-				<DropdownMenuContent side="right" align="start" sideOffset={8} className="z-[60] w-80 space-y-3 p-3">
+			</Tooltip>
+			{open && (
+				<div
+					role="dialog"
+					aria-label={label}
+					className="md-fade-in absolute left-0 top-full z-[60] mt-2 w-80 space-y-3 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg"
+				>
+					<button
+						type="button"
+						onClick={() => setOpen(false)}
+						aria-label={t("common.close", "Close")}
+						className="absolute right-2 top-2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+					>
+						<X className="h-4 w-4" />
+					</button>
 					{groups.map((group) => (
 						<div key={group.key} className="space-y-1">
 							<p className={`text-[10px] font-semibold uppercase tracking-wider ${group.titleClass}`}>{group.title}</p>
@@ -41,8 +65,8 @@ export const ShortcutsMenu: FC = () => {
 							))}
 						</div>
 					))}
-				</DropdownMenuContent>
-			</DropdownMenu>
-		</Tooltip>
+				</div>
+			)}
+		</div>
 	);
 };
