@@ -12,6 +12,7 @@
 import type {
   BuemBuildingRunResponse,
   ConfiguratorServices,
+  PvBuildingRunResponse,
   IgnisCalculateResponse,
   IgnisDataResponse,
   IgnisMatchResponse,
@@ -19,9 +20,12 @@ import type {
 
 import axios from '@/lib/axios';
 
+import { pvYieldRequest, type PvYieldContext } from './pvYield';
+
 /** Bounds on the wait, matching the budgets ConfiguratorServices documents. */
 const LOOKUP_TIMEOUT_MS = 8000;
 const CALCULATE_TIMEOUT_MS = 15000;
+const PV_TIMEOUT_MS = 30000;
 
 /** The backend wraps an ignis answer as { data }; BuEM's comes back bare. */
 interface Enveloped<T> {
@@ -62,11 +66,13 @@ export const variantLookups: Omit<ConfiguratorServices, 'runBuemBuilding'> = {
  * The services for a building of one model or draft. ownerPath is
  * "models/<id>" or "drafts/<id>"; a BuEM run goes to that owner's stored
  * route, which keeps the result and answers with the building's demand summary,
- * also handed to onStored.
+ * also handed to onStored. A PV run reads the open building's PV through
+ * pvContext at call time, so the services keep one identity while it changes.
  */
 export function configuratorServicesFor(
   ownerPath: string,
   onStored: (profile: BuemBuildingRunResponse) => void,
+  pvContext: () => PvYieldContext | null,
 ): ConfiguratorServices {
   return {
     ...variantLookups,
@@ -77,6 +83,14 @@ export function configuratorServicesFor(
       );
       onStored(res.data);
       return res.data;
+    },
+    async runPvBuilding(request): Promise<PvBuildingRunResponse> {
+      const context = pvContext();
+      if (!context) throw new Error(`building ${request.osm_id} has no PV technology or no position on the map`);
+      const res = await axios.post<{ annual_kwh: number }>('/v1/pv/building-yield', pvYieldRequest(request, context), {
+        signal: AbortSignal.timeout(PV_TIMEOUT_MS),
+      });
+      return { annualKwh: res.data.annual_kwh };
     },
   };
 }

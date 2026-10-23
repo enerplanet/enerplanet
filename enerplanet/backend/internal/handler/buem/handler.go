@@ -11,7 +11,6 @@ package buem
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -175,18 +174,5 @@ func (h *Handler) run(c *gin.Context, p prepared, modelID string) (buemclient.Bu
 // requestPeriod reads the run's weather from the request: a validation year, a
 // scenario, or the typical scenario when neither is given.
 func requestPeriod(req contracts.BuemBuildingRunRequest) (weatherclient.Period, error) {
-	switch {
-	case req.WeatherScenario != "" && req.WeatherYear != 0:
-		return weatherclient.Period{}, fmt.Errorf("send weather_scenario or weather_year, not both; got %q and %d", req.WeatherScenario, req.WeatherYear)
-	case req.WeatherYear < 0:
-		return weatherclient.Period{}, fmt.Errorf("weather_year must be a positive year, got %d", req.WeatherYear)
-	case req.WeatherYear > 0:
-		return weatherclient.Period{Year: req.WeatherYear}, nil
-	case req.WeatherScenario == "":
-		return weatherclient.DefaultPeriod, nil
-	case !weatherclient.IsScenario(req.WeatherScenario):
-		return weatherclient.Period{}, fmt.Errorf("weather_scenario must be p10, p50 or p90, got %q", req.WeatherScenario)
-	default:
-		return weatherclient.Period{Scenario: req.WeatherScenario}, nil
-	}
+	return weatherclient.RequestedPeriod(req.WeatherScenario, req.WeatherYear)
 }

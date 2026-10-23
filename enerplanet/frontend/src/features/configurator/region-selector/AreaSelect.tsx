@@ -819,6 +819,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         pvFor={pylovoLayers.buildingPv}
         onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
         techsFor={pylovoLayers.buildingTechs}
+        locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
       />
 

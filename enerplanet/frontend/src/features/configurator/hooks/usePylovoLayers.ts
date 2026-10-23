@@ -6,7 +6,8 @@ import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import OLFeature from "ol/Feature";
 import Point from "ol/geom/Point";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
+import { getCenter } from "ol/extent";
 import { withStationAt } from "@/features/configurator/utils/siteStations";
 import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
@@ -240,6 +241,13 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     if (!feature || !techs?.pv_supply) return;
     feature.set('techs', { ...techs, pv_supply: { ...techs.pv_supply, arrays } });
   }, [findBuilding]);
+  /** The centre of the building's map feature as WGS84 [lon, lat], or null when it is not on the map. */
+  const buildingLocation = useCallback((osmId: string): [number, number] | null => {
+    const extent = findBuilding(osmId)?.getGeometry()?.getExtent();
+    if (!extent || !map) return null;
+    const [lon, lat] = toLonLat(getCenter(extent), map.getView().getProjection());
+    return [lon, lat];
+  }, [findBuilding, map]);
   /** The building's technologies, or null when it has none. */
   const buildingTechs = useCallback((osmId: string): BuildingTechs | null => findBuilding(osmId)?.get('techs') ?? null, [findBuilding]);
   const storeBuildingTechs = useCallback((osmId: string, techs: BuildingTechs) => {
@@ -270,14 +278,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs,
+    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs,
+    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);
