@@ -5,6 +5,7 @@ import OnboardingWizard from "@/features/onboarding/OnboardingWizard";
 import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import { closeNotificationStream } from "@/features/notifications/hooks/useNotificationsQuery";
 import { ToastStack } from "@/features/notifications/ToastStack";
+import { PrivacyConsentGate } from "@/features/privacy-controls";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -319,6 +320,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </aside>
 
         <ToastStack />
+        <PrivacyConsentGate />
 
         <main
           className="relative min-w-0 flex-1 bg-background text-foreground"
