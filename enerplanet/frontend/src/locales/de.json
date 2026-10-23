@@ -1748,7 +1748,8 @@
       "creating": "Simulation wird erstellt...",
       "updating": "Simulation wird aktualisiert...",
       "cancel": "Abbrechen",
-      "regenerateFirst": "Erzeugen Sie das Netz vor dem Speichern neu."
+      "regenerateFirst": "Erzeugen Sie das Netz vor dem Speichern neu.",
+      "completeFirst": "Zum Speichern einen Modellnamen und einen Simulationszeitraum eingeben und ein Gebiet zeichnen."
     },
     "mapHeader": {
       "myBuildings": "Meine Gebäude",

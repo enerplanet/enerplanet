@@ -1698,7 +1698,8 @@
       "creating": "Création de la simulation...",
       "updating": "Mise à jour de la simulation...",
       "cancel": "Annuler",
-      "regenerateFirst": "Régénérez le réseau avant d'enregistrer."
+      "regenerateFirst": "Régénérez le réseau avant d'enregistrer.",
+      "completeFirst": "Pour enregistrer, saisissez un nom de modèle et une période de simulation, et dessinez une zone."
     },
     "mapHeader": {
       "myBuildings": "Mes bâtiments",

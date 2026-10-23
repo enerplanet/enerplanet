@@ -1442,7 +1442,8 @@
       "creating": "Creazione simulazione...",
       "updating": "Aggiornamento simulazione...",
       "cancel": "Annulla",
-      "regenerateFirst": "Rigenera la rete prima di salvare."
+      "regenerateFirst": "Rigenera la rete prima di salvare.",
+      "completeFirst": "Per salvare, inserisci un nome del modello e un periodo di simulazione e disegna un'area."
     },
     "mapHeader": {
       "myBuildings": "I miei edifici",

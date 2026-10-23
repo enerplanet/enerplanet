@@ -67,6 +67,13 @@ interface SidebarPanelProps {
   onFixOperateIssue?: (issue: OperateIssue, techKey: string) => void;
 }
 
+/** The message key saying why the model cannot be saved yet, or null when it can. */
+const saveBlocker = (complete: boolean, gridStale: boolean): string | null => {
+  if (!complete) return "simulation.actions.completeFirst";
+  if (gridStale) return "simulation.actions.regenerateFirst";
+  return null;
+};
+
 /** One setting on a single line: its name with the hint behind an info icon, and its control. */
 const SettingRow: FC<{ label: string; hint: string; dataTour?: string; children: ReactNode }> = ({ label, hint, dataTour, children }) => (
   <div className="flex items-center justify-between gap-2" data-tour={dataTour}>
@@ -114,78 +121,17 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
+  // A model is saved only with a name, a period and an area, and never with a grid older than its edits.
+  const complete = Boolean(state.fromDate && state.toDate && state.modelName.trim()) && allPolygonsCount > 0;
+  const canSave = complete && !state.isSaving && !gridStale;
+  const saveBlockedKey = saveBlocker(complete, gridStale);
+  const saveBlockedReason = saveBlockedKey ? t(saveBlockedKey) : undefined;
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
       <div className="flex items-center px-3 pt-4">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
       </div>
-
-      {isModified && state.fromDate && state.toDate && state.modelName.trim() && (
-        <div className="md-fade-in mx-3 mb-2 rounded-md bg-amber-500/10 border border-amber-500/20 px-3 py-2 space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-            <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              {t("simulation.unsavedChanges.title")}
-            </span>
-            <Button
-              onClick={actions.handleCancel}
-              className="ml-auto cursor-pointer shrink-0 h-7 text-red-600 dark:text-red-400"
-              aria-label={t("simulation.actions.cancel")}
-              variant="outline"
-            >
-              <span>{t("simulation.actions.cancel")}</span>
-            </Button>
-          </div>
-          <div className="flex gap-8">
-            <Button
-              onClick={actions.handleSave}
-              disabled={
-                !state.fromDate ||
-                !state.toDate ||
-                !state.modelName.trim() ||
-                state.isSaving ||
-                allPolygonsCount === 0 ||
-                gridStale
-              }
-              title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
-              variant="default"
-              className="flex-1 shrink-0 h-7 cursor-pointer"
-              data-tour="save-button"
-            >
-              {state.isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {editMode ? t("simulation.actions.updating") : t("simulation.actions.creating")}
-                </>
-              ) : (
-                <>{t("simulation.actions.saveAndExit")}</>
-              )}
-            </Button>
-            <Button
-              onClick={actions.handleQuickSave}
-              disabled={
-                !state.fromDate ||
-                !state.toDate ||
-                !state.modelName.trim() ||
-                state.isSaving ||
-                allPolygonsCount === 0 ||
-                gridStale
-              }
-              title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
-              variant="outline"
-              className="ml-auto cursor-pointer shrink-0 h-7 px-5.5"
-              aria-label={t("common.save")}
-            >
-              {state.isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>{t("common.save")}</>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
 
       <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
         <div className="relative" data-tour="model-name">
@@ -392,6 +338,45 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           />
         </div>
 
+      </div>
+
+      <div className="space-y-2 border-t border-border px-3 py-3">
+        {isModified && (
+          <p className="md-fade-in flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            {t("simulation.unsavedChanges.title")}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={actions.handleCancel} className="h-8 cursor-pointer">
+            {t("simulation.actions.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={actions.handleQuickSave}
+            disabled={!canSave}
+            title={saveBlockedReason}
+            className="h-8 cursor-pointer"
+          >
+            {state.isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("common.save")}
+          </Button>
+          <Button
+            onClick={actions.handleSave}
+            disabled={!canSave}
+            title={saveBlockedReason}
+            className="h-8 flex-1 cursor-pointer"
+            data-tour="save-button"
+          >
+            {state.isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {editMode ? t("simulation.actions.updating") : t("simulation.actions.creating")}
+              </>
+            ) : (
+              t("simulation.actions.saveAndExit")
+            )}
+          </Button>
+        </div>
       </div>
 
       <AdvancedParametersDrawer

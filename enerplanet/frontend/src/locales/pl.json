@@ -1456,7 +1456,8 @@
       "creating": "Tworzenie symulacji...",
       "updating": "Aktualizacja symulacji...",
       "cancel": "Anuluj",
-      "regenerateFirst": "Przed zapisaniem wygeneruj sieć ponownie."
+      "regenerateFirst": "Przed zapisaniem wygeneruj sieć ponownie.",
+      "completeFirst": "Aby zapisać, wprowadź nazwę modelu i okres symulacji oraz narysuj obszar."
     },
     "mapHeader": {
       "myBuildings": "Moje budynki",

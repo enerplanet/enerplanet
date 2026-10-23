@@ -1456,7 +1456,8 @@
       "creating": "Vytváření simulace...",
       "updating": "Aktualizace simulace...",
       "cancel": "Zrušit",
-      "regenerateFirst": "Před uložením síť znovu vytvořte."
+      "regenerateFirst": "Před uložením síť znovu vytvořte.",
+      "completeFirst": "Pro uložení zadejte název modelu a období simulace a nakreslete oblast."
     },
     "mapHeader": {
       "myBuildings": "Moje budovy",
