@@ -1913,7 +1913,9 @@
       },
       "coverage": "Abdeckung",
       "historicYears_one": "historisches Jahr {{range}}",
-      "historicYears_other": "historische Jahre {{range}} ({{count}} Jahre)"
+      "historicYears_other": "historische Jahre {{range}} ({{count}} Jahre)",
+      "scenarioYears_one": "Szenarien aus dem Jahr {{range}}",
+      "scenarioYears_other": "Szenarien aus {{count}} Jahren, {{range}}"
     },
     "periodParts": {
       "label": "Zeitraum",

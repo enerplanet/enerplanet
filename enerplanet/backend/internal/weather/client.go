@@ -93,26 +93,37 @@ func (c *Client) GetPVWeather(ctx context.Context, lat, lon float64, period Peri
 	return c.point(ctx, lat, lon, period, provider, "variables", pvVariables)
 }
 
-// Years returns, per weather-serve archive, the years it has processed,
-// ascending. An archive weather-serve could not list is left out.
-func (c *Client) Years(ctx context.Context) (map[string][]int, error) {
+// Archive is what one weather-serve archive offers a simulation. A weather-serve
+// release without scenario coverage leaves Scenarios and ScenarioSourceYears nil.
+type Archive struct {
+	// Years are the processed historic years, ascending.
+	Years []int `json:"years"`
+	// Scenarios are the scenarios with all twelve months, in p10, p50, p90 order.
+	Scenarios []string `json:"scenarios"`
+	// ScenarioSourceYears are the years, ascending, that supply a month to a listed scenario.
+	ScenarioSourceYears []int `json:"scenario_source_years"`
+}
+
+// Archives returns weather-serve's archives by name. An archive weather-serve
+// could not list is left out.
+func (c *Client) Archives(ctx context.Context) (map[string]Archive, error) {
 	var listing struct {
 		Providers map[string]struct {
-			Years []int           `json:"years"`
+			Archive
 			Error json.RawMessage `json:"error"`
 		} `json:"providers"`
 	}
 	if err := c.tc.Do(ctx, targetProviders, map[string]any{}, &listing); err != nil {
 		return nil, asWeatherError(err)
 	}
-	years := make(map[string][]int, len(listing.Providers))
+	archives := make(map[string]Archive, len(listing.Providers))
 	for name, entry := range listing.Providers {
 		if len(entry.Error) > 0 && string(entry.Error) != "null" {
 			continue
 		}
-		years[name] = entry.Years
+		archives[name] = entry.Archive
 	}
-	return years, nil
+	return archives, nil
 }
 
 // point queries weather-serve with selector "use_case" or "variables".

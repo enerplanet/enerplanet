@@ -1678,7 +1678,11 @@
       "historicYears_one": "rok historyczny {{range}}",
       "historicYears_few": "lata historyczne {{range}} ({{count}} lata)",
       "historicYears_many": "lata historyczne {{range}} ({{count}} lat)",
-      "historicYears_other": "lata historyczne {{range}} ({{count}} lat)"
+      "historicYears_other": "lata historyczne {{range}} ({{count}} lat)",
+      "scenarioYears_one": "scenariusze z roku {{range}}",
+      "scenarioYears_few": "scenariusze z {{count}} lat, {{range}}",
+      "scenarioYears_many": "scenariusze z {{count}} lat, {{range}}",
+      "scenarioYears_other": "scenariusze z {{count}} lat, {{range}}"
     },
     "periodParts": {
       "label": "Okres",
