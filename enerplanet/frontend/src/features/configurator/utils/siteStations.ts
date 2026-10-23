@@ -1,5 +1,7 @@
+import { fromLonLat } from "ol/proj";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { getDataProjection } from "@/features/configurator/utils/gridLayerUtils";
 
 /** One station of a pylovo site, as GET and PUT /sites/{id}/transformers carry it. */
 export interface SiteStation {
@@ -19,8 +21,12 @@ const positionKey = (coordinates: number[]): string => coordinates.map(c => c.to
  * grid_result_id, so an edit keeps the layout the user sees. A station the
  * generator placed has no site transformer yet and becomes a user station at
  * its position and rating. Stored stations missing from the grid are kept too.
+ *
+ * A shown station the stored list no longer holds is left out: an edit since
+ * generation moved or deleted it, and the generator places stations again where
+ * buildings are left without one.
  */
-export const stationsFromGrid = (stored: SiteStation[], grid: PylovoGridData): Map<string, SiteStation> => {
+export const stationsFromGrid = (stored: SiteStation[], grid: PylovoGridData, editedSinceGeneration = false): Map<string, SiteStation> => {
     const byId = new Map(stored.map(s => [s.transformer_id, s]));
     // A generated station an earlier edit already stored, before the site was
     // regenerated, is found by its position, so it is not stored twice.
@@ -36,6 +42,7 @@ export const stationsFromGrid = (stored: SiteStation[], grid: PylovoGridData): M
             stations.set(String(props.grid_result_id), { ...storedStation, assigned_building_ids: [...storedStation.assigned_building_ids] });
             continue;
         }
+        if (props.site_transformer_id != null || editedSinceGeneration) continue;
         stations.set(String(props.grid_result_id), {
             transformer_id: null,
             geom: feature.geometry as unknown as GeoJSON.Point,
@@ -64,17 +71,29 @@ export const siteBuildingIds = (grid: PylovoGridData, osmIds: string[]): number[
 
 /** Fixes the buildings to the station shown as targetGridId, taking them off any other station. */
 export const assignToStation = (stations: Map<string, SiteStation>, buildingIds: number[], targetGridId: number): SiteStation[] => {
-    const target = stations.get(String(targetGridId));
-    if (!target) throw new Error(`Transformer ${targetGridId} is not part of this site`);
+    const target = stationShownAs(stations, targetGridId);
     const moving = new Set(buildingIds);
     stations.forEach(s => { s.assigned_building_ids = s.assigned_building_ids.filter(b => !moving.has(b)); });
     target.assigned_building_ids.push(...buildingIds);
     return [...stations.values()];
 };
 
+/** Returns the station shown as gridId; one already moved or deleted since generation throws. */
+const stationShownAs = (stations: Map<string, SiteStation>, gridId: number): SiteStation => {
+    const station = stations.get(String(gridId));
+    if (!station) throw new Error(`Transformer ${gridId} is not part of this site`);
+    return station;
+};
+
+/** Reads the site's stations as the next edit starts from them. */
+const loadStations = async (siteId: number, grid: PylovoGridData): Promise<Map<string, SiteStation>> => {
+    const [stored, site] = await Promise.all([pylovoService.getSiteTransformers(siteId), pylovoService.getSite(siteId)]);
+    return stationsFromGrid(stored, grid, site.revision !== site.generated_revision);
+};
+
 /** Adds a user station at [lon, lat] to the site, keeping the shown stations; the site needs regenerating afterwards. */
 export const addSiteStation = async (siteId: number, grid: PylovoGridData, coordinates: [number, number], kva: number): Promise<void> => {
-    const stations = stationsFromGrid(await pylovoService.getSiteTransformers(siteId), grid);
+    const stations = await loadStations(siteId, grid);
     await pylovoService.putSiteTransformers(siteId, [...stations.values(), {
         transformer_id: null, geom: { type: "Point", coordinates }, rated_kva: kva, cost_eur: null, assigned_building_ids: [],
     }]);
@@ -82,6 +101,38 @@ export const addSiteStation = async (siteId: number, grid: PylovoGridData, coord
 
 /** Fixes the buildings to a shown station of the site; the site needs regenerating afterwards. */
 export const assignSiteBuildings = async (siteId: number, grid: PylovoGridData, osmIds: string[], targetGridId: number): Promise<void> => {
-    const stations = stationsFromGrid(await pylovoService.getSiteTransformers(siteId), grid);
+    const stations = await loadStations(siteId, grid);
     await pylovoService.putSiteTransformers(siteId, assignToStation(stations, siteBuildingIds(grid, osmIds), targetGridId));
+};
+
+/** Moves a shown station of the site to [lon, lat], keeping its rating and buildings; the site needs regenerating afterwards. */
+export const moveSiteStation = async (siteId: number, grid: PylovoGridData, gridId: number, coordinates: [number, number]): Promise<void> => {
+    const stations = await loadStations(siteId, grid);
+    stationShownAs(stations, gridId).geom = { type: "Point", coordinates };
+    await pylovoService.putSiteTransformers(siteId, [...stations.values()]);
+};
+
+/** Removes a shown station from the site; its fixed buildings are assigned again when the site is regenerated. */
+export const removeSiteStation = async (siteId: number, grid: PylovoGridData, gridId: number): Promise<void> => {
+    const stations = await loadStations(siteId, grid);
+    stationShownAs(stations, gridId);
+    stations.delete(String(gridId));
+    await pylovoService.putSiteTransformers(siteId, [...stations.values()]);
+};
+
+/**
+ * Returns the grid showing a station edit made before Regenerate grid: the
+ * station shown as gridId moves to [lon, lat], is added there when not shown,
+ * or is removed when coordinates is null.
+ */
+export const withStationAt = (grid: PylovoGridData, gridId: number, coordinates: [number, number] | null, kva?: number): PylovoGridData => {
+    const features = grid.transformers?.features ?? [];
+    const others = features.filter(f => f.properties?.grid_result_id !== gridId);
+    if (!coordinates) return { ...grid, transformers: { type: "FeatureCollection", ...grid.transformers, features: others } };
+    const geometry = { type: "Point", coordinates: getDataProjection(grid.transformers) === "EPSG:3857" ? fromLonLat(coordinates) : coordinates };
+    const shown = features.find(f => f.properties?.grid_result_id === gridId);
+    const station = shown
+        ? { ...shown, geometry }
+        : { type: "Feature", geometry, properties: { grid_result_id: gridId, rated_power_kva: kva ?? null } };
+    return { ...grid, transformers: { type: "FeatureCollection", ...grid.transformers, features: [...others, station] } };
 };

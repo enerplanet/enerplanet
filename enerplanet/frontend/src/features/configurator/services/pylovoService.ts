@@ -410,6 +410,12 @@ export const pylovoService = {
         return grid.data.data;
     },
 
+    /** The site's current input revision and the revision its grid was last generated from. */
+    getSite: async (siteId: number): Promise<{ revision: number; generated_revision: number | null }> => {
+        const response = await axios.get<{ data: { revision: number; generated_revision: number | null } }>(`/v1/pylovo/sites/${siteId}`);
+        return response.data.data;
+    },
+
     /** The site's stored stations with their fixed building assignments. */
     getSiteTransformers: async (siteId: number): Promise<SiteStation[]> => {
         const response = await axios.get<{ data: SiteStation[] }>(`/v1/pylovo/sites/${siteId}/transformers`);
