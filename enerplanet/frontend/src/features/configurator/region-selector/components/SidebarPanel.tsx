@@ -530,7 +530,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               }
               title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
               variant="outline"
-              className="h-8 w-full cursor-pointer"
+              className="h-8 w-full cursor-pointer dark:border-gray-500 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               {isStartingAnalysis || analysisProgress?.status === "resolving" ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
