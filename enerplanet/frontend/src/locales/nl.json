@@ -2462,7 +2462,10 @@
       "descriptions": {
         "targetWorkspace": "Kies de werkruimte waarnaar het model wordt verplaatst"
       },
-      "defaultWorkspace": "Standaard Werkruimte"
+      "defaultWorkspace": "Standaard Werkruimte",
+      "noOtherWorkspace": "Er is nog geen andere werkruimte. Geef een nieuwe een naam en het model wordt erheen verplaatst.",
+      "createAndMove": "Werkruimte maken en verplaatsen",
+      "createAndMoveFailed": "De werkruimte kon niet worden gemaakt of het model kon er niet naartoe worden verplaatst. Probeer het opnieuw."
     },
     "shareModel": {
       "title": "Deel met een Individuele Gebruiker",

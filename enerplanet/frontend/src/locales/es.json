@@ -403,7 +403,10 @@
       "descriptions": {
         "targetWorkspace": "Elija el espacio de trabajo al que mover el modelo"
       },
-      "defaultWorkspace": "Espacio de Trabajo Predeterminado"
+      "defaultWorkspace": "Espacio de Trabajo Predeterminado",
+      "noOtherWorkspace": "Todavía no hay otro espacio de trabajo. Ponga nombre a uno nuevo y el modelo se moverá a él.",
+      "createAndMove": "Crear espacio de trabajo y mover",
+      "createAndMoveFailed": "No se pudo crear el espacio de trabajo o mover el modelo a él. Inténtelo de nuevo."
     },
     "shareModel": {
       "title": "Compartir con un Usuario Individual",

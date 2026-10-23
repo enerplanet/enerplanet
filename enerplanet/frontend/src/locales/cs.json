@@ -2477,7 +2477,10 @@
       "descriptions": {
         "targetWorkspace": "Vyberte pracovní prostor, do kterého přesunout model"
       },
-      "defaultWorkspace": "Výchozí Pracovní Prostor"
+      "defaultWorkspace": "Výchozí Pracovní Prostor",
+      "noOtherWorkspace": "Zatím neexistuje žádný jiný pracovní prostor. Pojmenujte nový a model se do něj přesune.",
+      "createAndMove": "Vytvořit pracovní prostor a přesunout",
+      "createAndMoveFailed": "Pracovní prostor se nepodařilo vytvořit nebo do něj přesunout model. Zkuste to znovu."
     },
     "shareModel": {
       "title": "Sdílet s Jednotlivým Uživatelem",

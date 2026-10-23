@@ -403,7 +403,10 @@
       "descriptions": {
         "targetWorkspace": "Choisissez l'espace de travail vers lequel déplacer le modèle"
       },
-      "defaultWorkspace": "Espace de Travail Par Défaut"
+      "defaultWorkspace": "Espace de Travail Par Défaut",
+      "noOtherWorkspace": "Il n'existe pas encore d'autre espace de travail. Nommez-en un nouveau et le modèle y sera déplacé.",
+      "createAndMove": "Créer l'espace de travail et déplacer",
+      "createAndMoveFailed": "L'espace de travail n'a pas pu être créé, ou le modèle n'a pas pu y être déplacé. Veuillez réessayer."
     },
     "shareModel": {
       "title": "Partager avec un Utilisateur Individuel",

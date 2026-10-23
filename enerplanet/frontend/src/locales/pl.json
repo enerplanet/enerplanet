@@ -2477,7 +2477,10 @@
       "descriptions": {
         "targetWorkspace": "Wybierz przestrzeń roboczą, do której przenieść model"
       },
-      "defaultWorkspace": "Domyślna Przestrzeń Robocza"
+      "defaultWorkspace": "Domyślna Przestrzeń Robocza",
+      "noOtherWorkspace": "Nie ma jeszcze innego obszaru roboczego. Nazwij nowy, a model zostanie do niego przeniesiony.",
+      "createAndMove": "Utwórz obszar roboczy i przenieś",
+      "createAndMoveFailed": "Nie udało się utworzyć obszaru roboczego lub przenieść do niego modelu. Spróbuj ponownie."
     },
     "shareModel": {
       "title": "Udostępnij Indywidualnemu Użytkownikowi",

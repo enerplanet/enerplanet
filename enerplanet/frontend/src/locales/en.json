@@ -403,7 +403,10 @@
       "descriptions": {
         "targetWorkspace": "Choose the workspace to move the model to"
       },
-      "defaultWorkspace": "Default Workspace"
+      "defaultWorkspace": "Default Workspace",
+      "noOtherWorkspace": "There is no other workspace yet. Name a new one, and the model moves into it.",
+      "createAndMove": "Create workspace and move",
+      "createAndMoveFailed": "The workspace could not be created, or the model could not be moved into it. Please try again."
     },
     "shareModel": {
       "title": "Share with an Individual User",

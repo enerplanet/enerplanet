@@ -403,7 +403,10 @@
       "descriptions": {
         "targetWorkspace": "Wählen Sie den Arbeitsbereich, in den das Modell verschoben werden soll"
       },
-      "defaultWorkspace": "Standard-Arbeitsbereich"
+      "defaultWorkspace": "Standard-Arbeitsbereich",
+      "noOtherWorkspace": "Es gibt noch keinen anderen Arbeitsbereich. Geben Sie einem neuen einen Namen, und das Modell wird dorthin verschoben.",
+      "createAndMove": "Arbeitsbereich anlegen und verschieben",
+      "createAndMoveFailed": "Der Arbeitsbereich konnte nicht angelegt oder das Modell nicht verschoben werden. Bitte erneut versuchen."
     },
     "shareModel": {
       "title": "Mit einem einzelnen Benutzer teilen",
