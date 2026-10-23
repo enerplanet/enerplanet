@@ -1653,7 +1653,7 @@
       "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
       "startFailed": "Analýzu se nepodařilo spustit."
     },
-    "periodWithinYear": "Období zůstává v rámci jednoho kalendářního roku, proto nyní končí {{date}}."
+    "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}."
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

@@ -93,16 +93,22 @@ export const useAreaSelect = ({
     useEffect(() => { if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return; const orig = window.history.pushState.bind(window.history); const patched: typeof window.history.pushState = (data, _u, url) => { if (isInternalNavRef.current) { isInternalNavRef.current = false; orig(data, _u, url); return; } let target: string | null = null; if (typeof url === 'string') try { target = new URL(url, window.location.origin).pathname; } catch { target = url; } if (target && target !== window.location.pathname) { setPendingNavigationUrl(target); setShowUnsavedDialog(true); return; } orig(data, _u, url); }; window.history.pushState = patched; return () => { window.history.pushState = orig; }; }, [editMode, isModified]);
 
     // ── Handlers ──
-    // The weather and the stored series cover one calendar year, so a period ends in its start's year.
+    // The weather and the stored series cover one calendar year, so a period stays in one year:
+    // when one date's year changes the other follows it, keeping its day.
     const handleUpdateRange = useCallback((e: any) => {
         const f = ({ year, month, day }: any) => `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        let end = e.end;
-        if (end.year > e.start.year) {
-            end = { year: e.start.year, month: 12, day: 31 };
-            showWarning(t("simulation.periodWithinYear", { date: `31.12.${e.start.year}` }));
+        let { start, end } = e;
+        const startYear = fromDate ? Number(fromDate.slice(0, 4)) : start.year;
+        const endYear = toDate ? Number(toDate.slice(0, 4)) : end.year;
+        // A year being typed reports each digit; it counts once it has four.
+        if (start.year !== end.year && start.year >= 1000 && end.year >= 1000) {
+            if (start.year !== startYear && end.year === endYear) end = end.set({ year: start.year });
+            else if (end.year !== endYear && start.year === startYear) start = start.set({ year: end.year });
+            else end = { year: start.year, month: 12, day: 31 };
+            showWarning(t("simulation.periodWithinYear", { year: start.year }));
         }
-        setFromDate(f(e.start)); setToDate(f(end));
-    }, [setFromDate, setToDate, showWarning, t]);
+        setFromDate(f(start)); setToDate(f(end));
+    }, [fromDate, toDate, setFromDate, setToDate, showWarning, t]);
     const handleTourComplete = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleTourSkip = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleCancel = useCallback(() => { if (onCancel) { onCancel(); return; } if (isModified && editMode) { setShowUnsavedDialog(true); return; } isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [onCancel, navigate, isModified, editMode, setShowUnsavedDialog]);

@@ -1653,7 +1653,7 @@
       "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
       "startFailed": "Nie udało się rozpocząć analizy."
     },
-    "periodWithinYear": "Okres mieści się w jednym roku kalendarzowym, więc kończy się teraz {{date}}."
+    "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}."
   },
   "mapLayers": {
     "title": "Warstwy mapy",

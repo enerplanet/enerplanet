@@ -1895,7 +1895,7 @@
       "saveFailed": "No se pudo guardar el modelo, por lo que el análisis no se inició.",
       "startFailed": "No se pudo iniciar el análisis."
     },
-    "periodWithinYear": "Un periodo se mantiene dentro de un año natural, por lo que ahora termina el {{date}}."
+    "periodWithinYear": "Las simulaciones de varios años aún no son compatibles, así que ambas fechas están ahora en {{year}}."
   },
   "mapLayers": {
     "title": "Capas del mapa",

@@ -1639,7 +1639,7 @@
       "saveFailed": "Impossibile salvare il modello, quindi l'analisi non è stata avviata.",
       "startFailed": "Impossibile avviare l'analisi."
     },
-    "periodWithinYear": "Un periodo resta entro un anno solare, quindi ora termina il {{date}}."
+    "periodWithinYear": "Le simulazioni pluriennali non sono ancora supportate, quindi entrambe le date ora sono nel {{year}}."
   },
   "mapLayers": {
     "title": "Livelli mappa",

@@ -1895,7 +1895,7 @@
       "saveFailed": "Le modèle n'a pas pu être enregistré, l'analyse n'a donc pas démarré.",
       "startFailed": "L'analyse n'a pas pu démarrer."
     },
-    "periodWithinYear": "Une période reste dans une année civile, elle se termine donc désormais le {{date}}."
+    "periodWithinYear": "Les simulations sur plusieurs années ne sont pas encore prises en charge, les deux dates sont donc désormais en {{year}}."
   },
   "mapLayers": {
     "title": "Couches de carte",
