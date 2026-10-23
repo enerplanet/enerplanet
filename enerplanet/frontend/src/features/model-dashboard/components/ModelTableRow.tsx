@@ -298,8 +298,9 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
 }) => {
   const { t } = useTranslation();
   const toggleFavorite = useFavoriteModelsStore((s) => s.toggleFavorite);
-  const isFavorite = useFavoriteModelsStore((s) => s.isFavorite);
-  const favorited = isFavorite(model.id);
+  // Selects the flag itself: selecting isFavorite returns the same function on every
+  // change, so the row would not re-render when its star is toggled.
+  const favorited = useFavoriteModelsStore((s) => s.favoriteIds.includes(model.id));
   const level = model.level || 0;
   // Copies follow their original; only the name is indented.
   const nameIndentClass = level > 0 ? "pl-6" : "";
