@@ -26,21 +26,10 @@ function ensureHidingStyle() {
   styleInjected = true;
 }
 
-function hideViewportChildren(viewport: HTMLElement) {
-  viewport.querySelectorAll('canvas, .ol-overlaycontainer, .ol-overlaycontainer-stopevent, .ol-layer').forEach((el) => {
-    (el as HTMLElement).style.setProperty('visibility', 'hidden', 'important');
-  });
-}
-
-function showViewportChildren(viewport: HTMLElement) {
-  viewport.querySelectorAll('canvas, .ol-overlaycontainer, .ol-overlaycontainer-stopevent, .ol-layer').forEach((el) => {
-    (el as HTMLElement).style.removeProperty('visibility');
-  });
-}
-
+// The 2D map is hidden only through OL_HIDDEN_CLASS on its viewport. Hiding its
+// elements by inline style left a layer that OpenLayers detaches while hidden (the
+// base layer in 3D) still hidden when it was attached again, blanking the 2D map.
 export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolean) {
-  const observerRef = useRef<MutationObserver | null>(null);
-  const activeRef = useRef(false);
   const pendingTimeoutsRef = useRef<number[]>([]);
   const unmountedRef = useRef(false);
 
@@ -72,23 +61,11 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
     if (!viewport) return;
     const origZ = viewport.style.zIndex;
 
-    activeRef.current = true;
     viewport.style.zIndex = '2';
     viewport.classList.add(OL_HIDDEN_CLASS);
-    hideViewportChildren(viewport);
-
-    const observer = new MutationObserver(() => {
-      if (activeRef.current) hideViewportChildren(viewport);
-    });
-    observer.observe(viewport, { childList: true, subtree: true });
-    observerRef.current = observer;
 
     return () => {
-      activeRef.current = false;
-      observer.disconnect();
-      observerRef.current = null;
       viewport.classList.remove(OL_HIDDEN_CLASS);
-      showViewportChildren(viewport);
       viewport.style.zIndex = origZ;
 
       // Force OL redraw when leaving 3D, but skip if route unmounted/detached.
@@ -97,14 +74,12 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
 
       const secondPassId = window.setTimeout(() => {
         if (unmountedRef.current) return;
-        showViewportChildren(viewport);
         rerenderOlSafely();
       }, 200);
       pendingTimeoutsRef.current.push(secondPassId);
 
       const thirdPassId = window.setTimeout(() => {
         if (unmountedRef.current) return;
-        showViewportChildren(viewport);
         rerenderOlSafely();
       }, 600);
       pendingTimeoutsRef.current.push(thirdPassId);
@@ -119,11 +94,7 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
     const viewport = olMap.getViewport();
     if (!viewport) return;
 
-    const observer = observerRef.current;
-    if (observer) observer.disconnect();
-
     viewport.classList.remove(OL_HIDDEN_CLASS);
-    showViewportChildren(viewport);
 
     const hiddenLayers: any[] = [];
     const polygonZIndexMin = 2000;
@@ -153,13 +124,7 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
       olMap.getLayers().un('add', onLayerAdd);
       hiddenLayers.forEach((layer) => layer.setVisible(true));
       // Only re-hide if still in 3D mode (drawing just stopped)
-      if (visibleRef.current) {
-        viewport.classList.add(OL_HIDDEN_CLASS);
-        hideViewportChildren(viewport);
-        if (observer) {
-          observer.observe(viewport, { childList: true, subtree: true });
-        }
-      }
+      if (visibleRef.current) viewport.classList.add(OL_HIDDEN_CLASS);
     };
   }, [olMap, visible, isDrawing]);
 

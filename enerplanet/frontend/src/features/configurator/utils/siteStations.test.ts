@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
-import { assignToStation, siteBuildingIds, stationsFromGrid, type SiteStation } from "./siteStations";
+import { assignToStation, siteBuildingIds, stationsFromGrid, withStationAt, type SiteStation } from "./siteStations";
 
 const point = (lon: number, lat: number): GeoJSON.Point => ({ type: "Point", coordinates: [lon, lat] });
 
@@ -54,5 +54,46 @@ describe("stationsFromGrid before the site is regenerated", () => {
 
         expect(stations.get("102")?.transformer_id).toBe(6);
         expect([...stations.values()].filter(s => s.transformer_id === null)).toHaveLength(0);
+    });
+});
+
+describe("stationsFromGrid after a station was moved or deleted", () => {
+    it("leaves out a stored station that was deleted", () => {
+        const stations = stationsFromGrid([], grid);
+
+        expect(stations.has("101")).toBe(false);
+        expect(stations.has("102")).toBe(true);
+    });
+
+    it("leaves out a generated station once the site was edited since generation", () => {
+        // grid 102's station was stored by an earlier edit, then moved away from where the grid shows it.
+        const moved: SiteStation[] = [
+            ...stored,
+            { transformer_id: 6, geom: point(12.95, 48.85), rated_kva: 250, cost_eur: null, assigned_building_ids: [] },
+        ];
+        const stations = stationsFromGrid(moved, grid, true);
+
+        expect(stations.has("102")).toBe(false);
+        expect([...stations.values()].map(s => s.transformer_id)).toEqual([5, 6]);
+    });
+});
+
+describe("withStationAt", () => {
+    it("moves, adds and removes a shown station, and the next edit reads it there", () => {
+        const moved = withStationAt(grid, 102, [12.95, 48.85]);
+        const added = withStationAt(moved, -1, [12.91, 48.82], 400);
+        const removed = withStationAt(added, 101, null);
+
+        const shown = (g: PylovoGridData) => g.transformers!.features.map(f => [f.properties?.grid_result_id, (f.geometry as GeoJSON.Point).coordinates]);
+        expect(shown(removed)).toEqual([[102, [12.95, 48.85]], [-1, [12.91, 48.82]]]);
+        expect(grid.transformers!.features).toHaveLength(2);
+
+        // Stored after the edits: the moved station as 6, the added one as 7.
+        const stations = stationsFromGrid([
+            { transformer_id: 6, geom: point(12.95, 48.85), rated_kva: 250, cost_eur: null, assigned_building_ids: [] },
+            { transformer_id: 7, geom: point(12.91, 48.82), rated_kva: 400, cost_eur: null, assigned_building_ids: [] },
+        ], removed, true);
+        expect(stations.get("102")?.transformer_id).toBe(6);
+        expect(stations.get("-1")?.transformer_id).toBe(7);
     });
 });

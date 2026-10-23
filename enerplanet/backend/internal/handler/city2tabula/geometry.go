@@ -29,7 +29,7 @@ const maxGeometryObjectIDs = 1
 //	@Description	One building per call.
 //	@Tags			City2TABULA
 //	@Produce		json
-//	@Param			country		query		string	true	"Country name or ISO2 code"
+//	@Param			country		query		string	true	"Country name, e.g. germany; case-insensitive. ISO2 codes are rejected"
 //	@Param			object_ids	query		string	true	"City2TABULA building object_id"
 //	@Success		200			{object}	c2t.GeometryResult
 //	@Failure		400			{object}	contracts.ErrorResponse

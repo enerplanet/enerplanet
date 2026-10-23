@@ -3134,7 +3134,8 @@
     }
   },
   "transformer": {
-    "onlyInsidePolygon": "Los transformadores solo se pueden colocar dentro del área seleccionada"
+    "onlyInsidePolygon": "Los transformadores solo se pueden colocar dentro del área seleccionada",
+    "onlyNearPolygon": "Los transformadores se pueden colocar hasta 200 m fuera del área seleccionada"
   },
   "buildingConfig": {
     "backToMap": "Volver al mapa",

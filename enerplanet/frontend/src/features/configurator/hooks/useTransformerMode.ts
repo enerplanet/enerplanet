@@ -3,10 +3,26 @@ import { toLonLat } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { useTranslation } from "@spatialhub/i18n";
 import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
-import { addSiteStation } from "@/features/configurator/utils/siteStations";
+import { addSiteStation, moveSiteStation } from "@/features/configurator/utils/siteStations";
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+
+// pylovo attaches a site station to the nearest road within 200 m
+// (snap_site_transformers_to_network), so a site station may stand that far outside the area.
+const SITE_STATION_MARGIN_M = 200;
+
+/** Returns why a station cannot stand at lonLat, or null when it can. */
+const stationPositionError = (lonLat: [number, number], polygons: [number, number][][], t: ReturnType<typeof useTranslation>["t"]): string | null => {
+  if (siteScope(useModelStore.getState().pylovoGridData)) {
+    return isCoordinateInsidePolygons(lonLat, polygons, SITE_STATION_MARGIN_M)
+      ? null
+      : t("transformer.onlyNearPolygon", "Transformers can be placed up to 200 m outside the selected area");
+  }
+  return isCoordinateInsidePolygons(lonLat, polygons)
+    ? null
+    : t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area");
+};
 
 // ──────────────────────────────────────────────
 // useAddTransformerMode
@@ -21,6 +37,8 @@ interface AddTransformerOptions {
   };
   allPolygons: [number, number][][];
   refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: [number, number] | null, kva?: number) => void;
   existingModelId?: number;
   draftId?: string;
 }
@@ -43,6 +61,7 @@ export const useAddTransformerMode = ({
   notification,
   allPolygons,
   refreshGrid,
+  previewSiteStation,
   existingModelId,
   draftId,
 }: AddTransformerOptions): AddTransformerModeState => {
@@ -92,6 +111,8 @@ export const useAddTransformerMode = ({
         const site = siteScope(grid);
         if (site && grid) {
           await addSiteStation(site.site_id, grid, newTransformerCoords, kva);
+          // Not generated yet, so it has no grid id; a negative one cannot clash.
+          previewSiteStation(-Date.now(), newTransformerCoords, kva);
           notification.showSuccess(`Added transformer with ${kva} kVA`);
         } else {
           const result = await pylovoService.addTransformer({
@@ -122,6 +143,7 @@ export const useAddTransformerMode = ({
       notification,
       allPolygons.length,
       refreshGrid,
+      previewSiteStation,
       user?.id,
       existingModelId,
       draftId,
@@ -140,10 +162,9 @@ export const useAddTransformerMode = ({
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
-      if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
-        notification.showError(
-          t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
-        );
+      const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, t);
+      if (positionError) {
+        notification.showError(positionError);
         return;
       }
 
@@ -222,6 +243,9 @@ interface MoveTransformerOptions {
     coordinates: [number, number][],
     allPolygons: [number, number][][]
   ) => Promise<void>;
+  refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: [number, number] | null) => void;
   existingModelId?: number;
   draftId?: string;
 }
@@ -239,6 +263,8 @@ export const useMoveTransformerMode = ({
   notification,
   allPolygons,
   handlePolygonDrawn,
+  refreshGrid,
+  previewSiteStation,
   existingModelId,
   draftId,
 }: MoveTransformerOptions): MoveTransformerModeState => {
@@ -252,6 +278,10 @@ export const useMoveTransformerMode = ({
   tRef.current = t;
   const handlePolygonDrawnRef = useRef(handlePolygonDrawn);
   handlePolygonDrawnRef.current = handlePolygonDrawn;
+  const refreshGridRef = useRef(refreshGrid);
+  refreshGridRef.current = refreshGrid;
+  const previewSiteStationRef = useRef(previewSiteStation);
+  previewSiteStationRef.current = previewSiteStation;
   const existingModelIdRef = useRef(existingModelId);
   existingModelIdRef.current = existingModelId;
   const draftIdRef = useRef(draftId);
@@ -303,14 +333,22 @@ export const useMoveTransformerMode = ({
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
-      if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
-        notificationRef.current.showError(
-          tRef.current("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
-        );
+      const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, tRef.current);
+      if (positionError) {
+        notificationRef.current.showError(positionError);
         return;
       }
 
       try {
+        const grid = useModelStore.getState().pylovoGridData;
+        const site = siteScope(grid);
+        if (site && grid) {
+          await moveSiteStation(site.site_id, grid, transformerToMove, lonLatPair);
+          previewSiteStationRef.current(transformerToMove, lonLatPair);
+          notificationRef.current.showSuccess(tRef.current("transformer.movingSuccess"));
+          await refreshGridRef.current();
+          return;
+        }
         const userId = user?.id ? String(user.id) : undefined;
         await pylovoService.moveTransformer(
           transformerToMove,

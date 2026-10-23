@@ -4,6 +4,10 @@ import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
+import OLFeature from "ol/Feature";
+import Point from "ol/geom/Point";
+import { fromLonLat } from "ol/proj";
+import { withStationAt } from "@/features/configurator/utils/siteStations";
 import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
@@ -249,15 +253,29 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
   }, []);
 
+  /** Shows a site station edit before Regenerate grid, in the grid data the next edit reads and on the map; see withStationAt. */
+  const previewSiteStation = useCallback((gid: number, coordinates: [number, number] | null, kva?: number) => {
+    setPylovoGridData(prev => prev && withStationAt(prev, gid, coordinates, kva));
+    const source = pylovoLayersRef.current
+      .map(layer => layer.getSource())
+      .find((src): src is VectorSource => src instanceof VectorSource && src.getFeatures().some((f: Feature<Geometry>) => f.get('feature_type') === 'transformer'));
+    if (!source || !map) return;
+    const shown = source.getFeatures().find((f: Feature<Geometry>) => f.get('grid_result_id') === gid);
+    if (!coordinates) { if (shown) source.removeFeature(shown); return; }
+    const geometry = new Point(fromLonLat(coordinates, map.getView().getProjection()));
+    if (shown) shown.setGeometry(geometry);
+    else source.addFeature(new OLFeature({ geometry, feature_type: 'transformer', grid_result_id: gid, rated_power_kva: kva }));
+  }, [map, setPylovoGridData]);
+
   return useMemo(() => ({
-    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
+    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
     buildingPv, storePvArrays, buildingTechs, storeBuildingTechs,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
-    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
+    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
     buildingPv, storePvArrays, buildingTechs, storeBuildingTechs,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
