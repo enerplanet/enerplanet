@@ -205,6 +205,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         style={cssVariables}
       >
 
+        {/* Dims the page while a rail menu is open. It never takes clicks: the open menu
+            already closes on an outside click. Below the rail (z-51) and its menus. */}
+        <div
+          aria-hidden="true"
+          data-on={railMenuOpen}
+          className="pointer-events-none fixed inset-0 z-50 bg-black/20 opacity-0 transition-opacity duration-200 data-[on=true]:opacity-100 motion-reduce:transition-none dark:bg-black/40"
+        />
+
         {/* Widens over the page, not beside it, so the content and the map keep their size. */}
         <aside
           data-expanded={railMenuOpen}
