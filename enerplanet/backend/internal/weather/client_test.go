@@ -119,13 +119,17 @@ func TestPeriod_RangeCoversTheFullCalendarYear(t *testing.T) {
 	assert.Equal(t, "2019-12-31T23:00:00Z", end)
 }
 
-func TestYears_ListsEachArchiveAndSkipsAFailedOne(t *testing.T) {
-	listing := `{"providers":{"merra-2":{"years":[2018,2019]},"cosmo-rea6":{"years":[2018]},` +
+func TestArchives_ListsEachArchiveAndSkipsAFailedOne(t *testing.T) {
+	listing := `{"providers":{"merra-2":{"years":[2018,2019],"scenarios":["p10","p50"],"scenario_source_years":[1980,2024]},` +
+		`"cosmo-rea6":{"years":[2018]},` +
 		`"era5-land":{"error":{"code":"provider_listing_failed","message":"disk"}}}}`
 	tc, _ := fakeTentacronFor(t, "weather-providers", `{"state":"completed","result":{"target_status":200,"target_response":`+listing+`}}`)
 
-	years, err := NewClient(tc).Years(context.Background())
+	archives, err := NewClient(tc).Archives(context.Background())
 
 	require.NoError(t, err)
-	assert.Equal(t, map[string][]int{"merra-2": {2018, 2019}, "cosmo-rea6": {2018}}, years)
+	assert.Equal(t, map[string]Archive{
+		"merra-2":    {Years: []int{2018, 2019}, Scenarios: []string{"p10", "p50"}, ScenarioSourceYears: []int{1980, 2024}},
+		"cosmo-rea6": {Years: []int{2018}},
+	}, archives)
 }

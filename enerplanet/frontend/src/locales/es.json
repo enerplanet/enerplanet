@@ -1686,7 +1686,6 @@
     "title": "Configuración de simulación",
     "modelName": "Nombre del modelo",
     "modelNamePlaceholder": "Introduzca un nombre para su simulación energética",
-    "modelNameHint": "Dé a su simulación un nombre descriptivo",
     "simulationPeriod": "Período de simulación",
     "duration": "Duración",
     "days": "días",
@@ -1897,7 +1896,46 @@
       "startFailed": "No se pudo iniciar el análisis."
     },
     "periodWithinYear": "Las simulaciones de varios años aún no son compatibles, así que ambas fechas están ahora en {{year}}.",
-    "periodYear": "Año"
+    "periodYear": "Año",
+    "weather": {
+      "title": "Clima",
+      "archive": "Archivo meteorológico",
+      "year": "Año meteorológico",
+      "choices": {
+        "p50": "Año típico (P50)",
+        "p10": "Año de baja radiación (P10)",
+        "p90": "Año de alta radiación (P90)"
+      },
+      "hints": {
+        "scenario": "Un año compuesto con meses del archivo: típico, o en el extremo bajo o alto de la radiación solar.",
+        "year": "Elija el año histórico en el periodo de simulación de abajo; la ejecución usa el tiempo registrado de ese año."
+      },
+      "mode": {
+        "label": "Modo meteorológico",
+        "scenario": "Escenario",
+        "year": "Año histórico"
+      },
+      "coverage": "Cobertura",
+      "historicYears_one": "año histórico {{range}}",
+      "historicYears_other": "años históricos {{range}} ({{count}} años)",
+      "scenarioYears_one": "escenarios del año {{range}}",
+      "scenarioYears_other": "escenarios de {{count}} años, {{range}}",
+      "shortChoices": {
+        "p10": "Bajo (P10)",
+        "p50": "Típico (P50)",
+        "p90": "Alto (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Periodo",
+      "year": "Año completo",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
+    },
+    "periodScenarioYear": "Año de escenario",
+    "periodScenarioHint": "El tiempo de escenario no corresponde a ningún año natural. Elija los días y meses a simular; las fechas se guardan en un año de referencia fijo."
   },
   "mapLayers": {
     "title": "Capas del mapa",

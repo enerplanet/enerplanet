@@ -1430,7 +1430,6 @@
     "title": "Configurazione simulazione",
     "modelName": "Nome modello",
     "modelNamePlaceholder": "Inserisci un nome per la tua simulazione energetica",
-    "modelNameHint": "Dai alla tua simulazione un nome descrittivo",
     "simulationPeriod": "Periodo di simulazione",
     "duration": "Durata",
     "days": "giorni",
@@ -1641,7 +1640,46 @@
       "startFailed": "Impossibile avviare l'analisi."
     },
     "periodWithinYear": "Le simulazioni pluriennali non sono ancora supportate, quindi entrambe le date ora sono nel {{year}}.",
-    "periodYear": "Anno"
+    "periodYear": "Anno",
+    "weather": {
+      "title": "Meteo",
+      "archive": "Archivio meteo",
+      "year": "Anno meteo",
+      "choices": {
+        "p50": "Anno tipico (P50)",
+        "p10": "Anno a bassa irradiazione (P10)",
+        "p90": "Anno ad alta irradiazione (P90)"
+      },
+      "hints": {
+        "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
+        "year": "Scegli l'anno storico nel periodo di simulazione qui sotto; il calcolo usa il meteo registrato di quell'anno."
+      },
+      "mode": {
+        "label": "Modalità meteo",
+        "scenario": "Scenario",
+        "year": "Anno storico"
+      },
+      "coverage": "Copertura",
+      "historicYears_one": "anno storico {{range}}",
+      "historicYears_other": "anni storici {{range}} ({{count}} anni)",
+      "scenarioYears_one": "scenari dall'anno {{range}}",
+      "scenarioYears_other": "scenari da {{count}} anni, {{range}}",
+      "shortChoices": {
+        "p10": "Basso (P10)",
+        "p50": "Tipico (P50)",
+        "p90": "Alto (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Periodo",
+      "year": "Anno intero",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
+    },
+    "periodScenarioYear": "Anno di scenario",
+    "periodScenarioHint": "Il meteo di scenario non appartiene a un anno solare. Scegli i giorni e i mesi da simulare; le date vengono salvate in un anno di riferimento fisso."
   },
   "mapLayers": {
     "title": "Livelli mappa",

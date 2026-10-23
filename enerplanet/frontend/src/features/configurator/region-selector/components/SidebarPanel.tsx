@@ -33,6 +33,7 @@ import {
   Activity,
   MapPinned,
   Building2,
+  Info,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
@@ -41,8 +42,11 @@ import { useModelStore, type CookingCarrier, type RunMode } from "@/features/con
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
-import { useEffect, type FC, type ChangeEvent } from "react";
+import { useEffect, useRef, type FC, type ChangeEvent } from "react";
 import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
+import { useAuthStore } from "@/store/auth-store";
+import { WeatherSettings } from "./WeatherSettings";
+import { SCENARIO_DATE_YEAR, isScenario } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
@@ -79,33 +83,107 @@ interface SidebarPanelProps {
   onAnalyse: () => void;
 }
 
-// The period lies in one year with weather data: the year is chosen from those
-// years, day and month are typed. A saved model keeps its year listed even when
-// the weather archive no longer has it, and a new model starts with the latest
-// full year that has weather data.
+// The period lies in one year. With historic weather the year is chosen from the
+// archive's years, and a saved model keeps its year listed even when the archive
+// no longer has it. With scenario weather the year is not the user's: new dates
+// take SCENARIO_DATE_YEAR, and a saved model keeps the year it has. Day and month
+// are typed either way.
 function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editMode: boolean | undefined) {
-  const weatherYears = useWeatherYears();
+  const weather = useModelStore((s) => s.weather);
+  const setWeather = useModelStore((s) => s.setWeather);
+  const provider = weather.provider;
+  const scenario = isScenario(weather);
+  const weatherYears = useWeatherYears(provider);
   const periodYear = state.fromDate ? Number(state.fromDate.slice(0, 4)) : undefined;
-  const yearOptions = periodYear && !weatherYears.includes(periodYear)
-    ? [...weatherYears, periodYear].sort((a, b) => a - b)
-    : weatherYears;
+  let yearOptions = weatherYears;
+  if (scenario) yearOptions = [periodYear ?? SCENARIO_DATE_YEAR];
+  else if (periodYear && !weatherYears.includes(periodYear)) yearOptions = [...weatherYears, periodYear].sort((a, b) => a - b);
   const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
   const choosePeriodYear = (year: number) => {
     if (!state.fromDate || !state.toDate) return actions.handleUpdateRange(fullYear(year));
     actions.handleUpdateRange({ start: parseDate(state.fromDate).set({ year }), end: parseDate(state.toDate).set({ year }) });
   };
   const latestYear = weatherYears.at(-1);
+  const defaultYear = scenario ? SCENARIO_DATE_YEAR : latestYear;
+  // A new model's empty period is filled after every render, because the
+  // configurator's store reset on mount runs after this component's effects.
   useEffect(() => {
-    if (!editMode && !state.fromDate && latestYear) actions.handleUpdateRange(fullYear(latestYear));
-    // Only the first answer fills an empty period; later edits are the user's.
+    if (!editMode && !state.fromDate && defaultYear) actions.handleUpdateRange(fullYear(defaultYear));
+  });
+  // Switching to an archive without the period's year moves the period to that
+  // archive's latest year, keeping day and month. Opening a saved model does not.
+  const lastProvider = useRef(provider);
+  useEffect(() => {
+    if (lastProvider.current === provider) return;
+    lastProvider.current = provider;
+    if (!scenario && latestYear && periodYear && !weatherYears.includes(periodYear)) choosePeriodYear(latestYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latestYear]);
+  }, [provider]);
   // The calendar's first and last selectable days.
   const yearBounds = yearOptions.length
     ? { start: fullYear(yearOptions[0]).start, end: fullYear(yearOptions[yearOptions.length - 1]).end }
     : undefined;
-  return { periodYear, yearOptions, yearBounds, choosePeriodYear };
+  // Sets day and month to a part of the period's year; the year itself stays.
+  const choosePeriodPart = (part: PeriodPart) => {
+    const year = periodYear ?? latestYear;
+    if (!year) return;
+    actions.handleUpdateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
+  };
+  // Switching the weather mode moves the period into a year that mode allows,
+  // keeping day and month: the scenario year, or the archive's latest year.
+  const chooseWeatherMode = (toScenario: boolean) => {
+    setWeather({ ...weather, choice: toScenario ? "p50" : "year" });
+    const year = toScenario ? SCENARIO_DATE_YEAR : latestYear;
+    if (year) choosePeriodYear(year);
+  };
+  return { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode };
 }
+
+/** Stands in for the year select while the period uses scenario weather, which has no calendar year. */
+const ScenarioYearLabel: FC = () => {
+  const { t } = useTranslation();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="flex h-full shrink-0 cursor-help items-center gap-1 border-r border-border pl-3 pr-2 text-xs font-medium text-muted-foreground">
+          {t("simulation.periodScenarioYear")}
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">{t("simulation.periodScenarioHint")}</TooltipContent>
+    </Tooltip>
+  );
+};
+
+interface PeriodPart { key: string; start: string; end: string }
+
+// Whole year and quarters as month-day bounds; the year is the period's.
+const PERIOD_PARTS: PeriodPart[] = [
+  { key: "year", start: "01-01", end: "12-31" },
+  { key: "q1", start: "01-01", end: "03-31" },
+  { key: "q2", start: "04-01", end: "06-30" },
+  { key: "q3", start: "07-01", end: "09-30" },
+  { key: "q4", start: "10-01", end: "12-31" },
+];
+
+/** One-click periods within the period's year: the whole year or a quarter. */
+const PeriodParts: FC<{ onPick: (part: PeriodPart) => void }> = ({ onPick }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label={t("simulation.periodParts.label")}>
+      {PERIOD_PARTS.map((part) => (
+        <button
+          key={part.key}
+          type="button"
+          onClick={() => onPick(part)}
+          className="h-6 cursor-pointer rounded-md border border-border px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {t(`simulation.periodParts.${part.key}`)}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 /** The simulation period's year, chosen from the years with weather data. */
 const PeriodYearSelect: FC<{ year: number | undefined; years: number[]; onChange: (year: number) => void }> = ({ year, years, onChange }) => {
@@ -177,7 +255,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const gridStale = useModelStore((s) => s.gridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
-  const { periodYear, yearOptions, yearBounds, choosePeriodYear } = usePeriodYear(state, actions, editMode);
+  const { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
+  const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
@@ -296,8 +375,9 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             placeholder={t("simulation.modelNamePlaceholder")}
             className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
           />
-          <div className="text-xs text-muted-foreground mt-1">{t("simulation.modelNameHint")}</div>
         </div>
+
+        <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
 
         <div className="relative" data-tour="date-range">
           <DateRangePicker
@@ -327,8 +407,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                     "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
                   )}
                 >
-                  <PeriodYearSelect year={periodYear} years={yearOptions} onChange={choosePeriodYear} />
-                  {/* Day and month are typed; the year comes from the select above. */}
+                  {scenario ? <ScenarioYearLabel /> : <PeriodYearSelect year={periodYear} years={yearOptions} onChange={choosePeriodYear} />}
+                  {/* Day and month are typed; the year comes from the weather mode. */}
                   <DateInput slot="start" unstyled className={cn("text-xs pl-3 py-2", HIDE_YEAR_SEGMENT)} />
                   <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
                     -
@@ -353,6 +433,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                   maxValue={yearBounds?.end}
                   years={yearOptions}
                   withinStartYear
+                  yearLabel={scenario ? t("simulation.periodScenarioYear") : undefined}
                 />
               </Dialog>
             </Popover>
@@ -372,6 +453,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               : 0}{" "}
             {t("simulation.days")}
           </div>
+          <PeriodParts onPick={choosePeriodPart} />
         </div>
 
         <div className="relative" data-tour="resolution">

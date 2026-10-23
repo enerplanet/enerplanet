@@ -1429,7 +1429,6 @@
     "title": "Simulatieconfiguratie",
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
-    "modelNameHint": "Geef uw simulatie een beschrijvende naam",
     "simulationPeriod": "Simulatieperiode",
     "duration": "Duur",
     "days": "dagen",
@@ -1640,7 +1639,46 @@
       "startFailed": "De analyse kon niet worden gestart."
     },
     "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}.",
-    "periodYear": "Jaar"
+    "periodYear": "Jaar",
+    "weather": {
+      "title": "Weer",
+      "archive": "Weerarchief",
+      "year": "Weerjaar",
+      "choices": {
+        "p50": "Typisch jaar (P50)",
+        "p10": "Jaar met weinig zon (P10)",
+        "p90": "Jaar met veel zon (P90)"
+      },
+      "hints": {
+        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "year": "Kies het historische jaar in de simulatieperiode hieronder; de berekening gebruikt het gemeten weer van dat jaar."
+      },
+      "mode": {
+        "label": "Weermodus",
+        "scenario": "Scenario",
+        "year": "Historisch jaar"
+      },
+      "coverage": "Dekking",
+      "historicYears_one": "historisch jaar {{range}}",
+      "historicYears_other": "historische jaren {{range}} ({{count}} jaar)",
+      "scenarioYears_one": "scenario's uit het jaar {{range}}",
+      "scenarioYears_other": "scenario's uit {{count}} jaren, {{range}}",
+      "shortChoices": {
+        "p10": "Laag (P10)",
+        "p50": "Typisch (P50)",
+        "p90": "Hoog (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Periode",
+      "year": "Heel jaar",
+      "q1": "K1",
+      "q2": "K2",
+      "q3": "K3",
+      "q4": "K4"
+    },
+    "periodScenarioYear": "Scenariojaar",
+    "periodScenarioHint": "Scenarioweer hoort bij geen kalenderjaar. Kies de dagen en maanden om te simuleren; de datums worden opgeslagen in een vast referentiejaar."
   },
   "mapLayers": {
     "title": "Kaartlagen",

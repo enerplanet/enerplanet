@@ -1444,7 +1444,6 @@
     "title": "Konfigurace simulace",
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
-    "modelNameHint": "Dejte své simulaci popisný název",
     "simulationPeriod": "Období simulace",
     "duration": "Trvání",
     "days": "dní",
@@ -1655,7 +1654,50 @@
       "startFailed": "Analýzu se nepodařilo spustit."
     },
     "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}.",
-    "periodYear": "Rok"
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Počasí",
+      "archive": "Archiv počasí",
+      "year": "Rok počasí",
+      "choices": {
+        "p50": "Typický rok (P50)",
+        "p10": "Rok s nízkým zářením (P10)",
+        "p90": "Rok s vysokým zářením (P90)"
+      },
+      "hints": {
+        "scenario": "Rok složený z měsíců archivu: typický, nebo na dolním či horním konci slunečního záření.",
+        "year": "Vyberte historický rok v období simulace níže; výpočet použije zaznamenané počasí toho roku."
+      },
+      "mode": {
+        "label": "Režim počasí",
+        "scenario": "Scénář",
+        "year": "Historický rok"
+      },
+      "coverage": "Pokrytí",
+      "historicYears_one": "historický rok {{range}}",
+      "historicYears_few": "historické roky {{range}} ({{count}} roky)",
+      "historicYears_many": "historické roky {{range}} ({{count}} let)",
+      "historicYears_other": "historické roky {{range}} ({{count}} let)",
+      "scenarioYears_one": "scénáře z roku {{range}}",
+      "scenarioYears_few": "scénáře ze {{count}} let, {{range}}",
+      "scenarioYears_many": "scénáře ze {{count}} let, {{range}}",
+      "scenarioYears_other": "scénáře ze {{count}} let, {{range}}",
+      "shortChoices": {
+        "p10": "Nízký (P10)",
+        "p50": "Typický (P50)",
+        "p90": "Vysoký (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Období",
+      "year": "Celý rok",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4"
+    },
+    "periodScenarioYear": "Rok scénáře",
+    "periodScenarioHint": "Scénářové počasí nepatří k žádnému kalendářnímu roku. Vyberte dny a měsíce k simulaci; data se ukládají v pevném referenčním roce."
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_WEATHER, type WeatherSettings } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
 import type { PylovoGridData, AdvancedParametersState } from "@/features/configurator/types/area-select";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -74,6 +75,9 @@ export interface ModelStore {
   /** Saved as config.mode. */
   runMode: RunMode;
   setRunMode: (mode: RunMode) => void;
+  /** Saved as config.weatherProvider and config.weatherScenario or config.weatherYear. */
+  weather: WeatherSettings;
+  setWeather: (weather: WeatherSettings) => void;
   /** Generate the grid as a pylovo site, kept apart from the shared postcode grids. Saved as config.site. */
   siteMode: boolean;
   setSiteMode: (on: boolean) => void;
@@ -225,6 +229,7 @@ const getInitialState = () => ({
   resolution: 60,
   cookingCarrier: "electric" as CookingCarrier,
   runMode: "plan" as RunMode,
+  weather: DEFAULT_WEATHER,
   siteMode: false,
   isSaving: false,
   isLoadingModel: false,
@@ -317,6 +322,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
   runMode: "plan",
   setRunMode: (mode) => set({ runMode: mode }),
+  weather: DEFAULT_WEATHER,
+  setWeather: (weather) => set({ weather }),
   siteMode: false,
   setSiteMode: (on) => set({ siteMode: on }),
 

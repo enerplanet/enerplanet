@@ -1444,7 +1444,6 @@
     "title": "Konfiguracja symulacji",
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
-    "modelNameHint": "Nadaj swojej symulacji opisową nazwę",
     "simulationPeriod": "Okres symulacji",
     "duration": "Czas trwania",
     "days": "dni",
@@ -1655,7 +1654,50 @@
       "startFailed": "Nie udało się rozpocząć analizy."
     },
     "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}.",
-    "periodYear": "Rok"
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Pogoda",
+      "archive": "Archiwum pogody",
+      "year": "Rok pogodowy",
+      "choices": {
+        "p50": "Typowy rok (P50)",
+        "p10": "Rok o niskim nasłonecznieniu (P10)",
+        "p90": "Rok o wysokim nasłonecznieniu (P90)"
+      },
+      "hints": {
+        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "year": "Wybierz rok historyczny w okresie symulacji poniżej; obliczenia używają zarejestrowanej pogody z tego roku."
+      },
+      "mode": {
+        "label": "Tryb pogody",
+        "scenario": "Scenariusz",
+        "year": "Rok historyczny"
+      },
+      "coverage": "Zakres",
+      "historicYears_one": "rok historyczny {{range}}",
+      "historicYears_few": "lata historyczne {{range}} ({{count}} lata)",
+      "historicYears_many": "lata historyczne {{range}} ({{count}} lat)",
+      "historicYears_other": "lata historyczne {{range}} ({{count}} lat)",
+      "scenarioYears_one": "scenariusze z roku {{range}}",
+      "scenarioYears_few": "scenariusze z {{count}} lat, {{range}}",
+      "scenarioYears_many": "scenariusze z {{count}} lat, {{range}}",
+      "scenarioYears_other": "scenariusze z {{count}} lat, {{range}}",
+      "shortChoices": {
+        "p10": "Niski (P10)",
+        "p50": "Typowy (P50)",
+        "p90": "Wysoki (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Okres",
+      "year": "Cały rok",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4"
+    },
+    "periodScenarioYear": "Rok scenariusza",
+    "periodScenarioHint": "Pogoda scenariuszowa nie należy do żadnego roku kalendarzowego. Wybierz dni i miesiące do symulacji; daty są zapisywane w stałym roku odniesienia."
   },
   "mapLayers": {
     "title": "Warstwy mapy",

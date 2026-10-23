@@ -1975,13 +1975,16 @@ paths:
   /weather/years:
     get:
       description: Per weather archive (provider), the years with processed weather
-        data, and the archive runs use by default. A simulation period must lie within
-        one of these years.
+        data, and the archive runs use by default. A simulation period with historic
+        weather must lie within one of these years. scenario_coverage lists, per archive,
+        the complete scenarios and the years they draw months from; both are null
+        while the weather service does not report them.
       produces:
       - application/json
       responses:
         "200":
-          description: 'default_provider and providers: {name: [years]}'
+          description: 'default_provider, providers: {name: [years]} and scenario_coverage:
+            {name: {scenarios, source_years}}'
           schema:
             additionalProperties: true
             type: object
