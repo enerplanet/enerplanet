@@ -2723,8 +2723,8 @@
     "regions": "regiones",
     "grids": "cuadrículas",
     "countries": "países",
-    "boxedBuildings_one": "{{count}} edificio mostrado como bloque: sin datos urbanos 3D",
-    "boxedBuildings_other": "{{count}} edificios mostrados como bloques: sin datos urbanos 3D"
+    "footprintOnlyBuildings_one": "{{count}} edificio no tiene datos 3D y solo muestra su huella",
+    "footprintOnlyBuildings_other": "{{count}} edificios no tienen datos 3D y solo muestran su huella"
   },
   "privacy": {
     "dialogTitle": "Procesamiento de datos y privacidad",

@@ -2718,8 +2718,8 @@
     "regions": "Regionen",
     "grids": "Raster",
     "countries": "Länder",
-    "boxedBuildings_one": "{{count}} Gebäude als Quader dargestellt: keine 3D-Stadtdaten",
-    "boxedBuildings_other": "{{count}} Gebäude als Quader dargestellt: keine 3D-Stadtdaten"
+    "footprintOnlyBuildings_one": "{{count}} Gebäude hat keine 3D-Stadtdaten und wird nur als Grundriss gezeigt",
+    "footprintOnlyBuildings_other": "{{count}} Gebäude haben keine 3D-Stadtdaten und werden nur als Grundriss gezeigt"
   },
   "privacy": {
     "dialogTitle": "Datenverarbeitung & Datenschutz",

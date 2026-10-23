@@ -2346,8 +2346,8 @@
     "regions": "regio's",
     "grids": "rasters",
     "countries": "landen",
-    "boxedBuildings_one": "{{count}} gebouw als blok getoond: geen 3D-stadsgegevens",
-    "boxedBuildings_other": "{{count}} gebouwen als blokken getoond: geen 3D-stadsgegevens"
+    "footprintOnlyBuildings_one": "{{count}} gebouw heeft geen 3D-stadsdata en toont alleen de plattegrond",
+    "footprintOnlyBuildings_other": "{{count}} gebouwen hebben geen 3D-stadsdata en tonen alleen de plattegrond"
   },
   "privacy": {
     "dialogTitle": "Gegevensverwerking & Privacy",

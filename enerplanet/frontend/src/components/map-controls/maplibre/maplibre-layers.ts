@@ -93,22 +93,10 @@ function toFeatureCollection(input: any): GeoJSON.FeatureCollection | null {
   return null;
 }
 
-const heightExpr: maplibregl.ExpressionSpecification = [
-  'case',
-  ['all', ['has', 'height_max'], ['!=', ['get', 'height_max'], null], ['>', ['get', 'height_max'], 0]],
-  ['get', 'height_max'],
-  ['all', ['has', 'height'], ['!=', ['get', 'height'], null], ['>', ['get', 'height'], 0]],
-  ['get', 'height'],
-  ['all', ['has', 'floors_3dbag'], ['!=', ['get', 'floors_3dbag'], null], ['>', ['get', 'floors_3dbag'], 0]],
-  ['*', ['get', 'floors_3dbag'], 3],
-  ['all', ['has', 'floors'], ['!=', ['get', 'floors'], null], ['>', ['get', 'floors'], 0]],
-  ['*', ['get', 'floors'], 3],
-  0,
-];
-
-// A building drawn from its LoD2 surfaces (see maplibre-lod2) keeps a flat
-// footprint here, which still takes clicks and shows its grid colour.
-const footprintHeightExpr: maplibregl.ExpressionSpecification = ['case', ['==', ['get', '_lod2'], true], 0, heightExpr];
+// Footprints lie flat in 3D: the buildings themselves are City2TABULA's LoD2
+// surfaces (see maplibre-lod2), since the footprint heights are estimates.
+// Highlights sit slightly above the footprint so they draw over it.
+const HIGHLIGHT_HEIGHT = 0.1;
 
 const separatorWidthExpr: maplibregl.ExpressionSpecification = [
   'interpolate',
@@ -125,7 +113,6 @@ export function addOrUpdateBuildings(
   geojson: any,
   colorMap: Map<string, string>,
   selectedBuildingOsmIds: string[] = [],
-  lod2OsmIds: ReadonlySet<string> = new Set(),
 ): void {
   if (!geojson?.features?.length) {
     clearSource(map, 'buildings-3d');
@@ -147,7 +134,6 @@ export function addOrUpdateBuildings(
       const rawOsmId = f.properties.osm_id;
       const osmId = rawOsmId === undefined || rawOsmId === null ? '' : String(rawOsmId).trim();
       f.properties._assign_selected = selectedSet.has(osmId);
-      f.properties._lod2 = lod2OsmIds.has(osmId);
 
       polygons.push(f);
     }
@@ -189,7 +175,7 @@ export function addOrUpdateBuildings(
       source: 'buildings-3d',
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': footprintHeightExpr,
+        'fill-extrusion-height': 0,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.92,
         'fill-extrusion-vertical-gradient': true,
@@ -219,7 +205,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_cluster_key'], '__none__'],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', footprintHeightExpr, 2.4],
+        'fill-extrusion-height': HIGHLIGHT_HEIGHT,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.98,
       },
@@ -256,7 +242,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_assign_selected'], true],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', footprintHeightExpr, 3.2],
+        'fill-extrusion-height': HIGHLIGHT_HEIGHT,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.82,
       },

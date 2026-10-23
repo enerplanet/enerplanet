@@ -2723,8 +2723,8 @@
     "regions": "régions",
     "grids": "grilles",
     "countries": "pays",
-    "boxedBuildings_one": "{{count}} bâtiment affiché en bloc : pas de données urbaines 3D",
-    "boxedBuildings_other": "{{count}} bâtiments affichés en blocs : pas de données urbaines 3D"
+    "footprintOnlyBuildings_one": "{{count}} bâtiment n'a pas de données 3D et n'affiche que son emprise",
+    "footprintOnlyBuildings_other": "{{count}} bâtiments n'ont pas de données 3D et n'affichent que leur emprise"
   },
   "privacy": {
     "dialogTitle": "Traitement des données et confidentialité",
