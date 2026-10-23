@@ -50,7 +50,7 @@ interface AppLayoutProps {
 const SIDEBAR_WIDTH = "4.5rem";
 // The app has no header bar; pages start at the top of the window.
 const TOPBAR_HEIGHT = "0px";
-const DOCUMENTATION_URL = "https://docs.spatialhub.io";
+const DOCUMENTATION_URL = "https://enerplanet.github.io/enerplanet/";
 
 // Types
 interface SidebarItem {
