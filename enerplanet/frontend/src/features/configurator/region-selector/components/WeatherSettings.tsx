@@ -87,7 +87,7 @@ const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; 
         onClick={() => value !== option.value && onChange(option.value)}
         className={cn(
           "h-7 flex-1 cursor-pointer rounded px-2 text-xs font-medium transition-colors",
-          value === option.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          value === option.value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
         )}
       >
         {option.label}
