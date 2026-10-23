@@ -1749,7 +1749,8 @@
       "updating": "Updating Simulation...",
       "cancel": "Cancel",
       "regenerateFirst": "Regenerate the grid before saving.",
-      "completeFirst": "Enter a model name and a simulation period, and draw an area, to save."
+      "completeFirst": "Enter a model name and a simulation period, and draw an area, to save.",
+      "saveShortcut": "Save (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "My Buildings",

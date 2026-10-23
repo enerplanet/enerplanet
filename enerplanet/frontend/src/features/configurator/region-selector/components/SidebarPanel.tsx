@@ -34,7 +34,8 @@ import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes
 import { InfoIcon, TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
-import type { FC, ChangeEvent, ReactNode } from "react";
+import { useEffect, type FC, type ChangeEvent, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 
@@ -126,6 +127,20 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const canSave = complete && !state.isSaving && !gridStale;
   const saveBlockedKey = saveBlocker(complete, gridStale);
   const saveBlockedReason = saveBlockedKey ? t(saveBlockedKey) : undefined;
+  const [searchParams] = useSearchParams();
+  const buildingOpen = searchParams.has("building");
+
+  // Ctrl+S / Cmd+S saves without leaving the page. The browser's own save is always
+  // suppressed here; an open building configurator keeps the shortcut to itself.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "s") return;
+      e.preventDefault();
+      if (canSave && !buildingOpen) actions.handleQuickSave();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [canSave, buildingOpen, actions]);
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -355,7 +370,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             variant="outline"
             onClick={actions.handleQuickSave}
             disabled={!canSave}
-            title={saveBlockedReason}
+            title={saveBlockedReason ?? t("simulation.actions.saveShortcut")}
             className="h-8 cursor-pointer"
           >
             {state.isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("common.save")}

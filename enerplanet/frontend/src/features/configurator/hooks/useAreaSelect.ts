@@ -241,8 +241,10 @@ export const useAreaSelect = ({
     const handleQuickSave = useCallback(async () => {
         const data = getUpdatedPylovoData(); const user = useAuthStore.getState().user;
         const userId = user?.id ? String(user.id) : undefined;
-        await saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, navigate, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current });
+        const createdId = await saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current });
         setIsModified(false);
+        // A new model reopens in edit mode, so the next save updates it rather than creating another.
+        if (createdId) { isInternalNavRef.current = true; navigate(`/app/model-dashboard/edit/${createdId}`, { replace: true }); }
     }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, allPolygons, currentWorkspace?.id, getUpdatedPylovoData, advancedParams, draftId, setIsSaving, setIsModified, updateModelMutation, createModelMutation, navigate]);
 
     const handleSave = useCallback(async () => { await handleQuickSave(); isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [handleQuickSave, navigate]);
@@ -302,7 +304,8 @@ function gridErrorMessage(err: unknown, siteMode: boolean, fallback: string): st
     return e.response?.data?.error || e.message || fallback;
 }
 
-async function saveAreaData(params: any) {
+/** Saves the model; returns the id of a newly created model, undefined for an update or a failed save. */
+async function saveAreaData(params: any): Promise<number | undefined> {
     const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel } = params;
     if (!fromDate || !toDate || !modelName?.trim() || !polygonCoordinates?.length) return;
     setIsSaving(true);
@@ -329,7 +332,7 @@ async function saveAreaData(params: any) {
             if (draftId && newModel?.data?.id) try { await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId); } catch { /* non-critical */ }
             // Not fatal: the save's background run finds the same results stored by key.
             if (draftId && newModel?.data?.id) await modelService.claimDraftSeries(newModel.data.id, draftId).catch((err) => console.warn(`claiming draft ${draftId} series for model ${newModel.data.id} failed`, err));
-            params.navigate(DASHBOARD_ROUTE);
+            return newModel?.data?.id;
         }
     } catch { /* ignore */ }
     finally { setIsSaving(false); }

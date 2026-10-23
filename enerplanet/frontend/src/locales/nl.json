@@ -1442,7 +1442,8 @@
       "updating": "Simulatie wordt bijgewerkt...",
       "cancel": "Annuleren",
       "regenerateFirst": "Genereer het net opnieuw voordat u opslaat.",
-      "completeFirst": "Voer een modelnaam en een simulatieperiode in en teken een gebied om op te slaan."
+      "completeFirst": "Voer een modelnaam en een simulatieperiode in en teken een gebied om op te slaan.",
+      "saveShortcut": "Opslaan (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Mijn gebouwen",

@@ -1699,7 +1699,8 @@
       "updating": "Actualizando simulación...",
       "cancel": "Cancelar",
       "regenerateFirst": "Regenere la red antes de guardar.",
-      "completeFirst": "Para guardar, introduzca un nombre de modelo y un periodo de simulación, y dibuje un área."
+      "completeFirst": "Para guardar, introduzca un nombre de modelo y un periodo de simulación, y dibuje un área.",
+      "saveShortcut": "Guardar (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Mis edificios",

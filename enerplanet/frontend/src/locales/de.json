@@ -1749,7 +1749,8 @@
       "updating": "Simulation wird aktualisiert...",
       "cancel": "Abbrechen",
       "regenerateFirst": "Erzeugen Sie das Netz vor dem Speichern neu.",
-      "completeFirst": "Zum Speichern einen Modellnamen und einen Simulationszeitraum eingeben und ein Gebiet zeichnen."
+      "completeFirst": "Zum Speichern einen Modellnamen und einen Simulationszeitraum eingeben und ein Gebiet zeichnen.",
+      "saveShortcut": "Speichern (Strg+S)"
     },
     "mapHeader": {
       "myBuildings": "Meine Gebäude",

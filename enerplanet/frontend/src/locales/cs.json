@@ -1457,7 +1457,8 @@
       "updating": "Aktualizace simulace...",
       "cancel": "Zrušit",
       "regenerateFirst": "Před uložením síť znovu vytvořte.",
-      "completeFirst": "Pro uložení zadejte název modelu a období simulace a nakreslete oblast."
+      "completeFirst": "Pro uložení zadejte název modelu a období simulace a nakreslete oblast.",
+      "saveShortcut": "Uložit (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Moje budovy",

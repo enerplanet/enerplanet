@@ -1699,7 +1699,8 @@
       "updating": "Mise à jour de la simulation...",
       "cancel": "Annuler",
       "regenerateFirst": "Régénérez le réseau avant d'enregistrer.",
-      "completeFirst": "Pour enregistrer, saisissez un nom de modèle et une période de simulation, et dessinez une zone."
+      "completeFirst": "Pour enregistrer, saisissez un nom de modèle et une période de simulation, et dessinez une zone.",
+      "saveShortcut": "Enregistrer (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Mes bâtiments",

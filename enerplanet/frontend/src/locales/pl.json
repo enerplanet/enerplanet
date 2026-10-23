@@ -1457,7 +1457,8 @@
       "updating": "Aktualizacja symulacji...",
       "cancel": "Anuluj",
       "regenerateFirst": "Przed zapisaniem wygeneruj sieć ponownie.",
-      "completeFirst": "Aby zapisać, wprowadź nazwę modelu i okres symulacji oraz narysuj obszar."
+      "completeFirst": "Aby zapisać, wprowadź nazwę modelu i okres symulacji oraz narysuj obszar.",
+      "saveShortcut": "Zapisz (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Moje budynki",
