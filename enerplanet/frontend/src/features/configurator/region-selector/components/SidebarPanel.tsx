@@ -13,17 +13,9 @@ import { RangeCalendar } from "@/components/ui/calendar-rac";
 import { parseDate } from "@internationalized/date";
 import { cn } from "@/lib/utils";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Button,
   Switch,
   Label as UILabel,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "@spatialhub/ui";
 import {
   AlertTriangle,
@@ -38,9 +30,10 @@ import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
-import { InfoIcon } from "@/components/ui/InfoTooltip";
+import { InfoIcon, TextInfoIcon } from "@/components/ui/InfoTooltip";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
-import type { FC, ChangeEvent } from "react";
+import type { FC, ChangeEvent, ReactNode } from "react";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 
@@ -72,6 +65,17 @@ interface SidebarPanelProps {
   operateIssues?: OperateIssue[];
   onFixOperateIssue?: (issue: OperateIssue, techKey: string) => void;
 }
+
+/** One setting on a single line: its name with the hint behind an info icon, and its control. */
+const SettingRow: FC<{ label: string; hint: string; dataTour?: string; children: ReactNode }> = ({ label, hint, dataTour, children }) => (
+  <div className="flex items-center justify-between gap-2" data-tour={dataTour}>
+    <div className="flex min-w-0 items-center gap-1.5">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <TextInfoIcon title={label} description={hint} position="fixed-left-anchored" />
+    </div>
+    {children}
+  </div>
+);
 
 export const SidebarPanel: FC<SidebarPanelProps> = ({
   state,
@@ -275,67 +279,42 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           </div>
         </div>
 
-        <div className="relative" data-tour="resolution">
-          <label
-            htmlFor="resolution-select"
-            className="block text-sm font-medium text-foreground mb-2"
-          >
-            {t("simulation.resolution")}
-          </label>
-          <Select
+        <SettingRow label={t("simulation.resolution")} hint={t("simulation.resolutionHint")} dataTour="resolution">
+          <SegmentedControl
+            aria-label={t("simulation.resolution")}
             value={String(state.resolution)}
-            onValueChange={(value: any) => actions.setResolution(Number(value))}
-          >
-            <SelectTrigger id="resolution-select" className="w-full">
-              <SelectValue placeholder={t("simulation.resolutionPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <SelectItem value="30" disabled>
-                      30 {t("simulation.minutes")}
-                    </SelectItem>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t("simulation.resolutionComingSoon")}</TooltipContent>
-              </Tooltip>
-              <SelectItem value="60">60 {t("simulation.minutes")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-muted-foreground mt-1">{t("simulation.resolutionHint")}</div>
-        </div>
+            onChange={(value) => actions.setResolution(Number(value))}
+            options={[
+              { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
+              { value: "60", label: "60 min" },
+            ]}
+          />
+        </SettingRow>
 
-        <div className="relative">
-          <label htmlFor="cooking-select" className="block text-sm font-medium text-foreground mb-2">
-            {t("simulation.cooking.label")}
-          </label>
-          <Select value={cookingCarrier} onValueChange={(value: string) => setCookingCarrier(value as CookingCarrier)}>
-            <SelectTrigger id="cooking-select" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="electric">{t("simulation.cooking.electric")}</SelectItem>
-              <SelectItem value="gas">{t("simulation.cooking.gas")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-muted-foreground mt-1">{t("simulation.cooking.hint")}</div>
-        </div>
+        <SettingRow label={t("simulation.cooking.label")} hint={t("simulation.cooking.hint")}>
+          <SegmentedControl
+            aria-label={t("simulation.cooking.label")}
+            value={cookingCarrier}
+            onChange={(value) => setCookingCarrier(value as CookingCarrier)}
+            options={[
+              { value: "electric", label: t("simulation.cooking.electric") },
+              { value: "gas", label: t("simulation.cooking.gas") },
+            ]}
+          />
+        </SettingRow>
 
-        <div className="relative">
-          <label htmlFor="run-mode-select" className="block text-sm font-medium text-foreground mb-2">
-            {t("simulation.runMode.label")}
-          </label>
-          <Select value={runMode} onValueChange={(value: string) => setRunMode(value as RunMode)}>
-            <SelectTrigger id="run-mode-select" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="plan">{t("simulation.runMode.plan")}</SelectItem>
-              <SelectItem value="operate">{t("simulation.runMode.operate")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-muted-foreground mt-1">{t(`simulation.runMode.${runMode}Hint`)}</div>
+        <div>
+          <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
+            <SegmentedControl
+              aria-label={t("simulation.runMode.label")}
+              value={runMode}
+              onChange={(value) => setRunMode(value as RunMode)}
+              options={[
+                { value: "plan", label: t("simulation.runMode.plan"), title: t("simulation.runMode.planHint") },
+                { value: "operate", label: t("simulation.runMode.operate"), title: t("simulation.runMode.operateHint") },
+              ]}
+            />
+          </SettingRow>
           {runMode === "operate" && operateIssues.length > 0 && (
             <div className="mt-2 rounded-md border border-red-300 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/40">
               <p className="text-xs font-medium text-red-700 dark:text-red-300">
@@ -381,24 +360,24 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                     </Button> */}
         </div>
 
-        <div className="p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MapPinned className="w-4 h-4 text-foreground" />
-              <UILabel htmlFor="site-mode-toggle" className="text-sm font-medium text-foreground cursor-pointer">
-                {t("simulation.siteMode.label")}
-              </UILabel>
-            </div>
-            <Switch
-              id="site-mode-toggle"
-              disabled={siteModeLocked}
-              checked={siteMode}
-              onCheckedChange={setSiteMode}
+        <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
+          <div className="flex items-center gap-2">
+            <MapPinned className="w-4 h-4 text-foreground" />
+            <UILabel htmlFor="site-mode-toggle" className="text-sm font-medium text-foreground cursor-pointer">
+              {t("simulation.siteMode.label")}
+            </UILabel>
+            <TextInfoIcon
+              title={t("simulation.siteMode.label")}
+              description={t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
+              position="fixed-left-anchored"
             />
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
-          </div>
+          <Switch
+            id="site-mode-toggle"
+            disabled={siteModeLocked}
+            checked={siteMode}
+            onCheckedChange={setSiteMode}
+          />
         </div>
 
         <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
