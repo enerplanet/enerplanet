@@ -631,6 +631,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 onMvLineHover={ml3d.handleMl3dMvLineHover}
                 onMapClick={ml3d.handleMl3dMapClick}
                 onBoundaryRegionClick={regionSelection.handleBoundaryRegionClick}
+                techsFor={pylovoLayers.buildingTechs}
               />
             )}
             <MapOverlays

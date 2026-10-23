@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { triangulatePlanar } from './maplibre-lod2';
 import { lod2SurfacesOf } from './useLod2Surfaces';
+import { pvBuildingsOf } from './usePvSurfaceIds';
 
 const area = (tris: number[][]) => {
   let total = 0;
@@ -31,10 +32,30 @@ describe('lod2SurfacesOf', () => {
   it('keeps roofs and walls and leaves ground surfaces out', () => {
     const ring = [[12.96, 48.83, 320], [12.97, 48.83, 320], [12.97, 48.84, 325], [12.96, 48.83, 320]];
     const surfaces = lod2SurfacesOf({ buildings: [{ surfaces: [
-      { type: 'RoofSurface', geojson: { type: 'Polygon', coordinates: [ring] } },
-      { type: 'WallSurface', geojson: { type: 'MultiPolygon', coordinates: [[ring], [ring]] } },
+      { id: 'r1', type: 'RoofSurface', geojson: { type: 'Polygon', coordinates: [ring] } },
+      { id: 'w1', type: 'WallSurface', geojson: { type: 'MultiPolygon', coordinates: [[ring], [ring]] } },
       { type: 'GroundSurface', geojson: { type: 'Polygon', coordinates: [ring] } },
     ] }] });
     expect(surfaces.map((s) => s.roof)).toEqual([true, false, false]);
+    expect(surfaces.map((s) => s.id)).toEqual(['r1', 'w1', 'w1']);
+  });
+});
+
+describe('pvBuildingsOf', () => {
+  const building = (osm_id: string, techs?: unknown): GeoJSON.Feature => ({ type: 'Feature', geometry: null as never, properties: { osm_id, techs } });
+  const buildings: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [
+    building('1', { pv_supply: { arrays: [{ surface_id: 'r1' }, { surface_id: 'r2' }] } }),
+    building('2', { pv_supply: { alias: 'PV' } }),
+    building('3', { battery_storage: {} }),
+    building('4'),
+  ] };
+
+  it('lists stored arrays, and null for automatic placement', () => {
+    expect(pvBuildingsOf(buildings)).toEqual([['1', ['r1', 'r2']], ['2', null]]);
+  });
+
+  it('reads techs from techsFor when given, not from the property', () => {
+    const techsFor = (osmId: string) => (osmId === '4' ? { pv_supply: { arrays: [{ surface_id: 'r9' } as never] } } : null);
+    expect(pvBuildingsOf(buildings, techsFor)).toEqual([['4', ['r9']]]);
   });
 });

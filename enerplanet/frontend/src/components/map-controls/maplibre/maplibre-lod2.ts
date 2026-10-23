@@ -8,6 +8,7 @@ export const LOD2_LAYER_ID = 'lod2-buildings';
 const ROOF_COLOR = 0xb4664a;
 const WALL_COLOR = 0xe6e0d6;
 const EDGE_COLOR = 0x4b4b4b;
+const PV_COLOR = 0x1f3a5f;
 
 /** A point in the layer's frame: metres east, north and up from the origin. */
 type Local = [number, number, number];
@@ -77,8 +78,8 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.map = null;
   }
 
-  /** Replaces the drawn buildings with these, by osm_id. */
-  setBuildings(byOsmId: Map<string, Lod2Surface[]>): void {
+  /** Replaces the drawn buildings with these, by osm_id; the surfaces in pvByOsmId are drawn as PV panels. */
+  setBuildings(byOsmId: Map<string, Lod2Surface[]>, pvByOsmId: Map<string, Set<string>> = new Map()): void {
     this.clear();
     const first = byOsmId.values().next().value?.[0]?.rings[0]?.[0];
     if (!first) {
@@ -89,7 +90,9 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     const metre = this.origin.meterInMercatorCoordinateUnits();
     const roofs: number[] = [];
     const walls: number[] = [];
-    for (const surfaces of byOsmId.values()) {
+    const panels: number[] = [];
+    for (const [osmId, surfaces] of byOsmId) {
+      const pv = pvByOsmId.get(osmId);
       const base = Math.min(...surfaces.flatMap((s) => s.rings.flatMap((r) => r.map((p) => p[2] ?? 0))));
       for (const surface of surfaces) {
         const rings = surface.rings.map((ring) => ring.map((p): Local => {
@@ -97,11 +100,13 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
           // Mercator y grows southwards; the local frame's y points north.
           return [(m.x - this.origin!.x) / metre, (this.origin!.y - m.y) / metre, (p[2] ?? base) - base];
         }));
-        (surface.roof ? roofs : walls).push(...triangulatePlanar(rings).flat());
+        const target = pv?.has(surface.id) ? panels : surface.roof ? roofs : walls;
+        target.push(...triangulatePlanar(rings).flat());
       }
     }
     this.addMesh(roofs, ROOF_COLOR);
     this.addMesh(walls, WALL_COLOR);
+    this.addMesh(panels, PV_COLOR);
     this.map?.triggerRepaint();
   }
 
