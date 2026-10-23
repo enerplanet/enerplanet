@@ -22,7 +22,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	onPageChange,
 	onItemsPerPageChange,
 	pageSizeOptions = [5, 10, 25],
-	className = "",
+	className = "bg-card",
 	isLoading = false,
 	resultsLabel,
 }) => {
@@ -85,7 +85,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	};
 	
 	return (
-		<div className={`bg-card px-4 py-3 border-t border-border sm:px-6 ${className}`}>
+		<div className={`px-4 py-3 border-t border-border sm:px-6 ${className}`}>
 			<div className="flex flex-col sm:flex-row justify-between items-center gap-3">
 				{/* Results info */}
 				<div className="flex items-center">

@@ -1008,7 +1008,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										<table className="w-full min-w-[75rem] table-fixed">
 											<ModelColumns />
 											<thead>
-												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted/40"}`}>
+												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
 													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
@@ -1107,6 +1107,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
 											resultsLabel={t("model.family.pagination")}
+											className="bg-muted"
 										/>
 									)}
 								</div>
