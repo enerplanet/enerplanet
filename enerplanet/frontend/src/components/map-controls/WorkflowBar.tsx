@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 type StepStatus = "complete" | "active" | "available" | "pending";
 
 interface WorkflowBarProps {
+	/** Areas drawn so far; the first step is done once there is one. */
+	polygonCount: number;
 	isGeneratingGrid: boolean;
 	hasGridData: boolean;
 	isRunningPowerFlow: boolean;
@@ -17,6 +19,7 @@ interface WorkflowBarProps {
 
 /** The configurator's workflow as one row of steps in its top bar. */
 export const WorkflowBar: FC<WorkflowBarProps> = ({
+	polygonCount,
 	isGeneratingGrid,
 	hasGridData,
 	isRunningPowerFlow,
@@ -26,6 +29,11 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 }) => {
 	const { t } = useTranslation();
 	const steps: { key: string; label: string; status: StepStatus; optional?: boolean }[] = [
+		{
+			key: "area",
+			label: t("workflow.drawArea", "Draw area"),
+			status: polygonCount > 0 ? "complete" : "available",
+		},
 		{
 			key: "grid",
 			label: t("workflow.gridGeneration", "Grid Generation"),

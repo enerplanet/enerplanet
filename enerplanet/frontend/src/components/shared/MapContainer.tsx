@@ -4,6 +4,7 @@ import { useMapProvider } from "@/providers/map-context";
 import { initializeMap } from '@/features/interactive-map/utils/mapUtils';
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import type { MapControlsPlacement } from "@/components/map-controls/MapControls";
+import { BaseLayerSwitcher } from "@/components/map-controls/BaseLayerSwitcher";
 
 interface MapContainerProps {
 	topBar: ReactNode;
@@ -83,6 +84,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 								/>
 
 								{map && !muted && <MapControls placement={controlsPlacement}>{controlsExtra}</MapControls>}
+								{map && !muted && <BaseLayerSwitcher />}
 
 								{mapOverlays}
 

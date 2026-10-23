@@ -38,17 +38,20 @@ const MapControlsWrapper: React.FC<MapControlsWrapperProps> = ({ onZoomIn, onZoo
 	</MapControls>
 );
 
-// Separate component factory to avoid creating components inside parent
-const createMapControlsComponent = (
-	zoomIn: () => void,
-	zoomOut: () => void,
-	centerMap: () => void
-) => {
+interface MapControlActions {
+	zoomIn: () => void;
+	zoomOut: () => void;
+	centerMap: () => void;
+}
+
+// Created once and reading the current actions through the ref: a new component
+// type per action change would remount the controls while the map pans.
+const createMapControlsComponent = (actions: React.RefObject<MapControlActions>) => {
 	const MapControlsComponent = ({ placement, children }: { placement?: MapControlsPlacement; children?: React.ReactNode }) => (
 		<MapControlsWrapper
-			onZoomIn={zoomIn}
-			onZoomOut={zoomOut}
-			onCenterMap={centerMap}
+			onZoomIn={() => actions.current.zoomIn()}
+			onZoomOut={() => actions.current.zoomOut()}
+			onCenterMap={() => actions.current.centerMap()}
 			placement={placement}
 		>
 			{children}
@@ -69,7 +72,7 @@ function runWhenMapAttached(map: OlMap, action: () => void) {
 
 export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 	const mapRef = useRef<HTMLDivElement | null>(null);
-	const { map, zoom, position, layers, baseLayer, selectedBaseLayerId, setMap, setBaseLayer, setZoom, setPosition } = useMapStore();
+	const { map, layers, baseLayer, selectedBaseLayerId, setMap, setBaseLayer, setZoom, setPosition } = useMapStore();
 	const { location: mapLocation } = useMapLocationStore();
 
 	const initMapInstance = useCallback(async () => {
@@ -87,15 +90,18 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 			return;
 		}
 
-		const baseLayerInfo = layers.find((l) => l.id === selectedBaseLayerId)!;
+		// Read at creation only: depending on the view state would recreate this
+		// callback on every pan, and MapContainer re-initialises the map when it changes.
+		const { layers: baseLayers, selectedBaseLayerId: selectedId, position: startPosition, zoom: startZoom } = useMapStore.getState();
+		const baseLayerInfo = baseLayers.find((l) => l.id === selectedId) ?? baseLayers[0];
 		const initialBaseLayer = new TileLayer({ source: baseLayerInfo.source });
 
 		const olMap = new OlMap({
 			target: mapRef.current,
 			layers: [initialBaseLayer],
 			view: new View({
-				center: fromLonLat(position),
-				zoom: zoom,
+				center: fromLonLat(startPosition),
+				zoom: startZoom,
 				maxZoom: MAP_ZOOM.MAX,
 				minZoom: MAP_ZOOM.MIN,
 			}),
@@ -114,7 +120,7 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 				olMap.updateSize();
 			});
 		});
-	}, [map, layers, selectedBaseLayerId, position, zoom, setMap, setBaseLayer]);
+	}, [map, setMap, setBaseLayer]);
 
 	const changeToSelectedMapLayer = useCallback(() => {
 		const selected = layers.find((l) => l.id === selectedBaseLayerId);
@@ -218,10 +224,10 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 		const savedCenter = fromLonLat([mapLocation.longitude, mapLocation.latitude]);
 		map.getView().animate({
 			center: savedCenter,
-			zoom: mapLocation.zoom || zoom,
+			zoom: mapLocation.zoom || map.getView().getZoom(),
 			duration: 1000,
 		});
-	}, [map, mapLocation, zoom]);
+	}, [map, mapLocation]);
 
 	const clearDrawingLayers = useCallback(() => {
 		if (!map) return;
@@ -245,10 +251,9 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 		}
 	}, [map]);
 
-	const MapControlsComponent = useMemo(
-		() => createMapControlsComponent(zoomIn, zoomOut, centerMap),
-		[zoomIn, zoomOut, centerMap]
-	);
+	const controlActions = useRef<MapControlActions>({ zoomIn, zoomOut, centerMap });
+	controlActions.current = { zoomIn, zoomOut, centerMap };
+	const MapControlsComponent = useMemo(() => createMapControlsComponent(controlActions), []);
 
 	const contextValue = useMemo(() => ({
 		mapRef,

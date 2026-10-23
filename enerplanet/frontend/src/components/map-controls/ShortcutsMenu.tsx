@@ -3,7 +3,7 @@ import { Keyboard } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
-import { buildShortcutGroups } from "./PolygonDrawingGuide";
+import { buildShortcutGroups } from "./shortcutGroups";
 
 /** The map's keyboard and mouse shortcuts behind a button in the map tool column. */
 export const ShortcutsMenu: FC = () => {

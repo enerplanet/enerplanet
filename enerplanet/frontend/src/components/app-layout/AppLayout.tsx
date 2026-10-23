@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingWizard from "@/features/onboarding/OnboardingWizard";
@@ -9,9 +9,7 @@ import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { useTranslation } from "@spatialhub/i18n";
 
 import {
-  Layers,
   LogOut,
-  MapIcon,
   Settings,
   User,
   BookOpen,
@@ -29,33 +27,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-  RadioGroup,
-  RadioGroupItem,
-  Switch,
-  Separator,
   Button,
-  Label,
 } from "@spatialhub/ui";
 import SidebarButton from "@/components/ui/SidebarButton";
-import { LayerInfo, layers, useMapStore } from "@/features/interactive-map/store/map-store";
+import { useMapStore } from "@/features/interactive-map/store/map-store";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useProductTour } from "@/features/guided-tour/hooks/useProductTour";
 import { Authorized } from "@/middleware/authorized";
 import { useAuthStore } from "@/store/auth-store";
 import { SessionTimer } from "@/components/ui/SessionTimer";
 import { SessionExpiryBanner } from "@/components/ui/SessionExpiryBanner";
-import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -100,49 +84,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return location.pathname === path || (path === ADMIN_PATH && location.pathname === "/");
   };
 
-  const hasAccessToLayer = useCallback(
-    (layer: { accessLevel: "very_low" | "intermediate" | "manager" | "expert" }): boolean => {
-      if (!user) return false;
-
-      const accessLevels: ("very_low" | "intermediate" | "manager" | "expert")[] = [
-        "very_low",
-        "intermediate",
-        "manager",
-        "expert",
-      ];
-
-      const userLevel = accessLevels.indexOf(user.access_level);
-      const requiredLevel = accessLevels.indexOf(layer.accessLevel);
-
-      return (
-        userLevel >= requiredLevel ||
-        user.access_level === "expert" ||
-        user.access_level === "manager"
-      );
-    },
-    [user]
-  );
-
-  const changeBaseLayer = (index: number) => {
-    const layer = baseLayers.at(index);
-    if (!layer) return;
-    setSelectedBaseLayerId(layer.id);
-  };
-
-  const accessibleBaseLayers = useMemo(
-    () => baseLayers.filter((l) => hasAccessToLayer(l)),
-    [baseLayers, hasAccessToLayer]
-  );
-
+  // A saved base map that is not in the list falls back to the first one.
   useEffect(() => {
-    if (
-      selectedBaseLayerId &&
-      accessibleBaseLayers.length > 0 &&
-      !accessibleBaseLayers.some((l) => l.id === selectedBaseLayerId)
-    ) {
-      setSelectedBaseLayerId(accessibleBaseLayers[0].id);
+    if (!baseLayers.some((l) => l.id === selectedBaseLayerId)) {
+      setSelectedBaseLayerId(baseLayers[0].id);
     }
-  }, [selectedBaseLayerId, accessibleBaseLayers, setSelectedBaseLayerId]);
+  }, [selectedBaseLayerId, baseLayers, setSelectedBaseLayerId]);
 
   const navigationHandlers = useMemo(
     () => ({
@@ -276,12 +223,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               ))}
             </Authorized>
 
-            <LayersSheet
-              baseLayers={accessibleBaseLayers}
-              selectedBaseLayerId={selectedBaseLayerId}
-              changeBaseLayer={changeBaseLayer}
-              hasAccessToLayer={hasAccessToLayer}
-            />
           </div>
 
           <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 text-center">
@@ -393,265 +334,5 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </main>
       </div>
     </>
-  );
-};
-
-interface BaseLayerInfo {
-  id: string;
-  name: string;
-  description: string;
-}
-
-interface LayersSheetProps {
-  baseLayers: BaseLayerInfo[];
-  selectedBaseLayerId: string;
-  changeBaseLayer: (index: number) => void;
-  hasAccessToLayer: (layer: LayerInfo) => boolean;
-}
-
-const LayersSheet: React.FC<LayersSheetProps> = ({
-  baseLayers,
-  selectedBaseLayerId,
-  changeBaseLayer,
-  hasAccessToLayer,
-}) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [open, setOpen] = useState(false);
-  const { t } = useTranslation();
-
-  const handleOpen = () => {
-    setOpen(true);
-    setTimeout(() => setIsAnimating(true), 10);
-  };
-
-  const handleClose = () => {
-    setIsAnimating(false);
-    setTimeout(() => setOpen(false), 300);
-  };
-
-  const openSheet = () => handleOpen();
-  const closeSheet = () => handleClose();
-
-  return (
-    <Sheet open={open} onOpenChange={(isOpen) => (isOpen ? openSheet() : closeSheet())}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              data-tour="layers"
-              style={
-                {
-                  "--sidebar-color": "#10b981",
-                  "--sidebar-bg": "#d1fae5",
-                } as React.CSSProperties
-              }
-              className={cn(
-                "cursor-pointer w-11 h-11 rounded-button flex items-center justify-center transition-all duration-normal relative group",
-                "border-2 border-transparent hover:bg-muted"
-              )}
-            >
-              <Layers className="cursor-pointer w-5 h-5 text-muted-foreground group-hover:text-foreground" />
-            </button>
-          </SheetTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>Layers</p>
-        </TooltipContent>
-      </Tooltip>
-      <SheetContent
-        style={
-          {
-            "--sidebar-width": SIDEBAR_WIDTH,
-            "--topbar-height": TOPBAR_HEIGHT,
-          } as React.CSSProperties
-        }
-        side="left"
-        className={cn(
-          "p-0 h-[calc(100%-var(--topbar-height))] w-[320px] mt-[var(--topbar-height)] ml-[var(--sidebar-width)]",
-          "transition-transform duration-300 ease-in-out bg-card text-foreground",
-          isAnimating ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-border bg-muted/50">
-          <SheetTitle className="font-semibold text-base flex items-center gap-2.5 text-foreground">
-            <div className="p-1.5 rounded-lg bg-foreground">
-              <Layers className="size-4 text-background" />
-            </div>
-            {t('mapLayers.title')}
-          </SheetTitle>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            {t('mapLayers.description')}
-          </p>
-        </div>
-
-        <div className="relative overflow-y-auto no-scrollbar h-[calc(100%-80px)] px-4 py-4">
-          {/* Base Layers Section */}
-          <div className="relative">
-            <Accordion type="single" collapsible defaultValue="base-layers">
-              <AccordionItem value="base-layers" className="border-none">
-                <AccordionTrigger className="hover:no-underline py-2 px-3 rounded-lg hover:bg-muted transition-colors">
-                  <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <div className="p-1 rounded bg-muted">
-                      <MapIcon className="size-3.5 text-muted-foreground" />
-                    </div>
-                    {t('mapLayers.baseLayers.title')}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-0">
-                  <p className="text-xs text-muted-foreground px-1 mb-3">
-                    {t('mapLayers.baseLayers.description')}
-                  </p>
-                  <RadioGroup className="gap-2" value={selectedBaseLayerId} onValueChange={(val) => {
-                    const idx = baseLayers.findIndex((l) => l.id === val);
-                    if (idx >= 0) changeBaseLayer(idx);
-                  }}>
-                    {baseLayers.map((layer) => (
-                      <BaseLayerOption
-                        key={layer.id}
-                        layer={layer}
-                      />
-                    ))}
-                  </RadioGroup>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-
-          <Separator className="my-4 bg-border" />
-
-          {/* Data Layers Section */}
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <div className="p-1 rounded bg-muted">
-                <Layers className="size-3.5 text-muted-foreground" />
-              </div>
-              <span className="text-sm font-medium text-foreground">{t('mapLayers.dataLayers.title')}</span>
-            </div>
-            <div className="space-y-2">
-              {layers.map((layer) => (
-                <LayerOption key={layer.id} layer={layer} hasAccess={hasAccessToLayer(layer)} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-};
-interface BaseLayerOptionProps {
-  layer: BaseLayerInfo;
-}
-
-const BaseLayerOption: React.FC<BaseLayerOptionProps> = ({ layer }) => {
-  const { id, name } = layer;
-  const { t } = useTranslation();
-
-  // Map layer ID to translation key
-  const getLayerDescription = (layerId: string) => {
-    const descriptionMap: Record<string, string> = {
-      'osm_standard': t('mapLayers.baseLayers.osmStandard'),
-      'osm_humanitarian': t('mapLayers.baseLayers.osmHumanitarian'),
-      'carto_positron': t('mapLayers.baseLayers.cartoPositron'),
-      'carto_dark': t('mapLayers.baseLayers.cartoDark'),
-      'carto_voyager': t('mapLayers.baseLayers.cartoVoyager'),
-      'opentopomap': t('mapLayers.baseLayers.openTopoMap'),
-      'maplibre_3d': t('mapLayers.baseLayers.maplibre3d', '3D buildings on satellite imagery'),
-    };
-    return descriptionMap[layerId] || layer.description;
-  };
-
-  return (
-    <label
-      htmlFor={id}
-      className="group border border-border has-data-[state=checked]:border-foreground has-data-[state=checked]:bg-muted relative flex w-full items-start gap-3 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-muted-foreground text-left"
-    >
-      <RadioGroupItem
-        value={id}
-        id={id}
-        aria-describedby={`${id}-description`}
-        className="order-1 mt-0.5 cursor-pointer border-muted-foreground data-[state=checked]:border-foreground data-[state=checked]:bg-foreground"
-      />
-      <div className="grid grow gap-1">
-        <Label htmlFor={id} className="text-sm font-medium text-foreground cursor-pointer">
-          {name}
-        </Label>
-        <p id={`${id}-description`} className="text-muted-foreground text-xs leading-relaxed">
-          {getLayerDescription(id)}
-        </p>
-      </div>
-    </label>
-  );
-};
-
-interface LayerOptionProps {
-  layer: LayerInfo;
-  hasAccess: boolean;
-}
-
-const LayerOption: React.FC<LayerOptionProps> = ({ layer, hasAccess }) => {
-  const { id, name, color, enabled, icon: LayerIcon } = layer;
-  const { t } = useTranslation();
-
-  // Map layer ID to translation key
-  const getLayerDescription = (layerId: string) => {
-    const descriptionMap: Record<string, string> = {
-      'enerplanet_simulation_final': t('mapLayers.dataLayers.energySimulation'),
-    };
-    return descriptionMap[layerId] || layer.description;
-  };
-
-  return (
-    <div className="relative">
-      <div
-        style={{ "--layer-color": color } as React.CSSProperties}
-        className={cn(
-          "group border border-border cursor-pointer relative flex w-full items-center gap-3 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200",
-          "hover:border-muted-foreground",
-          "has-data-[state=checked]:border-foreground has-data-[state=checked]:bg-muted",
-          !hasAccess && "opacity-50 pointer-events-none"
-        )}
-      >
-        {/* Layer Icon */}
-        <div className="p-2 rounded-lg bg-muted group-hover:bg-accent transition-colors">
-          <LayerIcon className="size-4 text-foreground" />
-        </div>
-
-        {/* Layer Info */}
-        <div className="flex-1 min-w-0">
-          <Label htmlFor={id} className="text-sm font-medium text-foreground cursor-pointer block">
-            {name}
-          </Label>
-          <p
-            id={`${id}-description`}
-            className="text-muted-foreground text-xs mt-0.5 leading-relaxed truncate"
-          >
-            {getLayerDescription(id)}
-          </p>
-          {!hasAccess && (
-            <span className="text-amber-600 dark:text-amber-400 text-xs mt-1 flex items-center gap-1">
-              <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              Requires {layer.accessLevel.replace("_", " ")} access
-            </span>
-          )}
-        </div>
-
-        {/* Toggle Switch */}
-        <Switch
-          id={id}
-          className={cn("h-5 w-9 shrink-0", "data-[state=checked]:bg-foreground cursor-pointer")}
-          aria-describedby={`${id}-description`}
-          {...(enabled && { checked: enabled })}
-        />
-      </div>
-    </div>
   );
 };
