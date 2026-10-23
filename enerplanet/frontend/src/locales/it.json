@@ -1656,6 +1656,14 @@
         "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
         "year": "Il meteo registrato dall'archivio nell'anno del periodo."
       }
+    },
+    "periodParts": {
+      "label": "Periodo",
+      "year": "Anno intero",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
     }
   },
   "mapLayers": {

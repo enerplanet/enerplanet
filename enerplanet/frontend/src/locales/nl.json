@@ -1655,6 +1655,14 @@
         "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
         "year": "Het door het archief gemeten weer in het jaar van de periode."
       }
+    },
+    "periodParts": {
+      "label": "Periode",
+      "year": "Heel jaar",
+      "q1": "K1",
+      "q2": "K2",
+      "q3": "K3",
+      "q4": "K4"
     }
   },
   "mapLayers": {

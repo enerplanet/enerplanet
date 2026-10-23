@@ -116,8 +116,44 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   const yearBounds = yearOptions.length
     ? { start: fullYear(yearOptions[0]).start, end: fullYear(yearOptions[yearOptions.length - 1]).end }
     : undefined;
-  return { periodYear, yearOptions, yearBounds, choosePeriodYear };
+  // Sets day and month to a part of the period's year; the year itself stays.
+  const choosePeriodPart = (part: PeriodPart) => {
+    const year = periodYear ?? latestYear;
+    if (!year) return;
+    actions.handleUpdateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
+  };
+  return { periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart };
 }
+
+interface PeriodPart { key: string; start: string; end: string }
+
+// Whole year and quarters as month-day bounds; the year is the period's.
+const PERIOD_PARTS: PeriodPart[] = [
+  { key: "year", start: "01-01", end: "12-31" },
+  { key: "q1", start: "01-01", end: "03-31" },
+  { key: "q2", start: "04-01", end: "06-30" },
+  { key: "q3", start: "07-01", end: "09-30" },
+  { key: "q4", start: "10-01", end: "12-31" },
+];
+
+/** One-click periods within the period's year: the whole year or a quarter. */
+const PeriodParts: FC<{ onPick: (part: PeriodPart) => void }> = ({ onPick }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label={t("simulation.periodParts.label")}>
+      {PERIOD_PARTS.map((part) => (
+        <button
+          key={part.key}
+          type="button"
+          onClick={() => onPick(part)}
+          className="h-6 cursor-pointer rounded-md border border-border px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {t(`simulation.periodParts.${part.key}`)}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 /** The simulation period's year, chosen from the years with weather data. */
 const PeriodYearSelect: FC<{ year: number | undefined; years: number[]; onChange: (year: number) => void }> = ({ year, years, onChange }) => {
@@ -189,7 +225,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const gridStale = useModelStore((s) => s.gridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
-  const { periodYear, yearOptions, yearBounds, choosePeriodYear } = usePeriodYear(state, actions, editMode);
+  const { periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart } = usePeriodYear(state, actions, editMode);
   const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
@@ -385,6 +421,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               : 0}{" "}
             {t("simulation.days")}
           </div>
+          <PeriodParts onPick={choosePeriodPart} />
         </div>
 
         {isExpert && <WeatherSettings periodYear={periodYear} />}

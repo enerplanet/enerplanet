@@ -1912,6 +1912,14 @@
         "scenario": "Un año compuesto con meses del archivo: típico, o en el extremo bajo o alto de la radiación solar.",
         "year": "El clima registrado por el archivo en el año del periodo."
       }
+    },
+    "periodParts": {
+      "label": "Periodo",
+      "year": "Año completo",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
     }
   },
   "mapLayers": {
