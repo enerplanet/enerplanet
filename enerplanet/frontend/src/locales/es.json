@@ -1880,7 +1880,10 @@
     "siteMode": {
       "label": "Red personalizada",
       "hint": "Coloque sus propios transformadores y construya la red de esta zona a partir de ellos, en lugar de la red pregenerada. Solo se incluyen edificios con datos 3D, hasta 150.",
-      "locked": "Borre la zona dibujada para cambiar el modo."
+      "switchHint": "Al cambiar, la red se regenera para el área dibujada.",
+      "leaveTitle": "¿Salir de la red personalizada?",
+      "leaveDescription": "La red del área dibujada se regenera a partir de la red precalculada. Los transformadores que colocó se pierden.",
+      "leaveConfirm": "Cambiar"
     },
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",

@@ -1880,7 +1880,10 @@
     "siteMode": {
       "label": "Réseau personnalisé",
       "hint": "Placez vos propres transformateurs et construisez le réseau de cette zone à partir d'eux, au lieu du réseau précalculé. Seuls les bâtiments avec données 3D sont inclus, 150 au maximum.",
-      "locked": "Effacez la zone dessinée pour changer de mode."
+      "switchHint": "Changer de mode régénère le réseau pour la zone dessinée.",
+      "leaveTitle": "Quitter le réseau personnalisé ?",
+      "leaveDescription": "Le réseau de la zone dessinée est régénéré à partir du réseau précalculé. Les transformateurs que vous avez placés sont perdus.",
+      "leaveConfirm": "Changer"
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",

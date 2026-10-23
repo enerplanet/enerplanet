@@ -1875,7 +1875,10 @@
     "siteMode": {
       "label": "Eigenes Netz",
       "hint": "Eigene Transformatoren setzen und das Netz für dieses Gebiet daraus erzeugen, statt das vorberechnete Netz zu nutzen. Nur Gebäude mit 3D-Daten, höchstens 150.",
-      "locked": "Entfernen Sie das gezeichnete Gebiet, um den Modus zu ändern."
+      "switchHint": "Ein Wechsel erzeugt das Netz für das gezeichnete Gebiet neu.",
+      "leaveTitle": "Eigenes Netz verlassen?",
+      "leaveDescription": "Das Netz für das gezeichnete Gebiet wird aus dem vorberechneten Netz neu erzeugt. Selbst gesetzte Transformatoren gehen verloren.",
+      "leaveConfirm": "Wechseln"
     },
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",

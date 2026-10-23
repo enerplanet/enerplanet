@@ -35,6 +35,7 @@ import {
   Building2,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
+import { useConfirm } from "@/hooks/useConfirmDialog";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
@@ -227,9 +228,20 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 
   const { periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart } = usePeriodYear(state, actions, editMode);
   const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
-  const setSiteMode = useModelStore((s) => s.setSiteMode);
-  // A drawn grid was made in one mode; switching would leave it labelled with the other.
-  const siteModeLocked = state.allPolygons.length > 0;
+  const confirm = useConfirm();
+  const hasArea = state.allPolygons.length > 0;
+  // Leaving a custom grid drops its placed transformers, so that switch asks first.
+  const switchGridMode = (on: boolean) => {
+    if (on || !hasArea) return void actions.handleSwitchGridMode(on);
+    void confirm({
+      type: "warning",
+      title: t("simulation.siteMode.leaveTitle"),
+      description: t("simulation.siteMode.leaveDescription"),
+      confirmLabel: t("simulation.siteMode.leaveConfirm"),
+      cancelLabel: t("common.cancel"),
+      onConfirm: async () => void actions.handleSwitchGridMode(false),
+    });
+  };
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -542,13 +554,13 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </div>
             <Switch
               id="site-mode-toggle"
-              disabled={siteModeLocked}
+              disabled={state.isGeneratingGrid}
               checked={siteMode}
-              onCheckedChange={setSiteMode}
+              onCheckedChange={switchGridMode}
             />
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
+            {t("simulation.siteMode.hint")}{hasArea && ` ${t("simulation.siteMode.switchHint")}`}
           </div>
         </div>
 

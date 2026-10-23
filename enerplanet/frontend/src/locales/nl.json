@@ -1623,7 +1623,10 @@
     "siteMode": {
       "label": "Eigen net",
       "hint": "Plaats eigen transformatoren en bouw het net voor dit gebied daaruit op, in plaats van het vooraf gegenereerde net. Alleen gebouwen met 3D-gegevens, maximaal 150.",
-      "locked": "Wis het getekende gebied om de modus te wijzigen."
+      "switchHint": "Wisselen genereert het net voor het getekende gebied opnieuw.",
+      "leaveTitle": "Eigen net verlaten?",
+      "leaveDescription": "Het net voor het getekende gebied wordt opnieuw gemaakt uit het vooraf berekende net. Geplaatste transformatoren gaan verloren.",
+      "leaveConfirm": "Wisselen"
     },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
