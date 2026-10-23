@@ -66,7 +66,7 @@ interface AppLayoutProps {
 // Constants
 const SIDEBAR_WIDTH = "40px";
 const TOPBAR_HEIGHT = "2.75rem";
-const DOCUMENTATION_URL = "https://docs.spatialhub.io";
+const DOCUMENTATION_URL = "https://enerplanet.github.io/enerplanet/";
 
 // Types
 interface SidebarItem {
