@@ -273,7 +273,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={8}>
+                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={24}>
                     {/* Session Timer at top of dropdown */}
                     <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700">
                       <SessionTimer warningThreshold={5} compact />

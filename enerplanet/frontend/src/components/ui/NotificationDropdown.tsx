@@ -120,7 +120,8 @@ export const NotificationDropdown: React.FC = () => {
         <TooltipContent side="right">
           <p>{t('notifications.title')}</p>
         </TooltipContent>
-      <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-80 p-0 rounded-xl border border-border shadow-xl overflow-hidden bg-card z-[52]">
+      {/* The bell (2.75rem) is centred in the 4.5rem rail: 0.875rem (16 px at the 18 px root) to the rail edge, plus an 8 px gap. */}
+      <DropdownMenuContent side="right" align="end" sideOffset={24} className="w-80 p-0 rounded-xl border border-border shadow-xl overflow-hidden bg-card z-[52]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
           <h3 className="font-semibold text-sm text-foreground">
