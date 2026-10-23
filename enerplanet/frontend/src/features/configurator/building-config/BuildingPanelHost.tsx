@@ -28,6 +28,7 @@ import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useDemandProfile } from './useDemandProfile';
 import { usePvMode, type BuildingPv, type PvArray } from './usePvMode';
+import type { PvYieldContext } from './pvYield';
 import { useBuildingTechnologies } from './useBuildingTechnologies';
 import type { BuildingTechs } from './buildingTechnologies';
 import { useConfiguratorParams } from './useConfiguratorParams';
@@ -161,13 +162,22 @@ interface PanelBodyProps {
   /** The building's technologies when the view opens. */
   techs: BuildingTechs | null;
   onTechsChange?: OnTechsChange;
+  /** The building's current technologies, read when a PV run starts. */
+  techsFor?: (osmId: string) => BuildingTechs | null;
+  /** The building's WGS84 [lon, lat], read when a PV run starts. */
+  locationFor?: (osmId: string) => [number, number] | null;
 }
 
-const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays, techs, onTechsChange }) => {
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays, techs, onTechsChange, techsFor, locationFor }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited, buildingCount } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
-  const services = useMemo(() => configuratorServicesFor(ownerPath, setDemandProfile), [ownerPath, setDemandProfile]);
+  const pvContext = useCallback((): PvYieldContext | null => {
+    const pvTech = techsFor?.(osmId)?.pv_supply;
+    const location = locationFor?.(osmId);
+    return pvTech && location ? { location, pv: pvTech } : null;
+  }, [osmId, techsFor, locationFor]);
+  const services = useMemo(() => configuratorServicesFor(ownerPath, setDemandProfile, pvContext), [ownerPath, setDemandProfile, pvContext]);
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
   const { t, i18n } = useTranslation();
@@ -247,9 +257,11 @@ interface BuildingPanelHostProps {
   /** The building's technologies, or null when it has none. */
   techsFor?: (osmId: string) => BuildingTechs | null;
   onTechsChange?: OnTechsChange;
+  /** The building's WGS84 [lon, lat], or null when it is not on the map; the PV run's location. */
+  locationFor?: (osmId: string) => [number, number] | null;
 }
 
-export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays, techsFor, onTechsChange }) => {
+export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays, techsFor, onTechsChange, locationFor }) => {
   const { buildingId, isOpen, pvMode, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
@@ -273,6 +285,8 @@ export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId
         onPvArrays={onPvArrays}
         techs={techsFor?.(buildingId) ?? null}
         onTechsChange={onTechsChange}
+        techsFor={techsFor}
+        locationFor={locationFor}
       />
     </div>
   );

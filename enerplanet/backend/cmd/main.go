@@ -29,6 +29,7 @@ import (
 	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
 	"spatialhub_backend/internal/handler/ignis"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
+	pvhandler "spatialhub_backend/internal/handler/pv"
 	"spatialhub_backend/internal/handler/pylovo"
 	"spatialhub_backend/internal/handler/render"
 	settingshandler "spatialhub_backend/internal/handler/settings"
@@ -40,6 +41,7 @@ import (
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
 	opentechdb "spatialhub_backend/internal/opentechdb"
+	"spatialhub_backend/internal/pv"
 	resulthandler "spatialhub_backend/internal/result/handler"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
@@ -733,6 +735,12 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 
 	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider, seriesstore.NewStore(deps.DB), deps.Cfg.BuemVersion, modelHandler)
 	registerBuemRoutes(protectedAPI, buemHandler)
+
+	pvYields := jobs.PVResolver{
+		Weather: weatherclient.NewClient(deps.TentacronClient), WeatherProvider: deps.Cfg.WeatherProvider,
+		PV: pv.NewClient(deps.TentacronClient), Series: seriesstore.NewStore(deps.DB), Version: deps.Cfg.PVVersion,
+	}
+	protectedAPI.POST("/v1/pv/building-yield", pvhandler.NewHandler(pvYields).BuildingYield)
 
 	// Energy demand is calculated dynamically based on building area and type
 }

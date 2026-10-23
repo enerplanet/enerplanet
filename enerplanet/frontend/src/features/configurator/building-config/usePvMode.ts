@@ -57,6 +57,8 @@ export interface BuildingPv {
 
 // Matches the backend's pv.KWPerSqm.
 export const KWP_PER_M2 = 0.2;
+// Matches the backend's pv.DefaultUsableShare.
+export const DEFAULT_USABLE_SHARE = 0.8;
 
 const toArray = ({ surface_id, tilt, azimuth, area, usable_share }: PvArray): PvArray =>
   ({ surface_id, tilt, azimuth, area, usable_share });
