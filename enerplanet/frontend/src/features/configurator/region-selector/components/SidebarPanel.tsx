@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   CalendarIcon,
   Loader2,
+  ChevronRight,
   CircuitBoard,
   Activity,
   MapPinned,
@@ -151,7 +152,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               }
               title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
               variant="default"
-              className="flex-1 shrink-0 h-7 cursor-pointer bg-gradient-to-br from-gray-800 to-black hover:from-gray-700 hover:to-gray-900 border-0"
+              className="flex-1 shrink-0 h-7 cursor-pointer"
               data-tour="save-button"
             >
               {state.isSaving ? (
@@ -342,14 +343,18 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         </div>
 
         <div className="flex gap-2" data-tour="technologies-parameters">
-          <Button
-            variant="outline"
+          <button
+            type="button"
             onClick={onOpenTechDrawer}
-            className="flex-1 cursor-pointer flex items-center justify-center gap-2"
+            className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg bg-primary px-3 py-2 text-left text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
-            <CircuitBoard className="w-4 h-4" />
-            {t("simulation.technologies")}
-          </Button>
+            <CircuitBoard className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{t("simulation.technologies")}</span>
+              <span className="block text-xs opacity-80">{t("technologies.dragInstruction")}</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 opacity-80" aria-hidden="true" />
+          </button>
           {/* <Button
                         variant="outline"
                         onClick={onOpenAdvancedParams}
