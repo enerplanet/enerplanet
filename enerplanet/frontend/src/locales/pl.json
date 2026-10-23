@@ -1654,12 +1654,16 @@
       "choices": {
         "p50": "Typowy rok (P50)",
         "p10": "Rok o niskim nasłonecznieniu (P10)",
-        "p90": "Rok o wysokim nasłonecznieniu (P90)",
-        "year": "Rzeczywista pogoda {{year}}"
+        "p90": "Rok o wysokim nasłonecznieniu (P90)"
       },
       "hints": {
         "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
-        "year": "Zarejestrowana przez archiwum pogoda w roku okresu."
+        "year": "Wybierz rok historyczny w okresie symulacji poniżej; obliczenia używają zarejestrowanej pogody z tego roku."
+      },
+      "mode": {
+        "label": "Tryb pogody",
+        "scenario": "Scenariusz",
+        "year": "Rok historyczny"
       }
     },
     "periodParts": {
@@ -1669,7 +1673,9 @@
       "q2": "Q2",
       "q3": "Q3",
       "q4": "Q4"
-    }
+    },
+    "periodScenarioYear": "Rok scenariusza",
+    "periodScenarioHint": "Pogoda scenariuszowa nie należy do żadnego roku kalendarzowego. Wybierz dni i miesiące do symulacji; daty są zapisywane w stałym roku odniesienia."
   },
   "mapLayers": {
     "title": "Warstwy mapy",

@@ -1654,12 +1654,16 @@
       "choices": {
         "p50": "Typický rok (P50)",
         "p10": "Rok s nízkým zářením (P10)",
-        "p90": "Rok s vysokým zářením (P90)",
-        "year": "Skutečné počasí roku {{year}}"
+        "p90": "Rok s vysokým zářením (P90)"
       },
       "hints": {
         "scenario": "Rok složený z měsíců archivu: typický, nebo na dolním či horním konci slunečního záření.",
-        "year": "Zaznamenané počasí archivu v roce období."
+        "year": "Vyberte historický rok v období simulace níže; výpočet použije zaznamenané počasí toho roku."
+      },
+      "mode": {
+        "label": "Režim počasí",
+        "scenario": "Scénář",
+        "year": "Historický rok"
       }
     },
     "periodParts": {
@@ -1669,7 +1673,9 @@
       "q2": "Q2",
       "q3": "Q3",
       "q4": "Q4"
-    }
+    },
+    "periodScenarioYear": "Rok scénáře",
+    "periodScenarioHint": "Scénářové počasí nepatří k žádnému kalendářnímu roku. Vyberte dny a měsíce k simulaci; data se ukládají v pevném referenčním roce."
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

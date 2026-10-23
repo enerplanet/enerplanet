@@ -1899,12 +1899,16 @@
       "choices": {
         "p50": "Año típico (P50)",
         "p10": "Año de baja radiación (P10)",
-        "p90": "Año de alta radiación (P90)",
-        "year": "Clima real de {{year}}"
+        "p90": "Año de alta radiación (P90)"
       },
       "hints": {
         "scenario": "Un año compuesto con meses del archivo: típico, o en el extremo bajo o alto de la radiación solar.",
-        "year": "El clima registrado por el archivo en el año del periodo."
+        "year": "Elija el año histórico en el periodo de simulación de abajo; la ejecución usa el tiempo registrado de ese año."
+      },
+      "mode": {
+        "label": "Modo meteorológico",
+        "scenario": "Escenario",
+        "year": "Año histórico"
       }
     },
     "periodParts": {
@@ -1914,7 +1918,9 @@
       "q2": "T2",
       "q3": "T3",
       "q4": "T4"
-    }
+    },
+    "periodScenarioYear": "Año de escenario",
+    "periodScenarioHint": "El tiempo de escenario no corresponde a ningún año natural. Elija los días y meses a simular; las fechas se guardan en un año de referencia fijo."
   },
   "mapLayers": {
     "title": "Capas del mapa",

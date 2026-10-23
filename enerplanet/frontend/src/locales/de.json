@@ -1894,12 +1894,16 @@
       "choices": {
         "p50": "Typisches Jahr (P50)",
         "p10": "Strahlungsarmes Jahr (P10)",
-        "p90": "Strahlungsreiches Jahr (P90)",
-        "year": "Echtes Wetter von {{year}}"
+        "p90": "Strahlungsreiches Jahr (P90)"
       },
       "hints": {
         "scenario": "Ein aus den Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung.",
-        "year": "Das aufgezeichnete Wetter des Archivs im Jahr des Zeitraums."
+        "year": "Wählen Sie das historische Jahr im Simulationszeitraum unten; der Lauf nutzt das aufgezeichnete Wetter dieses Jahres."
+      },
+      "mode": {
+        "label": "Wettermodus",
+        "scenario": "Szenario",
+        "year": "Historisches Jahr"
       }
     },
     "periodParts": {
@@ -1909,7 +1913,9 @@
       "q2": "Q2",
       "q3": "Q3",
       "q4": "Q4"
-    }
+    },
+    "periodScenarioYear": "Szenariojahr",
+    "periodScenarioHint": "Szenariowetter gehört zu keinem Kalenderjahr. Wählen Sie die zu simulierenden Tage und Monate; die Daten werden in einem festen Bezugsjahr gespeichert."
   },
   "mapLayers": {
     "title": "Kartenebenen",

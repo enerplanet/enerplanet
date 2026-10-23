@@ -1640,12 +1640,16 @@
       "choices": {
         "p50": "Anno tipico (P50)",
         "p10": "Anno a bassa irradiazione (P10)",
-        "p90": "Anno ad alta irradiazione (P90)",
-        "year": "Meteo reale del {{year}}"
+        "p90": "Anno ad alta irradiazione (P90)"
       },
       "hints": {
         "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
-        "year": "Il meteo registrato dall'archivio nell'anno del periodo."
+        "year": "Scegli l'anno storico nel periodo di simulazione qui sotto; il calcolo usa il meteo registrato di quell'anno."
+      },
+      "mode": {
+        "label": "Modalità meteo",
+        "scenario": "Scenario",
+        "year": "Anno storico"
       }
     },
     "periodParts": {
@@ -1655,7 +1659,9 @@
       "q2": "T2",
       "q3": "T3",
       "q4": "T4"
-    }
+    },
+    "periodScenarioYear": "Anno di scenario",
+    "periodScenarioHint": "Il meteo di scenario non appartiene a un anno solare. Scegli i giorni e i mesi da simulare; le date vengono salvate in un anno di riferimento fisso."
   },
   "mapLayers": {
     "title": "Livelli mappa",
