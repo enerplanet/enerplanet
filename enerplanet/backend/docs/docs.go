@@ -179,6 +179,12 @@ const docTemplate = `{
                         "description": "families: limit, offset and total count originals with their copies, so a page never splits a family",
                         "name": "group",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated model ids to list only those, for example 12,31; an empty value lists none",
+                        "name": "ids",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -186,6 +192,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.GetModelsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
                         }
                     },
                     "401": {

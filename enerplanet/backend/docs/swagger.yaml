@@ -990,6 +990,11 @@ paths:
         in: query
         name: group
         type: string
+      - description: Comma-separated model ids to list only those, for example 12,31;
+          an empty value lists none
+        in: query
+        name: ids
+        type: string
       produces:
       - application/json
       responses:
@@ -997,6 +1002,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetModelsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
