@@ -35,7 +35,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
           >
             <Icon
               className={cn(
-                "cursor-pointer w-6 h-6",
+                "cursor-pointer w-5 h-5",
                 isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
               )}
             />

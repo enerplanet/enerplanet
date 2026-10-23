@@ -101,7 +101,7 @@ export const NotificationDropdown: React.FC = () => {
               className="relative flex h-11 w-11 items-center justify-center rounded-button transition-colors group text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
             >
               <Bell className={cn(
-                "w-6 h-6 transition-transform duration-200",
+                "w-5 h-5 transition-transform duration-200",
                 unreadCount > 0 && "group-hover:rotate-12"
               )} />
               {unreadCount > 0 && (

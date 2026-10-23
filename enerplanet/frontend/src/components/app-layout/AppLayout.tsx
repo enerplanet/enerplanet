@@ -205,7 +205,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               href="/app/model-dashboard"
               onClick={(e) => { if (!e.ctrlKey && !e.metaKey && e.button === 0) { e.preventDefault(); navigate("/app/model-dashboard"); } }}
               aria-label="EnerPlanET"
-              className="mb-3 rounded-lg p-1 transition-opacity hover:opacity-80"
+              className="mb-8 rounded-lg p-1 transition-opacity hover:opacity-80"
             >
               <img src="/brand/enerplanet-mark-green-outline.svg" alt="EnerPlanET" className="h-10 w-auto dark:hidden" />
               <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="EnerPlanET" className="hidden h-10 w-auto dark:block" />
