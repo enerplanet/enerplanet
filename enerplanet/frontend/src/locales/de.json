@@ -2752,7 +2752,9 @@
     "regions": "Regionen",
     "myModels": "Meine Modelle",
     "grids": "Raster",
-    "countries": "Länder"
+    "countries": "Länder",
+    "footprintOnlyBuildings_one": "{{count}} Gebäude hat keine 3D-Stadtdaten und wird nur als Grundriss gezeigt",
+    "footprintOnlyBuildings_other": "{{count}} Gebäude haben keine 3D-Stadtdaten und werden nur als Grundriss gezeigt"
   },
   "privacy": {
     "dataAndPrivacy": "Daten & Datenschutz",

@@ -1,6 +1,7 @@
 package city2tabula
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -25,12 +26,14 @@ const maxGeometryObjectIDs = 1
 //	@Description	Returns the building's footprint and every envelope surface polygon, for
 //	@Description	rendering it in 3D. Surface ids are the City2TABULA surface row ids that the
 //	@Description	BuEM envelope elements carry, so a clicked face resolves back to its element
-//	@Description	without a second lookup. Geometry is in the country's storage CRS, not WGS84.
-//	@Description	One building per call.
+//	@Description	without a second lookup. Geometry is in the country's storage CRS, or in WGS84
+//	@Description	with srid=4326, where surfaces keep z as height above sea level and the
+//	@Description	footprint is 2D. One building per call.
 //	@Tags			City2TABULA
 //	@Produce		json
 //	@Param			country		query		string	true	"Country name, e.g. germany; case-insensitive. ISO2 codes are rejected"
 //	@Param			object_ids	query		string	true	"City2TABULA building object_id"
+//	@Param			srid		query		string	false	"4326 for WGS84; omitted, the country's storage CRS"
 //	@Success		200			{object}	c2t.GeometryResult
 //	@Failure		400			{object}	contracts.ErrorResponse
 //	@Failure		502			{object}	contracts.ErrorResponse
@@ -53,7 +56,16 @@ func (h *Handler) Geometry(c *gin.Context) {
 		return
 	}
 
-	result, err := h.client.GetSurfaceGeometryByObjectIDs(c.Request.Context(), country, objectIDs)
+	fetch := h.client.GetSurfaceGeometryByObjectIDs
+	switch srid := c.Query("srid"); srid {
+	case "":
+	case "4326":
+		fetch = h.client.GetSurfaceGeometryWGS84
+	default:
+		httputil.BadRequest(c, fmt.Sprintf("srid %q is not supported; use 4326 or omit it for the storage CRS", srid))
+		return
+	}
+	result, err := fetch(c.Request.Context(), country, objectIDs)
 	if err != nil {
 		writeC2TError(c, country, err)
 		return

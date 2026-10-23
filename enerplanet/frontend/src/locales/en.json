@@ -2752,7 +2752,9 @@
     "regions": "regions",
     "myModels": "my models",
     "grids": "grids",
-    "countries": "countries"
+    "countries": "countries",
+    "footprintOnlyBuildings_one": "{{count}} building has no 3D city data and shows only its footprint",
+    "footprintOnlyBuildings_other": "{{count}} buildings have no 3D city data and show only their footprint"
   },
   "privacy": {
     "dataAndPrivacy": "Data & Privacy",

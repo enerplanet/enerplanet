@@ -2757,7 +2757,9 @@
     "regions": "régions",
     "myModels": "mes modèles",
     "grids": "grilles",
-    "countries": "pays"
+    "countries": "pays",
+    "footprintOnlyBuildings_one": "{{count}} bâtiment n'a pas de données 3D et n'affiche que son emprise",
+    "footprintOnlyBuildings_other": "{{count}} bâtiments n'ont pas de données 3D et n'affichent que leur emprise"
   },
   "privacy": {
     "dataAndPrivacy": "Données et confidentialité",

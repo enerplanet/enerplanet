@@ -8,6 +8,8 @@ import type { MapControlsPlacement } from '@/components/map-controls/MapControls
 interface MapLibre3DControlsProps {
   mapRef: React.RefObject<maplibregl.Map | null>;
   placement?: MapControlsPlacement;
+  /** Buildings drawn as boxes because City2TABULA has no LoD2 surfaces for them. */
+  footprintOnly?: number;
 }
 
 // Under the three zoom and centre buttons (size-8, gap-2) of MapControls.
@@ -19,7 +21,7 @@ const RESET_STYLE: Record<MapControlsPlacement, { className: string; style: Reac
 /**
  * Minimal 3D reset button with a persistent rotation hint on the map.
  */
-export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef, placement = "top-right" }) => {
+export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef, placement = "top-right", footprintOnly = 0 }) => {
   const { t } = useTranslation();
 
   const resetView = useCallback(() => {
@@ -54,6 +56,15 @@ export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef, 
         <RotateCcw className="w-3 h-3 opacity-80" />
         <span>{t('map.rightClickRotate', 'Right-click + drag to rotate')}</span>
       </div>
+
+      {footprintOnly > 0 && (
+        <div
+          className="absolute z-[60] pointer-events-none rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-white shadow-md backdrop-blur-sm"
+          style={{ bottom: 72, right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
+        >
+          {t('map.footprintOnlyBuildings', { count: footprintOnly })}
+        </div>
+      )}
     </>
   );
 };

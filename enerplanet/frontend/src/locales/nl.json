@@ -2383,7 +2383,9 @@
     "regions": "regio's",
     "myModels": "mijn modellen",
     "grids": "rasters",
-    "countries": "landen"
+    "countries": "landen",
+    "footprintOnlyBuildings_one": "{{count}} gebouw heeft geen 3D-stadsdata en toont alleen de plattegrond",
+    "footprintOnlyBuildings_other": "{{count}} gebouwen hebben geen 3D-stadsdata en tonen alleen de plattegrond"
   },
   "privacy": {
     "dataAndPrivacy": "Gegevens & Privacy",

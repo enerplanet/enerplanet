@@ -2757,7 +2757,9 @@
     "regions": "regiones",
     "myModels": "mis modelos",
     "grids": "cuadrículas",
-    "countries": "países"
+    "countries": "países",
+    "footprintOnlyBuildings_one": "{{count}} edificio no tiene datos 3D y solo muestra su huella",
+    "footprintOnlyBuildings_other": "{{count}} edificios no tienen datos 3D y solo muestran su huella"
   },
   "privacy": {
     "dataAndPrivacy": "Datos y privacidad",
