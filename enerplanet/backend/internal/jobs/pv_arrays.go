@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"time"
 
 	commonModels "platform.local/common/pkg/models"
 
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/contenthash"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/pv"
+	"spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/weather"
 )
 
@@ -29,12 +33,33 @@ type pvSimulator interface {
 	Simulate(ctx context.Context, loc pv.Location, weather json.RawMessage, arrays []pv.ArrayRequest) (map[string][]float64, error)
 }
 
-// PVResolver replaces each building's pv_supply by pv_arrays with production profiles.
+// pvSeriesStore is implemented by *series.Store.
+type pvSeriesStore interface {
+	StoredKeys(keys []string) (map[string]int64, error)
+	Save(p series.NewProfile) (int64, error)
+	Values(profileID int64, seriesName string) (models.SeriesValues, error)
+	ReplaceLinks(owner series.Owner, revision, seriesName string, links []series.Link) error
+}
+
+const (
+	// pvSeries is the series name PV profiles are stored and linked under.
+	pvSeries = "pv"
+	// pvUnit is the capacity factor, kW per kW installed: a model applies its
+	// own capacity, so identical roofs share one stored profile.
+	pvUnit = "kW_per_kWp"
+)
+
+// PVResolver gives each PV array a capacity-factor profile, stored by request
+// key (see pv.RequestKey) so only arrays not stored yet go to the PV service,
+// and links the model's profiles per building and roof face.
 type PVResolver struct {
 	C2T             roofSurfaceSource
 	Weather         pvWeatherSource
 	WeatherProvider string
 	PV              pvSimulator
+	Series          pvSeriesStore
+	// Version is the PV service version, part of every stored profile's key.
+	Version string
 }
 
 // pvBuilding is a building of the payload that carries PV.
@@ -57,40 +82,205 @@ var pvCarriedKeys = []string{
 	"cost_om_annual_investment_fraction", "cost_om_prod", "cost_interest_rate", "cost_purchase",
 }
 
-// Attach uses stored pv_supply.arrays, else places arrays on qualifying roofs (footprint without 3D data).
+// Attach replaces each building's pv_supply by pv_arrays with production
+// profiles, using stored pv_supply.arrays, else arrays placed on qualifying
+// roofs (the footprint without 3D data).
 func (r PVResolver) Attach(ctx context.Context, model *commonModels.Model, calc payload.CalculationPayload) error {
-	buildings := pvBuildings(calc.Topology)
-	if len(buildings) == 0 {
-		return nil
-	}
-	if err := r.placeArrays(ctx, model, buildings); err != nil {
+	buildings, profiles, err := r.resolve(ctx, model, calc)
+	if err != nil {
 		return err
 	}
-	requests, loc := pvRequests(buildings)
-	if len(requests) == 0 {
-		for _, b := range buildings {
-			setPVArrays(b, nil, seriesWindow{})
-		}
-		return nil
-	}
-	if loc == (pv.Location{}) {
-		return fmt.Errorf("PV of model %d: no building with PV has coordinates", model.ID)
-	}
-	period := modelWeatherPeriod(model.Config)
-	provider := modelWeatherProvider(model.Config, r.WeatherProvider)
-	wx, err := r.Weather.GetPVWeather(ctx, loc.Lat, loc.Lon, period, provider)
-	if err != nil {
-		return fmt.Errorf("weather for the PV of model %d: %w", model.ID, err)
-	}
-	profiles, err := r.PV.Simulate(ctx, loc, wx, requests)
-	if err != nil {
-		return fmt.Errorf("PV simulation of model %d: %w", model.ID, err)
-	}
-	w := modelSeriesWindow(model.FromDate, model.ToDate, calc.Resolution)
+	w := modelSeriesWindow(model.FromDate, model.ToDate, pvResolution(calc.Resolution))
 	for _, b := range buildings {
 		setPVArrays(b, profiles, w)
 	}
 	return nil
+}
+
+// Store gives every PV array of the model a stored profile and links them,
+// without changing the payload.
+func (r PVResolver) Store(ctx context.Context, model *commonModels.Model, calc payload.CalculationPayload) error {
+	_, _, err := r.resolve(ctx, model, calc)
+	return err
+}
+
+// resolve places the arrays, finds or simulates their profiles and replaces
+// the model's PV links with them; a model without PV is left with none.
+func (r PVResolver) resolve(ctx context.Context, model *commonModels.Model, calc payload.CalculationPayload) ([]*pvBuilding, map[string][]float32, error) {
+	buildings := pvBuildings(calc.Topology)
+	if err := r.placeArrays(ctx, model, buildings); err != nil {
+		return nil, nil, err
+	}
+	profiles, links, err := r.storedProfiles(ctx, model, pvArrayRefs(buildings), pvResolution(calc.Resolution))
+	if err != nil {
+		return nil, nil, err
+	}
+	revision, err := contenthash.Of(model.Config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("hash config of model %d: %w", model.ID, err)
+	}
+	if err := r.Series.ReplaceLinks(series.Owner{ModelID: model.ID}, revision, pvSeries, links); err != nil {
+		return nil, nil, fmt.Errorf("link the PV profiles of model %d: %w", model.ID, err)
+	}
+	return buildings, profiles, nil
+}
+
+// pvResolution is the step PV profiles are stored at: the model's, as for its
+// BuEM series, so a building's series share one time axis.
+func pvResolution(resolution int) int {
+	if resolution <= 0 {
+		return 60
+	}
+	return resolution
+}
+
+// pvArrayRef is one array of a PV building: its request to the PV service
+// (id "<osm_id>/<index>") and the part it is linked under.
+type pvArrayRef struct {
+	building  *pvBuilding
+	surfaceID string
+	part      string
+	request   pv.ArrayRequest
+}
+
+// pvArrayRefs returns a reference per array. The part is the roof face; an
+// array without one, or sharing it, is named by its index.
+func pvArrayRefs(buildings []*pvBuilding) []*pvArrayRef {
+	var refs []*pvArrayRef
+	for _, b := range buildings {
+		seen := map[string]bool{}
+		for j, a := range b.arrays {
+			part := a.SurfaceID
+			if part == "" || seen[part] {
+				part = fmt.Sprintf("array-%d", j)
+			}
+			seen[part] = true
+			refs = append(refs, &pvArrayRef{building: b, surfaceID: a.SurfaceID, part: part, request: pv.ArrayRequest{
+				ID: fmt.Sprintf("%s/%d", b.osmID, j), Tilt: a.Tilt, Azimuth: a.Azimuth,
+				Losses:             numberOr(b.module["losses"], 0.14),
+				DCACRatio:          numberOr(b.module["dc_ac_ratio"], 1.1),
+				InverterEfficiency: numberOr(b.module["inv_eff"], 0.96),
+				ModuleType:         moduleType(b.module["module_type"]),
+			}})
+		}
+	}
+	return refs
+}
+
+// pvCells groups the arrays by the weather cell of their building; a building
+// without coordinates joins the cell of the located buildings' mean.
+func pvCells(modelID uint, refs []*pvArrayRef) (map[pv.Location][]*pvArrayRef, error) {
+	var mean pv.Location
+	n := 0
+	for _, ref := range refs {
+		if ref.building.located {
+			mean.Lat += ref.building.lat
+			mean.Lon += ref.building.lon
+			n++
+		}
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("PV of model %d: no building with PV has coordinates", modelID)
+	}
+	mean = pv.Location{Lat: mean.Lat / float64(n), Lon: mean.Lon / float64(n)}
+	cells := map[pv.Location][]*pvArrayRef{}
+	for _, ref := range refs {
+		loc := mean
+		if ref.building.located {
+			loc = pv.Location{Lat: ref.building.lat, Lon: ref.building.lon}
+		}
+		cell := pv.SnapLocation(loc)
+		cells[cell] = append(cells[cell], ref)
+	}
+	return cells, nil
+}
+
+// storedProfiles returns each array's profile by request id, and the links
+// for them. Per weather cell it reads the weather once, reuses the profiles
+// stored by key and simulates and stores only the missing ones.
+func (r PVResolver) storedProfiles(ctx context.Context, model *commonModels.Model, refs []*pvArrayRef, resolution int) (map[string][]float32, []series.Link, error) {
+	if len(refs) == 0 {
+		return nil, nil, nil
+	}
+	cells, err := pvCells(model.ID, refs)
+	if err != nil {
+		return nil, nil, err
+	}
+	period := modelWeatherPeriod(model.Config)
+	provider := modelWeatherProvider(model.Config, r.WeatherProvider)
+	start, end := period.Range()
+	periodStart, err := time.Parse(time.RFC3339, start)
+	if err != nil {
+		return nil, nil, fmt.Errorf("PV of model %d: weather period start %q: %w", model.ID, start, err)
+	}
+	// A value stands for its step and is stamped at the step's middle, as BuEM's
+	// are, so a building's PV and demand series share one time axis.
+	startTime := periodStart.Add(time.Duration(resolution) * time.Minute / 2)
+	profiles := map[string][]float32{}
+	var links []series.Link
+	for cell, cellRefs := range cells {
+		wx, err := r.Weather.GetPVWeather(ctx, cell.Lat, cell.Lon, period, provider)
+		if err != nil {
+			return nil, nil, fmt.Errorf("weather for the PV of model %d at %v: %w", model.ID, cell, err)
+		}
+		shared, err := pv.NewSharedInputs(wx, cell, start, end, resolution, r.Version)
+		if err != nil {
+			return nil, nil, fmt.Errorf("PV of model %d: %w", model.ID, err)
+		}
+		keys := make([]string, len(cellRefs))
+		for i, ref := range cellRefs {
+			if keys[i], err = pv.RequestKey(ref.surfaceID, ref.request, shared); err != nil {
+				return nil, nil, fmt.Errorf("key the PV array %s of model %d: %w", ref.request.ID, model.ID, err)
+			}
+		}
+		stored, err := r.Series.StoredKeys(keys)
+		if err != nil {
+			return nil, nil, fmt.Errorf("look up the stored PV profiles of model %d: %w", model.ID, err)
+		}
+		var missing []pv.ArrayRequest
+		for i, ref := range cellRefs {
+			if _, ok := stored[keys[i]]; !ok {
+				missing = append(missing, ref.request)
+			}
+		}
+		simulated := map[string][]float64{}
+		if len(missing) > 0 {
+			if simulated, err = r.PV.Simulate(ctx, cell, wx, missing); err != nil {
+				return nil, nil, fmt.Errorf("PV simulation of model %d: %w", model.ID, err)
+			}
+		}
+		for i, ref := range cellRefs {
+			id, vals, err := r.profile(keys[i], stored, simulated[ref.request.ID], startTime, resolution)
+			if err != nil {
+				return nil, nil, fmt.Errorf("PV array %s of model %d: %w", ref.request.ID, model.ID, err)
+			}
+			stored[keys[i]] = id
+			profiles[ref.request.ID] = vals
+			links = append(links, series.Link{BuildingRef: ref.building.osmID, Part: ref.part, Series: pvSeries, ProfileID: id, Source: models.SeriesSourceDefault})
+		}
+	}
+	return profiles, links, nil
+}
+
+// profile returns the stored profile under key, or stores the simulated one.
+func (r PVResolver) profile(key string, stored map[string]int64, hourly []float64, start time.Time, resolution int) (int64, []float32, error) {
+	if id, ok := stored[key]; ok {
+		v, err := r.Series.Values(id, pvSeries)
+		if err != nil {
+			return 0, nil, fmt.Errorf("read stored profile %d: %w", id, err)
+		}
+		return id, v.Vals, nil
+	}
+	vals := pv.Resample(hourly, resolution)
+	id, err := r.Series.Save(series.NewProfile{
+		Key: key, Origin: models.SeriesOriginPV, ProducerVersion: r.Version,
+		StartTime: start, ResolutionMinutes: resolution,
+		Series: map[string]series.SeriesData{pvSeries: {Unit: pvUnit, Values: vals}},
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("store profile: %w", err)
+	}
+	return id, vals, nil
 }
 
 // pvBuildings returns the payload's buildings with pv_supply.
@@ -190,36 +380,8 @@ func (r PVResolver) placeArrays(ctx context.Context, model *commonModels.Model, 
 	return nil
 }
 
-// pvRequests returns one request per array (id "<osm_id>/<index>") and the buildings' mean location.
-func pvRequests(buildings []*pvBuilding) ([]pv.ArrayRequest, pv.Location) {
-	var requests []pv.ArrayRequest
-	var loc pv.Location
-	n := 0
-	for _, b := range buildings {
-		for j, a := range b.arrays {
-			requests = append(requests, pv.ArrayRequest{
-				ID: fmt.Sprintf("%s/%d", b.osmID, j), Tilt: a.Tilt, Azimuth: a.Azimuth,
-				Losses:             numberOr(b.module["losses"], 0.14),
-				DCACRatio:          numberOr(b.module["dc_ac_ratio"], 1.1),
-				InverterEfficiency: numberOr(b.module["inv_eff"], 0.96),
-				ModuleType:         moduleType(b.module["module_type"]),
-			})
-		}
-		if len(b.arrays) > 0 && b.located {
-			loc.Lat += b.lat
-			loc.Lon += b.lon
-			n++
-		}
-	}
-	if n > 0 {
-		loc.Lat /= float64(n)
-		loc.Lon /= float64(n)
-	}
-	return requests, loc
-}
-
 // setPVArrays replaces the building's pv_supply by its pv_arrays entries.
-func setPVArrays(b *pvBuilding, profiles map[string][]float64, w seriesWindow) {
+func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow) {
 	delete(b.techs, "pv_supply")
 	if len(b.arrays) == 0 {
 		return
@@ -230,7 +392,7 @@ func setPVArrays(b *pvBuilding, profiles map[string][]float64, w seriesWindow) {
 			"surface_id": a.SurfaceID, "tilt": a.Tilt, "azimuth": a.Azimuth,
 			"losses":              numberOr(b.module["losses"], 0.14),
 			"cont_energy_cap_max": math.Round(a.MaxCapacityKW()*1000) / 1000,
-			"profile":             hourlyWindow(profiles[fmt.Sprintf("%s/%d", b.osmID, j)], w),
+			"profile":             pvWindow(profiles[fmt.Sprintf("%s/%d", b.osmID, j)], w),
 		}
 		if a.CapacityKW != nil {
 			entry["cont_energy_cap_max"] = *a.CapacityKW
@@ -246,16 +408,12 @@ func setPVArrays(b *pvBuilding, profiles map[string][]float64, w seriesWindow) {
 	b.techs["pv_arrays"] = entries
 }
 
-// hourlyWindow maps an hourly profile from 1 January onto the model's steps, wrapping like window.
-func hourlyWindow(hourly []float64, w seriesWindow) []float64 {
-	out := make([]float64, w.steps)
-	if len(hourly) == 0 {
-		return out
+// pvWindow is a stored profile's window; zeros when the array has none.
+func pvWindow(vals []float32, w seriesWindow) []float64 {
+	if len(vals) == 0 {
+		return make([]float64, w.steps)
 	}
-	for i := range out {
-		out[i] = hourly[((w.offset+i)*w.resolution/60)%len(hourly)]
-	}
-	return out
+	return window(vals, w)
 }
 
 // numberOr returns v as a float64, or fallback when v is not a number.

@@ -64,12 +64,14 @@ type DemandResolver struct {
 	BuemVersion     string
 }
 
-// HandleResolveDemandProfiles runs r for the model in t's payload.
+// HandleResolveDemandProfiles runs r for the model in t's payload, then gives
+// its PV arrays their stored profiles through pvr.
 //
-// A resolution problem (buem-gateway unreachable, no buildings in the
+// A BuEM resolution problem (buem-gateway unreachable, no buildings in the
 // topology) is recorded on the affected rows and never fails the job itself
-// - there is no model status for this job to leave stuck, unlike run_buem.
-func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandResolver) (retErr error) {
+// - there is no model status for this job to leave stuck, unlike run_buem. A
+// PV failure fails the job, so it is retried; the BuEM series are reused by key.
+func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandResolver, pvr PVResolver) (retErr error) {
 	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	defer func() {
@@ -83,8 +85,32 @@ func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandRes
 	if err := json.Unmarshal(t.Payload(), &rp); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
-	_, err := r.Resolve(ctx, rp.ModelID)
-	return err
+	if _, err := r.Resolve(ctx, rp.ModelID); err != nil {
+		return err
+	}
+	return storeModelPV(ctx, r.DB, pvr, rp.ModelID)
+}
+
+// storeModelPV gives the PV arrays of model modelID their stored profiles; a
+// model whose payload cannot be built has no arrays to give them to.
+func storeModelPV(ctx context.Context, db *gorm.DB, pvr PVResolver, modelID uint) error {
+	if pvr.Version == "" {
+		logger.ForComponent("job:resolve_demand_profiles").Errorf("model %d: PV_VERSION is not configured, PV profiles cannot be keyed", modelID)
+		return nil
+	}
+	var model commonModels.Model
+	if err := db.First(&model, modelID).Error; err != nil {
+		return fmt.Errorf("failed to fetch model %d: %w", modelID, err)
+	}
+	calcPayload, err := buildCalculationPayload(&model)
+	if err != nil {
+		logger.ForComponent("job:resolve_demand_profiles").Debugf("model %d: cannot build calculation payload, no PV to resolve: %v", modelID, err)
+		return nil
+	}
+	if err := pvr.Store(ctx, &model, calcPayload); err != nil {
+		return fmt.Errorf("PV of model %d: %w", modelID, err)
+	}
+	return nil
 }
 
 // Resolve resolves and links the series of every building of model modelID
