@@ -179,7 +179,6 @@
       "technologies": "Technologie"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Nastavení",
       "logout": "Odhlásit"
     },
@@ -987,7 +986,6 @@
     "subtitle": "Vaše velitelské centrum pro hodnocení rizik",
     "navigation": "Navigace",
     "overview": "Přehled",
-    "profile": "Profil",
     "settings": "Nastavení",
     "logout": "Odhlásit",
     "tabs": {
@@ -1230,18 +1228,10 @@
     "refresh": "Obnovit"
   },
   "profile": {
-    "title": "Nastavení profilu",
-    "subtitle": "Spravujte své osobní údaje a předvolby účtu",
-    "goBack": "Zpět",
     "loadingProfile": "Načítání vašeho profilu...",
-    "defaultUser": "Uživatel",
     "accessLevel": "Úroveň přístupu",
     "notSpecified": "Nespecifikováno",
-    "personalInfo": "Osobní informace",
-    "personalInfoDescription": "Aktualizujte své profilové údaje níže",
     "readOnly": "pouze pro čtení",
-    "saving": "Ukládání...",
-    "saveChanges": "Uložit změny",
     "fields": {
       "fullName": "Celé jméno",
       "email": "E-mailová adresa",
@@ -1256,11 +1246,8 @@
       "phone": "+420 123 456 789"
     },
     "accessLevels": {
-      "basic": "Základní",
       "basicDescription": "Standardní přístup k základním funkcím",
-      "intermediate": "Střední",
       "intermediateDescription": "Rozšířený přístup s pokročilými funkcemi",
-      "expert": "Expert",
       "expertDescription": "Plný přístup ke všem funkcím"
     },
     "notifications": {
@@ -2129,22 +2116,11 @@
   "settings": {
     "title": "Nastavení",
     "subtitle": "Přizpůsobte si svůj zážitek a preference",
-    "configuration": "Konfigurace",
-    "goBack": "Zpět",
     "tabs": {
+      "profile": "Profil",
       "general": "Obecné",
       "notifications": "Oznámení",
       "advanced": "Pokročilé"
-    },
-    "stats": {
-      "language": "Jazyk",
-      "theme": "Téma",
-      "notifications": "Oznámení",
-      "accessLevel": "Úroveň Přístupu",
-      "enabled": "Povoleno",
-      "disabled": "Zakázáno",
-      "system": "Systém",
-      "user": "Uživatel"
     },
     "language": {
       "title": "Jazyk",

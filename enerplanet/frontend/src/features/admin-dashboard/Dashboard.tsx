@@ -154,17 +154,6 @@ export const Dashboard: React.FC = () => {
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<button 
-										onClick={() => navigate("/app/profile", { state: { from: 'admin' } })} 
-										className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 transition-all duration-200 hover:scale-105"
-									>
-										<User className="w-5 h-5" />
-									</button>
-								</TooltipTrigger>
-								<TooltipContent side="bottom">{t('adminDashboard.profile')}</TooltipContent>
-							</Tooltip>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<button 
 										onClick={() => navigate("/app/settings", { state: { from: 'admin' } })} 
 										className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 transition-all duration-200 hover:scale-105"
 									>

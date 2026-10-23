@@ -239,7 +239,6 @@
       "technologies": "Tecnologías"
     },
     "menu": {
-      "profile": "Perfil",
       "settings": "Configuración",
       "logout": "Cerrar Sesión"
     },
@@ -1229,7 +1228,6 @@
     "subtitle": "Tu centro de mando de evaluación de riesgos",
     "navigation": "Navegación",
     "overview": "Resumen",
-    "profile": "Perfil",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "tabs": {
@@ -1472,18 +1470,10 @@
     "refresh": "Actualizar"
   },
   "profile": {
-    "title": "Configuración de perfil",
-    "subtitle": "Gestiona tu información personal y preferencias de cuenta",
-    "goBack": "Volver",
     "loadingProfile": "Cargando tu perfil...",
-    "defaultUser": "Usuario",
     "accessLevel": "Nivel de acceso",
     "notSpecified": "No especificado",
-    "personalInfo": "Información personal",
-    "personalInfoDescription": "Actualiza los detalles de tu perfil a continuación",
     "readOnly": "solo lectura",
-    "saving": "Guardando...",
-    "saveChanges": "Guardar cambios",
     "fields": {
       "fullName": "Nombre completo",
       "email": "Correo electrónico",
@@ -1498,11 +1488,8 @@
       "phone": "+34 600 000 000"
     },
     "accessLevels": {
-      "basic": "Básico",
       "basicDescription": "Acceso estándar a funciones básicas",
-      "intermediate": "Intermedio",
       "intermediateDescription": "Acceso extendido con funciones avanzadas",
-      "expert": "Experto",
       "expertDescription": "Acceso completo a todas las funciones"
     },
     "notifications": {
@@ -2488,22 +2475,11 @@
   "settings": {
     "title": "Configuración",
     "subtitle": "Personaliza tu experiencia y preferencias",
-    "configuration": "Configuración",
-    "goBack": "Volver",
     "tabs": {
+      "profile": "Perfil",
       "general": "General",
       "notifications": "Notificaciones",
       "advanced": "Avanzado"
-    },
-    "stats": {
-      "language": "Idioma",
-      "theme": "Tema",
-      "notifications": "Notificaciones",
-      "accessLevel": "Nivel de Acceso",
-      "enabled": "Habilitado",
-      "disabled": "Deshabilitado",
-      "system": "Sistema",
-      "user": "Usuario"
     },
     "language": {
       "title": "Idioma",

@@ -239,7 +239,6 @@
       "technologies": "Technologies"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Paramètres",
       "logout": "Déconnexion"
     },
@@ -1229,7 +1228,6 @@
     "subtitle": "Votre centre de commande d'évaluation des risques",
     "navigation": "Navigation",
     "overview": "Aperçu",
-    "profile": "Profil",
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "tabs": {
@@ -1472,18 +1470,10 @@
     "refresh": "Actualiser"
   },
   "profile": {
-    "title": "Paramètres du profil",
-    "subtitle": "Gérez vos informations personnelles et préférences de compte",
-    "goBack": "Retour",
     "loadingProfile": "Chargement de votre profil...",
-    "defaultUser": "Utilisateur",
     "accessLevel": "Niveau d'accès",
     "notSpecified": "Non spécifié",
-    "personalInfo": "Informations personnelles",
-    "personalInfoDescription": "Mettez à jour vos informations de profil ci-dessous",
     "readOnly": "lecture seule",
-    "saving": "Enregistrement...",
-    "saveChanges": "Enregistrer les modifications",
     "fields": {
       "fullName": "Nom complet",
       "email": "Adresse e-mail",
@@ -1498,11 +1488,8 @@
       "phone": "+33 6 00 00 00 00"
     },
     "accessLevels": {
-      "basic": "Basique",
       "basicDescription": "Accès standard aux fonctionnalités de base",
-      "intermediate": "Intermédiaire",
       "intermediateDescription": "Accès étendu avec fonctionnalités avancées",
-      "expert": "Expert",
       "expertDescription": "Accès complet à toutes les fonctionnalités"
     },
     "notifications": {
@@ -2488,22 +2475,11 @@
   "settings": {
     "title": "Paramètres",
     "subtitle": "Personnalisez votre expérience et vos préférences",
-    "configuration": "Configuration",
-    "goBack": "Retour",
     "tabs": {
+      "profile": "Profil",
       "general": "Général",
       "notifications": "Notifications",
       "advanced": "Avancé"
-    },
-    "stats": {
-      "language": "Langue",
-      "theme": "Thème",
-      "notifications": "Notifications",
-      "accessLevel": "Niveau d'Accès",
-      "enabled": "Activé",
-      "disabled": "Désactivé",
-      "system": "Système",
-      "user": "Utilisateur"
     },
     "language": {
       "title": "Langue",

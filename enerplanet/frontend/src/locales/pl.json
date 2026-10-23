@@ -179,7 +179,6 @@
       "technologies": "Technologie"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Ustawienia",
       "logout": "Wyloguj"
     },
@@ -987,7 +986,6 @@
     "subtitle": "Twoje centrum dowodzenia oceną ryzyka",
     "navigation": "Nawigacja",
     "overview": "Przegląd",
-    "profile": "Profil",
     "settings": "Ustawienia",
     "logout": "Wyloguj",
     "tabs": {
@@ -1230,18 +1228,10 @@
     "refresh": "Odśwież"
   },
   "profile": {
-    "title": "Ustawienia profilu",
-    "subtitle": "Zarządzaj swoimi danymi osobowymi i preferencjami konta",
-    "goBack": "Wróć",
     "loadingProfile": "Ładowanie profilu...",
-    "defaultUser": "Użytkownik",
     "accessLevel": "Poziom dostępu",
     "notSpecified": "Nie określono",
-    "personalInfo": "Informacje osobiste",
-    "personalInfoDescription": "Zaktualizuj szczegóły swojego profilu poniżej",
     "readOnly": "tylko do odczytu",
-    "saving": "Zapisywanie...",
-    "saveChanges": "Zapisz zmiany",
     "fields": {
       "fullName": "Imię i nazwisko",
       "email": "Adres e-mail",
@@ -1256,11 +1246,8 @@
       "phone": "+48 123 456 789"
     },
     "accessLevels": {
-      "basic": "Podstawowy",
       "basicDescription": "Standardowy dostęp do podstawowych funkcji",
-      "intermediate": "Średniozaawansowany",
       "intermediateDescription": "Rozszerzony dostęp z zaawansowanymi funkcjami",
-      "expert": "Ekspert",
       "expertDescription": "Pełny dostęp do wszystkich funkcji"
     },
     "notifications": {
@@ -2129,22 +2116,11 @@
   "settings": {
     "title": "Ustawienia",
     "subtitle": "Dostosuj swoje doświadczenie i preferencje",
-    "configuration": "Konfiguracja",
-    "goBack": "Wróć",
     "tabs": {
+      "profile": "Profil",
       "general": "Ogólne",
       "notifications": "Powiadomienia",
       "advanced": "Zaawansowane"
-    },
-    "stats": {
-      "language": "Język",
-      "theme": "Motyw",
-      "notifications": "Powiadomienia",
-      "accessLevel": "Poziom Dostępu",
-      "enabled": "Włączone",
-      "disabled": "Wyłączone",
-      "system": "System",
-      "user": "Użytkownik"
     },
     "language": {
       "title": "Język",

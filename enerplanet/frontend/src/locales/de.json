@@ -239,7 +239,6 @@
       "technologies": "Technologien"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Einstellungen",
       "logout": "Abmelden"
     },
@@ -1229,7 +1228,6 @@
     "managePlatform": "Verwalten Sie Ihre Energiesimulationsplattform",
     "administrator": "Administrator",
     "loadingContent": "Inhalt wird geladen...",
-    "profile": "Profil",
     "settings": "Einstellungen",
     "logout": "Abmelden",
     "tabs": {
@@ -1467,18 +1465,10 @@
     "refresh": "Aktualisieren"
   },
   "profile": {
-    "title": "Profileinstellungen",
-    "subtitle": "Verwalten Sie Ihre persönlichen Daten und Kontoeinstellungen",
-    "goBack": "Zurück",
     "loadingProfile": "Profil wird geladen...",
-    "defaultUser": "Benutzer",
     "accessLevel": "Zugriffsebene",
     "notSpecified": "Nicht angegeben",
-    "personalInfo": "Persönliche Informationen",
-    "personalInfoDescription": "Aktualisieren Sie Ihre Profildaten unten",
     "readOnly": "schreibgeschützt",
-    "saving": "Speichern...",
-    "saveChanges": "Änderungen speichern",
     "fields": {
       "fullName": "Vollständiger Name",
       "email": "E-Mail-Adresse",
@@ -1493,11 +1483,8 @@
       "phone": "+49 (0) 123 456789"
     },
     "accessLevels": {
-      "basic": "Basis",
       "basicDescription": "Standardzugriff auf grundlegende Funktionen",
-      "intermediate": "Fortgeschritten",
       "intermediateDescription": "Erweiterter Zugriff mit erweiterten Funktionen",
-      "expert": "Experte",
       "expertDescription": "Vollzugriff auf alle Funktionen"
     },
     "notifications": {
@@ -2483,22 +2470,11 @@
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Passen Sie Ihre Erfahrung und Präferenzen an",
-    "configuration": "Konfiguration",
-    "goBack": "Zurück",
     "tabs": {
+      "profile": "Profil",
       "general": "Allgemein",
       "notifications": "Benachrichtigungen",
       "advanced": "Erweitert"
-    },
-    "stats": {
-      "language": "Sprache",
-      "theme": "Design",
-      "notifications": "Benachrichtigungen",
-      "accessLevel": "Zugriffsstufe",
-      "enabled": "Aktiviert",
-      "disabled": "Deaktiviert",
-      "system": "System",
-      "user": "Benutzer"
     },
     "language": {
       "title": "Sprache",

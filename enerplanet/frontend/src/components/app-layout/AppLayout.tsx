@@ -12,7 +12,6 @@ import { useTranslation } from "@spatialhub/i18n";
 import {
   LogOut,
   Settings,
-  User,
   BookOpen,
   GraduationCap,
   MessageSquareText,
@@ -99,7 +98,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const navigationHandlers = useMemo(
     () => ({
-      profile: () => navigate("/app/profile"),
       settings: () => navigate("/app/settings"),
       dashboard: () => navigate(ADMIN_PATH),
       login: () => navigate("/login"),
@@ -166,11 +164,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const userMenuItems: UserMenuItem[] = useMemo(
     () => [
-      {
-        icon: User,
-        label: t("common.menu.profile"),
-        onClick: navigationHandlers.profile,
-      },
       {
         icon: Settings,
         label: t("common.menu.settings"),

@@ -239,7 +239,6 @@
       "technologies": "Technologies"
     },
     "menu": {
-      "profile": "Profile",
       "settings": "Settings",
       "logout": "Log out"
     },
@@ -1229,7 +1228,6 @@
     "managePlatform": "Manage your Energy Simulation Platform",
     "administrator": "Administrator",
     "loadingContent": "Loading content...",
-    "profile": "Profile",
     "settings": "Settings",
     "logout": "Logout",
     "tabs": {
@@ -1467,18 +1465,10 @@
     }
   },
   "profile": {
-    "title": "Profile Settings",
-    "subtitle": "Manage your personal information and account preferences",
-    "goBack": "Go back",
     "loadingProfile": "Loading your profile...",
-    "defaultUser": "User",
     "accessLevel": "Access Level",
     "notSpecified": "Not specified",
-    "personalInfo": "Personal Information",
-    "personalInfoDescription": "Update your profile details below",
     "readOnly": "read-only",
-    "saving": "Saving...",
-    "saveChanges": "Save Changes",
     "fields": {
       "fullName": "Full Name",
       "email": "Email Address",
@@ -1493,11 +1483,8 @@
       "phone": "+1 (555) 000-0000"
     },
     "accessLevels": {
-      "basic": "Basic",
       "basicDescription": "Standard access to basic features",
-      "intermediate": "Intermediate",
       "intermediateDescription": "Extended access with advanced features",
-      "expert": "Expert",
       "expertDescription": "Full access to all features"
     },
     "notifications": {
@@ -2483,22 +2470,11 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Customize your experience and preferences",
-    "configuration": "Configuration",
-    "goBack": "Go back",
     "tabs": {
+      "profile": "Profile",
       "general": "General",
       "notifications": "Notifications",
       "advanced": "Advanced"
-    },
-    "stats": {
-      "language": "Language",
-      "theme": "Theme",
-      "notifications": "Notifications",
-      "accessLevel": "Access Level",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "system": "System",
-      "user": "User"
     },
     "language": {
       "title": "Language",

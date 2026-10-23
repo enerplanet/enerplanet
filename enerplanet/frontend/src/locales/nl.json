@@ -179,7 +179,6 @@
       "technologies": "Technologieën"
     },
     "menu": {
-      "profile": "Profiel",
       "settings": "Instellingen",
       "logout": "Uitloggen"
     },
@@ -972,7 +971,6 @@
     "subtitle": "Uw commandocentrum voor risicobeoordeling",
     "navigation": "Navigatie",
     "overview": "Overzicht",
-    "profile": "Profiel",
     "settings": "Instellingen",
     "logout": "Uitloggen",
     "tabs": {
@@ -1215,18 +1213,10 @@
     "refresh": "Vernieuwen"
   },
   "profile": {
-    "title": "Profielinstellingen",
-    "subtitle": "Beheer uw persoonlijke gegevens en accountvoorkeuren",
-    "goBack": "Terug",
     "loadingProfile": "Uw profiel laden...",
-    "defaultUser": "Gebruiker",
     "accessLevel": "Toegangsniveau",
     "notSpecified": "Niet gespecificeerd",
-    "personalInfo": "Persoonlijke informatie",
-    "personalInfoDescription": "Werk uw profielgegevens hieronder bij",
     "readOnly": "alleen-lezen",
-    "saving": "Opslaan...",
-    "saveChanges": "Wijzigingen opslaan",
     "fields": {
       "fullName": "Volledige naam",
       "email": "E-mailadres",
@@ -1241,11 +1231,8 @@
       "phone": "+31 6 12345678"
     },
     "accessLevels": {
-      "basic": "Basis",
       "basicDescription": "Standaard toegang tot basisfuncties",
-      "intermediate": "Gemiddeld",
       "intermediateDescription": "Uitgebreide toegang met geavanceerde functies",
-      "expert": "Expert",
       "expertDescription": "Volledige toegang tot alle functies"
     },
     "notifications": {
@@ -2114,22 +2101,11 @@
   "settings": {
     "title": "Instellingen",
     "subtitle": "Pas uw ervaring en voorkeuren aan",
-    "configuration": "Configuratie",
-    "goBack": "Terug",
     "tabs": {
+      "profile": "Profiel",
       "general": "Algemeen",
       "notifications": "Meldingen",
       "advanced": "Geavanceerd"
-    },
-    "stats": {
-      "language": "Taal",
-      "theme": "Thema",
-      "notifications": "Meldingen",
-      "accessLevel": "Toegangsniveau",
-      "enabled": "Ingeschakeld",
-      "disabled": "Uitgeschakeld",
-      "system": "Systeem",
-      "user": "Gebruiker"
     },
     "language": {
       "title": "Taal",
