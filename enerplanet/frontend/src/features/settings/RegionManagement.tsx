@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
 import { pylovoService, type CachedRegion } from '@/features/configurator/services/pylovoService';
 import { Loader2, Trash2, MapPin, AlertTriangle, RefreshCw, ChevronRight, ChevronDown, Search } from 'lucide-react';
-import { Button } from '@spatialhub/ui';
+import { Button, Switch } from '@spatialhub/ui';
 import { InfoIcon } from '@/components/ui/InfoTooltip';
 
 interface GroupedRegions {
@@ -250,22 +250,12 @@ const RegionManagement: FC = () => {
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    role="switch"
-                                                    aria-checked={region.enabled}
+                                                <Switch
+                                                    checked={region.enabled}
                                                     disabled={togglingId === region.id}
-                                                    onClick={() => handleToggle(region)}
-                                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                                                        region.enabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                                                    } ${togglingId === region.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
-                                                >
-                                                    <span
-                                                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                                                            region.enabled ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                                                        }`}
-                                                    />
-                                                </button>
+                                                    onCheckedChange={() => handleToggle(region)}
+                                                    aria-label={region.region_name}
+                                                />
 
                                                 {confirmDelete?.id === region.id ? (
                                                     <div className="flex items-center gap-1.5">
