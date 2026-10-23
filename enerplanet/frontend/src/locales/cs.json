@@ -3114,7 +3114,8 @@
     }
   },
   "transformer": {
-    "onlyInsidePolygon": "Transformátory lze umístit jen uvnitř vybrané oblasti"
+    "onlyInsidePolygon": "Transformátory lze umístit jen uvnitř vybrané oblasti",
+    "onlyNearPolygon": "Transformátory lze umístit až 200 m mimo vybranou oblast"
   },
   "powerFlowLegend": {
     "customTransformers": "Vlastní transformátory",

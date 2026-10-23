@@ -8,6 +8,22 @@ import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
+// pylovo attaches a site station to the nearest road within 200 m
+// (snap_site_transformers_to_network), so a site station may stand that far outside the area.
+const SITE_STATION_MARGIN_M = 200;
+
+/** Returns why a station cannot stand at lonLat, or null when it can. */
+const stationPositionError = (lonLat: [number, number], polygons: [number, number][][], t: ReturnType<typeof useTranslation>["t"]): string | null => {
+  if (siteScope(useModelStore.getState().pylovoGridData)) {
+    return isCoordinateInsidePolygons(lonLat, polygons, SITE_STATION_MARGIN_M)
+      ? null
+      : t("transformer.onlyNearPolygon", "Transformers can be placed up to 200 m outside the selected area");
+  }
+  return isCoordinateInsidePolygons(lonLat, polygons)
+    ? null
+    : t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area");
+};
+
 // ──────────────────────────────────────────────
 // useAddTransformerMode
 // ──────────────────────────────────────────────
@@ -140,10 +156,9 @@ export const useAddTransformerMode = ({
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
-      if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
-        notification.showError(
-          t("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
-        );
+      const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, t);
+      if (positionError) {
+        notification.showError(positionError);
         return;
       }
 
@@ -307,10 +322,9 @@ export const useMoveTransformerMode = ({
       const lonLat = toLonLat(coords);
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
-      if (!isCoordinateInsidePolygons(lonLatPair, allPolygonsRef.current)) {
-        notificationRef.current.showError(
-          tRef.current("transformer.onlyInsidePolygon", "Transformers can only be placed inside the selected area")
-        );
+      const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, tRef.current);
+      if (positionError) {
+        notificationRef.current.showError(positionError);
         return;
       }
 
