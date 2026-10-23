@@ -248,6 +248,13 @@ class ModelService {
     return response.data;
   }
 
+  // Starts the demand analysis of every building of a saved model; progress is
+  // read from GET /models/{id}/demand-profiles. "running" when one was already under way.
+  async analyseModel(id: number): Promise<{ status: "queued" | "running"; buildings: number }> {
+    const response = await axios.post(`/models/${id}/analyse`);
+    return response.data;
+  }
+
   // Dispatch the model to MEME (via TentaCron).
   async runMeme(id: number): Promise<ModelResponse> {
     const response = await axios.post(`/models/${id}/run-meme`);

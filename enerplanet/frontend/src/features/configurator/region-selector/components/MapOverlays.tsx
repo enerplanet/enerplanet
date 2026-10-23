@@ -105,12 +105,11 @@ const CursorHint: FC<{ mapRef: RefObject<HTMLDivElement | null>; offsetY?: numbe
 const kwh = (value: number) => `${formatEnergy(value)}/yr`;
 
 /**
- * A building's annual demand in the tooltip: the stored BuEM totals once its
- * run has resolved, matching the configurator's energy overview; until then
- * pylovo's electricity estimate and the estimated heat demand, with the run's
- * state when it did not resolve.
+ * A building's annual demand in the tooltip: the stored BuEM totals once the
+ * building is analysed, matching the configurator's energy overview; until then
+ * its analysis state and no estimated figure.
  */
-const TooltipDemand: FC<{ building: TooltipBuilding; profile?: StoredDemandProfile }> = ({ building, profile }) => {
+const TooltipDemand: FC<{ profile?: StoredDemandProfile }> = ({ profile }) => {
     const { t } = useTranslation();
     const totals = profile ? buemTotals(profile) : null;
     if (profile && totals) {
@@ -136,20 +135,8 @@ const TooltipDemand: FC<{ building: TooltipBuilding; profile?: StoredDemandProfi
     }
     return (
         <>
-            <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
-                <Zap className="w-3 h-3 text-sky-500" />
-                {kwh(building.yearlyDemandKwh)}
-            </div>
-            {building.yearlyHeatDemandKwh != null && building.yearlyHeatDemandKwh > 0 && (
-                <div className="text-muted-foreground mt-0.5 flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-orange-500" />
-                    {kwh(building.yearlyHeatDemandKwh)}
-                    {building.heatDemandEstimated && (
-                        <span className="text-[9px] px-1 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
-                            {t("simulation.mapOverlay.estimatedShort")}
-                        </span>
-                    )}
-                </div>
+            {!profile && (
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.notAnalysed")}</div>
             )}
             {profile?.status === "failed" && (
                 <div className="mt-0.5 text-[10px] text-red-600 dark:text-red-400">{t("simulation.mapOverlay.buemFailed", { reason: profile.error_message ?? "" })}</div>
@@ -382,7 +369,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                 </span>
                             </div>
                         )}
-                        <TooltipDemand building={buildingTooltip} profile={buildingProfile} />
+                        <TooltipDemand profile={buildingProfile} />
                         {buildingTooltip.countryCode === 'NL' && (buildingTooltip.floors3dBag || buildingTooltip.floors || hasFiniteNumber(buildingTooltip.heightMax) || hasFiniteNumber(buildingTooltip.heightMedian) || hasFiniteNumber(buildingTooltip.heightGround) || buildingTooltip.constructionYear || buildingTooltip.energyLabel || hasFiniteNumber(buildingTooltip.energyIndex) || buildingTooltip.labelDate || buildingTooltip.bagId || hasFiniteNumber(buildingTooltip.cbsPopulation) || hasFiniteNumber(buildingTooltip.cbsHouseholds) || hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize)) && (
                             <div className="mt-2 pt-2 border-t border-border space-y-0.5 text-[10px] text-muted-foreground">
                                 <div className="font-semibold text-foreground/90 flex items-center gap-1.5">

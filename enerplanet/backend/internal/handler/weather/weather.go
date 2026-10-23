@@ -1,6 +1,7 @@
 package weather
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,10 +23,40 @@ type CurrentWeatherData struct {
 	UVIndex     *float64 `json:"uv_index,omitempty"`
 }
 
-type WeatherHandler struct{}
+// yearsLister reports the years each weather archive has processed.
+type yearsLister interface {
+	Years(ctx context.Context) (map[string][]int, error)
+}
 
-func NewWeatherHandler() *WeatherHandler {
-	return &WeatherHandler{}
+// WeatherHandler serves current weather and the simulation weather archives' years.
+type WeatherHandler struct {
+	years           yearsLister
+	defaultProvider string
+}
+
+// NewWeatherHandler returns a WeatherHandler that lists archive years through
+// years; defaultProvider is the archive a run uses unless a model chooses one.
+func NewWeatherHandler(years yearsLister, defaultProvider string) *WeatherHandler {
+	return &WeatherHandler{years: years, defaultProvider: defaultProvider}
+}
+
+// GetYears lists, per weather archive, the years a simulation can use.
+// @Summary      Weather years available for simulations
+// @Description  Per weather archive (provider), the years with processed weather data, and the archive runs use by default. A simulation period must lie within one of these years.
+// @Tags         EnerPlanET
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "default_provider and providers: {name: [years]}"
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      502  {object}  map[string]interface{}  "The weather service could not be reached; retrying later may help"
+// @Security     SessionAuth
+// @Router       /weather/years [get]
+func (h *WeatherHandler) GetYears(c *gin.Context) {
+	years, err := h.years.Years(c.Request.Context())
+	if err != nil {
+		httputil.BadGateway(c, fmt.Sprintf("weather years unavailable: %v", err))
+		return
+	}
+	httputil.SuccessResponse(c, gin.H{"default_provider": h.defaultProvider, "providers": years})
 }
 
 // GetCurrentWeather returns current weather for provided coordinates or defaults to Galicia

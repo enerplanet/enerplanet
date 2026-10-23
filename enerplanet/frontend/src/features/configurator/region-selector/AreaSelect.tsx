@@ -1,6 +1,5 @@
 import { useEffect, Fragment, useCallback, useMemo, useState, useRef, type FC } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { parseDate } from "@internationalized/date";
 import { transformExtent } from "ol/proj";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -80,14 +79,6 @@ import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay"
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 
-const DATE_BOUNDS = { minYear: 2015, maxYear: 2025 };
-
-const getDateBounds = () => ({
-  minValue: parseDate(`${DATE_BOUNDS.minYear}-01-01`),
-  maxValue: parseDate(`${DATE_BOUNDS.maxYear}-12-31`),
-  minYear: DATE_BOUNDS.minYear,
-  maxYear: DATE_BOUNDS.maxYear,
-});
 
 interface AreaSelectProps {
   onAreaSelected?: (areaData: AreaData) => void;
@@ -482,10 +473,23 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     buildingCoords: reassignmentLineAnchor,
   });
 
-  // Read again after a save, which starts a BuEM run, and after the configurator
+  // Read again after a save, after an analysis starts, and after the configurator
   // closes, where a building's run may have been repeated.
   const { buildingId: openBuildingId } = useConfiguratorParams();
-  const demandProfiles = useModelDemandProfiles(existingModelId, `${state.isSaving}|${openBuildingId ?? ""}`);
+  const [analysisKey, setAnalysisKey] = useState(0);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const { profiles: demandProfiles, progress: analysisProgress } = useModelDemandProfiles(
+    existingModelId,
+    `${state.isSaving}|${openBuildingId ?? ""}|${analysisKey}`
+  );
+  const handleAnalyseBuildings = useCallback(async () => {
+    setIsStartingAnalysis(true);
+    try {
+      if (await actions.handleAnalyse()) setAnalysisKey((k) => k + 1);
+    } finally {
+      setIsStartingAnalysis(false);
+    }
+  }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
@@ -564,7 +568,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onAdvancedParamsChange={actions.setAdvancedParams}
             onResetAdvancedParams={actions.handleResetAdvancedParams}
             handleModelNameChange={(e) => actions.setModelName(e.target.value)}
-            getDateBounds={getDateBounds}
             editMode={editMode}
             showTechDrawer={techOperations.showTechDrawer}
             onOpenTechDrawer={() => techOperations.setShowTechDrawer(true)}
@@ -579,6 +582,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             isModified={state.isModified}
             operateIssues={operateIssues}
             onFixOperateIssue={fixOperateIssue}
+            analysisProgress={analysisProgress}
+            isStartingAnalysis={isStartingAnalysis}
+            onAnalyse={handleAnalyseBuildings}
           />
         }
         onDrop={techOperations.handleMapDrop}

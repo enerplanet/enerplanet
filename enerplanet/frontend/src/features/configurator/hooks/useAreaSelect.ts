@@ -4,6 +4,7 @@ import { modelService } from '@/features/model-dashboard/services/modelService';
 import { useCreateModelMutation, useUpdateModelMutation2 } from '@/features/model-dashboard/hooks/useModelsQuery';
 import GeoJSON from 'ol/format/GeoJSON';
 import axios from '@/lib/axios';
+import { applyWeatherToConfig, weatherFromConfig } from './useAreaSelect/helpers/weatherSettings';
 import type { AreaData, UseAreaSelectProps, PylovoGridData } from '@/features/configurator/types/area-select';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
 import { useWorkspaceStore } from '@/components/workspace/store/workspace-store';
@@ -36,7 +37,7 @@ export const useAreaSelect = ({
     const navigate = useNavigate();
     const params = useParams();
     const modelId = editMode ? (existingModelId || Number.parseInt(params.id || '0', 10)) : undefined;
-    const { showSuccess, showError } = useNotification();
+    const { showSuccess, showError, showWarning } = useNotification();
     const currentWorkspace = useWorkspaceStore(state => state.currentWorkspace);
     const { map } = useMapStore();
     const { mapRef } = useMapProvider();
@@ -93,14 +94,29 @@ export const useAreaSelect = ({
     useEffect(() => { if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return; const orig = window.history.pushState.bind(window.history); const patched: typeof window.history.pushState = (data, _u, url) => { if (isInternalNavRef.current) { isInternalNavRef.current = false; orig(data, _u, url); return; } let target: string | null = null; if (typeof url === 'string') try { target = new URL(url, window.location.origin).pathname; } catch { target = url; } if (target && target !== window.location.pathname) { setPendingNavigationUrl(target); setShowUnsavedDialog(true); return; } orig(data, _u, url); }; window.history.pushState = patched; return () => { window.history.pushState = orig; }; }, [editMode, isModified]);
 
     // ── Handlers ──
-    const handleUpdateRange = useCallback((e: any) => { const f = ({ year, month, day }: any) => `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`; setFromDate(f(e.start)); setToDate(f(e.end)); }, [setFromDate, setToDate]);
+    // The weather and the stored series cover one calendar year, so a period stays in one year:
+    // when one date's year changes the other follows it, keeping its day.
+    const handleUpdateRange = useCallback((e: any) => {
+        const f = ({ year, month, day }: any) => `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        let { start, end } = e;
+        const startYear = fromDate ? Number(fromDate.slice(0, 4)) : start.year;
+        const endYear = toDate ? Number(toDate.slice(0, 4)) : end.year;
+        // A year being typed reports each digit; it counts once it has four.
+        if (start.year !== end.year && start.year >= 1000 && end.year >= 1000) {
+            if (start.year !== startYear && end.year === endYear) end = end.set({ year: start.year });
+            else if (end.year !== endYear && start.year === startYear) start = start.set({ year: end.year });
+            else end = { year: start.year, month: 12, day: 31 };
+            showWarning(t("simulation.periodWithinYear", { year: start.year }));
+        }
+        setFromDate(f(start)); setToDate(f(end));
+    }, [fromDate, toDate, setFromDate, setToDate, showWarning, t]);
     const handleTourComplete = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleTourSkip = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleCancel = useCallback(() => { if (onCancel) { onCancel(); return; } if (isModified && editMode) { setShowUnsavedDialog(true); return; } isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [onCancel, navigate, isModified, editMode, setShowUnsavedDialog]);
     const handleResetAdvancedParams = useCallback(() => setAdvancedParams(getDefaultAdvancedParameters()), [setAdvancedParams]);
 
     // Detect metadata changes
-    const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode);
+    const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode); const weather = useModelStore((s) => s.weather);
     const siteMode = useModelStore((s) => s.siteMode);
     const setGridStale = useModelStore((s) => s.setGridStale);
     // Whether the area changed since the shown grid was generated; a site whose
@@ -109,13 +125,12 @@ export const useAreaSelect = ({
     // An area over the building limit: it stays on the map and is not fetched.
     const [areaOverLimit, setAreaOverLimit] = useState<{ count: number; capped: boolean; limit: number } | null>(null);
     const countIdRef = useRef(0);
-    const areaLimit = areaBuildingLimit(buildingLimit, siteMode);
-
     // Counts the area's buildings before anything is fetched and reports
     // whether it fits; a count that fails lets the fetch go ahead, so an
     // unavailable count never blocks modelling.
-    const areaFits = useCallback(async (polygons: [number, number][][]): Promise<boolean> => {
+    const areaFits = useCallback(async (polygons: [number, number][][], mode = siteMode): Promise<boolean> => {
         const countId = ++countIdRef.current;
+        const areaLimit = areaBuildingLimit(buildingLimit, mode);
         if (areaLimit <= 0) { setAreaOverLimit(null); return true; }
         let count: number, capped: boolean;
         try { ({ count, capped } = await pylovoService.countBuildings(polygons)); }
@@ -123,8 +138,8 @@ export const useAreaSelect = ({
         if (countId !== countIdRef.current) return false;
         setAreaOverLimit(count > areaLimit ? { count, capped, limit: areaLimit } : null);
         return count <= areaLimit;
-    }, [areaLimit]);
-    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, setIsModified]);
+    }, [buildingLimit, siteMode]);
+    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
         setAllPolygons(polygons);
@@ -163,15 +178,15 @@ export const useAreaSelect = ({
         setIsModified(true);
     }, [pylovoLayersData, mapInteractionsData, setAllPolygons, incrementClearTrigger, clearExcludedBuildings, setIsModified, setGridStale]);
 
-    const regenerateArea = useCallback(async (updatedPolygons: [number, number][][]) => {
+    const regenerateArea = useCallback(async (updatedPolygons: [number, number][][], mode = siteMode) => {
         setIsGeneratingGrid(true);
         const genId = ++gridGenIdRef.current;
         try {
-            const fits = await areaFits(updatedPolygons);
+            const fits = await areaFits(updatedPolygons, mode);
             if (genId !== gridGenIdRef.current) return;
             if (!fits) { setGridStale(true); return; }
             const user = useAuthStore.getState().user;
-            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
+            const response = mode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
                 polygons: updatedPolygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
@@ -180,7 +195,7 @@ export const useAreaSelect = ({
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
             pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
             areaChangedRef.current = false; setGridStale(false);
-        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridRegenerationFailed"))); }
+        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, mode, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
     }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale, areaFits]);
@@ -221,6 +236,16 @@ export const useAreaSelect = ({
         else if (allPolygons.length > 0) await regenerateArea(allPolygons);
     }, [pylovoLayersData.pylovoGridData, handleSiteRegenerate, regenerateArea, allPolygons]);
 
+    // A drawn area keeps its polygons across a mode switch and gets a grid in the
+    // new mode. The grid is stale until that succeeds, so a failure leaves Regenerate grid.
+    const handleSwitchGridMode = useCallback(async (on: boolean) => {
+        useModelStore.getState().setSiteMode(on);
+        if (allPolygons.length === 0) return;
+        areaChangedRef.current = true;
+        setGridStale(true);
+        await regenerateArea(allPolygons, on);
+    }, [allPolygons, regenerateArea, setGridStale]);
+
     // ── Save ──
     const getUpdatedPylovoData = useCallback(() => {
         const base = pylovoLayersData.pylovoGridData || {};
@@ -238,14 +263,38 @@ export const useAreaSelect = ({
     const updateModelMutation = useUpdateModelMutation2();
     const createModelMutation = useCreateModelMutation();
 
-    const handleQuickSave = useCallback(async () => {
+    /** Saves the model and returns its id, or undefined when it was not saved. */
+    const saveModel = useCallback(async (): Promise<number | undefined> => {
         const data = getUpdatedPylovoData(); const user = useAuthStore.getState().user;
         const userId = user?.id ? String(user.id) : undefined;
-        const createdId = await saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current });
+        return saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current });
+    }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, allPolygons, currentWorkspace?.id, getUpdatedPylovoData, advancedParams, draftId, setIsSaving, updateModelMutation, createModelMutation]);
+
+    const handleQuickSave = useCallback(async () => {
+        const id = await saveModel();
         setIsModified(false);
         // A new model reopens in edit mode, so the next save updates it rather than creating another.
-        if (createdId) { isInternalNavRef.current = true; navigate(`/app/model-dashboard/edit/${createdId}`, { replace: true }); }
-    }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, allPolygons, currentWorkspace?.id, getUpdatedPylovoData, advancedParams, draftId, setIsSaving, setIsModified, updateModelMutation, createModelMutation, navigate]);
+        if (id && !editMode) { isInternalNavRef.current = true; navigate(`/app/model-dashboard/edit/${id}`, { replace: true }); }
+    }, [saveModel, setIsModified, editMode, navigate]);
+
+    /** Saves a new or changed model, then starts the analysis of its buildings; returns whether it started. */
+    const handleAnalyse = useCallback(async (): Promise<boolean> => {
+        let id = editMode ? modelId : undefined;
+        if (!id || isModified) {
+            id = await saveModel();
+            if (!id) { showError(t("simulation.analysis.saveFailed")); return false; }
+            setIsModified(false);
+        }
+        try {
+            await modelService.analyseModel(id);
+        } catch (err) {
+            showError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? t("simulation.analysis.startFailed"));
+            return false;
+        }
+        // A new model opens in edit mode so its progress and results show.
+        if (!editMode) { isInternalNavRef.current = true; navigate(`/app/model-dashboard/edit/${id}`, { replace: true }); }
+        return true;
+    }, [editMode, modelId, isModified, saveModel, setIsModified, showError, t, navigate]);
 
     const handleSave = useCallback(async () => { await handleQuickSave(); isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [handleQuickSave, navigate]);
 
@@ -253,7 +302,7 @@ export const useAreaSelect = ({
 
     // ── Build return values ──
     const state = { areaOverLimit, modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, pointerOnMap, isGeneratingGrid, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
-    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleRegenerateGrid, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave };
+    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleRegenerateGrid, handleSwitchGridMode, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave, handleAnalyse };
 
     return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setPointerOnMap, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
 };
@@ -275,6 +324,7 @@ async function loadExistingModelData(modelId: number, setters: any, originalRef:
             }
             if (m.config?.cookingCarrier === 'gas' || m.config?.cookingCarrier === 'electric') useModelStore.getState().setCookingCarrier(m.config.cookingCarrier);
             useModelStore.getState().setRunMode(m.config?.mode === 'operate' ? 'operate' : 'plan');
+            useModelStore.getState().setWeather(weatherFromConfig(m.config));
             useModelStore.getState().setSiteMode((m.config?.site as { mode?: string } | undefined)?.mode === 'site');
             if (m.config) {
                 const cfg: any = {};
@@ -304,15 +354,15 @@ function gridErrorMessage(err: unknown, siteMode: boolean, fallback: string): st
     return e.response?.data?.error || e.message || fallback;
 }
 
-/** Saves the model; returns the id of a newly created model, undefined for an update or a failed save. */
+/** Saves the area as a model and returns its id, or undefined when it was not saved. */
 async function saveAreaData(params: any): Promise<number | undefined> {
     const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel } = params;
-    if (!fromDate || !toDate || !modelName?.trim() || !polygonCoordinates?.length) return;
+    if (!fromDate || !toDate || !modelName?.trim() || !polygonCoordinates?.length) return undefined;
     setIsSaving(true);
     try {
         await new Promise(r => setTimeout(r, 1200));
         const areaData: AreaData = { fromDate, toDate, resolution, modelName: modelName.trim(), timestamp: new Date().toISOString() };
-        if (onAreaSelected) { onAreaSelected(areaData); return; }
+        if (onAreaSelected) { onAreaSelected(areaData); return undefined; }
         const coords = { type: "MultiPolygon", coordinates: polygonCoordinates.map((p: number[][]) => [p]) };
         const config: any = pylovoData ? { ...pylovoData } : undefined;
         if (config && advancedParams?.pypsa_enabled !== false) {
@@ -320,20 +370,22 @@ async function saveAreaData(params: any): Promise<number | undefined> {
         } else if (config) { config.pypsa = false; }
         if (config) config.cookingCarrier = useModelStore.getState().cookingCarrier;
         if (config) config.mode = useModelStore.getState().runMode;
+        if (config) applyWeatherToConfig(config, useModelStore.getState().weather, Number(fromDate.slice(0, 4)));
         const site = siteScope(pylovoData);
         if (config && site) config.site = { mode: 'site', ...site };
         const modelData = { title: areaData.modelName, from_date: areaData.fromDate, to_date: areaData.toDate, resolution: areaData.resolution, workspace_id: workspaceId, coordinates: coords, config };
         if (editMode && modelId) {
             let hasChanges = !originalModel;
-            if (originalModel) { const { cookingCarrier, runMode } = useModelStore.getState(); hasChanges = settingsChanged(originalModel, { title: areaData.modelName, fromDate: areaData.fromDate, toDate: areaData.toDate, resolution: areaData.resolution, cookingCarrier, runMode }); }
+            if (originalModel) { const { cookingCarrier, runMode, weather } = useModelStore.getState(); hasChanges = settingsChanged(originalModel, { title: areaData.modelName, fromDate: areaData.fromDate, toDate: areaData.toDate, resolution: areaData.resolution, cookingCarrier, runMode, weather }); }
             await updateModelMutation.mutateAsync({ id: modelId, data: hasChanges ? { ...modelData, status: 'modified' } : modelData });
+            return modelId;
         } else {
             const newModel = await createModelMutation.mutateAsync(modelData);
             if (draftId && newModel?.data?.id) try { await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId); } catch { /* non-critical */ }
-            // Not fatal: the save's background run finds the same results stored by key.
+            // Not fatal: an analysis finds the same results stored by key.
             if (draftId && newModel?.data?.id) await modelService.claimDraftSeries(newModel.data.id, draftId).catch((err) => console.warn(`claiming draft ${draftId} series for model ${newModel.data.id} failed`, err));
             return newModel?.data?.id;
         }
-    } catch { /* ignore */ }
+    } catch (err) { console.error('saving the model failed', err); return undefined; }
     finally { setIsSaving(false); }
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import { ComponentProps } from "react"
-import { getLocalTimeZone, today } from "@internationalized/date"
+import { ComponentProps, useContext, useRef } from "react"
+import { getLocalTimeZone, today, type CalendarDate } from "@internationalized/date"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import {
   Button,
@@ -11,9 +11,10 @@ import {
   CalendarGrid as CalendarGridRac,
   CalendarHeaderCell as CalendarHeaderCellRac,
   CalendarMonthPicker,
-  CalendarYearPicker,
   composeRenderProps,
   RangeCalendar as RangeCalendarRac,
+  RangeCalendarStateContext,
+  type DateValue,
 } from "react-aria-components"
 
 import { cn } from "@/lib/utils/index"
@@ -24,19 +25,50 @@ interface BaseCalendarProps {
 
 type RangeCalendarProps = ComponentProps<typeof RangeCalendarRac> &
   BaseCalendarProps & {
-    minYear?: number
-    maxYear?: number
+    /** The years that can be picked, ascending; days in any other year are unavailable. */
+    years: number[]
+    /** Once a start date is picked, the end can only fall in the start's calendar year. */
+    withinStartYear?: boolean
   }
 
 const PICKER_SELECT =
   "h-8 rounded-md border border-input bg-background px-2 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
-function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYear: number }>) {
+function CalendarHeader({ years }: Readonly<{ years: number[] }>) {
+  const range = useContext(RangeCalendarStateContext)
+  // The state of the latest render, for the step after a re-render below.
+  const latest = useRef(range)
+  latest.current = range
+  // A start picked so far moves to the new year, so the period stays in one year.
+  // While a start is picked the calendar only reaches days near it, so the view
+  // follows once it has re-rendered for the moved start.
+  const changeYear = (year: number) => {
+    if (!range) return
+    const anchor = range.anchorDate
+    if (!anchor) {
+      range.setFocusedDate(range.focusedDate.set({ year }))
+      return
+    }
+    const moved = anchor.set({ year })
+    range.setAnchorDate(moved)
+    requestAnimationFrame(() => latest.current?.setFocusedDate(moved))
+  }
   return (
-    <header className="flex w-full items-center gap-1 pb-1">
+    // RangeCalendar commits a half-picked range on a pointerup inside it that is
+    // not on an enabled button, and when focus leaves it. The header only moves the
+    // view, so a press on it must do neither: its pointerup stops here, and outside
+    // the selects it keeps the focus where it is. A disabled arrow lets presses
+    // through to the header, as the browser sends it no mouse events.
+    <header
+      className="flex w-full items-center gap-1 pb-1"
+      onPointerUp={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        if (!(e.target as HTMLElement).closest("select")) e.preventDefault()
+      }}
+    >
       <Button
         slot="previous"
-        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-30"
       >
         <ChevronLeftIcon size={16} />
       </Button>
@@ -52,23 +84,22 @@ function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYea
             </select>
           )}
         </CalendarMonthPicker>
-        <CalendarYearPicker visibleYears={2 * (maxYear - minYear) + 1}>
-          {({ items, value, onChange, "aria-label": label }) => (
-            <select aria-label={label} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} className={PICKER_SELECT}>
-              {items
-                .filter((item) => item.date.year >= minYear && item.date.year <= maxYear)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.formatted}
-                  </option>
-                ))}
-            </select>
-          )}
-        </CalendarYearPicker>
+        <select
+          aria-label="year"
+          value={range?.focusedDate.year ?? years[0]}
+          onChange={(e) => changeYear(Number(e.target.value))}
+          className={PICKER_SELECT}
+        >
+          {years.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
       </div>
       <Button
         slot="next"
-        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-30"
       >
         <ChevronRightIcon size={16} />
       </Button>
@@ -113,15 +144,21 @@ function CalendarGridComponent({ isRange = false }: Readonly<{ isRange?: boolean
   )
 }
 
-function RangeCalendar({ className, minYear = 1980, maxYear = 2025, ...props }: RangeCalendarProps) {
+function RangeCalendar({ className, years, withinStartYear = false, isDateUnavailable, ...props }: RangeCalendarProps) {
+  // anchor is the start date picked so far, null before one is.
+  const unavailable = (date: DateValue, anchor: CalendarDate | null) =>
+    (isDateUnavailable?.(date, anchor) ?? false) ||
+    !years.includes(date.year) ||
+    (withinStartYear && anchor !== null && date.year !== anchor.year)
   return (
     <RangeCalendarRac
       {...props}
+      isDateUnavailable={unavailable}
       className={composeRenderProps(className, (className) =>
         cn("w-fit", className)
       )}
     >
-      <CalendarHeader minYear={minYear} maxYear={maxYear} />
+      <CalendarHeader years={years} />
       {/* Room for a header row and six weeks, so the popover keeps its height in every month. */}
       <div className="min-h-[calc(2.25rem_+_6*(2.25rem_+_2px))]">
         <CalendarGridComponent isRange />

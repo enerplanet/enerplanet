@@ -155,6 +155,8 @@ export interface AreaSelectActions {
 	handlePolygonModified: (allPolygons: [number, number][][]) => Promise<void>;
 	handleSiteRegenerate: (siteId: number) => Promise<void>;
 	handleRegenerateGrid: () => Promise<void>;
+	/** Sets the grid mode and regenerates the grid for the drawn area in it. */
+	handleSwitchGridMode: (on: boolean) => Promise<void>;
 	handleClearAllPolygons: () => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions
@@ -162,4 +164,6 @@ export interface AreaSelectActions {
 	toggleBuildingExclusion: (buildingId: number) => void;
 	clearExcludedBuildings: () => void;
 	handleQuickSave: () => Promise<void>;
+	/** Saves a new or changed model, then starts the analysis of its buildings; resolves to whether it started. */
+	handleAnalyse: () => Promise<boolean>;
 }

@@ -17,6 +17,10 @@ import (
 // onto the query string per its target config.
 const targetPoint = "weather-point"
 
+// targetProviders is the TentaCron proxy target for weather-serve's provider
+// listing (GET /v1/weather/providers): the years each archive has processed.
+const targetProviders = "weather-providers"
+
 // providers are the archives weather-serve answers for, by its canonical names.
 var providers = map[string]bool{"cosmo-rea6": true, "era5-land": true, "merra-2": true}
 
@@ -87,6 +91,28 @@ const pvVariables = "T,DHI,DNI,WS_10M"
 // GetPVWeather is GetPointWeather with pvVariables.
 func (c *Client) GetPVWeather(ctx context.Context, lat, lon float64, period Period, provider string) (json.RawMessage, error) {
 	return c.point(ctx, lat, lon, period, provider, "variables", pvVariables)
+}
+
+// Years returns, per weather-serve archive, the years it has processed,
+// ascending. An archive weather-serve could not list is left out.
+func (c *Client) Years(ctx context.Context) (map[string][]int, error) {
+	var listing struct {
+		Providers map[string]struct {
+			Years []int           `json:"years"`
+			Error json.RawMessage `json:"error"`
+		} `json:"providers"`
+	}
+	if err := c.tc.Do(ctx, targetProviders, map[string]any{}, &listing); err != nil {
+		return nil, asWeatherError(err)
+	}
+	years := make(map[string][]int, len(listing.Providers))
+	for name, entry := range listing.Providers {
+		if len(entry.Error) > 0 && string(entry.Error) != "null" {
+			continue
+		}
+		years[name] = entry.Years
+	}
+	return years, nil
 }
 
 // point queries weather-serve with selector "use_case" or "variables".

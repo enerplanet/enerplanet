@@ -1548,7 +1548,6 @@
       "moreCount": "+{{count}} więcej",
       "clickForDetails": "Kliknij, aby zobaczyć szczegóły",
       "class": "Klasa",
-      "estimatedShort": "szac.",
       "buemTotal": "Łącznie: {{value}}",
       "kitchenGas": "Gaz kuchenny: {{value}}",
       "geometry3d": "Geometria 3D: City2TABULA",
@@ -1594,7 +1593,8 @@
       "length": "Długość",
       "type": "Typ",
       "bus": "Węzeł",
-      "disabled": "Wyłączony"
+      "disabled": "Wyłączony",
+      "notAnalysed": "Jeszcze nie przeanalizowano"
     },
     "unsavedChanges": {
       "title": "Niezapisane zmiany",
@@ -1621,7 +1621,10 @@
     "siteMode": {
       "label": "Własna sieć",
       "hint": "Umieść własne transformatory i zbuduj z nich sieć dla tego obszaru zamiast gotowej sieci. Tylko budynki z danymi 3D, maksymalnie 150.",
-      "locked": "Usuń narysowany obszar, aby zmienić tryb."
+      "switchHint": "Zmiana trybu ponownie generuje sieć dla narysowanego obszaru.",
+      "leaveTitle": "Opuścić własną sieć?",
+      "leaveDescription": "Sieć dla narysowanego obszaru zostanie ponownie wygenerowana z sieci przygotowanej wcześniej. Umieszczone transformatory zostaną utracone.",
+      "leaveConfirm": "Zmień"
     },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
@@ -1631,6 +1634,41 @@
       "grid": "Sieć",
       "model": "Model",
       "energySystem": "System energetyczny"
+    },
+    "analysis": {
+      "button": "Analizuj budynki",
+      "running": "Obliczanie zapotrzebowania: {{done}} z {{total}} budynków",
+      "done": "Przeanalizowane budynki: {{count}}",
+      "failed": "nieprzeanalizowane: {{count}} (najedź na budynek, aby zobaczyć powód)",
+      "notYet": "Jeszcze nie przeanalizowano. Analiza oblicza zapotrzebowanie każdego budynku na ogrzewanie, chłodzenie i energię elektryczną.",
+      "needsInputs": "Wprowadź nazwę modelu i okres symulacji, aby przeanalizować budynki.",
+      "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
+      "startFailed": "Nie udało się rozpocząć analizy."
+    },
+    "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}.",
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Pogoda",
+      "archive": "Archiwum pogody",
+      "year": "Rok pogodowy",
+      "choices": {
+        "p50": "Typowy rok (P50)",
+        "p10": "Rok o niskim nasłonecznieniu (P10)",
+        "p90": "Rok o wysokim nasłonecznieniu (P90)",
+        "year": "Rzeczywista pogoda {{year}}"
+      },
+      "hints": {
+        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "year": "Zarejestrowana przez archiwum pogoda w roku okresu."
+      }
+    },
+    "periodParts": {
+      "label": "Okres",
+      "year": "Cały rok",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4"
     }
   },
   "mapLayers": {

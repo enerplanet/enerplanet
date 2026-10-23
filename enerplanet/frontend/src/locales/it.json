@@ -1534,7 +1534,6 @@
       "moreCount": "+{{count}} altri",
       "clickForDetails": "Clicca per maggiori dettagli",
       "class": "Classe",
-      "estimatedShort": "stim.",
       "buemTotal": "Totale: {{value}}",
       "kitchenGas": "Gas da cucina: {{value}}",
       "geometry3d": "Geometria 3D: City2TABULA",
@@ -1580,7 +1579,8 @@
       "length": "Lunghezza",
       "type": "Tipo",
       "bus": "Nodo",
-      "disabled": "Disattivato"
+      "disabled": "Disattivato",
+      "notAnalysed": "Non ancora analizzato"
     },
     "unsavedChanges": {
       "title": "Modifiche non salvate",
@@ -1607,7 +1607,10 @@
     "siteMode": {
       "label": "Rete personalizzata",
       "hint": "Posiziona i tuoi trasformatori e costruisci la rete di quest'area a partire da essi, invece della rete pregenerata. Solo edifici con dati 3D, al massimo 150.",
-      "locked": "Cancella l'area disegnata per cambiare modalità."
+      "switchHint": "Il cambio rigenera la rete per l'area disegnata.",
+      "leaveTitle": "Uscire dalla rete personalizzata?",
+      "leaveDescription": "La rete dell'area disegnata viene rigenerata dalla rete precalcolata. I trasformatori posizionati vanno persi.",
+      "leaveConfirm": "Cambia"
     },
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",
@@ -1617,6 +1620,41 @@
       "grid": "Rete",
       "model": "Modello",
       "energySystem": "Sistema energetico"
+    },
+    "analysis": {
+      "button": "Analizza edifici",
+      "running": "Calcolo della domanda: {{done}} di {{total}} edifici",
+      "done": "Edifici analizzati: {{count}}",
+      "failed": "non analizzati: {{count}} (passa il mouse su un edificio per il motivo)",
+      "notYet": "Non ancora analizzato. L'analisi calcola il fabbisogno di riscaldamento, raffrescamento ed elettricità di ogni edificio.",
+      "needsInputs": "Inserisci un nome del modello e un periodo di simulazione per analizzare gli edifici.",
+      "saveFailed": "Impossibile salvare il modello, quindi l'analisi non è stata avviata.",
+      "startFailed": "Impossibile avviare l'analisi."
+    },
+    "periodWithinYear": "Le simulazioni pluriennali non sono ancora supportate, quindi entrambe le date ora sono nel {{year}}.",
+    "periodYear": "Anno",
+    "weather": {
+      "title": "Meteo",
+      "archive": "Archivio meteo",
+      "year": "Anno meteo",
+      "choices": {
+        "p50": "Anno tipico (P50)",
+        "p10": "Anno a bassa irradiazione (P10)",
+        "p90": "Anno ad alta irradiazione (P90)",
+        "year": "Meteo reale del {{year}}"
+      },
+      "hints": {
+        "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
+        "year": "Il meteo registrato dall'archivio nell'anno del periodo."
+      }
+    },
+    "periodParts": {
+      "label": "Periodo",
+      "year": "Anno intero",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
     }
   },
   "mapLayers": {

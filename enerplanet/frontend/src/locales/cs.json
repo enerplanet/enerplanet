@@ -1548,7 +1548,6 @@
       "moreCount": "+{{count}} další",
       "clickForDetails": "Klikněte pro více podrobností",
       "class": "Třída",
-      "estimatedShort": "odh.",
       "buemTotal": "Celkem: {{value}}",
       "kitchenGas": "Plyn na vaření: {{value}}",
       "geometry3d": "3D geometrie: City2TABULA",
@@ -1594,7 +1593,8 @@
       "length": "Délka",
       "type": "Typ",
       "bus": "Uzel",
-      "disabled": "Vypnuto"
+      "disabled": "Vypnuto",
+      "notAnalysed": "Zatím neanalyzováno"
     },
     "unsavedChanges": {
       "title": "Neuložené změny",
@@ -1621,7 +1621,10 @@
     "siteMode": {
       "label": "Vlastní síť",
       "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
-      "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
+      "switchHint": "Přepnutí znovu vygeneruje síť pro nakreslenou oblast.",
+      "leaveTitle": "Opustit vlastní síť?",
+      "leaveDescription": "Síť pro nakreslenou oblast se znovu vytvoří z předem vypočtené sítě. Umístěné transformátory budou ztraceny.",
+      "leaveConfirm": "Přepnout"
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",
@@ -1631,6 +1634,41 @@
       "grid": "Síť",
       "model": "Model",
       "energySystem": "Energetický systém"
+    },
+    "analysis": {
+      "button": "Analyzovat budovy",
+      "running": "Výpočet potřeby: {{done}} z {{total}} budov",
+      "done": "Analyzované budovy: {{count}}",
+      "failed": "neanalyzováno: {{count}} (důvod se zobrazí po najetí na budovu)",
+      "notYet": "Zatím neanalyzováno. Analýza vypočítá potřebu vytápění, chlazení a elektřiny každé budovy.",
+      "needsInputs": "Pro analýzu budov zadejte název modelu a období simulace.",
+      "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
+      "startFailed": "Analýzu se nepodařilo spustit."
+    },
+    "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}.",
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Počasí",
+      "archive": "Archiv počasí",
+      "year": "Rok počasí",
+      "choices": {
+        "p50": "Typický rok (P50)",
+        "p10": "Rok s nízkým zářením (P10)",
+        "p90": "Rok s vysokým zářením (P90)",
+        "year": "Skutečné počasí roku {{year}}"
+      },
+      "hints": {
+        "scenario": "Rok složený z měsíců archivu: typický, nebo na dolním či horním konci slunečního záření.",
+        "year": "Zaznamenané počasí archivu v roce období."
+      }
+    },
+    "periodParts": {
+      "label": "Období",
+      "year": "Celý rok",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4"
     }
   },
   "mapLayers": {

@@ -1533,7 +1533,6 @@
       "moreCount": "+{{count}} meer",
       "clickForDetails": "Klik voor meer details",
       "class": "Klasse",
-      "estimatedShort": "geschat",
       "buemTotal": "Totaal: {{value}}",
       "kitchenGas": "Kookgas: {{value}}",
       "geometry3d": "3D-geometrie: City2TABULA",
@@ -1579,7 +1578,8 @@
       "length": "Lengte",
       "type": "Type",
       "bus": "Knooppunt",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "notAnalysed": "Nog niet geanalyseerd"
     },
     "unsavedChanges": {
       "title": "Niet-opgeslagen wijzigingen",
@@ -1606,7 +1606,10 @@
     "siteMode": {
       "label": "Eigen net",
       "hint": "Plaats eigen transformatoren en bouw het net voor dit gebied daaruit op, in plaats van het vooraf gegenereerde net. Alleen gebouwen met 3D-gegevens, maximaal 150.",
-      "locked": "Wis het getekende gebied om de modus te wijzigen."
+      "switchHint": "Wisselen genereert het net voor het getekende gebied opnieuw.",
+      "leaveTitle": "Eigen net verlaten?",
+      "leaveDescription": "Het net voor het getekende gebied wordt opnieuw gemaakt uit het vooraf berekende net. Geplaatste transformatoren gaan verloren.",
+      "leaveConfirm": "Wisselen"
     },
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
@@ -1616,6 +1619,41 @@
       "grid": "Net",
       "model": "Model",
       "energySystem": "Energiesysteem"
+    },
+    "analysis": {
+      "button": "Gebouwen analyseren",
+      "running": "Vraag berekenen: {{done}} van {{total}} gebouwen",
+      "done": "Geanalyseerde gebouwen: {{count}}",
+      "failed": "niet geanalyseerd: {{count}} (beweeg over een gebouw voor de reden)",
+      "notYet": "Nog niet geanalyseerd. De analyse berekent de warmte-, koel- en elektriciteitsvraag van elk gebouw.",
+      "needsInputs": "Voer een modelnaam en een simulatieperiode in om de gebouwen te analyseren.",
+      "saveFailed": "Het model kon niet worden opgeslagen, dus de analyse is niet gestart.",
+      "startFailed": "De analyse kon niet worden gestart."
+    },
+    "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}.",
+    "periodYear": "Jaar",
+    "weather": {
+      "title": "Weer",
+      "archive": "Weerarchief",
+      "year": "Weerjaar",
+      "choices": {
+        "p50": "Typisch jaar (P50)",
+        "p10": "Jaar met weinig zon (P10)",
+        "p90": "Jaar met veel zon (P90)",
+        "year": "Echt weer van {{year}}"
+      },
+      "hints": {
+        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "year": "Het door het archief gemeten weer in het jaar van de periode."
+      }
+    },
+    "periodParts": {
+      "label": "Periode",
+      "year": "Heel jaar",
+      "q1": "K1",
+      "q2": "K2",
+      "q3": "K3",
+      "q4": "K4"
     }
   },
   "mapLayers": {

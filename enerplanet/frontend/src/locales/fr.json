@@ -1793,7 +1793,6 @@
       "moreCount": "+{{count}} de plus",
       "clickForDetails": "Cliquez pour plus de détails",
       "class": "Classe",
-      "estimatedShort": "est.",
       "buemTotal": "Total : {{value}}",
       "kitchenGas": "Gaz de cuisine : {{value}}",
       "geometry3d": "Géométrie 3D : City2TABULA",
@@ -1839,7 +1838,8 @@
       "length": "Longueur",
       "type": "Type",
       "bus": "Nœud",
-      "disabled": "Désactivé"
+      "disabled": "Désactivé",
+      "notAnalysed": "Pas encore analysé"
     },
     "unsavedChanges": {
       "title": "Modifications non enregistrées",
@@ -1866,7 +1866,10 @@
     "siteMode": {
       "label": "Réseau personnalisé",
       "hint": "Placez vos propres transformateurs et construisez le réseau de cette zone à partir d'eux, au lieu du réseau précalculé. Seuls les bâtiments avec données 3D sont inclus, 150 au maximum.",
-      "locked": "Effacez la zone dessinée pour changer de mode."
+      "switchHint": "Changer de mode régénère le réseau pour la zone dessinée.",
+      "leaveTitle": "Quitter le réseau personnalisé ?",
+      "leaveDescription": "Le réseau de la zone dessinée est régénéré à partir du réseau précalculé. Les transformateurs que vous avez placés sont perdus.",
+      "leaveConfirm": "Changer"
     },
     "largeModel": {
       "title": "Ce modèle compte {{count}} bâtiments",
@@ -1876,6 +1879,41 @@
       "grid": "Réseau",
       "model": "Modèle",
       "energySystem": "Système énergétique"
+    },
+    "analysis": {
+      "button": "Analyser les bâtiments",
+      "running": "Calcul de la demande : {{done}} sur {{total}} bâtiments",
+      "done": "Bâtiments analysés : {{count}}",
+      "failed": "non analysés : {{count}} (survolez un bâtiment pour la raison)",
+      "notYet": "Pas encore analysé. L'analyse calcule la demande de chauffage, de refroidissement et d'électricité de chaque bâtiment.",
+      "needsInputs": "Saisissez un nom de modèle et une période de simulation pour analyser les bâtiments.",
+      "saveFailed": "Le modèle n'a pas pu être enregistré, l'analyse n'a donc pas démarré.",
+      "startFailed": "L'analyse n'a pas pu démarrer."
+    },
+    "periodWithinYear": "Les simulations sur plusieurs années ne sont pas encore prises en charge, les deux dates sont donc désormais en {{year}}.",
+    "periodYear": "Année",
+    "weather": {
+      "title": "Météo",
+      "archive": "Archive météo",
+      "year": "Année météo",
+      "choices": {
+        "p50": "Année typique (P50)",
+        "p10": "Année peu ensoleillée (P10)",
+        "p90": "Année très ensoleillée (P90)",
+        "year": "Météo réelle de {{year}}"
+      },
+      "hints": {
+        "scenario": "Une année composée de mois de l'archive : typique, ou au bas ou au haut de l'ensoleillement.",
+        "year": "La météo enregistrée par l'archive pour l'année de la période."
+      }
+    },
+    "periodParts": {
+      "label": "Période",
+      "year": "Année entière",
+      "q1": "T1",
+      "q2": "T2",
+      "q3": "T3",
+      "q4": "T4"
     }
   },
   "mapLayers": {

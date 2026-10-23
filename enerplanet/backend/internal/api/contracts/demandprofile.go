@@ -31,6 +31,14 @@ type BuildingDemandProfile struct {
 	HRoomM   *float64 `json:"h_room_m,omitempty" example:"2.5"`
 }
 
+// ModelAnalysisResponse is the response for POST /models/{id}/analyse. status is
+// "queued" for a new analysis and "running" when one was already under way;
+// buildings is how many buildings it covers.
+type ModelAnalysisResponse struct {
+	Status    string `json:"status" example:"queued"`
+	Buildings int    `json:"buildings" example:"42"`
+}
+
 // ModelDemandProfilesResponse is the response for GET /models/{id}/demand-profiles.
 //
 // status is one of:
