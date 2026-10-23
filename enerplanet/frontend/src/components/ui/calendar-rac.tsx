@@ -40,7 +40,9 @@ function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYea
       >
         <ChevronLeftIcon size={16} />
       </Button>
-      <div className="flex grow justify-center gap-1">
+      {/* RangeCalendar commits a half-picked range on any pointerup inside it that
+          is not on a button, so the selects keep theirs: they only move the view. */}
+      <div className="flex grow justify-center gap-1" onPointerUp={(e) => e.stopPropagation()}>
         <CalendarMonthPicker format="long">
           {({ items, value, onChange, "aria-label": label }) => (
             <select aria-label={label} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} className={PICKER_SELECT}>

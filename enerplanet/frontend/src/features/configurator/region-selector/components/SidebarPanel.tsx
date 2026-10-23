@@ -278,11 +278,11 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                     "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
                   )}
                 >
-                  <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
+                  <DateInput slot="start" unstyled className="text-xs pl-3 py-2" />
                   <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
                     -
                   </span>
-                  <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
+                  <DateInput slot="end" unstyled className="text-xs pr-10 py-2" />
                   <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
                     <CalendarIcon size={16} />
                   </Trigger>
@@ -309,13 +309,14 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 
           <div className="mt-2 text-xs text-muted-foreground">
             {t("simulation.duration")}:{" "}
+            {/* Both the first and the last day are simulated. */}
             {state.fromDate && state.toDate
               ? Math.max(
                   0,
-                  Math.ceil(
+                  Math.round(
                     (new Date(state.toDate).getTime() - new Date(state.fromDate).getTime()) /
                       (1000 * 60 * 60 * 24)
-                  )
+                  ) + 1
                 )
               : 0}{" "}
             {t("simulation.days")}
