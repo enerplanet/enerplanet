@@ -1686,7 +1686,6 @@
     "title": "Configuration de simulation",
     "modelName": "Nom du modèle",
     "modelNamePlaceholder": "Entrez un nom pour votre simulation énergétique",
-    "modelNameHint": "Donnez à votre simulation un nom descriptif",
     "simulationPeriod": "Période de simulation",
     "duration": "Durée",
     "days": "jours",
@@ -1923,7 +1922,12 @@
       "historicYears_one": "année historique {{range}}",
       "historicYears_other": "années historiques {{range}} ({{count}} ans)",
       "scenarioYears_one": "scénarios de l'année {{range}}",
-      "scenarioYears_other": "scénarios issus de {{count}} années, {{range}}"
+      "scenarioYears_other": "scénarios issus de {{count}} années, {{range}}",
+      "shortChoices": {
+        "p10": "Faible (P10)",
+        "p50": "Typique (P50)",
+        "p90": "Élevé (P90)"
+      }
     },
     "periodParts": {
       "label": "Période",

@@ -1444,7 +1444,6 @@
     "title": "Konfigurace simulace",
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
-    "modelNameHint": "Dejte své simulaci popisný název",
     "simulationPeriod": "Období simulace",
     "duration": "Trvání",
     "days": "dní",
@@ -1685,7 +1684,12 @@
       "scenarioYears_one": "scénáře z roku {{range}}",
       "scenarioYears_few": "scénáře ze {{count}} let, {{range}}",
       "scenarioYears_many": "scénáře ze {{count}} let, {{range}}",
-      "scenarioYears_other": "scénáře ze {{count}} let, {{range}}"
+      "scenarioYears_other": "scénáře ze {{count}} let, {{range}}",
+      "shortChoices": {
+        "p10": "Nízký (P10)",
+        "p50": "Typický (P50)",
+        "p90": "Vysoký (P90)"
+      }
     },
     "periodParts": {
       "label": "Období",

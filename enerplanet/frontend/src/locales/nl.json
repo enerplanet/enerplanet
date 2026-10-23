@@ -1429,7 +1429,6 @@
     "title": "Simulatieconfiguratie",
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
-    "modelNameHint": "Geef uw simulatie een beschrijvende naam",
     "simulationPeriod": "Simulatieperiode",
     "duration": "Duur",
     "days": "dagen",
@@ -1666,7 +1665,12 @@
       "historicYears_one": "historisch jaar {{range}}",
       "historicYears_other": "historische jaren {{range}} ({{count}} jaar)",
       "scenarioYears_one": "scenario's uit het jaar {{range}}",
-      "scenarioYears_other": "scenario's uit {{count}} jaren, {{range}}"
+      "scenarioYears_other": "scenario's uit {{count}} jaren, {{range}}",
+      "shortChoices": {
+        "p10": "Laag (P10)",
+        "p50": "Typisch (P50)",
+        "p90": "Hoog (P90)"
+      }
     },
     "periodParts": {
       "label": "Periode",

@@ -1444,7 +1444,6 @@
     "title": "Konfiguracja symulacji",
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
-    "modelNameHint": "Nadaj swojej symulacji opisową nazwę",
     "simulationPeriod": "Okres symulacji",
     "duration": "Czas trwania",
     "days": "dni",
@@ -1685,7 +1684,12 @@
       "scenarioYears_one": "scenariusze z roku {{range}}",
       "scenarioYears_few": "scenariusze z {{count}} lat, {{range}}",
       "scenarioYears_many": "scenariusze z {{count}} lat, {{range}}",
-      "scenarioYears_other": "scenariusze z {{count}} lat, {{range}}"
+      "scenarioYears_other": "scenariusze z {{count}} lat, {{range}}",
+      "shortChoices": {
+        "p10": "Niski (P10)",
+        "p50": "Typowy (P50)",
+        "p90": "Wysoki (P90)"
+      }
     },
     "periodParts": {
       "label": "Okres",
