@@ -1649,7 +1649,10 @@
         "label": "Modalità meteo",
         "scenario": "Scenario",
         "year": "Anno storico"
-      }
+      },
+      "coverage": "Copertura",
+      "historicYears_one": "anno storico {{range}}",
+      "historicYears_other": "anni storici {{range}} ({{count}} anni)"
     },
     "periodParts": {
       "label": "Periodo",

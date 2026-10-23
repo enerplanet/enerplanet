@@ -1648,7 +1648,10 @@
         "label": "Weermodus",
         "scenario": "Scenario",
         "year": "Historisch jaar"
-      }
+      },
+      "coverage": "Dekking",
+      "historicYears_one": "historisch jaar {{range}}",
+      "historicYears_other": "historische jaren {{range}} ({{count}} jaar)"
     },
     "periodParts": {
       "label": "Periode",

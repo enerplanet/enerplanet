@@ -1908,7 +1908,10 @@
         "label": "Mode météo",
         "scenario": "Scénario",
         "year": "Année historique"
-      }
+      },
+      "coverage": "Couverture",
+      "historicYears_one": "année historique {{range}}",
+      "historicYears_other": "années historiques {{range}} ({{count}} ans)"
     },
     "periodParts": {
       "label": "Période",

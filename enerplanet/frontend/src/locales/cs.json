@@ -1663,7 +1663,12 @@
         "label": "Režim počasí",
         "scenario": "Scénář",
         "year": "Historický rok"
-      }
+      },
+      "coverage": "Pokrytí",
+      "historicYears_one": "historický rok {{range}}",
+      "historicYears_few": "historické roky {{range}} ({{count}} roky)",
+      "historicYears_many": "historické roky {{range}} ({{count}} let)",
+      "historicYears_other": "historické roky {{range}} ({{count}} let)"
     },
     "periodParts": {
       "label": "Období",

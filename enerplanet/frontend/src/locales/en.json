@@ -1903,7 +1903,10 @@
         "label": "Weather mode",
         "scenario": "Scenario",
         "year": "Historic year"
-      }
+      },
+      "coverage": "Coverage",
+      "historicYears_one": "historic year {{range}}",
+      "historicYears_other": "historic years {{range}} ({{count}} years)"
     },
     "periodParts": {
       "label": "Period",
