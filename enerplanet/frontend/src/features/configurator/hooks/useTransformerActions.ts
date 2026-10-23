@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
+import { removeSiteStation } from "@/features/configurator/utils/siteStations";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface TransformerActionsOptions {
@@ -11,8 +12,9 @@ interface TransformerActionsOptions {
   userId: string | undefined;
   existingModelId: number | undefined;
   draftId: string | undefined;
-  allPolygons: [number, number][][];
-  handlePolygonModified: (polygons: [number, number][][]) => Promise<void>;
+  refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: null) => void;
 }
 
 export const useTransformerActions = ({
@@ -21,8 +23,8 @@ export const useTransformerActions = ({
   userId,
   existingModelId,
   draftId,
-  allPolygons,
-  handlePolygonModified,
+  refreshGrid,
+  previewSiteStation,
 }: TransformerActionsOptions) => {
   const selectedTransformer = useModelStore((s) => s.selectedTransformer);
   const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
@@ -44,22 +46,28 @@ export const useTransformerActions = ({
   const handleDeleteTransformer = useCallback(
     async (gridResultId: number) => {
       try {
-        const result = await pylovoService.deleteTransformer(
-          gridResultId,
-          userId,
-          existingModelId,
-          draftId
-        );
-        notification.showSuccess(result.message || "Transformer deleted");
-        if (allPolygons.length > 0) {
-          await handlePolygonModified(allPolygons);
+        const grid = useModelStore.getState().pylovoGridData;
+        const site = siteScope(grid);
+        if (site && grid) {
+          await removeSiteStation(site.site_id, grid, gridResultId);
+          previewSiteStation(gridResultId, null);
+          notification.showSuccess("Transformer deleted");
+        } else {
+          const result = await pylovoService.deleteTransformer(
+            gridResultId,
+            userId,
+            existingModelId,
+            draftId
+          );
+          notification.showSuccess(result.message || "Transformer deleted");
         }
+        await refreshGrid();
       } catch (error: any) {
         console.error("Failed to delete transformer:", error);
         notification.showError(error?.message || "Failed to delete transformer");
       }
     },
-    [notification, allPolygons, handlePolygonModified, userId, existingModelId, draftId]
+    [notification, refreshGrid, previewSiteStation, userId, existingModelId, draftId]
   );
 
   return { handleTransformerKvaChange, handleDeleteTransformer };

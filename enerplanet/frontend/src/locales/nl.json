@@ -3099,7 +3099,8 @@
     }
   },
   "transformer": {
-    "onlyInsidePolygon": "Transformatoren kunnen alleen binnen het geselecteerde gebied worden geplaatst"
+    "onlyInsidePolygon": "Transformatoren kunnen alleen binnen het geselecteerde gebied worden geplaatst",
+    "onlyNearPolygon": "Transformatoren kunnen tot 200 m buiten het geselecteerde gebied worden geplaatst"
   },
   "powerFlowLegend": {
     "customTransformers": "Eigen transformatoren",
