@@ -12,7 +12,7 @@ interface MapLibre3DControlsProps {
 
 // Under the three zoom and centre buttons (size-8, gap-2) of MapControls.
 const RESET_STYLE: Record<MapControlsPlacement, { className: string; style: React.CSSProperties }> = {
-  "top-right": { className: "absolute z-[60] pointer-events-auto", style: { top: 152, right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
+  "top-right": { className: "absolute z-50 pointer-events-auto", style: { top: 152, right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
   "top-left": { className: "absolute z-[5] pointer-events-auto", style: { top: "11rem", left: "1rem" } },
 };
 
@@ -48,7 +48,7 @@ export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef, 
 
       {/* Persistent hint on the map */}
       <div
-        className="absolute z-[60] pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[11px] shadow-md"
+        className="absolute z-50 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-[11px] shadow-md"
         style={{ bottom: 40, right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
       >
         <RotateCcw className="w-3 h-3 opacity-80" />
