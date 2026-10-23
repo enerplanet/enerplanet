@@ -311,13 +311,15 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
-  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${level === 0 ? "border-t border-border" : ""} ${
-    isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""
-  }`;
+  // Copies sit on a shade of the original's background.
+  const rowShade = isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : level > 0 ? "bg-muted/30" : "";
+  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${level === 0 ? "border-t border-border" : ""} ${rowShade}`;
+  // The first cell of a copy has no top line, so the bars of a family's copies join into one.
+  const copyBar = level > 0 ? "relative pl-7 before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-muted-foreground/30" : "pl-4";
 
   return (
     <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
-      <td className="pl-4 pr-2 py-2.5">
+      <td className={`pr-2 py-2.5 ${copyBar}`}>
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
