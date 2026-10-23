@@ -7,7 +7,6 @@ import TileWMS from "ol/source/TileWMS";
 import { fromLonLat } from "ol/proj";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { MAP_ZOOM } from '@/features/interactive-map/utils/mapUtils';
-import { withCartoBasemapKey } from '@/utils/carto-basemap';
 import { useMapLocationStore } from './map-location';
 
 // Base layer metadata interface
@@ -40,7 +39,6 @@ interface MapStore {
 }
 
 const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const CARTO_ATTR = '© <a href="https://carto.com/attributions">CARTO</a>';
 
 // Map first: it is the default and the base for drawing.
 const baseLayers: BaseLayerInfo[] = [
@@ -50,21 +48,6 @@ const baseLayers: BaseLayerInfo[] = [
 		description: "Standard OpenStreetMap layer",
 		source: new OSM({
 			attributions: [OSM_ATTR],
-		}),
-		accessLevel: "very_low",
-	},
-	{
-		id: "carto_dark",
-		name: "Dark",
-		description: "Dark theme base map by CartoDB",
-		source: new XYZ({
-			url: withCartoBasemapKey(
-				"https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-			),
-			attributions: [
-				OSM_ATTR,
-				CARTO_ATTR,
-			],
 		}),
 		accessLevel: "very_low",
 	},

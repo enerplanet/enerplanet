@@ -2,10 +2,9 @@ import { useEffect, useState, type FC } from "react";
 import { Box } from "lucide-react";
 import { toLonLat } from "ol/proj";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
-import { withCartoBasemapKey } from "@/utils/carto-basemap";
-import { cn } from "@/lib/utils";
+import { useToastStore } from "@/features/notifications/toastStore";
 
-/** Zoom of the preview tiles: a few streets, enough to tell the styles apart. */
+/** Zoom of the preview tile: a few streets, enough to recognise the place. */
 const PREVIEW_ZOOM = 15;
 
 /** Web Mercator tile holding lon/lat at zoom z. */
@@ -18,22 +17,16 @@ const tileAt = (lon: number, lat: number, z: number) => {
 	};
 };
 
-const previewUrl = (layerId: string, x: number, y: number): string | null => {
-	if (layerId === "osm_standard") return `https://tile.openstreetmap.org/${PREVIEW_ZOOM}/${x}/${y}.png`;
-	if (layerId === "carto_dark") return withCartoBasemapKey(`https://a.basemaps.cartocdn.com/dark_all/${PREVIEW_ZOOM}/${x}/${y}.png`);
-	return null;
-};
-
 /**
- * Base map choice as small preview tiles on the map, bottom right. The visible
- * tile switches straight to the other everyday view (2D map or 3D); pointing at
- * it shows every base map.
+ * Switches between the 2D map and the 3D view with one preview tile showing
+ * the other view, bottom left under the map tools and level with the attribution.
  */
 export const BaseLayerSwitcher: FC = () => {
 	const map = useMapStore((s) => s.map);
 	const layers = useMapStore((s) => s.layers);
 	const selectedId = useMapStore((s) => s.selectedBaseLayerId);
 	const select = useMapStore((s) => s.setSelectedBaseLayerId);
+	const setToastsLifted = useToastStore((s) => s.setLifted);
 	const [tile, setTile] = useState<{ x: number; y: number } | null>(null);
 
 	useEffect(() => {
@@ -49,50 +42,33 @@ export const BaseLayerSwitcher: FC = () => {
 		return () => map.un("moveend", update);
 	}, [map]);
 
-	const quickId = selectedId === "osm_standard" ? "maplibre_3d" : "osm_standard";
-	const quick = layers.find((l) => l.id === quickId);
-	if (!quick) return null;
-	const others = layers.filter((l) => l.id !== quickId);
+	// Toasts share the bottom-left corner, so they sit above the tile.
+	useEffect(() => {
+		setToastsLifted(true);
+		return () => setToastsLifted(false);
+	}, [setToastsLifted]);
 
-	const tileButton = (layer: (typeof layers)[number]) => {
-		const url = tile ? previewUrl(layer.id, tile.x, tile.y) : null;
-		const active = layer.id === selectedId;
-		return (
-			<button
-				key={layer.id}
-				type="button"
-				onClick={() => select(layer.id)}
-				aria-pressed={active}
-				title={layer.description}
-				className={cn(
-					"relative h-16 w-16 overflow-hidden rounded-lg border-2 bg-muted shadow-md transition-transform hover:scale-105",
-					active ? "border-primary" : "border-card"
-				)}
-			>
-				{url ? (
-					<img src={url} alt="" className="h-full w-full object-cover" />
-				) : (
-					<span className="flex h-full w-full items-center justify-center bg-slate-700 text-white">
-						<Box className="h-6 w-6" aria-hidden="true" />
-					</span>
-				)}
-				<span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[11px] font-medium text-white">
-					{layer.name}
-				</span>
-			</button>
-		);
-	};
+	const other = layers.find((l) => l.id !== selectedId);
+	if (!other) return null;
+	const showsMap = other.id === "osm_standard";
 
 	return (
-		<div
-			className="group absolute z-30 flex items-end gap-2"
-			// Above the attribution line and the 3D rotate hint in the bottom-right corner.
-			style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))", bottom: "4.5rem" }}
+		<button
+			type="button"
+			onClick={() => select(other.id)}
+			title={other.description}
+			className="absolute bottom-4 left-4 z-30 h-16 w-16 overflow-hidden rounded-lg border-2 border-card bg-muted shadow-md transition-transform hover:scale-105"
 		>
-			<div className="hidden gap-2 rounded-xl bg-card/90 p-1.5 shadow-lg group-focus-within:flex group-hover:flex">
-				{others.map(tileButton)}
-			</div>
-			{tileButton(quick)}
-		</div>
+			{showsMap && tile ? (
+				<img src={`https://tile.openstreetmap.org/${PREVIEW_ZOOM}/${tile.x}/${tile.y}.png`} alt="" className="h-full w-full object-cover" />
+			) : (
+				<span className="flex h-full w-full items-center justify-center bg-slate-700 text-white">
+					<Box className="h-6 w-6" aria-hidden="true" />
+				</span>
+			)}
+			<span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[11px] font-medium text-white">
+				{other.name}
+			</span>
+		</button>
 	);
 };
