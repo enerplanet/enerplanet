@@ -222,8 +222,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <img src="/brand/enerplanet-mark-green-outline.svg" alt="" className={`h-10 w-auto dark:hidden ${RAIL_HIDE}`} />
                 <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="" className={`hidden h-10 w-auto dark:block ${RAIL_HIDE}`} />
               </span>
-              <img src="/brand/enerplanet-lockup-green-outline.svg" alt="" className={`absolute left-0 top-0.5 h-10 w-auto max-w-none dark:hidden ${RAIL_SHOW}`} />
-              <img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="" className={`absolute left-0 top-0.5 hidden h-10 w-auto max-w-none dark:block ${RAIL_SHOW}`} />
+              {/* The lockup opens with the same 89 x 101 mark, so this offset keeps its mark on the icon column. */}
+              <span className="absolute inset-y-0 flex items-center" style={{ left: "calc((2.75rem - 2.5rem * 89 / 101) / 2)" }}>
+                <img src="/brand/enerplanet-lockup-green-outline.svg" alt="" className={`h-10 w-auto max-w-none dark:hidden ${RAIL_SHOW}`} />
+                <img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="" className={`hidden h-10 w-auto max-w-none dark:block ${RAIL_SHOW}`} />
+              </span>
             </a>
             <Authorized>
               {sidebarItems.map((item) => (
