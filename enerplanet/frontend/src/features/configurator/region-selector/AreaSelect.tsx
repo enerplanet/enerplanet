@@ -482,30 +482,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     buildingCoords: reassignmentLineAnchor,
   });
 
-  // ── Handle run power flow ────────────────────────────────────────
-  const handleRunPowerFlow = useCallback(async () => {
-    try {
-      const success = await pylovoLayers.runPowerFlowAnalysis();
-      if (success) {
-        notification.showSuccess(
-          t("simulation.powerFlow.success") ||
-            "Power flow analysis completed. Line colors now show load utilization."
-        );
-      } else {
-        notification.showError(
-          t("simulation.powerFlow.noData") || "No grid data available for power flow analysis."
-        );
-      }
-      return success;
-    } catch (error) {
-      console.error("Power flow analysis error:", error);
-      notification.showError(
-        t("simulation.powerFlow.error") || "Power flow analysis failed. Check console for details."
-      );
-      return false;
-    }
-  }, [pylovoLayers, notification, t]);
-
   // Read again after a save, which starts a BuEM run, and after the configurator
   // closes, where a building's run may have been repeated.
   const { buildingId: openBuildingId } = useConfiguratorParams();
@@ -581,8 +557,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               polygonCount={state.allPolygons.length}
               isGeneratingGrid={state.isGeneratingGrid}
               hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
-              hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
               siteMode={siteMode}
               hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
             />
@@ -672,9 +646,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
               isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
               onStartBuildingAssignMode={buildingAssign.startBuildingAssignMode}
-              onRunPowerFlow={handleRunPowerFlow}
-              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
-              hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
               onResolveAllHeat={handleResolveAllHeat}
               isResolvingHeat={isResolvingHeat}
             />

@@ -10,8 +10,6 @@ interface WorkflowBarProps {
 	polygonCount: number;
 	isGeneratingGrid: boolean;
 	hasGridData: boolean;
-	isRunningPowerFlow: boolean;
-	hasPowerFlowResults: boolean;
 	/** Custom grid mode: transformers can be added and buildings assigned. */
 	siteMode: boolean;
 	hasAddedTransformer: boolean;
@@ -22,8 +20,6 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 	polygonCount,
 	isGeneratingGrid,
 	hasGridData,
-	isRunningPowerFlow,
-	hasPowerFlowResults,
 	siteMode,
 	hasAddedTransformer,
 }) => {
@@ -38,11 +34,6 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 			key: "grid",
 			label: t("workflow.gridGeneration", "Grid Generation"),
 			status: isGeneratingGrid ? "active" : hasGridData ? "complete" : "pending",
-		},
-		{
-			key: "powerflow",
-			label: t("workflow.powerFlow", "Run Power Flow"),
-			status: isRunningPowerFlow ? "active" : hasPowerFlowResults ? "complete" : hasGridData ? "available" : "pending",
 		},
 		...(siteMode
 			? [
