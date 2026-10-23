@@ -1611,6 +1611,11 @@
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
       "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
+    },
+    "sections": {
+      "grid": "Net",
+      "model": "Model",
+      "energySystem": "Energiesysteem"
     }
   },
   "mapLayers": {

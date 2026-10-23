@@ -1626,6 +1626,11 @@
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
       "description": "Modele z ponad {{limit}} budynkami liczą się znacznie dłużej: każdy budynek przechodzi przez BuEM, a Calliope rozwiązuje godzinowe zapotrzebowanie każdego budynku. Cały rok może trwać kilkadziesiąt minut. Nadal możesz go zapisać i uruchomić."
+    },
+    "sections": {
+      "grid": "Sieć",
+      "model": "Model",
+      "energySystem": "System energetyczny"
     }
   },
   "mapLayers": {

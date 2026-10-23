@@ -1612,6 +1612,11 @@
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",
       "description": "I modelli con più di {{limit}} edifici richiedono molto più tempo di calcolo: ogni edificio passa per BuEM e Calliope risolve la domanda oraria di ciascun edificio. Un anno intero può richiedere decine di minuti. Puoi comunque salvarlo ed eseguirlo."
+    },
+    "sections": {
+      "grid": "Rete",
+      "model": "Modello",
+      "energySystem": "Sistema energetico"
     }
   },
   "mapLayers": {

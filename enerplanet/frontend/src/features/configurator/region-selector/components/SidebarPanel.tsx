@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import {
   Button,
   Switch,
-  Label as UILabel,
 } from "@spatialhub/ui";
 import {
   AlertTriangle,
@@ -31,10 +30,12 @@ import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
-import { InfoIcon, TextInfoIcon } from "@/components/ui/InfoTooltip";
+import { TextInfoIcon } from "@/components/ui/InfoTooltip";
+import { TOOLTIP_CONTENTS } from "@/components/shared/tooltip-contents";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
 import { useEffect, type FC, type ChangeEvent, type ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -75,10 +76,19 @@ const saveBlocker = (complete: boolean, gridStale: boolean): string | null => {
   return null;
 };
 
+/** A titled group of settings, set off from the group above by a line. */
+const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
+  <section className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-0">
+    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
+    {children}
+  </section>
+);
+
 /** One setting on a single line: its name with the hint behind an info icon, and its control. */
-const SettingRow: FC<{ label: string; hint: string; dataTour?: string; children: ReactNode }> = ({ label, hint, dataTour, children }) => (
+const SettingRow: FC<{ label: string; hint: string; icon?: LucideIcon; dataTour?: string; children: ReactNode }> = ({ label, hint, icon: Icon, dataTour, children }) => (
   <div className="flex items-center justify-between gap-2" data-tour={dataTour}>
     <div className="flex min-w-0 items-center gap-1.5">
+      {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
       <span className="text-sm font-medium text-foreground">{label}</span>
       <TextInfoIcon title={label} description={hint} position="fixed-left-anchored" />
     </div>
@@ -148,210 +158,199 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
-        <div className="relative" data-tour="model-name">
-          <label
-            htmlFor="model-name-input"
-            className="block text-sm font-medium text-foreground mb-2"
+      <div className="flex-1 overflow-y-auto pb-4 px-3">
+        <PanelSection title={t("simulation.sections.grid")}>
+          <SettingRow
+            label={t("simulation.siteMode.label")}
+            hint={t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
+            icon={MapPinned}
           >
-            {t("simulation.modelName")}
-          </label>
-          <input
-            id="model-name-input"
-            type="text"
-            value={state.modelName}
-            onChange={handleModelNameChange}
-            placeholder={t("simulation.modelNamePlaceholder")}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
-          />
-          <div className="text-xs text-muted-foreground mt-1">{t("simulation.modelNameHint")}</div>
-        </div>
+            <Switch
+              id="site-mode-toggle"
+              aria-label={t("simulation.siteMode.label")}
+              disabled={siteModeLocked}
+              checked={siteMode}
+              onCheckedChange={setSiteMode}
+            />
+          </SettingRow>
+        </PanelSection>
 
-        <div className="relative" data-tour="date-range">
-          <DateRangePicker
-            value={
-              state.fromDate && state.toDate
-                ? {
-                    start: parseDate(state.fromDate),
-                    end: parseDate(state.toDate),
-                  }
-                : null
-            }
-            onChange={(range) => {
-              if (!range) return;
-              actions.handleUpdateRange({ start: range.start, end: range.end });
-            }}
-            className="*:not-first:mt-2"
-          >
-            <Label className="text-foreground text-sm font-medium">
-              {t("simulation.simulationPeriod")}
-            </Label>
-            <div className="flex">
-              {/* English uses en-CH for DD.MM.YYYY fields; other languages keep their own date order. */}
-              <I18nProvider locale={appLang === "en" ? "en-CH" : appLang}>
-                <Group
-                  className={cn(
-                    DATE_INPUT_STYLE,
-                    "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
-                  )}
-                >
-                  <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
-                  <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
-                    -
-                  </span>
-                  <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
-                  <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
-                    <CalendarIcon size={16} />
-                  </Trigger>
-                </Group>
-              </I18nProvider>
-            </div>
-            <Popover
-              className="bg-background dark:bg-gray-800 text-popover-foreground data-entering:animate-in data-exiting:animate-out data-[entering]:fade-in-0 data-[exiting]:fade-out-0 data-[entering]:zoom-in-95 data-[exiting]:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 z-50 rounded-md border border-border shadow-lg outline-hidden"
-              offset={4}
+        <PanelSection title={t("simulation.sections.model")}>
+          <div className="relative" data-tour="model-name">
+            <label
+              htmlFor="model-name-input"
+              className="block text-sm font-medium text-foreground mb-2"
             >
-              <Dialog className="max-h-[inherit] overflow-auto p-2">
-                <RangeCalendar
-                  onChange={(range) =>
-                    actions.handleUpdateRange({ start: range.start, end: range.end })
-                  }
-                  minValue={getDateBounds().minValue}
-                  maxValue={getDateBounds().maxValue}
-                  minYear={getDateBounds().minYear}
-                  maxYear={getDateBounds().maxYear}
-                />
-              </Dialog>
-            </Popover>
-          </DateRangePicker>
-
-          <div className="mt-2 text-xs text-muted-foreground">
-            {t("simulation.duration")}:{" "}
-            {state.fromDate && state.toDate
-              ? Math.max(
-                  0,
-                  Math.ceil(
-                    (new Date(state.toDate).getTime() - new Date(state.fromDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  )
-                )
-              : 0}{" "}
-            {t("simulation.days")}
+              {t("simulation.modelName")}
+            </label>
+            <input
+              id="model-name-input"
+              type="text"
+              value={state.modelName}
+              onChange={handleModelNameChange}
+              placeholder={t("simulation.modelNamePlaceholder")}
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
+            />
+            <div className="text-xs text-muted-foreground mt-1">{t("simulation.modelNameHint")}</div>
           </div>
-        </div>
+          <div className="relative" data-tour="date-range">
+            <DateRangePicker
+              value={
+                state.fromDate && state.toDate
+                  ? {
+                      start: parseDate(state.fromDate),
+                      end: parseDate(state.toDate),
+                    }
+                  : null
+              }
+              onChange={(range) => {
+                if (!range) return;
+                actions.handleUpdateRange({ start: range.start, end: range.end });
+              }}
+              className="*:not-first:mt-2"
+            >
+              <Label className="text-foreground text-sm font-medium">
+                {t("simulation.simulationPeriod")}
+              </Label>
+              <div className="flex">
+                {/* English uses en-CH for DD.MM.YYYY fields; other languages keep their own date order. */}
+                <I18nProvider locale={appLang === "en" ? "en-CH" : appLang}>
+                  <Group
+                    className={cn(
+                      DATE_INPUT_STYLE,
+                      "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
+                    )}
+                  >
+                    <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
+                    <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
+                      -
+                    </span>
+                    <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
+                    <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
+                      <CalendarIcon size={16} />
+                    </Trigger>
+                  </Group>
+                </I18nProvider>
+              </div>
+              <Popover
+                className="bg-background dark:bg-gray-800 text-popover-foreground data-entering:animate-in data-exiting:animate-out data-[entering]:fade-in-0 data-[exiting]:fade-out-0 data-[entering]:zoom-in-95 data-[exiting]:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 z-50 rounded-md border border-border shadow-lg outline-hidden"
+                offset={4}
+              >
+                <Dialog className="max-h-[inherit] overflow-auto p-2">
+                  <RangeCalendar
+                    onChange={(range) =>
+                      actions.handleUpdateRange({ start: range.start, end: range.end })
+                    }
+                    minValue={getDateBounds().minValue}
+                    maxValue={getDateBounds().maxValue}
+                    minYear={getDateBounds().minYear}
+                    maxYear={getDateBounds().maxYear}
+                  />
+                </Dialog>
+              </Popover>
+            </DateRangePicker>
 
-        <SettingRow label={t("simulation.resolution")} hint={t("simulation.resolutionHint")} dataTour="resolution">
-          <SegmentedControl
-            aria-label={t("simulation.resolution")}
-            value={String(state.resolution)}
-            onChange={(value) => actions.setResolution(Number(value))}
-            options={[
-              { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
-              { value: "60", label: "60 min" },
-            ]}
-          />
-        </SettingRow>
-
-        <div>
-          <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {t("simulation.duration")}:{" "}
+              {state.fromDate && state.toDate
+                ? Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(state.toDate).getTime() - new Date(state.fromDate).getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )
+                  )
+                : 0}{" "}
+              {t("simulation.days")}
+            </div>
+          </div>
+          <SettingRow label={t("simulation.resolution")} hint={t("simulation.resolutionHint")} dataTour="resolution">
             <SegmentedControl
-              aria-label={t("simulation.runMode.label")}
-              value={runMode}
-              onChange={(value) => setRunMode(value as RunMode)}
+              aria-label={t("simulation.resolution")}
+              value={String(state.resolution)}
+              onChange={(value) => actions.setResolution(Number(value))}
               options={[
-                { value: "plan", label: t("simulation.runMode.plan"), title: t("simulation.runMode.planHint") },
-                { value: "operate", label: t("simulation.runMode.operate"), title: t("simulation.runMode.operateHint") },
+                { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
+                { value: "60", label: "60 min" },
               ]}
             />
           </SettingRow>
-          {runMode === "operate" && operateIssues.length > 0 && (
-            <div className="mt-2 rounded-md border border-red-300 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/40">
-              <p className="text-xs font-medium text-red-700 dark:text-red-300">
-                {t("simulation.runMode.unsized", { count: operateIssues.length })}
-              </p>
-              <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto">
-                {operateIssues.flatMap((issue) => issue.techs.map((tech) => (
-                  <li key={`${issue.osmId}:${tech.techKey}`}>
-                    <button
-                      type="button"
-                      onClick={() => onFixOperateIssue?.(issue, tech.techKey)}
-                      className="w-full cursor-pointer text-left text-xs text-red-700 hover:underline dark:text-red-300"
-                    >
-                      {t("simulation.runMode.unsizedEntry", {
-                        building: issue.osmId,
-                        tech: t(`technologies.types.${tech.techKey}`, { defaultValue: tech.techKey }),
-                        fields: tech.fields.map((field) => t(`simulation.runMode.fields.${field}`)).join(", "),
-                      })}
-                    </button>
-                  </li>
-                )))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2" data-tour="technologies-parameters">
-          <Button
-            variant="outline"
-            onClick={onOpenTechDrawer}
-            className="h-auto flex-1 cursor-pointer justify-start gap-3 px-3 py-2 text-left"
-          >
-            <CircuitBoard className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium">{t("simulation.technologies")}</span>
-              <span className="block whitespace-normal text-xs font-normal text-muted-foreground">{t("technologies.dragInstruction")}</span>
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          </Button>
-          {/* <Button
-                        variant="outline"
-                        onClick={onOpenAdvancedParams}
-                        className="flex-1 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                        <Sliders className="w-4 h-4" />
-                        {t('simulation.parameters')}
-                    </Button> */}
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
-          <div className="flex items-center gap-2">
-            <MapPinned className="w-4 h-4 text-foreground" />
-            <UILabel htmlFor="site-mode-toggle" className="text-sm font-medium text-foreground cursor-pointer">
-              {t("simulation.siteMode.label")}
-            </UILabel>
-            <TextInfoIcon
-              title={t("simulation.siteMode.label")}
-              description={t(siteModeLocked ? "simulation.siteMode.locked" : "simulation.siteMode.hint")}
-              position="fixed-left-anchored"
-            />
+          <div>
+            <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
+              <SegmentedControl
+                aria-label={t("simulation.runMode.label")}
+                value={runMode}
+                onChange={(value) => setRunMode(value as RunMode)}
+                options={[
+                  { value: "plan", label: t("simulation.runMode.plan"), title: t("simulation.runMode.planHint") },
+                  { value: "operate", label: t("simulation.runMode.operate"), title: t("simulation.runMode.operateHint") },
+                ]}
+              />
+            </SettingRow>
+            {runMode === "operate" && operateIssues.length > 0 && (
+              <div className="mt-2 rounded-md border border-red-300 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/40">
+                <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                  {t("simulation.runMode.unsized", { count: operateIssues.length })}
+                </p>
+                <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto">
+                  {operateIssues.flatMap((issue) => issue.techs.map((tech) => (
+                    <li key={`${issue.osmId}:${tech.techKey}`}>
+                      <button
+                        type="button"
+                        onClick={() => onFixOperateIssue?.(issue, tech.techKey)}
+                        className="w-full cursor-pointer text-left text-xs text-red-700 hover:underline dark:text-red-300"
+                      >
+                        {t("simulation.runMode.unsizedEntry", {
+                          building: issue.osmId,
+                          tech: t(`technologies.types.${tech.techKey}`, { defaultValue: tech.techKey }),
+                          fields: tech.fields.map((field) => t(`simulation.runMode.fields.${field}`)).join(", "),
+                        })}
+                      </button>
+                    </li>
+                  )))}
+                </ul>
+              </div>
+            )}
           </div>
-          <Switch
-            id="site-mode-toggle"
-            disabled={siteModeLocked}
-            checked={siteMode}
-            onCheckedChange={setSiteMode}
-          />
-        </div>
+        </PanelSection>
 
-        <div className="flex items-center justify-between p-3 bg-muted/50 dark:bg-gray-700/50 border border-border rounded-lg">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-foreground" />
-            <UILabel
-              htmlFor="pypsa-toggle"
-              className="text-sm font-medium text-foreground cursor-pointer"
+        <PanelSection title={t("simulation.sections.energySystem")}>
+          <div className="flex gap-2" data-tour="technologies-parameters">
+            <Button
+              variant="outline"
+              onClick={onOpenTechDrawer}
+              className="h-auto flex-1 cursor-pointer justify-start gap-3 px-3 py-2 text-left"
             >
-              {t("simulation.pypsaSimulation")}
-            </UILabel>
-            <InfoIcon tooltipKey="pypsaSimulation" position="fixed-left-anchored" />
+              <CircuitBoard className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{t("simulation.technologies")}</span>
+                <span className="block whitespace-normal text-xs font-normal text-muted-foreground">{t("technologies.dragInstruction")}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </Button>
           </div>
-          <Switch
-            id="pypsa-toggle"
-            disabled
-            checked={advancedParams.pypsa_enabled}
-            onCheckedChange={(checked) =>
-              onAdvancedParamsChange({ ...advancedParams, pypsa_enabled: checked })
-            }
-          />
-        </div>
+          <SettingRow
+            label={t("simulation.pypsaSimulation")}
+            hint={t("tooltips.pypsaSimulation.description", { defaultValue: TOOLTIP_CONTENTS.pypsaSimulation.description })}
+            icon={Activity}
+          >
+            <Switch
+              id="pypsa-toggle"
+              aria-label={t("simulation.pypsaSimulation")}
+              disabled
+              checked={advancedParams.pypsa_enabled}
+              onCheckedChange={(checked) =>
+                onAdvancedParamsChange({ ...advancedParams, pypsa_enabled: checked })
+              }
+            />
+          </SettingRow>
+        </PanelSection>
+
+
+
+
+
+
 
       </div>
 

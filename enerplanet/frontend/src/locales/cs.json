@@ -1626,6 +1626,11 @@
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
+    },
+    "sections": {
+      "grid": "Síť",
+      "model": "Model",
+      "energySystem": "Energetický systém"
     }
   },
   "mapLayers": {
