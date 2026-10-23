@@ -1559,7 +1559,6 @@
       "moreCount": "+{{count}} další",
       "clickForDetails": "Klikněte pro více podrobností",
       "class": "Třída",
-      "estimatedShort": "odh.",
       "buemTotal": "Celkem: {{value}}",
       "kitchenGas": "Plyn na vaření: {{value}}",
       "geometry3d": "3D geometrie: City2TABULA",
@@ -1605,7 +1604,8 @@
       "length": "Délka",
       "type": "Typ",
       "bus": "Uzel",
-      "disabled": "Vypnuto"
+      "disabled": "Vypnuto",
+      "notAnalysed": "Zatím neanalyzováno"
     },
     "unsavedChanges": {
       "title": "Neuložené změny",
@@ -1643,6 +1643,15 @@
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
+    },
+    "analysis": {
+      "button": "Analyzovat budovy",
+      "running": "Výpočet potřeby: {{done}} z {{total}} budov",
+      "done": "Analyzované budovy: {{count}}",
+      "failed": "neanalyzováno: {{count}} (důvod se zobrazí po najetí na budovu)",
+      "notYet": "Zatím neanalyzováno. Analýza vypočítá potřebu vytápění, chlazení a elektřiny každé budovy.",
+      "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
+      "startFailed": "Analýzu se nepodařilo spustit."
     }
   },
   "mapLayers": {

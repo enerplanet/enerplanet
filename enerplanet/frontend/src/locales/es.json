@@ -1801,7 +1801,6 @@
       "moreCount": "+{{count}} más",
       "clickForDetails": "Haz clic para ver más detalles",
       "class": "Clase",
-      "estimatedShort": "est.",
       "buemTotal": "Total: {{value}}",
       "kitchenGas": "Gas de cocina: {{value}}",
       "geometry3d": "Geometría 3D: City2TABULA",
@@ -1847,7 +1846,8 @@
       "length": "Longitud",
       "type": "Tipo",
       "bus": "Nodo",
-      "disabled": "Desactivado"
+      "disabled": "Desactivado",
+      "notAnalysed": "Aún no analizado"
     },
     "unsavedChanges": {
       "title": "Cambios sin guardar",
@@ -1885,6 +1885,15 @@
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",
       "description": "Los modelos con más de {{limit}} edificios tardan bastante más en calcularse: cada edificio pasa por BuEM y Calliope resuelve la demanda horaria de cada edificio. Un año completo puede tardar decenas de minutos. Aun así puede guardarlo y ejecutarlo."
+    },
+    "analysis": {
+      "button": "Analizar edificios",
+      "running": "Calculando la demanda: {{done}} de {{total}} edificios",
+      "done": "Edificios analizados: {{count}}",
+      "failed": "sin analizar: {{count}} (pase el ratón sobre un edificio para ver el motivo)",
+      "notYet": "Aún no analizado. El análisis calcula la demanda de calefacción, refrigeración y electricidad de cada edificio.",
+      "saveFailed": "No se pudo guardar el modelo, por lo que el análisis no se inició.",
+      "startFailed": "No se pudo iniciar el análisis."
     }
   },
   "mapLayers": {

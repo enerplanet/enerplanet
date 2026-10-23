@@ -1544,7 +1544,6 @@
       "moreCount": "+{{count}} meer",
       "clickForDetails": "Klik voor meer details",
       "class": "Klasse",
-      "estimatedShort": "geschat",
       "buemTotal": "Totaal: {{value}}",
       "kitchenGas": "Kookgas: {{value}}",
       "geometry3d": "3D-geometrie: City2TABULA",
@@ -1590,7 +1589,8 @@
       "length": "Lengte",
       "type": "Type",
       "bus": "Knooppunt",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "notAnalysed": "Nog niet geanalyseerd"
     },
     "unsavedChanges": {
       "title": "Niet-opgeslagen wijzigingen",
@@ -1628,6 +1628,15 @@
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
       "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
+    },
+    "analysis": {
+      "button": "Gebouwen analyseren",
+      "running": "Vraag berekenen: {{done}} van {{total}} gebouwen",
+      "done": "Geanalyseerde gebouwen: {{count}}",
+      "failed": "niet geanalyseerd: {{count}} (beweeg over een gebouw voor de reden)",
+      "notYet": "Nog niet geanalyseerd. De analyse berekent de warmte-, koel- en elektriciteitsvraag van elk gebouw.",
+      "saveFailed": "Het model kon niet worden opgeslagen, dus de analyse is niet gestart.",
+      "startFailed": "De analyse kon niet worden gestart."
     }
   },
   "mapLayers": {

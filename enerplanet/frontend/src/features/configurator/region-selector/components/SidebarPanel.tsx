@@ -32,6 +32,7 @@ import {
   CircuitBoard,
   Activity,
   MapPinned,
+  Building2,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
@@ -43,6 +44,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import type { FC, ChangeEvent } from "react";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
+import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
 
 interface SidebarPanelProps {
   state: AreaSelectState;
@@ -71,7 +73,21 @@ interface SidebarPanelProps {
   /** Buildings whose technologies lack a size for operate mode. */
   operateIssues?: OperateIssue[];
   onFixOperateIssue?: (issue: OperateIssue, techKey: string) => void;
+  /** The analysis of the saved model's buildings; null before the model is saved. */
+  analysisProgress: AnalysisProgress | null;
+  isStartingAnalysis: boolean;
+  onAnalyse: () => void;
 }
+
+/** The analysis state under the Analyse buildings button. */
+const analysisText = (progress: AnalysisProgress | null, t: (key: string, opts?: Record<string, unknown>) => string): string => {
+  if (progress?.status === "resolving") return t("simulation.analysis.running", { done: progress.done, total: progress.total });
+  if (progress?.status === "completed") {
+    const done = t("simulation.analysis.done", { count: progress.done - progress.failed });
+    return progress.failed > 0 ? `${done} · ${t("simulation.analysis.failed", { count: progress.failed })}` : done;
+  }
+  return t("simulation.analysis.notYet");
+};
 
 export const SidebarPanel: FC<SidebarPanelProps> = ({
   state,
@@ -99,6 +115,9 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   isModified = false,
   operateIssues = [],
   onFixOperateIssue,
+  analysisProgress,
+  isStartingAnalysis,
+  onAnalyse,
 }) => {
   const { t, i18n } = useTranslation();
   const appLang = i18n.language?.split("-")[0] || "en";
@@ -181,6 +200,34 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               )}
             </Button>
           </div>
+        </div>
+      )}
+
+      {allPolygonsCount > 0 && (
+        <div className="mx-3 mb-2 space-y-1.5">
+          <Button
+            onClick={onAnalyse}
+            disabled={
+              !state.fromDate ||
+              !state.toDate ||
+              !state.modelName.trim() ||
+              state.isSaving ||
+              gridStale ||
+              isStartingAnalysis ||
+              analysisProgress?.status === "resolving"
+            }
+            title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
+            variant="outline"
+            className="h-8 w-full cursor-pointer"
+          >
+            {isStartingAnalysis || analysisProgress?.status === "resolving" ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+            )}
+            {t("simulation.analysis.button")}
+          </Button>
+          <p className="text-xs text-muted-foreground" aria-live="polite">{analysisText(analysisProgress, t)}</p>
         </div>
       )}
 

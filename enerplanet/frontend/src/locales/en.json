@@ -1796,7 +1796,6 @@
       "moreCount": "+{{count}} more",
       "clickForDetails": "Click for more details",
       "class": "Class",
-      "estimatedShort": "est.",
       "buemTotal": "Total: {{value}}",
       "kitchenGas": "Kitchen gas: {{value}}",
       "geometry3d": "3D geometry: City2TABULA",
@@ -1842,7 +1841,8 @@
       "length": "Length",
       "type": "Type",
       "bus": "Bus",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "notAnalysed": "Not analysed yet"
     },
     "unsavedChanges": {
       "title": "Unsaved changes",
@@ -1880,6 +1880,15 @@
     "largeModel": {
       "title": "This model has {{count}} buildings",
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
+    },
+    "analysis": {
+      "button": "Analyse buildings",
+      "running": "Calculating demand: {{done}} of {{total}} buildings",
+      "done": "Buildings analysed: {{count}}",
+      "failed": "not analysed: {{count}} (hover a building for the reason)",
+      "notYet": "Not analysed yet. Analysing calculates each building's heating, cooling and electricity demand.",
+      "saveFailed": "The model could not be saved, so the analysis did not start.",
+      "startFailed": "The analysis could not be started."
     }
   },
   "mapLayers": {

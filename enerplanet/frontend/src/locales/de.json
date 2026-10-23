@@ -1796,7 +1796,6 @@
       "moreCount": "+{{count}} weitere",
       "clickForDetails": "Klicken Sie für weitere Details",
       "class": "Klasse",
-      "estimatedShort": "geschätzt",
       "buemTotal": "Gesamt: {{value}}",
       "kitchenGas": "Küchengas: {{value}}",
       "geometry3d": "3D-Geometrie: City2TABULA",
@@ -1842,7 +1841,8 @@
       "length": "Länge",
       "type": "Typ",
       "bus": "Knoten",
-      "disabled": "Deaktiviert"
+      "disabled": "Deaktiviert",
+      "notAnalysed": "Noch nicht analysiert"
     },
     "unsavedChanges": {
       "title": "Ungespeicherte Änderungen",
@@ -1880,6 +1880,15 @@
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
       "description": "Modelle mit mehr als {{limit}} Gebäuden brauchen deutlich länger: Jedes Gebäude läuft durch BuEM, und Calliope löst den stündlichen Bedarf jedes Gebäudes. Ein ganzes Jahr kann Dutzende Minuten dauern. Sie können es trotzdem speichern und ausführen."
+    },
+    "analysis": {
+      "button": "Gebäude analysieren",
+      "running": "Bedarf wird berechnet: {{done}} von {{total}} Gebäuden",
+      "done": "Analysierte Gebäude: {{count}}",
+      "failed": "nicht analysiert: {{count}} (Grund beim Überfahren eines Gebäudes)",
+      "notYet": "Noch nicht analysiert. Die Analyse berechnet den Heiz-, Kühl- und Strombedarf jedes Gebäudes.",
+      "saveFailed": "Das Modell konnte nicht gespeichert werden, daher wurde die Analyse nicht gestartet.",
+      "startFailed": "Die Analyse konnte nicht gestartet werden."
     }
   },
   "mapLayers": {

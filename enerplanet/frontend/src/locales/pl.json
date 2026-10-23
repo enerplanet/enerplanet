@@ -1559,7 +1559,6 @@
       "moreCount": "+{{count}} więcej",
       "clickForDetails": "Kliknij, aby zobaczyć szczegóły",
       "class": "Klasa",
-      "estimatedShort": "szac.",
       "buemTotal": "Łącznie: {{value}}",
       "kitchenGas": "Gaz kuchenny: {{value}}",
       "geometry3d": "Geometria 3D: City2TABULA",
@@ -1605,7 +1604,8 @@
       "length": "Długość",
       "type": "Typ",
       "bus": "Węzeł",
-      "disabled": "Wyłączony"
+      "disabled": "Wyłączony",
+      "notAnalysed": "Jeszcze nie przeanalizowano"
     },
     "unsavedChanges": {
       "title": "Niezapisane zmiany",
@@ -1643,6 +1643,15 @@
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",
       "description": "Modele z ponad {{limit}} budynkami liczą się znacznie dłużej: każdy budynek przechodzi przez BuEM, a Calliope rozwiązuje godzinowe zapotrzebowanie każdego budynku. Cały rok może trwać kilkadziesiąt minut. Nadal możesz go zapisać i uruchomić."
+    },
+    "analysis": {
+      "button": "Analizuj budynki",
+      "running": "Obliczanie zapotrzebowania: {{done}} z {{total}} budynków",
+      "done": "Przeanalizowane budynki: {{count}}",
+      "failed": "nieprzeanalizowane: {{count}} (najedź na budynek, aby zobaczyć powód)",
+      "notYet": "Jeszcze nie przeanalizowano. Analiza oblicza zapotrzebowanie każdego budynku na ogrzewanie, chłodzenie i energię elektryczną.",
+      "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
+      "startFailed": "Nie udało się rozpocząć analizy."
     }
   },
   "mapLayers": {

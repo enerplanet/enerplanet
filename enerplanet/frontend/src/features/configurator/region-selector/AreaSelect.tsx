@@ -505,10 +505,23 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     }
   }, [pylovoLayers, notification, t]);
 
-  // Read again after a save, which starts a BuEM run, and after the configurator
+  // Read again after a save, after an analysis starts, and after the configurator
   // closes, where a building's run may have been repeated.
   const { buildingId: openBuildingId } = useConfiguratorParams();
-  const demandProfiles = useModelDemandProfiles(existingModelId, `${state.isSaving}|${openBuildingId ?? ""}`);
+  const [analysisKey, setAnalysisKey] = useState(0);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const { profiles: demandProfiles, progress: analysisProgress } = useModelDemandProfiles(
+    existingModelId,
+    `${state.isSaving}|${openBuildingId ?? ""}|${analysisKey}`
+  );
+  const handleAnalyseBuildings = useCallback(async () => {
+    setIsStartingAnalysis(true);
+    try {
+      if (await actions.handleAnalyse()) setAnalysisKey((k) => k + 1);
+    } finally {
+      setIsStartingAnalysis(false);
+    }
+  }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
@@ -603,6 +616,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             isModified={state.isModified}
             operateIssues={operateIssues}
             onFixOperateIssue={fixOperateIssue}
+            analysisProgress={analysisProgress}
+            isStartingAnalysis={isStartingAnalysis}
+            onAnalyse={handleAnalyseBuildings}
           />
         }
         onDrop={techOperations.handleMapDrop}
