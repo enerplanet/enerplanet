@@ -1637,7 +1637,10 @@
     "siteMode": {
       "label": "Własna sieć",
       "hint": "Umieść własne transformatory i zbuduj z nich sieć dla tego obszaru zamiast gotowej sieci. Tylko budynki z danymi 3D, maksymalnie 150.",
-      "locked": "Usuń narysowany obszar, aby zmienić tryb."
+      "switchHint": "Zmiana trybu ponownie generuje sieć dla narysowanego obszaru.",
+      "leaveTitle": "Opuścić własną sieć?",
+      "leaveDescription": "Sieć dla narysowanego obszaru zostanie ponownie wygenerowana z sieci przygotowanej wcześniej. Umieszczone transformatory zostaną utracone.",
+      "leaveConfirm": "Zmień"
     },
     "largeModel": {
       "title": "Ten model ma {{count}} budynków",

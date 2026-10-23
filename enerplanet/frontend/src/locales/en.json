@@ -1874,7 +1874,10 @@
     "siteMode": {
       "label": "Custom grid",
       "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
-      "locked": "Clear the drawn area to change the mode."
+      "switchHint": "Switching regenerates the grid for the drawn area.",
+      "leaveTitle": "Leave the custom grid?",
+      "leaveDescription": "The grid for the drawn area is regenerated from the pre-generated grid. Transformers you placed are lost.",
+      "leaveConfirm": "Switch"
     },
     "largeModel": {
       "title": "This model has {{count}} buildings",

@@ -1637,7 +1637,10 @@
     "siteMode": {
       "label": "Vlastní síť",
       "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
-      "locked": "Pro změnu režimu odstraňte nakreslenou oblast."
+      "switchHint": "Přepnutí znovu vygeneruje síť pro nakreslenou oblast.",
+      "leaveTitle": "Opustit vlastní síť?",
+      "leaveDescription": "Síť pro nakreslenou oblast se znovu vytvoří z předem vypočtené sítě. Umístěné transformátory budou ztraceny.",
+      "leaveConfirm": "Přepnout"
     },
     "largeModel": {
       "title": "Tento model má {{count}} budov",

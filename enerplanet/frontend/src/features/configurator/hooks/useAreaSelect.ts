@@ -125,13 +125,12 @@ export const useAreaSelect = ({
     // An area over the building limit: it stays on the map and is not fetched.
     const [areaOverLimit, setAreaOverLimit] = useState<{ count: number; capped: boolean; limit: number } | null>(null);
     const countIdRef = useRef(0);
-    const areaLimit = areaBuildingLimit(buildingLimit, siteMode);
-
     // Counts the area's buildings before anything is fetched and reports
     // whether it fits; a count that fails lets the fetch go ahead, so an
     // unavailable count never blocks modelling.
-    const areaFits = useCallback(async (polygons: [number, number][][]): Promise<boolean> => {
+    const areaFits = useCallback(async (polygons: [number, number][][], mode = siteMode): Promise<boolean> => {
         const countId = ++countIdRef.current;
+        const areaLimit = areaBuildingLimit(buildingLimit, mode);
         if (areaLimit <= 0) { setAreaOverLimit(null); return true; }
         let count: number, capped: boolean;
         try { ({ count, capped } = await pylovoService.countBuildings(polygons)); }
@@ -139,7 +138,7 @@ export const useAreaSelect = ({
         if (countId !== countIdRef.current) return false;
         setAreaOverLimit(count > areaLimit ? { count, capped, limit: areaLimit } : null);
         return count <= areaLimit;
-    }, [areaLimit]);
+    }, [buildingLimit, siteMode]);
     useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
@@ -179,15 +178,15 @@ export const useAreaSelect = ({
         setIsModified(true);
     }, [pylovoLayersData, mapInteractionsData, setAllPolygons, incrementClearTrigger, clearExcludedBuildings, setIsModified, setGridStale]);
 
-    const regenerateArea = useCallback(async (updatedPolygons: [number, number][][]) => {
+    const regenerateArea = useCallback(async (updatedPolygons: [number, number][][], mode = siteMode) => {
         setIsGeneratingGrid(true);
         const genId = ++gridGenIdRef.current;
         try {
-            const fits = await areaFits(updatedPolygons);
+            const fits = await areaFits(updatedPolygons, mode);
             if (genId !== gridGenIdRef.current) return;
             if (!fits) { setGridStale(true); return; }
             const user = useAuthStore.getState().user;
-            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
+            const response = mode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
                 polygons: updatedPolygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
@@ -196,7 +195,7 @@ export const useAreaSelect = ({
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
             pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
             areaChangedRef.current = false; setGridStale(false);
-        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridRegenerationFailed"))); }
+        } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, mode, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
     }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale, areaFits]);
@@ -236,6 +235,16 @@ export const useAreaSelect = ({
         if (site && !areaChangedRef.current) await handleSiteRegenerate(site.site_id);
         else if (allPolygons.length > 0) await regenerateArea(allPolygons);
     }, [pylovoLayersData.pylovoGridData, handleSiteRegenerate, regenerateArea, allPolygons]);
+
+    // A drawn area keeps its polygons across a mode switch and gets a grid in the
+    // new mode. The grid is stale until that succeeds, so a failure leaves Regenerate grid.
+    const handleSwitchGridMode = useCallback(async (on: boolean) => {
+        useModelStore.getState().setSiteMode(on);
+        if (allPolygons.length === 0) return;
+        areaChangedRef.current = true;
+        setGridStale(true);
+        await regenerateArea(allPolygons, on);
+    }, [allPolygons, regenerateArea, setGridStale]);
 
     // ── Save ──
     const getUpdatedPylovoData = useCallback(() => {
@@ -291,7 +300,7 @@ export const useAreaSelect = ({
 
     // ── Build return values ──
     const state = { areaOverLimit, modelName, fromDate, toDate, resolution, isSaving, isLoadingModel, showAreaSelectTour, loadedCoordinates, loadedConfig, allPolygons, advancedParams, showAdvancedParams, isDrawing, clearTrigger, pointerOnMap, isGeneratingGrid, includePrivateBuildings, excludedBuildingIds, isModified, showUnsavedDialog };
-    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleRegenerateGrid, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave, handleAnalyse };
+    const actions = { setModelName, setResolution, handleUpdateRange, setShowAreaSelectTour, handleTourComplete, handleTourSkip, handleSave, handleCancel, setAllPolygons, setAdvancedParams, setShowAdvancedParams, handleResetAdvancedParams, handlePolygonDrawn, handlePolygonModified, handleSiteRegenerate, handleRegenerateGrid, handleSwitchGridMode, handleClearAllPolygons, setIsDrawing, setIncludePrivateBuildings, toggleBuildingExclusion, clearExcludedBuildings, handleQuickSave, handleAnalyse };
 
     return { state, actions, customLocations: customLocationsData, pylovoLayers: pylovoLayersData, techOperations: techOperationsData, mapInteractions: mapInteractionsData, notification: { showSuccess, showError }, setPointerOnMap, map, mapRef, handleQuickSave, unsavedDialog: { showUnsavedDialog, setShowUnsavedDialog, handleUnsavedDiscard }, setIsModified };
 };

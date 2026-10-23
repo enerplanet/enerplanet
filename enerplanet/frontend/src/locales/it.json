@@ -1623,7 +1623,10 @@
     "siteMode": {
       "label": "Rete personalizzata",
       "hint": "Posiziona i tuoi trasformatori e costruisci la rete di quest'area a partire da essi, invece della rete pregenerata. Solo edifici con dati 3D, al massimo 150.",
-      "locked": "Cancella l'area disegnata per cambiare modalità."
+      "switchHint": "Il cambio rigenera la rete per l'area disegnata.",
+      "leaveTitle": "Uscire dalla rete personalizzata?",
+      "leaveDescription": "La rete dell'area disegnata viene rigenerata dalla rete precalcolata. I trasformatori posizionati vanno persi.",
+      "leaveConfirm": "Cambia"
     },
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",
