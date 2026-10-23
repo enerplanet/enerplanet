@@ -1910,7 +1910,10 @@
         "label": "Wettermodus",
         "scenario": "Szenario",
         "year": "Historisches Jahr"
-      }
+      },
+      "coverage": "Abdeckung",
+      "historicYears_one": "historisches Jahr {{range}}",
+      "historicYears_other": "historische Jahre {{range}} ({{count}} Jahre)"
     },
     "periodParts": {
       "label": "Zeitraum",

@@ -1673,7 +1673,12 @@
         "label": "Tryb pogody",
         "scenario": "Scenariusz",
         "year": "Rok historyczny"
-      }
+      },
+      "coverage": "Zakres",
+      "historicYears_one": "rok historyczny {{range}}",
+      "historicYears_few": "lata historyczne {{range}} ({{count}} lata)",
+      "historicYears_many": "lata historyczne {{range}} ({{count}} lat)",
+      "historicYears_other": "lata historyczne {{range}} ({{count}} lat)"
     },
     "periodParts": {
       "label": "Okres",
