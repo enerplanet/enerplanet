@@ -1640,7 +1640,22 @@
       "startFailed": "De analyse kon niet worden gestart."
     },
     "periodWithinYear": "Simulaties over meerdere jaren worden nog niet ondersteund, dus beide datums liggen nu in {{year}}.",
-    "periodYear": "Jaar"
+    "periodYear": "Jaar",
+    "weather": {
+      "title": "Weer",
+      "archive": "Weerarchief",
+      "year": "Weerjaar",
+      "choices": {
+        "p50": "Typisch jaar (P50)",
+        "p10": "Jaar met weinig zon (P10)",
+        "p90": "Jaar met veel zon (P90)",
+        "year": "Echt weer van {{year}}"
+      },
+      "hints": {
+        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "year": "Het door het archief gemeten weer in het jaar van de periode."
+      }
+    }
   },
   "mapLayers": {
     "title": "Kaartlagen",

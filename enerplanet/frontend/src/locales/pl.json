@@ -1655,7 +1655,22 @@
       "startFailed": "Nie udało się rozpocząć analizy."
     },
     "periodWithinYear": "Symulacje wieloletnie nie są jeszcze obsługiwane, więc obie daty są teraz w roku {{year}}.",
-    "periodYear": "Rok"
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Pogoda",
+      "archive": "Archiwum pogody",
+      "year": "Rok pogodowy",
+      "choices": {
+        "p50": "Typowy rok (P50)",
+        "p10": "Rok o niskim nasłonecznieniu (P10)",
+        "p90": "Rok o wysokim nasłonecznieniu (P90)",
+        "year": "Rzeczywista pogoda {{year}}"
+      },
+      "hints": {
+        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "year": "Zarejestrowana przez archiwum pogoda w roku okresu."
+      }
+    }
   },
   "mapLayers": {
     "title": "Warstwy mapy",

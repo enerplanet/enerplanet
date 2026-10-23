@@ -1892,7 +1892,22 @@
       "startFailed": "Die Analyse konnte nicht gestartet werden."
     },
     "periodWithinYear": "Mehrjährige Simulationen werden noch nicht unterstützt, daher liegen jetzt beide Daten in {{year}}.",
-    "periodYear": "Jahr"
+    "periodYear": "Jahr",
+    "weather": {
+      "title": "Wetter",
+      "archive": "Wetterarchiv",
+      "year": "Wetterjahr",
+      "choices": {
+        "p50": "Typisches Jahr (P50)",
+        "p10": "Strahlungsarmes Jahr (P10)",
+        "p90": "Strahlungsreiches Jahr (P90)",
+        "year": "Echtes Wetter von {{year}}"
+      },
+      "hints": {
+        "scenario": "Ein aus den Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung.",
+        "year": "Das aufgezeichnete Wetter des Archivs im Jahr des Zeitraums."
+      }
+    }
   },
   "mapLayers": {
     "title": "Kartenebenen",

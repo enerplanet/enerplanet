@@ -1892,7 +1892,22 @@
       "startFailed": "The analysis could not be started."
     },
     "periodWithinYear": "Multi-year simulation is not supported yet, so both dates are now in {{year}}.",
-    "periodYear": "Year"
+    "periodYear": "Year",
+    "weather": {
+      "title": "Weather",
+      "archive": "Weather archive",
+      "year": "Weather year",
+      "choices": {
+        "p50": "Typical year (P50)",
+        "p10": "Low solar year (P10)",
+        "p90": "High solar year (P90)",
+        "year": "Real weather of {{year}}"
+      },
+      "hints": {
+        "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
+        "year": "The archive's recorded weather of the period's year."
+      }
+    }
   },
   "mapLayers": {
     "title": "Map Layers",

@@ -41,8 +41,10 @@ import { useModelStore, type CookingCarrier, type RunMode } from "@/features/con
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
-import { useEffect, type FC, type ChangeEvent } from "react";
+import { useEffect, useRef, type FC, type ChangeEvent } from "react";
 import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
+import { useAuthStore } from "@/store/auth-store";
+import { WeatherSettings } from "./WeatherSettings";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
@@ -84,7 +86,8 @@ interface SidebarPanelProps {
 // the weather archive no longer has it, and a new model starts with the latest
 // full year that has weather data.
 function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editMode: boolean | undefined) {
-  const weatherYears = useWeatherYears();
+  const provider = useModelStore((s) => s.weather.provider);
+  const weatherYears = useWeatherYears(provider);
   const periodYear = state.fromDate ? Number(state.fromDate.slice(0, 4)) : undefined;
   const yearOptions = periodYear && !weatherYears.includes(periodYear)
     ? [...weatherYears, periodYear].sort((a, b) => a - b)
@@ -100,6 +103,15 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
     // Only the first answer fills an empty period; later edits are the user's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestYear]);
+  // Switching to an archive without the period's year moves the period to that
+  // archive's latest year, keeping day and month. Opening a saved model does not.
+  const lastProvider = useRef(provider);
+  useEffect(() => {
+    if (lastProvider.current === provider) return;
+    lastProvider.current = provider;
+    if (latestYear && periodYear && !weatherYears.includes(periodYear)) choosePeriodYear(latestYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider]);
   // The calendar's first and last selectable days.
   const yearBounds = yearOptions.length
     ? { start: fullYear(yearOptions[0]).start, end: fullYear(yearOptions[yearOptions.length - 1]).end }
@@ -178,6 +190,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
   const { periodYear, yearOptions, yearBounds, choosePeriodYear } = usePeriodYear(state, actions, editMode);
+  const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
@@ -373,6 +386,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             {t("simulation.days")}
           </div>
         </div>
+
+        {isExpert && <WeatherSettings periodYear={periodYear} />}
 
         <div className="relative" data-tour="resolution">
           <label

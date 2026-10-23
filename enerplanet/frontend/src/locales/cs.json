@@ -1655,7 +1655,22 @@
       "startFailed": "Analýzu se nepodařilo spustit."
     },
     "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}.",
-    "periodYear": "Rok"
+    "periodYear": "Rok",
+    "weather": {
+      "title": "Počasí",
+      "archive": "Archiv počasí",
+      "year": "Rok počasí",
+      "choices": {
+        "p50": "Typický rok (P50)",
+        "p10": "Rok s nízkým zářením (P10)",
+        "p90": "Rok s vysokým zářením (P90)",
+        "year": "Skutečné počasí roku {{year}}"
+      },
+      "hints": {
+        "scenario": "Rok složený z měsíců archivu: typický, nebo na dolním či horním konci slunečního záření.",
+        "year": "Zaznamenané počasí archivu v roce období."
+      }
+    }
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

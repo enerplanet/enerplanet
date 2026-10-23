@@ -1641,7 +1641,22 @@
       "startFailed": "Impossibile avviare l'analisi."
     },
     "periodWithinYear": "Le simulazioni pluriennali non sono ancora supportate, quindi entrambe le date ora sono nel {{year}}.",
-    "periodYear": "Anno"
+    "periodYear": "Anno",
+    "weather": {
+      "title": "Meteo",
+      "archive": "Archivio meteo",
+      "year": "Anno meteo",
+      "choices": {
+        "p50": "Anno tipico (P50)",
+        "p10": "Anno a bassa irradiazione (P10)",
+        "p90": "Anno ad alta irradiazione (P90)",
+        "year": "Meteo reale del {{year}}"
+      },
+      "hints": {
+        "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
+        "year": "Il meteo registrato dall'archivio nell'anno del periodo."
+      }
+    }
   },
   "mapLayers": {
     "title": "Livelli mappa",

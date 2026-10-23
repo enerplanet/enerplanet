@@ -1897,7 +1897,22 @@
       "startFailed": "No se pudo iniciar el análisis."
     },
     "periodWithinYear": "Las simulaciones de varios años aún no son compatibles, así que ambas fechas están ahora en {{year}}.",
-    "periodYear": "Año"
+    "periodYear": "Año",
+    "weather": {
+      "title": "Clima",
+      "archive": "Archivo meteorológico",
+      "year": "Año meteorológico",
+      "choices": {
+        "p50": "Año típico (P50)",
+        "p10": "Año de baja radiación (P10)",
+        "p90": "Año de alta radiación (P90)",
+        "year": "Clima real de {{year}}"
+      },
+      "hints": {
+        "scenario": "Un año compuesto con meses del archivo: típico, o en el extremo bajo o alto de la radiación solar.",
+        "year": "El clima registrado por el archivo en el año del periodo."
+      }
+    }
   },
   "mapLayers": {
     "title": "Capas del mapa",
