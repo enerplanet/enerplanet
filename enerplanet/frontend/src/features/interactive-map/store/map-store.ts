@@ -171,7 +171,7 @@ export const useMapStore = create<MapStore>()(
 			layers: baseLayers,
 			baseLayer: null,
 			setBaseLayer: (layer) => set({ baseLayer: layer }),
-			selectedBaseLayerId: "maplibre_3d",
+			selectedBaseLayerId: "osm_standard",
 			setSelectedBaseLayerId: (id) => set({ selectedBaseLayerId: id }),
 			overlayLayers: [],
 			addOverlayLayer: (layer) => {
