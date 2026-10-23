@@ -16,7 +16,7 @@ import {
   BookOpen,
   GraduationCap,
   MessageSquareText,
-  HousePlug,
+  LayoutDashboard,
   MapPinHouse,
   GitCompareArrows,
   LayoutGrid,
@@ -125,7 +125,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     () => [
       {
         path: "/app/model-dashboard",
-        icon: HousePlug,
+        icon: LayoutDashboard,
         title: t("common.sidebar.energySimulations"),
         color: "#8b5cf6",
         bgColor: "#ede9fe",

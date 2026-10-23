@@ -14,7 +14,7 @@ import {
 	FolderInput,
 	Copy,
 	Edit,
-	BarChart3,
+	LayoutDashboard,
 	AlertCircle,
 	GitCompareArrows,
 	Zap,
@@ -819,7 +819,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
 				{/* Page header */}
 				<PageHeader
-					icon={BarChart3}
+					icon={LayoutDashboard}
 					title={t('model.dashboard')}
 					subtitle={t('model.manageConfigurations')}
 					actions={
@@ -1134,7 +1134,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
 									<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-										<BarChart3 className="h-7 w-7 text-muted-foreground" />
+										<LayoutDashboard className="h-7 w-7 text-muted-foreground" />
 									</div>
 									<h3 className="text-base font-semibold tracking-tight text-foreground">{t('model.noModelsFound')}</h3>
 									<p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
