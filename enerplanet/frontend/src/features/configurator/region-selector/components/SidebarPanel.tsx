@@ -319,7 +319,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             <Button
               variant="outline"
               onClick={onOpenTechDrawer}
-              className="h-auto flex-1 cursor-pointer justify-start gap-3 px-3 py-2 text-left"
+              className="h-auto flex-1 cursor-pointer justify-start gap-3 border-border px-3 py-2 text-left dark:border-gray-500 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
               <CircuitBoard className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 flex-1">
