@@ -58,7 +58,7 @@ import {
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { GridStatsBadge } from "./components/GridStatsBadge";
-import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
@@ -552,15 +552,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <MapContainer
         key={editMode ? `edit-${existingModelId}` : "create"}
         modal={false}
-        topBar={
-          <WorkflowBar
-              polygonCount={state.allPolygons.length}
-              isGeneratingGrid={state.isGeneratingGrid}
-              hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-              siteMode={siteMode}
-              hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-            />
-        }
         sidebar={
           <SidebarPanel
             state={state}
@@ -594,6 +585,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
+            <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
+              <WorkflowBar
+                polygonCount={state.allPolygons.length}
+                isGeneratingGrid={state.isGeneratingGrid}
+                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                siteMode={siteMode}
+                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+              />
+            </div>
             {gridResultIds.length > 0 && (
               <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
                 <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />

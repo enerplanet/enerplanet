@@ -15,7 +15,10 @@ interface WorkflowBarProps {
 	hasAddedTransformer: boolean;
 }
 
-/** The configurator's workflow as one row of steps in its top bar. */
+/** Centres an overlay on the part of the map the sidebar does not cover. */
+export const MAP_TOP_CENTRE = { left: "calc((100% - var(--sidebar-offset, 0rem)) / 2)" } as const;
+
+/** The configurator's workflow as a pill of numbered steps over the map. */
 export const WorkflowBar: FC<WorkflowBarProps> = ({
 	polygonCount,
 	isGeneratingGrid,
@@ -51,18 +54,18 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 	];
 
 	return (
-		<ol aria-label={t("workflow.title", "Workflow")} className="flex min-h-11 flex-wrap items-center gap-2 border-b border-border bg-background px-4 py-1.5 dark:bg-gray-800">
+		<ol aria-label={t("workflow.title", "Workflow")} className="flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-2.5 py-1 shadow-md backdrop-blur-sm">
 			{steps.map((step, i) => (
 				<li key={step.key} className="flex items-center gap-2">
 					{i > 0 && (
 						<span
 							aria-hidden="true"
-							className={cn("h-0.5 w-6", step.status === "pending" ? "bg-border" : "bg-primary")}
+							className={cn("h-px w-4", step.status === "pending" ? "bg-border" : "bg-primary")}
 						/>
 					)}
 					<span
 						className={cn(
-							"flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
+							"flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
 							step.status === "complete" && "bg-primary text-primary-foreground",
 							step.status === "active" && "border-2 border-primary text-primary",
 							step.status === "available" && "border-2 border-primary/60 text-foreground",
@@ -70,23 +73,23 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 						)}
 					>
 						{step.status === "complete" ? (
-							<Check className="h-3.5 w-3.5" aria-hidden="true" />
+							<Check className="h-3 w-3" aria-hidden="true" />
 						) : step.status === "active" ? (
-							<Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+							<Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
 						) : (
 							i + 1
 						)}
 					</span>
 					<span
 						className={cn(
-							"whitespace-nowrap text-sm",
+							"whitespace-nowrap text-xs",
 							step.status === "pending" ? "text-muted-foreground" : "font-medium text-foreground"
 						)}
 					>
 						{step.label}
 					</span>
 					{step.optional && step.status !== "complete" && (
-						<span className="text-xs text-muted-foreground">{t("workflow.optional", "optional")}</span>
+						<span className="text-[11px] text-muted-foreground">{t("workflow.optional", "optional")}</span>
 					)}
 				</li>
 			))}

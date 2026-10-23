@@ -7,7 +7,7 @@ import type { MapControlsPlacement } from "@/components/map-controls/MapControls
 import { BaseLayerSwitcher } from "@/components/map-controls/BaseLayerSwitcher";
 
 interface MapContainerProps {
-	topBar: ReactNode;
+	topBar?: ReactNode;
 	sidebar?: ReactNode;
 	showSidebar?: boolean;
 	mapOverlays?: ReactNode;
@@ -60,9 +60,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 					['--sidebar-offset']: showSidebar ? sidebarWidth : '0rem',
 				}}
 			>
-				<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
-					{topBar}
-				</div>
+				{topBar && (
+					<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
+						{topBar}
+					</div>
+				)}
 
 				{mapHeader && (
 					<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
