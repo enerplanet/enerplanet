@@ -1145,7 +1145,10 @@
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",
     "selectedCount_other": "{{count}} selected",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "starredFilter": "Starred",
+    "starredFilterHint": "Show only starred models",
+    "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here."
   },
   "polygon": {
     "drawRegion": "Draw Your Region",

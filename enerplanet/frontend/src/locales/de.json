@@ -1145,7 +1145,10 @@
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",
     "selectedCount_other": "{{count}} ausgewählt",
-    "clearSelection": "Auswahl aufheben"
+    "clearSelection": "Auswahl aufheben",
+    "starredFilter": "Markiert",
+    "starredFilterHint": "Nur markierte Modelle anzeigen",
+    "noStarredModels": "Noch keine markierten Modelle. Markieren Sie ein Modell mit dem Stern neben seinem Namen, um es hier zu finden."
   },
   "polygon": {
     "drawRegion": "Zeichnen Sie Ihre Region",

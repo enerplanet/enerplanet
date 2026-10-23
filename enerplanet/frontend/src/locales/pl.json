@@ -904,7 +904,10 @@
     "selectedCount_few": "{{count}} zaznaczone",
     "selectedCount_many": "{{count}} zaznaczonych",
     "selectedCount_other": "{{count}} zaznaczonych",
-    "clearSelection": "Wyczyść zaznaczenie"
+    "clearSelection": "Wyczyść zaznaczenie",
+    "starredFilter": "Oznaczone",
+    "starredFilterHint": "Pokaż tylko oznaczone modele",
+    "noStarredModels": "Brak oznaczonych modeli. Oznacz model gwiazdką obok jego nazwy, aby znaleźć go tutaj."
   },
   "polygon": {
     "drawRegion": "Narysuj swój region",

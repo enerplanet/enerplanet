@@ -889,7 +889,10 @@
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",
     "selectedCount_other": "{{count}} geselecteerd",
-    "clearSelection": "Selectie wissen"
+    "clearSelection": "Selectie wissen",
+    "starredFilter": "Met ster",
+    "starredFilterHint": "Alleen modellen met ster tonen",
+    "noStarredModels": "Nog geen modellen met ster. Geef een model een ster naast de naam om het hier te vinden."
   },
   "polygon": {
     "drawRegion": "Teken je regio",

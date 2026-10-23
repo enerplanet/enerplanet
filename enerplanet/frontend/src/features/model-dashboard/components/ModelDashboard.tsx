@@ -6,6 +6,7 @@ import {
 	Settings,
 	Search,
 	ArrowUpDown,
+	Star,
 	RefreshCw,
 	ChevronUp,
 	ChevronDown,
@@ -246,6 +247,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [currentPage, setCurrentPage] = useState<number>(0);
 	const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 	const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>(undefined);
+	const [starredOnly, setStarredOnly] = useState(false);
+	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
 
 	const { data: modelsResponse, isLoading: isLoadingModels, refetch: refetchModels } = useModelsQuery({
 		limit: itemsPerPage,
@@ -255,6 +258,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		sort_by: orderBy,
 		sort_order: order,
 		group: "families",
+		ids: starredOnly ? favoriteIds.join(",") : undefined,
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
@@ -406,19 +410,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	const filteredModels = models;
 
-	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
-	const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-	const sortedModels = useMemo(() => {
-		// Server already sorts by orderBy/order — only reorder favorites to top
-		return [...filteredModels].sort((a, b) => {
-			const aFav = favoriteIdSet.has(a.id) ? 0 : 1;
-			const bFav = favoriteIdSet.has(b.id) ? 0 : 1;
-			return aFav - bFav;
-		});
-	}, [filteredModels, favoriteIdSet]);
-
-	const orderedModels = useMemo(() => organizeModelsHierarchically(sortedModels), [sortedModels]);
+	// The server's order stands; starring a model filters, it does not move it.
+	const orderedModels = useMemo(() => organizeModelsHierarchically(filteredModels), [filteredModels]);
 
 	const paginatedModels = orderedModels;
 	const modelTitlesByID = useMemo(() => {
@@ -892,6 +885,17 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								/>
 							</div>
 
+							<button
+								type="button"
+								onClick={() => { setStarredOnly((on) => !on); setCurrentPage(0); }}
+								aria-pressed={starredOnly}
+								title={t('model.starredFilterHint')}
+								className={`${TOOLBAR_BUTTON_CLASS} ${starredOnly ? "bg-muted" : ""}`}
+							>
+								<Star className={`h-4 w-4 ${starredOnly ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} aria-hidden="true" />
+								{t('model.starredFilter')}
+							</button>
+
 								{/* Workspace Controls */}
 								<div className="flex items-center gap-2">
 									{isLoadingWorkspace ? (
@@ -1097,7 +1101,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											</tbody>
 										</table>
 									</div>
-									{sortedModels.length > 0 && (
+									{filteredModels.length > 0 && (
 										<Pagination
 											currentPage={currentPage}
 											totalItems={totalItems}
@@ -1118,37 +1122,41 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									</div>
 									<h3 className="text-base font-semibold tracking-tight text-foreground">{t('model.noModelsFound')}</h3>
 									<p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-										{filterText
-											? t('model.noModelsMatch', { search: filterText })
-											: t('model.noModelsYet')}
+										{starredOnly
+											? t('model.noStarredModels')
+											: filterText
+												? t('model.noModelsMatch', { search: filterText })
+												: t('model.noModelsYet')}
 									</p>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span>
-												<button
-													onClick={handleNewModel}
-													disabled={isModelLimitReached}
-													className={`mt-6 ${
-														isModelLimitReached
-															? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
-															: PRIMARY_BUTTON_CLASS
-													}`}
-												>
-													{isModelLimitReached ? (
-														<AlertCircle className="h-4 w-4" />
-													) : (
-														<Plus className="h-4 w-4" />
-													)}
-													{t('model.createFirstModel')}
-												</button>
-											</span>
-										</TooltipTrigger>
-										{isModelLimitReached && (
-											<TooltipContent>
-												{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
-											</TooltipContent>
-										)}
-									</Tooltip>
+									{!starredOnly && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span>
+													<button
+														onClick={handleNewModel}
+														disabled={isModelLimitReached}
+														className={`mt-6 ${
+															isModelLimitReached
+																? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
+																: PRIMARY_BUTTON_CLASS
+														}`}
+													>
+														{isModelLimitReached ? (
+															<AlertCircle className="h-4 w-4" />
+														) : (
+															<Plus className="h-4 w-4" />
+														)}
+														{t('model.createFirstModel')}
+													</button>
+												</span>
+											</TooltipTrigger>
+											{isModelLimitReached && (
+												<TooltipContent>
+													{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
+												</TooltipContent>
+											)}
+										</Tooltip>
+									)}
 								</div>
 							)}
 							</>

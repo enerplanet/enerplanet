@@ -904,7 +904,10 @@
     "selectedCount_few": "{{count}} vybrány",
     "selectedCount_many": "{{count}} vybráno",
     "selectedCount_other": "{{count}} vybráno",
-    "clearSelection": "Zrušit výběr"
+    "clearSelection": "Zrušit výběr",
+    "starredFilter": "Označené",
+    "starredFilterHint": "Zobrazit jen označené modely",
+    "noStarredModels": "Zatím žádné označené modely. Označte model hvězdičkou vedle jeho názvu a najdete ho zde."
   },
   "polygon": {
     "drawRegion": "Nakreslete svůj region",

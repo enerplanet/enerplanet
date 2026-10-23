@@ -1146,7 +1146,10 @@
     "workspaceActions": "Acciones del espacio de trabajo",
     "selectedCount_one": "{{count}} seleccionado",
     "selectedCount_other": "{{count}} seleccionados",
-    "clearSelection": "Quitar selección"
+    "clearSelection": "Quitar selección",
+    "starredFilter": "Destacados",
+    "starredFilterHint": "Mostrar solo los modelos destacados",
+    "noStarredModels": "Aún no hay modelos destacados. Destaque un modelo con la estrella junto a su nombre para encontrarlo aquí."
   },
   "polygon": {
     "drawRegion": "Dibuja tu región",
