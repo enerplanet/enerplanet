@@ -188,6 +188,49 @@ func (s *Store) Link(owner Owner, revision string, links []Link) error {
 	return nil
 }
 
+// ReplaceLinks makes links the owner's only links of seriesName at revision:
+// links of that series not among them, such as a roof face that is gone, are
+// removed.
+func (s *Store) ReplaceLinks(owner Owner, revision, seriesName string, links []Link) error {
+	if err := owner.validate(); err != nil {
+		return err
+	}
+	for _, l := range links {
+		if l.Series != seriesName {
+			return fmt.Errorf("replace %s links for %+v: link of building %s is series %s", seriesName, owner, l.BuildingRef, l.Series)
+		}
+	}
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		q := tx.Where("series = ?", seriesName)
+		if owner.ModelID != 0 {
+			q = q.Where("model_id = ?", owner.ModelID)
+		} else {
+			q = q.Where("draft_id = ?", owner.DraftID)
+		}
+		if err := q.Delete(&models.SeriesLink{}).Error; err != nil {
+			return fmt.Errorf("drop %s links of %+v: %w", seriesName, owner, err)
+		}
+		return NewStore(tx).Link(owner, revision, links)
+	})
+}
+
+// DeleteUnreferenced deletes generated profiles (BuEM and PV) created before
+// cutoff that no link refers to, with their values, and returns how many.
+// Uploaded profiles are kept.
+// Known limit: a profile created before cutoff but unlinked moments ago is
+// deleted at once, so a run that found it stored and has not linked it yet
+// fails to link. Record when a profile was last released if that shows up.
+func (s *Store) DeleteUnreferenced(cutoff time.Time) (int64, error) {
+	res := s.db.Exec(`DELETE FROM series_profiles AS p
+		WHERE p.origin IN (?, ?) AND p.created_at < ?
+		AND NOT EXISTS (SELECT 1 FROM series_links AS l WHERE l.profile_id = p.id)`,
+		models.SeriesOriginBuem, models.SeriesOriginPV, cutoff)
+	if res.Error != nil {
+		return 0, fmt.Errorf("delete profiles unreferenced before %s: %w", cutoff.Format(time.RFC3339), res.Error)
+	}
+	return res.RowsAffected, nil
+}
+
 // MoveDraft hands a draft's links to a model at revision, for the model saved
 // from that draft. A link the model already has for the same building, part
 // and series wins, and the draft's duplicate is dropped. Returns how many
