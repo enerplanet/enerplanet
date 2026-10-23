@@ -3,7 +3,6 @@ import { useAuth } from "@/providers/auth-provider";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { auth } from "@/configuration";
 import { AppLayout } from "@/components/app-layout/AppLayout";
-import { cn } from "@/lib/utils";
 import { User } from "@/types/user";
 
 type AccessLevel = User["access_level"];
@@ -19,16 +18,9 @@ export const Middleware: React.FC<MiddlewareProps> = ({ type = "guest", access }
 
 	if (isLoading) {
 		return (
-			<div className="flex justify-center items-center h-full w-full bg-background dark:bg-surface-dark">
-				<div
-					className={cn(
-						"size-10border-4 border-t-primary-500 border-l-primary-500 border-b-background border-r-background",
-						"dark:border-b-surface-dark dark:border-r-surface-dark",
-						"rounded-full animate-spin"
-					)}
-				>
-					loading
-				</div>
+			<div role="status" className="flex h-full w-full flex-col items-center justify-center gap-3 bg-background dark:bg-surface-dark">
+				<div aria-hidden="true" className="size-10 rounded-full border-4 border-muted border-t-foreground animate-spin" />
+				<span className="text-sm text-muted-foreground">Loading</span>
 			</div>
 		);
 	}
