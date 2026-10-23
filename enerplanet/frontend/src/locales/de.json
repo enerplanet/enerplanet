@@ -1908,7 +1908,12 @@
       "historicYears_one": "historisches Jahr {{range}}",
       "historicYears_other": "historische Jahre {{range}} ({{count}} Jahre)",
       "scenarioYears_one": "Szenarien aus dem Jahr {{range}}",
-      "scenarioYears_other": "Szenarien aus {{count}} Jahren, {{range}}"
+      "scenarioYears_other": "Szenarien aus {{count}} Jahren, {{range}}",
+      "shortChoices": {
+        "p10": "Niedrig (P10)",
+        "p50": "Typisch (P50)",
+        "p90": "Hoch (P90)"
+      }
     },
     "periodParts": {
       "label": "Zeitraum",
