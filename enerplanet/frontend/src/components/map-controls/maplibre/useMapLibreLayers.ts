@@ -16,6 +16,7 @@ import {
 import { reprojectGeoJSON } from './maplibre-utils';
 import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
 import { useLod2Surfaces } from './useLod2Surfaces';
+import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
@@ -32,6 +33,7 @@ export interface LayerData {
   onBoundaryRegionClick?: (regionName: string) => void;
   userModelGeoJSON?: any;
   onUserModelClick?: (modelId: number, status?: string) => void;
+  techsFor?: TechsFor;
 }
 
 /**
@@ -59,6 +61,7 @@ export function useMapLibreLayers(
     onBoundaryRegionClick,
     userModelGeoJSON,
     onUserModelClick,
+    techsFor,
   } = data;
 
   const boundaryClickRef = useRef(onBoundaryRegionClick);
@@ -77,7 +80,8 @@ export function useMapLibreLayers(
   const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
 
-  const { surfaces: lod2, loading: lod2Loading } = useLod2Surfaces(buildings, mapReady);
+  const { surfaces: lod2, loading: lod2Loading, country } = useLod2Surfaces(buildings, mapReady);
+  const pvSurfaceIds = usePvSurfaceIds(buildings, techsFor, country);
   const lod2LayerRef = useRef<Lod2Layer | null>(null);
 
   const loadAll = useCallback((map: maplibregl.Map) => {
@@ -136,11 +140,11 @@ export function useMapLibreLayers(
         lod2LayerRef.current = new Lod2Layer();
         map.addLayer(lod2LayerRef.current);
       }
-      lod2LayerRef.current.setBuildings(lod2);
+      lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds);
     };
     if (map.isStyleLoaded()) apply();
     else map.once('idle', apply);
-  }, [mapRef, mapReady, lod2]);
+  }, [mapRef, mapReady, lod2, pvSurfaceIds]);
 
   // Interactions setup
   useEffect(() => {

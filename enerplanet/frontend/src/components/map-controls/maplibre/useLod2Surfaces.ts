@@ -4,12 +4,14 @@ import axios from '@/lib/axios';
 
 /** One LoD2 roof or wall polygon: rings of [lon, lat, height above sea level in m]. */
 export interface Lod2Surface {
+  /** City2TABULA's surface id, which stored PV arrays refer to. */
+  id: string;
   roof: boolean;
   rings: number[][][];
 }
 
 interface GeometryResponse {
-  buildings: { surfaces?: { type: string; geojson?: { type: string; coordinates: unknown } }[] }[];
+  buildings: { surfaces?: { id?: string; type: string; geojson?: { type: string; coordinates: unknown } }[] }[];
 }
 
 interface EnrichAnswer {
@@ -36,7 +38,7 @@ export function lod2SurfacesOf(res: GeometryResponse): Lod2Surface[] {
       let polygons: number[][][][] = [];
       if (geometry?.type === 'Polygon') polygons = [geometry.coordinates as number[][][]];
       else if (geometry?.type === 'MultiPolygon') polygons = geometry.coordinates as number[][][][];
-      for (const rings of polygons) out.push({ roof: surface.type === 'RoofSurface', rings });
+      for (const rings of polygons) out.push({ id: surface.id ?? '', roof: surface.type === 'RoofSurface', rings });
     }
   }
   return out;
@@ -66,6 +68,15 @@ function bboxOf(buildings: GeoJSON.FeatureCollection) {
   return box;
 }
 
+/** Runs fn over items, PARALLEL_REQUESTS at a time, until all are done or cancelled() is true. */
+export async function forEachLimited<T>(items: T[], fn: (item: T) => Promise<void>, cancelled: () => boolean): Promise<void> {
+  const queue = [...items];
+  const worker = async () => {
+    while (!cancelled() && queue.length > 0) await fn(queue.shift()!);
+  };
+  await Promise.all(Array.from({ length: PARALLEL_REQUESTS }, worker));
+}
+
 function surfacesFor(country: string, objectId: string): Promise<Lod2Surface[]> {
   let request = surfaceCache.get(objectId);
   if (!request) {
@@ -84,9 +95,10 @@ function surfacesFor(country: string, objectId: string): Promise<Lod2Surface[]> 
  * osm_id, loaded only while enabled. A building without 3D data is absent, so
  * the caller can keep drawing it another way; loading is true until all are asked.
  */
-export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean } {
+export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean; country: string | null } {
   const [byOsmId, setByOsmId] = useState<Map<string, Lod2Surface[]>>(() => new Map());
   const [loading, setLoading] = useState(false);
+  const [country, setCountry] = useState<string | null>(null);
   // The building data is rebuilt on many renders; the lookup restarts only when
   // the set of buildings changes, and reads their outlines from this ref.
   const buildingsRef = useRef(buildings);
@@ -107,26 +119,23 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
       const country = enrich.data.country;
       const entries = enrich.data.data ?? {};
       if (!country) return;
+      if (!cancelled) setCountry(country);
       const queue = osmIds.flatMap((osmId) => {
         const objectId = entries[osmId]?.object_id;
         return objectId ? [{ osmId, objectId }] : [];
       });
       const found = new Map<string, Lod2Surface[]>();
       let done = 0;
-      const worker = async () => {
-        while (!cancelled && queue.length > 0) {
-          const { osmId, objectId } = queue.shift()!;
-          try {
-            const surfaces = await surfacesFor(country, objectId);
-            if (surfaces.length > 0) found.set(osmId, surfaces);
-          } catch (err) {
-            console.warn(`[3d] no LoD2 surfaces for building ${osmId} (object ${objectId})`, err);
-          }
-          done++;
-          if (!cancelled && done % PUBLISH_EVERY === 0) setByOsmId(new Map(found));
+      await forEachLimited(queue, async ({ osmId, objectId }) => {
+        try {
+          const surfaces = await surfacesFor(country, objectId);
+          if (surfaces.length > 0) found.set(osmId, surfaces);
+        } catch (err) {
+          console.warn(`[3d] no LoD2 surfaces for building ${osmId} (object ${objectId})`, err);
         }
-      };
-      await Promise.all(Array.from({ length: PARALLEL_REQUESTS }, worker));
+        done++;
+        if (!cancelled && done % PUBLISH_EVERY === 0) setByOsmId(new Map(found));
+      }, () => cancelled);
       if (!cancelled) setByOsmId(new Map(found));
     };
 
@@ -136,5 +145,5 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
     return () => { cancelled = true; };
   }, [buildingKey, enabled]);
 
-  return { surfaces: byOsmId, loading };
+  return { surfaces: byOsmId, loading, country };
 }
