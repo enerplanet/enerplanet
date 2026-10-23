@@ -5,12 +5,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
 } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
+import { RAIL_ICON_SLOT, RAIL_LABEL } from "@/components/app-layout/rail";
 import { TimeAgo } from "@/components/ui/TimeAgo";
 import {
   useNotificationsQuery,
@@ -25,7 +23,13 @@ import {
   getNotificationTypeIcon,
 } from "./NotificationDetailDialog";
 
-export const NotificationDropdown: React.FC = () => {
+interface NotificationDropdownProps {
+  /** Called when the menu opens or closes, so the rail stays expanded while it is open. */
+  onOpenChange?: (open: boolean) => void;
+}
+
+/** The bell in the left rail, with its name while the rail is expanded, and the notification menu. */
+export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onOpenChange }) => {
   const { t } = useTranslation();
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -91,36 +95,32 @@ export const NotificationDropdown: React.FC = () => {
 
   return (
     <>
-    <Tooltip>
-      <DropdownMenu>
-        <TooltipTrigger asChild>
+      <DropdownMenu onOpenChange={onOpenChange}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label={t('notifications.title')}
-              className="relative flex h-11 w-11 items-center justify-center rounded-button transition-colors group text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              className="group flex h-11 w-full cursor-pointer items-center rounded-button text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <Bell className={cn(
-                "w-5 h-5 transition-transform duration-200",
-                unreadCount > 0 && "group-hover:rotate-12"
-              )} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center">
-                  {showPulse && (
-                    <span className="absolute inline-flex h-4 w-4 rounded-full bg-foreground/40 animate-ping"></span>
-                  )}
-                  <span className="relative inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-foreground text-[9px] font-semibold text-background shadow-sm">
-                    {unreadCount > 99 ? '99+' : unreadCount}
+              <span className={RAIL_ICON_SLOT}>
+                <Bell className={cn(
+                  "w-5 h-5 transition-transform duration-200",
+                  unreadCount > 0 && "group-hover:rotate-12"
+                )} aria-hidden="true" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 flex items-center justify-center">
+                    {showPulse && (
+                      <span className="absolute inline-flex h-4 w-4 rounded-full bg-foreground/40 animate-ping"></span>
+                    )}
+                    <span className="relative inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-foreground text-[9px] font-semibold text-background shadow-sm">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   </span>
-                </span>
-              )}
+                )}
+              </span>
+              <span className={RAIL_LABEL}>{t('notifications.title')}</span>
             </button>
           </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>{t('notifications.title')}</p>
-        </TooltipContent>
-      {/* The bell (2.75rem) is centred in the 4.5rem rail: 0.875rem (16 px at the 18 px root) to the rail edge, plus an 8 px gap. */}
+      {/* The trigger ends 0.875rem (16 px at the 18 px root) inside the rail edge, collapsed or expanded, plus an 8 px gap. */}
       <DropdownMenuContent side="right" align="end" sideOffset={24} className="w-80 p-0 rounded-xl border border-border shadow-xl overflow-hidden bg-card z-[52]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-muted border-b border-border">
@@ -223,7 +223,6 @@ export const NotificationDropdown: React.FC = () => {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  </Tooltip>
 
     {/* Notification Detail Dialog */}
     <NotificationDetailDialog

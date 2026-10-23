@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocation, useNavigate } from "react-router-dom";
 import OnboardingWizard from "@/features/onboarding/OnboardingWizard";
@@ -34,6 +34,7 @@ import {
   Button,
 } from "@spatialhub/ui";
 import SidebarButton from "@/components/ui/SidebarButton";
+import { RAIL_HIDE, RAIL_ICON_SLOT, RAIL_LABEL, RAIL_SHOW } from "@/components/app-layout/rail";
 import { useMapStore } from "@/features/interactive-map/store/map-store";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useProductTour } from "@/features/guided-tour/hooks/useProductTour";
@@ -70,6 +71,10 @@ interface UserMenuItem {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user } = useAuth();
+  const [bellOpen, setBellOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  // A rail menu sits outside the rail, so the rail stays expanded while one is open.
+  const railMenuOpen = bellOpen || profileOpen;
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuthStore();
@@ -200,23 +205,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         style={cssVariables}
       >
 
-        <aside className="fixed left-0 bottom-0 bg-card border-r border-border shadow-lg z-[51] w-[var(--sidebar-width)] top-[var(--topbar-height)]">
-          <div className="flex flex-col items-center gap-2 py-4">
+        {/* Widens over the page, not beside it, so the content and the map keep their size. */}
+        <aside
+          data-expanded={railMenuOpen}
+          className="group/rail fixed left-0 bottom-0 z-[51] w-[var(--sidebar-width)] overflow-hidden border-r border-border bg-card shadow-lg transition-[width] duration-200 top-[var(--topbar-height)] hover:w-60 hover:delay-150 has-[[data-rail-expand]:focus-visible]:w-60 data-[expanded=true]:w-60 motion-reduce:transition-none"
+        >
+          <div className="flex flex-col gap-2 px-[0.875rem] py-4">
             <a
               href="/app/model-dashboard"
               onClick={(e) => { if (!e.ctrlKey && !e.metaKey && e.button === 0) { e.preventDefault(); navigate("/app/model-dashboard"); } }}
               aria-label="EnerPlanET"
-              className="mb-8 rounded-lg p-1 transition-opacity hover:opacity-80"
+              data-rail-expand
+              className="relative mb-8 block h-11 rounded-lg transition-opacity hover:opacity-80"
             >
-              <img src="/brand/enerplanet-mark-green-outline.svg" alt="EnerPlanET" className="h-10 w-auto dark:hidden" />
-              <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="EnerPlanET" className="hidden h-10 w-auto dark:block" />
+              <img src="/brand/enerplanet-mark-green-outline.svg" alt="" className={`absolute left-0.5 top-0.5 h-10 w-auto dark:hidden ${RAIL_HIDE}`} />
+              <img src="/brand/enerplanet-mark-green-dark-outline.svg" alt="" className={`absolute left-0.5 top-0.5 hidden h-10 w-auto dark:block ${RAIL_HIDE}`} />
+              <img src="/brand/enerplanet-lockup-green-outline.svg" alt="" className={`absolute left-0 top-0.5 h-10 w-auto max-w-none dark:hidden ${RAIL_SHOW}`} />
+              <img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="" className={`absolute left-0 top-0.5 hidden h-10 w-auto max-w-none dark:block ${RAIL_SHOW}`} />
             </a>
             <Authorized>
               {sidebarItems.map((item) => (
                 <SidebarButton
                   key={item.path}
                   icon={item.icon}
-                  tooltip={item.title}
+                  label={item.title}
                   onClick={() => navigate(item.path)}
                   isActive={isActive(item.path)}
                   dataTour={item.dataTour}
@@ -226,12 +238,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           </div>
 
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 text-center">
+          <div className="absolute bottom-8 left-0 right-0 flex flex-col gap-3 px-[0.875rem]">
             <Authorized>
-              <NotificationDropdown />
+              <NotificationDropdown onOpenChange={setBellOpen} />
             </Authorized>
             {!user && (
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex w-11 flex-col items-center gap-3">
                 <ThemeToggle />
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -262,16 +274,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 the bottom of the left rail; the menu opens to the right of it. */}
             <Authorized>
               <div className="relative" data-tour="profile">
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={setProfileOpen}>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="cursor-pointer rounded-full size-11 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md group"
-                      title={t("common.tooltips.profile")}
+                      aria-label={t("common.tooltips.profile")}
+                      className="group flex h-11 w-full cursor-pointer items-center rounded-full text-left transition-colors hover:bg-muted"
                     >
-                      <div className="text-base font-semibold text-gray-700 dark:text-gray-200 group-hover:scale-105 transition-transform">
-                        {getUserInitial()}
-                      </div>
+                      <span className={RAIL_ICON_SLOT}>
+                        <span className="flex size-11 items-center justify-center rounded-full border border-gray-200 bg-gradient-to-br from-gray-100 to-gray-200 text-base font-semibold text-gray-700 shadow-sm dark:border-gray-600 dark:from-gray-700 dark:to-gray-800 dark:text-gray-200">
+                          {getUserInitial()}
+                        </span>
+                      </span>
+                      <span className={`ml-2 ${RAIL_LABEL} text-foreground`}>{user?.name || user?.email}</span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={24}>
