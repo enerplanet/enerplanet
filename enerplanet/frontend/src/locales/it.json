@@ -1638,7 +1638,8 @@
       "notYet": "Non ancora analizzato. L'analisi calcola il fabbisogno di riscaldamento, raffrescamento ed elettricità di ogni edificio.",
       "saveFailed": "Impossibile salvare il modello, quindi l'analisi non è stata avviata.",
       "startFailed": "Impossibile avviare l'analisi."
-    }
+    },
+    "periodWithinYear": "Un periodo resta entro un anno solare, quindi ora termina il {{date}}."
   },
   "mapLayers": {
     "title": "Livelli mappa",

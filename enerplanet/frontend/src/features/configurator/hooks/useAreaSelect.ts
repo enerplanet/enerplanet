@@ -36,7 +36,7 @@ export const useAreaSelect = ({
     const navigate = useNavigate();
     const params = useParams();
     const modelId = editMode ? (existingModelId || Number.parseInt(params.id || '0', 10)) : undefined;
-    const { showSuccess, showError } = useNotification();
+    const { showSuccess, showError, showWarning } = useNotification();
     const currentWorkspace = useWorkspaceStore(state => state.currentWorkspace);
     const { map } = useMapStore();
     const { mapRef } = useMapProvider();
@@ -93,7 +93,16 @@ export const useAreaSelect = ({
     useEffect(() => { if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return; const orig = window.history.pushState.bind(window.history); const patched: typeof window.history.pushState = (data, _u, url) => { if (isInternalNavRef.current) { isInternalNavRef.current = false; orig(data, _u, url); return; } let target: string | null = null; if (typeof url === 'string') try { target = new URL(url, window.location.origin).pathname; } catch { target = url; } if (target && target !== window.location.pathname) { setPendingNavigationUrl(target); setShowUnsavedDialog(true); return; } orig(data, _u, url); }; window.history.pushState = patched; return () => { window.history.pushState = orig; }; }, [editMode, isModified]);
 
     // ── Handlers ──
-    const handleUpdateRange = useCallback((e: any) => { const f = ({ year, month, day }: any) => `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`; setFromDate(f(e.start)); setToDate(f(e.end)); }, [setFromDate, setToDate]);
+    // The weather and the stored series cover one calendar year, so a period ends in its start's year.
+    const handleUpdateRange = useCallback((e: any) => {
+        const f = ({ year, month, day }: any) => `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        let end = e.end;
+        if (end.year > e.start.year) {
+            end = { year: e.start.year, month: 12, day: 31 };
+            showWarning(t("simulation.periodWithinYear", { date: `31.12.${e.start.year}` }));
+        }
+        setFromDate(f(e.start)); setToDate(f(end));
+    }, [setFromDate, setToDate, showWarning, t]);
     const handleTourComplete = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleTourSkip = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleCancel = useCallback(() => { if (onCancel) { onCancel(); return; } if (isModified && editMode) { setShowUnsavedDialog(true); return; } isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [onCancel, navigate, isModified, editMode, setShowUnsavedDialog]);

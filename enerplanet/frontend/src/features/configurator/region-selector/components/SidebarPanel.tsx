@@ -302,6 +302,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                   maxValue={getDateBounds().maxValue}
                   minYear={getDateBounds().minYear}
                   maxYear={getDateBounds().maxYear}
+                  withinStartYear
                 />
               </Dialog>
             </Popover>

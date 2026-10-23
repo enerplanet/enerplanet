@@ -1652,7 +1652,8 @@
       "notYet": "Zatím neanalyzováno. Analýza vypočítá potřebu vytápění, chlazení a elektřiny každé budovy.",
       "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
       "startFailed": "Analýzu se nepodařilo spustit."
-    }
+    },
+    "periodWithinYear": "Období zůstává v rámci jednoho kalendářního roku, proto nyní končí {{date}}."
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

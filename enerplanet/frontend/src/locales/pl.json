@@ -1652,7 +1652,8 @@
       "notYet": "Jeszcze nie przeanalizowano. Analiza oblicza zapotrzebowanie każdego budynku na ogrzewanie, chłodzenie i energię elektryczną.",
       "saveFailed": "Nie udało się zapisać modelu, więc analiza się nie rozpoczęła.",
       "startFailed": "Nie udało się rozpocząć analizy."
-    }
+    },
+    "periodWithinYear": "Okres mieści się w jednym roku kalendarzowym, więc kończy się teraz {{date}}."
   },
   "mapLayers": {
     "title": "Warstwy mapy",

@@ -1,7 +1,7 @@
 "use client"
 
 import { ComponentProps } from "react"
-import { getLocalTimeZone, today } from "@internationalized/date"
+import { getLocalTimeZone, today, type CalendarDate } from "@internationalized/date"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   CalendarYearPicker,
   composeRenderProps,
   RangeCalendar as RangeCalendarRac,
+  type DateValue,
 } from "react-aria-components"
 
 import { cn } from "@/lib/utils/index"
@@ -26,6 +27,8 @@ type RangeCalendarProps = ComponentProps<typeof RangeCalendarRac> &
   BaseCalendarProps & {
     minYear?: number
     maxYear?: number
+    /** Once a start date is picked, the end can only fall in the start's calendar year. */
+    withinStartYear?: boolean
   }
 
 const PICKER_SELECT =
@@ -33,16 +36,25 @@ const PICKER_SELECT =
 
 function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYear: number }>) {
   return (
-    <header className="flex w-full items-center gap-1 pb-1">
+    // RangeCalendar commits a half-picked range on a pointerup inside it that is
+    // not on an enabled button, and when focus leaves it. The header only moves the
+    // view, so a press on it must do neither: its pointerup stops here, and outside
+    // the selects it keeps the focus where it is. A disabled arrow lets presses
+    // through to the header, as the browser sends it no mouse events.
+    <header
+      className="flex w-full items-center gap-1 pb-1"
+      onPointerUp={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        if (!(e.target as HTMLElement).closest("select")) e.preventDefault()
+      }}
+    >
       <Button
         slot="previous"
-        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-30"
       >
         <ChevronLeftIcon size={16} />
       </Button>
-      {/* RangeCalendar commits a half-picked range on any pointerup inside it that
-          is not on a button, so the selects keep theirs: they only move the view. */}
-      <div className="flex grow justify-center gap-1" onPointerUp={(e) => e.stopPropagation()}>
+      <div className="flex grow justify-center gap-1">
         <CalendarMonthPicker format="long">
           {({ items, value, onChange, "aria-label": label }) => (
             <select aria-label={label} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} className={PICKER_SELECT}>
@@ -70,7 +82,7 @@ function CalendarHeader({ minYear, maxYear }: Readonly<{ minYear: number; maxYea
       </div>
       <Button
         slot="next"
-        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+        className="text-muted-foreground/80 hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-md transition-[color,box-shadow] outline-none focus-visible:ring-[3px] data-disabled:pointer-events-none data-disabled:opacity-30"
       >
         <ChevronRightIcon size={16} />
       </Button>
@@ -115,10 +127,14 @@ function CalendarGridComponent({ isRange = false }: Readonly<{ isRange?: boolean
   )
 }
 
-function RangeCalendar({ className, minYear = 1980, maxYear = 2025, ...props }: RangeCalendarProps) {
+function RangeCalendar({ className, minYear = 1980, maxYear = 2025, withinStartYear = false, isDateUnavailable, ...props }: RangeCalendarProps) {
+  // anchor is the start date picked so far, null before one is.
+  const unavailable = (date: DateValue, anchor: CalendarDate | null) =>
+    (isDateUnavailable?.(date, anchor) ?? false) || (withinStartYear && anchor !== null && date.year !== anchor.year)
   return (
     <RangeCalendarRac
       {...props}
+      isDateUnavailable={unavailable}
       className={composeRenderProps(className, (className) =>
         cn("w-fit", className)
       )}

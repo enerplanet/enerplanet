@@ -1894,7 +1894,8 @@
       "notYet": "Aún no analizado. El análisis calcula la demanda de calefacción, refrigeración y electricidad de cada edificio.",
       "saveFailed": "No se pudo guardar el modelo, por lo que el análisis no se inició.",
       "startFailed": "No se pudo iniciar el análisis."
-    }
+    },
+    "periodWithinYear": "Un periodo se mantiene dentro de un año natural, por lo que ahora termina el {{date}}."
   },
   "mapLayers": {
     "title": "Capas del mapa",
