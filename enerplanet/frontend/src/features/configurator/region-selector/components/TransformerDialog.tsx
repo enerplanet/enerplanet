@@ -30,6 +30,8 @@ interface TransformerDialogProps {
     onDeleteTransformer?: (gridResultId: number) => Promise<void>;
     onMoveTransformer?: (gridResultId: number) => void;
     isUserPlaced?: boolean;
+    /** Shows Move and Delete: a user-placed station, or any station of a site grid. */
+    canEdit?: boolean;
 }
 
 export const TransformerDialog: FC<TransformerDialogProps> = ({
@@ -41,7 +43,8 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
     onOpenChange,
     onDeleteTransformer,
     onMoveTransformer,
-    isUserPlaced = false
+    isUserPlaced = false,
+    canEdit = false
 }) => {
     const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
@@ -149,7 +152,7 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
         )}
 
         <AlertDialogFooter className="flex-row gap-2">
-          {isUserPlaced && onMoveTransformer && selectedTransformer && (
+          {canEdit && onMoveTransformer && selectedTransformer && (
             <Button
               variant="outline"
               size="sm"
@@ -160,7 +163,7 @@ export const TransformerDialog: FC<TransformerDialogProps> = ({
               {t("model.move")}
             </Button>
           )}
-          {isUserPlaced && onDeleteTransformer && selectedTransformer && (
+          {canEdit && onDeleteTransformer && selectedTransformer && (
             <Button
               variant="outline"
               size="sm"

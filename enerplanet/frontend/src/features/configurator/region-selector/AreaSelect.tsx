@@ -306,6 +306,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     notification,
     allPolygons: state.allPolygons,
     handlePolygonDrawn: actions.handlePolygonDrawn,
+    refreshGrid,
     existingModelId,
     draftId,
   });
@@ -389,8 +390,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     userId: user?.id ? String(user.id) : undefined,
     existingModelId,
     draftId,
-    allPolygons: state.allPolygons,
-    handlePolygonModified: actions.handlePolygonModified,
+    refreshGrid,
   });
 
   // ── Tech dialog flow ─────────────────────────────────────────────
@@ -768,6 +768,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
           mapInteractions.setTransformerDialogOpen(false);
         }}
         isUserPlaced={mapInteractions.selectedTransformer?.osmId?.startsWith("user/") || false}
+        canEdit={mapInteractions.selectedTransformer?.osmId?.startsWith("user/") || !!siteScope(pylovoLayers.pylovoGridData)}
       />
 
       {/* Add Transformer Dialog */}

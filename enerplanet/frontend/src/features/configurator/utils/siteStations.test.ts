@@ -56,3 +56,24 @@ describe("stationsFromGrid before the site is regenerated", () => {
         expect([...stations.values()].filter(s => s.transformer_id === null)).toHaveLength(0);
     });
 });
+
+describe("stationsFromGrid after a station was moved or deleted", () => {
+    it("leaves out a stored station that was deleted", () => {
+        const stations = stationsFromGrid([], grid);
+
+        expect(stations.has("101")).toBe(false);
+        expect(stations.has("102")).toBe(true);
+    });
+
+    it("leaves out a generated station once the site was edited since generation", () => {
+        // grid 102's station was stored by an earlier edit, then moved away from where the grid shows it.
+        const moved: SiteStation[] = [
+            ...stored,
+            { transformer_id: 6, geom: point(12.95, 48.85), rated_kva: 250, cost_eur: null, assigned_building_ids: [] },
+        ];
+        const stations = stationsFromGrid(moved, grid, true);
+
+        expect(stations.has("102")).toBe(false);
+        expect([...stations.values()].map(s => s.transformer_id)).toEqual([5, 6]);
+    });
+});

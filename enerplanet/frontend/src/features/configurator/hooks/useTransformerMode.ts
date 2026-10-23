@@ -3,7 +3,7 @@ import { toLonLat } from "ol/proj";
 import type { Map as OLMap } from "ol";
 import { useTranslation } from "@spatialhub/i18n";
 import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
-import { addSiteStation } from "@/features/configurator/utils/siteStations";
+import { addSiteStation, moveSiteStation } from "@/features/configurator/utils/siteStations";
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -222,6 +222,7 @@ interface MoveTransformerOptions {
     coordinates: [number, number][],
     allPolygons: [number, number][][]
   ) => Promise<void>;
+  refreshGrid: () => Promise<void>;
   existingModelId?: number;
   draftId?: string;
 }
@@ -239,6 +240,7 @@ export const useMoveTransformerMode = ({
   notification,
   allPolygons,
   handlePolygonDrawn,
+  refreshGrid,
   existingModelId,
   draftId,
 }: MoveTransformerOptions): MoveTransformerModeState => {
@@ -252,6 +254,8 @@ export const useMoveTransformerMode = ({
   tRef.current = t;
   const handlePolygonDrawnRef = useRef(handlePolygonDrawn);
   handlePolygonDrawnRef.current = handlePolygonDrawn;
+  const refreshGridRef = useRef(refreshGrid);
+  refreshGridRef.current = refreshGrid;
   const existingModelIdRef = useRef(existingModelId);
   existingModelIdRef.current = existingModelId;
   const draftIdRef = useRef(draftId);
@@ -311,6 +315,14 @@ export const useMoveTransformerMode = ({
       }
 
       try {
+        const grid = useModelStore.getState().pylovoGridData;
+        const site = siteScope(grid);
+        if (site && grid) {
+          await moveSiteStation(site.site_id, grid, transformerToMove, lonLatPair);
+          notificationRef.current.showSuccess(tRef.current("transformer.movingSuccess"));
+          await refreshGridRef.current();
+          return;
+        }
         const userId = user?.id ? String(user.id) : undefined;
         await pylovoService.moveTransformer(
           transformerToMove,
