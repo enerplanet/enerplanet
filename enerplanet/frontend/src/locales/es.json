@@ -1676,7 +1676,6 @@
     "title": "Configuración de simulación",
     "modelName": "Nombre del modelo",
     "modelNamePlaceholder": "Introduzca un nombre para su simulación energética",
-    "modelNameHint": "Dé a su simulación un nombre descriptivo",
     "simulationPeriod": "Período de simulación",
     "duration": "Duración",
     "days": "días",

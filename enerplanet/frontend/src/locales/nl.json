@@ -1416,7 +1416,6 @@
     "title": "Simulatieconfiguratie",
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
-    "modelNameHint": "Geef uw simulatie een beschrijvende naam",
     "simulationPeriod": "Simulatieperiode",
     "duration": "Duur",
     "days": "dagen",

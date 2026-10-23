@@ -355,7 +355,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               placeholder={t("simulation.modelNamePlaceholder")}
               className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
             />
-            <div className="text-xs text-muted-foreground mt-1">{t("simulation.modelNameHint")}</div>
           </div>
           <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
           <div className="relative" data-tour="date-range">

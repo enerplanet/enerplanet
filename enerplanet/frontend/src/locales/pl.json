@@ -1431,7 +1431,6 @@
     "title": "Konfiguracja symulacji",
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
-    "modelNameHint": "Nadaj swojej symulacji opisową nazwę",
     "simulationPeriod": "Okres symulacji",
     "duration": "Czas trwania",
     "days": "dni",
