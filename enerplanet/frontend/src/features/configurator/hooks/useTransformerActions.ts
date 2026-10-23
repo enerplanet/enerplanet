@@ -13,6 +13,8 @@ interface TransformerActionsOptions {
   existingModelId: number | undefined;
   draftId: string | undefined;
   refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: null) => void;
 }
 
 export const useTransformerActions = ({
@@ -22,6 +24,7 @@ export const useTransformerActions = ({
   existingModelId,
   draftId,
   refreshGrid,
+  previewSiteStation,
 }: TransformerActionsOptions) => {
   const selectedTransformer = useModelStore((s) => s.selectedTransformer);
   const setSelectedTransformer = useModelStore((s) => s.setSelectedTransformer);
@@ -47,6 +50,7 @@ export const useTransformerActions = ({
         const site = siteScope(grid);
         if (site && grid) {
           await removeSiteStation(site.site_id, grid, gridResultId);
+          previewSiteStation(gridResultId, null);
           notification.showSuccess("Transformer deleted");
         } else {
           const result = await pylovoService.deleteTransformer(
@@ -63,7 +67,7 @@ export const useTransformerActions = ({
         notification.showError(error?.message || "Failed to delete transformer");
       }
     },
-    [notification, refreshGrid, userId, existingModelId, draftId]
+    [notification, refreshGrid, previewSiteStation, userId, existingModelId, draftId]
   );
 
   return { handleTransformerKvaChange, handleDeleteTransformer };

@@ -1,5 +1,7 @@
+import { fromLonLat } from "ol/proj";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { getDataProjection } from "@/features/configurator/utils/gridLayerUtils";
 
 /** One station of a pylovo site, as GET and PUT /sites/{id}/transformers carry it. */
 export interface SiteStation {
@@ -116,4 +118,21 @@ export const removeSiteStation = async (siteId: number, grid: PylovoGridData, gr
     stationShownAs(stations, gridId);
     stations.delete(String(gridId));
     await pylovoService.putSiteTransformers(siteId, [...stations.values()]);
+};
+
+/**
+ * Returns the grid showing a station edit made before Regenerate grid: the
+ * station shown as gridId moves to [lon, lat], is added there when not shown,
+ * or is removed when coordinates is null.
+ */
+export const withStationAt = (grid: PylovoGridData, gridId: number, coordinates: [number, number] | null, kva?: number): PylovoGridData => {
+    const features = grid.transformers?.features ?? [];
+    const others = features.filter(f => f.properties?.grid_result_id !== gridId);
+    if (!coordinates) return { ...grid, transformers: { type: "FeatureCollection", ...grid.transformers, features: others } };
+    const geometry = { type: "Point", coordinates: getDataProjection(grid.transformers) === "EPSG:3857" ? fromLonLat(coordinates) : coordinates };
+    const shown = features.find(f => f.properties?.grid_result_id === gridId);
+    const station = shown
+        ? { ...shown, geometry }
+        : { type: "Feature", geometry, properties: { grid_result_id: gridId, rated_power_kva: kva ?? null } };
+    return { ...grid, transformers: { type: "FeatureCollection", ...grid.transformers, features: [...others, station] } };
 };

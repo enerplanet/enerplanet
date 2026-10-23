@@ -297,6 +297,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     notification,
     allPolygons: state.allPolygons,
     refreshGrid,
+    previewSiteStation: pylovoLayers.previewSiteStation,
     existingModelId,
     draftId,
   });
@@ -307,6 +308,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     allPolygons: state.allPolygons,
     handlePolygonDrawn: actions.handlePolygonDrawn,
     refreshGrid,
+    previewSiteStation: pylovoLayers.previewSiteStation,
     existingModelId,
     draftId,
   });
@@ -391,6 +393,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     existingModelId,
     draftId,
     refreshGrid,
+    previewSiteStation: pylovoLayers.previewSiteStation,
   });
 
   // ── Tech dialog flow ─────────────────────────────────────────────

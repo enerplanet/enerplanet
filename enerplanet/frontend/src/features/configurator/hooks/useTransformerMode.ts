@@ -37,6 +37,8 @@ interface AddTransformerOptions {
   };
   allPolygons: [number, number][][];
   refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: [number, number] | null, kva?: number) => void;
   existingModelId?: number;
   draftId?: string;
 }
@@ -59,6 +61,7 @@ export const useAddTransformerMode = ({
   notification,
   allPolygons,
   refreshGrid,
+  previewSiteStation,
   existingModelId,
   draftId,
 }: AddTransformerOptions): AddTransformerModeState => {
@@ -108,6 +111,8 @@ export const useAddTransformerMode = ({
         const site = siteScope(grid);
         if (site && grid) {
           await addSiteStation(site.site_id, grid, newTransformerCoords, kva);
+          // Not generated yet, so it has no grid id; a negative one cannot clash.
+          previewSiteStation(-Date.now(), newTransformerCoords, kva);
           notification.showSuccess(`Added transformer with ${kva} kVA`);
         } else {
           const result = await pylovoService.addTransformer({
@@ -138,6 +143,7 @@ export const useAddTransformerMode = ({
       notification,
       allPolygons.length,
       refreshGrid,
+      previewSiteStation,
       user?.id,
       existingModelId,
       draftId,
@@ -238,6 +244,8 @@ interface MoveTransformerOptions {
     allPolygons: [number, number][][]
   ) => Promise<void>;
   refreshGrid: () => Promise<void>;
+  /** Shows a site station edit on the map before Regenerate grid. */
+  previewSiteStation: (gridId: number, coordinates: [number, number] | null) => void;
   existingModelId?: number;
   draftId?: string;
 }
@@ -256,6 +264,7 @@ export const useMoveTransformerMode = ({
   allPolygons,
   handlePolygonDrawn,
   refreshGrid,
+  previewSiteStation,
   existingModelId,
   draftId,
 }: MoveTransformerOptions): MoveTransformerModeState => {
@@ -271,6 +280,8 @@ export const useMoveTransformerMode = ({
   handlePolygonDrawnRef.current = handlePolygonDrawn;
   const refreshGridRef = useRef(refreshGrid);
   refreshGridRef.current = refreshGrid;
+  const previewSiteStationRef = useRef(previewSiteStation);
+  previewSiteStationRef.current = previewSiteStation;
   const existingModelIdRef = useRef(existingModelId);
   existingModelIdRef.current = existingModelId;
   const draftIdRef = useRef(draftId);
@@ -333,6 +344,7 @@ export const useMoveTransformerMode = ({
         const site = siteScope(grid);
         if (site && grid) {
           await moveSiteStation(site.site_id, grid, transformerToMove, lonLatPair);
+          previewSiteStationRef.current(transformerToMove, lonLatPair);
           notificationRef.current.showSuccess(tRef.current("transformer.movingSuccess"));
           await refreshGridRef.current();
           return;
