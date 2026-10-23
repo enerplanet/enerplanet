@@ -1916,7 +1916,9 @@
       },
       "coverage": "Coverage",
       "historicYears_one": "historic year {{range}}",
-      "historicYears_other": "historic years {{range}} ({{count}} years)"
+      "historicYears_other": "historic years {{range}} ({{count}} years)",
+      "scenarioYears_one": "scenarios from year {{range}}",
+      "scenarioYears_other": "scenarios from {{count}} years, {{range}}"
     },
     "periodParts": {
       "label": "Period",

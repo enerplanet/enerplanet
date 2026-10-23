@@ -9,14 +9,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+
+	weatherclient "spatialhub_backend/internal/weather"
 )
 
-type fakeYears struct {
-	years map[string][]int
-	err   error
+type fakeArchives struct {
+	archives map[string]weatherclient.Archive
+	err      error
 }
 
-func (f fakeYears) Years(context.Context) (map[string][]int, error) { return f.years, f.err }
+func (f fakeArchives) Archives(context.Context) (map[string]weatherclient.Archive, error) {
+	return f.archives, f.err
+}
 
 func getYears(h *WeatherHandler) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
@@ -28,15 +32,17 @@ func getYears(h *WeatherHandler) *httptest.ResponseRecorder {
 }
 
 func TestGetYears_ListsArchivesWithTheDefault(t *testing.T) {
-	w := getYears(NewWeatherHandler(fakeYears{years: map[string][]int{"merra-2": {2018, 2019}}}, "merra-2"))
+	archives := map[string]weatherclient.Archive{"merra-2": {Years: []int{2018, 2019}, Scenarios: []string{"p50"}, ScenarioSourceYears: []int{1980, 2024}}}
+	w := getYears(NewWeatherHandler(fakeArchives{archives: archives}, "merra-2"))
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), `"default_provider":"merra-2"`)
 	assert.Contains(t, w.Body.String(), `"merra-2":[2018,2019]`)
+	assert.Contains(t, w.Body.String(), `"scenario_coverage":{"merra-2":{"scenarios":["p50"],"source_years":[1980,2024]}}`)
 }
 
 func TestGetYears_ReportsAnUnreachableWeatherService(t *testing.T) {
-	w := getYears(NewWeatherHandler(fakeYears{err: errors.New("timeout")}, "merra-2"))
+	w := getYears(NewWeatherHandler(fakeArchives{err: errors.New("timeout")}, "merra-2"))
 
 	assert.Equal(t, http.StatusBadGateway, w.Code)
 	assert.Contains(t, w.Body.String(), "timeout")

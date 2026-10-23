@@ -1681,7 +1681,11 @@
       "historicYears_one": "historický rok {{range}}",
       "historicYears_few": "historické roky {{range}} ({{count}} roky)",
       "historicYears_many": "historické roky {{range}} ({{count}} let)",
-      "historicYears_other": "historické roky {{range}} ({{count}} let)"
+      "historicYears_other": "historické roky {{range}} ({{count}} let)",
+      "scenarioYears_one": "scénáře z roku {{range}}",
+      "scenarioYears_few": "scénáře ze {{count}} let, {{range}}",
+      "scenarioYears_many": "scénáře ze {{count}} let, {{range}}",
+      "scenarioYears_other": "scénáře ze {{count}} let, {{range}}"
     },
     "periodParts": {
       "label": "Období",
