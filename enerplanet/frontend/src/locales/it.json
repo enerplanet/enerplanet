@@ -1477,7 +1477,9 @@
         "tooLarge": "Il file è troppo grande ({{detail}}); si possono importare file fino a 5 MB.",
         "tooComplex": "L'area è troppo dettagliata ({{detail}} poligoni / vertici); si possono importare fino a 100 poligoni e 10.000 vertici.",
         "outOfRange": "Una coordinata ({{detail}}) è fuori dall'intervallo di longitudine e latitudine. Se il file usa metri, deve indicare il suo sistema di coordinate (crs)."
-      }
+      },
+      "importAreaHint": "Carica l'area del modello da un file GeoJSON (.geojson o .json) con elementi Polygon o MultiPolygon. Coordinate in WGS 84 (EPSG:4326) o in una griglia nazionale come ETRS89 / UTM, come le esporta QGIS. Fino a 100 poligoni, 10.000 punti e 5 MB. Il file sostituisce l'area disegnata.",
+      "exportAreaHint": "Scarica l'area disegnata come file GeoJSON (WGS 84, EPSG:4326). Si può importare in un altro modello o aprire in QGIS."
     },
     "powerFlow": {
       "run": "Esegui analisi flusso di potenza",
@@ -1543,7 +1545,6 @@
       "moreCount": "+{{count}} altri",
       "clickForDetails": "Clicca per maggiori dettagli",
       "class": "Classe",
-      "estimatedShort": "stim.",
       "buemTotal": "Totale: {{value}}",
       "kitchenGas": "Gas da cucina: {{value}}",
       "geometry3d": "Geometria 3D: City2TABULA",
@@ -1589,7 +1590,8 @@
       "length": "Lunghezza",
       "type": "Tipo",
       "bus": "Nodo",
-      "disabled": "Disattivato"
+      "disabled": "Disattivato",
+      "notAnalysed": "Non ancora analizzato"
     },
     "unsavedChanges": {
       "title": "Modifiche non salvate",
@@ -1627,7 +1629,19 @@
     "largeModel": {
       "title": "Questo modello ha {{count}} edifici",
       "description": "I modelli con più di {{limit}} edifici richiedono molto più tempo di calcolo: ogni edificio passa per BuEM e Calliope risolve la domanda oraria di ciascun edificio. Un anno intero può richiedere decine di minuti. Puoi comunque salvarlo ed eseguirlo."
-    }
+    },
+    "analysis": {
+      "button": "Analizza edifici",
+      "running": "Calcolo della domanda: {{done}} di {{total}} edifici",
+      "done": "Edifici analizzati: {{count}}",
+      "failed": "non analizzati: {{count}} (passa il mouse su un edificio per il motivo)",
+      "notYet": "Non ancora analizzato. L'analisi calcola il fabbisogno di riscaldamento, raffrescamento ed elettricità di ogni edificio.",
+      "needsInputs": "Inserisci un nome del modello e un periodo di simulazione per analizzare gli edifici.",
+      "saveFailed": "Impossibile salvare il modello, quindi l'analisi non è stata avviata.",
+      "startFailed": "Impossibile avviare l'analisi."
+    },
+    "periodWithinYear": "Le simulazioni pluriennali non sono ancora supportate, quindi entrambe le date ora sono nel {{year}}.",
+    "periodYear": "Anno"
   },
   "mapLayers": {
     "title": "Livelli mappa",
@@ -2597,24 +2611,13 @@
     "cables": "Cavi",
     "peakLoad": "Carico di Picco",
     "capacity": "Capacità",
-    "utilization": "Utilizzo",
-    "estCost": "Costo Stimato",
-    "cablesLabel": "Cavi",
-    "trafosLabel": "Trasformatori",
-    "costDescription": "Costi infrastruttura incl. cavi e trasformatori",
     "buildingsTooltip": "Totale degli edifici di OpenStreetMap nell'area selezionata. PyLoVo stima la domanda di energia di ogni edificio in base a superficie, piani, dimensione del nucleo familiare ed etichetta energetica.",
-    "trafosTooltip": "Trasformatori dimensionati da PyLoVo per il carico contemporaneo. Le taglie standard (da 100 a 630 kVA) sono scelte da cataloghi di apparecchiature tedeschi. Il costo per taglia deriva dai prezzi degli impianti installati.",
-    "cablesTooltip": "Cavi di distribuzione BT tracciati da PyLoVo tra edifici e trasformatori. Il costo è la lunghezza (m) per il costo al metro (€/m) dal catalogo, in base al tipo di cavo.",
+    "trafosTooltip": "Trasformatori dimensionati da PyLoVo per il carico contemporaneo. Le taglie standard (da 100 a 630 kVA) sono scelte da cataloghi di apparecchiature tedeschi.",
+    "cablesTooltip": "Cavi di distribuzione BT tracciati da PyLoVo tra edifici e trasformatori.",
     "lengthTooltip": "Lunghezza totale di tutti i cavi BT della rete. Il percorso segue il cammino più breve tra i punti di allaccio degli edifici e i trasformatori.",
-    "selectionNote": "Edifici selezionati e cavi che li collegano ai loro trasformatori. Intera rete: {{buildings}} edifici, {{cables}} cavi, {{km}} km, utilizzo {{utilisation}}%.",
-    "simultaneousLoad": "Carico contemporaneo",
-    "peakLoadTooltip": "Somma dei carichi elettrici di picco di tutti gli edifici (kW), ricavata dalla domanda annua stimata di ogni edificio con profili di carico standard (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Carico contemporaneo realistico con un fattore di contemporaneità, dove n è il numero di edifici. Non tutti gli edifici raggiungono il picco nello stesso momento.",
+    "selectionNote": "Edifici selezionati e cavi che li collegano ai loro trasformatori. Intera rete: {{buildings}} edifici, {{cables}} cavi, {{km}} km.",
     "capacityTooltip": "Potenza nominale totale di tutti i trasformatori (kVA). I trasformatori sono scelti tra le taglie BT standard tedesche per coprire il carico contemporaneo con un margine di sicurezza.",
-    "utilizationTooltip": "Utilizzo dei trasformatori = carico contemporaneo ÷ capacità totale × 100%. Valori oltre l'80% possono indicare la necessità di ulteriore capacità.",
-    "cableCostTooltip": "Costo di posa dei cavi in base a tipo e lunghezza. I prezzi dei cataloghi BT tedeschi includono materiale, scavo e posa (€/m).",
-    "trafoCostTooltip": "Costo di acquisto e installazione dei trasformatori. I prezzi per taglia in kVA provengono da cataloghi tedeschi di apparecchiature di distribuzione, alla taglia più vicina.",
-    "sourceNote": "Stimato dal motore di rete PyLoVo. Costi da cataloghi BT tedeschi. Utilizzo basato sul carico contemporaneo."
+    "sourceNote": "Stimato dal motore di rete PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {
@@ -3102,18 +3105,6 @@
   "transformer": {
     "onlyInsidePolygon": "I trasformatori possono essere posizionati solo all'interno dell'area selezionata",
     "onlyNearPolygon": "I trasformatori possono essere posizionati fino a 200 m al di fuori dell'area selezionata"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Trasformatori personalizzati",
-    "transformer": "Trasformatore {{number}}",
-    "buildingCount": "Edifici: {{count}}",
-    "loadUtilization": "Utilizzo del carico",
-    "low": "Basso",
-    "moderate": "Moderato",
-    "medium": "Medio",
-    "high": "Alto",
-    "overloaded": "Sovraccarico",
-    "mvLines": "Linee MT"
   },
   "buildingConfig": {
     "backToMap": "Torna alla mappa",

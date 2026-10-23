@@ -1491,7 +1491,9 @@
         "tooLarge": "Soubor je příliš velký ({{detail}}); importovat lze soubory do 5 MB.",
         "tooComplex": "Oblast je příliš podrobná ({{detail}} polygonů / vrcholů); importovat lze nejvýše 100 polygonů a 10 000 vrcholů.",
         "outOfRange": "Souřadnice ({{detail}}) leží mimo rozsah zeměpisné délky a šířky. Pokud soubor používá metry, musí uvádět svůj souřadnicový systém (crs)."
-      }
+      },
+      "importAreaHint": "Načte oblast modelu ze souboru GeoJSON (.geojson nebo .json) s prvky Polygon nebo MultiPolygon. Souřadnice ve WGS 84 (EPSG:4326) nebo v národní síti, například ETRS89 / UTM, jak je exportuje QGIS. Nejvýše 100 polygonů, 10 000 bodů a 5 MB. Soubor nahradí nakreslenou oblast.",
+      "exportAreaHint": "Stáhne nakreslenou oblast jako soubor GeoJSON (WGS 84, EPSG:4326). Lze ho importovat do jiného modelu nebo otevřít v QGIS."
     },
     "powerFlow": {
       "run": "Spustit analýzu toku výkonu",
@@ -1557,7 +1559,6 @@
       "moreCount": "+{{count}} další",
       "clickForDetails": "Klikněte pro více podrobností",
       "class": "Třída",
-      "estimatedShort": "odh.",
       "buemTotal": "Celkem: {{value}}",
       "kitchenGas": "Plyn na vaření: {{value}}",
       "geometry3d": "3D geometrie: City2TABULA",
@@ -1603,7 +1604,8 @@
       "length": "Délka",
       "type": "Typ",
       "bus": "Uzel",
-      "disabled": "Vypnuto"
+      "disabled": "Vypnuto",
+      "notAnalysed": "Zatím neanalyzováno"
     },
     "unsavedChanges": {
       "title": "Neuložené změny",
@@ -1641,7 +1643,19 @@
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
-    }
+    },
+    "analysis": {
+      "button": "Analyzovat budovy",
+      "running": "Výpočet potřeby: {{done}} z {{total}} budov",
+      "done": "Analyzované budovy: {{count}}",
+      "failed": "neanalyzováno: {{count}} (důvod se zobrazí po najetí na budovu)",
+      "notYet": "Zatím neanalyzováno. Analýza vypočítá potřebu vytápění, chlazení a elektřiny každé budovy.",
+      "needsInputs": "Pro analýzu budov zadejte název modelu a období simulace.",
+      "saveFailed": "Model se nepodařilo uložit, takže analýza nezačala.",
+      "startFailed": "Analýzu se nepodařilo spustit."
+    },
+    "periodWithinYear": "Víceleté simulace zatím nejsou podporovány, proto jsou nyní obě data v roce {{year}}.",
+    "periodYear": "Rok"
   },
   "mapLayers": {
     "title": "Mapové vrstvy",
@@ -2611,24 +2625,13 @@
     "cables": "Kabely",
     "peakLoad": "Špičková Zátěž",
     "capacity": "Kapacita",
-    "utilization": "Využití",
-    "estCost": "Odhadované Náklady",
-    "cablesLabel": "Kabely",
-    "trafosLabel": "Transformátory",
-    "costDescription": "Náklady na infrastrukturu včetně kabelů a transformátorů",
     "buildingsTooltip": "Počet budov z OpenStreetMap ve vybrané oblasti. Spotřebu energie každé budovy odhaduje PyLoVo podle plochy, počtu podlaží, velikosti domácnosti a energetického štítku.",
-    "trafosTooltip": "Transformátory dimenzované nástrojem PyLoVo na souběžné zatížení. Standardní velikosti (100 až 630 kVA) se vybírají z německých katalogů zařízení. Cena se určuje podle velikosti z cen instalovaných zařízení.",
-    "cablesTooltip": "Rozvodné kabely NN vedené nástrojem PyLoVo mezi budovami a transformátory. Cena je délka (m) krát cena za metr (€/m) z katalogu zařízení, podle typu kabelu.",
+    "trafosTooltip": "Transformátory dimenzované nástrojem PyLoVo na souběžné zatížení. Standardní velikosti (100 až 630 kVA) se vybírají z německých katalogů zařízení.",
+    "cablesTooltip": "Rozvodné kabely NN vedené nástrojem PyLoVo mezi budovami a transformátory.",
     "lengthTooltip": "Celková délka všech kabelů NN v síti. Trasa vede nejkratší cestou mezi přípojkami budov a polohami transformátorů.",
-    "selectionNote": "Vybrané budovy a kabely, které je spojují s jejich transformátory. Celá síť: budovy {{buildings}}, kabely {{cables}}, {{km}} km, vytížení {{utilisation}} %.",
-    "simultaneousLoad": "Souběžné zatížení",
-    "peakLoadTooltip": "Součet špičkových elektrických zatížení všech budov (kW), odvozený z odhadované roční spotřeby každé budovy pomocí standardních zátěžových profilů (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistické souběžné zatížení s koeficientem soudobosti, kde n je počet budov. Ne všechny budovy odebírají špičkový výkon ve stejnou chvíli.",
+    "selectionNote": "Vybrané budovy a kabely, které je spojují s jejich transformátory. Celá síť: budovy {{buildings}}, kabely {{cables}}, {{km}} km.",
     "capacityTooltip": "Celkový jmenovitý výkon všech transformátorů (kVA). Transformátory se vybírají ze standardních německých velikostí NN tak, aby pokryly souběžné zatížení s rezervou.",
-    "utilizationTooltip": "Vytížení transformátorů = souběžné zatížení ÷ celkový výkon × 100 %. Hodnoty nad 80 % mohou znamenat potřebu dalšího výkonu transformátorů.",
-    "cableCostTooltip": "Náklady na instalaci kabelů podle typu a délky kabelu. Ceny z německých katalogů zařízení NN zahrnují materiál, výkop a instalaci (€/m).",
-    "trafoCostTooltip": "Náklady na pořízení a instalaci transformátorů. Ceny podle velikosti v kVA pocházejí z německých katalogů distribučních zařízení, přiřazené k nejbližší velikosti.",
-    "sourceNote": "Odhad nástroje PyLoVo. Ceny z německých katalogů zařízení NN. Vytížení vychází ze souběžného zatížení."
+    "sourceNote": "Odhad nástroje PyLoVo."
   },
   "tooltips": {
     "privateBuildings": {
@@ -3116,18 +3119,6 @@
   "transformer": {
     "onlyInsidePolygon": "Transformátory lze umístit jen uvnitř vybrané oblasti",
     "onlyNearPolygon": "Transformátory lze umístit až 200 m mimo vybranou oblast"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Vlastní transformátory",
-    "transformer": "Transformátor {{number}}",
-    "buildingCount": "Budovy: {{count}}",
-    "loadUtilization": "Vytížení",
-    "low": "Nízké",
-    "moderate": "Mírné",
-    "medium": "Střední",
-    "high": "Vysoké",
-    "overloaded": "Přetížené",
-    "mvLines": "Vedení VN"
   },
   "buildingConfig": {
     "backToMap": "Zpět na mapu",

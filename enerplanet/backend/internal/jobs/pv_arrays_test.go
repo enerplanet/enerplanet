@@ -12,8 +12,10 @@ import (
 	commonModels "platform.local/common/pkg/models"
 
 	"spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/pv"
+	"spatialhub_backend/internal/store/series"
 	"spatialhub_backend/internal/weather"
 )
 
@@ -29,11 +31,57 @@ func (f fakeRoofs) GetBuildingsByOSMIDs(_ context.Context, _ string, ids []strin
 	return out, nil
 }
 
-type fakePVWeather struct{ lat, lon float64 }
+// fakePVWeather records the cells it is asked for.
+type fakePVWeather struct{ cells []pv.Location }
 
 func (f *fakePVWeather) GetPVWeather(_ context.Context, lat, lon float64, _ weather.Period, _ string) (json.RawMessage, error) {
-	f.lat, f.lon = lat, lon
+	f.cells = append(f.cells, pv.Location{Lat: lat, Lon: lon})
 	return json.RawMessage(`{}`), nil
+}
+
+// fakePVStore keeps profiles by key and the links of the last replacement.
+type fakePVStore struct {
+	ids      map[string]int64
+	values   map[int64][]float32
+	units    map[int64]string
+	starts   map[int64]time.Time
+	revision string
+	links    []series.Link
+}
+
+func newFakePVStore() *fakePVStore {
+	return &fakePVStore{ids: map[string]int64{}, values: map[int64][]float32{}, units: map[int64]string{}, starts: map[int64]time.Time{}}
+}
+
+func (f *fakePVStore) StoredKeys(keys []string) (map[string]int64, error) {
+	out := map[string]int64{}
+	for _, k := range keys {
+		if id, ok := f.ids[k]; ok {
+			out[k] = id
+		}
+	}
+	return out, nil
+}
+
+func (f *fakePVStore) Save(p series.NewProfile) (int64, error) {
+	if id, ok := f.ids[p.Key]; ok {
+		return id, nil
+	}
+	id := int64(len(f.ids) + 1)
+	f.ids[p.Key] = id
+	f.values[id] = p.Series[pvSeries].Values
+	f.units[id] = p.Series[pvSeries].Unit
+	f.starts[id] = p.StartTime
+	return id, nil
+}
+
+func (f *fakePVStore) Values(id int64, _ string) (models.SeriesValues, error) {
+	return models.SeriesValues{ProfileID: id, Series: pvSeries, Vals: f.values[id]}, nil
+}
+
+func (f *fakePVStore) ReplaceLinks(_ series.Owner, revision, _ string, links []series.Link) error {
+	f.revision, f.links = revision, links
+	return nil
 }
 
 // fakePV returns an hourly profile whose value at hour h is h/10000, so a
@@ -41,7 +89,7 @@ func (f *fakePVWeather) GetPVWeather(_ context.Context, lat, lon float64, _ weat
 type fakePV struct{ requests []pv.ArrayRequest }
 
 func (f *fakePV) Simulate(_ context.Context, _ pv.Location, _ json.RawMessage, arrays []pv.ArrayRequest) (map[string][]float64, error) {
-	f.requests = arrays
+	f.requests = append(f.requests, arrays...)
 	out := map[string][]float64{}
 	for _, a := range arrays {
 		hourly := make([]float64, 8760)
@@ -81,9 +129,9 @@ func TestPVResolverPlacesSimulatesAndWindowsArrays(t *testing.T) {
 	country := "germany"
 	model := &commonModels.Model{ID: 7, Country: &country,
 		FromDate: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC), ToDate: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)}
-	wx, sim := &fakePVWeather{}, &fakePV{}
+	wx, sim, store := &fakePVWeather{}, &fakePV{}, newFakePVStore()
 
-	err := PVResolver{C2T: roofs, Weather: wx, PV: sim}.Attach(context.Background(), model, payload.CalculationPayload{Topology: topology, Resolution: 30})
+	err := PVResolver{C2T: roofs, Weather: wx, PV: sim, Series: store, Version: "test"}.Attach(context.Background(), model, payload.CalculationPayload{Topology: topology, Resolution: 30})
 	require.NoError(t, err)
 
 	techs := func(i int, side string) map[string]interface{} {
@@ -113,21 +161,65 @@ func TestPVResolverPlacesSimulatesAndWindowsArrays(t *testing.T) {
 	assert.InDelta(t, 12.8, b3["cont_energy_cap_max"], 1e-9)
 
 	assert.Len(t, sim.requests, 3)
-	assert.Equal(t, "premium", sim.requests[0].ModuleType)
-	assert.InDelta(t, 49.0, wx.lat, 1e-9)
-	assert.InDelta(t, 13.0, wx.lon, 1e-9)
+	for _, r := range sim.requests {
+		if r.ID == "1/0" {
+			assert.Equal(t, "premium", r.ModuleType)
+		}
+	}
+	assert.ElementsMatch(t, []pv.Location{
+		pv.SnapLocation(pv.Location{Lat: 48, Lon: 12}), pv.SnapLocation(pv.Location{Lat: 49, Lon: 13}), pv.SnapLocation(pv.Location{Lat: 50, Lon: 14}),
+	}, wx.cells, "each building's own weather cell, not the model's mean")
+
+	var parts []string
+	for _, l := range store.links {
+		assert.Equal(t, "pv", l.Series)
+		parts = append(parts, l.BuildingRef+":"+l.Part)
+	}
+	assert.ElementsMatch(t, []string{"1:south", "2:r1", "3:array-0"}, parts, "one link per roof face; an array without one by its index")
+	for _, unit := range store.units {
+		assert.Equal(t, "kW_per_kWp", unit)
+	}
+	for _, start := range store.starts {
+		assert.Equal(t, time.Date(1900, 1, 1, 0, 15, 0, 0, time.UTC), start, "the scenario year, stamped at the middle of the first 30-minute step as BuEM stamps its values")
+	}
+}
+
+// A second run of the same model finds every profile stored and simulates nothing.
+func TestPVResolverReusesStoredProfiles(t *testing.T) {
+	module := map[string]interface{}{"losses": 0.14}
+	topology := func() []interface{} {
+		return []interface{}{map[string]interface{}{"from": pvFeature("3", 14.0, 50.0, 80, module)}}
+	}
+	country := "germany"
+	model := &commonModels.Model{ID: 7, Country: &country,
+		FromDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC), ToDate: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)}
+	store := newFakePVStore()
+	first := &fakePV{}
+	require.NoError(t, PVResolver{C2T: fakeRoofs{}, Weather: &fakePVWeather{}, PV: first, Series: store, Version: "test"}.Store(context.Background(), model, payload.CalculationPayload{Topology: topology(), Resolution: 60}))
+	require.Len(t, first.requests, 1)
+
+	again := &fakePV{}
+	second := topology()
+	err := PVResolver{C2T: fakeRoofs{}, Weather: &fakePVWeather{}, PV: again, Series: store, Version: "test"}.Attach(context.Background(), model, payload.CalculationPayload{Topology: second, Resolution: 60})
+
+	require.NoError(t, err)
+	assert.Nil(t, again.requests, "nothing left to simulate")
+	arrays := second[0].(map[string]interface{})["from"].(map[string]interface{})["techs"].(map[string]interface{})["pv_arrays"].([]interface{})
+	assert.Equal(t, []float64{0, 0.0001, 0.0002}, arrays[0].(map[string]interface{})["profile"].([]float64)[:3])
 }
 
 func TestPVResolverDropsPVWhenNoRoofQualifies(t *testing.T) {
 	roofs := fakeRoofs{"1": {{ID: "north", Type: "RoofSurface", AreaSqm: f64(40), Tilt: f64(55), Azimuth: f64(0)}}}
 	topology := []interface{}{map[string]interface{}{"from": pvFeature("1", 12, 48, 100, map[string]interface{}{})}}
 	country := "germany"
-	sim := &fakePV{}
+	sim, store := &fakePV{}, newFakePVStore()
+	store.links = []series.Link{{BuildingRef: "1", Part: "south", Series: pvSeries, ProfileID: 9}}
 
-	err := PVResolver{C2T: roofs, Weather: &fakePVWeather{}, PV: sim}.Attach(context.Background(), &commonModels.Model{Country: &country}, payload.CalculationPayload{Topology: topology, Resolution: 60})
+	err := PVResolver{C2T: roofs, Weather: &fakePVWeather{}, PV: sim, Series: store, Version: "test"}.Attach(context.Background(), &commonModels.Model{ID: 3, Country: &country}, payload.CalculationPayload{Topology: topology, Resolution: 60})
 
 	require.NoError(t, err)
 	techs := topology[0].(map[string]interface{})["from"].(map[string]interface{})["techs"].(map[string]interface{})
 	assert.Empty(t, techs)
 	assert.Nil(t, sim.requests, "nothing to simulate")
+	assert.Empty(t, store.links, "the model's earlier PV links are removed")
 }

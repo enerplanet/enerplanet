@@ -2,6 +2,7 @@ import {
   DateRangePicker,
   Dialog,
   Group,
+  I18nProvider,
   Label,
   Popover,
   Button as Trigger,
@@ -31,18 +32,20 @@ import {
   CircuitBoard,
   Activity,
   MapPinned,
+  Building2,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
-import { GridStatsBadge } from "./GridStatsBadge";
 import { useModelStore, type CookingCarrier, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { useTranslation } from "@spatialhub/i18n";
-import type { FC, ChangeEvent } from "react";
+import { useEffect, type FC, type ChangeEvent } from "react";
+import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
+import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
 
 interface SidebarPanelProps {
   state: AreaSelectState;
@@ -55,7 +58,6 @@ interface SidebarPanelProps {
   onAdvancedParamsChange: (params: ReturnType<typeof getDefaultAdvancedParameters>) => void;
   onResetAdvancedParams: () => void;
   handleModelNameChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  getDateBounds: () => { minValue: any; maxValue: any; minYear: number; maxYear: number };
   editMode: boolean;
   showTechDrawer: boolean;
   onOpenTechDrawer: () => void;
@@ -67,15 +69,74 @@ interface SidebarPanelProps {
   onRemoveAllTechs?: () => void;
   techBuildingCount?: number;
   appliedTechKeys?: string[];
-  gridResultIds?: number[];
-  buildingOsmIds?: string[];
-  buildingsCount?: number;
-  peakLoadKw?: number;
   isModified?: boolean;
   /** Buildings whose technologies lack a size for operate mode. */
   operateIssues?: OperateIssue[];
   onFixOperateIssue?: (issue: OperateIssue, techKey: string) => void;
+  /** The analysis of the saved model's buildings; null before the model is saved. */
+  analysisProgress: AnalysisProgress | null;
+  isStartingAnalysis: boolean;
+  onAnalyse: () => void;
 }
+
+// The period lies in one year with weather data: the year is chosen from those
+// years, day and month are typed. A saved model keeps its year listed even when
+// the weather archive no longer has it, and a new model starts with the latest
+// full year that has weather data.
+function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editMode: boolean | undefined) {
+  const weatherYears = useWeatherYears();
+  const periodYear = state.fromDate ? Number(state.fromDate.slice(0, 4)) : undefined;
+  const yearOptions = periodYear && !weatherYears.includes(periodYear)
+    ? [...weatherYears, periodYear].sort((a, b) => a - b)
+    : weatherYears;
+  const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
+  const choosePeriodYear = (year: number) => {
+    if (!state.fromDate || !state.toDate) return actions.handleUpdateRange(fullYear(year));
+    actions.handleUpdateRange({ start: parseDate(state.fromDate).set({ year }), end: parseDate(state.toDate).set({ year }) });
+  };
+  const latestYear = weatherYears.at(-1);
+  useEffect(() => {
+    if (!editMode && !state.fromDate && latestYear) actions.handleUpdateRange(fullYear(latestYear));
+    // Only the first answer fills an empty period; later edits are the user's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestYear]);
+  // The calendar's first and last selectable days.
+  const yearBounds = yearOptions.length
+    ? { start: fullYear(yearOptions[0]).start, end: fullYear(yearOptions[yearOptions.length - 1]).end }
+    : undefined;
+  return { periodYear, yearOptions, yearBounds, choosePeriodYear };
+}
+
+/** The simulation period's year, chosen from the years with weather data. */
+const PeriodYearSelect: FC<{ year: number | undefined; years: number[]; onChange: (year: number) => void }> = ({ year, years, onChange }) => {
+  const { t } = useTranslation();
+  return (
+    <select
+      aria-label={t("simulation.periodYear")}
+      value={year ?? ""}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-full shrink-0 cursor-pointer border-r border-border bg-transparent pl-3 pr-1 text-xs font-medium text-foreground outline-none"
+    >
+      {year === undefined && <option value="">{t("simulation.periodYear")}</option>}
+      {years.map((y) => (
+        <option key={y} value={y}>{y}</option>
+      ))}
+    </select>
+  );
+};
+
+// Hides a date field's year segment and the separator before it, in every locale's order.
+const HIDE_YEAR_SEGMENT = "[&_[data-type=year]]:hidden [&_[data-type=literal]:has(+[data-type=year])]:hidden";
+
+/** The analysis state under the Analyse buildings button. */
+const analysisText = (progress: AnalysisProgress | null, t: (key: string, opts?: Record<string, unknown>) => string): string => {
+  if (progress?.status === "resolving") return t("simulation.analysis.running", { done: progress.done, total: progress.total });
+  if (progress?.status === "completed") {
+    const done = t("simulation.analysis.done", { count: progress.done - progress.failed });
+    return progress.failed > 0 ? `${done} · ${t("simulation.analysis.failed", { count: progress.failed })}` : done;
+  }
+  return t("simulation.analysis.notYet");
+};
 
 export const SidebarPanel: FC<SidebarPanelProps> = ({
   state,
@@ -88,7 +149,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onAdvancedParamsChange,
   onResetAdvancedParams,
   handleModelNameChange,
-  getDateBounds,
   editMode,
   showTechDrawer,
   onOpenTechDrawer,
@@ -100,27 +160,30 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   onRemoveAllTechs,
   techBuildingCount = 0,
   appliedTechKeys = [],
-  gridResultIds = [],
-  buildingOsmIds,
-  buildingsCount,
-  peakLoadKw,
   isModified = false,
   operateIssues = [],
   onFixOperateIssue,
+  analysisProgress,
+  isStartingAnalysis,
+  onAnalyse,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const appLang = i18n.language?.split("-")[0] || "en";
   const cookingCarrier = useModelStore((s) => s.cookingCarrier);
   const setCookingCarrier = useModelStore((s) => s.setCookingCarrier);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
   const siteMode = useModelStore((s) => s.siteMode);
   const gridStale = useModelStore((s) => s.gridStale);
+  const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
+
+  const { periodYear, yearOptions, yearBounds, choosePeriodYear } = usePeriodYear(state, actions, editMode);
   const setSiteMode = useModelStore((s) => s.setSiteMode);
   // A drawn grid was made in one mode; switching would leave it labelled with the other.
   const siteModeLocked = state.allPolygons.length > 0;
 
   return (
-    <div className="md-scope md-rise relative h-full w-80 border-l border-border bg-background dark:bg-gray-800 flex flex-col">
+    <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
       <div className="flex items-center px-3 pt-4">
         <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
       </div>
@@ -191,19 +254,33 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
-        {/* Grid Statistics - compact badge shown when grid data is available */}
-        {gridResultIds.length > 0 && (
-          <div className="md-fade-in">
-            <GridStatsBadge
-              gridResultIds={gridResultIds}
-              buildingOsmIds={buildingOsmIds}
-              buildingsCount={buildingsCount}
-              peakLoadKw={peakLoadKw}
-            />
-          </div>
-        )}
+      {allPolygonsCount > 0 && (
+        <div className="mx-3 mb-2 space-y-1.5">
+          <Button
+            onClick={onAnalyse}
+            disabled={
+              missingInputs ||
+              state.isSaving ||
+              gridStale ||
+              isStartingAnalysis ||
+              analysisProgress?.status === "resolving"
+            }
+            title={gridStale ? t("simulation.actions.regenerateFirst") : undefined}
+            variant="outline"
+            className="h-8 w-full cursor-pointer"
+          >
+            {isStartingAnalysis || analysisProgress?.status === "resolving" ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+            )}
+            {t("simulation.analysis.button")}
+          </Button>
+          <p className="text-xs text-muted-foreground" aria-live="polite">{missingInputs ? t("simulation.analysis.needsInputs") : analysisText(analysisProgress, t)}</p>
+        </div>
+      )}
 
+      <div className="flex-1 overflow-y-auto pb-4 space-y-3 px-3">
         <div className="relative" data-tour="model-name">
           <label
             htmlFor="model-name-input"
@@ -242,21 +319,26 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               {t("simulation.simulationPeriod")}
             </Label>
             <div className="flex">
-              <Group
-                className={cn(
-                  DATE_INPUT_STYLE,
-                  "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
-                )}
-              >
-                <DateInput slot="start" unstyled className="text-xs pl-3 pr-1 py-2 flex-1" />
-                <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
-                  -
-                </span>
-                <DateInput slot="end" unstyled className="text-xs pl-1 pr-10 py-2 flex-1" />
-                <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:border-ring data-focus-visible:ring-ring/50 absolute inset-0 flex items-center justify-end pr-3 transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
-                  <CalendarIcon size={16} />
-                </Trigger>
-              </Group>
+              {/* English uses en-CH for DD.MM.YYYY fields; other languages keep their own date order. */}
+              <I18nProvider locale={appLang === "en" ? "en-CH" : appLang}>
+                <Group
+                  className={cn(
+                    DATE_INPUT_STYLE,
+                    "xl:px-0 lg:px-2 relative dark:bg-gray-700 dark:border-gray-600"
+                  )}
+                >
+                  <PeriodYearSelect year={periodYear} years={yearOptions} onChange={choosePeriodYear} />
+                  {/* Day and month are typed; the year comes from the select above. */}
+                  <DateInput slot="start" unstyled className={cn("text-xs pl-3 py-2", HIDE_YEAR_SEGMENT)} />
+                  <span aria-hidden="true" className="text-muted-foreground/70 px-2 py-2">
+                    -
+                  </span>
+                  <DateInput slot="end" unstyled className={cn("text-xs pr-10 py-2", HIDE_YEAR_SEGMENT)} />
+                  <Trigger className="text-muted-foreground/80 hover:text-foreground data-focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none data-focus-visible:ring-[3px] cursor-pointer">
+                    <CalendarIcon size={16} />
+                  </Trigger>
+                </Group>
+              </I18nProvider>
             </div>
             <Popover
               className="bg-background dark:bg-gray-800 text-popover-foreground data-entering:animate-in data-exiting:animate-out data-[entering]:fade-in-0 data-[exiting]:fade-out-0 data-[entering]:zoom-in-95 data-[exiting]:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 z-50 rounded-md border border-border shadow-lg outline-hidden"
@@ -267,10 +349,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
                   onChange={(range) =>
                     actions.handleUpdateRange({ start: range.start, end: range.end })
                   }
-                  minValue={getDateBounds().minValue}
-                  maxValue={getDateBounds().maxValue}
-                  minYear={getDateBounds().minYear}
-                  maxYear={getDateBounds().maxYear}
+                  minValue={yearBounds?.start}
+                  maxValue={yearBounds?.end}
+                  years={yearOptions}
+                  withinStartYear
                 />
               </Dialog>
             </Popover>
@@ -278,13 +360,14 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 
           <div className="mt-2 text-xs text-muted-foreground">
             {t("simulation.duration")}:{" "}
+            {/* Both the first and the last day are simulated. */}
             {state.fromDate && state.toDate
               ? Math.max(
                   0,
-                  Math.ceil(
+                  Math.round(
                     (new Date(state.toDate).getTime() - new Date(state.fromDate).getTime()) /
                       (1000 * 60 * 60 * 24)
-                  )
+                  ) + 1
                 )
               : 0}{" "}
             {t("simulation.days")}

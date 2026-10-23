@@ -1,5 +1,5 @@
 import { useState, useEffect, type FC } from "react";
-import { Building2, Zap, Cable, Activity, Euro, Loader2, Info } from "lucide-react";
+import { Building2, Zap, Cable, Activity, Loader2, Info } from "lucide-react";
 import { pylovoService, siteScope, type GridStatistics } from "@/features/configurator/services/pylovoService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { cn } from "@/lib/utils";
@@ -63,10 +63,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
         return null;
     }
 
-    const utilizationPercent = statistics.transformers?.utilization_percent ?? 0;
     const buildingsCountValue = statistics.buildings?.count ?? 0;
-    const peakLoadKwValue = statistics.buildings?.total_peak_load_kw ?? 0;
-    const simultaneousLoadKwValue = statistics.buildings?.simultaneous_load_kw ?? 0;
     const wholeGrid = statistics.whole_grid;
 
     return (
@@ -133,51 +130,16 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
             </div>
 
             {wholeGrid && (
-                <p className="px-3 pb-2 text-[10px] text-muted-foreground">
+                <p className="hidden px-3 pb-2 text-[10px] text-muted-foreground xl:block">
                     {t("gridStats.selectionNote", {
                         buildings: wholeGrid.buildings.count,
                         cables: wholeGrid.cables.count,
                         km: wholeGrid.cables.total_length_km.toFixed(1),
-                        utilisation: wholeGrid.transformers.utilization_percent.toFixed(1),
                     })}
                 </p>
             )}
 
-            {/* Load & Utilization */}
-            <div className="px-3 py-2 space-y-2 border-t border-border">
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center justify-between text-xs cursor-help">
-                            <span className="text-muted-foreground flex items-center gap-1">
-                                {t("gridStats.peakLoad")}
-                                <Info className="w-3 h-3 text-muted-foreground/60" />
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {peakLoadKwValue.toFixed(1)} kW
-                            </span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs">
-                        <p className="text-xs">{t("gridStats.peakLoadTooltip")}</p>
-                    </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center justify-between text-xs cursor-help">
-                            <span className="text-muted-foreground flex items-center gap-1">
-                                {t("gridStats.simultaneousLoad")}
-                                <Info className="w-3 h-3 text-muted-foreground/60" />
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {simultaneousLoadKwValue.toFixed(1)} kW
-                            </span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs">
-                        <p className="text-xs">{t("gridStats.simultaneousLoadTooltip")}</p>
-                        <p className="text-xs font-mono">SF = 0.07 + 0.93 × n^(−0.75)</p>
-                    </TooltipContent>
-                </Tooltip>
+            <div className="px-3 py-2 space-y-1.5 border-t border-border">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <div className="flex items-center justify-between text-xs cursor-help">
@@ -194,71 +156,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
                         <p className="text-xs">{t("gridStats.capacityTooltip")}</p>
                     </TooltipContent>
                 </Tooltip>
-                
-                {/* Utilization bar */}
-                <div className="space-y-1">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="flex items-center justify-between text-xs cursor-help">
-                                <span className="text-muted-foreground flex items-center gap-1">
-                                    {t("gridStats.utilization")}
-                                    <Info className="w-3 h-3 text-muted-foreground/60" />
-                                </span>
-                                <span className="font-semibold text-black dark:text-white">
-                                    {utilizationPercent.toFixed(1)}%
-                                </span>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
-                            <p className="text-xs">{t("gridStats.utilizationTooltip")}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                            className="h-full rounded-full transition-all bg-black dark:bg-white"
-                            style={{ width: `${Math.min(utilizationPercent, 100)}%` }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Cost estimate - highlighted */}
-            <div className="px-3 py-2.5 bg-muted/30 border-t border-border space-y-1.5">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                        <Euro className="w-3.5 h-3.5 text-black dark:text-white" />
-                        <span className="text-xs font-medium text-foreground">{t("gridStats.estCost")}</span>
-                    </div>
-                    <span className="text-sm font-bold text-foreground">
-                        €{(statistics.costs?.total_estimated_cost_eur ?? 0).toLocaleString()}
-                    </span>
-                </div>
-                {/* Cost breakdown */}
-                <div className="flex items-center justify-between text-[10px] text-foreground pt-1">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="flex items-center gap-1 cursor-help">
-                                <Cable className="w-2.5 h-2.5" />
-                                {t("gridStats.cablesLabel")}: €{(statistics.costs?.cable_cost_eur ?? 0).toLocaleString()}
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-xs">{t("gridStats.cableCostTooltip")}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="flex items-center gap-1 cursor-help">
-                                <Zap className="w-2.5 h-2.5" />
-                                {t("gridStats.trafosLabel")}: €{(statistics.costs?.transformer_cost_eur ?? 0).toLocaleString()}
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-xs">{t("gridStats.trafoCostTooltip")}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-                <p className="text-[9px] text-muted-foreground pt-0.5 flex items-center gap-1">
+                <p className="text-[9px] text-muted-foreground flex items-center gap-1">
                     <Info className="w-3 h-3 shrink-0" />
                     {t("gridStats.sourceNote")}
                 </p>

@@ -38,6 +38,7 @@ type TaskProcessor struct {
 	profileStore        *demandprofile.Store
 	seriesStore         *seriesstore.Store
 	buemVersion         string
+	pvVersion           string
 	c2tRuns             *c2trun.Store
 	memeRuns            *memerun.Store
 	tentacronClient     *tentacronclient.Client
@@ -55,6 +56,7 @@ func NewTaskProcessor(
 	weatherClient *weatherclient.Client,
 	weatherProvider string,
 	buemVersion string,
+	pvVersion string,
 	buemClient *buem.Client,
 	ignisClient *ignis.Client,
 	tentacronClient *tentacronclient.Client,
@@ -75,6 +77,7 @@ func NewTaskProcessor(
 		profileStore:        demandprofile.NewStore(db),
 		seriesStore:         seriesstore.NewStore(db),
 		buemVersion:         buemVersion,
+		pvVersion:           pvVersion,
 		c2tRuns:             c2trun.NewStore(db),
 		memeRuns:            memerun.NewStore(db),
 		tentacronClient:     tentacronClient,
@@ -93,11 +96,12 @@ func (p *TaskProcessor) demandResolver() jobs.DemandResolver {
 	}
 }
 
-// pvResolver is dispatch_meme's PV step.
+// pvResolver gives PV arrays their stored profiles, for resolve_demand_profiles and dispatch_meme.
 func (p *TaskProcessor) pvResolver() jobs.PVResolver {
 	return jobs.PVResolver{
 		C2T: p.city2tabulaClient, Weather: p.weatherClient,
 		WeatherProvider: p.weatherProvider, PV: pv.NewClient(p.tentacronClient),
+		Series: p.seriesStore, Version: p.pvVersion,
 	}
 }
 
@@ -112,7 +116,7 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeRunBuem:
 		return jobs.HandleRunBuem(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns, p.weatherClient, p.weatherProvider, p.buemClient, p.ignisClient, p.asynqClient, p.notificationService)
 	case jobs.TypeResolveDemandProfiles:
-		return jobs.HandleResolveDemandProfiles(ctx, t, p.demandResolver())
+		return jobs.HandleResolveDemandProfiles(ctx, t, p.demandResolver(), p.pvResolver())
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:

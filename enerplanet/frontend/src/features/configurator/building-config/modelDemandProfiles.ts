@@ -34,7 +34,22 @@ export interface StoredDemandProfile {
 interface ModelDemandProfiles {
   /** idle, resolving or completed. */
   status: string;
+  total: number;
+  resolved: number;
+  pending: number;
+  failed: number;
+  shared: number;
   buildings: StoredDemandProfile[];
+}
+
+/** How far the analysis of a model's buildings has got. */
+export interface AnalysisProgress {
+  /** idle (never analysed), resolving or completed. */
+  status: string;
+  total: number;
+  /** Buildings with an outcome: resolved, failed or shared. */
+  done: number;
+  failed: number;
 }
 
 /** Annual totals of a resolved building, in kWh. */
@@ -67,20 +82,25 @@ export function buemTotals(profile: StoredDemandProfile): BuemTotals | null {
   };
 }
 
-/** How often the profiles are read again while the model's run is in progress. */
-const RESOLVING_POLL_MS = 10_000;
+/** How often the profiles are read again while the model's analysis is in progress. */
+const RESOLVING_POLL_MS = 3_000;
 
 /**
- * The stored profiles of modelId keyed by osm_id, empty for a model not saved
- * yet. They are read again whenever refreshKey changes and every
- * RESOLVING_POLL_MS while a run is in progress.
+ * The stored profiles of modelId keyed by osm_id, and the analysis progress;
+ * empty and null for a model not saved yet. They are read again whenever
+ * refreshKey changes and every RESOLVING_POLL_MS while an analysis runs.
  */
-export function useModelDemandProfiles(modelId: number | undefined, refreshKey: string): Map<string, StoredDemandProfile> {
+export function useModelDemandProfiles(
+  modelId: number | undefined,
+  refreshKey: string,
+): { profiles: Map<string, StoredDemandProfile>; progress: AnalysisProgress | null } {
   const [profiles, setProfiles] = useState<Map<string, StoredDemandProfile>>(new Map());
+  const [progress, setProgress] = useState<AnalysisProgress | null>(null);
 
   useEffect(() => {
     if (!modelId) {
       setProfiles(new Map());
+      setProgress(null);
       return;
     }
     let cancelled = false;
@@ -89,8 +109,10 @@ export function useModelDemandProfiles(modelId: number | undefined, refreshKey: 
       try {
         const res = await axios.get<ModelDemandProfiles>(`/models/${modelId}/demand-profiles`);
         if (cancelled) return;
-        setProfiles(new Map(res.data.buildings.map((b) => [b.osm_id, b])));
-        if (res.data.status === 'resolving') timer = setTimeout(load, RESOLVING_POLL_MS);
+        const d = res.data;
+        setProfiles(new Map(d.buildings.map((b) => [b.osm_id, b])));
+        setProgress({ status: d.status, total: d.total, done: d.resolved + d.failed + d.shared, failed: d.failed });
+        if (d.status === 'resolving') timer = setTimeout(load, RESOLVING_POLL_MS);
       } catch (err) {
         if (!cancelled) console.error('[map] could not load the stored demand profiles of model', modelId, err);
       }
@@ -102,5 +124,5 @@ export function useModelDemandProfiles(modelId: number | undefined, refreshKey: 
     };
   }, [modelId, refreshKey]);
 
-  return profiles;
+  return { profiles, progress };
 }

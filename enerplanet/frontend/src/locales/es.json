@@ -115,24 +115,13 @@
     "cables": "Cables",
     "peakLoad": "Carga Máxima",
     "capacity": "Capacidad",
-    "utilization": "Utilización",
-    "estCost": "Costo Est.",
-    "cablesLabel": "Cables",
-    "trafosLabel": "Trafos",
-    "costDescription": "Costos de infraestructura incl. cables y transformadores",
     "buildingsTooltip": "Total de edificios de OpenStreetMap en el área seleccionada. PyLoVo estima la demanda de energía de cada edificio a partir de la superficie, las plantas, el tamaño del hogar y la etiqueta energética.",
-    "trafosTooltip": "Transformadores dimensionados por PyLoVo para la carga simultánea. Los tamaños estándar (100 a 630 kVA) se eligen de catálogos de equipos alemanes. El coste por tamaño procede de precios de equipos instalados.",
-    "cablesTooltip": "Cables de distribución de BT trazados por PyLoVo entre edificios y transformadores. El coste es la longitud (m) por el coste por metro (€/m) del catálogo, según el tipo de cable.",
+    "trafosTooltip": "Transformadores dimensionados por PyLoVo para la carga simultánea. Los tamaños estándar (100 a 630 kVA) se eligen de catálogos de equipos alemanes.",
+    "cablesTooltip": "Cables de distribución de BT trazados por PyLoVo entre edificios y transformadores.",
     "lengthTooltip": "Longitud total de todos los cables de BT de la red. El trazado sigue el camino más corto entre las acometidas de los edificios y los transformadores.",
-    "selectionNote": "Edificios seleccionados y los cables que los conectan a sus transformadores. Red completa: {{buildings}} edificios, {{cables}} cables, {{km}} km, {{utilisation}} % de utilización.",
-    "simultaneousLoad": "Carga simultánea",
-    "peakLoadTooltip": "Suma de las cargas eléctricas pico de todos los edificios (kW), derivada de la demanda anual estimada de cada edificio con perfiles de carga estándar (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Carga concurrente realista con un factor de simultaneidad, donde n es el número de edificios. No todos los edificios alcanzan su carga pico al mismo tiempo.",
+    "selectionNote": "Edificios seleccionados y los cables que los conectan a sus transformadores. Red completa: {{buildings}} edificios, {{cables}} cables, {{km}} km.",
     "capacityTooltip": "Potencia nominal total de todos los transformadores (kVA). Se eligen tamaños estándar alemanes de BT para cubrir la carga simultánea con un margen de seguridad.",
-    "utilizationTooltip": "Utilización del transformador = carga simultánea ÷ capacidad total × 100 %. Valores por encima del 80 % pueden indicar que se necesita más capacidad.",
-    "cableCostTooltip": "Coste de instalación de cables según tipo y longitud. Los precios de catálogos alemanes de BT incluyen material, zanja e instalación (€/m).",
-    "trafoCostTooltip": "Coste de compra e instalación de transformadores. Los precios por tamaño en kVA proceden de catálogos alemanes de equipos de distribución, ajustados al tamaño más cercano.",
-    "sourceNote": "Estimado por el motor de red PyLoVo. Costes de catálogos alemanes de BT. Utilización basada en la carga simultánea."
+    "sourceNote": "Estimado por el motor de red PyLoVo."
   },
   "drawing": {
     "clickToDraw": "Clic para dibujar",
@@ -1744,7 +1733,9 @@
         "tooLarge": "El archivo es demasiado grande ({{detail}}); se pueden importar archivos de hasta 5 MB.",
         "tooComplex": "La zona es demasiado detallada ({{detail}} polígonos / vértices); se pueden importar hasta 100 polígonos y 10.000 vértices.",
         "outOfRange": "Una coordenada ({{detail}}) está fuera del rango de longitud y latitud. Si el archivo usa metros, debe indicar su sistema de coordenadas (crs)."
-      }
+      },
+      "importAreaHint": "Carga el área del modelo desde un archivo GeoJSON (.geojson o .json) con entidades Polygon o MultiPolygon. Coordenadas en WGS 84 (EPSG:4326) o en una cuadrícula nacional como ETRS89 / UTM, tal como las exporta QGIS. Hasta 100 polígonos, 10 000 puntos y 5 MB. El archivo sustituye al área dibujada.",
+      "exportAreaHint": "Descarga el área dibujada como archivo GeoJSON (WGS 84, EPSG:4326). Se puede importar en otro modelo o abrir en QGIS."
     },
     "powerFlow": {
       "run": "Ejecutar análisis de flujo de potencia",
@@ -1810,7 +1801,6 @@
       "moreCount": "+{{count}} más",
       "clickForDetails": "Haz clic para ver más detalles",
       "class": "Clase",
-      "estimatedShort": "est.",
       "buemTotal": "Total: {{value}}",
       "kitchenGas": "Gas de cocina: {{value}}",
       "geometry3d": "Geometría 3D: City2TABULA",
@@ -1856,7 +1846,8 @@
       "length": "Longitud",
       "type": "Tipo",
       "bus": "Nodo",
-      "disabled": "Desactivado"
+      "disabled": "Desactivado",
+      "notAnalysed": "Aún no analizado"
     },
     "unsavedChanges": {
       "title": "Cambios sin guardar",
@@ -1894,7 +1885,19 @@
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",
       "description": "Los modelos con más de {{limit}} edificios tardan bastante más en calcularse: cada edificio pasa por BuEM y Calliope resuelve la demanda horaria de cada edificio. Un año completo puede tardar decenas de minutos. Aun así puede guardarlo y ejecutarlo."
-    }
+    },
+    "analysis": {
+      "button": "Analizar edificios",
+      "running": "Calculando la demanda: {{done}} de {{total}} edificios",
+      "done": "Edificios analizados: {{count}}",
+      "failed": "sin analizar: {{count}} (pase el ratón sobre un edificio para ver el motivo)",
+      "notYet": "Aún no analizado. El análisis calcula la demanda de calefacción, refrigeración y electricidad de cada edificio.",
+      "needsInputs": "Introduzca un nombre de modelo y un periodo de simulación para analizar los edificios.",
+      "saveFailed": "No se pudo guardar el modelo, por lo que el análisis no se inició.",
+      "startFailed": "No se pudo iniciar el análisis."
+    },
+    "periodWithinYear": "Las simulaciones de varios años aún no son compatibles, así que ambas fechas están ahora en {{year}}.",
+    "periodYear": "Año"
   },
   "mapLayers": {
     "title": "Capas del mapa",
@@ -3096,18 +3099,6 @@
   "transformer": {
     "onlyInsidePolygon": "Los transformadores solo se pueden colocar dentro del área seleccionada",
     "onlyNearPolygon": "Los transformadores se pueden colocar hasta 200 m fuera del área seleccionada"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Transformadores propios",
-    "transformer": "Transformador {{number}}",
-    "buildingCount": "Edificios: {{count}}",
-    "loadUtilization": "Utilización de carga",
-    "low": "Baja",
-    "moderate": "Moderada",
-    "medium": "Media",
-    "high": "Alta",
-    "overloaded": "Sobrecargada",
-    "mvLines": "Líneas de MT"
   },
   "buildingConfig": {
     "backToMap": "Volver al mapa",

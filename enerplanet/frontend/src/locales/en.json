@@ -115,24 +115,13 @@
     "cables": "Cables",
     "peakLoad": "Peak Load",
     "capacity": "Capacity",
-    "utilization": "Utilization",
-    "estCost": "Est. Cost",
-    "cablesLabel": "Cables",
-    "trafosLabel": "Trafos",
-    "costDescription": "Infrastructure costs incl. cables & transformers",
     "buildingsTooltip": "Total buildings detected from OpenStreetMap within the selected area. Each building's energy demand is estimated by PyLoVo using area, floors, household size and energy label.",
-    "trafosTooltip": "Transformers sized by PyLoVo to handle the simultaneous load. Standard sizes (100 to 630 kVA) are selected from German equipment catalogues. Cost is looked up per size from installed equipment prices.",
-    "cablesTooltip": "LV distribution cables routed by PyLoVo between buildings and transformers. Cost is length (m) times cost per metre (€/m) from the equipment catalogue, varying by cable type.",
+    "trafosTooltip": "Transformers sized by PyLoVo to handle the simultaneous load. Standard sizes (100 to 630 kVA) are selected from German equipment catalogues.",
+    "cablesTooltip": "LV distribution cables routed by PyLoVo between buildings and transformers.",
     "lengthTooltip": "Total length of all LV cables in the grid. Routing follows the shortest path between building connection points and transformer positions.",
-    "selectionNote": "Selected buildings and the cables connecting them to their transformers. Whole grid: {{buildings}} buildings, {{cables}} cables, {{km}} km, {{utilisation}}% utilisation.",
-    "simultaneousLoad": "Simult. load",
-    "peakLoadTooltip": "Sum of all building peak electrical loads (kW), derived from each building's estimated annual demand using standard load profiles (VDI 3807 / DIN 18599).",
-    "simultaneousLoadTooltip": "Realistic concurrent load using a simultaneity factor, where n is the number of buildings. Not all buildings draw their peak load at the same time.",
+    "selectionNote": "Selected buildings and the cables connecting them to their transformers. Whole grid: {{buildings}} buildings, {{cables}} cables, {{km}} km.",
     "capacityTooltip": "Total rated power of all transformers (kVA). Transformers are selected from standard German LV sizes to cover the simultaneous load with a safety margin.",
-    "utilizationTooltip": "Transformer utilisation = simultaneous load ÷ total capacity × 100%. Values above 80% may mean more transformer capacity is needed.",
-    "cableCostTooltip": "Cable installation cost based on cable type and length. Prices from German LV equipment catalogues include material, trenching and installation (€/m).",
-    "trafoCostTooltip": "Transformer purchase and installation cost. Prices per kVA size come from German distribution equipment catalogues, matched to the nearest size.",
-    "sourceNote": "Estimated by the PyLoVo grid engine. Costs from German LV equipment catalogues. Utilisation based on simultaneous load."
+    "sourceNote": "Estimated by the PyLoVo grid engine."
   },
   "drawing": {
     "clickToDraw": "Click to draw",
@@ -1794,7 +1783,9 @@
         "tooLarge": "The file is too large ({{detail}}); files up to 5 MB can be imported.",
         "tooComplex": "The area is too detailed ({{detail}} polygons / vertices); up to 100 polygons and 10,000 vertices can be imported.",
         "outOfRange": "A coordinate ({{detail}}) is outside the longitude and latitude range. If the file uses metres, it must name its coordinate system (crs)."
-      }
+      },
+      "importAreaHint": "Load a model area from a GeoJSON file (.geojson or .json) with Polygon or MultiPolygon features. Coordinates in WGS 84 (EPSG:4326) or a national grid such as ETRS89 / UTM, as QGIS exports them. Up to 100 polygons, 10,000 points and 5 MB. The file replaces the drawn area.",
+      "exportAreaHint": "Download the drawn area as a GeoJSON file (WGS 84, EPSG:4326). Import it into another model or open it in QGIS."
     },
     "mapOverlay": {
       "analyzingArea": "Analyzing area",
@@ -1805,7 +1796,6 @@
       "moreCount": "+{{count}} more",
       "clickForDetails": "Click for more details",
       "class": "Class",
-      "estimatedShort": "est.",
       "buemTotal": "Total: {{value}}",
       "kitchenGas": "Kitchen gas: {{value}}",
       "geometry3d": "3D geometry: City2TABULA",
@@ -1851,7 +1841,8 @@
       "length": "Length",
       "type": "Type",
       "bus": "Bus",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "notAnalysed": "Not analysed yet"
     },
     "unsavedChanges": {
       "title": "Unsaved changes",
@@ -1889,7 +1880,19 @@
     "largeModel": {
       "title": "This model has {{count}} buildings",
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
-    }
+    },
+    "analysis": {
+      "button": "Analyse buildings",
+      "running": "Calculating demand: {{done}} of {{total}} buildings",
+      "done": "Buildings analysed: {{count}}",
+      "failed": "not analysed: {{count}} (hover a building for the reason)",
+      "notYet": "Not analysed yet. Analysing calculates each building's heating, cooling and electricity demand.",
+      "needsInputs": "Enter a model name and a simulation period to analyse the buildings.",
+      "saveFailed": "The model could not be saved, so the analysis did not start.",
+      "startFailed": "The analysis could not be started."
+    },
+    "periodWithinYear": "Multi-year simulation is not supported yet, so both dates are now in {{year}}.",
+    "periodYear": "Year"
   },
   "mapLayers": {
     "title": "Map Layers",
@@ -3091,18 +3094,6 @@
   "transformer": {
     "onlyInsidePolygon": "Transformers can only be placed inside the selected area",
     "onlyNearPolygon": "Transformers can be placed up to 200 m outside the selected area"
-  },
-  "powerFlowLegend": {
-    "customTransformers": "Custom transformers",
-    "transformer": "Transformer {{number}}",
-    "buildingCount": "Buildings: {{count}}",
-    "loadUtilization": "Load utilisation",
-    "low": "Low",
-    "moderate": "Moderate",
-    "medium": "Medium",
-    "high": "High",
-    "overloaded": "Overloaded",
-    "mvLines": "MV lines"
   },
   "buildingConfig": {
     "backToMap": "Back to map",
