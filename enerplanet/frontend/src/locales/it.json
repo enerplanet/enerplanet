@@ -2344,8 +2344,8 @@
     "myModels": "i miei modelli",
     "grids": "griglie",
     "countries": "paesi",
-    "boxedBuildings_one": "{{count}} edificio mostrato come blocco: nessun dato urbano 3D",
-    "boxedBuildings_other": "{{count}} edifici mostrati come blocchi: nessun dato urbano 3D"
+    "footprintOnlyBuildings_one": "{{count}} edificio non ha dati 3D e mostra solo la sua impronta",
+    "footprintOnlyBuildings_other": "{{count}} edifici non hanno dati 3D e mostrano solo la loro impronta"
   },
   "privacy": {
     "dataAndPrivacy": "Dati e privacy",

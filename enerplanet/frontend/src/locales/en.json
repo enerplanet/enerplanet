@@ -2712,8 +2712,8 @@
     "myModels": "my models",
     "grids": "grids",
     "countries": "countries",
-    "boxedBuildings_one": "{{count}} building shown as a box: no 3D city data",
-    "boxedBuildings_other": "{{count}} buildings shown as boxes: no 3D city data"
+    "footprintOnlyBuildings_one": "{{count}} building has no 3D city data and shows only its footprint",
+    "footprintOnlyBuildings_other": "{{count}} buildings have no 3D city data and show only their footprint"
   },
   "privacy": {
     "dataAndPrivacy": "Data & Privacy",

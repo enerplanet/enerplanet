@@ -77,10 +77,7 @@ export function useMapLibreLayers(
   const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
 
-  // Buildings City2TABULA has LoD2 surfaces for are drawn from them (Lod2Layer)
-  // and keep only a flat footprint in the extrusion; the rest stay extruded.
   const { surfaces: lod2, loading: lod2Loading } = useLod2Surfaces(buildings, mapReady);
-  const lod2OsmIds = useMemo(() => new Set(lod2.keys()), [lod2]);
   const lod2LayerRef = useRef<Lod2Layer | null>(null);
 
   const loadAll = useCallback((map: maplibregl.Map) => {
@@ -89,7 +86,7 @@ export function useMapLibreLayers(
     // Use pre-reprojected data
     const colorMap = buildClusterColorMap(buildings, lines, transformers);
 
-    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds, lod2OsmIds);
+    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds);
     addOrUpdateLvLines(map, lines, colorMap);
     addOrUpdateMvLines(map, mvLines);
     addOrUpdateTransformers(map, transformers, colorMap);
@@ -114,7 +111,6 @@ export function useMapLibreLayers(
     showBoundary,
     polygonCoordinates,
     selectedBuildingOsmIds,
-    lod2OsmIds,
   ]);
 
   // Combined effect for initial load and data updates
@@ -274,8 +270,8 @@ export function useMapLibreLayers(
     };
   }, [mapRef, mapReady, isBuildingAssignMode, selectedBuildingOsmIds]);
 
-  // Buildings still drawn as extruded boxes once the LoD2 lookup has finished.
-  const boxedBuildings = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
+  // Buildings left as flat footprints once the LoD2 lookup has finished.
+  const footprintOnly = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
 
-  return { loadAll, boxedBuildings };
+  return { loadAll, footprintOnly };
 }
