@@ -1900,12 +1900,16 @@
       "choices": {
         "p50": "Typical year (P50)",
         "p10": "Low solar year (P10)",
-        "p90": "High solar year (P90)",
-        "year": "Real weather of {{year}}"
+        "p90": "High solar year (P90)"
       },
       "hints": {
         "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
-        "year": "The archive's recorded weather of the period's year."
+        "year": "Pick the historic year in the simulation period below; the run uses that year's recorded weather."
+      },
+      "mode": {
+        "label": "Weather mode",
+        "scenario": "Scenario",
+        "year": "Historic year"
       }
     },
     "periodParts": {
@@ -1915,7 +1919,9 @@
       "q2": "Q2",
       "q3": "Q3",
       "q4": "Q4"
-    }
+    },
+    "periodScenarioYear": "Scenario year",
+    "periodScenarioHint": "Scenario weather is not tied to a calendar year. Pick the days and months to simulate; the dates are saved in a fixed reference year."
   },
   "mapLayers": {
     "title": "Map Layers",

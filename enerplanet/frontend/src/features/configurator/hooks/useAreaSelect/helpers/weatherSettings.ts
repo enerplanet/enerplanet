@@ -15,6 +15,15 @@ export interface WeatherSettings {
 
 export const DEFAULT_WEATHER: WeatherSettings = { provider: null, choice: "p50" };
 
+/**
+ * The year a scenario model's dates carry. Scenario weather has no calendar year;
+ * the dates still need one for the simulation engine, and a non-leap year keeps
+ * their days in line with the 365-day scenario series.
+ */
+export const SCENARIO_DATE_YEAR = 2023;
+
+export const isScenario = (weather: WeatherSettings): boolean => weather.choice !== "year";
+
 const SCENARIOS: WeatherChoice[] = ["p50", "p10", "p90"];
 
 /** The weather a saved config asks for; anything unset or unknown reads as the default. */

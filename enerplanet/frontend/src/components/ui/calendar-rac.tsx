@@ -29,12 +29,14 @@ type RangeCalendarProps = ComponentProps<typeof RangeCalendarRac> &
     years: number[]
     /** Once a start date is picked, the end can only fall in the start's calendar year. */
     withinStartYear?: boolean
+    /** Shown in place of the year select, for dates whose year is not the user's to pick. */
+    yearLabel?: string
   }
 
 const PICKER_SELECT =
   "h-8 rounded-md border border-input bg-background px-2 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
-function CalendarHeader({ years }: Readonly<{ years: number[] }>) {
+function CalendarHeader({ years, yearLabel }: Readonly<{ years: number[]; yearLabel?: string }>) {
   const range = useContext(RangeCalendarStateContext)
   // The state of the latest render, for the step after a re-render below.
   const latest = useRef(range)
@@ -84,18 +86,22 @@ function CalendarHeader({ years }: Readonly<{ years: number[] }>) {
             </select>
           )}
         </CalendarMonthPicker>
-        <select
-          aria-label="year"
-          value={range?.focusedDate.year ?? years[0]}
-          onChange={(e) => changeYear(Number(e.target.value))}
-          className={PICKER_SELECT}
-        >
-          {years.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+        {yearLabel ? (
+          <span className="flex h-8 items-center px-2 text-sm font-medium text-muted-foreground">{yearLabel}</span>
+        ) : (
+          <select
+            aria-label="year"
+            value={range?.focusedDate.year ?? years[0]}
+            onChange={(e) => changeYear(Number(e.target.value))}
+            className={PICKER_SELECT}
+          >
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <Button
         slot="next"
@@ -144,7 +150,7 @@ function CalendarGridComponent({ isRange = false }: Readonly<{ isRange?: boolean
   )
 }
 
-function RangeCalendar({ className, years, withinStartYear = false, isDateUnavailable, ...props }: RangeCalendarProps) {
+function RangeCalendar({ className, years, withinStartYear = false, yearLabel, isDateUnavailable, ...props }: RangeCalendarProps) {
   // anchor is the start date picked so far, null before one is.
   const unavailable = (date: DateValue, anchor: CalendarDate | null) =>
     (isDateUnavailable?.(date, anchor) ?? false) ||
@@ -158,7 +164,7 @@ function RangeCalendar({ className, years, withinStartYear = false, isDateUnavai
         cn("w-fit", className)
       )}
     >
-      <CalendarHeader years={years} />
+      <CalendarHeader years={years} yearLabel={yearLabel} />
       {/* Room for a header row and six weeks, so the popover keeps its height in every month. */}
       <div className="min-h-[calc(2.25rem_+_6*(2.25rem_+_2px))]">
         <CalendarGridComponent isRange />

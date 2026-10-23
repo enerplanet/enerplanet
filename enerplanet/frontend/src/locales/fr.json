@@ -1905,12 +1905,16 @@
       "choices": {
         "p50": "Année typique (P50)",
         "p10": "Année peu ensoleillée (P10)",
-        "p90": "Année très ensoleillée (P90)",
-        "year": "Météo réelle de {{year}}"
+        "p90": "Année très ensoleillée (P90)"
       },
       "hints": {
         "scenario": "Une année composée de mois de l'archive : typique, ou au bas ou au haut de l'ensoleillement.",
-        "year": "La météo enregistrée par l'archive pour l'année de la période."
+        "year": "Choisissez l'année historique dans la période de simulation ci-dessous ; le calcul utilise la météo enregistrée de cette année."
+      },
+      "mode": {
+        "label": "Mode météo",
+        "scenario": "Scénario",
+        "year": "Année historique"
       }
     },
     "periodParts": {
@@ -1920,7 +1924,9 @@
       "q2": "T2",
       "q3": "T3",
       "q4": "T4"
-    }
+    },
+    "periodScenarioYear": "Année de scénario",
+    "periodScenarioHint": "La météo de scénario n'est liée à aucune année civile. Choisissez les jours et mois à simuler ; les dates sont enregistrées dans une année de référence fixe."
   },
   "mapLayers": {
     "title": "Couches de carte",

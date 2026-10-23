@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { applyWeatherToConfig, weatherFromConfig } from "./weatherSettings";
+import { SCENARIO_DATE_YEAR, applyWeatherToConfig, weatherFromConfig } from "./weatherSettings";
+
+describe("SCENARIO_DATE_YEAR", () => {
+  it("is not a leap year, so its days match the 365-day scenario series", () => {
+    expect(new Date(Date.UTC(SCENARIO_DATE_YEAR, 1, 29)).getUTCMonth()).toBe(2);
+  });
+});
 
 describe("weatherFromConfig", () => {
   it("reads an unset or unknown weather as the typical scenario on the default archive", () => {
