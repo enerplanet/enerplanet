@@ -1664,7 +1664,12 @@
       "historicYears_one": "anno storico {{range}}",
       "historicYears_other": "anni storici {{range}} ({{count}} anni)",
       "scenarioYears_one": "scenari dall'anno {{range}}",
-      "scenarioYears_other": "scenari da {{count}} anni, {{range}}"
+      "scenarioYears_other": "scenari da {{count}} anni, {{range}}",
+      "shortChoices": {
+        "p10": "Basso (P10)",
+        "p50": "Tipico (P50)",
+        "p90": "Alto (P90)"
+      }
     },
     "periodParts": {
       "label": "Periodo",

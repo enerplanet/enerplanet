@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { Info } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
@@ -14,7 +14,8 @@ const ARCHIVE_NAMES: Record<string, string> = {
   "cosmo-rea6": "COSMO-REA6",
 };
 
-const SCENARIOS: WeatherChoice[] = ["p50", "p10", "p90"];
+// Low to high solar irradiance, the order the row shows them in.
+const SCENARIOS: WeatherChoice[] = ["p10", "p50", "p90"];
 
 interface WeatherSettingsProps {
   /** Shows the archive picker; everyone else runs on the default archive. */
@@ -47,21 +48,17 @@ export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChan
 
       {scenario ? (
         <div>
-          <label htmlFor="weather-scenario-select" className="mb-1 block text-xs font-medium text-muted-foreground">
-            {t("simulation.weather.year")}
-          </label>
-          <Select value={weather.choice} onValueChange={(value: string) => setWeather({ ...weather, choice: value as WeatherChoice })}>
-            <SelectTrigger id="weather-scenario-select" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SCENARIOS.map((choice) => (
-                <SelectItem key={choice} value={choice}>
-                  {t(`simulation.weather.choices.${choice}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">{t("simulation.weather.year")}</p>
+          <ChoiceToggle
+            label={t("simulation.weather.year")}
+            value={weather.choice}
+            options={SCENARIOS.map((choice) => ({
+              value: choice,
+              label: t(`simulation.weather.shortChoices.${choice}`),
+              title: t(`simulation.weather.choices.${choice}`),
+            }))}
+            onChange={(choice) => setWeather({ ...weather, choice: choice as WeatherChoice })}
+          />
           <p className="mt-1 text-xs text-muted-foreground">{t("simulation.weather.hints.scenario")}</p>
         </div>
       ) : (
@@ -73,7 +70,8 @@ export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChan
   );
 };
 
-interface ChoiceOption { value: string; label: string }
+/** title, when set, is the option's full name, shown on hover. */
+interface ChoiceOption { value: string; label: string; title?: string }
 
 /** A row of mutually exclusive choices, one click each. */
 const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (
@@ -84,6 +82,7 @@ const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; 
         type="button"
         role="radio"
         aria-checked={value === option.value}
+        title={option.title}
         onClick={() => value !== option.value && onChange(option.value)}
         className={cn(
           "h-7 flex-1 cursor-pointer rounded px-2 text-xs font-medium transition-colors",

@@ -1920,7 +1920,12 @@
       "historicYears_one": "año histórico {{range}}",
       "historicYears_other": "años históricos {{range}} ({{count}} años)",
       "scenarioYears_one": "escenarios del año {{range}}",
-      "scenarioYears_other": "escenarios de {{count}} años, {{range}}"
+      "scenarioYears_other": "escenarios de {{count}} años, {{range}}",
+      "shortChoices": {
+        "p10": "Bajo (P10)",
+        "p50": "Típico (P50)",
+        "p90": "Alto (P90)"
+      }
     },
     "periodParts": {
       "label": "Periodo",
