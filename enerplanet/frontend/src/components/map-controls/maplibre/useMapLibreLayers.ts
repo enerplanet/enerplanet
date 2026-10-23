@@ -39,6 +39,8 @@ export interface LayerData {
 export function useMapLibreLayers(
   mapRef: React.RefObject<maplibregl.Map | null>,
   data: LayerData,
+  /** True once mapRef holds the map, so data present before it is drawn too. */
+  mapReady: boolean,
 ) {
   const {
     buildingsGeoJSON,
@@ -116,7 +118,7 @@ export function useMapLibreLayers(
     } else {
       map.once('load', () => loadAll(map));
     }
-  }, [mapRef, loadAll]);
+  }, [mapRef, mapReady, loadAll]);
 
   // Interactions setup
   useEffect(() => {
@@ -162,7 +164,7 @@ export function useMapLibreLayers(
       modelCleanupRef.current?.();
       modelCleanupRef.current = null;
     };
-  }, [mapRef, availableBoundaryGeoJSON, userModelGeoJSON]);
+  }, [mapRef, mapReady, availableBoundaryGeoJSON, userModelGeoJSON]);
 
   // Keep separator lines subtle at high pitch to avoid perceived drift.
   // Throttled to avoid overhead during fast rotation.
@@ -204,7 +206,7 @@ export function useMapLibreLayers(
       map.off('move', scheduleUpdate);
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [mapRef, buildingsGeoJSON]);
+  }, [mapRef, mapReady, buildingsGeoJSON]);
 
   // Pulse effect for assignment selection
   useEffect(() => {
@@ -244,7 +246,7 @@ export function useMapLibreLayers(
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [mapRef, isBuildingAssignMode, selectedBuildingOsmIds]);
+  }, [mapRef, mapReady, isBuildingAssignMode, selectedBuildingOsmIds]);
 
   return { loadAll };
 }
