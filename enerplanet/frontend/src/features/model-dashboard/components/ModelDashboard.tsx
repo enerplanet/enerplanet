@@ -17,7 +17,7 @@ import {
 	LayoutDashboard,
 	AlertCircle,
 	GitCompareArrows,
-	Zap,
+	Play,
 	MoreHorizontal,
 } from "lucide-react";
 
@@ -666,7 +666,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleRunMeme([model.id]);
 	}, [handleRunMeme]);
 
-	// A model the MEME run action offers on: the same statuses the per-row Zap
+	// A model the MEME run action offers on: the same statuses the per-row Play
 	// shows for (draft | modified | failed). completed/published are excluded.
 	const bulkRunnableModels = useMemo(
 		() => selectedModels.filter((model: Model) =>
@@ -756,7 +756,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		},
 		{
 			key: "bulk-run-meme",
-			icon: Zap,
+			icon: Play,
 			tooltip: getRunMemeTooltip(),
 			variant: "warning" as const,
 			onClick: handleBulkRunMeme,

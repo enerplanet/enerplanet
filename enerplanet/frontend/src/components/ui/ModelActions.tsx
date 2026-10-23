@@ -1,4 +1,4 @@
-import { Eye, Edit, Download, Copy, Trash2, Share, FolderInput, Zap, Activity } from "lucide-react";
+import { Eye, Edit, Download, Copy, Trash2, Share, FolderInput, Play, Activity } from "lucide-react";
 import { ModelStatus } from "@/types/models";
 import { isModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import ModelActionGroup, { ActionConfig, ActionSize } from "../shared/ModelActionGroup";
@@ -127,7 +127,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			// retired power-flow path by accident; POST /models/:id/run-meme is
 			// the seam.
 			key: "runMeme",
-			icon: Zap,
+			icon: Play,
 			tooltip: t("common.modelActions.runWithMeme"),
 			variant: "warning",
 			onClick: () => onRunMeme?.(model),
