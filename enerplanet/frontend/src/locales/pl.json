@@ -2357,7 +2357,11 @@
     "regions": "regiony",
     "myModels": "moje modele",
     "grids": "siatki",
-    "countries": "kraje"
+    "countries": "kraje",
+    "boxedBuildings_one": "{{count}} budynek pokazany jako bryła: brak danych 3D miasta",
+    "boxedBuildings_few": "{{count}} budynki pokazane jako bryły: brak danych 3D miasta",
+    "boxedBuildings_many": "{{count}} budynków pokazanych jako bryły: brak danych 3D miasta",
+    "boxedBuildings_other": "{{count}} budynku pokazanego jako bryła: brak danych 3D miasta"
   },
   "privacy": {
     "dataAndPrivacy": "Dane i prywatność",

@@ -2357,7 +2357,11 @@
     "regions": "regiony",
     "myModels": "moje modely",
     "grids": "mřížky",
-    "countries": "země"
+    "countries": "země",
+    "boxedBuildings_one": "{{count}} budova zobrazena jako kvádr: chybí 3D data města",
+    "boxedBuildings_few": "{{count}} budovy zobrazeny jako kvádry: chybí 3D data města",
+    "boxedBuildings_many": "{{count}} budov zobrazeno jako kvádry: chybí 3D data města",
+    "boxedBuildings_other": "{{count}} budov zobrazeno jako kvádry: chybí 3D data města"
   },
   "privacy": {
     "dataAndPrivacy": "Data a soukromí",

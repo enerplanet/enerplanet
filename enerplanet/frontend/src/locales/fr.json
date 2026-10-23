@@ -2716,7 +2716,9 @@
     "regions": "régions",
     "myModels": "mes modèles",
     "grids": "grilles",
-    "countries": "pays"
+    "countries": "pays",
+    "boxedBuildings_one": "{{count}} bâtiment affiché en bloc : pas de données urbaines 3D",
+    "boxedBuildings_other": "{{count}} bâtiments affichés en blocs : pas de données urbaines 3D"
   },
   "privacy": {
     "dataAndPrivacy": "Données et confidentialité",

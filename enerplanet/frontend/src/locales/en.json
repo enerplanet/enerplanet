@@ -2711,7 +2711,9 @@
     "regions": "regions",
     "myModels": "my models",
     "grids": "grids",
-    "countries": "countries"
+    "countries": "countries",
+    "boxedBuildings_one": "{{count}} building shown as a box: no 3D city data",
+    "boxedBuildings_other": "{{count}} buildings shown as boxes: no 3D city data"
   },
   "privacy": {
     "dataAndPrivacy": "Data & Privacy",

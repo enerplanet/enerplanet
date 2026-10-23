@@ -2342,7 +2342,9 @@
     "regions": "regio's",
     "myModels": "mijn modellen",
     "grids": "rasters",
-    "countries": "landen"
+    "countries": "landen",
+    "boxedBuildings_one": "{{count}} gebouw als blok getoond: geen 3D-stadsgegevens",
+    "boxedBuildings_other": "{{count}} gebouwen als blokken getoond: geen 3D-stadsgegevens"
   },
   "privacy": {
     "dataAndPrivacy": "Gegevens & Privacy",
