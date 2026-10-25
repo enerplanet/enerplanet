@@ -1,5 +1,21 @@
 basePath: /api
 definitions:
+  internal_handler_city2tabula.SurfacesResponse:
+    properties:
+      attributions:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.SurfacesBuilding'
+        type: array
+      country:
+        example: germany
+        type: string
+      next_cursor:
+        type: string
+    type: object
   internal_middleware.WhoAmIResponse:
     properties:
       access_level:
@@ -942,6 +958,28 @@ definitions:
       type:
         type: string
     type: object
+  spatialhub_backend_internal_city2tabula.SurfacesBuilding:
+    properties:
+      object_id:
+        type: string
+      osm_ids:
+        items:
+          type: string
+        type: array
+      surfaces:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.WGS84Surface'
+        type: array
+    type: object
+  spatialhub_backend_internal_city2tabula.WGS84Surface:
+    properties:
+      geometry:
+        type: object
+      id:
+        type: string
+      type:
+        type: string
+    type: object
   spatialhub_backend_internal_pv.Surface:
     properties:
       area:
@@ -1754,6 +1792,65 @@ paths:
       security:
       - SessionAuth: []
       summary: Roof and wall surfaces of a building for PV
+      tags:
+      - City2TABULA
+  /v1/city2tabula/surfaces:
+    get:
+      description: |-
+        Returns one page of the LoD2 roof and wall polygons of every building whose
+        footprint intersects the bbox, in WGS84 with z as height above sea level, for
+        drawing the area in 3D. Each building lists its linked OSM ways, best match
+        first. Surface ids are the ids /v1/city2tabula/geometry and stored PV arrays
+        use. Pass next_cursor back as cursor until it is null. Without a country, the
+        country is worked out from the bbox centre and returned.
+      parameters:
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected
+        in: query
+        name: country
+        type: string
+      - description: West longitude
+        in: query
+        name: xmin
+        required: true
+        type: number
+      - description: South latitude
+        in: query
+        name: ymin
+        required: true
+        type: number
+      - description: East longitude
+        in: query
+        name: xmax
+        required: true
+        type: number
+      - description: North latitude
+        in: query
+        name: ymax
+        required: true
+        type: number
+      - description: next_cursor of the previous page; omitted for the first page
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_city2tabula.SurfacesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: LoD2 roofs and walls of the buildings in an area
       tags:
       - City2TABULA
   /v1/heat-demand/resolve:

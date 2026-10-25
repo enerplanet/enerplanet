@@ -53,6 +53,8 @@ type fakeC2T struct {
 	geometryJSON        string         // target_response for c2t-geometry
 	geometryFails       bool           // c2t-geometry fails as an upstream 500
 	geometryPayload     map[string]any // payload of the last c2t-geometry request
+	surfacesJSON        string         // target_response for c2t-surfaces
+	surfacesPayload     map[string]any // payload of the last c2t-surfaces request
 }
 
 func (f *fakeC2T) client(t *testing.T) *c2t.Client {
@@ -70,6 +72,9 @@ func (f *fakeC2T) client(t *testing.T) *c2t.Client {
 			}
 			if req.Target == "c2t-geometry" {
 				f.geometryPayload = req.Payload
+			}
+			if req.Target == "c2t-surfaces" {
+				f.surfacesPayload = req.Payload
 			}
 			w.WriteHeader(http.StatusAccepted)
 			_, _ = fmt.Fprintf(w, `{"id":%q}`, req.Target)
@@ -110,6 +115,8 @@ func (f *fakeC2T) envelope(target string) string {
 			return fail(http.StatusInternalServerError, "internal server error")
 		}
 		return ok(`{"run_id":"run-1","country":"germany","status":"pending"}`)
+	case "c2t-surfaces":
+		return ok(f.surfacesJSON)
 	case "c2t-geometry":
 		if f.geometryFails {
 			return fail(http.StatusInternalServerError, "internal server error")

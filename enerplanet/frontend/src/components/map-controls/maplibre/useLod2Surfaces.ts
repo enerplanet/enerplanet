@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import axios from '@/lib/axios';
+import { OBJECT_KEY_PREFIX } from '@/features/configurator/building-config/useBuildingState';
 
 /** One LoD2 roof or wall polygon: rings of [lon, lat, height above sea level in m]. */
 export interface Lod2Surface {
@@ -10,38 +11,60 @@ export interface Lod2Surface {
   rings: number[][][];
 }
 
-interface GeometryResponse {
-  buildings: { surfaces?: { id?: string; type: string; geojson?: { type: string; coordinates: unknown } }[] }[];
+/** One building of a /v1/city2tabula/surfaces page. */
+export interface SurfacesBuilding {
+  object_id: string;
+  /** The building's OSM ways, best match first. */
+  osm_ids: string[];
+  surfaces: { id: string; type: string; geometry?: { type: string; coordinates: unknown } }[];
 }
 
-interface EnrichAnswer {
-  country?: string;
-  data?: Record<string, { object_id?: string }>;
+interface SurfacesPage {
+  country: string;
+  buildings: SurfacesBuilding[];
+  next_cursor: string | null;
 }
 
-// A building's LoD2 geometry does not change while the page is open, so it is
-// fetched once per object_id and kept for later 3D views. The request itself is
-// kept, so a building asked for twice at the same time is fetched once.
-const surfaceCache = new Map<string, Promise<Lod2Surface[]>>();
-// The geometry route serves one building per call; this many run at a time.
+interface AreaSurfaces {
+  country: string | null;
+  surfaces: Map<string, Lod2Surface[]>;
+}
+
+// An area's LoD2 geometry does not change while the page is open, so it is
+// fetched once per set of buildings and kept for later 3D views. The request
+// itself is kept, so an area asked for twice at the same time is fetched once.
+const areaCache = new Map<string, Promise<AreaSurfaces>>();
+// The PV surface lookup runs one call per building; this many run at a time.
 const PARALLEL_REQUESTS = 4;
-// Surfaces found so far are drawn after this many buildings, not only at the end.
-const PUBLISH_EVERY = 10;
 
-/** Roof and wall polygons of a geometry response; ground and other surfaces are left out. */
-export function lod2SurfacesOf(res: GeometryResponse): Lod2Surface[] {
+/** Roof and wall polygons of one building; other surface types are left out. */
+export function lod2SurfacesOf(building: SurfacesBuilding): Lod2Surface[] {
   const out: Lod2Surface[] = [];
-  for (const building of res.buildings ?? []) {
-    for (const surface of building.surfaces ?? []) {
-      if (surface.type !== 'RoofSurface' && surface.type !== 'WallSurface') continue;
-      const geometry = surface.geojson;
-      let polygons: number[][][][] = [];
-      if (geometry?.type === 'Polygon') polygons = [geometry.coordinates as number[][][]];
-      else if (geometry?.type === 'MultiPolygon') polygons = geometry.coordinates as number[][][][];
-      for (const rings of polygons) out.push({ id: surface.id ?? '', roof: surface.type === 'RoofSurface', rings });
-    }
+  for (const surface of building.surfaces ?? []) {
+    if (surface.type !== 'RoofSurface' && surface.type !== 'WallSurface') continue;
+    const geometry = surface.geometry;
+    let polygons: number[][][][] = [];
+    if (geometry?.type === 'Polygon') polygons = [geometry.coordinates as number[][][]];
+    else if (geometry?.type === 'MultiPolygon') polygons = geometry.coordinates as number[][][][];
+    for (const rings of polygons) out.push({ id: surface.id, roof: surface.type === 'RoofSurface', rings });
   }
   return out;
+}
+
+/**
+ * Adds each building's surfaces under the first of its keys in osmIds: its OSM
+ * ways, then the `c2t:` key a custom-grid building carries. Every LoD2 building
+ * under an outline is drawn, each once; one matching no key lies outside the
+ * model and is skipped.
+ */
+export function addByOsmId(into: Map<string, Lod2Surface[]>, buildings: SurfacesBuilding[], osmIds: ReadonlySet<string>): void {
+  for (const building of buildings) {
+    const keys = [...(building.osm_ids ?? []), OBJECT_KEY_PREFIX + building.object_id];
+    const osmId = keys.find((id) => osmIds.has(id));
+    if (!osmId) continue;
+    const surfaces = lod2SurfacesOf(building);
+    if (surfaces.length > 0) into.set(osmId, [...(into.get(osmId) ?? []), ...surfaces]);
+  }
 }
 
 function osmIdsOf(buildings: GeoJSON.FeatureCollection): string[] {
@@ -77,28 +100,42 @@ export async function forEachLimited<T>(items: T[], fn: (item: T) => Promise<voi
   await Promise.all(Array.from({ length: PARALLEL_REQUESTS }, worker));
 }
 
-function surfacesFor(country: string, objectId: string): Promise<Lod2Surface[]> {
-  let request = surfaceCache.get(objectId);
+/** Reads every page of the area's surfaces; the first page names the country the rest are read for. */
+async function fetchArea(bbox: ReturnType<typeof bboxOf>, osmIds: ReadonlySet<string>): Promise<AreaSurfaces> {
+  const surfaces = new Map<string, Lod2Surface[]>();
+  let country: string | null = null;
+  let cursor: string | null = null;
+  do {
+    const res: { data: SurfacesPage } = await axios.get<SurfacesPage>('/v1/city2tabula/surfaces', {
+      params: { ...bbox, country: country ?? undefined, cursor: cursor ?? undefined },
+    });
+    country = res.data.country;
+    addByOsmId(surfaces, res.data.buildings ?? [], osmIds);
+    cursor = res.data.next_cursor;
+  } while (cursor);
+  return { country, surfaces };
+}
+
+function areaSurfaces(key: string, buildings: GeoJSON.FeatureCollection): Promise<AreaSurfaces> {
+  let request = areaCache.get(key);
   if (!request) {
-    request = axios
-      .get<GeometryResponse>('/v1/city2tabula/geometry', { params: { country, object_ids: objectId, srid: '4326' } })
-      .then((res) => lod2SurfacesOf(res.data));
+    request = fetchArea(bboxOf(buildings), new Set(key.split(',')));
     // A failed request is dropped, so the next 3D view asks again.
-    request.catch(() => surfaceCache.delete(objectId));
-    surfaceCache.set(objectId, request);
+    request.catch(() => areaCache.delete(key));
+    areaCache.set(key, request);
   }
   return request;
 }
 
 /**
  * The LoD2 roofs and walls City2TABULA has for the given WGS84 buildings, by
- * osm_id, loaded only while enabled. A building without 3D data is absent, so
- * the caller can keep drawing it another way; loading is true until all are asked.
+ * osm_id, loaded only while enabled, and the country they were read for. A
+ * building without 3D data is absent, so the caller can keep drawing it
+ * another way; loading is true until the area is read.
  */
 export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean; country: string | null } {
-  const [byOsmId, setByOsmId] = useState<Map<string, Lod2Surface[]>>(() => new Map());
+  const [area, setArea] = useState<AreaSurfaces>(() => ({ country: null, surfaces: new Map() }));
   const [loading, setLoading] = useState(false);
-  const [country, setCountry] = useState<string | null>(null);
   // The building data is rebuilt on many renders; the lookup restarts only when
   // the set of buildings changes, and reads their outlines from this ref.
   const buildingsRef = useRef(buildings);
@@ -109,41 +146,13 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
     const current = buildingsRef.current;
     if (!enabled || !current?.features?.length || !buildingKey) return;
     let cancelled = false;
-    const osmIds = buildingKey.split(',');
     setLoading(true);
-
-    const load = async () => {
-      const enrich = await axios.post<EnrichAnswer>('/v1/city2tabula/enrich', {
-        country: '', bbox: bboxOf(current), osm_ids: osmIds,
-      });
-      const country = enrich.data.country;
-      const entries = enrich.data.data ?? {};
-      if (!country) return;
-      if (!cancelled) setCountry(country);
-      const queue = osmIds.flatMap((osmId) => {
-        const objectId = entries[osmId]?.object_id;
-        return objectId ? [{ osmId, objectId }] : [];
-      });
-      const found = new Map<string, Lod2Surface[]>();
-      let done = 0;
-      await forEachLimited(queue, async ({ osmId, objectId }) => {
-        try {
-          const surfaces = await surfacesFor(country, objectId);
-          if (surfaces.length > 0) found.set(osmId, surfaces);
-        } catch (err) {
-          console.warn(`[3d] no LoD2 surfaces for building ${osmId} (object ${objectId})`, err);
-        }
-        done++;
-        if (!cancelled && done % PUBLISH_EVERY === 0) setByOsmId(new Map(found));
-      }, () => cancelled);
-      if (!cancelled) setByOsmId(new Map(found));
-    };
-
-    load()
-      .catch((err) => console.warn('[3d] LoD2 surfaces unavailable; buildings stay extruded', err))
+    areaSurfaces(buildingKey, current)
+      .then((result) => { if (!cancelled) setArea(result); })
+      .catch((err) => console.warn('[3d] LoD2 surfaces unavailable; buildings stay flat footprints', err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [buildingKey, enabled]);
 
-  return { surfaces: byOsmId, loading, country };
+  return { surfaces: area.surfaces, loading, country: area.country };
 }
