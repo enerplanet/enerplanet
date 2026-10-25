@@ -77,7 +77,7 @@ const EMPTY: BuildingStateResult = { building: null, loading: false, error: null
 const failed = (error: string): BuildingStateResult => ({ ...EMPTY, error });
 
 /** Prefix of the key a building from 3D data carries when it has no OSM way (backend city2tabula.ObjectKey). */
-const OBJECT_KEY_PREFIX = 'c2t:';
+export const OBJECT_KEY_PREFIX = 'c2t:';
 
 /**
  * The building with the label its header shows: a 3D building's dataset id
