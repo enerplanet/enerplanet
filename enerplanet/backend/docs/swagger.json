@@ -1112,6 +1112,85 @@
                 }
             }
         },
+        "/v1/city2tabula/surfaces": {
+            "get": {
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ],
+                "description": "Returns one page of the LoD2 roof and wall polygons of every building whose\nfootprint intersects the bbox, in WGS84 with z as height above sea level, for\ndrawing the area in 3D. Each building lists its linked OSM ways, best match\nfirst. Surface ids are the ids /v1/city2tabula/geometry and stored PV arrays\nuse. Pass next_cursor back as cursor until it is null. Without a country, the\ncountry is worked out from the bbox centre and returned.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "City2TABULA"
+                ],
+                "summary": "LoD2 roofs and walls of the buildings in an area",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Country name, e.g. germany; case-insensitive. ISO2 codes are rejected",
+                        "name": "country",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "West longitude",
+                        "name": "xmin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "South latitude",
+                        "name": "ymin",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "East longitude",
+                        "name": "xmax",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "number",
+                        "description": "North latitude",
+                        "name": "ymax",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "next_cursor of the previous page; omitted for the first page",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_city2tabula.SurfacesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/heat-demand/resolve": {
             "post": {
                 "security": [
@@ -1641,6 +1720,30 @@
         }
     },
     "definitions": {
+        "internal_handler_city2tabula.SurfacesResponse": {
+            "type": "object",
+            "properties": {
+                "attributions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit"
+                    }
+                },
+                "buildings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.SurfacesBuilding"
+                    }
+                },
+                "country": {
+                    "type": "string",
+                    "example": "germany"
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_middleware.WhoAmIResponse": {
             "type": "object",
             "properties": {
@@ -2879,6 +2982,40 @@
                     "items": {
                         "type": "integer"
                     }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.SurfacesBuilding": {
+            "type": "object",
+            "properties": {
+                "object_id": {
+                    "type": "string"
+                },
+                "osm_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "surfaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/spatialhub_backend_internal_city2tabula.WGS84Surface"
+                    }
+                }
+            }
+        },
+        "spatialhub_backend_internal_city2tabula.WGS84Surface": {
+            "type": "object",
+            "properties": {
+                "geometry": {
+                    "type": "object"
                 },
                 "id": {
                     "type": "string"

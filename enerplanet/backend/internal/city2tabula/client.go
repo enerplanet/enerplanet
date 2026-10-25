@@ -24,6 +24,7 @@ const (
 	targetBuildings  = "c2t-buildings"
 	targetCoverage   = "c2t-coverage"
 	targetGeometry   = "c2t-geometry"
+	targetSurfaces   = "c2t-surfaces"
 )
 
 // ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
@@ -492,4 +493,46 @@ func (c *Client) getGeometry(ctx context.Context, country string, objectIDs []st
 		return GeometryResult{}, asC2TError(err)
 	}
 	return result, nil
+}
+
+// SurfacesBuilding is one building of a surfaces page: its LoD2 roofs and
+// walls in WGS84, and the OSM ways linked to it, best match first.
+type SurfacesBuilding struct {
+	ObjectID string         `json:"object_id"`
+	OSMIDs   []string       `json:"osm_ids"`
+	Surfaces []WGS84Surface `json:"surfaces"`
+}
+
+// WGS84Surface is a roof or wall polygon in EPSG:4326 with z in metres above
+// sea level. ID is the surface id GET /api/v1/geometry and stored PV arrays use.
+type WGS84Surface struct {
+	ID       string          `json:"id"`
+	Type     string          `json:"type"`
+	Geometry json.RawMessage `json:"geometry" swaggertype:"object"`
+}
+
+// SurfacesPage is one page of GET /api/v1/surfaces. NextCursor is nil on the
+// last page.
+type SurfacesPage struct {
+	Buildings    []SurfacesBuilding `json:"buildings"`
+	Attributions []DatasetCredit    `json:"attributions"`
+	NextCursor   *string            `json:"next_cursor"`
+}
+
+// GetSurfacesInBBox returns one page of the LoD2 roofs and walls of every
+// building whose footprint intersects bbox (WGS84). Pass the previous page's
+// NextCursor as cursor, "" for the first page.
+func (c *Client) GetSurfacesInBBox(ctx context.Context, country string, bbox Bbox, cursor string) (SurfacesPage, error) {
+	payload := map[string]any{
+		"country": normalizeCountry(country),
+		"xmin":    bbox.Xmin, "ymin": bbox.Ymin, "xmax": bbox.Xmax, "ymax": bbox.Ymax,
+	}
+	if cursor != "" {
+		payload["cursor"] = cursor
+	}
+	var page SurfacesPage
+	if err := c.tc.Do(ctx, targetSurfaces, payload, &page); err != nil {
+		return SurfacesPage{}, asC2TError(err)
+	}
+	return page, nil
 }
