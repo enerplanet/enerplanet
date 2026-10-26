@@ -801,7 +801,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	return (
 		<Fragment>
-				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
+				<div className={`${PAGE_SHELL_CLASS} flex h-full flex-col overflow-hidden`}>
 				{/* Page header */}
 				<PageHeader
 					icon={LayoutDashboard}
@@ -839,7 +839,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					}
 				/>
 
-				<div className="w-full space-y-5">
+				<div className="flex min-h-0 w-full flex-1 flex-col space-y-5">
 					{/* Groups Section */}
 					{groups.length > 0 && (
 						<div className="md-rise rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm">
@@ -870,7 +870,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					)}
 
 					{/* Toolbar and table, each in its own card */}
-					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
+					<div className="md-rise flex min-h-0 flex-1 flex-col space-y-4" style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
 						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
 							{/* Search */}
@@ -986,8 +986,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								)}
 							</div>
 
-							{/* Table */}
-							<div>
+							{/* Table: only the rows scroll; header, toolbar and pagination stay */}
+							<div className="flex min-h-0 flex-1 flex-col">
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
 								<div className="space-y-3">
@@ -1007,11 +1007,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
-									<div className="w-full overflow-auto">
+										<div className={`md-fade-in flex min-h-0 flex-col overflow-hidden ${CARD_CLASS}`}>
+									<div className="min-h-0 w-full flex-1 overflow-auto">
 										<table className="w-full min-w-[75rem] table-fixed">
 											<ModelColumns />
-											<thead>
+											<thead className="sticky top-0 z-10">
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
 													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
@@ -1111,7 +1111,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
 											resultsLabel={t("model.family.pagination")}
-											className="bg-muted"
+											className="shrink-0 bg-muted"
 										/>
 									)}
 								</div>
