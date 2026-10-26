@@ -200,6 +200,14 @@ migrate: .env
 	@echo "$(CYAN)Running migrations...$(NC)"
 	@$(BACKEND_RUN) /app/migrate energy-backend
 
+.PHONY: migrate-rerun
+# Force re-apply one already-recorded migration, e.g.
+# `make migrate-rerun FILE=044_rename_building_heat_profiles_to_demand_profiles.sql`.
+# The file must be written re-apply-safe; see enerplanet/backend/migrations/README.md.
+migrate-rerun: .env
+	@test -n "$(FILE)" || (echo "Usage: make migrate-rerun FILE=NNN_description.sql"; exit 1)
+	@$(BACKEND_RUN) /app/migrate --rerun $(FILE) energy-backend
+
 .PHONY: seed
 seed: .env
 	@echo "$(CYAN)Seeding database...$(NC)"
