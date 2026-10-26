@@ -15,24 +15,13 @@ interface GridStatsBadgeProps {
     className?: string;
 }
 
-// Remembered per browser; storage can be unavailable (private windows), which only loses the preference.
-const COLLAPSED_KEY = "gridStats.collapsed";
-const readCollapsed = (): boolean => {
-    try { return localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; }
-};
-const writeCollapsed = (collapsed: boolean) => {
-    try { localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0"); } catch { /* preference only */ }
-};
-
 export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildingOsmIds, className }) => {
     const { t } = useTranslation();
     const [statistics, setStatistics] = useState<GridStatistics | null>(null);
     const [loading, setLoading] = useState(false);
-    const [collapsed, setCollapsed] = useState(readCollapsed);
-    const toggleCollapsed = () => {
-        writeCollapsed(!collapsed);
-        setCollapsed(!collapsed);
-    };
+    // Open on every visit: the building and transformer counts matter most on large models.
+    const [collapsed, setCollapsed] = useState(false);
+    const toggleCollapsed = () => setCollapsed(!collapsed);
     // Joined so a new array with the same ids does not refetch.
     const selectionKey = buildingOsmIds?.join(",") ?? "";
     const site = siteScope(useModelStore((s) => s.pylovoGridData));
