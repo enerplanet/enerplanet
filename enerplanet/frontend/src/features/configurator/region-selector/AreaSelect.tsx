@@ -525,13 +525,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
+  // 3D is for viewing: no drawing or deleting there, so no hints for them.
+  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null && !isMapLibre3D);
 
   // Primitive selectors: they change when another building is hovered, not on every move.
   const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
   const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
   const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null && !isMapLibre3D);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -560,7 +562,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     downloadBlob(blob, name && `${name}.geojson`, "area.geojson");
   };
 
-  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
   const closeTechDialog = () => {
     techOperations.setTechDialogOpen(false);
