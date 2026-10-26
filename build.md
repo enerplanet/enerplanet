@@ -51,6 +51,16 @@ make backend   # rebuilds + restarts only energy-backend
 and `env_file: ./backend/.env`, so the backend reaches each service on its
 published localhost port.
 
+## Migrations run on start
+
+The container entrypoint (`/app/start.sh`) runs `/app/migrate` **before**
+`/app/server`, so pending migrations are applied on every start or restart —
+settings like `make backend`, a compose `--force-recreate`, or a deploy over
+the new image can never leave the schema behind the code. The migration runner
+records each applied file in `schema_migrations` and skips what is already
+applied, so this is safe on every boot. `RUN_MIGRATIONS_ON_START=false`
+skips it. See `enerplanet/backend/migrations/README.md`.
+
 ## Configure an environment (radarr-style)
 
 The image is one artifact; the environment is supplied as container env vars.
@@ -86,6 +96,7 @@ docker run -d --name energy-backend \
 curl -sS http://localhost:8000/config.js        # window.__ENERPLANET_CONFIG__ = {...}
 curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/health   # 200
 curl -sS http://localhost:8000/ | grep -o 'src="/config.js"'             # present
+docker logs energy-backend 2>&1 | grep -i migration                       # "Applied N, skipped M" on start
 ```
 
 ## Troubleshooting
