@@ -2743,6 +2743,11 @@ const docTemplate = `{
         "spatialhub_backend_internal_api_contracts.PVSurfacesResponse": {
             "type": "object",
             "properties": {
+                "country": {
+                    "description": "Country is the database the surfaces came from, as given or resolved\nfrom lon and lat; GET /v1/city2tabula/geometry takes the same value.",
+                    "type": "string",
+                    "example": "germany"
+                },
                 "surfaces": {
                     "type": "array",
                     "items": {

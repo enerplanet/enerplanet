@@ -29,7 +29,7 @@ func TestPVSurfaces_ListsRoofsAndWallsWithPlacement(t *testing.T) {
 	w := getPVSurfaces(t, h, "country=germany&osm_id=42")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.JSONEq(t, `{"surfaces":[
+	assert.JSONEq(t, `{"country":"germany","surfaces":[
 		{"surface_id":"r-south","tilt":35,"azimuth":180,"area":40,"usable_share":0.8,"kind":"roof","qualifies":true,"suggested":true,"object_id":"DE.A"},
 		{"surface_id":"r-north","tilt":35,"azimuth":0,"area":40,"usable_share":0.8,"kind":"roof","qualifies":false,"suggested":false,"object_id":"DE.A"},
 		{"surface_id":"w-1","tilt":90,"azimuth":180,"area":80,"usable_share":0.8,"kind":"wall","qualifies":false,"suggested":true,"object_id":"DE.A"}]}`, w.Body.String())
@@ -59,7 +59,7 @@ func TestPVSurfaces_NoBuildingIsEmptyList(t *testing.T) {
 	w := getPVSurfaces(t, h, "country=germany&osm_id=42")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.JSONEq(t, `{"surfaces":[]}`, w.Body.String())
+	assert.JSONEq(t, `{"country":"germany","surfaces":[]}`, w.Body.String())
 }
 
 func TestPVSurfaces_ResolvesCountryFromCoordinates(t *testing.T) {
@@ -69,6 +69,7 @@ func TestPVSurfaces_ResolvesCountryFromCoordinates(t *testing.T) {
 	w := getPVSurfaces(t, h, "osm_id=42&lon=12.95&lat=48.83")
 
 	require.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `{"country":"germany","surfaces":[]}`, w.Body.String())
 }
 
 func TestPVSurfaces_RequiresOSMIDAndALocation(t *testing.T) {
