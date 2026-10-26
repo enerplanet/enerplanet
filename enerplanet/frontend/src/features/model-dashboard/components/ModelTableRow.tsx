@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
-import { SimulationProgress } from "@/components/ui/SimulationProgress";
 import CompletedTimer from "@/components/ui/CompletedTimer";
 import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import ModelActions from "@/components/ui/ModelActions";
@@ -172,15 +171,16 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
   );
 };
 
-/** The run's stage graph, shown in place of the status tag while the run is in progress. */
-const RunStages: React.FC<{ status: Model["status"] }> = ({ status }) => {
+/** The status pill of a run in progress; a queued run explains the wait on hover. */
+const RunStatus: React.FC<{ status: Model["status"] }> = ({ status }) => {
   const { t } = useTranslation();
-  if (status !== "queue") return <SimulationProgress status={status} />;
+  const pill = <StatusBadge status={status} size="small" />;
+  if (status !== "queue") return pill;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div>
-          <SimulationProgress status={status} />
+          {pill}
         </div>
       </TooltipTrigger>
       <TooltipContent>
@@ -423,7 +423,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
       <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex flex-wrap items-center gap-2">
           {isActiveStatus(model.status) ? (
-            <RunStages status={model.status} />
+            <RunStatus status={model.status} />
           ) : model.status === "failed" ? (
             <Tooltip>
               <TooltipTrigger asChild>
