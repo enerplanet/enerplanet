@@ -95,7 +95,7 @@ export function LandingNav() {
     <nav className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-slate-950/90 shadow-lg shadow-black/10 backdrop-blur-xl' : 'bg-slate-950/60 backdrop-blur-md'}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-          <img src="/images/logo/enerplanet-logo.png" alt="EnerPlanET" className="h-8 brightness-0 invert" />
+          <img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="EnerPlanET" className="h-10 w-auto" />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

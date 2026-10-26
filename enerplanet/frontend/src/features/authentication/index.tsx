@@ -36,14 +36,8 @@ function ssoLoginUrl(): string {
 
 const EnerPlanETLogo = (
 	<div className="flex items-center justify-center mb-1">
-		<img
-			src="/images/logo/enerplanet-logo.png"
-			alt="EnerPlanET"
-			className="w-auto max-w-[95%] md:max-w-[600px] object-contain dark:brightness-0 dark:invert"
-			style={{
-				height: '36px'
-			}}
-		/>
+		<img src="/brand/enerplanet-lockup-green-outline.svg" alt="EnerPlanET" className="h-12 w-auto dark:hidden" />
+		<img src="/brand/enerplanet-lockup-green-dark-outline.svg" alt="EnerPlanET" className="hidden h-12 w-auto dark:block" />
 	</div>
 );
 
@@ -58,9 +52,9 @@ const EnerPlanETSidePanel = (
 		<div className="absolute inset-0 bg-gradient-to-br from-slate-900/92 via-slate-900/82 to-slate-800/70" />
 		<div className="relative flex h-full flex-col justify-between p-10 xl:p-14 text-white">
 			<img
-				src="/images/logo/enerplanet-logo.png"
+				src="/brand/enerplanet-lockup-green-dark-outline.svg"
 				alt="EnerPlanET"
-				className="h-8 w-auto self-start shrink-0 brightness-0 invert"
+				className="h-12 w-auto self-start shrink-0"
 			/>
 
 			<div className="max-w-lg">
@@ -68,11 +62,11 @@ const EnerPlanETSidePanel = (
 					<Zap className="h-3.5 w-3.5" /> Energy system planning
 				</span>
 				<h2 className="mt-6 text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight">
-					Plan smarter, more resilient energy grids
+					Plan heat and power for a neighbourhood, building by building
 				</h2>
 				<p className="mt-4 text-base text-white/80 leading-relaxed">
-					Model capacity, costs and renewable integration across your network — from a single
-					connected workspace.
+					Draw an area to get its low-voltage grid and 3D buildings, give each building its heat
+					pump, boiler, PV or battery, and optimise the whole system hour by hour.
 				</p>
 			</div>
 

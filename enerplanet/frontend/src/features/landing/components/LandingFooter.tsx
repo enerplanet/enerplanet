@@ -42,9 +42,9 @@ export function LandingFooter() {
           <div>
             <div className="flex items-center gap-2.5">
               <img
-                src="/images/logo/enerplanet-logo.png"
+                src="/brand/enerplanet-lockup-green-dark-outline.svg"
                 alt="EnerPlanET"
-                className="h-8 brightness-0 invert"
+                className="h-10 w-auto"
               />
             </div>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
