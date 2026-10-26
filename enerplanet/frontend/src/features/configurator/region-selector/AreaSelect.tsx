@@ -625,15 +625,17 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
-            <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
-              <WorkflowBar
-                polygonCount={state.allPolygons.length}
-                isGeneratingGrid={state.isGeneratingGrid}
-                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                siteMode={siteMode}
-                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-              />
-            </div>
+            {!isMapLibre3D && (
+              <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
+                <WorkflowBar
+                  polygonCount={state.allPolygons.length}
+                  isGeneratingGrid={state.isGeneratingGrid}
+                  hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                  siteMode={siteMode}
+                  hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                />
+              </div>
+            )}
             {gridResultIds.length > 0 && (
               <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
                 <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
