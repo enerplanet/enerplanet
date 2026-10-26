@@ -1858,17 +1858,17 @@
     "resolutionComingSoon": "30-minute resolution coming in a future release",
     "runMode": {
       "label": "Run mode",
-      "plan": "Plan",
-      "operate": "Operate",
-      "planHint": "Choose the size of each technology at least cost",
-      "operateHint": "Keep each technology at its maximum size and optimise only its use",
-      "unsized": "Buildings that need a size for operate mode: {{count}}. Click an entry to set it.",
+      "plan": "Optimisation",
+      "operate": "Simulation",
+      "planHint": "Suggests the values left open, such as sizes, at least cost",
+      "operateHint": "Runs each technology at the size and values entered and optimises only its use; every value must be set, not only the size",
+      "unsized": "Buildings that need a size for simulation: {{count}}. Click an entry to set it.",
       "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximum size",
         "cont_storage_cap_max": "storage size"
       },
-      "fieldNeeded": "Operate mode needs a finite size here",
+      "fieldNeeded": "Simulation needs a finite size here",
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
@@ -1910,7 +1910,7 @@
         "p90": "High solar year (P90)"
       },
       "hints": {
-        "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
+        "scenario": "A year stitched from historical archive months: typical, or the low or high end of solar irradiance. Not a forecast.",
         "year": "Pick the historic year in the simulation period below; the run uses that year's recorded weather."
       },
       "mode": {
@@ -1938,7 +1938,7 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Scenario year",
-    "periodScenarioHint": "Scenario weather is not tied to a calendar year. Pick the days and months to simulate; the dates are saved in a fixed reference year."
+    "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year."
   },
   "mapLayers": {
     "title": "Map Layers",

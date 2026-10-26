@@ -1614,17 +1614,17 @@
     "resolutionComingSoon": "Rozdzielczość 30-minutowa pojawi się w przyszłej wersji",
     "runMode": {
       "label": "Tryb obliczeń",
-      "plan": "Planowanie",
-      "operate": "Eksploatacja",
-      "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
-      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę",
-      "unsized": "Budynki wymagające wielkości w trybie eksploatacji: {{count}}. Kliknij wpis, aby ją ustawić.",
+      "plan": "Optymalizacja",
+      "operate": "Symulacja",
+      "planHint": "Proponuje brakujące wartości, np. wielkości, przy najniższym koszcie",
+      "operateHint": "Używa każdej technologii z wpisaną wielkością i wartościami i optymalizuje tylko jej pracę; potrzebne są wszystkie wartości, nie tylko wielkość",
+      "unsized": "Budynki wymagające wielkości do symulacji: {{count}}. Kliknij wpis, aby ją ustawić.",
       "unsizedEntry": "Budynek {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maksymalna wielkość",
         "cont_storage_cap_max": "wielkość magazynu"
       },
-      "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości",
+      "fieldNeeded": "Symulacja wymaga tu skończonej wielkości",
       "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
     "siteMode": {
@@ -1666,7 +1666,7 @@
         "p90": "Rok o wysokim nasłonecznieniu (P90)"
       },
       "hints": {
-        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "scenario": "Rok złożony z historycznych miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia. To nie jest prognoza.",
         "year": "Wybierz rok historyczny w okresie symulacji poniżej; obliczenia używają zarejestrowanej pogody z tego roku."
       },
       "mode": {
@@ -1698,7 +1698,7 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scenariusza",
-    "periodScenarioHint": "Pogoda scenariuszowa nie należy do żadnego roku kalendarzowego. Wybierz dni i miesiące do symulacji; daty są zapisywane w stałym roku odniesienia."
+    "periodScenarioHint": "Rok scenariuszowy jest składany miesiąc po miesiącu z historycznych danych pogodowych, więc nie ma własnego roku kalendarzowego. Miesiące nadal mają znaczenie: wyznaczają porę roku objętą symulacją, a z nią zapotrzebowanie na ciepło, uzysk energii słonecznej i czas obliczeń. Daty są zapisywane w stałym roku odniesienia."
   },
   "mapLayers": {
     "title": "Warstwy mapy",

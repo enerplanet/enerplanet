@@ -1599,17 +1599,17 @@
     "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
     "runMode": {
       "label": "Rekenmodus",
-      "plan": "Plannen",
-      "operate": "Bedrijven",
-      "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
-      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren",
-      "unsized": "Gebouwen die een grootte nodig hebben voor de bedrijfsmodus: {{count}}. Klik op een regel om die in te stellen.",
+      "plan": "Optimalisatie",
+      "operate": "Simulatie",
+      "planHint": "Stelt tegen de laagste kosten de ontbrekende waarden voor, zoals groottes",
+      "operateHint": "Gebruikt elke technologie met de ingevoerde grootte en waarden en optimaliseert alleen het gebruik; alle waarden zijn nodig, niet alleen de grootte",
+      "unsized": "Gebouwen die een grootte nodig hebben voor de simulatie: {{count}}. Klik op een regel om die in te stellen.",
       "unsizedEntry": "Gebouw {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximale grootte",
         "cont_storage_cap_max": "opslaggrootte"
       },
-      "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
+      "fieldNeeded": "De simulatie heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "siteMode": {
@@ -1651,7 +1651,7 @@
         "p90": "Jaar met veel zon (P90)"
       },
       "hints": {
-        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "scenario": "Een jaar samengesteld uit historische maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling. Geen voorspelling.",
         "year": "Kies het historische jaar in de simulatieperiode hieronder; de berekening gebruikt het gemeten weer van dat jaar."
       },
       "mode": {
@@ -1679,7 +1679,7 @@
       "q4": "K4"
     },
     "periodScenarioYear": "Scenariojaar",
-    "periodScenarioHint": "Scenarioweer hoort bij geen kalenderjaar. Kies de dagen en maanden om te simuleren; de datums worden opgeslagen in een vast referentiejaar."
+    "periodScenarioHint": "Een scenariojaar wordt maand voor maand samengesteld uit historisch weer en heeft daardoor geen eigen kalenderjaar. De maanden tellen toch: ze bepalen welk seizoen de simulatie dekt, en daarmee de warmtevraag, de zonne-opbrengst en de rekentijd. De datums worden opgeslagen in een vast referentiejaar."
   },
   "mapLayers": {
     "title": "Kaartlagen",

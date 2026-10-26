@@ -1600,17 +1600,17 @@
     "resolutionComingSoon": "La risoluzione a 30 minuti arriverà in una versione futura",
     "runMode": {
       "label": "Modalità di calcolo",
-      "plan": "Pianificare",
-      "operate": "Esercire",
-      "planHint": "Scegliere la dimensione di ogni tecnologia al minimo costo",
-      "operateHint": "Mantenere ogni tecnologia alla sua dimensione massima e ottimizzarne solo l'uso",
-      "unsized": "Edifici che richiedono una dimensione per la modalità di esercizio: {{count}}. Fare clic su una voce per impostarla.",
+      "plan": "Ottimizzazione",
+      "operate": "Simulazione",
+      "planHint": "Propone al minimo costo i valori mancanti, come le dimensioni",
+      "operateHint": "Usa ogni tecnologia con la dimensione e i valori inseriti e ne ottimizza solo l'uso; servono tutti i valori, non solo la dimensione",
+      "unsized": "Edifici che richiedono una dimensione per la simulazione: {{count}}. Fare clic su una voce per impostarla.",
       "unsizedEntry": "Edificio {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "dimensione massima",
         "cont_storage_cap_max": "dimensione di accumulo"
       },
-      "fieldNeeded": "La modalità di esercizio richiede qui una dimensione finita",
+      "fieldNeeded": "La simulazione richiede qui una dimensione finita",
       "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
     "siteMode": {
@@ -1652,7 +1652,7 @@
         "p90": "Anno ad alta irradiazione (P90)"
       },
       "hints": {
-        "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
+        "scenario": "Un anno composto da mesi storici dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare. Non è una previsione.",
         "year": "Scegli l'anno storico nel periodo di simulazione qui sotto; il calcolo usa il meteo registrato di quell'anno."
       },
       "mode": {
@@ -1680,7 +1680,7 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Anno di scenario",
-    "periodScenarioHint": "Il meteo di scenario non appartiene a un anno solare. Scegli i giorni e i mesi da simulare; le date vengono salvate in un anno di riferimento fisso."
+    "periodScenarioHint": "Un anno di scenario è composto mese per mese da dati meteo storici, quindi non ha un anno solare proprio. I mesi contano comunque: stabiliscono la stagione coperta dalla simulazione e, con essa, il fabbisogno di riscaldamento, la resa solare e il tempo di calcolo. Le date vengono salvate in un anno di riferimento fisso."
   },
   "mapLayers": {
     "title": "Livelli mappa",

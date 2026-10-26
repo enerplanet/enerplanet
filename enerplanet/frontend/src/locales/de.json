@@ -1858,17 +1858,17 @@
     "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version",
     "runMode": {
       "label": "Betriebsart",
-      "plan": "Planen",
-      "operate": "Betreiben",
-      "planHint": "Die Größe jeder Technologie zu minimalen Kosten wählen",
-      "operateHint": "Jede Technologie bei ihrer maximalen Größe halten und nur ihren Einsatz optimieren",
-      "unsized": "Gebäude, die für den Betriebsmodus eine Größe brauchen: {{count}}. Klicken Sie auf einen Eintrag, um sie festzulegen.",
+      "plan": "Optimierung",
+      "operate": "Simulation",
+      "planHint": "Schlägt offene Werte wie Größen zu minimalen Kosten vor",
+      "operateHint": "Betreibt jede Technologie mit der eingegebenen Größe und den eingegebenen Werten und optimiert nur ihren Einsatz; alle Werte müssen gesetzt sein, nicht nur die Größe",
+      "unsized": "Gebäude, die für die Simulation eine Größe brauchen: {{count}}. Klicken Sie auf einen Eintrag, um sie festzulegen.",
       "unsizedEntry": "Gebäude {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximale Größe",
         "cont_storage_cap_max": "Speichergröße"
       },
-      "fieldNeeded": "Der Betriebsmodus braucht hier eine endliche Größe",
+      "fieldNeeded": "Die Simulation braucht hier eine endliche Größe",
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
     "siteMode": {
@@ -1910,7 +1910,7 @@
         "p90": "Strahlungsreiches Jahr (P90)"
       },
       "hints": {
-        "scenario": "Ein aus den Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung.",
+        "scenario": "Ein aus historischen Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung. Keine Vorhersage.",
         "year": "Wählen Sie das historische Jahr im Simulationszeitraum unten; der Lauf nutzt das aufgezeichnete Wetter dieses Jahres."
       },
       "mode": {
@@ -1938,7 +1938,7 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Szenariojahr",
-    "periodScenarioHint": "Szenariowetter gehört zu keinem Kalenderjahr. Wählen Sie die zu simulierenden Tage und Monate; die Daten werden in einem festen Bezugsjahr gespeichert."
+    "periodScenarioHint": "Ein Szenariojahr wird Monat für Monat aus historischem Wetter zusammengesetzt und hat daher kein eigenes Kalenderjahr. Die Monate zählen trotzdem: Sie bestimmen, welche Jahreszeit die Simulation abdeckt, und damit Heizbedarf, Solarertrag und Rechenzeit. Die Daten werden in einem festen Bezugsjahr gespeichert."
   },
   "mapLayers": {
     "title": "Kartenebenen",

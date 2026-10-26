@@ -1860,17 +1860,17 @@
     "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version",
     "runMode": {
       "label": "Mode de calcul",
-      "plan": "Planifier",
-      "operate": "Exploiter",
-      "planHint": "Choisir la taille de chaque technologie au moindre coût",
-      "operateHint": "Garder chaque technologie à sa taille maximale et optimiser uniquement son utilisation",
-      "unsized": "Bâtiments qui ont besoin d'une taille pour le mode exploitation : {{count}}. Cliquez sur une entrée pour la définir.",
+      "plan": "Optimisation",
+      "operate": "Simulation",
+      "planHint": "Propose au moindre coût les valeurs manquantes, comme les tailles",
+      "operateHint": "Utilise chaque technologie avec la taille et les valeurs saisies et optimise uniquement son utilisation ; toutes les valeurs sont nécessaires, pas seulement la taille",
+      "unsized": "Bâtiments qui ont besoin d'une taille pour la simulation : {{count}}. Cliquez sur une entrée pour la définir.",
       "unsizedEntry": "Bâtiment {{building}} : {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "taille maximale",
         "cont_storage_cap_max": "taille de stockage"
       },
-      "fieldNeeded": "Le mode exploitation exige ici une taille finie",
+      "fieldNeeded": "La simulation exige ici une taille finie",
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "siteMode": {
@@ -1912,7 +1912,7 @@
         "p90": "Année très ensoleillée (P90)"
       },
       "hints": {
-        "scenario": "Une année composée de mois de l'archive : typique, ou au bas ou au haut de l'ensoleillement.",
+        "scenario": "Une année composée de mois historiques de l'archive : typique, ou au bas ou au haut de l'ensoleillement. Ce n'est pas une prévision.",
         "year": "Choisissez l'année historique dans la période de simulation ci-dessous ; le calcul utilise la météo enregistrée de cette année."
       },
       "mode": {
@@ -1940,7 +1940,7 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Année de scénario",
-    "periodScenarioHint": "La météo de scénario n'est liée à aucune année civile. Choisissez les jours et mois à simuler ; les dates sont enregistrées dans une année de référence fixe."
+    "periodScenarioHint": "Une année de scénario est assemblée mois par mois à partir de la météo historique ; elle n'a donc pas d'année civile propre. Les mois comptent quand même : ils fixent la saison couverte par la simulation, et donc la demande de chauffage, la production solaire et le temps de calcul. Les dates sont enregistrées dans une année de référence fixe."
   },
   "mapLayers": {
     "title": "Couches de carte",
