@@ -22,9 +22,15 @@ export function storedBuemOf(properties: Record<string, unknown> | undefined): S
   return stored?.building ? stored : null;
 }
 
-/** Rebuilds the configurator's state for a building from what was stored. */
-export function fromStoredBuem(osmId: string, geometry: unknown, stored: StoredBuem): BuildingState {
+/**
+ * Rebuilds the configurator's state for a building from what was stored.
+ * storeys is City2TABULA's count, used when the stored block has none.
+ */
+export function fromStoredBuem(osmId: string, geometry: unknown, stored: StoredBuem, storeys?: number): BuildingState {
   // Models saved with configurator 0.7 carry technology_state; PV now lives in the building's techs.
   const { technology_state: _legacy, ...buem } = stored as StoredBuem & { technology_state?: unknown };
-  return adaptBuemFeature({ type: 'Feature', id: osmId, geometry, properties: { buem } });
+  // Configurator 0.14 keeps the count beside the block; earlier versions saved none.
+  const saved = (buem as { storeys?: number }).storeys ?? buem.building.n_storeys;
+  const building = saved === undefined && storeys ? { ...buem.building, n_storeys: storeys } : buem.building;
+  return adaptBuemFeature({ type: 'Feature', id: osmId, geometry, properties: { buem: { ...buem, building } } });
 }
