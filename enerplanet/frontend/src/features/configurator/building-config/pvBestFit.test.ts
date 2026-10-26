@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PV_MODULE, type SurfacePolygon } from '@thd-spatial-ai/building-configurator';
 
-import { arrayWithLayout, bestFitArrays } from './pvBestFit';
+const { get } = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('@/lib/axios', () => ({ default: { get } }));
+
+import { arrayWithLayout, bestFitArrays, fetchBestFitArrays } from './pvBestFit';
 import type { PvSurfaceRow } from './usePvMode';
 
 const flat = (id: string, w: number, d: number): SurfacePolygon => ({
@@ -32,5 +35,24 @@ describe('arrayWithLayout', () => {
   it('keeps an array without a polygon as stored, for the backend to size by area', () => {
     const array = { surface_id: 'elsewhere', tilt: 30, azimuth: 200, area: 40, usable_share: 0.8 };
     expect(arrayWithLayout(array, undefined, DEFAULT_PV_MODULE)).toBe(array);
+  });
+});
+
+describe('fetchBestFitArrays', () => {
+  beforeEach(() => get.mockReset());
+
+  it('lays out the qualifying roofs on the geometry of their 3D building, in the resolved country', async () => {
+    get
+      .mockResolvedValueOnce({ data: { country: 'germany', surfaces: [{ ...row('big', true), object_id: 'DE.A' }, { ...row('wall', false), object_id: 'DE.B' }] } })
+      .mockResolvedValueOnce({ data: { buildings: [{ object_id: 'DE.A', surfaces: [{ id: 'big', type: 'RoofSurface', geojson: { type: 'Polygon', coordinates: flat('big', 10, 6).coordinates } }] }] } });
+
+    const { country, arrays } = await fetchBestFitArrays('42', { lon: 12.9, lat: 48.8 }, 0.6, DEFAULT_PV_MODULE);
+
+    expect(country).toBe('germany');
+    expect(arrays.map((a) => [a.surface_id, a.usable_share])).toEqual([['big', 0.6]]);
+    expect(arrays[0].modules).toBeGreaterThan(0);
+    // Only the 3D building behind a qualifying roof is fetched.
+    expect(get).toHaveBeenCalledWith('/v1/city2tabula/geometry', { params: { country: 'germany', object_ids: 'DE.A' } });
+    expect(get).toHaveBeenCalledTimes(2);
   });
 });

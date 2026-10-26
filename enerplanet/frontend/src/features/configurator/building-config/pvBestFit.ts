@@ -5,7 +5,15 @@
  * simulates, so the map, the 3D view and the run agree.
  */
 
-import { pvLayout, type PvModule, type SurfacePolygon } from '@thd-spatial-ai/building-configurator';
+import {
+  pvLayout,
+  surfacesFromGeometryResponse,
+  type BuildingGeometry,
+  type PvModule,
+  type SurfacePolygon,
+} from '@thd-spatial-ai/building-configurator';
+
+import axios from '@/lib/axios';
 
 import type { PvArray, PvSurfaceRow } from './usePvMode';
 
@@ -53,3 +61,31 @@ export function bestFitArrays(
     .filter((array) => array.modules === undefined || array.modules > 0);
 }
 
+/** Where a building is: its City2TABULA country, or a WGS84 point to resolve it from. */
+export type BuildingPlace = { country: string } | { lon: number; lat: number };
+
+/**
+ * Fetches the building's PV surfaces and the geometry of each 3D building
+ * behind its qualifying roofs, and returns the best-fit arrays with the
+ * country the surfaces came from, for the next building's request.
+ */
+export async function fetchBestFitArrays(
+  osmId: string,
+  place: BuildingPlace,
+  usableShare: number,
+  module: PvModule,
+): Promise<{ country: string; arrays: PvArray[] }> {
+  const { data } = await axios.get<{ country: string; surfaces: PvSurfaceRow[] }>('/v1/city2tabula/pv-surfaces', {
+    params: { osm_id: osmId, ...place },
+  });
+  const objectIds = new Set(data.surfaces.filter((r) => r.qualifies && r.object_id).map((r) => r.object_id!));
+  const polygons: SurfacePolygon[] = [];
+  // The geometry route serves one 3D building per call.
+  for (const objectId of objectIds) {
+    const res = await axios.get<{ buildings: BuildingGeometry[] }>('/v1/city2tabula/geometry', {
+      params: { country: data.country, object_ids: objectId },
+    });
+    polygons.push(...surfacesFromGeometryResponse(res.data.buildings ?? []));
+  }
+  return { country: data.country, arrays: bestFitArrays(data.surfaces, polygons, usableShare, module) };
+}

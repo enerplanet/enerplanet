@@ -16,7 +16,7 @@ import {
 
 import axios from '@/lib/axios';
 
-import { arrayWithLayout } from './pvBestFit';
+import { arrayWithLayout, bestFitArrays } from './pvBestFit';
 
 /**
  * One PV array on a surface, as stored in techs.pv_supply.arrays. tilt and
@@ -133,7 +133,11 @@ export function usePvMode(
   const active = building !== null;
   const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
-  const installed = useMemo(() => installedPvArrays(arrays, rows), [arrays, rows]);
+  // A building still on automatic placement shows the best fit; the first change stores it.
+  const installed = useMemo(
+    () => arrays ?? bestFitArrays(rows ?? [], polygons ?? [], DEFAULT_USABLE_SHARE, DEFAULT_PV_MODULE),
+    [arrays, rows, polygons],
+  );
   const polygonById = useMemo(() => new Map((polygons ?? []).map((p) => [p.id, p])), [polygons]);
   const laidOut = useCallback(
     (array: PvArray) => arrayWithLayout(array, polygonById.get(array.surface_id), DEFAULT_PV_MODULE),
