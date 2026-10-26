@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Technologies } from '@thd-spatial-ai/building-configurator';
+import type { PvLayoutOptions, Technologies } from '@thd-spatial-ai/building-configurator';
 import { useTranslation } from '@spatialhub/i18n';
 
 import { useModelStore } from '@/features/configurator/store/modelStore';
@@ -19,14 +19,15 @@ import {
 /**
  * initial is the building's techs when the view opens; onChange receives every
  * edit as the building's full techs. technologies is undefined while the
- * building has none, so the view shows no empty tab.
+ * building has none, so the view shows no empty tab. pvSurfaceIds and
+ * pvSurfaces are the installed surfaces and their layout options for the view.
  */
 export function useBuildingTechnologies(
   osmId: string,
   country: string | null,
   initial: BuildingTechs | null,
   onChange?: (techs: BuildingTechs) => void,
-): { technologies: Technologies | undefined; pvSurfaceIds: readonly string[] } {
+): { technologies: Technologies | undefined; pvSurfaceIds: readonly string[]; pvSurfaces: Record<string, PvLayoutOptions> } {
   const { t } = useTranslation();
   const runMode = useModelStore((s) => s.runMode);
   const { openBuilding } = useConfiguratorParams();
@@ -42,6 +43,11 @@ export function useBuildingTechnologies(
   const { rows } = usePvSurfaceRows(osmId, country, pv !== undefined);
   const pvArrays = useMemo(() => (pv ? installedPvArrays(pv.arrays ?? null, rows) : []), [pv, rows]);
   const pvSurfaceIds = useMemo(() => pvArrays.map((a) => a.surface_id), [pvArrays]);
+  // The normal view draws each surface's modules as PV mode lays them out.
+  const pvSurfaces = useMemo<Record<string, PvLayoutOptions>>(
+    () => Object.fromEntries(pvArrays.map((a) => [a.surface_id, { usableShare: a.usable_share, mounting: a.mounting, orientation: a.orientation }])),
+    [pvArrays],
+  );
 
   const store = useCallback((next: BuildingTechs) => {
     setTechs(next);
@@ -73,5 +79,5 @@ export function useBuildingTechnologies(
     return { items, onChange: onFieldChange, onRemove };
   }, [techs, pvArrays, runMode, errors, t, openBuilding, osmId, onFieldChange, onRemove]);
 
-  return { technologies, pvSurfaceIds };
+  return { technologies, pvSurfaceIds, pvSurfaces };
 }

@@ -5,17 +5,36 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { PvMode, PvSurface } from '@thd-spatial-ai/building-configurator';
+import {
+  DEFAULT_PV_MODULE,
+  type PvMode,
+  type PvMounting,
+  type PvOrientation,
+  type PvSurface,
+  type SurfacePolygon,
+} from '@thd-spatial-ai/building-configurator';
 
 import axios from '@/lib/axios';
 
-/** One PV array on a surface, as stored in techs.pv_supply.arrays. */
+import { arrayWithLayout } from './pvBestFit';
+
+/**
+ * One PV array on a surface, as stored in techs.pv_supply.arrays. tilt and
+ * azimuth are the panels' own angles; with a module layout, modules and
+ * capacity_kw come from it.
+ */
 export interface PvArray {
   surface_id: string;
   tilt: number;
   azimuth: number;
   area: number;
   usable_share: number;
+  /** Absent: the configurator's default, racked under 10° tilt, otherwise flush. */
+  mounting?: PvMounting;
+  /** Absent: best fit. */
+  orientation?: PvOrientation;
+  modules?: number;
+  capacity_kw?: number;
 }
 
 export interface PvSurfaceRow extends PvArray {
@@ -97,7 +116,8 @@ function stateOf(row: PvSurfaceRow, installed: boolean): PvSurface['state'] {
 /**
  * Returns the PV mode to pass to Building3DView once the surfaces are loaded,
  * and whether loading them failed; nothing is loaded while building is null.
- * onArrays receives every change as the building's full list of arrays.
+ * onArrays receives every change as the building's full list of arrays, each
+ * laid out on its surface's polygon where the view's geometry has one.
  */
 export function usePvMode(
   osmId: string,
@@ -107,12 +127,18 @@ export function usePvMode(
   onArrays: (arrays: PvArray[]) => void,
   shownObjectId: string | null,
   t: (key: string, options?: Record<string, unknown>) => string,
+  polygons: readonly SurfacePolygon[] | null,
 ): { pv: PvMode | undefined; failed: boolean } {
   const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
   const active = building !== null;
   const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
   const installed = useMemo(() => installedPvArrays(arrays, rows), [arrays, rows]);
+  const polygonById = useMemo(() => new Map((polygons ?? []).map((p) => [p.id, p])), [polygons]);
+  const laidOut = useCallback(
+    (array: PvArray) => arrayWithLayout(array, polygonById.get(array.surface_id), DEFAULT_PV_MODULE),
+    [polygonById],
+  );
 
   const change = useCallback((next: PvArray[]) => {
     setArrays(next);
@@ -123,12 +149,16 @@ export function usePvMode(
     const row = rows?.find((r) => r.surface_id === surfaceId);
     if (!row) return;
     const others = installed.filter((a) => a.surface_id !== surfaceId);
-    change(on ? [...others, toArray(row)] : others);
-  }, [rows, installed, change]);
+    change(on ? [...others, laidOut(toArray(row))] : others);
+  }, [rows, installed, change, laidOut]);
 
   const onShareChange = useCallback((surfaceId: string, usableShare: number) => {
-    change(installed.map((a) => (a.surface_id === surfaceId ? { ...a, usable_share: usableShare } : a)));
-  }, [installed, change]);
+    change(installed.map((a) => (a.surface_id === surfaceId ? laidOut({ ...a, usable_share: usableShare }) : a)));
+  }, [installed, change, laidOut]);
+
+  const onMountingChange = useCallback((surfaceId: string, mounting: PvMounting, orientation: PvOrientation | undefined) => {
+    change(installed.map((a) => (a.surface_id === surfaceId ? laidOut({ ...a, mounting, orientation }) : a)));
+  }, [installed, change, laidOut]);
 
   const typeLabel = building?.typeLabel ?? "";
   const pv = useMemo<PvMode | undefined>(() => {
@@ -142,11 +172,16 @@ export function usePvMode(
         state: stateOf(row, array !== undefined),
         usableShare,
         maxKwp: Number((row.area * usableShare * KWP_PER_M2).toFixed(1)),
+        mounting: array?.mounting,
+        orientation: array?.orientation,
         label: labels[row.surface_id],
+        tilt: row.tilt,
+        azimuth: row.azimuth,
+        area: row.area,
       };
     }
-    return { surfaces, notice, typeLabel, onToggle, onShareChange };
-  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange, shownObjectId, t]);
+    return { surfaces, notice, typeLabel, onToggle, onShareChange, onMountingChange, module: DEFAULT_PV_MODULE };
+  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange, onMountingChange, shownObjectId, t]);
 
   return { pv, failed };
 }
