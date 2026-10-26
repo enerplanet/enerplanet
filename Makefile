@@ -264,14 +264,14 @@ setup-repos:
 	@# Pinned to PYLOVO_REF (see repos.conf). An existing checkout is left alone:
 	@# it may be a developer's own branch.
 	@[ -d dependencies/enerplanet-pylovo ] || (git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git checkout -q $(PYLOVO_REF) && git lfs pull)
-	@[ -d dependencies/$(OPENTECHDB_DIR) ] && (cd dependencies/$(OPENTECHDB_DIR) && git pull && git lfs pull) || git clone $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && cd dependencies/$(OPENTECHDB_DIR) && git lfs pull
+	@# Pinned to OPENTECHDB_REF, a commit. An existing checkout is left alone: it
+	@# may be a developer's own branch.
+	@[ -d dependencies/$(OPENTECHDB_DIR) ] || (git clone -q $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && git -C dependencies/$(OPENTECHDB_DIR) checkout -q $(OPENTECHDB_REF) && git -C dependencies/$(OPENTECHDB_DIR) lfs pull)
 	$(call pinned_checkout,$(IGNIS_DIR),$(IGNIS_REPO),$(IGNIS_REF))
 	$(call pinned_checkout,$(BUEM_DIR),$(BUEM_REPO),$(BUEM_REF))
-	@# MEME is a plain clone with its OWN git (a developer branch, e.g.
-	@# feature/power-flow, is left alone — a bare `git pull` on a local
-	@# branch with no upstream fails and trips the || clone into the existing
-	@# dir, breaking `make setup`. Clone only when absent, like TentaCron.
-	@[ -d dependencies/$(MEME_DIR) ] || git clone $(MEME_REPO) dependencies/$(MEME_DIR)
+	@# Pinned to MEME_REF. A checkout on a branch is left alone: it may be a
+	@# developer's own.
+	$(call pinned_checkout,$(MEME_DIR),$(MEME_REPO),$(MEME_REF))
 	@# Pinned to TENTACRON_REF (see repos.conf). An existing checkout is left alone:
 	@# it may be a developer's own branch.
 	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
@@ -336,7 +336,7 @@ up-services: .env
 # Cloned here rather than in setup-repos: only the Calliope/PyPSA simulation
 # needs it, and its 6 GB of LFS data would otherwise land on every checkout.
 webservice:
-	@[ -d dependencies/simulation-engine ] || (git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull)
+	@[ -d dependencies/simulation-engine ] || (git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git checkout -q $(SIMENGINE_REF) && git lfs pull)
 	@cd dependencies/simulation-engine && make build && make up-min
 
 # pylovo's `make dev` returns before the API answers, so this waits for it.
