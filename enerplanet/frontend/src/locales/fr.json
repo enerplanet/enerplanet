@@ -141,7 +141,11 @@
     "clickToEnableBuilding": "Cliquez pour réactiver ce bâtiment",
     "clickToSelectBuilding": "Cliquez pour sélectionner ce bâtiment",
     "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection",
-    "cancel": "Annuler le tracé"
+    "cancel": "Annuler le tracé",
+    "view3dOnly": "La 3D sert à visualiser : cliquez sur un bâtiment pour ses détails. Passez à la carte pour dessiner ou modifier la zone.",
+    "legendPv": "PV",
+    "legendStorage": "Stockage",
+    "legendHeat": "Production de chaleur"
   },
   "gridNotifications": {
     "gridGenerated": "Réseau généré : {{count}} bâtiments trouvés",

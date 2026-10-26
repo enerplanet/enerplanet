@@ -2395,7 +2395,11 @@
     "clickToEnableBuilding": "Fai clic per riattivare questo edificio",
     "clickToSelectBuilding": "Fai clic per selezionare questo edificio",
     "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione",
-    "cancel": "Annulla il disegno"
+    "cancel": "Annulla il disegno",
+    "view3dOnly": "Il 3D serve per la visualizzazione: fai clic su un edificio per i dettagli. Passa alla mappa per disegnare o modificare l'area.",
+    "legendPv": "FV",
+    "legendStorage": "Accumulo",
+    "legendHeat": "Fornitura di calore"
   },
   "forms": {
     "user": {

@@ -2415,7 +2415,11 @@
     "clickToEnableBuilding": "Kliknutím budovu znovu zapnete",
     "clickToSelectBuilding": "Kliknutím budovu vyberete",
     "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru",
-    "cancel": "Zrušit kreslení"
+    "cancel": "Zrušit kreslení",
+    "view3dOnly": "3D slouží k prohlížení: klikněte na budovu pro její podrobnosti. Pro kreslení nebo úpravu oblasti přepněte na mapu.",
+    "legendPv": "FV",
+    "legendStorage": "Úložiště",
+    "legendHeat": "Zdroj tepla"
   },
   "forms": {
     "user": {

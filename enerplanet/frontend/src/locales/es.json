@@ -141,7 +141,11 @@
     "clickToEnableBuilding": "Haga clic para volver a activar este edificio",
     "clickToSelectBuilding": "Haga clic para seleccionar este edificio",
     "clickToDeselectBuilding": "Haga clic para quitar este edificio de la selección",
-    "cancel": "Cancelar el dibujo"
+    "cancel": "Cancelar el dibujo",
+    "view3dOnly": "3D es solo para ver: haga clic en un edificio para ver sus detalles. Cambie al mapa para dibujar o editar el área.",
+    "legendPv": "FV",
+    "legendStorage": "Almacenamiento",
+    "legendHeat": "Suministro de calor"
   },
   "gridNotifications": {
     "gridGenerated": "Red generada: {{count}} edificios encontrados",

@@ -57,6 +57,7 @@ import {
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
+import { View3dBanner } from "./components/View3dBanner";
 import { GridStatsBadge } from "./components/GridStatsBadge";
 import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
@@ -680,11 +681,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {isMapLibre3D && (
-              <div className="pointer-events-none absolute top-16 z-30 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs font-medium text-white shadow-md" style={MAP_TOP_CENTRE}>
-                {t("drawing.view3dOnly", "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.")}
-              </div>
-            )}
+            {isMapLibre3D && <View3dBanner />}
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}

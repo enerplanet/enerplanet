@@ -141,7 +141,11 @@
     "clickToEnableBuilding": "Klicken, um dieses Gebäude wieder zu aktivieren",
     "clickToSelectBuilding": "Klicken, um dieses Gebäude auszuwählen",
     "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen",
-    "cancel": "Zeichnen abbrechen"
+    "cancel": "Zeichnen abbrechen",
+    "view3dOnly": "3D dient zur Ansicht: Klicken Sie auf ein Gebäude für seine Details. Wechseln Sie zur Karte, um das Gebiet zu zeichnen oder zu bearbeiten.",
+    "legendPv": "PV",
+    "legendStorage": "Speicher",
+    "legendHeat": "Wärmeversorgung"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",

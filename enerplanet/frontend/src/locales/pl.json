@@ -2415,7 +2415,11 @@
     "clickToEnableBuilding": "Kliknij, aby ponownie włączyć ten budynek",
     "clickToSelectBuilding": "Kliknij, aby zaznaczyć ten budynek",
     "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia",
-    "cancel": "Anuluj rysowanie"
+    "cancel": "Anuluj rysowanie",
+    "view3dOnly": "Widok 3D służy do oglądania: kliknij budynek, aby zobaczyć szczegóły. Przełącz na mapę, aby rysować lub edytować obszar.",
+    "legendPv": "PV",
+    "legendStorage": "Magazyn",
+    "legendHeat": "Źródło ciepła"
   },
   "forms": {
     "user": {
