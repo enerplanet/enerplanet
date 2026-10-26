@@ -140,7 +140,8 @@
     "clickToDisableBuilding": "Click to disable this building",
     "clickToEnableBuilding": "Click to enable this building again",
     "clickToSelectBuilding": "Click to select this building",
-    "clickToDeselectBuilding": "Click to remove this building from the selection"
+    "clickToDeselectBuilding": "Click to remove this building from the selection",
+    "cancel": "Cancel drawing"
   },
   "gridNotifications": {
     "gridGenerated": "Grid generated: {{count}} buildings found",

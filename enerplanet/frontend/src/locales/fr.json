@@ -140,7 +140,8 @@
     "clickToDisableBuilding": "Cliquez pour désactiver ce bâtiment",
     "clickToEnableBuilding": "Cliquez pour réactiver ce bâtiment",
     "clickToSelectBuilding": "Cliquez pour sélectionner ce bâtiment",
-    "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection"
+    "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection",
+    "cancel": "Annuler le tracé"
   },
   "gridNotifications": {
     "gridGenerated": "Réseau généré : {{count}} bâtiments trouvés",

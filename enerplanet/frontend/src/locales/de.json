@@ -140,7 +140,8 @@
     "clickToDisableBuilding": "Klicken, um dieses Gebäude zu deaktivieren",
     "clickToEnableBuilding": "Klicken, um dieses Gebäude wieder zu aktivieren",
     "clickToSelectBuilding": "Klicken, um dieses Gebäude auszuwählen",
-    "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen"
+    "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen",
+    "cancel": "Zeichnen abbrechen"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",

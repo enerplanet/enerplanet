@@ -161,6 +161,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
+  const [cancelSketch, setCancelSketch] = useState(0);
+  const cancelDrawing = useCallback(() => setCancelSketch((n) => n + 1), []);
   const [pointerTarget, setPointerTarget] = useState<PointerTarget>("outside");
   const [heldKeys, setHeldKeys] = useState<HeldKeys>({ shift: false, alt: false, ctrl: false });
   const cornerUnderPointerRef = useRef(false);
@@ -665,6 +667,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             <MapOverlays
               demandProfiles={demandProfiles}
               drawHintKey={drawHint}
+              isDrawing={state.isDrawing}
+              onCancelDrawing={cancelDrawing}
               deleteHintKey={deleteHint}
               mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
@@ -757,6 +761,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         suspended={activeMode !== null || isMapLibre3D}
         allowMultiple
         clearTrigger={state.clearTrigger}
+        cancelSketchTrigger={cancelSketch}
         initialPolygons={importedPolygons ?? (editMode ? state.loadedCoordinates : undefined)}
         enableEditing={true}
         labels={{

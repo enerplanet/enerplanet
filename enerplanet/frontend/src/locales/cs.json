@@ -2414,7 +2414,8 @@
     "clickToDisableBuilding": "Kliknutím budovu vypnete",
     "clickToEnableBuilding": "Kliknutím budovu znovu zapnete",
     "clickToSelectBuilding": "Kliknutím budovu vyberete",
-    "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru"
+    "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru",
+    "cancel": "Zrušit kreslení"
   },
   "forms": {
     "user": {

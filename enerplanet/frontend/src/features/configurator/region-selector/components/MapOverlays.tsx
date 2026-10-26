@@ -1,4 +1,4 @@
-import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets } from "lucide-react";
+import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets, X } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { MAP_TOP_CENTRE } from "@/components/map-controls/WorkflowBar";
@@ -66,6 +66,10 @@ interface TooltipMvLine {
 interface MapOverlaysProps {
     /** Translation key of the drawing hint beside the cursor, or null for none. */
     drawHintKey?: string | null;
+    /** Whether a polygon is being drawn; shows the Cancel button. */
+    isDrawing?: boolean;
+    /** Abandons the polygon being drawn. */
+    onCancelDrawing?: () => void;
     /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
     deleteHintKey?: string | null;
     /** The map element; the hints follow the pointer over it. */
@@ -175,8 +179,29 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
     );
 };
 
+/** A fixed button that abandons the polygon being drawn, beside the Escape shortcut. */
+const CancelDrawingButton: FC<{ visible: boolean; onCancel?: () => void }> = ({ visible, onCancel }) => {
+    const { t } = useTranslation();
+    if (!visible || !onCancel) return null;
+    return (
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-40 -translate-x-1/2">
+            <button
+                type="button"
+                onClick={onCancel}
+                className="md-fade-in pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-md hover:bg-muted"
+            >
+                <X className="h-3.5 w-3.5" />
+                {t("drawing.cancel")}
+                <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">Esc</kbd>
+            </button>
+        </div>
+    );
+};
+
 export const MapOverlays: FC<MapOverlaysProps> = ({
     drawHintKey = null,
+    isDrawing = false,
+    onCancelDrawing,
     deleteHintKey = null,
     mapRef,
     demandProfiles,
@@ -284,6 +309,8 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     </div>
                 </CursorHint>
             )}
+
+            <CancelDrawingButton visible={isDrawing} onCancel={onCancelDrawing} />
 
             {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
             {deleteHintKey && (

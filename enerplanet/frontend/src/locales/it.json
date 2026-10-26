@@ -2394,7 +2394,8 @@
     "clickToDisableBuilding": "Fai clic per disattivare questo edificio",
     "clickToEnableBuilding": "Fai clic per riattivare questo edificio",
     "clickToSelectBuilding": "Fai clic per selezionare questo edificio",
-    "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione"
+    "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione",
+    "cancel": "Annulla il disegno"
   },
   "forms": {
     "user": {

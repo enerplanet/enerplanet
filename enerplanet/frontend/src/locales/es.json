@@ -140,7 +140,8 @@
     "clickToDisableBuilding": "Haga clic para desactivar este edificio",
     "clickToEnableBuilding": "Haga clic para volver a activar este edificio",
     "clickToSelectBuilding": "Haga clic para seleccionar este edificio",
-    "clickToDeselectBuilding": "Haga clic para quitar este edificio de la selección"
+    "clickToDeselectBuilding": "Haga clic para quitar este edificio de la selección",
+    "cancel": "Cancelar el dibujo"
   },
   "gridNotifications": {
     "gridGenerated": "Red generada: {{count}} edificios encontrados",

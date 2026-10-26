@@ -2393,7 +2393,8 @@
     "clickToDisableBuilding": "Klik om dit gebouw uit te schakelen",
     "clickToEnableBuilding": "Klik om dit gebouw weer in te schakelen",
     "clickToSelectBuilding": "Klik om dit gebouw te selecteren",
-    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen"
+    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen",
+    "cancel": "Tekenen annuleren"
   },
   "forms": {
     "user": {

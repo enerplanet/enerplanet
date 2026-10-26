@@ -2414,7 +2414,8 @@
     "clickToDisableBuilding": "Kliknij, aby wyłączyć ten budynek",
     "clickToEnableBuilding": "Kliknij, aby ponownie włączyć ten budynek",
     "clickToSelectBuilding": "Kliknij, aby zaznaczyć ten budynek",
-    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia"
+    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia",
+    "cancel": "Anuluj rysowanie"
   },
   "forms": {
     "user": {
