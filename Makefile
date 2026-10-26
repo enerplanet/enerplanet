@@ -61,7 +61,8 @@ help:
 	@echo "  make fixtures-reload    Drop the fixture databases and load the fixtures afresh"
 	@echo "  make example-models     Create the example models (development only, backend running)"
 	@echo "  make smoke              Run the heat workflow smoke test against the running stack"
-	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem)"
+	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem, meme, pv-service)"
+	@echo "  make pv-service              Build and start the PV service on the shared network (repos.conf port)"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
 	@echo "  make sonar              Run SonarQube analysis"
@@ -275,6 +276,9 @@ setup-repos:
 	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
 	$(call pinned_checkout,$(CITY2TABULA_DIR),$(CITY2TABULA_REPO),$(CITY2TABULA_REF))
 	$(call pinned_checkout,$(WEATHER_DIR),$(WEATHER_REPO),$(WEATHER_REF))
+	@# Pinned to a commit, which `git clone --branch` cannot take. An existing
+	@# checkout is left alone: it may be a developer's own branch.
+	@[ -d dependencies/$(PV_SERVICE_DIR) ] || (git clone -q $(PV_SERVICE_REPO) dependencies/$(PV_SERVICE_DIR) && git -C dependencies/$(PV_SERVICE_DIR) checkout -q $(PV_SERVICE_REF))
 
 .PHONY: env-setup
 env-setup:
@@ -345,11 +349,11 @@ pylovo:
 .PHONY: tentacron-stack
 # meme is left out until its translator and parser packages are released; it
 # serves only the simulation step. `make meme` starts it on its own.
-tentacron-stack: tentacron-network ignis city2tabula weather buem meme tentacron
+tentacron-stack: tentacron-network ignis city2tabula weather buem meme pv-service tentacron
 	@# These services' own compose files set no restart policy, so after a Docker
 	@# restart they stay down. Remove once each pinned version sets one.
 	@docker update --restart unless-stopped tentacron-env-tentacron-1 >/dev/null
-	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/tentacron are reachable on network 'tentacron-net'$(NC)"
+	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/pv-service/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
 # ignis and city2tabula declare tentacron-net in their compose files, and
@@ -388,6 +392,11 @@ meme: tentacron-network
 # weather and city2tabula pull rather than build: both publish an image, and
 # building them locally costs the conda environment and the Go/JDK/citydb
 # toolchain respectively for no gain. meme still builds, having no image.
+.PHONY: pv-service
+pv-service: tentacron-network
+	@cd dependencies/$(PV_SERVICE_DIR) && HOST_PORT=$(PV_SERVICE_PORT) docker compose up -d --build
+	@echo "$(GREEN)PV service up on http://localhost:$(PV_SERVICE_PORT), on 'tentacron-net'$(NC)"
+
 .PHONY: weather
 weather: tentacron-network
 	@# Docker Engine creates a missing bind-mount source as root, and the
