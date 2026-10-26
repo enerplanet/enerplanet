@@ -13,8 +13,12 @@ import { isZeroHeatDemandClass } from "./heatDemand";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { HEAT_SUPPLY_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 
-/** The universal fallback tech: always solvable. */
-export const SIMPLE_DEFAULT_TECH = "electric_boilers";
+/**
+ * The fallback for a class the table does not know. A gas boiler draws on the
+ * unlimited gas import, so it stays solvable where electric heating would
+ * exceed the transformer capacity pylovo sized for ordinary electricity use.
+ */
+export const SIMPLE_DEFAULT_TECH = "gas_boiler";
 
 /** f-class → heat technology type (expected-fit mode). */
 const EXPECTED_FIT: Record<string, string> = {
