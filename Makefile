@@ -63,6 +63,7 @@ help:
 	@echo "  make smoke              Run the heat workflow smoke test against the running stack"
 	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem, meme, pv-service)"
 	@echo "  make pv-service              Build and start the PV service on the shared network (repos.conf port)"
+	@echo "  make coati                   Set up Coati, which turns MEME results into the results the backend stores"
 	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
 	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
 	@echo "  make sonar              Run SonarQube analysis"
@@ -110,7 +111,7 @@ smoke:
 	$(call run_script,enerplanet/backend,scripts/smoke/heat_workflow_smoke.sh)
 
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack fixtures up example-models
+setup: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures up example-models
 	@echo "$(GREEN)Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678$(NC)"
 
 
@@ -122,7 +123,7 @@ dev-bg:
 	@tmux has-session -t $(SESSION_NAME) 2>/dev/null && \
 		(echo "Error: Session '$(SESSION_NAME)' is already running. Run 'make clean-bg' first.") || \
 		(tmux new-session -d -s $(SESSION_NAME) -n frontend "cd $(FRONT_DIR) && npm run dev" && \
-		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && BUEM_VERSION='$(BUEM_MODEL_IMAGE_TAG)' PV_VERSION='$(PV_SERVICE_REF)' go run cmd/main.go" && \
+		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && BUEM_VERSION='$(BUEM_MODEL_IMAGE_TAG)' PV_VERSION='$(PV_SERVICE_REF)' COATI_BIN='$(CURDIR)/submodules/Coati/.venv/bin/coati' go run cmd/main.go" && \
 		 echo "Services started successfully!" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Access Frontend:  http://localhost:3000" && \
