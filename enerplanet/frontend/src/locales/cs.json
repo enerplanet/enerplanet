@@ -1698,7 +1698,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scénáře",
-    "periodScenarioHint": "Scénářový rok se skládá měsíc po měsíci z historického počasí, a proto nemá vlastní kalendářní rok. Na měsících přesto záleží: určují roční období, které simulace pokrývá, a tím potřebu tepla, solární výnos a dobu výpočtu. Data se ukládají v pevném referenčním roce."
+    "periodScenarioHint": "Scénářový rok se skládá měsíc po měsíci z historického počasí, a proto nemá vlastní kalendářní rok. Na měsících přesto záleží: určují roční období, které simulace pokrývá, a tím potřebu tepla, solární výnos a dobu výpočtu. Data se ukládají v pevném referenčním roce.",
+    "periodCheckYear": "S historickým počasím je období nastaveno na rok {{year}}, poslední rok archivu. Ponechte jej, nebo zvolte jiný rok.",
+    "periodKeepYear": "Ponechat {{year}}"
   },
   "mapLayers": {
     "title": "Mapové vrstvy",

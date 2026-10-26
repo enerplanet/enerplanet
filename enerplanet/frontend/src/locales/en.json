@@ -1943,7 +1943,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Scenario year",
-    "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year."
+    "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year.",
+    "periodCheckYear": "Historic weather set the period to {{year}}, the latest year in the archive. Keep it or choose another year.",
+    "periodKeepYear": "Keep {{year}}"
   },
   "mapLayers": {
     "title": "Map Layers",

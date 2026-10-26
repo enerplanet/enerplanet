@@ -1680,7 +1680,9 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Anno di scenario",
-    "periodScenarioHint": "Un anno di scenario è composto mese per mese da dati meteo storici, quindi non ha un anno solare proprio. I mesi contano comunque: stabiliscono la stagione coperta dalla simulazione e, con essa, il fabbisogno di riscaldamento, la resa solare e il tempo di calcolo. Le date vengono salvate in un anno di riferimento fisso."
+    "periodScenarioHint": "Un anno di scenario è composto mese per mese da dati meteo storici, quindi non ha un anno solare proprio. I mesi contano comunque: stabiliscono la stagione coperta dalla simulazione e, con essa, il fabbisogno di riscaldamento, la resa solare e il tempo di calcolo. Le date vengono salvate in un anno di riferimento fisso.",
+    "periodCheckYear": "Con il meteo storico il periodo passa al {{year}}, l'ultimo anno dell'archivio. Mantienilo o scegli un altro anno.",
+    "periodKeepYear": "Mantieni il {{year}}"
   },
   "mapLayers": {
     "title": "Livelli mappa",

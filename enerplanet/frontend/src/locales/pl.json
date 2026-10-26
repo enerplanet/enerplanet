@@ -1698,7 +1698,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scenariusza",
-    "periodScenarioHint": "Rok scenariuszowy jest składany miesiąc po miesiącu z historycznych danych pogodowych, więc nie ma własnego roku kalendarzowego. Miesiące nadal mają znaczenie: wyznaczają porę roku objętą symulacją, a z nią zapotrzebowanie na ciepło, uzysk energii słonecznej i czas obliczeń. Daty są zapisywane w stałym roku odniesienia."
+    "periodScenarioHint": "Rok scenariuszowy jest składany miesiąc po miesiącu z historycznych danych pogodowych, więc nie ma własnego roku kalendarzowego. Miesiące nadal mają znaczenie: wyznaczają porę roku objętą symulacją, a z nią zapotrzebowanie na ciepło, uzysk energii słonecznej i czas obliczeń. Daty są zapisywane w stałym roku odniesienia.",
+    "periodCheckYear": "Przy pogodzie historycznej okres ustawiono na {{year}}, ostatni rok archiwum. Zachowaj go lub wybierz inny rok.",
+    "periodKeepYear": "Zachowaj {{year}}"
   },
   "mapLayers": {
     "title": "Warstwy mapy",

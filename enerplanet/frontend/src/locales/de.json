@@ -1943,7 +1943,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Szenariojahr",
-    "periodScenarioHint": "Ein Szenariojahr wird Monat für Monat aus historischem Wetter zusammengesetzt und hat daher kein eigenes Kalenderjahr. Die Monate zählen trotzdem: Sie bestimmen, welche Jahreszeit die Simulation abdeckt, und damit Heizbedarf, Solarertrag und Rechenzeit. Die Daten werden in einem festen Bezugsjahr gespeichert."
+    "periodScenarioHint": "Ein Szenariojahr wird Monat für Monat aus historischem Wetter zusammengesetzt und hat daher kein eigenes Kalenderjahr. Die Monate zählen trotzdem: Sie bestimmen, welche Jahreszeit die Simulation abdeckt, und damit Heizbedarf, Solarertrag und Rechenzeit. Die Daten werden in einem festen Bezugsjahr gespeichert.",
+    "periodCheckYear": "Mit historischem Wetter liegt der Zeitraum jetzt in {{year}}, dem letzten Jahr des Archivs. Behalten Sie es oder wählen Sie ein anderes Jahr.",
+    "periodKeepYear": "{{year}} behalten"
   },
   "mapLayers": {
     "title": "Kartenebenen",

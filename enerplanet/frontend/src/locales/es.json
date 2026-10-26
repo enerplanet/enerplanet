@@ -1945,7 +1945,9 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Año de escenario",
-    "periodScenarioHint": "Un año de escenario se compone mes a mes a partir de datos meteorológicos históricos, por lo que no tiene año natural propio. Los meses siguen importando: determinan la estación que cubre la simulación y, con ella, la demanda de calefacción, la producción solar y el tiempo de cálculo. Las fechas se guardan en un año de referencia fijo."
+    "periodScenarioHint": "Un año de escenario se compone mes a mes a partir de datos meteorológicos históricos, por lo que no tiene año natural propio. Los meses siguen importando: determinan la estación que cubre la simulación y, con ella, la demanda de calefacción, la producción solar y el tiempo de cálculo. Las fechas se guardan en un año de referencia fijo.",
+    "periodCheckYear": "Con el tiempo histórico, el periodo pasa a {{year}}, el último año del archivo. Manténgalo o elija otro año.",
+    "periodKeepYear": "Mantener {{year}}"
   },
   "mapLayers": {
     "title": "Capas del mapa",

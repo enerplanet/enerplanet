@@ -1679,7 +1679,9 @@
       "q4": "K4"
     },
     "periodScenarioYear": "Scenariojaar",
-    "periodScenarioHint": "Een scenariojaar wordt maand voor maand samengesteld uit historisch weer en heeft daardoor geen eigen kalenderjaar. De maanden tellen toch: ze bepalen welk seizoen de simulatie dekt, en daarmee de warmtevraag, de zonne-opbrengst en de rekentijd. De datums worden opgeslagen in een vast referentiejaar."
+    "periodScenarioHint": "Een scenariojaar wordt maand voor maand samengesteld uit historisch weer en heeft daardoor geen eigen kalenderjaar. De maanden tellen toch: ze bepalen welk seizoen de simulatie dekt, en daarmee de warmtevraag, de zonne-opbrengst en de rekentijd. De datums worden opgeslagen in een vast referentiejaar.",
+    "periodCheckYear": "Met historisch weer ligt de periode nu in {{year}}, het laatste jaar van het archief. Houd het aan of kies een ander jaar.",
+    "periodKeepYear": "{{year}} houden"
   },
   "mapLayers": {
     "title": "Kaartlagen",

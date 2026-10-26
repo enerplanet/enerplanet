@@ -36,7 +36,7 @@ import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
-import { useEffect, useRef, type FC, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FC, type ChangeEvent, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
@@ -86,6 +86,20 @@ const saveBlocker = (complete: boolean, gridStale: boolean): string | null => {
   return null;
 };
 
+/** Asks the user to keep the year the app chose for historic weather, or to change it. */
+const YearCheckNote: FC<{ year: number; onKeep: () => void }> = ({ year, onKeep }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-foreground">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+      <p className="flex-1">{t("simulation.periodCheckYear", { year })}</p>
+      <button type="button" onClick={onKeep} className="shrink-0 rounded border border-border bg-background px-2 py-0.5 font-medium hover:bg-muted">
+        {t("simulation.periodKeepYear", { year })}
+      </button>
+    </div>
+  );
+};
+
 /** A titled group of settings, set off from the group above by a line. */
 const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
   <section className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-0">
@@ -122,9 +136,19 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   if (scenario) yearOptions = [periodYear ?? SCENARIO_DATE_YEAR];
   else if (periodYear && !weatherYears.includes(periodYear)) yearOptions = [...weatherYears, periodYear].sort((a, b) => a - b);
   const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
-  const choosePeriodYear = (year: number) => {
+  // A year the app chose for the user, shown until they keep or change the period.
+  const [yearToCheck, setYearToCheck] = useState<number | null>(null);
+  const movePeriodToYear = (year: number) => {
     if (!state.fromDate || !state.toDate) return actions.handleUpdateRange(fullYear(year));
     actions.handleUpdateRange({ start: parseDate(state.fromDate).set({ year }), end: parseDate(state.toDate).set({ year }) });
+  };
+  const choosePeriodYear = (year: number) => {
+    setYearToCheck(null);
+    movePeriodToYear(year);
+  };
+  const updateRange = (range: Parameters<AreaSelectActions["handleUpdateRange"]>[0]) => {
+    setYearToCheck(null);
+    actions.handleUpdateRange(range);
   };
   const latestYear = weatherYears.at(-1);
   const defaultYear = scenario ? SCENARIO_DATE_YEAR : latestYear;
@@ -139,7 +163,10 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   useEffect(() => {
     if (lastProvider.current === provider) return;
     lastProvider.current = provider;
-    if (!scenario && latestYear && periodYear && !weatherYears.includes(periodYear)) choosePeriodYear(latestYear);
+    if (!scenario && latestYear && periodYear && !weatherYears.includes(periodYear)) {
+      movePeriodToYear(latestYear);
+      setYearToCheck(latestYear);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
   // The calendar's first and last selectable days.
@@ -150,16 +177,18 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   const choosePeriodPart = (part: PeriodPart) => {
     const year = periodYear ?? latestYear;
     if (!year) return;
-    actions.handleUpdateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
+    updateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
   };
   // Switching the weather mode moves the period into a year that mode allows,
   // keeping day and month: the scenario year, or the archive's latest year.
   const chooseWeatherMode = (toScenario: boolean) => {
     setWeather({ ...weather, choice: toScenario ? "p50" : "year" });
     const year = toScenario ? SCENARIO_DATE_YEAR : latestYear;
-    if (year) choosePeriodYear(year);
+    if (year) movePeriodToYear(year);
+    setYearToCheck(toScenario ? null : year ?? null);
   };
-  return { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode };
+  const keepYear = () => setYearToCheck(null);
+  return { scenario, periodYear, yearOptions, yearBounds, yearToCheck, keepYear, updateRange, choosePeriodYear, choosePeriodPart, chooseWeatherMode };
 }
 
 /** Stands in for the year select while the period uses scenario weather, which has no calendar year. */
@@ -277,7 +306,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const gridStale = useModelStore((s) => s.gridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
-  const { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
+  const { scenario, periodYear, yearOptions, yearBounds, yearToCheck, keepYear, updateRange, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
   const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
   // A model is saved only with a name, a period and an area, and never with a grid older than its edits.
   const complete = Boolean(state.fromDate && state.toDate && state.modelName.trim()) && allPolygonsCount > 0;
@@ -335,6 +364,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           {configuratorMode === "advanced" && (
             <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
           )}
+          {yearToCheck !== null && <YearCheckNote year={yearToCheck} onKeep={keepYear} />}
           <div className="relative" data-tour="date-range">
             <DateRangePicker
               value={
@@ -347,7 +377,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               }
               onChange={(range) => {
                 if (!range) return;
-                actions.handleUpdateRange({ start: range.start, end: range.end });
+                updateRange({ start: range.start, end: range.end });
               }}
               className="*:not-first:mt-2"
             >
@@ -382,9 +412,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               >
                 <Dialog className="max-h-[inherit] overflow-auto p-2">
                   <RangeCalendar
-                    onChange={(range) =>
-                      actions.handleUpdateRange({ start: range.start, end: range.end })
-                    }
+                    onChange={(range) => updateRange({ start: range.start, end: range.end })}
                     minValue={yearBounds?.start}
                     maxValue={yearBounds?.end}
                     years={yearOptions}

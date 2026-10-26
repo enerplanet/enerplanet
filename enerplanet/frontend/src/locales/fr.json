@@ -1945,7 +1945,9 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Année de scénario",
-    "periodScenarioHint": "Une année de scénario est assemblée mois par mois à partir de la météo historique ; elle n'a donc pas d'année civile propre. Les mois comptent quand même : ils fixent la saison couverte par la simulation, et donc la demande de chauffage, la production solaire et le temps de calcul. Les dates sont enregistrées dans une année de référence fixe."
+    "periodScenarioHint": "Une année de scénario est assemblée mois par mois à partir de la météo historique ; elle n'a donc pas d'année civile propre. Les mois comptent quand même : ils fixent la saison couverte par la simulation, et donc la demande de chauffage, la production solaire et le temps de calcul. Les dates sont enregistrées dans une année de référence fixe.",
+    "periodCheckYear": "Avec la météo historique, la période passe à {{year}}, la dernière année de l'archive. Gardez-la ou choisissez une autre année.",
+    "periodKeepYear": "Garder {{year}}"
   },
   "mapLayers": {
     "title": "Couches de carte",
