@@ -118,7 +118,7 @@ const TooltipDemand: FC<{ profile?: StoredDemandProfile }> = ({ profile }) => {
             { icon: <Flame className="w-3 h-3 text-orange-500" />, value: totals.heating },
             { icon: <Zap className="w-3 h-3 text-sky-500" />, value: totals.electricity },
             { icon: <Snowflake className="w-3 h-3 text-cyan-500" />, value: totals.cooling },
-            { icon: <Droplets className="w-3 h-3 text-blue-500" />, value: totals.hotWater },
+            { icon: <Droplets className="w-3 h-3 text-red-500" />, value: totals.hotWater },
         ];
         return (
             <div className="mt-1 space-y-0.5 text-muted-foreground">
