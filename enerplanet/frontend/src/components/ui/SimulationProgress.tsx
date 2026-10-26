@@ -41,7 +41,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
             {i > 0 && (
               <div
                 className={`w-3 h-px ${
-                  isCompleted || isActive ? "bg-blue-400" : "bg-muted-foreground/30"
+                  isCompleted || isActive ? "bg-green-500" : "bg-muted-foreground/30"
                 }`}
               />
             )}
@@ -51,7 +51,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
                   isActive
                     ? "bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-800 animate-pulse"
                     : isCompleted
-                    ? "bg-blue-400"
+                    ? "bg-green-500"
                     : "bg-muted-foreground/30"
                 }`}
               />
@@ -60,7 +60,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
                   isActive
                     ? "text-blue-600 dark:text-blue-400 font-medium"
                     : isCompleted
-                    ? "text-blue-400"
+                    ? "text-green-700 dark:text-green-400"
                     : "text-muted-foreground/50"
                 }`}
               >
