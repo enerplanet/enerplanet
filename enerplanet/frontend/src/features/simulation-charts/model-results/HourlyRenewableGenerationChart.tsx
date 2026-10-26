@@ -9,6 +9,7 @@ import {
 } from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { createDataZoomWithStyle, useThemeColors } from '../pypsa/chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface HourlyRenewableGenerationChartProps {
   production: CarrierProdRecord[];
@@ -45,9 +46,9 @@ function formatAxisEnergy(value: number): string {
   const abs = Math.abs(normalized);
 
   if (normalized === 0) return '0';
-  if (abs >= 1000) return `${(normalized / 1000).toFixed(1)} MWh`;
-  if (abs >= 10) return `${normalized.toFixed(0)}`;
-  return `${normalized.toFixed(1)}`;
+  if (abs >= 1000) return `${formatNumber(normalized / 1000, 1)} MWh`;
+  if (abs >= 10) return `${formatNumber(normalized, 0)}`;
+  return `${formatNumber(normalized, 1)}`;
 }
 
 function categorizeRenewableTech(techs: string): RenewableTechKey | null {

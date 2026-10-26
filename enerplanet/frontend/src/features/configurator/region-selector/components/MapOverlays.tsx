@@ -8,6 +8,7 @@ import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
 import { getEnergyLabelColorClasses, normalizeEnergyLabel } from "@/features/configurator/utils/energyLabelUtils";
 import { buemTotals, type StoredDemandProfile } from "@/features/configurator/building-config/modelDemandProfiles";
 import { formatEnergy } from "@/utils/formatEnergy";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface TooltipTransformer {
     x: number;
@@ -161,8 +162,8 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
     const { t } = useTranslation();
     const facts: [string, string | undefined][] = [
         [t("simulation.mapOverlay.storeys"), profile.n_storeys?.toString()],
-        [t("simulation.mapOverlay.floorArea"), profile.a_ref_m2 == null ? undefined : `${Math.round(profile.a_ref_m2).toLocaleString()} m²`],
-        [t("simulation.mapOverlay.roomHeight"), profile.h_room_m == null ? undefined : `${profile.h_room_m.toFixed(1)} m`],
+        [t("simulation.mapOverlay.floorArea"), profile.a_ref_m2 == null ? undefined : `${formatNumber(profile.a_ref_m2)} m²`],
+        [t("simulation.mapOverlay.roomHeight"), profile.h_room_m == null ? undefined : `${formatNumber(profile.h_room_m, 1)} m`],
         [t("simulation.mapOverlay.envelope"), profile.tabula_variant_code],
     ];
     return (
@@ -417,14 +418,14 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.height")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.heightMax.toFixed(1)} m</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.heightMax, 1)} m</span>
                                     </div>
                                 )}
                                 {!hasFiniteNumber(buildingTooltip.heightMax) && hasFiniteNumber(buildingTooltip.heightMedian) && (
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.heightMedian")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.heightMedian.toFixed(1)} m</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.heightMedian, 1)} m</span>
                                     </div>
                                 )}
                                 {buildingTooltip.constructionYear && (
@@ -447,7 +448,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                             {buildingTooltip.energyLabel ? normalizeEnergyLabel(buildingTooltip.energyLabel) : t("common.na")}
                                         </span>
                                         {hasFiniteNumber(buildingTooltip.energyIndex) && (
-                                            <span className="text-muted-foreground">(EI {buildingTooltip.energyIndex.toFixed(2)})</span>
+                                            <span className="text-muted-foreground">(EI {formatNumber(buildingTooltip.energyIndex, 2)})</span>
                                         )}
                                     </div>
                                 )}
@@ -455,7 +456,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Tag className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.energyIndex")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.energyIndex.toFixed(2)}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.energyIndex, 2)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && buildingTooltip.labelDate && (
@@ -469,20 +470,20 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Users className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.population")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsPopulation.toLocaleString()}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsPopulation, 3, 0)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsHouseholds) && (
                                     <div className="flex items-center gap-1.5">
                                         <Home className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.households")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsHouseholds.toLocaleString()}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsHouseholds, 3, 0)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize) && (
                                     <div className="flex items-center gap-1.5">
                                         <span>{t("simulation.mapOverlay.avgHouseholdSize")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsAvgHouseholdSize.toFixed(2)}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsAvgHouseholdSize, 2)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && buildingTooltip.bagId && (
@@ -580,7 +581,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             </div>
                             {mvLineTooltip.lengthM !== undefined && mvLineTooltip.lengthM > 0 && (
                                 <div>
-                                    {t("simulation.mapOverlay.length")}: <span className="font-medium text-foreground">{mvLineTooltip.lengthM.toFixed(1)} m</span>
+                                    {t("simulation.mapOverlay.length")}: <span className="font-medium text-foreground">{formatNumber(mvLineTooltip.lengthM, 1)} m</span>
                                 </div>
                             )}
                             {mvLineTooltip.cableType && (

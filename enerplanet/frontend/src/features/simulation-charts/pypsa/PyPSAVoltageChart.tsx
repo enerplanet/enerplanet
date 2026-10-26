@@ -1,6 +1,7 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo } from 'react';
 import { createChartGrid, createTimeXAxis, createDataZoom, createSplitLineStyle } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface VoltageChartProps {
   timestamps: string[];
@@ -34,7 +35,7 @@ export const PyPSAVoltageChart = ({
         confine: true,
         formatter: (params: any) => {
           const point = params[0];
-          return `${point.axisValue}<br/>Voltage: ${point.value.toFixed(4)} pu`;
+          return `${point.axisValue}<br/>Voltage: ${formatNumber(point.value, 4)} pu`;
         },
       },
       grid: createChartGrid(15),
@@ -45,7 +46,7 @@ export const PyPSAVoltageChart = ({
         min: Math.max(0.9, minV - 0.02),
         max: Math.min(1.1, maxV + 0.02),
         axisLabel: {
-          formatter: (value: number) => value.toFixed(3),
+          formatter: (value: number) => formatNumber(value, 3),
         },
         splitLine: createSplitLineStyle(),
       },
@@ -102,9 +103,9 @@ export const PyPSAVoltageChart = ({
     <div className="w-full">
       <ReactECharts option={option} style={{ height }} />
       <div className="flex justify-center gap-6 mt-2 text-xs text-muted-foreground">
-        <span>Min: {Math.min(...voltage).toFixed(4)} pu</span>
-        <span>Max: {Math.max(...voltage).toFixed(4)} pu</span>
-        <span>Avg: {(voltage.reduce((a, b) => a + b, 0) / voltage.length).toFixed(4)} pu</span>
+        <span>Min: {formatNumber(Math.min(...voltage), 4)} pu</span>
+        <span>Max: {formatNumber(Math.max(...voltage), 4)} pu</span>
+        <span>Avg: {formatNumber(voltage.reduce((a, b) => a + b, 0) / voltage.length, 4)} pu</span>
       </div>
     </div>
   );

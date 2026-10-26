@@ -3,6 +3,7 @@ import { pylovoService, type CachedRegion } from '@/features/configurator/servic
 import { Loader2, Trash2, MapPin, AlertTriangle, RefreshCw, ChevronRight, ChevronDown, Search } from 'lucide-react';
 import { Button, Switch } from '@spatialhub/ui';
 import { InfoIcon } from '@/components/ui/InfoTooltip';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface GroupedRegions {
     country: string;
@@ -188,7 +189,7 @@ const RegionManagement: FC = () => {
             </div>
 
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">
-                {grouped.length} {grouped.length === 1 ? 'country' : 'countries'} · {regions.length} region{regions.length !== 1 ? 's' : ''} · {regions.reduce((s, r) => s + r.grid_count, 0).toLocaleString()} grids
+                {grouped.length} {grouped.length === 1 ? 'country' : 'countries'} · {regions.length} region{regions.length !== 1 ? 's' : ''} · {formatNumber(regions.reduce((s, r) => s + r.grid_count, 0), 3, 0)} grids
             </span>
 
             {/* Country accordion list */}
@@ -214,7 +215,7 @@ const RegionManagement: FC = () => {
                                 </span>
                                 <span className="ml-auto text-[10px] text-muted-foreground flex-shrink-0 flex items-center gap-3">
                                     <span>{group.regions.length} region{group.regions.length !== 1 ? 's' : ''}</span>
-                                    <span>{group.totalGrids.toLocaleString()} grids</span>
+                                    <span>{formatNumber(group.totalGrids, 3, 0)} grids</span>
                                 </span>
                             </button>
 
@@ -237,7 +238,7 @@ const RegionManagement: FC = () => {
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-0.5 ml-5">
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        {region.grid_count.toLocaleString()} grids
+                                                        {formatNumber(region.grid_count, 3, 0)} grids
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                         Level {region.admin_level}

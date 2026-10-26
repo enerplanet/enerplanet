@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface SystemCostSummaryChartProps {
   systemLCOE?: number;
@@ -33,22 +34,22 @@ export const SystemCostSummaryChart: FC<SystemCostSummaryChartProps> = ({
   const option = useMemo<EChartsOption>(() => {
 
     const fmtEur = (v: number) =>
-      v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: v >= 100 ? 0 : 2 });
+      formatCurrency(v, v >= 100 ? 0 : 2);
 
-    const formatCurrency = (v: number) => {
-      if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} M€`;
-      if (v >= 1_000) return `${(v / 1_000).toFixed(1)} k€`;
-      return `${v.toFixed(0)} €`;
+    const formatEuroShort = (v: number) => {
+      if (v >= 1_000_000) return `${formatNumber(v / 1_000_000, 1)} M€`;
+      if (v >= 1_000) return `${formatNumber(v / 1_000, 1)} k€`;
+      return `${formatNumber(v, 0)} €`;
     };
 
     // Stored LCOE is EUR/MWh; ct/kWh is a tenth of it (300 → 30).
-    const lcoeCtkwh = systemLCOE ? lcoeToCtkwh(systemLCOE).toFixed(2) : '—';
+    const lcoeCtkwh = systemLCOE ? formatNumber(lcoeToCtkwh(systemLCOE), 2) : '—';
     const periodLabel = isPartialYear && simulationDays
       ? ` (${simulationDays} ${t('results.chartLabels.days')})`
       : '';
 
     // Center display: total cost + LCOE
-    const centerTotalFmt = formatCurrency(totalCost);
+    const centerTotalFmt = formatEuroShort(totalCost);
 
     return {
       tooltip: {
@@ -76,7 +77,7 @@ export const SystemCostSummaryChart: FC<SystemCostSummaryChartProps> = ({
 
           html += `<div style="${rowStyle}">
             <span style="${labelStyle}">${t('results.chartLabels.share')}:</span>
-            <span style="${valueStyle}">${params.percent?.toFixed(1)}%</span>
+            <span style="${valueStyle}">${formatNumber(params.percent ?? 0, 1)}%</span>
           </div>`;
 
           html += `<div style="${dividerStyle}"></div>`;
@@ -119,7 +120,7 @@ export const SystemCostSummaryChart: FC<SystemCostSummaryChartProps> = ({
           label: {
             show: true,
             position: 'outside',
-            formatter: (p: any) => `{name|${p.name}}\n{pct|${p.percent?.toFixed(0)}%}`,
+            formatter: (p: any) => `{name|${p.name}}\n{pct|${formatNumber(p.percent ?? 0, 0)}%}`,
             rich: {
               name: {
                 fontSize: 10,

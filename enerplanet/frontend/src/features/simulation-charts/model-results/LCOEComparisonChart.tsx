@@ -5,6 +5,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
 import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface LCOEItem {
   tech: string;
@@ -37,10 +38,10 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
     const values = sorted.map(d => lcoeToCtkwh(d.lcoe)); // EUR/MWh -> ct/kWh
     const colors = sorted.map(d => getTechColor(d.tech));
 
-    const fmtEur = (v: number) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    const fmtEur = (v: number) => formatCurrency(v);
     const fmtEnergy = (kwh: number) => {
-      if (kwh >= 1000) return `${(kwh / 1000).toFixed(2)} MWh`;
-      return `${kwh.toFixed(1)} kWh`;
+      if (kwh >= 1000) return `${formatNumber(kwh / 1000, 2)} MWh`;
+      return `${formatNumber(kwh, 1)} kWh`;
     };
 
     return {
@@ -65,7 +66,7 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
           // Cost per kWh
           html += `<div style="${rowStyle}">
             <span style="${labelStyle}">${t('results.chartLabels.costPerKwh')}:</span>
-            <span style="${valueStyle}">${p.value.toFixed(2)} ct/kWh</span>
+            <span style="${valueStyle}">${formatNumber(p.value, 2)} ct/kWh</span>
           </div>`;
 
           // Energy produced
@@ -106,12 +107,12 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
             const ratio = item.lcoe / systemLCOE;
             html += `<div style="${dividerStyle}"></div>`;
             if (ratio < 0.9) {
-              const pctCheaper = ((1 - ratio) * 100).toFixed(0);
+              const pctCheaper = formatNumber((1 - ratio) * 100, 0);
               html += `<div style="${rowStyle}">
                 <span style="color: #16a34a; font-size: 11px; font-weight: 500;">${pctCheaper}% ${t('results.chartLabels.cheaperThanAvg')}</span>
               </div>`;
             } else if (ratio > 1.1) {
-              const pctMore = ((ratio - 1) * 100).toFixed(0);
+              const pctMore = formatNumber((ratio - 1) * 100, 0);
               html += `<div style="${rowStyle}">
                 <span style="color: #dc2626; font-size: 11px; font-weight: 500;">${pctMore}% ${t('results.chartLabels.moreExpensiveThanAvg')}</span>
               </div>`;
@@ -153,7 +154,7 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
           label: {
             show: true,
             position: 'right',
-            formatter: (p: any) => `${p.value.toFixed(1)}`,
+            formatter: (p: any) => `${formatNumber(p.value, 1)}`,
             fontSize: 11,
             fontWeight: 600,
             color: themeColors.text,
@@ -171,7 +172,7 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
               width: 1.5,
             },
             label: {
-              formatter: `Ø ${lcoeToCtkwh(systemLCOE).toFixed(1)} ct/kWh`,
+              formatter: `Ø ${formatNumber(lcoeToCtkwh(systemLCOE), 1)} ct/kWh`,
               fontSize: 10,
               color: themeColors.textMuted,
               position: 'end' as const,

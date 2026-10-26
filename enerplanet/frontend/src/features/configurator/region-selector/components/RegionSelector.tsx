@@ -3,6 +3,7 @@ import { ChevronDown, MapPin, Search, Check, Star, ArrowUpDown, Clock, Heart } f
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
 import { useDefaultRegionStore } from '../store/default-region';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatNumber } from '@/utils/formatNumber';
 import { regionMatch } from '../regionMatch';
 
 export interface AvailableRegion {
@@ -52,10 +53,6 @@ function getFlag(regions: AvailableRegion[], country: string): string {
     const region = regions.find(r => r.country === country && r.countryCode);
     if (region?.countryCode) return COUNTRY_FLAGS[region.countryCode.toUpperCase()] || '🏳️';
     return '🏳️';
-}
-
-function formatNumber(n: number): string {
-    return n.toLocaleString();
 }
 
 type SortMode = 'name' | 'grids';

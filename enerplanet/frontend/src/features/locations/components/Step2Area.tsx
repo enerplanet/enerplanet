@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { MapPin, CheckCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface Step2AreaProps {
   polygonCoordinates: [number, number][];
@@ -9,8 +10,8 @@ interface Step2AreaProps {
 }
 
 const formatArea = (areaValue: number): string => {
-  if (areaValue > 10000) return `${(areaValue / 1_000_000).toFixed(2)} km²`;
-  return `${areaValue.toFixed(0)} m²`;
+  if (areaValue > 10000) return `${formatNumber(areaValue / 1_000_000, 2)} km²`;
+  return `${formatNumber(areaValue, 0)} m²`;
 };
 
 const Step2Area: FC<Step2AreaProps> = ({ polygonCoordinates, area, onClear }) => {

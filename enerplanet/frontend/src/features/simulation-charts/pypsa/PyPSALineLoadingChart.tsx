@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { createSplitLineStyle, isOverloaded, useThemeColors } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface LineLoadingItem {
   name: string;
@@ -25,8 +26,8 @@ interface PyPSALineLoadingChartProps {
 const formatKva = (value: number): string => {
   if (!Number.isFinite(value)) return '0 kVA';
   const abs = Math.abs(value);
-  if (abs >= 1000) return `${(value / 1000).toFixed(2)} MVA`;
-  return `${value.toFixed(1)} kVA`;
+  if (abs >= 1000) return `${formatNumber(value / 1000, 2)} MVA`;
+  return `${formatNumber(value, 1)} kVA`;
 };
 
 export const PyPSALineLoadingChart = ({
@@ -68,11 +69,11 @@ export const PyPSALineLoadingChart = ({
           ];
           // Only show the loss figure when the result actually carries loss data.
           if (lossesAvailable) {
-            lines.push(`<div>Peak active loss: <b>${item.peakLossKw.toFixed(2)} kW</b></div>`);
+            lines.push(`<div>Peak active loss: <b>${formatNumber(item.peakLossKw, 2)} kW</b></div>`);
           }
           if (item.peakLoadingPercent !== undefined) {
             const overloaded = isOverloaded(item.peakLoadingPercent);
-            lines.push(`<div${overloaded ? ' style="color:#ef4444;font-weight:600;"' : ''}>${utilizationOnly ? 'Utilization' : 'Rated loading'}: <b>${item.peakLoadingPercent.toFixed(1)}%</b>${overloaded ? ' ⚠' : ''}</div>`);
+            lines.push(`<div${overloaded ? ' style="color:#ef4444;font-weight:600;"' : ''}>${utilizationOnly ? 'Utilization' : 'Rated loading'}: <b>${formatNumber(item.peakLoadingPercent, 1)}%</b>${overloaded ? ' ⚠' : ''}</div>`);
           }
           return lines.join('');
         },

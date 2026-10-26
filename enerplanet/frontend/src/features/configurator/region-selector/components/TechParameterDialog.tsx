@@ -57,6 +57,7 @@ import { FUEL_BY_TYPE } from "@/features/technologies/catalogue";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { OPERATE_SIZE_FIELDS, isFiniteValue } from "@/features/configurator/utils/operateSizes";
 import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
+import { formatNumber } from "@/utils/formatNumber";
 
 // Wind turbine data structure
 interface WindTurbineData {
@@ -650,7 +651,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const formatValue = (value: number | string) => {
     if (typeof value === "string" && value === "INF") return "∞";
     if (typeof value === "number") {
-      return value % 1 === 0 ? value.toString() : value.toFixed(4);
+      return formatNumber(value, 4, 0);
     }
     return value;
   };

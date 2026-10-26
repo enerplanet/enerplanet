@@ -68,6 +68,7 @@ import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
 import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
 
@@ -970,7 +971,7 @@ export const ModelResultsViewer = () => {
                 },
                 {
                   label: t('results.metrics.selfSufficiency'),
-                  value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
+                  value: `${formatNumber(summary.self_sufficiency_rate * 100, 1)}%`,
                   hint: t('results.metrics.selfSufficiencyDesc'),
                 },
               ]
@@ -993,7 +994,7 @@ export const ModelResultsViewer = () => {
                   },
                   {
                     label: t('results.metrics.totalCost'),
-                    value: `€${summary.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                    value: formatCurrency(summary.total_cost_eur, 0),
                     hint: periodLabel
                       ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}`
                       : t('results.metrics.equipmentAndRunning'),
@@ -1057,13 +1058,13 @@ export const ModelResultsViewer = () => {
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
                     {selectedBuilding.area != null && selectedBuilding.fClass !== 'Transformer' && (
-                      <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{selectedBuilding.area.toFixed(0)} m²</span></span>
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{formatNumber(selectedBuilding.area, 0)} m²</span></span>
                     )}
                     {selectedBuilding.yearlyDemandKwh != null && selectedBuilding.yearlyDemandKwh > 0 && (
-                      <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{formatNumber(selectedBuilding.yearlyDemandKwh, 0, 0)} kWh</span></span>
                     )}
                     {selectedBuilding.yearlyHeatDemandKwh != null && selectedBuilding.yearlyHeatDemandKwh > 0 && (
-                      <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{selectedBuilding.heatDemandEstimated ? '*' : ''}</span></span>
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{formatNumber(selectedBuilding.yearlyHeatDemandKwh, 0, 0)} kWh{selectedBuilding.heatDemandEstimated ? '*' : ''}</span></span>
                     )}
                   </div>
                   {selectedBuilding.technologies.length > 0 && (
@@ -1102,13 +1103,13 @@ export const ModelResultsViewer = () => {
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
                         {mapTooltip.area != null && (
-                          <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{mapTooltip.area.toFixed(0)} m²</span></span>
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{formatNumber(mapTooltip.area, 0)} m²</span></span>
                         )}
                         {mapTooltip.yearlyDemandKwh != null && mapTooltip.yearlyDemandKwh > 0 && (
-                          <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{formatNumber(mapTooltip.yearlyDemandKwh, 0, 0)} kWh</span></span>
                         )}
                         {mapTooltip.yearlyHeatDemandKwh != null && mapTooltip.yearlyHeatDemandKwh > 0 && (
-                          <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{mapTooltip.heatDemandEstimated ? '*' : ''}</span></span>
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{formatNumber(mapTooltip.yearlyHeatDemandKwh, 0, 0)} kWh{mapTooltip.heatDemandEstimated ? '*' : ''}</span></span>
                         )}
                       </div>
                       {mapTooltip.techs && Object.keys(mapTooltip.techs).length > 0 && (
@@ -1208,7 +1209,7 @@ export const ModelResultsViewer = () => {
                     {selectedBuilding.fClass === 'Transformer' ? t('results.transformer') : `${t('results.building')} ${selectedBuilding.osmId || selectedBuilding.buildingId}`}
                     {selectedBuilding.area && (
                       <span className="text-xs text-muted-foreground ml-1">
-                        {selectedBuilding.fClass === 'Transformer' ? `(${selectedBuilding.area} kVA)` : `(${selectedBuilding.area.toFixed(0)} m²)`}
+                        {selectedBuilding.fClass === 'Transformer' ? `(${selectedBuilding.area} kVA)` : `(${formatNumber(selectedBuilding.area, 0)} m²)`}
                       </span>
                     )}
                     <button

@@ -5,6 +5,7 @@ import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/ca
 import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface ComparisonChartsProps {
   results1: StructuredModelResults;
@@ -48,7 +49,7 @@ const normalizeMetricValue = (value: number, precision: number = 3): number => {
 
 const formatPercentValue = (value: number, digits: number = 1): string => {
   const normalized = normalizeMetricValue(value, digits + 1);
-  return `${normalized.toFixed(digits)}%`;
+  return `${formatNumber(normalized, digits)}%`;
 };
 
 const normalizeTech = (raw: string): string => {
@@ -224,9 +225,9 @@ const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics =>
 
 const formatShortNumber = (value: number, decimals = 0): string => {
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(decimals)}M`;
-  if (abs >= 1_000) return `${(value / 1_000).toFixed(decimals)}k`;
-  return value.toFixed(decimals);
+  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, decimals)}M`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, decimals)}k`;
+  return formatNumber(value, decimals);
 };
 
 const SectionHeader: FC<{ children: ReactNode }> = ({ children }) => (
@@ -281,7 +282,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           let html = `<strong style="color: ${themeColors.text}">${label}</strong><br/>`;
           params.forEach((p) => {
             const unit = p.seriesName === selfSuffKey ? '%' : energyUnit;
-            const val = unit === '%' ? p.value.toFixed(1) : formatShortNumber(p.value, 1);
+            const val = unit === '%' ? formatNumber(p.value, 1) : formatShortNumber(p.value, 1);
             html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${val} ${unit}</span><br/>`;
           });
           return html;
@@ -394,7 +395,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const tech = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${p.value.toFixed(1)} kW</span><br/>`;
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatNumber(p.value, 1)} kW</span><br/>`;
           });
           return html;
         },
@@ -466,9 +467,9 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           let html = `<strong style="color: ${themeColors.text}">${params[0].axisValue}</strong><br/>`;
           params.forEach((p) => {
             total += p.value;
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: €${p.value.toLocaleString()}</span><br/>`;
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatCurrency(p.value, 2, 0)}</span><br/>`;
           });
-          html += `<strong style="color: ${themeColors.text}">${totalLabel}: €${total.toLocaleString()}</strong>`;
+          html += `<strong style="color: ${themeColors.text}">${totalLabel}: ${formatCurrency(total, 2, 0)}</strong>`;
           return html;
         },
       },
@@ -489,7 +490,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
         axisLabel: {
           color: themeColors.textSubtle,
-          formatter: (value: number) => value >= 1000 ? `€${(value / 1000).toFixed(0)}k` : `€${value.toFixed(0)}`,
+          formatter: (value: number) => value >= 1000 ? `€${formatNumber(value / 1000, 0)}k` : `€${formatNumber(value, 0)}`,
         },
       },
       series: allKeys.map((key, idx) => ({
@@ -543,9 +544,9 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const item = diffs[params[0].dataIndex];
           const sign = item.diff >= 0 ? '+' : '-';
           return `<strong style="color: ${themeColors.text}">${item.name}</strong><br/>
-            <span style="color: ${themeColors.text}">${baselineLabel}: €${item.baseline.toFixed(0)}</span><br/>
-            <span style="color: ${themeColors.text}">${comparisonLabel}: €${item.comparison.toFixed(0)}</span><br/>
-            <strong style="color: ${themeColors.text}">${differenceLabel}: ${sign}€${Math.abs(item.diff).toFixed(0)}</strong>`;
+            <span style="color: ${themeColors.text}">${baselineLabel}: €${formatNumber(item.baseline, 0)}</span><br/>
+            <span style="color: ${themeColors.text}">${comparisonLabel}: €${formatNumber(item.comparison, 0)}</span><br/>
+            <strong style="color: ${themeColors.text}">${differenceLabel}: ${sign}€${formatNumber(Math.abs(item.diff), 0)}</strong>`;
         },
       },
       grid: { left: '3%', right: '10%', bottom: '3%', top: '18%', containLabel: true },
@@ -557,7 +558,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           formatter: (value: number) => {
             const sign = value >= 0 ? '+' : '-';
             const abs = Math.abs(value);
-            return abs >= 1000 ? `${sign}€${(abs / 1000).toFixed(0)}k` : `${sign}€${abs.toFixed(0)}`;
+            return abs >= 1000 ? `${sign}€${formatNumber(abs / 1000, 0)}k` : `${sign}€${formatNumber(abs, 0)}`;
           },
         },
       },
@@ -583,7 +584,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
               const val = Number(params.value || 0);
               const sign = val >= 0 ? '+' : '-';
               const abs = Math.abs(val);
-              return abs >= 1000 ? `${sign}€${(abs / 1000).toFixed(1)}k` : `${sign}€${abs.toFixed(0)}`;
+              return abs >= 1000 ? `${sign}€${formatNumber(abs / 1000, 1)}k` : `${sign}€${formatNumber(abs, 0)}`;
             },
             fontSize: 10,
             color: themeColors.textMuted,
@@ -666,7 +667,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
             lcoeToCtkwh(metrics1.lcoe),
             t('simulationComparison.charts.lcoeBaseline', 'Baseline LCOE'),
             maxLcoe,
-            (v: number) => `${v.toFixed(1)} ct/kWh`,
+            (v: number) => `${formatNumber(v, 1)} ct/kWh`,
             13,
           ),
           buildGauge(
@@ -675,7 +676,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
             lcoeToCtkwh(metrics2.lcoe),
             t('simulationComparison.charts.lcoeComparison', 'Comparison LCOE'),
             maxLcoe,
-            (v: number) => `${v.toFixed(1)} ct/kWh`,
+            (v: number) => `${formatNumber(v, 1)} ct/kWh`,
             13,
           ),
         ] : []),
@@ -709,7 +710,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const tech = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            const val = p.value >= 1000 ? `€${(p.value / 1000).toFixed(1)}k` : `€${p.value.toFixed(0)}`;
+            const val = p.value >= 1000 ? `€${formatNumber(p.value / 1000, 1)}k` : `€${formatNumber(p.value, 0)}`;
             html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${val}</span><br/>`;
           });
           return html;
@@ -724,7 +725,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       yAxis: {
         type: 'value' as const,
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
-        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v.toFixed(0)}` },
+        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => v >= 1000 ? `€${formatNumber(v / 1000, 0)}k` : `€${formatNumber(v, 0)}` },
       },
       series: [
         {
@@ -771,7 +772,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const tech = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${p.value.toFixed(1)} ct/kWh</span><br/>`;
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatNumber(p.value, 1)} ct/kWh</span><br/>`;
           });
           return html;
         },
@@ -788,7 +789,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         name: 'ct/kWh',
         nameTextStyle: { color: themeColors.textMuted, fontSize: 10 },
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
-        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${v.toFixed(0)}` },
+        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${formatNumber(v, 0)}` },
       },
       series: [
         {
@@ -835,7 +836,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const tech = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${p.value.toFixed(1)}%</span><br/>`;
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatNumber(p.value, 1)}%</span><br/>`;
           });
           return html;
         },
@@ -849,7 +850,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         name: '%',
         nameTextStyle: { color: themeColors.textMuted, fontSize: 10 },
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
-        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${v.toFixed(0)}%` },
+        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${formatNumber(v, 0)}%` },
       },
       series: [
         {
