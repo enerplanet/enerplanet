@@ -31,9 +31,10 @@ const MODULE_KEYS = ['losses', 'dc_ac_ratio', 'inv_eff', 'module_type'];
 /** Each surface as the view has it, with the usable share stored for it, or the default. */
 export function pvYieldRequest(request: PvBuildingRunRequest, context: PvYieldContext): PvYieldRequest {
   const stored = new Map((context.pv.arrays ?? []).map((a) => [a.surface_id, a]));
+  // A building tech keeps its values in constraints; older ones carried them flat.
   const module: Record<string, number> = {};
   for (const key of MODULE_KEYS) {
-    const value = context.pv[key];
+    const value = context.pv.constraints?.find((c) => c.key === key)?.value ?? context.pv[key];
     if (typeof value === 'number') module[key] = value;
   }
   return {

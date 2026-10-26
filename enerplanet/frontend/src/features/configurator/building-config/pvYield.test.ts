@@ -26,4 +26,22 @@ describe('pvYieldRequest', () => {
       ],
     });
   });
+
+  it('reads the module settings from the stored constraints, as a building tech keeps them', () => {
+    const request = pvYieldRequest(
+      { osm_id: '7', surfaces: [{ id: 'south', area: 42, tilt: 30, azimuth: 175 }] },
+      {
+        location: [12.96, 48.83],
+        pv: { alias: 'PV', constraints: [
+          { key: 'losses', value: 0.14 },
+          { key: 'dc_ac_ratio', value: 1.2 },
+          { key: 'inv_eff', value: 96 },
+          { key: 'module_type', value: 0 },
+          { key: 'cost_energy_cap', value: 575 },
+        ] },
+      },
+    );
+
+    expect(request.module).toEqual({ losses: 0.14, dc_ac_ratio: 1.2, inv_eff: 96, module_type: 0 });
+  });
 });
