@@ -900,7 +900,9 @@
       "failed_few": "{{count}} selhaly",
       "failed_many": "{{count}} selhalo",
       "failed_other": "{{count}} selhalo",
-      "pagination": "rodin modelů"
+      "pagination": "rodin modelů",
+      "join": "Přidat do rodiny",
+      "joinFailed": "„{{name}}“ se nepodařilo přidat do rodiny: {{reason}}"
     },
     "workspaceActions": "Akce pracovního prostoru",
     "selectedCount_one": "{{count}} vybrán",

@@ -375,6 +375,12 @@ class ModelService {
     return response.data;
   }
 
+  /** Puts a model into another family of its workspace. */
+  async setModelFamily(id: number, familyId: number): Promise<ModelResponse> {
+    const response = await axios.post(`${this.baseURL}/${id}/family`, { family_id: familyId });
+    return response.data;
+  }
+
   async bulkMoveModels(modelIds: number[], workspaceId: number): Promise<{ success: boolean; message: string }> {
     const response = await axios.patch(`${this.baseURL}/bulk-move`, {
       model_ids: modelIds,

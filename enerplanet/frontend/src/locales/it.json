@@ -888,7 +888,9 @@
       "copies_other": "{{count}} copie",
       "failed_one": "{{count}} non riuscita",
       "failed_other": "{{count}} non riuscite",
-      "pagination": "famiglie"
+      "pagination": "famiglie",
+      "join": "Aggiungi a una famiglia",
+      "joinFailed": "Impossibile aggiungere \"{{name}}\" alla famiglia: {{reason}}"
     },
     "workspaceActions": "Azioni dell'area di lavoro",
     "selectedCount_one": "{{count}} selezionato",

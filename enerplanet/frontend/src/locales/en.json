@@ -1147,7 +1147,9 @@
       "copies_other": "{{count}} copies",
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
-      "pagination": "families"
+      "pagination": "families",
+      "join": "Add to family",
+      "joinFailed": "Could not add \"{{name}}\" to the family: {{reason}}"
     },
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",

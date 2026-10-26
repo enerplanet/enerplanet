@@ -900,7 +900,9 @@
       "failed_few": "{{count}} nieudane",
       "failed_many": "{{count}} nieudanych",
       "failed_other": "{{count}} nieudanych",
-      "pagination": "rodzin modeli"
+      "pagination": "rodzin modeli",
+      "join": "Dodaj do rodziny",
+      "joinFailed": "Nie udało się dodać „{{name}}” do rodziny: {{reason}}"
     },
     "workspaceActions": "Działania obszaru roboczego",
     "selectedCount_one": "{{count}} zaznaczony",

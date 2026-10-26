@@ -1147,7 +1147,9 @@
       "copies_other": "{{count}} Kopien",
       "failed_one": "{{count}} fehlgeschlagen",
       "failed_other": "{{count}} fehlgeschlagen",
-      "pagination": "Modellfamilien"
+      "pagination": "Modellfamilien",
+      "join": "Zu Familie hinzufügen",
+      "joinFailed": "\"{{name}}\" konnte nicht zur Familie hinzugefügt werden: {{reason}}"
     },
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",

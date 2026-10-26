@@ -22,7 +22,8 @@ import {
 	MoreHorizontal,
 } from "lucide-react";
 
-import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
+import { isAxiosError } from "axios";
+import { Model, ModelStats, modelService } from "@/features/model-dashboard/services/modelService";
 import { ModelStatsSummary } from "./ModelStatsSummary";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/Skeletons";
@@ -63,7 +64,7 @@ import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorit
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import { ModelTableRow } from "./ModelTableRow";
 import { processModelTimingUpdates, type TimingUpdate } from "@/features/model-dashboard/utils/modelTimingUtils";
-import { organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
+import { familyId, groupFamilies, organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 
 interface Group {
@@ -319,6 +320,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		editTitle,
 		isSelected,
 		handleSelectModel,
+		handleSelectFamily,
 		handleSelectAll,
 		startTitleEdit,
 		cancelTitleEdit,
@@ -421,22 +423,46 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return titles;
 	}, [paginatedModels]);
-	const childCountByParentID = useMemo(() => {
-		const children = new Map<number, number>();
+	const copyCountByFamily = useMemo(() => {
+		const copies = new Map<number, number>();
 		for (const model of paginatedModels) {
-			if (!model.parent_model_id) continue;
-			children.set(model.parent_model_id, (children.get(model.parent_model_id) ?? 0) + 1);
+			if (model.level === 0) continue;
+			copies.set(familyId(model), (copies.get(familyId(model)) ?? 0) + 1);
 		}
-		return children;
+		return copies;
 	}, [paginatedModels]);
-	const failedChildCountByParentID = useMemo(() => {
+	const failedCopyCountByFamily = useMemo(() => {
 		const failed = new Map<number, number>();
 		for (const model of paginatedModels) {
-			if (!model.parent_model_id || model.status !== "failed") continue;
-			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+			if (model.level === 0 || model.status !== "failed") continue;
+			failed.set(familyId(model), (failed.get(familyId(model)) ?? 0) + 1);
 		}
 		return failed;
 	}, [paginatedModels]);
+	// A family's head selects or clears its whole family.
+	const familyByHeadID = useMemo(
+		() => new Map(groupFamilies(paginatedModels).map(({ head, members }) => [head.id, [head, ...members]])),
+		[paginatedModels],
+	);
+	// Families a model alone in its own can join, one entry per family on the page.
+	const familyChoices = useMemo(
+		() => groupFamilies(paginatedModels).map(({ head }) => ({ id: familyId(head), headId: head.id, title: head.title.trim() })),
+		[paginatedModels],
+	);
+	const handleJoinFamily = useCallback(async (model: Model, family: number) => {
+		try {
+			await modelService.setModelFamily(model.id, family);
+			await loadModels();
+		} catch (error) {
+			const reason = isAxiosError(error) ? (error.response?.data?.error ?? error.message) : String(error);
+			showError(t("model.family.joinFailed", { name: model.title, reason }));
+		}
+	}, [loadModels, showError, t]);
+	const handleSelectRow = useCallback((model: Model) => {
+		const family = familyByHeadID.get(model.id);
+		if (family && family.length > 1) handleSelectFamily(family);
+		else handleSelectModel(model);
+	}, [familyByHeadID, handleSelectFamily, handleSelectModel]);
 	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
 	const toggleFamily = useCallback((modelId: number) => {
 		setCollapsedFamilies((prev) => {
@@ -446,17 +472,16 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		});
 	}, []);
 	const visibleModels = useMemo(
-		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		() => paginatedModels.filter((m) => !(m.level > 0 && collapsedFamilies.has(familyId(m)))),
 		[paginatedModels, collapsedFamilies],
 	);
 
-	// Each original with the copies shown below it; a copy whose original is
-	// not on the page is its own family.
+	// Each family's head with the rest of its family shown below it.
 	const families = useMemo(() => {
 		const list: { original: (typeof visibleModels)[number]; copies: (typeof visibleModels)[number][] }[] = [];
 		for (const model of visibleModels) {
 			const last = list.at(-1);
-			if (model.level > 0 && last && last.original.id === model.parent_model_id) last.copies.push(model);
+			if (model.level > 0 && last && familyId(last.original) === familyId(model)) last.copies.push(model);
 			else list.push({ original: model, copies: [] });
 		}
 		return list;
@@ -771,10 +796,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			model={model}
 			index={rowIndex(model)}
 			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
-			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
-			familyCollapsed={collapsedFamilies.has(model.id)}
+			copyCount={model.level === 0 ? (copyCountByFamily.get(familyId(model)) ?? 0) : 0}
+			failedCopyCount={model.level === 0 ? (failedCopyCountByFamily.get(familyId(model)) ?? 0) : 0}
+			familyCollapsed={collapsedFamilies.has(familyId(model))}
 			onToggleFamily={toggleFamily}
+			familyChoices={familyChoices}
+			onJoinFamily={handleJoinFamily}
 			currentUserId={user?.id ? String(user.id) : undefined}
 			userAccessLevel={user?.access_level}
 			isSelected={isSelected(model)}
@@ -783,7 +810,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			calculationStartTimes={calculationStartTimes}
 			calculationCompletionInfo={calculationCompletionInfo}
 			canUserDeleteModel={canUserDeleteModel}
-			onSelect={handleSelectModel}
+			onSelect={handleSelectRow}
 			onStartEdit={startTitleEdit}
 			onEditTitleChange={setEditTitle}
 			onUpdateTitle={updateTitle}

@@ -37,40 +37,38 @@ const applyTieBreaker = (a: Model, b: Model, order: "asc" | "desc"): number => {
 	return order === "asc" ? a.id - b.id : b.id - a.id;
 };
 
+/**
+ * A model's family: the group it was copied or joined into, else its original,
+ * else itself. Matches familyIDExpr in the backend's model_helpers_query.go.
+ */
+export const familyId = (model: Pick<Model, "id" | "group_id" | "parent_model_id">): number =>
+	model.group_id ?? model.parent_model_id ?? model.id;
+
+/** A family's first model: its original, or the oldest member once the original is gone. */
+export const familyHead = <T extends Model>(members: T[], id: number): T =>
+	members.find((m) => m.id === id) ??
+	members.reduce((oldest, m) =>
+		m.created_at < oldest.created_at || (m.created_at === oldest.created_at && m.id < oldest.id) ? m : oldest,
+	);
+
+/** Groups models by family, the head first; families keep the order of their first model. */
+export const groupFamilies = <T extends Model>(models: T[]): { head: T; members: T[] }[] => {
+	const byFamily = new Map<number, T[]>();
+	for (const model of models) {
+		const members = byFamily.get(familyId(model));
+		if (members) members.push(model);
+		else byFamily.set(familyId(model), [model]);
+	}
+	return [...byFamily].map(([id, members]) => {
+		const head = familyHead(members, id);
+		return { head, members: members.filter((m) => m !== head) };
+	});
+};
+
 export const organizeModelsHierarchically = (
 	models: Model[]
-): (Model & { level: number })[] => {
-	const organized: (Model & { level: number })[] = [];
-	const addedIds = new Set<number>();
-	const parentMap = new Map<number, Model[]>();
-
-	for (const model of models) {
-		if (model.parent_model_id) {
-			if (!parentMap.has(model.parent_model_id)) {
-				parentMap.set(model.parent_model_id, []);
-			}
-			parentMap.get(model.parent_model_id)!.push(model);
-		}
-	}
-
-	for (const model of models) {
-		if (!model.parent_model_id) {
-			organized.push({ ...model, level: 0 });
-			addedIds.add(model.id);
-
-			const children = parentMap.get(model.id) || [];
-			for (const child of children) {
-				organized.push({ ...child, level: 1 });
-				addedIds.add(child.id);
-			}
-		}
-	}
-
-	for (const model of models) {
-		if (!addedIds.has(model.id)) {
-			organized.push({ ...model, level: 0 });
-		}
-	}
-
-	return organized;
-};
+): (Model & { level: number })[] =>
+	groupFamilies(models).flatMap(({ head, members }) => [
+		{ ...head, level: 0 },
+		...members.map((m) => ({ ...m, level: 1 })),
+	]);

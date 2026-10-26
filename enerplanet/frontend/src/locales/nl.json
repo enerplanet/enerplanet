@@ -887,7 +887,9 @@
       "copies_other": "{{count}} kopieën",
       "failed_one": "{{count}} mislukt",
       "failed_other": "{{count}} mislukt",
-      "pagination": "families"
+      "pagination": "families",
+      "join": "Aan familie toevoegen",
+      "joinFailed": "\"{{name}}\" kon niet aan de familie worden toegevoegd: {{reason}}"
     },
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",

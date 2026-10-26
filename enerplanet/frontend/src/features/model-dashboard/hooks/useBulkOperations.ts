@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 import { Model } from '@/features/model-dashboard/services/modelService';
+import { familyId } from '@/features/model-dashboard/utils/dashboardHelpers';
 
 interface UseBulkOperationsProps {
 	selectedModels: Model[];
@@ -25,14 +26,18 @@ export const useBulkOperations = ({
 		const deletableCount = selectedModels.filter((model: Model) => !isModelDisabled(model)).length;
 		const nonDeletableCount = selectedModels.length - deletableCount;
 
-		const parentsWithChildren = selectedModels.filter((model: Model) => {
-			const hasChildren = sortedModels.some((m: Model) => m.parent_model_id === model.id);
-			return hasChildren && !isModelDisabled(model);
-		});
+		// Families losing some, not all, of their models: the rest stay together.
+		const selectedIDs = new Set(selectedModels.map((m: Model) => m.id));
+		const partlyDeletedFamilies = new Set(
+			selectedModels
+				.filter((model: Model) => !isModelDisabled(model))
+				.filter((model: Model) => sortedModels.some((m: Model) => !selectedIDs.has(m.id) && familyId(m) === familyId(model)))
+				.map(familyId),
+		);
 
 		const description = buildBulkDeleteDescription(
 			selectedModels.length,
-			parentsWithChildren.length,
+			partlyDeletedFamilies.size,
 			nonDeletableCount
 		);
 
@@ -59,13 +64,13 @@ export const useBulkOperations = ({
 
 function buildBulkDeleteDescription(
 	totalCount: number,
-	parentsCount: number,
+	partlyDeletedFamilies: number,
 	nonDeletableCount: number
 ): string {
 	let description = `Are you sure you want to delete ${totalCount} selected model${totalCount > 1 ? "s" : ""}?`;
 
-	if (parentsCount > 0) {
-		description += ` ${parentsCount} parent model${parentsCount > 1 ? "s" : ""} with children will have their child models remain and become independent.`;
+	if (partlyDeletedFamilies > 0) {
+		description += ` The models you did not select stay in their ${partlyDeletedFamilies > 1 ? "families" : "family"}, each headed by its oldest model.`;
 	}
 
 	if (nonDeletableCount > 0) {

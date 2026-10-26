@@ -1,18 +1,19 @@
 import React, { memo } from "react";
-import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
+import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2, Combine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Model } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
 import { SimulationProgress } from "@/components/ui/SimulationProgress";
 import CompletedTimer from "@/components/ui/CompletedTimer";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import ModelActions from "@/components/ui/ModelActions";
 import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
 import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
+import { familyId } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
@@ -48,6 +49,9 @@ interface ModelTableRowProps {
   failedCopyCount: number;
   familyCollapsed: boolean;
   onToggleFamily: (modelId: number) => void;
+  /** Every family on the page; a model alone in its own may join one of the others. */
+  familyChoices: FamilyChoice[];
+  onJoinFamily: (model: Model, familyId: number) => void;
   currentUserId?: string;
   userAccessLevel?: string;
   isSelected: boolean;
@@ -247,6 +251,44 @@ const FamilyToggle: React.FC<{ modelId: number; title: string; copyCount: number
   );
 };
 
+/** A family on the page: its id and the head that names it. */
+export interface FamilyChoice {
+  id: number;
+  headId: number;
+  title: string;
+}
+
+/** Joins a model that is alone in its family to another family on the page. */
+const JoinFamilyMenu: React.FC<{ choices: FamilyChoice[]; onJoin: (familyId: number) => void }> = ({ choices, onJoin }) => {
+  const { t } = useTranslation();
+  if (choices.length === 0) return null;
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("model.family.join")}
+              className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+            >
+              <Combine className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t("model.family.join")}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
+        {choices.map((choice) => (
+          <DropdownMenuItem key={choice.id} className="cursor-pointer" onClick={() => onJoin(choice.id)}>
+            <span className="truncate">{choice.title}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 /** An original's copy count, and while its copies are hidden, how many of them failed. */
 const FamilyCounts: React.FC<{ copyCount: number; failedCopyCount: number; collapsed: boolean }> = ({ copyCount, failedCopyCount, collapsed }) => {
   const { t } = useTranslation();
@@ -273,6 +315,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   failedCopyCount,
   familyCollapsed,
   onToggleFamily,
+  familyChoices,
+  onJoinFamily,
   currentUserId,
   userAccessLevel,
   isSelected,
@@ -347,7 +391,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
       <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass} ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
-            <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
+            <FamilyToggle modelId={familyId(model)} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
           )}
           <ModelNameCell
             isEditing={isEditing}
@@ -362,6 +406,12 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             isNotModelOwner={isNotModelOwner}
           />
           <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
+          {level === 0 && copyCount === 0 && canManageModel && (
+            <JoinFamilyMenu
+              choices={familyChoices.filter((choice) => choice.headId !== model.id)}
+              onJoin={(family) => onJoinFamily(model, family)}
+            />
+          )}
         </div>
       </td>
 
@@ -480,6 +530,7 @@ const modelSnapshotEqual = (
   prev.user_id === next.user_id &&
   prev.user_email === next.user_email &&
   prev.is_copy === next.is_copy &&
+  prev.group_id === next.group_id &&
   prev.parent_model_id === next.parent_model_id &&
   prev.level === next.level &&
   modelSharesSnapshot(prev) === modelSharesSnapshot(next) &&
@@ -493,14 +544,19 @@ const modelSharesSnapshot = (model: Model): string =>
     .sort()
     .join("|");
 
+const familyPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): boolean =>
+  prev.copyCount === next.copyCount &&
+  prev.failedCopyCount === next.failedCopyCount &&
+  prev.familyCollapsed === next.familyCollapsed &&
+  prev.onToggleFamily === next.onToggleFamily &&
+  prev.familyChoices === next.familyChoices &&
+  prev.onJoinFamily === next.onJoinFamily;
+
 const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): boolean => {
   if (!modelSnapshotEqual(prev.model, next.model)) return false;
 
   if (prev.modelTitle !== next.modelTitle) return false;
-  if (prev.copyCount !== next.copyCount) return false;
-  if (prev.failedCopyCount !== next.failedCopyCount) return false;
-  if (prev.familyCollapsed !== next.familyCollapsed) return false;
-  if (prev.onToggleFamily !== next.onToggleFamily) return false;
+  if (!familyPropsEqual(prev, next)) return false;
   if (prev.currentUserId !== next.currentUserId) return false;
   if (prev.userAccessLevel !== next.userAccessLevel) return false;
   if (prev.isSelected !== next.isSelected) return false;

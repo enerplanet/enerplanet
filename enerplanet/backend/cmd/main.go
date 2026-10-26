@@ -901,6 +901,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.DELETE(routeModelByID, modelHandler.DeleteModel)
 	api.PUT(routeModelByID+"/activation", modelHandler.UpdateModelActivation)
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
+	api.POST(routeModelByID+"/family", modelHandler.SetModelFamily)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
 	api.POST(routeModelByID+"/analyse", modelHandler.AnalyseModel)

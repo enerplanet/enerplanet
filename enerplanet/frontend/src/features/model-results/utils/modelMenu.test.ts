@@ -41,4 +41,13 @@ describe('buildModelMenu', () => {
     const menu = buildModelMenu([model(7, '2026-10-07', { parent_model_id: 99 })]);
     expect(menu.rows.map((r) => [r.model.id, r.role])).toEqual([[7, 'single']]);
   });
+
+  it('keeps the copies of a deleted original together under the oldest', () => {
+    const menu = buildModelMenu([
+      model(5, '2026-10-05', { group_id: 1, status: 'completed' }),
+      model(4, '2026-10-04', { group_id: 1, status: 'completed' }),
+    ]);
+    expect(menu.rows.map((r) => [r.model.id, r.role])).toEqual([[4, 'parent'], [5, 'copy']]);
+    expect(menu.familyCount).toBe(1);
+  });
 });
