@@ -302,7 +302,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
 	coatiRunner := resultservice.SubprocessCoatiRunner{}
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, cfg.PVVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner)
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, cfg.PVVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner, cfg.MemeMaxJobMemoryMB)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)

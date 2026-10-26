@@ -37,6 +37,7 @@ type Config struct {
 	WeatherProvider      string // provider passed on every weather-serve call (via TentaCron) — weather-serve has no server-side default
 	BuemVersion          string // BuEM release the stored results are keyed for; must match the deployed buem-model
 	PVVersion            string // PV service (pv-simulate) release the stored PV profiles are keyed for
+	MemeMaxJobMemoryMB   int    // estimated solve memory above which a model is refused before dispatch; 0 sets no limit
 	TentacronServiceURL  string // URL of the TentaCron orchestrator; every ignis, weather-serve, City2TABULA and buem-gateway call (resolve endpoint, run_buem, enrich, the /v1/ignis/* proxy) routes through it
 	TentacronAPIKey      string // X-API-Key for TentaCron — required, every /v1 endpoint rejects a missing key
 	OpenTechDBServiceURL string // URL of the OpenTech-DB service
@@ -54,6 +55,10 @@ func LoadFromEnv() (*Config, error) {
 	}
 
 	sessionTTL, err := platformconfig.GetEnvInt("SESSION_TTL_MINUTES", 60)
+	if err != nil {
+		return nil, err
+	}
+	memeMaxJobMemoryMB, err := platformconfig.GetEnvInt("MEME_MAX_JOB_MEMORY_MB", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +83,7 @@ func LoadFromEnv() (*Config, error) {
 		WeatherProvider:      platformconfig.GetEnv("WEATHER_PROVIDER", "merra-2"),
 		BuemVersion:          platformconfig.GetEnv("BUEM_VERSION", ""),
 		PVVersion:            platformconfig.GetEnv("PV_VERSION", ""),
+		MemeMaxJobMemoryMB:   memeMaxJobMemoryMB,
 		// 8400 is TentaCron's slot in the dev port allocation (repos.conf),
 		// a range chosen to avoid the crowded 8080 and 9000 neighbourhoods.
 		// The Makefile publishes it there; TentaCron's own default is 8080,

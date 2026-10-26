@@ -815,12 +815,14 @@
         "meme": "Symulacja systemu energetycznego (MEME) zatrzymała się przed końcem.",
         "buem": "Obliczenie zapotrzebowania budynku na ciepło (BuEM) nie powiodło się.",
         "pv": "Obliczenie uzysku PV nie powiodło się.",
-        "city2tabula": "Dla tych budynków nie znaleziono danych 3D budynków (City2TABULA), więc nie można było obliczyć ich zapotrzebowania."
+        "city2tabula": "Dla tych budynków nie znaleziono danych 3D budynków (City2TABULA), więc nie można było obliczyć ich zapotrzebowania.",
+        "meme_size": "Model jest zbyt duży, aby obliczyć go na tym serwerze."
       },
       "unknown": "Proces nie powiódł się. Spróbuj ponownie później. Jeśli to się powtórzy, zgłoś to zespołowi EnerPlanET.",
       "next": "Model i jego dane wejściowe pozostały bez zmian. Uruchom go ponownie. Jeśli nie powiedzie się drugi raz, zgłoś to zespołowi EnerPlanET.",
       "nextFor": {
-        "city2tabula": "Ponowne uruchomienie nie pomoże, dopóki obszar nie będzie miał danych 3D budynków. Jeśli oczekiwano tu danych, zgłoś to zespołowi EnerPlanET."
+        "city2tabula": "Ponowne uruchomienie nie pomoże, dopóki obszar nie będzie miał danych 3D budynków. Jeśli oczekiwano tu danych, zgłoś to zespołowi EnerPlanET.",
+        "meme_size": "Ponowne uruchomienie nie pomoże. Zmniejsz liczbę budynków lub technologii albo skróć okres symulacji, a następnie uruchom go ponownie."
       },
       "report": "Zgłoś",
       "reported": "Zgłoszono",

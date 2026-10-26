@@ -806,12 +806,14 @@
         "meme": "De energiesysteemsimulatie (MEME) is gestopt voordat ze klaar was.",
         "buem": "De berekening van de warmtevraag van het gebouw (BuEM) is mislukt.",
         "pv": "De berekening van de PV-opbrengst is mislukt.",
-        "city2tabula": "Voor deze gebouwen zijn geen 3D-gebouwgegevens (City2TABULA) gevonden, daarom kon hun vraag niet worden berekend."
+        "city2tabula": "Voor deze gebouwen zijn geen 3D-gebouwgegevens (City2TABULA) gevonden, daarom kon hun vraag niet worden berekend.",
+        "meme_size": "Het model is te groot om op deze server te berekenen."
       },
       "unknown": "Het proces is mislukt. Probeer het later opnieuw. Gebeurt het weer, meld het dan aan het EnerPlanET-team.",
       "next": "Uw model en de invoer zijn ongewijzigd. Start het opnieuw. Mislukt het een tweede keer, meld het dan aan het EnerPlanET-team.",
       "nextFor": {
-        "city2tabula": "Opnieuw starten helpt pas als het gebied 3D-gebouwgegevens heeft. Verwachtte u hier gegevens, meld het dan aan het EnerPlanET-team."
+        "city2tabula": "Opnieuw starten helpt pas als het gebied 3D-gebouwgegevens heeft. Verwachtte u hier gegevens, meld het dan aan het EnerPlanET-team.",
+        "meme_size": "Opnieuw starten helpt niet. Verminder het aantal gebouwen of technologieën, of verkort de simulatieperiode, en start het daarna opnieuw."
       },
       "report": "Melden",
       "reported": "Gemeld",

@@ -815,12 +815,14 @@
         "meme": "Simulace energetického systému (MEME) skončila předčasně.",
         "buem": "Výpočet potřeby tepla budovy (BuEM) selhal.",
         "pv": "Výpočet výnosu FV selhal.",
-        "city2tabula": "Pro tyto budovy nebyla nalezena 3D data budov (City2TABULA), proto nebylo možné vypočítat jejich potřebu."
+        "city2tabula": "Pro tyto budovy nebyla nalezena 3D data budov (City2TABULA), proto nebylo možné vypočítat jejich potřebu.",
+        "meme_size": "Model je příliš velký na to, aby ho tento server spočítal."
       },
       "unknown": "Proces selhal. Zkuste to znovu později. Pokud se to opakuje, nahlaste to týmu EnerPlanET.",
       "next": "Váš model a jeho vstupy zůstaly beze změny. Spusťte jej znovu. Pokud selže podruhé, nahlaste to týmu EnerPlanET.",
       "nextFor": {
-        "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET."
+        "city2tabula": "Opětovné spuštění nepomůže, dokud oblast nebude mít 3D data budov. Pokud jste zde data očekávali, nahlaste to týmu EnerPlanET.",
+        "meme_size": "Opětovné spuštění nepomůže. Snižte počet budov nebo technologií nebo zkraťte období simulace a pak ho spusťte znovu."
       },
       "report": "Nahlásit",
       "reported": "Nahlášeno",

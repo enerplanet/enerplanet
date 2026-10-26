@@ -41,3 +41,17 @@ describe('failureMessage', () => {
     expect(failureMessage(undefined, t).title).toBe('Failed');
   });
 });
+
+// Must match the services the backend records (internal/store/model/failed.go).
+const RECORDED_SERVICES = ['meme', 'buem', 'pv', 'city2tabula', 'meme_size'];
+const LOCALES = import.meta.glob<{ model: { failure: { service: Record<string, string> } } }>('../../../locales/*.json', { eager: true, import: 'default' });
+
+describe('failure messages in every locale', () => {
+  it('has a line for each service the backend records', () => {
+    for (const [path, locale] of Object.entries(LOCALES)) {
+      for (const service of RECORDED_SERVICES) {
+        expect(locale.model.failure.service[service], `${path}: ${service}`).toBeTruthy();
+      }
+    }
+  });
+});
