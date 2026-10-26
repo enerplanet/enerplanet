@@ -135,11 +135,11 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 function ModelColumns() {
 	return (
 		<colgroup>
-			<col style={{ width: "5rem" }} />
+			<col style={{ width: "4rem" }} />
 			<col />
-			<col style={{ width: "24rem" }} />
-			<col className="hidden md:table-column" style={{ width: "10rem" }} />
-			<col style={{ width: "22rem" }} />
+			<col className="w-[12rem] xl:w-[18rem]" />
+			<col className="hidden xl:table-column" style={{ width: "10rem" }} />
+			<col style={{ width: "21.5rem" }} />
 		</colgroup>
 	);
 }
@@ -1036,7 +1036,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									{!isLoading && filteredModels.length > 0 ? (
 										<div className={`md-fade-in flex min-h-0 flex-col overflow-hidden ${CARD_CLASS}`}>
 									<div className="min-h-0 w-full flex-1 overflow-auto">
-										<table className="w-full min-w-[80rem] table-fixed">
+										<table className="w-full min-w-[47rem] table-fixed xl:min-w-[63.5rem]">
 											<ModelColumns />
 											<thead className="sticky top-0 z-10">
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
@@ -1102,7 +1102,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	onSort={handleSort}
 																/>
 															</th>
-															<th className="hidden px-4 py-2.5 text-left md:table-cell">
+															<th className="hidden px-4 py-2.5 text-left xl:table-cell">
 																<SortHeaderButton
 																	field="created_at"
 																	label={t('model.created')}

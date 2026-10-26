@@ -31,7 +31,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
   if (activeStage < 0) return null;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {STAGES.map((stage, i) => {
         const isActive = i === activeStage;
         const isCompleted = i < activeStage;

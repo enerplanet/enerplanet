@@ -421,7 +421,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
       </td>
 
       <td className={`px-4 py-2.5 ${copyDivider}`}>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isActiveStatus(model.status) ? (
             <RunStages status={model.status} />
           ) : model.status === "failed" ? (
@@ -475,7 +475,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`hidden px-4 py-2.5 md:table-cell ${copyDivider}`}>
+      <td className={`hidden px-4 py-2.5 xl:table-cell ${copyDivider}`}>
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
