@@ -68,9 +68,10 @@ as stored — so the file **must** be written re-apply-safe (guarded DDL). It
 fails loudly if not, which is the point: a broken re-run should stop the
 deploy, not silently corrupt.
 
-When the entrypoint migration runner is enabled, the same command runs before
-every container start; `--rerun` is the only way to force one recorded file to
-repeat.
+The container entrypoint runs the same migration command before every start or
+restart (`RUN_MIGRATIONS_ON_START=false` skips it), so pending migrations are
+applied automatically on deploy; `--rerun` is the only way to force one
+recorded file to repeat.
 
 ## Notes
 
