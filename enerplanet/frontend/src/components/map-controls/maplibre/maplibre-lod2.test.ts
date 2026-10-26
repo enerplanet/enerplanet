@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { triangulatePlanar } from './maplibre-lod2';
-import { lod2SurfacesOf } from './useLod2Surfaces';
+import { addByOsmId, lod2SurfacesOf } from './useLod2Surfaces';
 import { pvBuildingsOf } from './usePvSurfaceIds';
 
 const area = (tris: number[][]) => {
@@ -31,13 +31,33 @@ describe('triangulatePlanar', () => {
 describe('lod2SurfacesOf', () => {
   it('keeps roofs and walls and leaves ground surfaces out', () => {
     const ring = [[12.96, 48.83, 320], [12.97, 48.83, 320], [12.97, 48.84, 325], [12.96, 48.83, 320]];
-    const surfaces = lod2SurfacesOf({ buildings: [{ surfaces: [
-      { id: 'r1', type: 'RoofSurface', geojson: { type: 'Polygon', coordinates: [ring] } },
-      { id: 'w1', type: 'WallSurface', geojson: { type: 'MultiPolygon', coordinates: [[ring], [ring]] } },
-      { type: 'GroundSurface', geojson: { type: 'Polygon', coordinates: [ring] } },
-    ] }] });
+    const surfaces = lod2SurfacesOf({ object_id: 'B1', osm_ids: [], surfaces: [
+      { id: 'r1', type: 'RoofSurface', geometry: { type: 'Polygon', coordinates: [ring] } },
+      { id: 'w1', type: 'WallSurface', geometry: { type: 'MultiPolygon', coordinates: [[ring], [ring]] } },
+      { id: 'g1', type: 'GroundSurface', geometry: { type: 'Polygon', coordinates: [ring] } },
+    ] });
     expect(surfaces.map((s) => s.roof)).toEqual([true, false, false]);
     expect(surfaces.map((s) => s.id)).toEqual(['r1', 'w1', 'w1']);
+  });
+});
+
+describe('addByOsmId', () => {
+  const ring = [[0, 0, 1], [1, 0, 1], [1, 1, 2], [0, 0, 1]];
+  const building = (object_id: string, osm_ids: string[]) => ({
+    object_id, osm_ids, surfaces: [{ id: `${object_id}-r`, type: 'RoofSurface', geometry: { type: 'Polygon', coordinates: [ring] } }],
+  });
+
+  it('files each building once, under its first OSM way in the model', () => {
+    const into = new Map();
+    addByOsmId(into, [
+      building('A', ['9', '1', '2']),
+      building('B', ['1']),
+      building('C', ['7']),
+      building('D', []),
+      building('E', []),
+    ], new Set(['1', '2', 'c2t:E']));
+    expect([...into.keys()]).toEqual(['1', 'c2t:E']);
+    expect(into.get('1').map((s: { id: string }) => s.id)).toEqual(['A-r', 'B-r']);
   });
 });
 
