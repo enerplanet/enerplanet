@@ -149,7 +149,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             )}
           </div>
 
-          <span className="font-medium text-sm text-foreground line-clamp-2 break-words">{modelTitle}</span>
+          <span className="font-medium text-sm text-foreground break-words">{modelTitle}</span>
 
           <FileEdit className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" />
         </button>
@@ -393,25 +393,30 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
           {level === 0 && (
             <FamilyToggle modelId={familyId(model)} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
           )}
-          <ModelNameCell
-            isEditing={isEditing}
-            editTitle={editTitle}
-            modelTitle={modelTitle}
-            onEditTitleChange={onEditTitleChange}
-            onUpdateTitle={onUpdateTitle}
-            onCancelEdit={onCancelEdit}
-            onStartEdit={() => onStartEdit(model)}
-            level={level}
-            model={model}
-            isNotModelOwner={isNotModelOwner}
-          />
-          <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
-          {level === 0 && copyCount === 0 && canManageModel && (
-            <JoinFamilyMenu
-              choices={familyChoices.filter((choice) => choice.headId !== model.id)}
-              onJoin={(family) => onJoinFamily(model, family)}
+          {/* The family chips sit under the name, so a long name never pushes them into the status column. */}
+          <div className="min-w-0 flex-1">
+            <ModelNameCell
+              isEditing={isEditing}
+              editTitle={editTitle}
+              modelTitle={modelTitle}
+              onEditTitleChange={onEditTitleChange}
+              onUpdateTitle={onUpdateTitle}
+              onCancelEdit={onCancelEdit}
+              onStartEdit={() => onStartEdit(model)}
+              level={level}
+              model={model}
+              isNotModelOwner={isNotModelOwner}
             />
-          )}
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
+              <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
+              {level === 0 && copyCount === 0 && canManageModel && (
+                <JoinFamilyMenu
+                  choices={familyChoices.filter((choice) => choice.headId !== model.id)}
+                  onJoin={(family) => onJoinFamily(model, family)}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </td>
 
