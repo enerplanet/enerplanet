@@ -20,3 +20,7 @@ auth-service/
 
 # Infrastructure (separate repository)
 dependencies/
+
+# Locally built backend binaries (the image builds its own copies)
+/enerplanet/backend/migrate
+/enerplanet/backend/server
