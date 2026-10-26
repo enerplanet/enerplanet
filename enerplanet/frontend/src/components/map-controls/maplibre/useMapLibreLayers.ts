@@ -126,9 +126,13 @@ export function useMapLibreLayers(
     // only once per map, so a late call waits for the map to settle instead.
     if (map.isStyleLoaded()) {
       loadAll(map);
-    } else {
-      map.once('idle', () => loadAll(map));
+      return;
     }
+    // Only the latest data may wait: an older call running first adds sources,
+    // which unloads the style again and makes the newer call return unapplied.
+    const onIdle = () => loadAll(map);
+    map.once('idle', onIdle);
+    return () => { map.off('idle', onIdle); };
   }, [mapRef, mapReady, loadAll]);
 
   // A recreated map has no LoD2 layer yet, so one is added to each new map.
