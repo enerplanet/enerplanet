@@ -114,7 +114,7 @@ async function resolveBuilding(
   if (!entry && !stored) return failed('No 3D envelope is available for this building yet.');
 
   const built = stored
-    ? fromStoredBuem(osmId, feature.geometry, stored)
+    ? fromStoredBuem(osmId, feature.geometry, stored, entry?.buem?.building?.n_storeys)
     : (await buildBuildingStates(variantLookups, { features: [feature] }, res.data.data))[osmId];
   const building = built ? withDisplayLabel(built, osmId) : null;
   return {

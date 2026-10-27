@@ -17,6 +17,14 @@ const opened = adaptBuemFeature({
   properties: { buem: { building: { building_type: "SFH", n_storeys: 2, envelope: { elements: [wall] } } } },
 });
 
+// A block saved with 300 m2 in total, as configurators before 0.14 saved it: without a storey count.
+const savedWithoutStoreys = () => toStoredBuem(adaptBuemFeature({
+  type: "Feature",
+  id: "268425674",
+  geometry: footprint,
+  properties: { buem: { building: { building_type: "SFH", A_ref: { value: 300, unit: "m2" }, envelope: { elements: [wall] } } } },
+}));
+
 describe("stored BuEM", () => {
   it("reopens an edited building with its envelope and solver", () => {
     const stored = toStoredBuem(opened);
@@ -51,6 +59,20 @@ describe("stored BuEM", () => {
     expect(stored.construction_year).toBe(1968);
     expect(stored.building).not.toHaveProperty("construction_period");
     expect(reopened.construction_year).toBe(1968);
+  });
+
+  it("reopens a block saved without its storey count with City2TABULA's count", () => {
+    const { identity } = fromStoredBuem("268425674", footprint, savedWithoutStoreys(), 3);
+
+    expect(identity.storeys).toBe(3);
+    expect(identity.floorArea).toBe(300);
+  });
+
+  it("keeps a stored storey count over City2TABULA's", () => {
+    const saved = savedWithoutStoreys();
+    const stored = { ...saved, building: { ...saved.building, n_storeys: 2 } };
+
+    expect(fromStoredBuem("268425674", footprint, stored, 3).identity.storeys).toBe(2);
   });
 
   it("finds nothing stored on a building nobody edited", () => {
