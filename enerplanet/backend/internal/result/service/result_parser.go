@@ -70,6 +70,7 @@ type ParsedResults struct {
 	CostInvestment           []CostInvestmentRecord     `json:"cost_investment"`
 	PyPSAVoltage             []PyPSAVoltageRecord       `json:"pypsa_voltage"`
 	PyPSAPower               []PyPSAPowerRecord         `json:"pypsa_power"`
+	PyPSALineLoading         []PyPSALineLoadingRecord   `json:"pypsa_line_loading"`
 	LineFlows                []LineFlowRecord           `json:"line_flows"`
 	TrafoFlows               []TransformerFlowRecord    `json:"trafo_flows"`
 	SumProduction            float64                    `json:"sum_production"`
@@ -157,6 +158,27 @@ type PyPSAVoltageRecord struct {
 	Timestep time.Time `json:"timestep"`
 	VMagPu   float64   `json:"v_mag_pu"`
 	VAng     *float64  `json:"v_ang,omitempty"`
+}
+
+// PyPSALineLoadingRecord is one wire's flow at one timestep.
+//
+// Percent is the wire's utilisation against a REAL cable rating resolved on the
+// ingest side from the model config (per grid, conservative — the multimeter
+// against the grid's weakest cable; see cable_ratings.go). The only rating Coati
+// reports is the LP-optimised flow_cap, which makes |flow|/rating identically
+// 100, so it is never used. A wire with no resolvable rating (e.g. an MV arc,
+// no MV cable in the catalogue) leaves Percent nil -> NULL, never fabricated.
+type PyPSALineLoadingRecord struct {
+	Line     string    `json:"line"`
+	Bus0     string    `json:"bus0"`
+	Bus1     string    `json:"bus1"`
+	Timestep time.Time `json:"timestep"`
+	// P0 is the wire's flow. Coati reports the destination-side net arrival, so
+	// P0 carries that value; P1 is left nil (no origin-side series exists in the
+	// document). Losses therefore read as 0 — acceptable for a transport graph.
+	P0      float64  `json:"p0"`
+	P1      *float64 `json:"p1,omitempty"`
+	Percent *float64 `json:"utilization_percent,omitempty"`
 }
 
 type PyPSAPowerRecord struct {

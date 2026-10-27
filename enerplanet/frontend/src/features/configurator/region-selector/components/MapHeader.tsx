@@ -1,60 +1,24 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { Loader2, Globe, Lock, Layers } from "lucide-react";
+import { Switch, Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { FileDown, FileUp, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
-import type { FC, ReactNode } from "react";
-
-interface ModernToggleProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  icon: ReactNode;
-  activeColorClass?: string;
-  ariaLabel?: string;
-}
-
-const ModernToggle: FC<ModernToggleProps> = ({
-  checked,
-  onCheckedChange,
-  icon,
-  activeColorClass = "text-blue-600",
-  ariaLabel,
-}) => {
-  return (
-    <button
-      onClick={() => onCheckedChange(!checked)}
-      className={`
-                relative inline-flex h-5 w-10 items-center rounded-full
-                transition-all duration-300 ease-in-out cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary
-                ${checked ? "bg-slate-700" : "bg-gray-300 dark:bg-gray-600"}
-            `}
-      aria-label={ariaLabel}
-      type="button"
-    >
-      <span
-        className={`
-                    absolute h-4 w-4 rounded-full bg-white shadow-sm flex items-center justify-center
-                    transition-all duration-300 ease-in-out
-                `}
-        style={{ transform: checked ? "translateX(22px)" : "translateX(2px)" }}
-      >
-        <div
-          className={`w-3 h-3 ${checked ? activeColorClass.replace("bg-", "text-") : "text-gray-400"}`}
-        >
-          {icon}
-        </div>
-      </span>
-    </button>
-  );
-};
+import type { FC } from "react";
 
 interface MapHeaderProps {
   allPolygonsCount: number;
-  allowMultiplePolygons: boolean;
-  onToggleAllowMultiplePolygons: (value: boolean) => void;
   onClearAllPolygons: () => void;
+  /** Imports a GeoJSON file as the model area; absent where an area cannot be replaced. */
+  onImportArea?: (file: File) => void;
+  /** Downloads the drawn area as a GeoJSON file that Import area reads back. */
+  onExportArea?: () => void;
+  /** Present while a site's grid is out of date with its edits; regenerates it. */
+  onRegenerateGrid?: () => void;
+  isGeneratingGrid?: boolean;
+  selectedBuildingCount?: number;
+  onDisableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
   wsReloadKey?: number;
   currentWorkspace: Workspace | null;
@@ -63,21 +27,24 @@ interface MapHeaderProps {
   onWorkspaceChange: (workspace: Workspace | null) => void;
   onOpenCreateWorkspace: () => void;
   // Custom building filters
-  includePublicBuildings?: boolean;
   includePrivateBuildings?: boolean;
-  onTogglePublicBuildings?: (value: boolean) => void;
   onTogglePrivateBuildings?: (value: boolean) => void;
   simulateEV?: boolean;
   onToggleSimulateEV?: (value: boolean) => void;
   availableRegions?: AvailableRegion[];
   onRegionSelect?: (region: AvailableRegion) => void;
+  modelRegionName?: string;
 }
 
 export const MapHeader: FC<MapHeaderProps> = ({
   allPolygonsCount,
-  allowMultiplePolygons,
-  onToggleAllowMultiplePolygons,
   onClearAllPolygons,
+  onImportArea,
+  onExportArea,
+  onRegenerateGrid,
+  isGeneratingGrid = false,
+  selectedBuildingCount = 0,
+  onDisableSelectedBuildings,
   isLoadingPreference,
   wsReloadKey,
   currentWorkspace,
@@ -85,23 +52,21 @@ export const MapHeader: FC<MapHeaderProps> = ({
   normalizedWorkspaceId,
   onWorkspaceChange,
   onOpenCreateWorkspace,
-  includePublicBuildings = true,
   includePrivateBuildings = true,
-  onTogglePublicBuildings,
   onTogglePrivateBuildings,
   // EV simulation temporarily disabled
   // simulateEV = false,
   // onToggleSimulateEV,
   availableRegions = [],
   onRegionSelect,
+  modelRegionName,
 }) => {
   const { t } = useTranslation();
-  // relative z-30: md-fade-in animates with fill-mode both, which creates a
-  // permanent stacking context that traps the region dropdown's own z-50 here.
-  // Without a stacking order the header loses to the map canvas below it; 30
-  // clears the map while staying under the z-50 notification toast.
+  // relative z-40: md-fade-in animates with fill-mode both, which creates a
+  // permanent stacking context that traps the dropdowns' own z-50 here. 40 lifts
+  // them over the map's z-30 overlays while staying under the z-50 toasts.
   return (
-    <div className="md-fade-in relative z-30 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex items-center justify-between">
+    <div className="md-fade-in relative z-40 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-1.5">
       <div className="flex items-center gap-2">
         {!isLoadingPreference && (
           <Tooltip>
@@ -116,26 +81,97 @@ export const MapHeader: FC<MapHeaderProps> = ({
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent>Select or create a workspace to organize your models</TooltipContent>
+            <TooltipContent>{t("model.selectWorkspace")}</TooltipContent>
           </Tooltip>
         )}
         {onRegionSelect && availableRegions.length > 0 && (
           <RegionSelector regions={availableRegions} onRegionSelect={onRegionSelect} />
         )}
+        {/* A saved model's region is fixed by its polygon, so it is shown, not selectable. */}
+        {modelRegionName && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
+            <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+            <span className="font-normal text-foreground max-w-[160px] truncate text-sm">{modelRegionName}</span>
+          </div>
+        )}
         {isLoadingPreference && (
           <div className="md-fade-in flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-            <span className="font-medium text-foreground">Loading workspace...</span>
+            <span className="font-medium text-foreground">{t("model.loadingWorkspace")}</span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {selectedBuildingCount > 0 && onDisableSelectedBuildings && (
+          <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
+            <button
+              onClick={onDisableSelectedBuildings}
+              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {t("simulation.mapHeader.disableSelected")} ({selectedBuildingCount})
+            </button>
+          </div>
+        )}
+        {onImportArea && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <label
+                aria-label={t("simulation.mapHeader.importArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileUp className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.importArea")}</span>
+                <input
+                  type="file"
+                  accept=".geojson,.json,application/geo+json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onImportArea(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.importAreaHint")}</TooltipContent>
+          </Tooltip>
+        )}
+        {onRegenerateGrid && (
+          <button
+            type="button"
+            onClick={onRegenerateGrid}
+            disabled={isGeneratingGrid}
+            title={t("simulation.mapHeader.regenerateGridHint")}
+            className="md-fade-in bg-amber-500 border border-amber-600 rounded px-2 py-1 flex items-center gap-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingGrid ? "animate-spin" : ""}`} />
+            {t("simulation.mapHeader.regenerateGrid")}
+          </button>
+        )}
+        {onExportArea && allPolygonsCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onExportArea}
+                aria-label={t("simulation.mapHeader.exportArea")}
+                className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">{t("simulation.mapHeader.exportArea")}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">{t("simulation.mapHeader.exportAreaHint")}</TooltipContent>
+          </Tooltip>
+        )}
         {allPolygonsCount > 0 && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
             <button
               onClick={onClearAllPolygons}
-              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap"
             >
               {t("simulation.mapHeader.clearAll")} ({allPolygonsCount})
             </button>
@@ -143,34 +179,16 @@ export const MapHeader: FC<MapHeaderProps> = ({
         )}
 
         {/* Custom Building Filters */}
-        {onTogglePublicBuildings && (
-          <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1">
-              {t("simulation.mapHeader.public")}
-              <InfoIcon tooltipKey="publicBuildings" position="bottom" />
-            </span>
-            <ModernToggle
-              checked={includePublicBuildings}
-              onCheckedChange={onTogglePublicBuildings}
-              icon={<Globe className="w-full h-full" />}
-              activeColorClass="text-green-600"
-              ariaLabel={t("simulation.mapHeader.togglePublicBuildings")}
-            />
-          </div>
-        )}
-
         {onTogglePrivateBuildings && (
           <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+            <span className="text-xs font-medium text-foreground flex items-center gap-1 whitespace-nowrap">
               {t("simulation.mapHeader.myBuildings")}
               <InfoIcon tooltipKey="privateBuildings" position="bottom" />
             </span>
-            <ModernToggle
+            <Switch
               checked={includePrivateBuildings}
               onCheckedChange={onTogglePrivateBuildings}
-              icon={<Lock className="w-full h-full" />}
-              activeColorClass="text-blue-600"
-              ariaLabel={t("simulation.mapHeader.toggleMyBuildings")}
+              aria-label={t("simulation.mapHeader.toggleMyBuildings")}
             />
           </div>
         )}
@@ -187,20 +205,6 @@ export const MapHeader: FC<MapHeaderProps> = ({
                     <TooltipContent>EV Simulation will be available in a future release</TooltipContent>
                 </Tooltip>
                 */}
-
-        <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-          <span className="text-xs font-medium text-foreground flex items-center gap-1">
-            {t("simulation.mapHeader.multiplePolygons")}
-            <InfoIcon tooltipKey="multiplePolygons" position="bottom" />
-          </span>
-          <ModernToggle
-            checked={allowMultiplePolygons}
-            onCheckedChange={onToggleAllowMultiplePolygons}
-            icon={<Layers className="w-full h-full" />}
-            activeColorClass="text-blue-600"
-            ariaLabel={t("simulation.mapHeader.toggleMultiplePolygons")}
-          />
-        </div>
       </div>
     </div>
   );

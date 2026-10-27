@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import { UniversalForm } from "@spatialhub/forms";
 import { getWebserviceFormSections, validateWebserviceForm } from "@/configuration/formConfigurations";
@@ -39,12 +39,6 @@ import {
 interface WebservicesManagementProps {
 	onWebserviceAction?: (action: string, serviceId: number) => void;
 	readOnly?: boolean;
-}
-
-interface NotificationState {
-	open: boolean;
-	message: string;
-	severity: "success" | "error" | "warning";
 }
 
 const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserviceAction, readOnly = false }) => {
@@ -100,11 +94,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const confirm = useConfirm();
 
-	const [notification, setNotification] = useState<NotificationState>({
-		open: false,
-		message: "",
-		severity: "success",
-	});
+	const { setNotification } = useNotification();
 
 	const [formData, setFormData] = useState<WebserviceFormData>({
 		name: "",
@@ -429,6 +419,52 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 
 	return (
 		<div className="space-y-6">
+			{/* Title */}
+			<div className="md-rise" style={{ animationDelay: "60ms" }}>
+				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+					<div className="flex items-center gap-3.5">
+						<div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
+							<Cloud className="w-5 h-5 text-muted-foreground" />
+						</div>
+						<div>
+							<h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("webservicesManagement.title")}</h2>
+							<p className="mt-0.5 text-sm text-muted-foreground">{t("webservicesManagement.subtitle")}</p>
+						</div>
+					</div>
+					<div className="flex items-center gap-2">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									onClick={() => {
+										setIsRefreshing(true);
+										loadWebservices(filters);
+										setTimeout(() => setIsRefreshing(false), 1000);
+									}}
+									disabled={loading}
+									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									<RefreshCw className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`} />
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>{t("webservicesManagement.refresh")}</TooltipContent>
+						</Tooltip>
+						{!readOnly && (
+							<button
+								onClick={() => {
+									resetForm();
+									setAddDialogOpen(true);
+								}}
+								className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
+							>
+								<Plus className="w-4 h-4" />
+								<span className="hidden sm:inline">{t("webservicesManagement.registerNew")}</span>
+								<span className="sm:hidden">{t("common.add")}</span>
+							</button>
+						)}
+					</div>
+				</div>
+			</div>
+
 			{/* Summary Cards */}
 			<div className="md-rise grid grid-cols-2 md:grid-cols-5 gap-3">
 				{[
@@ -482,53 +518,8 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 				</div>
 			)}
 
-			{/* Header with filters */}
-			<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
-				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-					<div className="flex items-center gap-3.5">
-						<div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
-							<Cloud className="w-5 h-5 text-muted-foreground" />
-						</div>
-						<div>
-							<h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("webservicesManagement.title")}</h2>
-							<p className="mt-0.5 text-sm text-muted-foreground">{t("webservicesManagement.subtitle")}</p>
-						</div>
-					</div>
-					<div className="flex items-center gap-2">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<button
-									onClick={() => {
-										setIsRefreshing(true);
-										loadWebservices(filters);
-										setTimeout(() => setIsRefreshing(false), 1000);
-									}}
-									disabled={loading}
-									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									<RefreshCw className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`} />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent>{t("webservicesManagement.refresh")}</TooltipContent>
-						</Tooltip>
-						{!readOnly && (
-							<button
-								onClick={() => {
-									resetForm();
-									setAddDialogOpen(true);
-								}}
-								className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
-							>
-								<Plus className="w-4 h-4" />
-								<span className="hidden sm:inline">{t("webservicesManagement.registerNew")}</span>
-								<span className="sm:hidden">{t("common.add")}</span>
-							</button>
-						)}
-					</div>
-				</div>
-
-				{/* Filters */}
-				<div className="flex flex-col sm:flex-row gap-3">
+			{/* Filters */}
+			<div className="flex flex-col sm:flex-row gap-3">
 					<div className="relative flex-1">
 						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<input
@@ -566,9 +557,8 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 						/>
 					</div>
 				</div>
-			</div>
 
-			{/* Table */}
+				{/* Table */}
 			<div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
 				{loading && (
 					<div className="h-1 bg-muted overflow-hidden">
@@ -796,15 +786,6 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 				errors={formErrors}
 				maxWidth="xl"
 			/>
-
-			<div className="fixed top-16 right-4 z-[9999]">
-				<Notification
-					isOpen={notification.open}
-					message={notification.message}
-					severity={notification.severity}
-					onClose={() => setNotification({ ...notification, open: false })}
-				/>
-			</div>
 		</div>
 	);
 };

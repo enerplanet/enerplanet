@@ -4,11 +4,12 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
+import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
 
 interface LCOEItem {
   tech: string;
   label: string;
-  lcoe: number; // €/kWh
+  lcoe: number; // EUR/MWh (stored unit; see lcoeUnits)
   totalCost?: number;
   investCost?: number;
   variableCost?: number;
@@ -33,7 +34,7 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
   const option: EChartsOption = useMemo(() => {
     const sorted = [...data].sort((a, b) => a.lcoe - b.lcoe);
     const labels = sorted.map(d => d.label);
-    const values = sorted.map(d => d.lcoe * 100); // Convert to ct/kWh
+    const values = sorted.map(d => lcoeToCtkwh(d.lcoe)); // EUR/MWh -> ct/kWh
     const colors = sorted.map(d => getTechColor(d.tech));
 
     const fmtEur = (v: number) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -170,12 +171,12 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
               width: 1.5,
             },
             label: {
-              formatter: `Ø ${(systemLCOE * 100).toFixed(1)} ct/kWh`,
+              formatter: `Ø ${lcoeToCtkwh(systemLCOE).toFixed(1)} ct/kWh`,
               fontSize: 10,
               color: themeColors.textMuted,
               position: 'end' as const,
             },
-            data: [{ xAxis: systemLCOE * 100 }],
+            data: [{ xAxis: lcoeToCtkwh(systemLCOE) }],
           },
           data: [],
         }] : []),

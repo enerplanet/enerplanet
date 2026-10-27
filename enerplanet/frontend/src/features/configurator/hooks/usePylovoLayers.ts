@@ -4,21 +4,30 @@ import type { Geometry } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import GeoJSON from "ol/format/GeoJSON";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import OLFeature from "ol/Feature";
+import Point from "ol/geom/Point";
+import { fromLonLat, toLonLat } from "ol/proj";
+import { getCenter } from "ol/extent";
+import { withStationAt } from "@/features/configurator/utils/siteStations";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
+import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import {
-  transformerStyleFunction, cableStyleFunction, mvLineStyleFunction,
+  cableStyleFunction, mvLineStyleFunction,
   parsePoiClass, createBuildingStyleFunction,
 } from "@/features/interactive-map/utils/mapStyleUtils";
 import { normalizeFClass, getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { normalizeFClassToken } from "@/features/configurator/utils/buildingFeatureExtraction";
-import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers } from "@/features/configurator/utils/gridLayerUtils";
+import { getDataProjection, loadBoundaryLayer, loadAvailableBoundaryLayers, createTransformerLayers } from "@/features/configurator/utils/gridLayerUtils";
 import { extractPeakLoadFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { buildFClassDetails, type FClassDetail } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
+import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import type { BuildingPv, PvArray } from "@/features/configurator/building-config/usePvMode";
+import type { BuildingTechs } from "@/features/configurator/building-config/buildingTechnologies";
 
 // Local aliases matching original useAreaSelect.ts
 const extractPeakLoadKw = extractPeakLoadFromProps;
@@ -45,37 +54,33 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   const availableBoundaryLayersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const unmountedRef = useRef(false);
 
-  // Fetch available regions
+  const { data: regionsResponse } = useAvailableRegions(!!map && showBoundary);
+
+  // Show the available regions once the list has arrived
   useEffect(() => {
     if (!map || !showBoundary) { setAvailableBoundaryGeoJSON(undefined); return; }
-    const loadAvailableRegions = async () => {
-      try {
-        const response = await pylovoService.getAvailableRegions();
-        if (response.status !== 'success' || !response.regions?.length) {
-          setAvailableRegions([]); setAvailableBoundaryGeoJSON(undefined);
-          availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; return;
-        }
-        const regionsForLegend = response.regions.filter(r => r.region?.name).map(r => ({
-          name: r.region!.name, gridCount: r.grid_count, country: r.region?.country,
-          countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
-          has3d: r.has_3d || false, bbox: r.bbox,
-        }));
-        setAvailableRegions(regionsForLegend);
-        availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-        const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
-          boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
-          countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
-        }));
-        setAvailableBoundaryGeoJSON(boundaryRegions.length > 0 ? { type: 'FeatureCollection', features: boundaryRegions.map(r => ({ ...r.boundary, properties: { ...(r.boundary.properties ?? {}), name: r.name, grid_count: r.gridCount, _boundary_role: 'available' } })) } : undefined);
-        if (boundaryRegions.length > 0) availableBoundaryLayersRef.current = loadAvailableBoundaryLayers(map, boundaryRegions);
-      } catch {
-        setAvailableBoundaryGeoJSON(undefined);
-        availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-      }
-    };
-    loadAvailableRegions();
+    const response = regionsResponse;
+    // Loading or failing: keep what is shown, useAvailableRegions retries.
+    if (!response) return;
+    if (!response.regions?.length) {
+      setAvailableRegions([]); setAvailableBoundaryGeoJSON(undefined);
+      availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; return;
+    }
+    const regionsForLegend = response.regions.filter(r => r.region?.name).map(r => ({
+      name: r.region!.name, gridCount: r.grid_count, country: r.region?.country,
+      countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
+      has3d: r.has_3d || false, bbox: r.bbox,
+    }));
+    setAvailableRegions(regionsForLegend);
+    availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
+    const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
+      boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
+      countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
+    }));
+    setAvailableBoundaryGeoJSON(boundaryRegions.length > 0 ? { type: 'FeatureCollection', features: boundaryRegions.map(r => ({ ...r.boundary, properties: { ...(r.boundary.properties ?? {}), name: r.name, grid_count: r.gridCount, _boundary_role: 'available' } })) } : undefined);
+    if (boundaryRegions.length > 0) availableBoundaryLayersRef.current = loadAvailableBoundaryLayers(map, boundaryRegions);
     return () => { availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; };
-  }, [map, showBoundary]);
+  }, [map, showBoundary, regionsResponse]);
 
   const fetchBoundaryForGrid = useCallback(async (buildings: GeoJSON.FeatureCollection) => {
     if (!map || !showBoundary) return;
@@ -83,6 +88,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     buildings.features.forEach(feature => {
       if (feature.geometry.type === 'Point') coords.push(feature.geometry.coordinates as [number, number]);
       else if (feature.geometry.type === 'Polygon' && feature.geometry.coordinates[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0] as [number, number]);
+      else if (feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates[0]?.[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0][0] as [number, number]);
     });
     if (coords.length === 0) return;
     const centroidLon = coords.reduce((s, c) => s + c[0], 0) / coords.length;
@@ -120,7 +126,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const results = new Map<number, any>();
     try {
       for (const gid of Array.from(gridResultIds)) {
-        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
+        try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid), siteScope(pylovoGridData)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
       }
       setPowerFlowResults(results);
       pylovoLayersRef.current.forEach(layer => {
@@ -180,11 +186,18 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       const src = new VectorSource(); const fmt = new GeoJSON();
       const feats = fmt.readFeatures(nd.transformers, { dataProjection: getDataProjection(nd.transformers), featureProjection: map.getView().getProjection() });
       feats.forEach((f: Feature<Geometry>) => { f.set('feature_type', 'transformer'); setFeatureColorIndex(f, colorMap); }); src.addFeatures(feats);
-      const layer = new VectorLayer({ source: src, style: (f, r) => transformerStyleFunction(f as Feature<Geometry>, r), zIndex: 102 });
-      map.addLayer(layer); pylovoLayersRef.current.push(layer);
+      createTransformerLayers(src).forEach(layer => { map.addLayer(layer); pylovoLayersRef.current.push(layer); });
     }
     if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
-  }, [map, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
+
+    // One-time "how to add heat techs" prompt after a new model's first grid.
+    // Not in edit mode: the prompted flag is not persisted, so it would reopen
+    // on every load, and a ?building= link opens the z-[60] building panel over it.
+    const storeState = useModelStore.getState();
+    if (!editMode && (nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
+      storeState.setHeatBootstrapOpen(true);
+    }
+  }, [map, editMode, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
 
   // Auto-run power flow debounce
   const lastGridDataRef = useRef(''); const pendingGridDataRef = useRef(''); const pfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,20 +218,74 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
 
   const updateTransformerKva = useCallback((gid: number, kva: number) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'transformer' && f.get('grid_result_id') === gid) f.set('rated_power_kva', kva); }); }); }, []);
   const updateBuildingType = useCallback((osmId: string, t: string) => { const n = normalizeFClass(t) || t.trim().toLowerCase() || 'residential'; pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) { f.set('type', n); f.set('f_class', n); f.set('f_classes', [n]); f.set('parsed_class', n); } }); }); }, []);
+  // Save serialises buildings from the map features and reopening a building
+  // reads them from the store, so a building's stored BuEM goes into both.
+  const storeBuildingBuem = useCallback((osmId: string, buem: unknown) => {
+    pylovoLayersRef.current.forEach(layer => { layer.getSource()?.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && String(f.get('osm_id')) === osmId) f.set('buem', buem); }); });
+    setPylovoGridData(prev => {
+      if (!prev?.buildings?.features) return prev;
+      const features = prev.buildings.features.map((f: any) => String(f.properties?.osm_id) === osmId ? { ...f, properties: { ...f.properties, buem } } : f);
+      return { ...prev, buildings: { ...prev.buildings, features } };
+    });
+  }, [setPylovoGridData]);
+  const findBuilding = useCallback((osmId: string) => collectBuildingsFromLayers(pylovoLayersRef.current).find((f) => String(f.get('osm_id')) === osmId), []);
+  /** The building's PV technology, or null when it has none. */
+  const buildingPv = useCallback((osmId: string): BuildingPv | null => {
+    const tech = findBuilding(osmId)?.get('techs')?.pv_supply;
+    return tech ? { typeLabel: tech.alias, arrays: tech.arrays ?? null } : null;
+  }, [findBuilding]);
+  /** Stores the arrays chosen in PV mode on the building's PV technology. */
+  const storePvArrays = useCallback((osmId: string, arrays: PvArray[]) => {
+    const feature = findBuilding(osmId);
+    const techs = feature?.get('techs');
+    if (!feature || !techs?.pv_supply) return;
+    feature.set('techs', { ...techs, pv_supply: { ...techs.pv_supply, arrays } });
+  }, [findBuilding]);
+  /** The centre of the building's map feature as WGS84 [lon, lat], or null when it is not on the map. */
+  const buildingLocation = useCallback((osmId: string): [number, number] | null => {
+    const extent = findBuilding(osmId)?.getGeometry()?.getExtent();
+    if (!extent || !map) return null;
+    const [lon, lat] = toLonLat(getCenter(extent), map.getView().getProjection());
+    return [lon, lat];
+  }, [findBuilding, map]);
+  /** The building's technologies, or null when it has none. */
+  const buildingTechs = useCallback((osmId: string): BuildingTechs | null => findBuilding(osmId)?.get('techs') ?? null, [findBuilding]);
+  const storeBuildingTechs = useCallback((osmId: string, techs: BuildingTechs) => {
+    const feature = findBuilding(osmId);
+    if (!feature) return;
+    feature.set('techs', techs);
+    feature.setStyle(createBuildingStyleFunction(true, false));
+  }, [findBuilding]);
   const updateBuildingProperty = useCallback((osmId: string, key: string, val: unknown) => { pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (src) src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') === 'building' && f.get('osm_id') === osmId) f.set(key, val); }); }); }, []);
   const updateBuildingFClassDemand = useCallback((osmId: string, fClass: string, newDemand: number) => {
     pylovoLayersRef.current.forEach(layer => { const src = layer.getSource(); if (!src) return; src.getFeatures().forEach((f: Feature<Geometry>) => { if (f.get('feature_type') !== 'building' || f.get('osm_id') !== osmId) return; const nfc = normalizeFClassToken(fClass) || fClass; const props = f.getProperties() as Record<string, unknown>; const classes = getFeatureFClasses(props); if (!classes.includes(nfc)) f.set('f_classes', [...classes, nfc]); let details: FClassDetail[] = []; const stored = f.get('f_class_demands') ?? f.get('fclass_details'); if (stored) details = buildFClassDetails(getFeatureFClasses(props), extractYearlyDemandKwh(props), extractPeakLoadKw(props), stored); if (details.length === 0) { const fcs = getFeatureFClasses(props); details = buildFClassDetails(fcs.length > 0 ? fcs : [getPrimaryFClass(props) || 'unknown'], extractYearlyDemandKwh(props), extractPeakLoadKw(props)); } let updated = false; details = details.map(d => { const dc = normalizeFClassToken(d.fClass) || d.fClass; if (dc !== nfc) return d; updated = true; return { ...d, fClass: dc, yearlyDemandKwh: newDemand }; }); if (!updated) details.push({ fClass: nfc, yearlyDemandKwh: newDemand, peakLoadKw: 0 }); f.set('fclass_details', details); f.set('f_class_demands', details.map(d => ({ f_class: d.fClass, demand_energy: d.yearlyDemandKwh, peak_load_kw: d.peakLoadKw }))); const total = details.reduce((s, d) => s + d.yearlyDemandKwh, 0); f.set('yearly_demand_kwh', total); f.set('demand_energy', total); }); });
   }, []);
 
+  /** Shows a site station edit before Regenerate grid, in the grid data the next edit reads and on the map; see withStationAt. */
+  const previewSiteStation = useCallback((gid: number, coordinates: [number, number] | null, kva?: number) => {
+    setPylovoGridData(prev => prev && withStationAt(prev, gid, coordinates, kva));
+    const source = pylovoLayersRef.current
+      .map(layer => layer.getSource())
+      .find((src): src is VectorSource => src instanceof VectorSource && src.getFeatures().some((f: Feature<Geometry>) => f.get('feature_type') === 'transformer'));
+    if (!source || !map) return;
+    const shown = source.getFeatures().find((f: Feature<Geometry>) => f.get('grid_result_id') === gid);
+    if (!coordinates) { if (shown) source.removeFeature(shown); return; }
+    const geometry = new Point(fromLonLat(coordinates, map.getView().getProjection()));
+    if (shown) shown.setGeometry(geometry);
+    else source.addFeature(new OLFeature({ geometry, feature_type: 'transformer', grid_result_id: gid, rated_power_kva: kva }));
+  }, [map, setPylovoGridData]);
+
   return useMemo(() => ({
-    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
-    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
+    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
+    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
-    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData,
-    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand,
+    pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
+    updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
+    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

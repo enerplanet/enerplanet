@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
+import { formatLcoeCtkwh } from '@/features/model-results/lcoeUnits';
 
 interface CostItem {
   category: string;
@@ -196,7 +197,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
                 return `{total|${totalFmt}}\n{period|${simulationDays} ${t('results.chartLabels.days')}}`;
               }
               if (lcoe) {
-                return `{total|${totalFmt}}\n{lcoe|LCOE: ${lcoe.toFixed(3)} €/kWh}`;
+                return `{total|${totalFmt}}\n{lcoe|LCOE: ${formatLcoeCtkwh(lcoe, 1)}}`;
               }
               return `{total|${totalFmt}}\n{label|${t('results.chartLabels.totalCost')}}`;
             },

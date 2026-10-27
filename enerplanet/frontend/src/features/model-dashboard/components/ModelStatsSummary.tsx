@@ -1,5 +1,4 @@
 import type { ModelStats } from "@/features/model-dashboard/services/modelService";
-import { StatsStrip } from "@/components/ui/StatsStrip";
 import { useTranslation } from "@spatialhub/i18n";
 
 interface ModelStatsSummaryProps {
@@ -7,24 +6,28 @@ interface ModelStatsSummaryProps {
 	className?: string;
 }
 
-// Compact inline stats strip (label + value pairs) shown in the table toolbar area.
+// One line of model counts for the dashboard toolbar; the limit shows only when one applies.
 export function ModelStatsSummary({ stats, className = "" }: ModelStatsSummaryProps) {
 	const { t } = useTranslation();
 
 	const inProgress = (stats.queue || 0) + (stats.running || 0);
 	const isUnlimited = stats.is_unlimited ?? (stats.model_limit ?? 0) === 0;
 	const isAtLimit = !isUnlimited && stats.total >= (stats.model_limit ?? 0);
-	const limitText = isUnlimited ? t("dashboard.stats.unlimited") : `${stats.total}/${stats.model_limit}`;
+	const parts = [
+		t("dashboard.stats.modelsCount", { count: stats.total }),
+		t("dashboard.stats.inProgressCount", { count: inProgress }),
+		t("dashboard.stats.completedCount", { count: stats.completed }),
+	];
 
 	return (
-		<StatsStrip
-			className={className}
-			items={[
-				{ label: t("dashboard.stats.totalModels"), value: stats.total },
-				{ label: t("dashboard.stats.inProgress"), value: inProgress },
-				{ label: t("dashboard.stats.completed"), value: stats.completed },
-				{ label: t("dashboard.stats.modelLimit"), value: limitText, highlight: isAtLimit },
-			]}
-		/>
+		<span className={`whitespace-nowrap text-sm text-muted-foreground ${className}`}>
+			{parts.join(" · ")}
+			{!isUnlimited && (
+				<span className={isAtLimit ? "font-medium text-red-700 dark:text-red-400" : ""}>
+					{" · "}
+					{t("dashboard.stats.limitUsed", { used: stats.total, limit: stats.model_limit })}
+				</span>
+			)}
+		</span>
 	);
 }

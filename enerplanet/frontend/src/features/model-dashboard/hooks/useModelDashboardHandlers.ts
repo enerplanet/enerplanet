@@ -6,21 +6,38 @@ import {
   useDuplicateModelMutation,
   useDeleteModelMutation,
   useUpdateModelMutation,
-  useStartCalculationMutation,
+  useRunMemeMutation,
+  useRunMemePypsaMutation,
   useBulkDeleteModelsMutation
 } from '@/features/model-dashboard/hooks/useModelsQuery';
 
 interface UseModelDashboardHandlersProps {
   onRefresh: () => Promise<void>;
   onStatsRefresh: () => Promise<void>;
+  onDownloadError: (reason: string) => void;
 }
 
-export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseModelDashboardHandlersProps) => {
+// A failed blob request carries the server's JSON error as a Blob.
+async function downloadErrorReason(error: unknown): Promise<string> {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text()) as { error?: unknown };
+      if (typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    } catch {
+      // Not JSON: fall through to the error's own message.
+    }
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh, onDownloadError }: UseModelDashboardHandlersProps) => {
   const navigate = useNavigate();
   const duplicateMutation = useDuplicateModelMutation();
   const deleteMutation = useDeleteModelMutation();
   const updateMutation = useUpdateModelMutation();
-  const startCalculationMutation = useStartCalculationMutation();
+  const runMemeMutation = useRunMemeMutation();
+  const runMemePypsaMutation = useRunMemePypsaMutation();
   const bulkDeleteMutation = useBulkDeleteModelsMutation();
 
   const refreshData = useCallback(async () => {
@@ -54,24 +71,37 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     }
   }, [deleteMutation, refreshData]);
 
-  const handleCalculate = useCallback(async (modelIds: number[]): Promise<void> => {
+  const handleRunMeme = useCallback(async (modelIds: number[]): Promise<void> => {
     try {
       for (const id of modelIds) {
-        await startCalculationMutation.mutateAsync(id);
+        await runMemeMutation.mutateAsync(id);
       }
       await refreshData();
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Failed to start calculation:', error);
+      if (import.meta.env.DEV) console.error('Failed to start MEME calculation:', error);
     }
-  }, [startCalculationMutation, refreshData]);
+  }, [runMemeMutation, refreshData]);
+
+  // Isolated PyPSA power-flow leg: a derived run AFTER a successful Calliope
+  // run, so it targets only completed models (the backend enforces the gate).
+  const handleRunMemePypsa = useCallback(async (modelIds: number[]): Promise<void> => {
+    try {
+      for (const id of modelIds) {
+        await runMemePypsaMutation.mutateAsync(id);
+      }
+      await refreshData();
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Failed to start MEME PyPSA leg:', error);
+    }
+  }, [runMemePypsaMutation, refreshData]);
 
   const handleDownload = useCallback(async (model: Model): Promise<void> => {
     try {
       await downloadModelArchive(model.id, `model_${model.id}.zip`);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Download failed:', error);
+      onDownloadError(await downloadErrorReason(error));
     }
-  }, []);
+  }, [onDownloadError]);
 
   const updateTitle = useCallback(async (model: Model | null, title: string): Promise<void> => {
     if (model && title.trim()) {
@@ -102,7 +132,8 @@ export const useModelDashboardHandlers = ({ onRefresh, onStatsRefresh }: UseMode
     handleView,
     handleCopy,
     handleDelete,
-    handleCalculate,
+    handleRunMeme,
+    handleRunMemePypsa,
     handleDownload,
     updateTitle,
     handleBulkDelete,

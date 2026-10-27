@@ -1,6 +1,7 @@
 package weather
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
+
+	weatherclient "spatialhub_backend/internal/weather"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +25,52 @@ type CurrentWeatherData struct {
 	UVIndex     *float64 `json:"uv_index,omitempty"`
 }
 
-type WeatherHandler struct{}
+// archiveLister reports what each weather archive offers a simulation.
+type archiveLister interface {
+	Archives(ctx context.Context) (map[string]weatherclient.Archive, error)
+}
 
-func NewWeatherHandler() *WeatherHandler {
-	return &WeatherHandler{}
+// WeatherHandler serves current weather and the simulation weather archives' years.
+type WeatherHandler struct {
+	archives        archiveLister
+	defaultProvider string
+}
+
+// NewWeatherHandler returns a WeatherHandler that lists the archives through
+// archives; defaultProvider is the archive a run uses unless a model chooses one.
+func NewWeatherHandler(archives archiveLister, defaultProvider string) *WeatherHandler {
+	return &WeatherHandler{archives: archives, defaultProvider: defaultProvider}
+}
+
+// scenarioCoverage is one archive's complete scenarios and the years they draw months from.
+type scenarioCoverage struct {
+	Scenarios   []string `json:"scenarios"`
+	SourceYears []int    `json:"source_years"`
+}
+
+// GetYears lists, per weather archive, the years a simulation can use.
+// @Summary      Weather years available for simulations
+// @Description  Per weather archive (provider), the years with processed weather data, and the archive runs use by default. A simulation period with historic weather must lie within one of these years. scenario_coverage lists, per archive, the complete scenarios and the years they draw months from; both are null while the weather service does not report them.
+// @Tags         EnerPlanET
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "default_provider, providers: {name: [years]} and scenario_coverage: {name: {scenarios, source_years}}"
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      502  {object}  map[string]interface{}  "The weather service could not be reached; retrying later may help"
+// @Security     SessionAuth
+// @Router       /weather/years [get]
+func (h *WeatherHandler) GetYears(c *gin.Context) {
+	archives, err := h.archives.Archives(c.Request.Context())
+	if err != nil {
+		httputil.BadGateway(c, fmt.Sprintf("weather years unavailable: %v", err))
+		return
+	}
+	years := make(map[string][]int, len(archives))
+	coverage := make(map[string]scenarioCoverage, len(archives))
+	for name, archive := range archives {
+		years[name] = archive.Years
+		coverage[name] = scenarioCoverage{Scenarios: archive.Scenarios, SourceYears: archive.ScenarioSourceYears}
+	}
+	httputil.SuccessResponse(c, gin.H{"default_provider": h.defaultProvider, "providers": years, "scenario_coverage": coverage})
 }
 
 // GetCurrentWeather returns current weather for provided coordinates or defaults to Galicia

@@ -95,6 +95,12 @@ func (s *NotificationService) createBrowserNotification(ctx context.Context, use
 		notifType = "error"
 	}
 
+	return s.NotifyUser(ctx, userID, title, message, notifType)
+}
+
+// NotifyUser stores an in-app notification for userID and pushes it to the
+// user's open sessions. notifType is info, warning, error or success.
+func (s *NotificationService) NotifyUser(ctx context.Context, userID, title, message, notifType string) error {
 	userNotif := backendModels.UserNotification{
 		UserID:  userID,
 		Title:   title,

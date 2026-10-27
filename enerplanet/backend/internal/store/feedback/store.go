@@ -8,11 +8,16 @@ import (
 
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/models"
+	backendModels "spatialhub_backend/internal/models"
 
 	"gorm.io/gorm"
 )
 
-var errFeedbackNotFound = errors.New("feedback not found")
+var (
+	errFeedbackNotFound = errors.New("feedback not found")
+	// ErrRunReportNotFound is returned for a feedback entry without a failed run.
+	ErrRunReportNotFound = errors.New("run report not found")
+)
 
 type Store struct {
 	db *gorm.DB
@@ -87,6 +92,26 @@ func (fs *Store) GetFeedbackByID(id uint) (*models.Feedback, error) {
 	return &feedback, nil
 }
 
+// CreateRunReport stores the failed run attached to a feedback entry.
+func (fs *Store) CreateRunReport(report *backendModels.FeedbackRunReport) error {
+	if err := fs.db.Create(report).Error; err != nil {
+		return fmt.Errorf("create run report for feedback %d: %w", report.FeedbackID, err)
+	}
+	return nil
+}
+
+// GetRunReport returns the failed run attached to feedback id.
+func (fs *Store) GetRunReport(id uint) (*backendModels.FeedbackRunReport, error) {
+	var report backendModels.FeedbackRunReport
+	if err := fs.db.First(&report, "feedback_id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrRunReportNotFound
+		}
+		return nil, fmt.Errorf("get run report for feedback %d: %w", id, err)
+	}
+	return &report, nil
+}
+
 func buildListResponse(feedbacks []models.Feedback, total int64, pagination PaginationParams) *ListResponse {
 	totalPages := int(math.Ceil(float64(total) / float64(pagination.PerPage)))
 	return &ListResponse{
@@ -120,17 +145,6 @@ func (fs *Store) UpdateFeedback(id uint, updates map[string]interface{}) error {
 	result := fs.db.Model(&models.Feedback{}).Where("id = ?", id).Updates(updates)
 	if result.Error != nil {
 		return fmt.Errorf("update feedback: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return errFeedbackNotFound
-	}
-	return nil
-}
-
-func (fs *Store) DeleteFeedback(id uint) error {
-	result := fs.db.Delete(&models.Feedback{}, id)
-	if result.Error != nil {
-		return fmt.Errorf("delete feedback: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return errFeedbackNotFound
@@ -183,15 +197,4 @@ func (fs *Store) SearchFeedback(queryStr string, filters Filters, pagination Pag
 	}
 
 	return buildListResponse(feedbacks, total, pagination), nil
-}
-
-// DeleteClosedOlderThan permanently deletes closed/resolved feedback older than the given number of days.
-func (fs *Store) DeleteClosedOlderThan(days int) (int64, error) {
-	result := fs.db.Unscoped().
-		Where("status IN (?, ?) AND updated_at < NOW() - INTERVAL '1 day' * ?", "closed", "resolved", days).
-		Delete(&models.Feedback{})
-	if result.Error != nil {
-		return 0, fmt.Errorf("cleanup old feedback: %w", result.Error)
-	}
-	return result.RowsAffected, nil
 }

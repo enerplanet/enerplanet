@@ -1,7 +1,9 @@
 import { useState, useEffect, type FC } from "react";
-import { Battery, Sun, Wind, Leaf, Flame, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, type LucideIcon } from "lucide-react";
+import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, Trash2, type LucideIcon } from "lucide-react";
+import { useConfirm } from "@/hooks/useConfirmDialog";
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
-import technologyService, { type Technology } from "@/features/technologies/services/technologyService";
+import type { Technology } from "@/features/technologies/services/technologyService";
+import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue, productType } from "@/features/technologies/catalogue";
 import { useTranslation } from "@spatialhub/i18n";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -10,12 +12,15 @@ const iconMap: Record<string, LucideIcon> = {
     wind: Wind,
     leaf: Leaf,
     flame: Flame,
+    snowflake: Snowflake,
     droplets: Droplets,
     home: Home,
     "building-2": Building2,
     "solar-panel": SolarPanel,
     "wind-turbine": Fan,
 };
+
+type CarrierView = "electricity" | "heat";
 
 interface TechnologyDrawerProps {
     isOpen: boolean;
@@ -25,6 +30,10 @@ interface TechnologyDrawerProps {
     onAddTechToAll?: (tech: Technology) => void;
     onRemoveTechFromAll?: (tech: Technology) => void;
     appliedTechKeys?: string[];
+    /** Removes every technology and heat link from every building, after a confirmation. */
+    onRemoveAllTechs?: () => void;
+    /** Buildings that currently carry a technology or heat link. */
+    techBuildingCount?: number;
 }
 
 export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
@@ -35,12 +44,19 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     onAddTechToAll,
     onRemoveTechFromAll,
     appliedTechKeys = [],
+    onRemoveAllTechs,
+    techBuildingCount = 0,
 }) => {
     const { t } = useTranslation();
-    const [technologies, setTechnologies] = useState<Technology[]>([]);
+    const confirm = useConfirm();
+    const [catalogue, setCatalogue] = useState<Technology[]>([]);
     const [loading, setLoading] = useState(true);
+    // Client-side search across the active carrier's techs (catalog is small
+    // and cached — no server-side filtering needed).
+    const [search, setSearch] = useState("");
     const [isAnimating, setIsAnimating] = useState(false);
     const [draggedTech, setDraggedTech] = useState<Technology | null>(null);
+    const [carrierView, setCarrierView] = useState<CarrierView>("electricity");
 
     useEffect(() => {
         if (isOpen) {
@@ -50,31 +66,24 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     }, [isOpen]);
 
     const loadTechnologies = async () => {
-        try {
-            setLoading(true);
-            const data = await technologyService.getAll();
-            setTechnologies(data || []);
-        } catch (error) {
-            console.error("Failed to load technologies:", error);
-            // Try to load from fallback
-            try {
-                const response = await fetch("/initial-data/techs/default_technologies.json");
-                if (response.ok) {
-                    const data = await response.json();
-                    setTechnologies(data.technologies || []);
-                }
-            } catch {
-                // Ignore fallback errors
-            }
-        } finally {
-            setLoading(false);
-        }
+        setLoading(true);
+        setCatalogue(await loadCatalogue());
+        setLoading(false);
     };
 
     const handleClose = () => {
         setIsAnimating(false);
         setTimeout(onClose, 300);
     };
+
+    const handleRemoveAll = () =>
+        confirm({
+            type: "delete",
+            title: t("technologies.removeAllConfirmTitle"),
+            description: t("technologies.removeAllConfirmDescription", { count: techBuildingCount }),
+            confirmLabel: t("technologies.removeAll"),
+            onConfirm: async () => onRemoveAllTechs?.(),
+        });
 
     const handleDragStart = (e: React.DragEvent<HTMLElement>, tech: Technology) => {
         e.dataTransfer.setData("application/json", JSON.stringify(tech));
@@ -90,24 +99,14 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
 
     if (!isOpen) return null;
 
-    // Group technologies by type (supply, storage, demand)
-    // Include wind_onshore, pv, geothermal, biomass, water as supply technologies
-    const supplyTechs = technologies.filter(t => 
-        t.key.includes("supply") || 
-        t.key.includes("pv_") || 
-        t.key.includes("wind_") || 
-        t.key.includes("geothermal") || 
-        t.key.includes("biomass") || 
-        t.key.includes("water_") ||
-        t.key.includes("_onshore") ||
-        t.key.includes("_offshore")
-    );
-    const storageTechs = technologies.filter(t => t.key.includes("storage"));
-    const otherTechs = technologies.filter(t => 
-        !supplyTechs.includes(t) && !storageTechs.includes(t)
-    );
+    const q = search.trim().toLowerCase();
+    const matches = (tech: Technology): boolean =>
+      q === "" ||
+      tech.alias.toLowerCase().includes(q) ||
+      tech.key.toLowerCase().includes(q);
 
     const renderTechCard = (tech: Technology) => {
+        const productCount = catalogue.filter((p) => productType(p) === tech.key).length;
         const IconComponent = iconMap[tech.icon] || CircuitBoard;
         const isDragged = draggedTech?.key === tech.key;
         const isApplied = appliedTechKeys.includes(tech.key);
@@ -122,39 +121,39 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     ${isApplied ? "border-primary/50 bg-primary/5" : ""}
                 `}
             >
-                {/* Add/Remove to all button */}
-                {(onAddTechToAll || onRemoveTechFromAll) && (
+                {onAddTechToAll && (
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <button
-                                onClick={() => {
-                                    if (isApplied && onRemoveTechFromAll) {
-                                        onRemoveTechFromAll(tech);
-                                    } else if (!isApplied && onAddTechToAll) {
-                                        onAddTechToAll(tech);
-                                    }
-                                }}
-                                className={`flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                                    isApplied 
-                                        ? "bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50" 
-                                        : "bg-primary/10 hover:bg-primary/20"
-                                }`}
+                                onClick={() => onAddTechToAll(tech)}
+                                aria-label={t("technologies.addToAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-primary/10 hover:bg-primary/20"
                             >
-                                {isApplied ? (
-                                    <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                                ) : (
-                                    <Plus className="w-3.5 h-3.5 text-primary" />
-                                )}
+                                <Plus className="w-3.5 h-3.5 text-primary" />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="right">
-                            <p className="text-xs">
-                                {isApplied ? "Remove from all buildings" : "Add to all buildings"}
-                            </p>
+                        <TooltipContent side="top">
+                            <p className="text-xs">{t("technologies.addToAllBuildings")}</p>
                         </TooltipContent>
                     </Tooltip>
                 )}
-                
+                {isApplied && onRemoveTechFromAll && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => onRemoveTechFromAll(tech)}
+                                aria-label={t("technologies.removeFromAllBuildings")}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                            >
+                                <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            <p className="text-xs">{t("technologies.removeFromAllBuildings")}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                )}
+
                 {/* Draggable area */}
                 <button
                     type="button"
@@ -167,8 +166,10 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                         <IconComponent className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-foreground truncate">{tech.alias}</div>
-                        <div className="text-[10px] text-muted-foreground">{tech.constraints.length} params</div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm text-foreground truncate">{tech.alias}</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{t("technologies.products.count", { count: productCount })}</div>
                     </div>
                     <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 </button>
@@ -185,11 +186,21 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     {title}
                 </h4>
                 <div className="space-y-2">
-                    {techs.map(renderTechCard)}
+                    {techs.map((tech) => renderTechCard(tech))}
                 </div>
             </div>
         );
     };
+
+    // One card per technology type; dropping it asks which product to use.
+    const typeCards = (types: string[]): Technology[] =>
+        types.flatMap((type) => {
+            const product = defaultProduct(catalogue, type);
+            return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
+        }).filter(matches);
+    const supplyTechs = typeCards(ELECTRICITY_TYPES.filter((type) => type !== "battery_storage"));
+    const storageTechs = typeCards(["battery_storage"]);
+    const heatTechs = typeCards(HEAT_TYPES);
 
     return (
         <>
@@ -221,9 +232,50 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     <div className="text-xs text-muted-foreground mt-1">
                         {t("technologies.dragInstruction")}
                     </div>
+
+                    {/* Search */}
+                    <div className="relative mt-3">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t("technologies.searchPlaceholder")}
+                            className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    {/* Carrier toggle: electricity / heat */}
+                    <div
+                        className="mt-3 flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5"
+                        role="tablist"
+                        aria-label={t("technologies.carrierToggleLabel")}
+                    >
+                        {([
+                            ["electricity", t("technologies.carriers.electricity")],
+                            ["heat", t("technologies.carriers.heat")],
+                        ] as [CarrierView, string][]).map(([view, label]) => (
+                            <button
+                                key={view}
+                                role="tab"
+                                aria-selected={carrierView === view}
+                                onClick={() => setCarrierView(view)}
+                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all duration-150 ${
+                                    carrierView === view
+                                        ? "bg-card text-foreground shadow-sm border border-border"
+                                        : "text-muted-foreground hover:text-foreground border border-transparent"
+                                }`}
+                            >
+                                {view === "heat"
+                                    ? <Flame className={`h-3.5 w-3.5 ${carrierView === "heat" ? "text-orange-500" : "text-muted-foreground"}`} />
+                                    : <Zap className={`h-3.5 w-3.5 ${carrierView === "electricity" ? "text-primary" : "text-muted-foreground"}`} />}
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="px-3 py-4 space-y-6 h-[calc(100vh-180px)] overflow-y-auto">
+                <div className="px-3 py-4 space-y-6 h-[calc(100vh-290px)] overflow-y-auto">
                     {(() => {
                         if (loading) {
                             return (
@@ -233,7 +285,31 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 </div>
                             );
                         }
-                        if (technologies.length === 0) {
+                        const noSearchResults =
+                            search.trim() !== "" &&
+                            supplyTechs.length === 0 && storageTechs.length === 0 && heatTechs.length === 0;
+                        if (noSearchResults) {
+                            return (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Search className="w-8 h-8 text-muted-foreground mb-2" />
+                                    <p className="text-sm text-muted-foreground">{t("technologies.noSearchResults")}</p>
+                                </div>
+                            );
+                        }
+                        if (carrierView === "heat") {
+                            if (heatTechs.length === 0) {
+                                return (
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <Flame className="w-8 h-8 text-muted-foreground mb-2" />
+                                        <p className="text-sm text-muted-foreground">{t("technologies.noHeatTechnologies")}</p>
+                                    </div>
+                                );
+                            }
+                            return (
+                                renderSection(t("technologies.categories.conversion"), heatTechs)
+                            );
+                        }
+                        if (supplyTechs.length === 0 && storageTechs.length === 0) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <CircuitBoard className="w-8 h-8 text-muted-foreground mb-2" />
@@ -245,13 +321,23 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                             <>
                                 {renderSection(t("technologies.categories.supply"), supplyTechs)}
                                 {renderSection(t("technologies.categories.storage"), storageTechs)}
-                                {renderSection(t("technologies.categories.other"), otherTechs)}
                             </>
                         );
                     })()}
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-3 border-t border-border bg-background dark:bg-gray-800">
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-3 border-t border-border bg-background dark:bg-gray-800 space-y-2">
+                    {onRemoveAllTechs && (
+                        <Button
+                            variant="outline"
+                            onClick={handleRemoveAll}
+                            disabled={techBuildingCount === 0}
+                            className="w-full text-red-600 hover:text-red-700 dark:text-red-400"
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {t("technologies.removeAll")}
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={handleClose} className="w-full">
                         {t("common.close")}
                     </Button>
@@ -260,3 +346,4 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
         </>
     );
 };
+

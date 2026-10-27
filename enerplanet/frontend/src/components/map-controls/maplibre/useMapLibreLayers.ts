@@ -6,6 +6,7 @@ import {
   addOrUpdateLvLines,
   addOrUpdateMvLines,
   addOrUpdateTransformers,
+  addOrUpdateConnections,
   addOrUpdateRegionBoundaries,
   addOrUpdatePolygon,
   setupBoundaryInteractions,
@@ -13,12 +14,16 @@ import {
   setupUserModelInteractions,
 } from './maplibre-layers';
 import { reprojectGeoJSON } from './maplibre-utils';
+import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
+import { useLod2Surfaces } from './useLod2Surfaces';
+import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
   linesGeoJSON?: any;
   mvLinesGeoJSON?: any;
   transformersGeoJSON?: any;
+  connectionGeoJSON?: GeoJSON.FeatureCollection | null;
   availableBoundaryGeoJSON?: any;
   selectedBoundaryFeature?: any;
   showBoundary?: boolean;
@@ -28,6 +33,7 @@ export interface LayerData {
   onBoundaryRegionClick?: (regionName: string) => void;
   userModelGeoJSON?: any;
   onUserModelClick?: (modelId: number, status?: string) => void;
+  techsFor?: TechsFor;
 }
 
 /**
@@ -37,12 +43,15 @@ export interface LayerData {
 export function useMapLibreLayers(
   mapRef: React.RefObject<maplibregl.Map | null>,
   data: LayerData,
+  /** True once mapRef holds the map, so data present before it is drawn too. */
+  mapReady: boolean,
 ) {
   const {
     buildingsGeoJSON,
     linesGeoJSON,
     mvLinesGeoJSON,
     transformersGeoJSON,
+    connectionGeoJSON,
     availableBoundaryGeoJSON,
     selectedBoundaryFeature,
     showBoundary = true,
@@ -52,6 +61,7 @@ export function useMapLibreLayers(
     onBoundaryRegionClick,
     userModelGeoJSON,
     onUserModelClick,
+    techsFor,
   } = data;
 
   const boundaryClickRef = useRef(onBoundaryRegionClick);
@@ -67,7 +77,12 @@ export function useMapLibreLayers(
   const lines = useMemo(() => reprojectGeoJSON(linesGeoJSON), [linesGeoJSON]);
   const mvLines = useMemo(() => reprojectGeoJSON(mvLinesGeoJSON), [mvLinesGeoJSON]);
   const transformers = useMemo(() => reprojectGeoJSON(transformersGeoJSON), [transformersGeoJSON]);
+  const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
+
+  const { surfaces: lod2, loading: lod2Loading, country } = useLod2Surfaces(buildings, mapReady);
+  const pvSurfaceIds = usePvSurfaceIds(buildings, techsFor, country);
+  const lod2LayerRef = useRef<Lod2Layer | null>(null);
 
   const loadAll = useCallback((map: maplibregl.Map) => {
     if (!map.isStyleLoaded()) return;
@@ -79,6 +94,7 @@ export function useMapLibreLayers(
     addOrUpdateLvLines(map, lines, colorMap);
     addOrUpdateMvLines(map, mvLines);
     addOrUpdateTransformers(map, transformers, colorMap);
+    addOrUpdateConnections(map, connections);
     addOrUpdateRegionBoundaries(
       map,
       availableBoundaryGeoJSON,
@@ -92,12 +108,13 @@ export function useMapLibreLayers(
     lines,
     mvLines,
     transformers,
+    connections,
     userModels,
     availableBoundaryGeoJSON,
     selectedBoundaryFeature,
     showBoundary,
     polygonCoordinates,
-    selectedBuildingOsmIds
+    selectedBuildingOsmIds,
   ]);
 
   // Combined effect for initial load and data updates
@@ -105,12 +122,33 @@ export function useMapLibreLayers(
     const map = mapRef.current;
     if (!map) return;
 
+    // isStyleLoaded is false while any source is still loading, and 'load' fires
+    // only once per map, so a late call waits for the map to settle instead.
     if (map.isStyleLoaded()) {
       loadAll(map);
-    } else {
-      map.once('load', () => loadAll(map));
+      return;
     }
-  }, [mapRef, loadAll]);
+    // Only the latest data may wait: an older call running first adds sources,
+    // which unloads the style again and makes the newer call return unapplied.
+    const onIdle = () => loadAll(map);
+    map.once('idle', onIdle);
+    return () => { map.off('idle', onIdle); };
+  }, [mapRef, mapReady, loadAll]);
+
+  // A recreated map has no LoD2 layer yet, so one is added to each new map.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      if (!lod2LayerRef.current || !map.getLayer(LOD2_LAYER_ID)) {
+        lod2LayerRef.current = new Lod2Layer();
+        map.addLayer(lod2LayerRef.current);
+      }
+      lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds);
+    };
+    if (map.isStyleLoaded()) apply();
+    else map.once('idle', apply);
+  }, [mapRef, mapReady, lod2, pvSurfaceIds]);
 
   // Interactions setup
   useEffect(() => {
@@ -156,7 +194,7 @@ export function useMapLibreLayers(
       modelCleanupRef.current?.();
       modelCleanupRef.current = null;
     };
-  }, [mapRef, availableBoundaryGeoJSON, userModelGeoJSON]);
+  }, [mapRef, mapReady, availableBoundaryGeoJSON, userModelGeoJSON]);
 
   // Keep separator lines subtle at high pitch to avoid perceived drift.
   // Throttled to avoid overhead during fast rotation.
@@ -198,7 +236,7 @@ export function useMapLibreLayers(
       map.off('move', scheduleUpdate);
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [mapRef, buildingsGeoJSON]);
+  }, [mapRef, mapReady, buildingsGeoJSON]);
 
   // Pulse effect for assignment selection
   useEffect(() => {
@@ -238,7 +276,10 @@ export function useMapLibreLayers(
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [mapRef, isBuildingAssignMode, selectedBuildingOsmIds]);
+  }, [mapRef, mapReady, isBuildingAssignMode, selectedBuildingOsmIds]);
 
-  return { loadAll };
+  // Buildings left as flat footprints once the LoD2 lookup has finished.
+  const footprintOnly = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
+
+  return { loadAll, footprintOnly };
 }

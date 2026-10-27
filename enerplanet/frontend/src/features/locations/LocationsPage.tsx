@@ -5,16 +5,13 @@ import { useTranslation } from '@spatialhub/i18n';
 import {
   Plus,
   MapPin,
-  Globe,
-  Lock,
   Search,
   Trash2,
   Copy,
   Edit,
   Eye,
   RefreshCw,
-  MapPinned,
-  Share2
+  MapPinHouse,
 } from 'lucide-react';
 import { useCustomLocationStore } from '@/features/locations/store/custom-location-store';
 import type { CustomLocation } from '@/features/locations/services/customLocationService';
@@ -29,15 +26,9 @@ import {
   TOOLBAR_ICON_BUTTON_CLASS,
 } from '@/components/ui/toolbar';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
-import Notification from '@/components/ui/Notification';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 import ModelActionGroup from '@/components/shared/ModelActionGroup';
-import { LocationShareDialog } from './LocationShareDialog';
 import {
-  Switch,
-  Tabs,
-  TabsList,
-  TabsTrigger,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -53,11 +44,7 @@ const LocationRow: FC<{
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
   onCopy: (id: number) => void;
-  onShare: (location: CustomLocation) => void;
-  onTogglePublic: (id: number, isPublic: boolean) => void;
-  showPublicToggle?: boolean;
-  isOwner?: boolean;
-}> = ({ location, index, onView, onEdit, onDelete, onCopy, onShare, onTogglePublic, showPublicToggle = true, isOwner = true }) => {
+}> = ({ location, index, onView, onEdit, onDelete, onCopy }) => {
   const { t } = useTranslation();
   return (
     <div
@@ -86,33 +73,14 @@ const LocationRow: FC<{
         <span className="tabular-nums">{(location.demand_energy / 1000).toFixed(0)} MWh</span>
       </div>
 
-      {/* Public/Private Switch */}
-      {showPublicToggle && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex shrink-0 origin-center scale-[0.65] items-center">
-              <Switch
-                checked={location.is_public}
-                onCheckedChange={(checked) => onTogglePublic(location.id, checked)}
-                className="data-[state=checked]:bg-green-600"
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            {location.is_public ? t('locations.toggle.makePrivate') : t('locations.toggle.makePublic')}
-          </TooltipContent>
-        </Tooltip>
-      )}
-
       {/* Action Icons */}
       <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
         <ModelActionGroup
           actions={[
             { key: 'view', icon: Eye, tooltip: t('common.tooltips.viewOnMap'), variant: 'info', onClick: () => onView(location.id) },
-            { key: 'edit', icon: Edit, tooltip: t('common.tooltips.editLocation'), variant: 'default', onClick: () => onEdit(location.id), show: isOwner },
-            { key: 'share', icon: Share2, tooltip: t('locations.share.title'), variant: 'purple', onClick: () => onShare(location), show: isOwner },
+            { key: 'edit', icon: Edit, tooltip: t('common.tooltips.editLocation'), variant: 'default', onClick: () => onEdit(location.id) },
             { key: 'copy', icon: Copy, tooltip: t('common.tooltips.duplicate'), variant: 'default', onClick: () => onCopy(location.id) },
-            { key: 'delete', icon: Trash2, tooltip: t('common.delete'), variant: 'danger', onClick: () => onDelete(location.id), show: isOwner },
+            { key: 'delete', icon: Trash2, tooltip: t('common.delete'), variant: 'danger', onClick: () => onDelete(location.id) },
           ]}
           size="small"
         />
@@ -126,29 +94,22 @@ const LocationsPage: FC = () => {
   useDocumentTitle(t('locations.title'), ' | EnerPlanET');
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const {
     locations,
-    publicLocations,
     isLoading,
     fetchUserLocations,
-    fetchPublicLocations,
     refetchLocations,
     deleteLocation,
     copyLocation,
-    togglePublic,
   } = useCustomLocationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('my');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedLocationForShare, setSelectedLocationForShare] = useState<CustomLocation | null>(null);
 
   useEffect(() => {
     fetchUserLocations();
-    fetchPublicLocations();
-  }, [fetchUserLocations, fetchPublicLocations]);
+  }, [fetchUserLocations]);
 
   const handleCreateNew = useCallback(() => {
     navigate('/app/locations/create');
@@ -161,16 +122,6 @@ const LocationsPage: FC = () => {
   const handleEdit = useCallback((id: number) => {
     navigate(`/app/locations/edit/${id}`);
   }, [navigate]);
-
-  const handleShare = useCallback((location: CustomLocation) => {
-    setSelectedLocationForShare(location);
-    setShareDialogOpen(true);
-  }, []);
-
-  const handleCloseShareDialog = useCallback(() => {
-    setShareDialogOpen(false);
-    setSelectedLocationForShare(null);
-  }, []);
 
   const handleDelete = useCallback(async (id: number) => {
     const location = locations.find(l => l.id === id);
@@ -199,15 +150,6 @@ const LocationsPage: FC = () => {
     }
   }, [copyLocation, showSuccess, showError]);
 
-  const handleTogglePublic = useCallback(async (id: number, isPublic: boolean) => {
-    try {
-      await togglePublic(id, isPublic);
-      showSuccess(isPublic ? t('locations.toggle.nowPublic') : t('locations.toggle.nowPrivate'));
-    } catch {
-      showError('Failed to update location visibility');
-    }
-  }, [togglePublic, showSuccess, showError, t]);
-
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
@@ -222,42 +164,30 @@ const LocationsPage: FC = () => {
     loc.f_class.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredPublicLocations = publicLocations.filter((loc) =>
-    loc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    loc.f_class.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Stats
   const totalArea = locations.reduce((sum, loc) => sum + loc.area, 0);
   const totalDemand = locations.reduce((sum, loc) => sum + loc.demand_energy, 0);
-  const publicCount = locations.filter(l => l.is_public).length;
 
-  const renderEmptyState = (isPublicTab: boolean) => (
+  const renderEmptyState = () => (
     <div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-        {isPublicTab ? (
-          <Globe className="h-7 w-7 text-muted-foreground" />
-        ) : (
-          <MapPin className="h-7 w-7 text-muted-foreground" />
-        )}
+        <MapPin className="h-7 w-7 text-muted-foreground" />
       </div>
       <h3 className="text-base font-semibold tracking-tight text-foreground">
-        {isPublicTab ? t('locations.empty.publicTitle') : t('locations.empty.title')}
+        {t('locations.empty.title')}
       </h3>
       <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-        {isPublicTab ? t('locations.empty.publicDescription') : t('locations.empty.description')}
+        {t('locations.empty.description')}
       </p>
-      {!isPublicTab && (
-        <button onClick={handleCreateNew} className={`mt-6 ${PRIMARY_BUTTON_CLASS}`}>
-          <Plus className="h-4 w-4" />
-          {t('locations.newLocation')}
-        </button>
-      )}
+      <button onClick={handleCreateNew} className={`mt-6 ${PRIMARY_BUTTON_CLASS}`}>
+        <Plus className="h-4 w-4" />
+        {t('locations.newLocation')}
+      </button>
     </div>
   );
 
-  const renderLocationList = (items: CustomLocation[], isPublicTab: boolean) => {
-    if (items.length === 0) return renderEmptyState(isPublicTab);
+  const renderLocationList = (items: CustomLocation[]) => {
+    if (items.length === 0) return renderEmptyState();
 
     return (
       <div className="md-fade-in overflow-hidden rounded-xl border border-border">
@@ -271,10 +201,6 @@ const LocationsPage: FC = () => {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onCopy={handleCopy}
-              onShare={handleShare}
-              onTogglePublic={handleTogglePublic}
-              showPublicToggle={!isPublicTab}
-              isOwner={!isPublicTab}
             />
           ))}
         </div>
@@ -284,15 +210,8 @@ const LocationsPage: FC = () => {
 
   return (
     <div className={PAGE_SHELL_CLASS}>
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hideNotification}
-      />
-
       <PageHeader
-        icon={MapPinned}
+        icon={MapPinHouse}
         title={t('locations.title')}
         subtitle={t('locations.subtitle')}
         actions={
@@ -344,20 +263,6 @@ const LocationsPage: FC = () => {
             />
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-shrink-0">
-            <TabsList className="h-9">
-              <TabsTrigger key="my" value="my" className="text-xs px-3">
-                <Lock className="w-3.5 h-3.5 mr-1.5" />
-                {t('locations.tabs.my')} ({filteredLocations.length})
-              </TabsTrigger>
-              <TabsTrigger key="public" value="public" className="text-xs px-3">
-                <Globe className="w-3.5 h-3.5 mr-1.5" />
-                {t('locations.tabs.public')} ({filteredPublicLocations.length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           {/* Compact stats summary, in the toolbar */}
           <StatsStrip
             className="max-sm:w-full sm:ml-auto"
@@ -365,7 +270,6 @@ const LocationsPage: FC = () => {
               { label: t('locations.stats.total'), value: locations.length },
               { label: t('locations.stats.totalArea'), value: formatArea(totalArea) },
               { label: t('locations.stats.totalDemand'), value: `${(totalDemand / 1000).toFixed(0)} MWh` },
-              { label: t('locations.stats.public'), value: publicCount },
             ]}
           />
         </div>
@@ -381,20 +285,10 @@ const LocationsPage: FC = () => {
               <ListSkeleton />
             </div>
           ) : (
-            renderLocationList(
-              activeTab === 'my' ? filteredLocations : filteredPublicLocations,
-              activeTab !== 'my'
-            )
+            renderLocationList(filteredLocations)
           )}
         </div>
       </div>
-
-      {/* Share Dialog */}
-      <LocationShareDialog
-        isOpen={shareDialogOpen}
-        location={selectedLocationForShare}
-        onClose={handleCloseShareDialog}
-      />
     </div>
   );
 };

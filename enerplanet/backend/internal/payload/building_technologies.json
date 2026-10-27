@@ -1,0 +1,26 @@
+{
+  "air_source_heat_pump": {
+    "_source": "enerplanet/conversion-technologies cb1abca, heat_pump electric household; COP = 0.45 x 318.15 / (318.15 - 275.15) at 2/45 C",
+    "cont_energy_eff": 3.33, "cost_energy_cap": 900, "cont_lifetime": 18, "cost_interest_rate": 0.1
+  },
+  "ground_source_heat_pump": {
+    "_source": "enerplanet/conversion-technologies cb1abca, heat_pump geothermal household; COP = 0.50 x 318.15 / (318.15 - 283.15) at 10/45 C",
+    "cont_energy_eff": 4.55, "cost_energy_cap": 1800, "cont_lifetime": 25, "cost_interest_rate": 0.1
+  },
+  "electric_boilers": {
+    "_source": "enerplanet/conversion-technologies cb1abca, boiler electric household",
+    "cont_energy_eff": 0.99, "cost_energy_cap": 150, "cont_lifetime": 20, "cost_interest_rate": 0.1
+  },
+  "gas_boiler": {
+    "_source": "enerplanet/conversion-technologies cb1abca, boiler gas household",
+    "cont_energy_eff": 0.9, "cost_energy_cap": 100, "cont_lifetime": 18, "cost_interest_rate": 0.1
+  },
+  "air_conditioner": {
+    "_source": "SEER: EU Regulation 206/2012 minimum below 6 kW; lifetime: IEA air-to-air assumption; cost: installed 3.5 kW mono-split price, to be replaced by a technology-catalogue value",
+    "cont_energy_eff": 4.6, "cost_energy_cap": 450, "cont_lifetime": 12, "cost_interest_rate": 0.1
+  },
+  "gas_supply": {
+    "_source": "enerplanet/conversion-technologies cb1abca, gas boiler cost_flow_in",
+    "cont_energy_cap_max": "INF", "cost_om_con": 0.04
+  }
+}

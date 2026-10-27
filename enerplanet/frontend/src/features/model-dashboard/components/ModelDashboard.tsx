@@ -6,6 +6,7 @@ import {
 	Settings,
 	Search,
 	ArrowUpDown,
+	Star,
 	RefreshCw,
 	ChevronUp,
 	ChevronDown,
@@ -14,10 +15,11 @@ import {
 	FolderInput,
 	Copy,
 	Edit,
-	BarChart3,
+	LayoutDashboard,
 	AlertCircle,
-	Play,
 	GitCompareArrows,
+	Play,
+	MoreHorizontal,
 } from "lucide-react";
 
 import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
@@ -26,14 +28,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/Skeletons";
 import {
 	CARD_CLASS,
-	DANGER_BUTTON_CLASS,
 	PAGE_SHELL_CLASS,
 	PRIMARY_BUTTON_CLASS,
 	SEARCH_INPUT_CLASS,
 	TOOLBAR_BUTTON_CLASS,
 	TOOLBAR_ICON_BUTTON_CLASS,
 } from "@/components/ui/toolbar";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import Pagination from "@/components/ui/Pagination";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import Chip from "@/components/ui/Chip";
@@ -50,7 +51,6 @@ import { MoveModelModal } from "@/components/workspace/MoveModelModal";
 import { ShareModelModal } from "@/features/model-dashboard/components/ShareModelModal";
 import { BulkCopyModal } from "@/features/model-dashboard/components/BulkCopyModal";
 import { useNotification } from "@/features/notifications/hooks/useNotification";
-import Notification from "@/components/ui/Notification";
 import { type Workspace, workspaceService } from "@/components/workspace/services/workspaceService";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -62,7 +62,6 @@ import ModelActionGroup, { type ActionConfig } from "@/components/shared/ModelAc
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import { ModelTableRow } from "./ModelTableRow";
-import { useWebservices } from "@/features/admin-dashboard/hooks/useWebservices";
 import { processModelTimingUpdates, type TimingUpdate } from "@/features/model-dashboard/utils/modelTimingUtils";
 import { organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { useTranslation } from "@spatialhub/i18n";
@@ -131,6 +130,19 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 	);
 }
 
+/** Column widths of the model table; the name column takes the rest. */
+function ModelColumns() {
+	return (
+		<colgroup>
+			<col style={{ width: "5rem" }} />
+			<col />
+			<col style={{ width: "24rem" }} />
+			<col className="hidden md:table-column" style={{ width: "10rem" }} />
+			<col style={{ width: "22rem" }} />
+		</colgroup>
+	);
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity -- Large component with complex state management, permission checks, and UI logic
 export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const { t } = useTranslation();
@@ -155,7 +167,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [isCopyWsOpen, setIsCopyWsOpen] = useState(false);
 	const [wsReloadKey, setWsReloadKey] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+	const { showSuccess, showError } = useNotification();
 
 	useEffect(() => {
 		initializeWorkspace();
@@ -235,6 +247,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [currentPage, setCurrentPage] = useState<number>(0);
 	const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 	const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>(undefined);
+	const [starredOnly, setStarredOnly] = useState(false);
+	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
 
 	const { data: modelsResponse, isLoading: isLoadingModels, refetch: refetchModels } = useModelsQuery({
 		limit: itemsPerPage,
@@ -243,12 +257,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		workspace_id: currentWorkspaceId,
 		sort_by: orderBy,
 		sort_order: order,
+		group: "families",
+		ids: starredOnly ? favoriteIds.join(",") : undefined,
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
-
-	const { summary: webserviceSummary } = useWebservices({}, { autoRefresh: true, refreshInterval: 10000 });
-	const hasAvailableWebservice = (webserviceSummary?.available ?? 0) > 0;
 
 	const modelsData = useMemo(() => modelsResponse?.data || [], [modelsResponse?.data]);
 
@@ -313,18 +326,23 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		clearSelection,
 	} = useModelSelection();
 
+	const handleDownloadError = useCallback((reason: string) => {
+		showError(t("common.modelActions.downloadFailed", { reason }));
+	}, [showError, t]);
+
 	const {
 		handleEdit,
 		handleView,
 		handleCopy,
 		handleDelete,
-		handleCalculate,
+		handleRunMeme,
 		handleDownload,
 		updateTitle: updateTitleHandler,
 		handleBulkDelete: bulkDeleteHandler,
 	} = useModelDashboardHandlers({
 		onRefresh: async () => { await refetchModels(); },
 		onStatsRefresh: loadStats,
+		onDownloadError: handleDownloadError,
 	});
 
 	const setWorkspaceFilter = useCallback((workspaceId: number | undefined) => {
@@ -392,19 +410,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	const filteredModels = models;
 
-	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
-	const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-	const sortedModels = useMemo(() => {
-		// Server already sorts by orderBy/order — only reorder favorites to top
-		return [...filteredModels].sort((a, b) => {
-			const aFav = favoriteIdSet.has(a.id) ? 0 : 1;
-			const bFav = favoriteIdSet.has(b.id) ? 0 : 1;
-			return aFav - bFav;
-		});
-	}, [filteredModels, favoriteIdSet]);
-
-	const orderedModels = useMemo(() => organizeModelsHierarchically(sortedModels), [sortedModels]);
+	// The server's order stands; starring a model filters, it does not move it.
+	const orderedModels = useMemo(() => organizeModelsHierarchically(filteredModels), [filteredModels]);
 
 	const paginatedModels = orderedModels;
 	const modelTitlesByID = useMemo(() => {
@@ -422,6 +429,40 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return children;
 	}, [paginatedModels]);
+	const failedChildCountByParentID = useMemo(() => {
+		const failed = new Map<number, number>();
+		for (const model of paginatedModels) {
+			if (!model.parent_model_id || model.status !== "failed") continue;
+			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+		}
+		return failed;
+	}, [paginatedModels]);
+	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
+	const toggleFamily = useCallback((modelId: number) => {
+		setCollapsedFamilies((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(modelId)) next.add(modelId);
+			return next;
+		});
+	}, []);
+	const visibleModels = useMemo(
+		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		[paginatedModels, collapsedFamilies],
+	);
+
+	// Each original with the copies shown below it; a copy whose original is
+	// not on the page is its own family.
+	const families = useMemo(() => {
+		const list: { original: (typeof visibleModels)[number]; copies: (typeof visibleModels)[number][] }[] = [];
+		for (const model of visibleModels) {
+			const last = list.at(-1);
+			if (model.level > 0 && last && last.original.id === model.parent_model_id) last.copies.push(model);
+			else list.push({ original: model, copies: [] });
+		}
+		return list;
+	}, [visibleModels]);
+	const rowIndexByID = useMemo(() => new Map(visibleModels.map((m, i) => [m.id, i])), [visibleModels]);
+	const rowIndex = (model: Model) => rowIndexByID.get(model.id) ?? 0;
 
 	const { showBulkDeleteConfirm } = useBulkOperations({
 		selectedModels,
@@ -614,23 +655,24 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return selectedModels.some((model: Model) => canUserDeleteModel(model));
 	}, [selectedModels, canUserDeleteModel]);
 
-	const canCalculateAnySelected = useMemo(() => {
-		return hasAvailableWebservice && selectedModels.some((model: Model) => !isModelDisabled(model));
-	}, [selectedModels, isModelDisabled, hasAvailableWebservice]);
+	const handleRunMemeSingle = useCallback((model: Model) => {
+		handleRunMeme([model.id]);
+	}, [handleRunMeme]);
 
-	const calculatableCount = useMemo(() => {
-		return selectedModels.filter((model: Model) => !isModelDisabled(model)).length;
-	}, [selectedModels, isModelDisabled]);
+	// A model the MEME run action offers on: the same statuses the per-row Play
+	// shows for (draft | modified | failed). completed/published are excluded.
+	const bulkRunnableModels = useMemo(
+		() => selectedModels.filter((model: Model) =>
+			model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
+		[selectedModels]
+	);
+	const canRunMemeAnySelected = bulkRunnableModels.length > 0;
 
-	const handleBulkCalculate = useCallback(async () => {
-		const calculatableModels = selectedModels.filter((model: Model) => !isModelDisabled(model));
-		const modelIds = calculatableModels.map((m) => m.id);
-		await handleCalculate(modelIds);
+	const handleBulkRunMeme = useCallback(async () => {
+		if (bulkRunnableModels.length === 0) return;
+		await handleRunMeme(bulkRunnableModels.map((model) => model.id));
 		clearSelection();
-	}, [selectedModels, isModelDisabled, handleCalculate, clearSelection]);
-	const handleCalculateSingle = useCallback((model: Model) => {
-		handleCalculate([model.id]);
-	}, [handleCalculate]);
+	}, [bulkRunnableModels, handleRunMeme, clearSelection]);
 
 	const handleBulkCopy = useCallback(() => {
 		if (document.activeElement instanceof HTMLElement) {
@@ -656,19 +698,16 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return t('model.cannotMove');
 	}, [selectedModels.length, canMoveAnySelected, t]);
 
-	const getCalculateTooltip = useCallback(() => {
-		if (!hasAvailableWebservice) {
-			return t('model.noWebserviceAvailable');
-		}
-		if (canCalculateAnySelected) {
-			return `${t('model.calculate')} ${calculatableCount} ${t('model.selected')}`;
-		}
-		return t('model.cannotCalculate');
-	}, [hasAvailableWebservice, canCalculateAnySelected, calculatableCount, t]);
-
 	const getCopyTooltip = useCallback(() => {
 		return `${t('model.copy')} ${selectedModels.length} ${t('model.selected')}`;
 	}, [selectedModels.length, t]);
+
+	const getRunMemeTooltip = useCallback(() => {
+		if (canRunMemeAnySelected) {
+			return `${t('common.modelActions.runWithMeme')} ${bulkRunnableModels.length} ${t('model.selected')}`;
+		}
+		return t('model.cannotCalculate');
+	}, [canRunMemeAnySelected, bulkRunnableModels.length, t]);
 
 	const getDeleteTooltip = useCallback(() => {
 		if (canDeleteAnySelected) {
@@ -709,12 +748,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: handleBulkCopy,
 		},
 		{
-			key: "bulk-calculate",
+			key: "bulk-run-meme",
 			icon: Play,
-			tooltip: getCalculateTooltip(),
-			variant: "success" as const,
-			onClick: handleBulkCalculate,
-			disabled: !canCalculateAnySelected,
+			tooltip: getRunMemeTooltip(),
+			variant: "warning" as const,
+			onClick: handleBulkRunMeme,
+			disabled: !canRunMemeAnySelected,
 		},
 		{
 			key: "bulk-delete",
@@ -724,14 +763,48 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: showBulkDeleteConfirm,
 			disabled: !canDeleteAnySelected,
 		},
-	], [getMoveTooltip, getCopyTooltip, getCalculateTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkCalculate, showBulkDeleteConfirm, canMoveAnySelected, canCalculateAnySelected, canDeleteAnySelected, t]);
+	], [getMoveTooltip, getCopyTooltip, getRunMemeTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkRunMeme, showBulkDeleteConfirm, canMoveAnySelected, canRunMemeAnySelected, canDeleteAnySelected, t]);
+
+	const renderRow = (model: (typeof visibleModels)[number]) => (
+		<ModelTableRow
+			key={model.id}
+			model={model}
+			index={rowIndex(model)}
+			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
+			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
+			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
+			familyCollapsed={collapsedFamilies.has(model.id)}
+			onToggleFamily={toggleFamily}
+			currentUserId={user?.id ? String(user.id) : undefined}
+			userAccessLevel={user?.access_level}
+			isSelected={isSelected(model)}
+			isEditing={editingModel?.id === model.id}
+			editTitle={editTitle}
+			calculationStartTimes={calculationStartTimes}
+			calculationCompletionInfo={calculationCompletionInfo}
+			canUserDeleteModel={canUserDeleteModel}
+			onSelect={handleSelectModel}
+			onStartEdit={startTitleEdit}
+			onEditTitleChange={setEditTitle}
+			onUpdateTitle={updateTitle}
+			onCancelEdit={cancelTitleEdit}
+			onView={handleView}
+			onEdit={handleEdit}
+			onDownload={handleDownload}
+			onCopy={handleCopy}
+			onRunMeme={handleRunMemeSingle}
+			onDelete={handleSingleDelete}
+			onShare={handleShare}
+			onMoveToWorkspace={handleMoveToWorkspace}
+		/>
+	);
 
 	return (
 		<Fragment>
 				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
 				{/* Page header */}
 				<PageHeader
-					icon={BarChart3}
+					icon={LayoutDashboard}
 					title={t('model.dashboard')}
 					subtitle={t('model.manageConfigurations')}
 					actions={
@@ -796,10 +869,10 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 						</div>
 					)}
 
-					{/* Main Content Card */}
-					<div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: "60ms" }}>
+					{/* Toolbar and table, each in its own card */}
+					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
-						<div className="flex flex-wrap items-center gap-2 p-4 sm:px-5">
+						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
 							{/* Search */}
 							<div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -812,8 +885,19 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								/>
 							</div>
 
+							<button
+								type="button"
+								onClick={() => { setStarredOnly((on) => !on); setCurrentPage(0); }}
+								aria-pressed={starredOnly}
+								title={t('model.starredFilterHint')}
+								className={`${TOOLBAR_BUTTON_CLASS} ${starredOnly ? "bg-muted" : ""}`}
+							>
+								<Star className={`h-4 w-4 ${starredOnly ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} aria-hidden="true" />
+								{t('model.starredFilter')}
+							</button>
+
 								{/* Workspace Controls */}
-								<div className="flex flex-wrap items-center gap-2">
+								<div className="flex items-center gap-2">
 									{isLoadingWorkspace ? (
 										<div className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm shadow-sm">
 											<RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -856,111 +940,43 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										</>
 									)}
 
-									{/* Compare button - always visible */}
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="inline-flex">
-												<button
-													onClick={handleCompareSelected}
-													disabled={!canCompareSelected}
-													className={TOOLBAR_BUTTON_CLASS}
-												>
-													<GitCompareArrows className="h-4 w-4 text-muted-foreground" />
-													<span className="hidden sm:inline">{t('model.compare')}</span>
-												</button>
-											</span>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p>{canCompareSelected ? t('model.compare') : t('model.compareRequires2Completed')}</p>
-										</TooltipContent>
-									</Tooltip>
-
 									{currentWorkspace && (
-										<>
-											{canManageWorkspace && (
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<button
-															onClick={() => setIsShareWsOpen(true)}
-															className={TOOLBAR_BUTTON_CLASS}
-														>
-															<Share className="w-4 h-4 text-muted-foreground" />
-															<span className="hidden sm:inline">{t('model.share')}</span>
-														</button>
-													</TooltipTrigger>
-													<TooltipContent>
-														{t('model.shareWorkspace')}
-													</TooltipContent>
-												</Tooltip>
-											)}
-
+										<DropdownMenu>
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<button
-														onClick={() => setIsCopyWsOpen(true)}
-														className={TOOLBAR_BUTTON_CLASS}
-													>
-														<Copy className="w-4 h-4 text-muted-foreground" />
-														<span className="hidden sm:inline">{t('model.copy')}</span>
-													</button>
+													<DropdownMenuTrigger asChild>
+														<button className={TOOLBAR_ICON_BUTTON_CLASS} aria-label={t("model.workspaceActions")}>
+															<MoreHorizontal className="h-4 w-4" />
+														</button>
+													</DropdownMenuTrigger>
 												</TooltipTrigger>
-												<TooltipContent>
-													{t('model.copyWorkspace')}
-												</TooltipContent>
+												<TooltipContent>{t("model.workspaceActions")}</TooltipContent>
 											</Tooltip>
-
-											{!currentWorkspace.is_default && canManageWorkspace && (
-												<>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={() => setIsRenameWsOpen(true)}
-																className={TOOLBAR_BUTTON_CLASS}
-															>
-																<Edit className="w-4 h-4 text-muted-foreground" />
-																<span className="hidden sm:inline">{t('model.rename')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.renameWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={handleDeleteWorkspace}
-																className={DANGER_BUTTON_CLASS}
-															>
-																<Trash2 className="h-4 w-4" />
-																<span className="hidden sm:inline">{t('model.delete')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.deleteWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-												</>
-											)}
-										</>
-									)}
-
-									{/* Bulk Actions - placed after workspace delete button */}
-									{selectedModels.length > 0 && (
-										<div className="md-fade-in flex h-9 items-center gap-2 rounded-full border border-border bg-muted/40 pl-1.5 pr-1.5 shadow-sm">
-											<span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-foreground">
-												{selectedModels.length}
-											</span>
-											<span className="hidden text-xs font-medium text-muted-foreground lg:inline">
-												{t('model.selected')}
-											</span>
-											<span className="h-4 w-px bg-border" aria-hidden="true" />
-											<ModelActionGroup
-												actions={bulkActions}
-												layout="horizontal"
-												size="small"
-											/>
-										</div>
+											<DropdownMenuContent align="start" className="w-40">
+												{canManageWorkspace && (
+													<DropdownMenuItem className="cursor-pointer" onClick={() => setIsShareWsOpen(true)}>
+														<Share className="h-4 w-4" />
+														{t("model.share")}
+													</DropdownMenuItem>
+												)}
+												<DropdownMenuItem className="cursor-pointer" onClick={() => setIsCopyWsOpen(true)}>
+													<Copy className="h-4 w-4" />
+													{t("model.copy")}
+												</DropdownMenuItem>
+												{!currentWorkspace.is_default && canManageWorkspace && (
+													<>
+														<DropdownMenuItem className="cursor-pointer" onClick={() => setIsRenameWsOpen(true)}>
+															<Edit className="h-4 w-4" />
+															{t("model.rename")}
+														</DropdownMenuItem>
+														<DropdownMenuItem className="cursor-pointer text-red-700 focus:text-red-700 dark:text-red-400" onClick={handleDeleteWorkspace}>
+															<Trash2 className="h-4 w-4" />
+															{t("model.delete")}
+														</DropdownMenuItem>
+													</>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
 									)}
 								</div>
 
@@ -971,7 +987,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							</div>
 
 							{/* Table */}
-							<div className="border-t border-border p-4 sm:px-5 sm:pb-5">
+							<div>
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
 								<div className="space-y-3">
@@ -991,12 +1007,13 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className="md-fade-in overflow-hidden rounded-xl border border-border">
+										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
 									<div className="w-full overflow-auto">
-										<table className="w-full table-auto">
+										<table className="w-full min-w-[75rem] table-fixed">
+											<ModelColumns />
 											<thead>
-												<tr className="border-b border-border bg-muted/40">
-													<th className="w-12 px-4 py-2.5 text-center">
+												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
+													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -1013,75 +1030,78 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															</TooltipContent>
 														</Tooltip>
 													</th>
-													<th className="px-4 py-2.5 text-left">
-														<SortHeaderButton
-															field="title"
-															label={t('model.name')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="px-4 py-2.5 text-left">
-														<SortHeaderButton
-															field="status"
-															label={t('model.status')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="hidden px-4 py-2.5 text-left md:table-cell">
-														<SortHeaderButton
-															field="created_at"
-															label={t('model.created')}
-															orderBy={orderBy}
-															order={order}
-															onSort={handleSort}
-														/>
-													</th>
-													<th className="px-4 py-2.5 text-left">
-														<span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
-													</th>
+													{selectedModels.length > 0 ? (
+														<th colSpan={4} className="px-4 py-1 text-left">
+															<div className="flex items-center gap-2">
+																<span className="mr-2 text-sm font-semibold text-foreground">
+																	{t("model.selectedCount", { count: selectedModels.length })}
+																</span>
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<span className="inline-flex">
+																			<button onClick={handleCompareSelected} disabled={!canCompareSelected} className={TOOLBAR_BUTTON_CLASS}>
+																				<GitCompareArrows className="h-4 w-4 text-muted-foreground" />
+																				{t("model.compare")}
+																			</button>
+																		</span>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{canCompareSelected ? t("model.compare") : t("model.compareRequires2Completed")}</p>
+																	</TooltipContent>
+																</Tooltip>
+																<ModelActionGroup actions={bulkActions} layout="horizontal" size="medium" />
+																<button onClick={clearSelection} className="ml-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+																	{t("model.clearSelection")}
+																</button>
+															</div>
+														</th>
+													) : (
+														<>
+															<th className="px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="title"
+																	label={t('model.name')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="status"
+																	label={t('model.status')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="hidden px-4 py-2.5 text-left md:table-cell">
+																<SortHeaderButton
+																	field="created_at"
+																	label={t('model.created')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="px-4 py-2.5 text-left">
+																<span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
+															</th>
+														</>
+													)}
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-border bg-card">
-												{paginatedModels.map((model, index) => (
-													<ModelTableRow
-														key={model.id}
-														model={model}
-														index={index}
-														modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-														parentModelTitle={model.parent_model_id ? modelTitlesByID.get(model.parent_model_id) : undefined}
-														hasChildren={(childCountByParentID.get(model.id) ?? 0) > 0}
-														currentUserId={user?.id ? String(user.id) : undefined}
-														userAccessLevel={user?.access_level}
-														isSelected={isSelected(model)}
-														isEditing={editingModel?.id === model.id}
-														editTitle={editTitle}
-														calculationStartTimes={calculationStartTimes}
-														calculationCompletionInfo={calculationCompletionInfo}
-														canUserDeleteModel={canUserDeleteModel}
-														hasAvailableWebservice={hasAvailableWebservice}
-														onSelect={handleSelectModel}
-														onStartEdit={startTitleEdit}
-														onEditTitleChange={setEditTitle}
-														onUpdateTitle={updateTitle}
-														onCancelEdit={cancelTitleEdit}
-														onView={handleView}
-														onEdit={handleEdit}
-														onDownload={handleDownload}
-														onCopy={handleCopy}
-														onCalculate={handleCalculateSingle}
-														onDelete={handleSingleDelete}
-														onShare={handleShare}
-														onMoveToWorkspace={handleMoveToWorkspace}
-													/>
+											<tbody className="bg-card">
+												{families.map(({ original, copies }) => (
+													<Fragment key={original.id}>
+														{renderRow(original)}
+														{copies.map(renderRow)}
+													</Fragment>
 												))}
 											</tbody>
 										</table>
 									</div>
-									{sortedModels.length > 0 && (
+									{filteredModels.length > 0 && (
 										<Pagination
 											currentPage={currentPage}
 											totalItems={totalItems}
@@ -1090,47 +1110,53 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
+											resultsLabel={t("model.family.pagination")}
+											className="bg-muted"
 										/>
 									)}
 								</div>
 							) : (
 								<div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
 									<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-										<BarChart3 className="h-7 w-7 text-muted-foreground" />
+										<LayoutDashboard className="h-7 w-7 text-muted-foreground" />
 									</div>
 									<h3 className="text-base font-semibold tracking-tight text-foreground">{t('model.noModelsFound')}</h3>
 									<p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-										{filterText
-											? t('model.noModelsMatch', { search: filterText })
-											: t('model.noModelsYet')}
+										{starredOnly
+											? t('model.noStarredModels')
+											: filterText
+												? t('model.noModelsMatch', { search: filterText })
+												: t('model.noModelsYet')}
 									</p>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span>
-												<button
-													onClick={handleNewModel}
-													disabled={isModelLimitReached}
-													className={`mt-6 ${
-														isModelLimitReached
-															? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
-															: PRIMARY_BUTTON_CLASS
-													}`}
-												>
-													{isModelLimitReached ? (
-														<AlertCircle className="h-4 w-4" />
-													) : (
-														<Plus className="h-4 w-4" />
-													)}
-													{t('model.createFirstModel')}
-												</button>
-											</span>
-										</TooltipTrigger>
-										{isModelLimitReached && (
-											<TooltipContent>
-												{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
-											</TooltipContent>
-										)}
-									</Tooltip>
+									{!starredOnly && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span>
+													<button
+														onClick={handleNewModel}
+														disabled={isModelLimitReached}
+														className={`mt-6 ${
+															isModelLimitReached
+																? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
+																: PRIMARY_BUTTON_CLASS
+														}`}
+													>
+														{isModelLimitReached ? (
+															<AlertCircle className="h-4 w-4" />
+														) : (
+															<Plus className="h-4 w-4" />
+														)}
+														{t('model.createFirstModel')}
+													</button>
+												</span>
+											</TooltipTrigger>
+											{isModelLimitReached && (
+												<TooltipContent>
+													{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
+												</TooltipContent>
+											)}
+										</Tooltip>
+									)}
 								</div>
 							)}
 							</>
@@ -1201,13 +1227,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 				onSuccess={() => {
 					clearSelection();
 				}}
-			/>
-
-			<Notification
-				isOpen={notification.open}
-				message={notification.message}
-				severity={notification.severity}
-				onClose={hideNotification}
 			/>
 		</Fragment>
 	);

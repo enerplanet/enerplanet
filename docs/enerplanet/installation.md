@@ -1,174 +1,227 @@
+---
+audience: developer
+---
+
 # Installation
 
-## System Requirements
-
-| Resource | Minimum | Recommended |
-|---|---|---|
-| OS | Ubuntu 20.04 / Windows 10 (WSL2) / macOS 12 | Ubuntu 22.04 LTS |
-| RAM | 8 GB | 16 GB |
-| Storage | 20 GB | 50 GB |
-| CPU | 4 cores | 8 cores |
-
-## Prerequisites
-
-=== "Ubuntu / Debian"
-
-    ```bash
-    sudo apt update && sudo apt upgrade -y
-    sudo apt install -y git curl wget make
-
-    # Docker
-    curl -fsSL https://get.docker.com | sudo sh
-    sudo usermod -aG docker $USER && newgrp docker
-
-    # Node.js 22
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-    sudo apt install -y nodejs
-
-    # Go 1.24
-    wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
-    sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
-    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc && source ~/.bashrc
-    ```
-
-=== "Windows (WSL2)"
-
-    1. Open PowerShell as Administrator and run `wsl --install`
-    2. Restart, then open an Ubuntu terminal
-    3. Follow the Ubuntu instructions above
-    4. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) with the WSL2 backend enabled
-
-## Clone and Setup
-
 ```bash
-git clone https://github.com/THD-Spatial/enerplanet.git
+git lfs install
+git clone https://github.com/enerplanet/enerplanet.git
 cd enerplanet
 make setup
 ```
 
-The `make setup` command runs these steps automatically:
+Open <http://localhost:8000> and sign in as `admin@example.de` / `12345678`.
+The map opens with two example models, one in Bremen and one in Loenen, whose
+buildings all have 3D data.
 
-1. Clone platform-core, libs, and infrastructure sub-repositories
-2. Create `.env` files from `.env.example` templates
-3. Install npm and Go dependencies
-4. Pull Docker images (PostgreSQL, Redis, Keycloak)
-5. Start PostgreSQL and Redis
-6. Create the `spatialai` database
-7. Start Keycloak and configure the `spatialhub` realm
-8. Start auth-service and webservice
-9. Run database migrations and seed initial data
+The root `Makefile` is the only entry point. Every command on this page is a
+`make` target; ports and pinned versions live in `repos.conf`.
 
-!!! note
-    When prompted for credentials, enter your repository access credentials. They are cached for 2 minutes.
+## Two ways to run
 
-## Start the Application
+| Mode | Start | Backend and frontend | Use it for |
+|---|---|---|---|
+| Container | `make setup` once, then `make up` | One container, `energy-backend`, serves the built frontend on <http://localhost:8000> | Checking the stack as a server runs it |
+| Development | `make dev` | Backend on the host on port 8000, Vite on <http://localhost:3000> with hot reload, in one tmux window | Changing backend or frontend code |
 
-After setup completes, start the backend and frontend in separate terminals:
+Both modes use the same Docker services and data. `make dev` stops the
+`energy-backend` container, because both use port 8000; `make up` starts it
+again.
+
+## Prerequisites
+
+| Tool | Version | Check |
+|---|---|---|
+| Git | any recent | `git --version` |
+| Git LFS | 3.x | `git lfs version` |
+| GNU Make | any | `make --version` |
+| Docker Engine, or Docker Desktop | Compose plugin 2.24 or newer | `docker compose version` |
+| Go, Node.js, tmux | Go 1.26, Node.js 22 | development mode only |
+
+The user running `make` must be able to run `docker` without `sudo`.
+
+| Resource | Minimum |
+|---|---|
+| OS | Linux (amd64). Windows works through WSL2 with Docker Desktop. |
+| Memory for Docker | 16 GB; Calliope runs of larger models need more (see the warning below) |
+| Free disk | 100 GB for a first setup (see [Disk use](#disk-use)) |
+
+!!! warning "Install Git LFS before cloning"
+    The test fixtures are Git LFS objects. Without Git LFS a clone holds
+    pointer files of a few hundred bytes, and `make setup` stops at the first
+    fixture step with a `git lfs` error.
+
+!!! warning "Docker Desktop limits memory to its own VM"
+    Docker Desktop runs every container inside a virtual machine whose memory
+    is set under Settings, Resources, not by the host's RAM. The default of
+    about 8 GB leaves under 5 GB for a Calliope run, which kills models of
+    about 80 buildings. `docker info` shows the VM's total memory.
+
+!!! note "Docker Desktop needs host networking turned on"
+    The backend container and the helper scripts use host networking. Docker
+    Desktop supports it from 4.34, under Settings, Resources, Network, "Enable
+    host networking". Docker Engine on Linux needs nothing.
+
+## What runs and why
+
+Every container below has one job. Ports come from `repos.conf`; a dash means
+the container is reached only on the internal Docker network.
+
+| Container | Responsibility | Port | Image | Repository |
+|---|---|---|---|---|
+| `postgres` | Platform database: models, users, results, and the PyLovo database | 5433 | pulled, `pgrouting/pgrouting` | platform-core |
+| `redis` | Background job queue and cache for the backend | 6379 | pulled | platform-core |
+| `keycloak` | Login and user accounts | 8080 | pulled | platform-core |
+| `auth-service` | The platform's login layer in front of Keycloak | 8001 | built locally | platform-core |
+| `energy-backend` | EnerPlanET API and the built frontend (container mode only) | 8000 | built locally | enerplanet |
+| `pylovo-api-dev` | Low-voltage grid generation | 8086 | built locally | enerplanet-pylovo |
+| `tentacron-env-tentacron-1` | Single entry point to the services below: routing, job queue, polling | 8400 | built locally | TentaCron |
+| `meme-env-api-1` | Translates a model into Calliope or PyPSA and runs the solver | 8401 | built locally | meme |
+| `buem-gateway-http-buem-gateway-1` | BuEM API: validates requests, batches buildings | 8402 | pulled | buem-gateway |
+| `buem-gateway-http-buem-model-1` | BuEM building simulation | - | pulled | buem |
+| `ignis-http-ignis-1` | TABULA U-values and annual heat demand | 8403 | pulled | ignis |
+| `ignis-http-db-1` | ignis's TABULA database | - | pulled | ignis |
+| `city2tabula` | 3D city data: building envelopes, footprints, links to PyLovo buildings | 8404 | pulled | city2tabula |
+| `city2tabula-db` | One City2TABULA database per country | - | pulled | city2tabula |
+| `weather-serve` | Hourly weather: P10/P50/P90 scenarios and real years | 8406 | pulled | weather |
+
+The backend reaches every heat service through TentaCron, and PyLovo
+directly. A model's BuEM, weather, City2TABULA and ignis calls never go to
+those services' own ports.
+
+The platform-core `webservice` container, the dispatcher of the earlier
+simulation workers, is not started: neither the backend's start nor a MEME
+run needs it.
+
+## What `make setup` does
+
+`make setup` takes 30 to 60 minutes on an empty machine, most of it image
+downloads and local builds. It can be re-run: each step skips what already
+exists, so after a failure fix the cause and run `make setup` again.
+
+1. Clones the submodules, and the service checkouts under `dependencies/` at
+   the versions pinned in `repos.conf`.
+2. Creates every `.env` from its `.env.example`.
+3. Starts PostgreSQL, Redis, Keycloak and auth-service.
+4. Builds the app image and runs the database migrations and seed in it.
+5. Loads the PyLovo fixture, then builds and starts PyLovo.
+6. Starts the heat services: ignis, City2TABULA, weather, BuEM, MEME, then
+   TentaCron.
+7. Loads the City2TABULA and weather fixtures.
+8. Starts the app container on port 8000 and creates the example models.
+
+The last lines of a successful run are:
+
+```
+== 2 created, 0 skipped, 0 failed ==
+Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678
+```
+
+!!! note "A dependency checkout on a branch is not moved"
+    Step 1 moves a checkout under `dependencies/` to its pinned version only
+    when it is not on a branch, so that a developer's own work there is kept.
+    A checkout on a branch builds from that branch. `git -C dependencies/<name>
+    describe --tags` shows what a checkout is on.
+
+## Check the installation
 
 ```bash
-# Terminal 1 — Backend
-cd enerplanet/backend
-go run cmd/main.go
-# Listening on http://127.0.0.1:8000
-
-# Terminal 2 — Frontend
-cd enerplanet/frontend
-npm run dev
-# Listening on http://localhost:3000
+make health   # every service answers, about 10 seconds
+make smoke    # the heat workflow end to end, one to two minutes
 ```
 
-### Default Credentials
+`make health` prints one line per service and ends with `All services
+healthy.` `make smoke` ends with `== done: 0 failure(s) ==`.
 
-!!! warning "Development only"
-    These credentials are seeded by `make setup` for local development. **Change both before any non-local deployment.**
+## Everyday commands
 
-```
-Email:    admin@example.com
-Password: 12345678
-```
+| Command | Does |
+|---|---|
+| `make up` | Start every service in container mode, rebuilding the app image if the code changed; also the command after a reboot |
+| `make dev` | Start the Docker services, then the backend and frontend on the host in one tmux window, and check every service |
+| `scripts/dev.sh stop` | Stop the host backend and frontend; the containers keep running |
+| `make down` | Stop the platform services, PyLovo and the app container; the heat services keep running |
+| `make health` | Check that every service answers |
+| `make logs` | Follow the platform service logs |
+| `make migrate` | Run the database migrations |
+| `make seed` | Seed the database |
+| `make fixtures` | Load any fixture that is missing; never overwrites |
+| `make fixtures-reload` | Drop the fixture databases and load the fixtures afresh |
+| `make example-models` | Create the example models that are missing |
+| `make smoke` | Run the heat workflow smoke test |
+
+The fixtures, the regions they cover and how they are regenerated are described
+in [Test Data](test-data.md).
 
 ## Service URLs
 
 | Service | URL |
 |---|---|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| Keycloak Admin | http://localhost:8080 |
+| App, container mode | <http://localhost:8000> |
+| Frontend, development mode | <http://localhost:3000> |
+| Keycloak admin | <http://localhost:8080/keycloak> |
+| TentaCron | <http://localhost:8400> |
+| PyLovo | <http://localhost:8086> |
 
-## PyLovo Setup
+!!! warning "Development credentials"
+    `admin@example.de` / `12345678` is seeded for local development only.
+    Change it before any non-local deployment.
 
-PyLovo runs as a separate Docker service. See the [PyLovo Quickstart](../pylovo/quickstart.md) for setup instructions.
+## Testing a local build of the building configurator
 
-## Makefile Reference
-
-```bash
-make setup              # Full first-time setup
-make up                 # Start all platform services
-make down               # Stop all platform services
-make up-enerplanet      # Start backend + frontend containers
-make down-enerplanet    # Stop backend + frontend containers
-make migrate            # Run database migrations
-make seed               # Seed initial data
-make install            # Reinstall npm + Go dependencies
-make logs               # View platform logs
-```
-
-## Environment Configuration
-
-**`enerplanet/backend/.env`**
+The frontend installs the building configurator package from a release tag in
+`enerplanet/frontend/package.json`. To try a local change of the package
+without a release:
 
 ```bash
-APP_NAME=Enerplanet
-APP_ENV=development
-APP_PORT=8000
-DB_HOST=localhost
-DB_PORT=5433
-DB_DATABASE=spatialai
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-REDIS_HOST=localhost
-REDIS_PORT=6379
-KEYCLOAK_URL=http://localhost:8080
-KEYCLOAK_REALM=spatialhub
-KEYCLOAK_CLIENT_ID=spatialhub
-KEYCLOAK_CLIENT_SECRET=
-AUTH_SERVICE_URL=http://localhost:8001
-WEBSERVICE_SERVICE_URL=http://localhost:8082
-PYLOVO_SERVICE_URL=http://localhost:8086
+cd ../Building-configurator/building-configurator && npm run build:lib
+cd -   # back to enerplanet
+cd enerplanet/frontend && npm install --no-save <path to building-configurator>
 ```
 
-**`enerplanet/frontend/.env`**
+Restart Vite with `npm run dev -- --force` so it drops its cached copy of the
+package. `--no-save` leaves `package.json` unchanged; once the package change
+is released, bump the tag in `package.json` as usual.
+
+## Disk use
+
+Measured after `make setup` on an empty Docker, 2026-10-13:
+
+| What | Size |
+|---|---|
+| Images | 41 GB, of which the locally built PyLovo image is 21 GB |
+| Build cache | 48 GB |
+| Volumes (all databases) | 1.3 GB |
+
+The build cache only speeds up rebuilds; `docker builder prune -f` frees it.
+Services built locally account for most of both figures.
+
+## Starting from an empty Docker
+
+These commands delete every container, image, volume and build cache on the
+machine, including those of other projects. There is no undo.
 
 ```bash
-VITE_API_URL=http://localhost:8000/api
-VITE_KEYCLOAK_URL=http://localhost:8080
-VITE_KEYCLOAK_REALM=spatialhub
-VITE_KEYCLOAK_CLIENT_ID=spatialhub
+scripts/dev.sh stop
+docker stop $(docker ps -q)
+docker system prune -a --volumes -f
+docker volume prune -a -f
+docker builder prune -a -f
+make setup
 ```
+
+`docker system prune --volumes` removes only unnamed volumes, hence the
+separate `docker volume prune -a`.
 
 ## Troubleshooting
 
-**Docker permission denied**
-```bash
-sudo usermod -aG docker $USER && newgrp docker
-```
-
-**Port already in use**
-```bash
-lsof -i :8000          # Find the process
-kill -9 <PID>          # Stop it
-```
-
-**Database connection failed**
-```bash
-docker ps | grep postgres
-docker logs postgres --tail 50
-make stop-postgres && make start-postgres
-```
-
-**npm install errors**
-```bash
-npm cache clean --force
-rm -rf node_modules && npm install
-```
+| Symptom | Cause | Fix |
+|---|---|---|
+| `permission denied while trying to connect to the Docker daemon socket` | The user is not in the `docker` group | `sudo usermod -aG docker $USER`, then log out and in again |
+| `Bind for 0.0.0.0:5433 failed: port is already allocated`, or the same for another port | Another process or an older stack holds the port | Stop it; `docker ps` lists containers by port |
+| `git: 'lfs' is not a git command` | Git LFS is not installed | Install it, run `git lfs install`, then `make setup` again |
+| `go: download go1.26.0 ... unexpected EOF`, or the auth-service build hangs at `go mod download` | The build downloads a Go toolchain and the download failed | Run `make setup` again |
+| A simulation fails with `coati binary not found` | The host backend has no `COATI_BIN` | Start it with `make dev`, which sets it; `make coati` installs the Coati CLI |
+| A Calliope run ends with `signal: killed` | The solver ran out of Docker memory | Raise Docker Desktop's memory, or use a smaller model |
+| `FAIL  city2tabula: container city2tabula-db is not running` | City2TABULA was not started | `make city2tabula`, then `make fixtures` |

@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"platform.local/platform/logger"
+
+	"spatialhub_backend/internal/heatdemand"
 )
 
 func getFeatures(configMap map[string]interface{}, key string) []interface{} {
@@ -45,7 +47,6 @@ var genericPrimaryFClasses = map[string]struct{}{
 	"unclassified":       {},
 	"other":              {},
 }
-
 
 var specificDemandByFClass = map[string]float64{
 	"ab":                      28,
@@ -888,3 +889,153 @@ func specificDemandForFClass(fClass string) float64 {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Heat demand helpers
+// ---------------------------------------------------------------------------
+
+// heatProfileForFClass returns the heat demand profile key for a building class.
+// Heat profiles differ from electricity — they follow seasonal temperature patterns.
+func heatProfileForFClass(fClass string) string {
+	return "heat_" + demandProfileForFClass(fClass)
+}
+
+// parseStoredFClassHeatDemands parses stored heat demand details from building properties.
+// Uses the same shape as f_class_demands but reads heat_demand_energy field.
+func parseStoredFClassHeatDemands(raw interface{}, fallbackClasses []string) ([]map[string]interface{}, int64) {
+	if raw == nil {
+		return nil, 0
+	}
+
+	parsed := raw
+	if text, ok := raw.(string); ok {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			return nil, 0
+		}
+		var decoded []interface{}
+		if err := json.Unmarshal([]byte(text), &decoded); err != nil {
+			return nil, 0
+		}
+		parsed = decoded
+	}
+
+	var rows []interface{}
+	switch v := parsed.(type) {
+	case []interface{}:
+		rows = v
+	case []map[string]interface{}:
+		rows = make([]interface{}, 0, len(v))
+		for _, item := range v {
+			rows = append(rows, item)
+		}
+	default:
+		return nil, 0
+	}
+
+	out := make([]map[string]interface{}, 0, len(rows))
+	var total int64
+	for idx, row := range rows {
+		record, ok := row.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		cls := normalizeFClass(getStringValue(record["f_class"]))
+		if cls == "" {
+			cls = normalizeFClass(getStringValue(record["fClass"]))
+		}
+		if cls == "" {
+			cls = normalizeFClass(getStringValue(record["class"]))
+		}
+		if cls == "" && idx < len(fallbackClasses) {
+			cls = normalizeFClass(fallbackClasses[idx])
+		}
+		if cls == "" {
+			continue
+		}
+
+		demand := getFloatValue(record["demand_heat_energy"])
+		if demand <= 0 {
+			demand = getFloatValue(record["yearly_heat_demand_kwh"])
+		}
+		if demand < 0 {
+			demand = 0
+		}
+
+		profile := heatProfileForFClass(cls)
+
+		demandInt := int64(math.Round(demand))
+		total += demandInt
+		out = append(out, map[string]interface{}{
+			"demand_heat_energy": demandInt,
+			"profile":            profile,
+		})
+	}
+
+	if len(out) == 0 {
+		return nil, 0
+	}
+	return out, total
+}
+
+// calculateYearlyHeatDemandPerFClass computes per-class heat demand analogous to
+// calculateYearlyDemandPerFClass, using stored heat demands, explicit heat demand,
+// or area-based estimation.
+func calculateYearlyHeatDemandPerFClass(
+	fClasses []string,
+	areaSqm float64,
+	storedDetails interface{},
+	explicitHeatDemand float64,
+) ([]map[string]interface{}, int64) {
+	classes := normalizeUniqueFClasses(fClasses)
+
+	if stored, storedTotal := parseStoredFClassHeatDemands(storedDetails, classes); len(stored) > 0 {
+		if storedTotal == 0 && explicitHeatDemand > 0 {
+			targetTotal := int64(math.Round(explicitHeatDemand))
+			base := targetTotal / int64(len(stored))
+			remainder := targetTotal % int64(len(stored))
+			for idx, detail := range stored {
+				demand := base
+				if int64(idx) < remainder {
+					demand++
+				}
+				detail["demand_heat_energy"] = demand
+			}
+			return stored, targetTotal
+		}
+		return stored, storedTotal
+	}
+
+	if explicitHeatDemand > 0 {
+		return distributeDemandEvenly(classes, int64(math.Round(explicitHeatDemand)))
+	}
+
+	if areaSqm <= 0 {
+		return distributeDemandEvenly(classes, 0)
+	}
+
+	areaShare := areaSqm / float64(len(classes))
+	out := make([]map[string]interface{}, 0, len(classes))
+	var total int64
+
+	for _, cls := range classes {
+		demand := int64(math.Round(areaShare * specificHeatDemandForFClass(cls)))
+		if demand < 0 {
+			demand = 0
+		}
+		total += demand
+		out = append(out, map[string]interface{}{
+			"demand_heat_energy": demand,
+			"profile":            heatProfileForFClass(cls),
+		})
+	}
+
+	return out, total
+}
+
+// specificHeatDemandForFClass returns the fallback yearly heat demand in
+// kWh/sqm for a building class. The table and classifier live in
+// internal/heatdemand, shared with the resolve endpoint.
+func specificHeatDemandForFClass(fClass string) float64 {
+	return heatdemand.SpecificDemandKwhM2a(fClass)
+}

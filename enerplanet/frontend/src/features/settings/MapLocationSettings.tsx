@@ -5,6 +5,7 @@ import { updateMapToSavedLocation } from '@/features/interactive-map/store/map-s
 import { Loader2 } from 'lucide-react';
 import { LocationSearch } from './components/LocationSearch';
 import { SavedLocationsList } from './components/SavedLocationsList';
+import { MapPointPicker } from './components/MapPointPicker';
 import { useTranslation } from '@spatialhub/i18n';
 
 const MapLocationSettings: React.FC = () => {
@@ -29,6 +30,13 @@ const MapLocationSettings: React.FC = () => {
       zoom: 12,
       source: 'geocoded' as const
     };
+    addSavedLocation(loc);
+    updateMapToSavedLocation(loc);
+  };
+
+  const handlePick = (latitude: number, longitude: number, zoom: number) => {
+    const name = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    const loc = { id: `point:${name}`, name, latitude, longitude, zoom, source: 'map' as const };
     addSavedLocation(loc);
     updateMapToSavedLocation(loc);
   };
@@ -65,6 +73,9 @@ const MapLocationSettings: React.FC = () => {
         isLocationAdded={(r) => savedLocations.some(loc => loc.id === r.id.toString())}
         placeholder={t('settings.mapLocation.searchPlaceholder')}
       />
+
+      <MapPointPicker latitude={location.latitude} longitude={location.longitude} zoom={location.zoom} onPick={handlePick} />
+      <p className="text-xs text-muted-foreground">{t('settings.mapLocation.pickHint')}</p>
 
       {/* Current Location */}
       <div className="text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createSplitLineStyle, useThemeColors } from './chartUtils';
+import { createSplitLineStyle, isOverloaded, useThemeColors } from './chartUtils';
 
 interface LineLoadingItem {
   name: string;
@@ -13,6 +13,13 @@ interface PyPSALineLoadingChartProps {
   items: LineLoadingItem[];
   height?: number;
   title?: string;
+  // When true the percentages are flow/capacity utilisation, not electrical
+  // loading — relabel the axis and tooltip accordingly (meaning differs, data
+  // is real; this is a relabel, never a hide).
+  utilizationOnly?: boolean;
+  // Losses are a declared capability: a source without loss data must not show
+  // a fake "0.00 kW" line. Default true keeps legacy results unchanged.
+  lossesAvailable?: boolean;
 }
 
 const formatKva = (value: number): string => {
@@ -26,6 +33,8 @@ export const PyPSALineLoadingChart = ({
   items,
   height = 260,
   title = 'Peak Line Flow',
+  utilizationOnly = false,
+  lossesAvailable = true,
 }: PyPSALineLoadingChartProps) => {
   const themeColors = useThemeColors();
 
@@ -56,10 +65,14 @@ export const PyPSALineLoadingChart = ({
           const lines = [
             `<div style="font-weight:600;margin-bottom:4px;color:${themeColors.text};">${item.name}</div>`,
             `<div>Peak apparent flow: <b>${formatKva(item.peakApparentKva)}</b></div>`,
-            `<div>Peak active loss: <b>${item.peakLossKw.toFixed(2)} kW</b></div>`,
           ];
+          // Only show the loss figure when the result actually carries loss data.
+          if (lossesAvailable) {
+            lines.push(`<div>Peak active loss: <b>${item.peakLossKw.toFixed(2)} kW</b></div>`);
+          }
           if (item.peakLoadingPercent !== undefined) {
-            lines.push(`<div>Rated loading: <b>${item.peakLoadingPercent.toFixed(1)}%</b></div>`);
+            const overloaded = isOverloaded(item.peakLoadingPercent);
+            lines.push(`<div${overloaded ? ' style="color:#ef4444;font-weight:600;"' : ''}>${utilizationOnly ? 'Utilization' : 'Rated loading'}: <b>${item.peakLoadingPercent.toFixed(1)}%</b>${overloaded ? ' ⚠' : ''}</div>`);
           }
           return lines.join('');
         },
@@ -72,7 +85,11 @@ export const PyPSALineLoadingChart = ({
       },
       xAxis: {
         type: 'value',
-        name: displayItems.some(item => item.peakLoadingPercent !== undefined) ? 'Peak flow' : 'kVA',
+        name: utilizationOnly
+          ? '% of rating'
+          : displayItems.some(item => item.peakLoadingPercent !== undefined)
+            ? 'Peak flow'
+            : 'kVA',
         axisLabel: {
           color: themeColors.textMuted,
           formatter: (value: number) => formatKva(value),
@@ -91,11 +108,15 @@ export const PyPSALineLoadingChart = ({
         {
           name: 'Peak apparent flow',
           type: 'bar',
-          data: displayItems.map(item => item.peakApparentKva),
-          itemStyle: {
-            color: '#3b82f6',
-            borderRadius: [0, 6, 6, 0],
-          },
+          data: displayItems.map(item => ({
+            value: item.peakApparentKva,
+            itemStyle: {
+              // Red when the wire's peak utilisation exceeds its rating; the
+              // other wires keep the neutral blue. Colour is per bar.
+              color: isOverloaded(item.peakLoadingPercent) ? '#ef4444' : '#3b82f6',
+              borderRadius: [0, 6, 6, 0],
+            },
+          })),
           label: {
             show: true,
             position: 'right',
@@ -105,7 +126,7 @@ export const PyPSALineLoadingChart = ({
         },
       ],
     };
-  }, [items, themeColors, title]);
+  }, [items, themeColors, title, utilizationOnly, lossesAvailable]);
 
   if (items.length === 0) {
     return (

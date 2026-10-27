@@ -1,0 +1,339 @@
+// Package city2tabula is the HTTP handler for the on-request 3D-data
+// endpoints. Given a user-drawn area (country plus its PyLovo osm_ids and the
+// bbox), it resolves City2TABULA envelope data for those buildings and returns
+// a per-osm_id merge map the Building Configurator folds onto its building
+// features.
+//
+// A bbox-scoped City2TABULA pipeline run can take minutes, so the endpoint
+// never blocks on one: it returns what is already linked immediately and, when
+// a run is needed, triggers it and hands back the run id for the client to
+// poll.
+package city2tabula
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"platform.local/common/pkg/httputil"
+	"platform.local/platform/logger"
+
+	"spatialhub_backend/internal/api/contracts"
+	c2t "spatialhub_backend/internal/city2tabula"
+	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/tentacron"
+)
+
+// yearResolver is the ignis surface mapBuildings needs to derive
+// default_construction_year. Satisfied by *ignis.Client; faked in tests.
+type yearResolver interface {
+	GetEnvelopeUValues(ctx context.Context, variantCode string) (ignis.EnvelopeUValues, error)
+}
+
+// countryResolver names the country an area sits in, for a caller that did not.
+// Satisfied by *geo.NominatimResolver; faked in tests.
+type countryResolver interface {
+	Resolve(ctx context.Context, coords json.RawMessage) (string, error)
+}
+
+// Handler serves the enrich and availability endpoints, backed by the
+// City2TABULA client.
+type Handler struct {
+	client     *c2t.Client
+	yearClient yearResolver
+	grid       gridRegions
+	country    countryResolver
+}
+
+// NewHandler returns a Handler bound to the given City2TABULA client,
+// reaching ignis through the given TentaCron client for
+// default_construction_year lookups and reading PyLovo grid extents from grid.
+func NewHandler(client *c2t.Client, tc *tentacron.Client, grid gridRegions, country countryResolver) *Handler {
+	return &Handler{client: client, yearClient: ignis.NewClient(tc), grid: grid, country: country}
+}
+
+// resolveCountry returns the request's country, or works it out from the bbox
+// centroid when the caller left it blank. The same resolver and the same cache
+// back the model run, so both paths name a building's country identically.
+func (h *Handler) resolveCountry(ctx context.Context, req contracts.EnrichRequest) (string, error) {
+	if country := strings.TrimSpace(req.Country); country != "" {
+		return country, nil
+	}
+	if h.country == nil {
+		return "", errors.New("country is required")
+	}
+	centre := fmt.Sprintf(`{"type":"Point","coordinates":[%g,%g]}`,
+		(req.Bbox.Xmin+req.Bbox.Xmax)/2, (req.Bbox.Ymin+req.Bbox.Ymax)/2)
+	country, err := h.country.Resolve(ctx, json.RawMessage(centre))
+	if err != nil {
+		return "", fmt.Errorf("could not resolve the country for this area: %w", err)
+	}
+	return country, nil
+}
+
+// Enrich godoc
+//
+//	@Summary		Resolve City2TABULA 3D data for a drawn area
+//	@Description	Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)
+//	@Description	returns a per-osm_id
+//	@Description	merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
+//	@Description	linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
+//	@Description	(the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
+//	@Tags			City2TABULA
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		contracts.EnrichRequest	true	"Drawn area"
+//	@Success		200		{object}	contracts.EnrichResponse
+//	@Success		202		{object}	contracts.EnrichResponse
+//	@Failure		400		{object}	contracts.ErrorResponse
+//	@Failure		502		{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/v1/city2tabula/enrich [post]
+func (h *Handler) Enrich(c *gin.Context) {
+	var req contracts.EnrichRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httputil.BadRequest(c, "invalid request payload")
+		return
+	}
+	if len(req.OSMIDs) == 0 {
+		httputil.BadRequest(c, "osm_ids are required")
+		return
+	}
+
+	ctx := c.Request.Context()
+	log := logger.ForComponent("handler:city2tabula_enrich")
+
+	country, err := h.resolveCountry(ctx, req)
+	if err != nil {
+		httputil.BadRequest(c, err.Error())
+		return
+	}
+
+	byOSMID, further, credits, err := h.fetchLinked(ctx, country, req.OSMIDs)
+	if badReq := new(c2t.BadRequestError); errors.As(err, &badReq) {
+		log.Warnf("city2tabula rejected the building fetch for %s: %s", country, badReq.Message)
+		httputil.BadRequest(c, upstreamRejectedMessage)
+		return
+	}
+	if err != nil {
+		log.Warnf("city2tabula building fetch failed: %v", err)
+		httputil.BadGateway(c, "city2tabula unavailable")
+		return
+	}
+
+	missing := missingOSMIDs(req.OSMIDs, byOSMID, further)
+	resp := contracts.EnrichResponse{
+		Country:  country,
+		Resolved: len(req.OSMIDs) - len(missing),
+		Total:    len(req.OSMIDs),
+		Missing:  missing,
+		Data:     h.mapBuildings(ctx, byOSMID),
+
+		Attributions: credits,
+	}
+
+	if len(missing) == 0 {
+		resp.Status = "completed"
+		c.JSON(http.StatusOK, resp)
+		return
+	}
+
+	run, err := h.client.TriggerRun(ctx, country, c2t.Bbox{
+		Xmin: req.Bbox.Xmin, Ymin: req.Bbox.Ymin, Xmax: req.Bbox.Xmax, Ymax: req.Bbox.Ymax,
+	})
+	if err != nil {
+		log.Warnf("city2tabula run trigger failed, returning %d/%d resolved: %v",
+			len(byOSMID), len(req.OSMIDs), err)
+		resp.Status = "partial"
+		c.JSON(http.StatusOK, resp)
+		return
+	}
+
+	resp.Status = "running"
+	resp.RunID = run.RunID
+	resp.RunStage = run.RunStage
+	c.JSON(http.StatusAccepted, resp)
+}
+
+// EnrichStatus godoc
+//
+//	@Summary		Poll a City2TABULA enrich run
+//	@Description	Proxies the City2TABULA run status. When the run has completed and country and
+//	@Description	osm_ids are given as query parameters, also returns the merge map for those buildings,
+//	@Description	so the client polls one endpoint and gets data when ready.
+//	@Tags			City2TABULA
+//	@Produce		json
+//	@Param			run_id	path		string	true	"Run id from the 202 enrich response"
+//	@Param			country	query		string	false	"Country, required to receive data on completion"
+//	@Param			osm_ids	query		string	false	"Comma-separated osm_ids, required to receive data on completion"
+//	@Success		200		{object}	contracts.EnrichResponse
+//	@Failure		400		{object}	contracts.ErrorResponse
+//	@Failure		404		{object}	contracts.ErrorResponse	"No run with this id (stale or mistyped)"
+//	@Failure		502		{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/v1/city2tabula/enrich/{run_id} [get]
+func (h *Handler) EnrichStatus(c *gin.Context) {
+	runID := c.Param("run_id")
+	if runID == "" {
+		httputil.BadRequest(c, "run_id is required")
+		return
+	}
+
+	ctx := c.Request.Context()
+	log := logger.ForComponent("handler:city2tabula_enrich")
+
+	run, err := h.client.GetRunStatus(ctx, runID)
+	if errors.Is(err, c2t.ErrRunNotFound) {
+		httputil.NotFound(c, "unknown run id: "+runID)
+		return
+	}
+	if err != nil {
+		log.Warnf("city2tabula run status failed for %s: %v", runID, err)
+		httputil.BadGateway(c, "city2tabula unavailable")
+		return
+	}
+
+	resp := contracts.EnrichResponse{
+		Status:       run.Status,
+		RunID:        run.RunID,
+		RunStage:     run.RunStage,
+		Data:         map[string]contracts.EnrichedBuilding{},
+		Attributions: []c2t.DatasetCredit{},
+	}
+
+	country := c.Query("country")
+	osmIDs := splitCSV(c.Query("osm_ids"))
+	if run.Status == "completed" && country != "" && len(osmIDs) > 0 {
+		byOSMID, further, credits, ferr := h.fetchLinked(ctx, country, osmIDs)
+		if badReq := new(c2t.BadRequestError); errors.As(ferr, &badReq) {
+			log.Warnf("city2tabula rejected the building re-fetch after run %s: %s", runID, badReq.Message)
+			httputil.BadRequest(c, upstreamRejectedMessage)
+			return
+		}
+		if ferr != nil {
+			log.Warnf("city2tabula building re-fetch after run %s failed: %v", runID, ferr)
+			httputil.BadGateway(c, "city2tabula unavailable")
+			return
+		}
+		resp.Missing = missingOSMIDs(osmIDs, byOSMID, further)
+		resp.Resolved = len(osmIDs) - len(resp.Missing)
+		resp.Total = len(osmIDs)
+		resp.Data = h.mapBuildings(ctx, byOSMID)
+		resp.Attributions = credits
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// fetchLinked fetches the osm_ids' 3D attributes, indexes them by their
+// standing way's osm_id and returns the further ways (see
+// c2t.BuildingsResult.ByRequestedWay), with the credits of their datasets. An
+// osm_id in neither has no PyLovo-linked building in City2TABULA yet (see
+// missingOSMIDs).
+func (h *Handler) fetchLinked(ctx context.Context, country string, osmIDs []string) (map[string][]c2t.Building, map[string]string, []c2t.DatasetCredit, error) {
+	result, err := h.client.GetBuildingsByOSMIDs(ctx, country, osmIDs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	credits := result.Attributions
+	if credits == nil {
+		credits = []c2t.DatasetCredit{}
+	}
+	byOSMID, further := result.ByRequestedWay(osmIDs)
+	return byOSMID, further, credits, nil
+}
+
+// missingOSMIDs returns the osm_ids in want that have no entry in got.
+func missingOSMIDs(want []string, got map[string][]c2t.Building, further map[string]string) []string {
+	var missing []string
+	for _, id := range want {
+		_, isFurther := further[id]
+		if _, ok := got[id]; !ok && !isFurther {
+			missing = append(missing, id)
+		}
+	}
+	return missing
+}
+
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// mapBuildings turns City2TABULA buildings into merge-map entries. Unlike the
+// run_buem job it keeps a building even when no surface qualifies for the
+// envelope: the configurator still shows its scalar attributes and TABULA
+// variant and falls back to an archetype for the geometry (scenario SC-03).
+// A way covering several 3D buildings is shown as its largest one, the
+// building a customised BuEM block replaces (see jobs.buildingsForBuem), with
+// the number of 3D buildings the way covers.
+func (h *Handler) mapBuildings(ctx context.Context, byOSMID map[string][]c2t.Building) map[string]contracts.EnrichedBuilding {
+	out := make(map[string]contracts.EnrichedBuilding, len(byOSMID))
+	// One ignis lookup per distinct variant code rather than per building: an
+	// area covering a village shares a handful of archetypes across hundreds
+	// of buildings.
+	years := make(map[string]*int)
+	yearFor := func(code *string) *int {
+		if code == nil {
+			return nil
+		}
+		if y, seen := years[*code]; seen {
+			return y
+		}
+		y := h.defaultConstructionYear(ctx, code)
+		years[*code] = y
+		return y
+	}
+	for osmID, buildings := range byOSMID {
+		b := buildings[0]
+		bb := contracts.BuemBuilding{
+			Envelope: contracts.BuemEnvelope{Elements: c2t.EnvelopeElements(b)},
+		}
+		if b.NumberOfStoreys != nil {
+			n := *b.NumberOfStoreys
+			bb.NStoreys = &n
+		}
+		if b.RoomHeight != nil {
+			bb.HRoom = &contracts.EnrichQuantity{Value: *b.RoomHeight, Unit: "m"}
+		}
+		if b.FootprintAreaSqm != nil {
+			bb.FootprintArea = &contracts.EnrichQuantity{Value: *b.FootprintAreaSqm, Unit: "m2"}
+		}
+		out[osmID] = contracts.EnrichedBuilding{
+			ObjectID:                b.ObjectID,
+			DatasetID:               b.DatasetID,
+			MatchType:               b.MatchType,
+			TabulaVariantCode:       b.TabulaVariantCode,
+			DefaultConstructionYear: yearFor(b.TabulaVariantCode),
+			BuildingCount:           len(buildings),
+			Buem:                    contracts.BuemNode{Building: bb},
+		}
+	}
+	return out
+}
+
+// defaultConstructionYear derives a construction year from variantCode's
+// TABULA period, or nil when there is no code or ignis has no year data for
+// it - a miss here just means the enrich response omits the field, it never
+// fails the request.
+func (h *Handler) defaultConstructionYear(ctx context.Context, variantCode *string) *int {
+	if h.yearClient == nil || variantCode == nil || *variantCode == "" {
+		return nil
+	}
+	u, err := h.yearClient.GetEnvelopeUValues(ctx, *variantCode)
+	if err != nil || (u.YearFrom == 0 && u.YearTo == 0) {
+		return nil
+	}
+	year := ignis.DefaultConstructionYear(u.YearFrom, u.YearTo)
+	return &year
+}

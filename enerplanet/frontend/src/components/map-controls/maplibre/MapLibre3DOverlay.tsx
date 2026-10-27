@@ -6,11 +6,14 @@ import { useMapLibreLayers, type LayerData } from './useMapLibreLayers';
 import { useMapLibreInteractions, type InteractionCallbacks } from './useMapLibreInteractions';
 import { useOlLayerSync } from './useOlLayerSync';
 import { MapLibre3DControls } from './MapLibre3DControls';
+import type { MapControlsPlacement } from '@/components/map-controls/MapControls';
 
 interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
   olMap: OlMap;
   visible: boolean;
   isDrawing?: boolean;
+  /** Placement of the map's zoom buttons; the reset button sits under them. */
+  controlsPlacement?: MapControlsPlacement;
 }
 
 /**
@@ -21,6 +24,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   olMap,
   visible,
   isDrawing = false,
+  controlsPlacement,
   // Layer data
   buildingsGeoJSON,
   linesGeoJSON,
@@ -35,6 +39,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   onBoundaryRegionClick,
   userModelGeoJSON,
   onUserModelClick,
+  techsFor,
   // Interaction callbacks
   onBuildingClick,
   onTransformerClick,
@@ -44,14 +49,14 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   onMapClick,
 }) => {
   // 1. Map lifecycle & OL sync
-  const { containerRef, mapRef } = useMapLibreMap(olMap, visible, isDrawing);
+  const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible, isDrawing);
 
   // 2. Data layers
-  useMapLibreLayers(mapRef, {
+  const { footprintOnly } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
     transformersGeoJSON, availableBoundaryGeoJSON, selectedBoundaryFeature, showBoundary, polygonCoordinates,
-    selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick,
-  });
+    selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
+  }, mapReady);
 
   // 3. Click/hover interactions (forwarded from OL events to MapLibre queryRenderedFeatures)
   useMapLibreInteractions(mapRef, olMap, visible, {
@@ -76,7 +81,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
         }}
       />
       {/* 3D pitch/bearing/reset controls */}
-      <MapLibre3DControls mapRef={mapRef} />
+      <MapLibre3DControls mapRef={mapRef} placement={controlsPlacement} footprintOnly={footprintOnly} />
     </>
   );
 };

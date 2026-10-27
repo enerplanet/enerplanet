@@ -3,22 +3,31 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
 import { LocateFixed, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 
+/** Where the zoom and centre buttons sit on the map. */
+export type MapControlsPlacement = "top-right" | "top-left";
+
 interface MapControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onCenterMap: () => void;
+  placement?: MapControlsPlacement;
+  /** Further buttons below the zoom and centre buttons, in the same column. */
+  children?: React.ReactNode;
 }
 
-export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, onCenterMap }) => {
+const PLACEMENT_STYLE: Record<MapControlsPlacement, { className: string; style: React.CSSProperties }> = {
+  "top-right": { className: "absolute top-4 z-50 pointer-events-auto", style: { right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
+  "top-left": { className: "absolute z-[5] pointer-events-auto", style: { left: "1rem", top: "1rem" } },
+};
+
+export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement = "top-right", children }) => {
   const { t } = useTranslation();
+  const tooltipSide = placement === "top-left" ? "right" : "left";
   
   const buttonClass = "flex items-center justify-center rounded-full size-8 cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border";
   
   return (
-    <div
-      className="absolute top-4 z-50 pointer-events-auto"
-      style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
-    >
+    <div className={PLACEMENT_STYLE[placement].className} style={PLACEMENT_STYLE[placement].style}>
       <div className="relative grid gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -29,7 +38,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, o
               <ZoomIn className="w-4 h-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left" sideOffset={8}>
+          <TooltipContent side={tooltipSide} sideOffset={8}>
             {t('map.zoomIn')}
           </TooltipContent>
         </Tooltip>
@@ -43,7 +52,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, o
               <ZoomOut className="w-4 h-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left" sideOffset={8}>
+          <TooltipContent side={tooltipSide} sideOffset={8}>
             {t('map.zoomOut')}
           </TooltipContent>
         </Tooltip>
@@ -57,10 +66,11 @@ export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, o
               <LocateFixed className="w-4 h-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="left" sideOffset={8}>
+          <TooltipContent side={tooltipSide} sideOffset={8}>
             {t('map.centerMap')}
           </TooltipContent>
         </Tooltip>
+        {children}
       </div>
     </div>
   );

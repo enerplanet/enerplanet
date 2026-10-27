@@ -143,3 +143,25 @@ export const gradients = {
   green: createGradient('#34d399', '#10b981'),
   purple: createGradient('#a78bfa', '#8b5cf6'),
 };
+
+// A wire is flagged when its peak utilisation exceeds 100% of its rating. The
+// rating comes from the weakest cable in the grid, so the flag is per connection
+// and independent of how loading_percent is derived.
+export const OVERLOAD_UTILIZATION_PERCENT = 100;
+
+// Location ids arrive in two vocabularies: the current `n1` / `ntrafo_82` and
+// the legacy `ID_1` / `Trafo_...`. Strip the legacy `ID_` prefix (case-insensitive)
+// and normalise case so both forms key the same connection.
+export function normalizeLocId(id: string): string {
+  return id.replace(/^ID_/i, '').trim().toLowerCase();
+}
+
+// Order-independent key for a wire, matching however a connection's endpoints are
+// supplied (bus0/bus1 from the result, or source/target from the topology layout).
+export function connectionKey(a: string, b: string): string {
+  return [normalizeLocId(a), normalizeLocId(b)].sort().join('::');
+}
+
+export function isOverloaded(percent?: number | null): boolean {
+  return typeof percent === 'number' && Number.isFinite(percent) && percent > OVERLOAD_UTILIZATION_PERCENT;
+}

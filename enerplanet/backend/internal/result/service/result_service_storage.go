@@ -22,31 +22,43 @@ func batchStore[T any](tx *gorm.DB, log *logrus.Entry, records []T, batchSize in
 	return nil
 }
 
+// smallResultsStoreFuncs lists the small/summary store steps in transaction
+// order. Shared by the legacy ProcessModelResult path and the Coati ingest.
+func (s *ResultService) smallResultsStoreFuncs() []func(*gorm.DB, *logrus.Entry, uint, *ParsedResults) error {
+	return []func(*gorm.DB, *logrus.Entry, uint, *ParsedResults) error{
+		s.storeCoordinates,
+		s.storeLocTechs,
+		s.storeModelCapacityFactor,
+		s.storeModelLevelisedCost,
+		s.storeTotalLevelisedCost,
+		s.storeEnergyCap,
+		s.storeCost,
+		s.storeCostInvestment,
+		s.storePyPSASettings,
+		s.storePyPSALineLoading,
+	}
+}
+
+// storeSmallResultsTx runs the small-result store steps against the given tx. A
+// caller that already opened a transaction (e.g. the Coati ingest, which wraps
+// deleteExistingResults + these steps atomically) uses this; storeSmallResults
+// wraps it in its own transaction for the legacy path.
+func (s *ResultService) storeSmallResultsTx(tx *gorm.DB, log *logrus.Entry, modelID uint, parsed *ParsedResults) error {
+	for _, fn := range s.smallResultsStoreFuncs() {
+		if err := fn(tx, log, modelID, parsed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // storeSmallResults stores only the small/summary data in a single transaction.
 // Large time-series data is streamed separately via StreamingInserter.
 func (s *ResultService) storeSmallResults(ctx context.Context, modelID uint, parsed *ParsedResults) error {
 	log := logger.ForComponent("result")
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		storeFuncs := []func(*gorm.DB, *logrus.Entry, uint, *ParsedResults) error{
-			s.storeCoordinates,
-			s.storeLocTechs,
-			s.storeModelCapacityFactor,
-			s.storeModelLevelisedCost,
-			s.storeTotalLevelisedCost,
-			s.storeEnergyCap,
-			s.storeCost,
-			s.storeCostInvestment,
-			s.storePyPSASettings,
-		}
-
-		for _, fn := range storeFuncs {
-			if err := fn(tx, log, modelID, parsed); err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return s.storeSmallResultsTx(tx, log, modelID, parsed)
 	})
 }
 
@@ -192,6 +204,29 @@ func (s *ResultService) storePyPSASettings(tx *gorm.DB, log *logrus.Entry, model
 	}
 	log.Debugf("Stored PyPSA settings for model_id=%d, converged=%v", modelID, record.Converged)
 	return nil
+}
+
+// storePyPSALineLoading writes the per-wire flow series. Percent is
+// flow/capacity utilisation for a Coati-sourced result — see
+// PyPSALineLoadingRecord.
+func (s *ResultService) storePyPSALineLoading(tx *gorm.DB, log *logrus.Entry, modelID uint, parsed *ParsedResults) error {
+	if len(parsed.PyPSALineLoading) == 0 {
+		return nil
+	}
+	records := make([]models.ResultsPyPSALineLoading, 0, len(parsed.PyPSALineLoading))
+	for _, l := range parsed.PyPSALineLoading {
+		records = append(records, models.ResultsPyPSALineLoading{
+			ModelID:        modelID,
+			Line:           l.Line,
+			Bus0:           l.Bus0,
+			Bus1:           l.Bus1,
+			Timestep:       l.Timestep,
+			P0:             l.P0,
+			P1:             l.P1,
+			LoadingPercent: l.Percent,
+		})
+	}
+	return batchStore(tx, log, records, 100, modelID, "pypsa line loading records")
 }
 
 func (s *ResultService) storeCostInvestment(tx *gorm.DB, log *logrus.Entry, modelID uint, parsed *ParsedResults) error {

@@ -8,9 +8,8 @@ import { PolygonDrawer } from '@/features/polygon-drawer';
 import { useCustomLocationStore } from '@/features/locations/store/custom-location-store';
 import { customLocationService } from '@/features/locations/services/customLocationService';
 import { useNotification } from '@/features/notifications/hooks/useNotification';
-import Notification from '@/components/ui/Notification';
 import { RegionSelector, type AvailableRegion } from '@/features/configurator/region-selector/components/RegionSelector';
-import { pylovoService } from '@/features/configurator/services/pylovoService';
+import { useAvailableRegions } from '@/features/configurator/hooks/useAvailableRegions';
 import { loadAvailableBoundaryLayers, highlightSelectedRegionBoundary } from '@/features/configurator/utils/gridLayerUtils';
 import { transformExtent } from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
@@ -43,14 +42,13 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   const { id } = useParams<{ id: string }>();
   const { map, clearOverlayLayers, setFireRiskOverlay } = useMapStore();
   const { createLocation, updateLocation } = useCustomLocationStore();
-  const { notification, showSuccess, showError, hide } = useNotification();
+  const { showSuccess, showError } = useNotification();
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
 
   // Step 1: Metadata
   const [title, setTitle] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -86,32 +84,26 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   const zoomToCoordinates = useZoomToCoordinates(map);
   useClearOverlays(clearOverlayLayers, setFireRiskOverlay);
 
-  // Fetch available regions
+  // Show the available regions once the list has arrived
+  const { data: regionsResponse } = useAvailableRegions(!!map);
   useEffect(() => {
-    if (!map) return;
-    pylovoService.getAvailableRegions()
-      .then((response) => {
-        if (response.status === 'success' && response.regions?.length) {
-          setAvailableRegions(
-            response.regions
-              .filter((r) => r.region?.name)
-              .map((r) => ({
-                name: r.region!.name,
-                gridCount: r.grid_count,
-                country: r.region?.country,
-                bbox: r.bbox,
-              }))
-          );
-          const boundaryRegions = response.regions
-            .filter((r) => r.boundary && r.region?.name)
-            .map((r) => ({ boundary: r.boundary!, name: r.region!.name }));
-          if (boundaryRegions.length) {
-            loadAvailableBoundaryLayers(map, boundaryRegions);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [map]);
+    if (!map || !regionsResponse?.regions?.length) return;
+    setAvailableRegions(
+      regionsResponse.regions
+        .filter((r) => r.region?.name)
+        .map((r) => ({
+          name: r.region!.name,
+          gridCount: r.grid_count,
+          country: r.region?.country,
+          bbox: r.bbox,
+        }))
+    );
+    const boundaryRegions = regionsResponse.regions
+      .filter((r) => r.boundary && r.region?.name)
+      .map((r) => ({ boundary: r.boundary!, name: r.region!.name }));
+    const layers = boundaryRegions.length ? loadAvailableBoundaryLayers(map, boundaryRegions) : [];
+    return () => layers.forEach((layer) => map.removeLayer(layer));
+  }, [map, regionsResponse]);
 
   const handleRegionSelect = useCallback((region: AvailableRegion) => {
     if (!map || !region.bbox) return;
@@ -135,7 +127,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
           setTitle(location.title);
           setBuildingProps((prev) => ({ ...prev, fClass: location.f_class || 'house' }));
           setDemandEnergy(location.demand_energy);
-          setIsPublic(location.is_public);
           setTags(location.tags || []);
           setArea(location.area);
           if (location.geometry_area?.coordinates) {
@@ -200,7 +191,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
         geometry: { type: 'Point' as const, coordinates: [avgLon, avgLat] },
         geometry_area: { type: 'Polygon' as const, coordinates: [polygonCoordinates] },
         tags,
-        is_public: isPublic,
       };
 
       if (editMode && id) {
@@ -217,7 +207,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
       setIsLoading(false);
     }
   }, [
-    title, polygonCoordinates, area, buildingProps, demandEnergy, tags, isPublic,
+    title, polygonCoordinates, area, buildingProps, demandEnergy, tags,
     editMode, id, createLocation, updateLocation, navigate, showSuccess, showError,
   ]);
 
@@ -243,7 +233,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
   }
 
   const stepDescriptions = [
-    'Set up your location name and visibility',
+    'Set up your location name and tags',
     'Draw the area boundary on the map',
     'Configure building characteristics',
     'Review and save your location',
@@ -251,13 +241,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
 
   return (
     <>
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hide}
-      />
-
       <MapContainer
         modal={false}
         topBar={
@@ -299,7 +282,6 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
                 {currentStep === 0 && (
                   <Step1Metadata
                     title={title} setTitle={setTitle}
-                    isPublic={isPublic} setIsPublic={setIsPublic}
                     tags={tags} setTags={setTags}
                     tagInput={tagInput} setTagInput={setTagInput}
                   />
@@ -321,7 +303,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
                   <Step4DemandSave
                     demandEnergy={demandEnergy} setDemandEnergy={setDemandEnergy}
                     peakLoad={peakLoad} setPeakLoad={setPeakLoad}
-                    title={title} area={area} isPublic={isPublic} tags={tags}
+                    title={title} area={area} tags={tags}
                     properties={buildingProps} polygonCoordinates={polygonCoordinates}
                     isLoading={isLoading} onSave={handleSave} editMode={editMode}
                   />

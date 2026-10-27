@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_WEATHER, type WeatherSettings } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
 import type { PylovoGridData, AdvancedParametersState } from "@/features/configurator/types/area-select";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -12,10 +13,17 @@ export type ActiveMode =
   | "add-transformer"
   | "move-transformer"
   | "assign-buildings"
-  | "multi-edit"
+  | "heat-link"
   | null;
 
+export type HeatResolutionMode = "expected" | "manual";
+
 export type AssignStep = "select-buildings" | "select-transformer";
+
+/** BuEM's cooking carriers that EnerPlanET offers. */
+export type CookingCarrier = "electric" | "gas";
+/** "plan" sizes every technology; "operate" keeps each at its maximum and optimises only the dispatch. */
+export type RunMode = "plan" | "operate";
 
 export interface ModelStore {
   // ── Active mode (unified) ──
@@ -23,6 +31,15 @@ export interface ModelStore {
   setActiveMode: (mode: ActiveMode) => void;
   assignStep: AssignStep;
   setAssignStep: (step: AssignStep) => void;
+ 
+  // ── Heat resolution (expected-fit auto-resolve / manual) ──
+  heatResolutionMode: HeatResolutionMode;
+  setHeatResolutionMode: (mode: HeatResolutionMode) => void;
+  // One-time "how to add heat techs" bootstrap, shown once after grid data loads.
+  heatBootstrapOpen: boolean;
+  setHeatBootstrapOpen: (v: boolean) => void;
+  heatBootstrapPrompted: boolean;
+  setHeatBootstrapPrompted: (v: boolean) => void;
 
   // ── Grid / pylovo data ──
   pylovoGridData: PylovoGridData | undefined;
@@ -37,12 +54,11 @@ export interface ModelStore {
   setAllPolygons: (polygons: [number, number][][]) => void;
   isDrawing: boolean;
   setIsDrawing: (drawing: boolean) => void;
-  allowMultiplePolygons: boolean;
-  setAllowMultiplePolygons: (allow: boolean) => void;
   clearTrigger: number;
   incrementClearTrigger: () => void;
-  cursorPos: { x: number; y: number } | null;
-  setCursorPos: (pos: { x: number; y: number } | null) => void;
+  /** Whether the pointer is over the map; the position itself stays with the overlays that follow it. */
+  pointerOnMap: boolean;
+  setPointerOnMap: (on: boolean) => void;
 
   // ── Model metadata ──
   modelName: string;
@@ -53,6 +69,18 @@ export interface ModelStore {
   setToDate: (date: string) => void;
   resolution: number;
   setResolution: (res: number) => void;
+  /** What households cook with; gas cooking adds BuEM's kitchen profile as a gas demand. Saved as config.cookingCarrier. */
+  cookingCarrier: CookingCarrier;
+  setCookingCarrier: (carrier: CookingCarrier) => void;
+  /** Saved as config.mode. */
+  runMode: RunMode;
+  setRunMode: (mode: RunMode) => void;
+  /** Saved as config.weatherProvider and config.weatherScenario or config.weatherYear. */
+  weather: WeatherSettings;
+  setWeather: (weather: WeatherSettings) => void;
+  /** Generate the grid as a pylovo site, kept apart from the shared postcode grids. Saved as config.site. */
+  siteMode: boolean;
+  setSiteMode: (on: boolean) => void;
 
   // ── Loading / saving ──
   isSaving: boolean;
@@ -61,6 +89,9 @@ export interface ModelStore {
   setIsLoadingModel: (v: boolean) => void;
   isGeneratingGrid: boolean;
   setIsGeneratingGrid: (v: boolean) => void;
+  /** The area or the stations changed since the shown grid was generated; Regenerate grid brings it up to date. */
+  gridStale: boolean;
+  setGridStale: (v: boolean) => void;
 
   // ── Unsaved changes ──
   isModified: boolean;
@@ -78,13 +109,15 @@ export interface ModelStore {
   resetAdvancedParams: () => void;
 
   // ── Building filters ──
-  includePublicBuildings: boolean;
-  setIncludePublicBuildings: (v: boolean) => void;
   includePrivateBuildings: boolean;
   setIncludePrivateBuildings: (v: boolean) => void;
   excludedBuildingIds: Set<number>;
   toggleBuildingExclusion: (id: number) => void;
   clearExcludedBuildings: () => void;
+  /** osm_ids picked with Ctrl+click, for acting on several buildings at once. */
+  selectedBuildingIds: Set<string>;
+  toggleBuildingSelection: (osmId: string) => void;
+  clearBuildingSelection: () => void;
 
   // ── Map interactions (dialogs + tooltips) ──
   transformerDialogOpen: boolean;
@@ -111,6 +144,9 @@ export interface ModelStore {
   setDraggingTech: (v: Technology | null) => void;
   techDialogOpen: boolean;
   setTechDialogOpen: (v: boolean) => void;
+  /** pick: choose a catalogue product; define: edit its parameters. */
+  techDialogStep: "pick" | "define";
+  setTechDialogStep: (v: "pick" | "define") => void;
   selectedTechForDialog: Technology | null;
   setSelectedTechForDialog: (v: Technology | null) => void;
   selectedBuildingForTech: any;
@@ -144,6 +180,10 @@ export interface ModelStore {
   availableBoundaryGeoJSON: GeoJSON.FeatureCollection | undefined;
   setAvailableBoundaryGeoJSON: (v: GeoJSON.FeatureCollection | undefined) => void;
 
+  // ── Heat links (producer → consumer) ──
+  selectedHeatLinkSource: string | null;
+  setSelectedHeatLinkSource: (v: string | null) => void;
+
   // ── Selected buildings for assign mode ──
   selectedBuildingsForAssign: string[];
   setSelectedBuildingsForAssign: (ids: string[] | ((prev: string[]) => string[])) => void;
@@ -173,29 +213,36 @@ export interface ModelStore {
 const getInitialState = () => ({
   activeMode: null as ActiveMode,
   assignStep: "select-buildings" as AssignStep,
+  heatResolutionMode: "expected" as HeatResolutionMode,
+  heatBootstrapOpen: false,
+  heatBootstrapPrompted: false,
   pylovoGridData: undefined as PylovoGridData | undefined,
   isRunningPowerFlow: false,
   powerFlowResults: new Map<number, any>(),
   allPolygons: [] as [number, number][][],
   isDrawing: false,
-  allowMultiplePolygons: false,
   clearTrigger: 0,
-  cursorPos: null as { x: number; y: number } | null,
+  pointerOnMap: false,
   modelName: "",
   fromDate: "",
   toDate: "",
   resolution: 60,
+  cookingCarrier: "electric" as CookingCarrier,
+  runMode: "plan" as RunMode,
+  weather: DEFAULT_WEATHER,
+  siteMode: false,
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
+  gridStale: false,
   isModified: false,
   showUnsavedDialog: false,
   showAreaSelectTour: false,
   showAdvancedParams: false,
   advancedParams: getDefaultAdvancedParameters(),
-  includePublicBuildings: true,
   includePrivateBuildings: true,
   excludedBuildingIds: new Set<number>(),
+  selectedBuildingIds: new Set<string>(),
   transformerDialogOpen: false,
   selectedTransformer: null,
   transformerTooltip: null,
@@ -207,6 +254,7 @@ const getInitialState = () => ({
   showTechDrawer: false,
   draggingTech: null,
   techDialogOpen: false,
+  techDialogStep: "pick" as const,
   selectedTechForDialog: null,
   selectedBuildingForTech: null,
   isAddingTechToAll: false,
@@ -217,6 +265,7 @@ const getInitialState = () => ({
   availableRegions: [],
   showBoundary: true,
   availableBoundaryGeoJSON: undefined as GeoJSON.FeatureCollection | undefined,
+  selectedHeatLinkSource: null as string | null,
   selectedBuildingsForAssign: [],
   reassignmentLineAnchor: null as [number, number] | null,
   newTransformerCoords: null as [number, number] | null,
@@ -232,6 +281,12 @@ export const useModelStore = create<ModelStore>((set) => ({
   setActiveMode: (mode) => set({ activeMode: mode }),
   assignStep: "select-buildings",
   setAssignStep: (step) => set({ assignStep: step }),
+  heatResolutionMode: "expected",
+  setHeatResolutionMode: (mode) => set({ heatResolutionMode: mode }),
+  heatBootstrapOpen: false,
+  setHeatBootstrapOpen: (v) => set({ heatBootstrapOpen: v }),
+  heatBootstrapPrompted: false,
+  setHeatBootstrapPrompted: (v) => set({ heatBootstrapPrompted: v }),
 
   // ── Grid / pylovo data ──
   pylovoGridData: undefined,
@@ -249,12 +304,10 @@ export const useModelStore = create<ModelStore>((set) => ({
   setAllPolygons: (polygons) => set({ allPolygons: polygons }),
   isDrawing: false,
   setIsDrawing: (drawing) => set({ isDrawing: drawing }),
-  allowMultiplePolygons: false,
-  setAllowMultiplePolygons: (allow) => set({ allowMultiplePolygons: allow }),
   clearTrigger: 0,
   incrementClearTrigger: () => set((s) => ({ clearTrigger: s.clearTrigger + 1 })),
-  cursorPos: null,
-  setCursorPos: (pos) => set({ cursorPos: pos }),
+  pointerOnMap: false,
+  setPointerOnMap: (on) => set({ pointerOnMap: on }),
 
   // ── Model metadata ──
   modelName: "",
@@ -265,6 +318,14 @@ export const useModelStore = create<ModelStore>((set) => ({
   setToDate: (date) => set({ toDate: date }),
   resolution: 60,
   setResolution: (res) => set({ resolution: res }),
+  cookingCarrier: "electric",
+  setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
+  runMode: "plan",
+  setRunMode: (mode) => set({ runMode: mode }),
+  weather: DEFAULT_WEATHER,
+  setWeather: (weather) => set({ weather }),
+  siteMode: false,
+  setSiteMode: (on) => set({ siteMode: on }),
 
   // ── Loading / saving ──
   isSaving: false,
@@ -273,6 +334,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsLoadingModel: (v) => set({ isLoadingModel: v }),
   isGeneratingGrid: false,
   setIsGeneratingGrid: (v) => set({ isGeneratingGrid: v }),
+  gridStale: false,
+  setGridStale: (v) => set({ gridStale: v }),
 
   // ── Unsaved changes ──
   isModified: false,
@@ -290,8 +353,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   resetAdvancedParams: () => set({ advancedParams: getDefaultAdvancedParameters() }),
 
   // ── Building filters ──
-  includePublicBuildings: true,
-  setIncludePublicBuildings: (v) => set({ includePublicBuildings: v }),
   includePrivateBuildings: true,
   setIncludePrivateBuildings: (v) => set({ includePrivateBuildings: v }),
   excludedBuildingIds: new Set(),
@@ -303,6 +364,15 @@ export const useModelStore = create<ModelStore>((set) => ({
       return { excludedBuildingIds: next };
     }),
   clearExcludedBuildings: () => set({ excludedBuildingIds: new Set() }),
+  selectedBuildingIds: new Set(),
+  toggleBuildingSelection: (osmId) =>
+    set((s) => {
+      const next = new Set(s.selectedBuildingIds);
+      if (next.has(osmId)) next.delete(osmId);
+      else next.add(osmId);
+      return { selectedBuildingIds: next };
+    }),
+  clearBuildingSelection: () => set({ selectedBuildingIds: new Set() }),
 
   // ── Map interactions ──
   transformerDialogOpen: false,
@@ -337,6 +407,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setDraggingTech: (v) => set({ draggingTech: v }),
   techDialogOpen: false,
   setTechDialogOpen: (v) => set({ techDialogOpen: v }),
+  techDialogStep: "pick",
+  setTechDialogStep: (v) => set({ techDialogStep: v }),
   selectedTechForDialog: null,
   setSelectedTechForDialog: (v) => set({ selectedTechForDialog: v }),
   selectedBuildingForTech: null,
@@ -365,6 +437,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   availableBoundaryGeoJSON: undefined,
   setAvailableBoundaryGeoJSON: (v) => set({ availableBoundaryGeoJSON: v }),
 
+  selectedHeatLinkSource: null as string | null,
+  setSelectedHeatLinkSource: (v) => set({ selectedHeatLinkSource: v }),
   // ── Selected buildings for assign mode ──
   selectedBuildingsForAssign: [],
   setSelectedBuildingsForAssign: (ids) =>
