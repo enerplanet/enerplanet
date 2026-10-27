@@ -73,6 +73,11 @@ function TechnologyCard({
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{techDescription}</p>
+          <p className="text-[10px] text-muted-foreground/80 mt-1 truncate">
+            {[t(`technologies.types.${tech.type ?? tech.key}`, { defaultValue: tech.type ?? tech.key }), tech.manufacturer, tech.source]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         </div>
       </div>
 

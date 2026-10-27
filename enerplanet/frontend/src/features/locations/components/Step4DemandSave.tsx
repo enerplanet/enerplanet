@@ -12,7 +12,6 @@ interface Step4DemandSaveProps {
   setPeakLoad: (v: number) => void;
   title: string;
   area: number;
-  isPublic: boolean;
   tags: string[];
   properties: BuildingProperties;
   polygonCoordinates: [number, number][];
@@ -28,7 +27,7 @@ const formatArea = (areaValue: number): string => {
 
 const Step4DemandSave: FC<Step4DemandSaveProps> = ({
   demandEnergy, setDemandEnergy, peakLoad, setPeakLoad,
-  title, area, isPublic, tags, properties, polygonCoordinates,
+  title, area, tags, properties, polygonCoordinates,
   isLoading, onSave, editMode,
 }) => {
   const [estimating, setEstimating] = useState(false);
@@ -139,7 +138,6 @@ const Step4DemandSave: FC<Step4DemandSaveProps> = ({
           {properties.constructionYear && <Row label="Built" value={String(properties.constructionYear)} />}
           {properties.heatingType && <Row label="Heating" value={properties.heatingType.replace('_', ' ')} capitalize />}
           <Row label="Hot Water" value={properties.hotWaterElectric === true ? 'Electric' : properties.hotWaterElectric === false ? 'Non-electric' : 'Not specified'} />
-          <Row label="Visibility" value={isPublic ? 'Public' : 'Private'} />
           {tags.length > 0 && <Row label="Tags" value={tags.join(', ')} />}
           <div className="border-t border-border/50 pt-1 mt-1">
             <Row label="Demand" value={`${demandEnergy.toLocaleString()} kWh/yr`} bold />

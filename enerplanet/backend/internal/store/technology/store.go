@@ -13,15 +13,21 @@ import (
 
 // Technology represents an energy technology
 type Technology struct {
-	ID          uint                   `gorm:"primaryKey" json:"id"`
-	Key         string                 `gorm:"type:varchar(255);not null" json:"key"`
-	Alias       string                 `gorm:"type:varchar(255);not null" json:"alias"`
-	Icon        *string                `gorm:"type:varchar(100)" json:"icon"`
-	Description *string                `gorm:"type:text" json:"description"`
-	UserID      *string                `gorm:"type:varchar(255)" json:"user_id"`
-	CreatedAt   time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt   time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	Constraints []TechnologyConstraint `gorm:"foreignKey:TechnologyID" json:"constraints"`
+	ID  uint   `gorm:"primaryKey" json:"id"`
+	Key string `gorm:"type:varchar(255);not null" json:"key"`
+	// Type is the technology the product provides, e.g. pv_supply; Key identifies the product.
+	Type         string                 `gorm:"type:varchar(255);not null" json:"type"`
+	Manufacturer *string                `gorm:"type:varchar(255)" json:"manufacturer"`
+	Model        *string                `gorm:"type:varchar(255)" json:"model"`
+	DatasheetURL *string                `gorm:"type:text;column:datasheet_url" json:"datasheet_url"`
+	Source       *string                `gorm:"type:text" json:"source"`
+	Alias        string                 `gorm:"type:varchar(255);not null" json:"alias"`
+	Icon         *string                `gorm:"type:varchar(100)" json:"icon"`
+	Description  *string                `gorm:"type:text" json:"description"`
+	UserID       *string                `gorm:"type:varchar(255)" json:"user_id"`
+	CreatedAt    time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt    time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
+	Constraints  []TechnologyConstraint `gorm:"foreignKey:TechnologyID" json:"constraints"`
 }
 
 // TechnologyConstraint represents a configurable parameter for a technology
@@ -288,11 +294,16 @@ func (s *Store) ReseedFromDefaults() (int, error) {
 
 // technologyJSON represents the JSON structure for a technology
 type technologyJSON struct {
-	Key         string `json:"key"`
-	Alias       string `json:"alias"`
-	Icon        string `json:"icon"`
-	Description string `json:"description"`
-	Constraints []constraintJSON `json:"constraints"`
+	Key          string           `json:"key"`
+	Type         string           `json:"type"`
+	Manufacturer string           `json:"manufacturer"`
+	Model        string           `json:"model"`
+	DatasheetURL string           `json:"datasheet_url"`
+	Source       string           `json:"source"`
+	Alias        string           `json:"alias"`
+	Icon         string           `json:"icon"`
+	Description  string           `json:"description"`
+	Constraints  []constraintJSON `json:"constraints"`
 }
 
 // constraintJSON represents the JSON structure for a constraint
@@ -313,11 +324,16 @@ func (s *Store) createTechnologyFromJSON(techJSON technologyJSON) Technology {
 	icon := techJSON.Icon
 	desc := techJSON.Description
 	return Technology{
-		Key:         techJSON.Key,
-		Alias:       techJSON.Alias,
-		Icon:        &icon,
-		Description: &desc,
-		UserID:      nil, // System technology
+		Key:          techJSON.Key,
+		Type:         productType(techJSON.Type, techJSON.Key),
+		Manufacturer: optional(techJSON.Manufacturer),
+		Model:        optional(techJSON.Model),
+		DatasheetURL: optional(techJSON.DatasheetURL),
+		Source:       optional(techJSON.Source),
+		Alias:        techJSON.Alias,
+		Icon:         &icon,
+		Description:  &desc,
+		UserID:       nil, // System technology
 	}
 }
 
@@ -351,4 +367,20 @@ func (s *Store) createConstraintsFromJSON(techID uint, constraints []constraintJ
 	if err := s.db.Create(&dbConstraints).Error; err != nil {
 		return
 	}
+}
+
+// productType is the technology type of a product, its key when none is given.
+func productType(typ, key string) string {
+	if typ == "" {
+		return key
+	}
+	return typ
+}
+
+// optional returns nil for an empty string.
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

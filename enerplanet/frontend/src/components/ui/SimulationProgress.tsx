@@ -8,7 +8,7 @@ interface SimulationProgressProps {
 const STAGES = [
   { key: "queued", label: "Queued" },
   { key: "simulating", label: "Simulating" },
-  { key: "done", label: "Done" },
+  { key: "processing", label: "Processing results" },
 ] as const;
 
 const getActiveStage = (status: ModelStatus): number => {
@@ -20,7 +20,7 @@ const getActiveStage = (status: ModelStatus): number => {
     case "running":
       return 1;
     case "processing":
-      return 1;
+      return 2;
     default:
       return -1;
   }
@@ -56,7 +56,7 @@ export const SimulationProgress: React.FC<SimulationProgressProps> = ({ status }
                 }`}
               />
               <span
-                className={`text-[10px] ${
+                className={`whitespace-nowrap text-[10px] ${
                   isActive
                     ? "text-blue-600 dark:text-blue-400 font-medium"
                     : isCompleted

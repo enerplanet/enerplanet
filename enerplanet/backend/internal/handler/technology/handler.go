@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
+	"spatialhub_backend/internal/payload"
 	techstore "spatialhub_backend/internal/store/technology"
 )
 
@@ -73,13 +75,18 @@ func checkModifyPermission(c *gin.Context, tech *techstore.Technology, userID, a
 }
 
 type TechnologyDTO struct {
-	ID          uint             `json:"id,omitempty"`
-	Key         string           `json:"key"`
-	Alias       string           `json:"alias"`
-	Icon        string           `json:"icon"`
-	Description string           `json:"description"`
-	UserID      *string          `json:"user_id,omitempty"`
-	Constraints []ConstraintDTO  `json:"constraints"`
+	ID           uint            `json:"id,omitempty"`
+	Key          string          `json:"key"`
+	Type         string          `json:"type"`
+	Manufacturer *string         `json:"manufacturer,omitempty"`
+	Model        *string         `json:"model,omitempty"`
+	DatasheetURL *string         `json:"datasheet_url,omitempty"`
+	Source       *string         `json:"source,omitempty"`
+	Alias        string          `json:"alias"`
+	Icon         string          `json:"icon"`
+	Description  string          `json:"description"`
+	UserID       *string         `json:"user_id,omitempty"`
+	Constraints  []ConstraintDTO `json:"constraints"`
 }
 
 type ConstraintDTO struct {
@@ -97,11 +104,16 @@ type ConstraintDTO struct {
 
 func toTechnologyDTO(tech *techstore.Technology) TechnologyDTO {
 	dto := TechnologyDTO{
-		ID:          tech.ID,
-		Key:         tech.Key,
-		Alias:       tech.Alias,
-		UserID:      tech.UserID,
-		Constraints: make([]ConstraintDTO, len(tech.Constraints)),
+		ID:           tech.ID,
+		Key:          tech.Key,
+		Type:         tech.Type,
+		Manufacturer: tech.Manufacturer,
+		Model:        tech.Model,
+		DatasheetURL: tech.DatasheetURL,
+		Source:       tech.Source,
+		Alias:        tech.Alias,
+		UserID:       tech.UserID,
+		Constraints:  make([]ConstraintDTO, len(tech.Constraints)),
 	}
 
 	if tech.Icon != nil {
@@ -134,8 +146,12 @@ func toConstraintDTO(c *techstore.TechnologyConstraint) ConstraintDTO {
 		dto.Description = *c.Description
 	}
 
+	// JSON has no Infinity: an unbounded default such as cont_energy_cap_max
+	// goes out as "INF", the spelling Max and the simulation payload use.
 	if isValidFloat(c.DefaultValue) {
 		dto.DefaultValue = *c.DefaultValue
+	} else if c.DefaultValue != nil && math.IsInf(*c.DefaultValue, 1) {
+		dto.DefaultValue = "INF"
 	}
 
 	if c.MaxValue != nil {
@@ -159,11 +175,19 @@ func toConstraintDTO(c *techstore.TechnologyConstraint) ConstraintDTO {
 
 func fromTechnologyDTO(dto *TechnologyDTO, userID string) *techstore.Technology {
 	tech := &techstore.Technology{
-		Key:         dto.Key,
-		Alias:       dto.Alias,
-		Constraints: make([]techstore.TechnologyConstraint, len(dto.Constraints)),
+		Key:          dto.Key,
+		Type:         dto.Type,
+		Manufacturer: dto.Manufacturer,
+		Model:        dto.Model,
+		DatasheetURL: dto.DatasheetURL,
+		Source:       dto.Source,
+		Alias:        dto.Alias,
+		Constraints:  make([]techstore.TechnologyConstraint, len(dto.Constraints)),
 	}
 
+	if tech.Type == "" {
+		tech.Type = dto.Key
+	}
 	if dto.Icon != "" {
 		tech.Icon = &dto.Icon
 	}
@@ -201,6 +225,11 @@ func fromConstraintDTO(dto *ConstraintDTO) techstore.TechnologyConstraint {
 		case int:
 			val := float64(v)
 			c.DefaultValue = &val
+		case string:
+			if strings.EqualFold(v, "INF") {
+				inf := math.Inf(1)
+				c.DefaultValue = &inf
+			}
 		}
 	}
 
@@ -237,12 +266,18 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 
-	dtos := make([]TechnologyDTO, len(technologies))
-	for i, tech := range technologies {
-		dtos[i] = toTechnologyDTO(&tech)
-	}
+	httputil.SuccessResponse(c, supportedDTOs(technologies))
+}
 
-	httputil.SuccessResponse(c, dtos)
+// supportedDTOs returns the products of the technologies the simulation models, as DTOs.
+func supportedDTOs(technologies []techstore.Technology) []TechnologyDTO {
+	dtos := make([]TechnologyDTO, 0, len(technologies))
+	for _, tech := range technologies {
+		if payload.IsSupportedTechnology(tech.Type) {
+			dtos = append(dtos, toTechnologyDTO(&tech))
+		}
+	}
+	return dtos
 }
 
 func (h *Handler) GetByID(c *gin.Context) {
@@ -352,6 +387,18 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 	if dto.Description != "" {
 		tech.Description = &dto.Description
+	}
+	if dto.Manufacturer != nil {
+		tech.Manufacturer = dto.Manufacturer
+	}
+	if dto.Model != nil {
+		tech.Model = dto.Model
+	}
+	if dto.DatasheetURL != nil {
+		tech.DatasheetURL = dto.DatasheetURL
+	}
+	if dto.Source != nil {
+		tech.Source = dto.Source
 	}
 
 	if err := h.store.Update(tech); err != nil {

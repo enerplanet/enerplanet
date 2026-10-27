@@ -26,6 +26,13 @@ import {
 import { useDocumentTitle } from '@/hooks/use-document-title';
 import { fetchStructuredResults } from '@/features/model-results/api';
 import { StructuredModelResults } from '@/features/model-results/types';
+import {
+  formatCarrierEnergy,
+  formatCarrierPower,
+  isGenerationCarrier,
+  sameCarrier,
+} from '@/features/model-results/carrierUnits';
+import CarrierToggle from '@/features/model-results/components/CarrierToggle';
 import { ComparisonSummary } from './components/ComparisonSummary';
 import { ComparisonCharts } from './components/ComparisonCharts';
 import { ComparisonMapPanel } from './components/ComparisonMapPanel';
@@ -45,25 +52,10 @@ function normalizeDisplayValue(value: number, precision: number = 3): number {
   return Math.abs(normalized) < FLOATING_POINT_EPSILON ? 0 : normalized;
 }
 
-// Format energy value with appropriate units
-function formatEnergy(kwh: number): string {
-  if (kwh >= 1000000) {
-    return `${(kwh / 1000000).toFixed(2)} GWh`;
-  } else if (kwh >= 1000) {
-    return `${(kwh / 1000).toFixed(2)} MWh`;
-  }
-  return `${kwh.toFixed(1)} kWh`;
-}
-
-function formatPower(kw: number): string {
-  const abs = Math.abs(kw);
-  if (!Number.isFinite(kw)) return '0';
-  if (abs >= 1000) return `${(kw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(kw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(kw * 1_000_000).toFixed(1)} mW`;
-}
+// Energy/power values carry the active carrier's unit (kWh/kW vs m³) — the
+// unit table lives in `features/model-results/carrierUnits`.
+const formatEnergy = (value: number, carrier?: string): string => formatCarrierEnergy(value, carrier);
+const formatPower = (value: number, carrier?: string): string => formatCarrierPower(value, carrier);
 
 function formatPercent(value: number, digits: number = 1): string {
   const normalized = normalizeDisplayValue(value, digits + 1);
@@ -100,9 +92,9 @@ function calculateSummary(structured: StructuredModelResults) {
   const structuredLcoe = (structured.model_total_levelised_cost || []).find((row) => {
     return (row.carrier || '').toLowerCase() === 'power' && isMonetaryCost(row.costs);
   });
-  const lcoe = structuredLcoe
-    ? Math.abs(structuredLcoe.value)
-    : (renewableProduction > 0 ? totalCost / renewableProduction : 0);
+  // Stored levelised cost is EUR/MWh (see lcoeUnits). No stored value => 0,
+  // meaning "not reported": the UI hides it instead of inventing one.
+  const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
   const co2Savings = renewableProduction * 0.4;
 
@@ -125,7 +117,7 @@ function calculateSummary(structured: StructuredModelResults) {
     peak_demand_kw: peakDemandRaw,
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
-    lcoe_eur_kwh: lcoe,
+    lcoe_eur_mwh: lcoe,
     co2_savings_kg: co2Savings,
   };
 }
@@ -156,6 +148,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
 
   const [structuredResults1, setStructuredResults1] = useState<StructuredModelResults | null>(null);
   const [structuredResults2, setStructuredResults2] = useState<StructuredModelResults | null>(null);
+
+  // Energy carrier both sides are compared on. '' = backend default ("power").
+  // Availability is derived from the UNFILTERED responses only, so switching
+  // carrier never shrinks the toggle's own option list.
+  const [carrier, setCarrier] = useState('');
+  const [carriers1, setCarriers1] = useState<string[]>(['power']);
+  const [carriers2, setCarriers2] = useState<string[]>(['power']);
 
   const [loading1, setLoading1] = useState(false);
   const [loading2, setLoading2] = useState(false);
@@ -249,22 +248,26 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           throw new Error('Failed to fetch model');
         }
 
-        // Fetch structured results
-        const structured = await fetchStructuredResults(modelId);
+        // Fetch structured results for the active carrier
+        const structured = await fetchStructuredResults(modelId, carrier || undefined);
         if (structured) {
           setStructuredResults1(structured);
+          if (carrier === '' && structured.carrier_summaries) {
+            const keys = Object.keys(structured.carrier_summaries);
+            if (keys.length > 0) setCarriers1(keys);
+          }
         } else {
           setError1('No simulation results available');
         }
       } catch (error) {
-        console.error(`Failed to fetch model ${selectedModelId1}:`, error);
+        console.error('Failed to fetch model', selectedModelId1, error);
         setError1('Failed to load model data');
       } finally {
         setLoading1(false);
       }
     };
     fetchModel1Data();
-  }, [selectedModelId1]);
+  }, [selectedModelId1, carrier]);
 
   // Fetch model 2 details and structured results
   useEffect(() => {
@@ -289,22 +292,44 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           throw new Error('Failed to fetch model');
         }
 
-        // Fetch structured results
-        const structured = await fetchStructuredResults(modelId);
+        // Fetch structured results for the active carrier
+        const structured = await fetchStructuredResults(modelId, carrier || undefined);
         if (structured) {
           setStructuredResults2(structured);
+          if (carrier === '' && structured.carrier_summaries) {
+            const keys = Object.keys(structured.carrier_summaries);
+            if (keys.length > 0) setCarriers2(keys);
+          }
         } else {
           setError2('No simulation results available');
         }
       } catch (error) {
-        console.error(`Failed to fetch model ${selectedModelId2}:`, error);
+        console.error('Failed to fetch model', selectedModelId2, error);
         setError2('Failed to load model data');
       } finally {
         setLoading2(false);
       }
     };
     fetchModel2Data();
-  }, [selectedModelId2]);
+  }, [selectedModelId2, carrier]);
+
+  // A comparison on a carrier only ONE side has would compare real numbers
+  // against zeros, so offer the carriers both models carry (falling back to
+  // the union while only one model is selected).
+  const availableCarriers = useMemo(() => {
+    if (model1 && model2) {
+      const both = carriers1.filter((c) => carriers2.some((other) => sameCarrier(other, c)));
+      return both.length > 0 ? both : carriers1;
+    }
+    const union = [...carriers1, ...carriers2];
+    return union.filter((c, i) => union.findIndex((other) => sameCarrier(other, c)) === i);
+  }, [carriers1, carriers2, model1, model2]);
+
+  // Drop a carrier selection the loaded pair no longer supports.
+  useEffect(() => {
+    if (carrier === '') return;
+    if (!availableCarriers.some((c) => sameCarrier(c, carrier))) setCarrier('');
+  }, [availableCarriers, carrier]);
 
   // Calculate summaries from structured results
   const summary1 = useMemo(() => {
@@ -379,6 +404,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                 </div>
               </div>
             </div>
+
+            {/* Energy carrier switch — one toggle drives BOTH sides */}
+            <CarrierToggle
+              carriers={availableCarriers}
+              activeCarrier={carrier}
+              onSelect={setCarrier}
+            />
 
             {/* Action buttons */}
             {hasComparison && (
@@ -479,24 +511,34 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
         </div>
 
         {/* Summary Metrics Bar - Only show when we have comparison */}
-        {hasComparison && summary1 && summary2 && (
-          <div className="px-4 pb-4 sm:px-6">
-            <StatsStrip
-              className="md-fade-in"
-              items={[
-                { label: t('simulationComparison.metrics.demandBaseline'), value: formatEnergy(summary1.total_demand_kwh) },
-                { label: t('simulationComparison.metrics.renewableGen'), value: formatEnergy(summary1.renewable_production_kwh) },
-                { label: t('simulationComparison.metrics.gridImport'), value: formatEnergy(summary1.grid_import_kwh) },
+        {hasComparison && summary1 && summary2 && (() => {
+          // Generation / import / self-sufficiency only describe a generating
+          // carrier; a heat comparison has none of them.
+          const generation = isGenerationCarrier(carrier);
+          const generationItems = generation
+            ? [
+                { label: t('simulationComparison.metrics.renewableGen'), value: formatEnergy(summary1.renewable_production_kwh, carrier) },
+                { label: t('simulationComparison.metrics.gridImport'), value: formatEnergy(summary1.grid_import_kwh, carrier) },
                 { label: t('simulationComparison.metrics.selfSufficiency'), value: formatPercent(summary1.self_sufficiency_rate * 100) },
-                { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw) },
-                {
-                  label: t('simulationComparison.metrics.totalCost'),
-                  value: `€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
-                },
-              ]}
-            />
-          </div>
-        )}
+              ]
+            : [];
+          return (
+            <div className="px-4 pb-4 sm:px-6">
+              <StatsStrip
+                className="md-fade-in"
+                items={[
+                  { label: t('simulationComparison.metrics.demandBaseline'), value: formatEnergy(summary1.total_demand_kwh, carrier) },
+                  ...generationItems,
+                  { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw, carrier) },
+                  {
+                    label: t('simulationComparison.metrics.totalCost'),
+                    value: `€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                  },
+                ]}
+              />
+            </div>
+          );
+        })()}
       </header>
 
       {/* Main Content */}
@@ -577,6 +619,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <ComparisonSummary
                     data1={summary1}
                     data2={summary2}
+                    carrier={carrier}
                   />
                 </div>
 
@@ -585,6 +628,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <ComparisonCharts
                     results1={structuredResults1}
                     results2={structuredResults2}
+                    carrier={carrier}
                   />
                 </div>
               </div>

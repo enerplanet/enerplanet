@@ -15,3 +15,14 @@ func RequireExpert() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// RequireManagerOrExpert lets only users with the manager or expert access
+// level through; others get 403 and the handler does not run.
+func RequireManagerOrExpert() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !httputil.RequireManagerOrExpertAccess(nil, c) {
+			return
+		}
+		c.Next()
+	}
+}

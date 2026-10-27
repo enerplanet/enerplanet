@@ -1,0 +1,334 @@
+// Package tentacron is the backend's client for the TentaCron orchestrator
+// (enerplanet/TentaCron). A request names a configured target; TentaCron calls
+// that upstream and returns its response verbatim. The server-side ignis calls
+// (the resolve endpoint, run_buem) use it.
+//
+// Requests are async. Do submits (POST /v1/requests -> 202 + id) then
+// long-polls GET /v1/requests/{id}?wait=... until the job reaches a terminal
+// state. TentaCron owns transient retry (upstream 5xx, network); the caller
+// must not add its own.
+package tentacron
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	httpclient "platform.local/common/pkg/httpclient"
+)
+
+const (
+	// waitParam is the long-poll hold on each status GET. TentaCron wakes it
+	// within milliseconds of the job finishing and blocks the full duration
+	// only while the job is genuinely still running. Kept under TentaCron's own
+	// clamp (server.write_timeout - 5s, 60s when unset).
+	waitParam = "25s"
+	// perCallTimeout must exceed waitParam so the HTTP call does not abort
+	// before a held status response comes back.
+	perCallTimeout = 30 * time.Second
+	// opTimeout bounds a whole submit-and-await. A TentaCron-side retry storm
+	// (max_attempts with backoff to 60s) can outlast this; Do then returns a
+	// deadline error and the caller degrades (heat demand falls to the
+	// estimate). Acceptable: the interactive resolve path would not hold a
+	// user's spinner longer than this regardless.
+	opTimeout = 60 * time.Second
+)
+
+// pollBackstop is a floor on the gap between status GETs. The ?wait hold
+// normally paces the loop; this only bites if TentaCron returns a non-terminal
+// state early, stopping a hot spin. Var, not const, so tests can shrink it.
+var pollBackstop = time.Second
+
+// Client talks to TentaCron at one base URL with one API key.
+type Client struct {
+	http   *httpclient.Client
+	apiKey string
+}
+
+// New binds a Client to TentaCron at baseURL, authenticating with apiKey
+// (sent as X-API-Key; every /v1 endpoint rejects a missing key with 401).
+func New(baseURL, apiKey string) *Client {
+	return &Client{
+		http:   httpclient.New(baseURL, httpclient.WithTimeout(perCallTimeout)),
+		apiKey: apiKey,
+	}
+}
+
+// TargetError is a TentaCron job that ended in a non-success terminal state.
+// Code is the job-level error.code (e.g. "target_error" for an upstream 4xx,
+// "target_timeout", "max_attempts_exceeded" once transient retries are spent,
+// "unknown_target" / "invalid_payload" for a caller mistake). Message is
+// error.message; for an upstream HTTP failure TentaCron formats it as
+// "target <name>: HTTP <status>: <body excerpt>" (credentials redacted,
+// truncated to 512 bytes).
+type TargetError struct {
+	Code    string
+	Message string
+}
+
+func (e *TargetError) Error() string {
+	return fmt.Sprintf("tentacron request failed (%s): %s", e.Code, e.Message)
+}
+
+// upstreamMsgPrefix is TentaCron's "target <name>: HTTP <status>: " stamp on an
+// upstream HTTP failure message. upstreamStatusRe additionally captures the
+// status digits.
+var (
+	upstreamMsgPrefix = regexp.MustCompile(`^target \S+: HTTP \d+: `)
+	upstreamStatusRe  = regexp.MustCompile(`^target \S+: HTTP (\d{3}): `)
+)
+
+// UpstreamStatus is the HTTP status the upstream service returned, parsed from
+// the message stamp. ok is false when the message carries no status: a
+// timeout, a transport error, or a caller-side rejection (unknown_target,
+// invalid_payload) rather than an upstream HTTP response.
+func (e *TargetError) UpstreamStatus() (int, bool) {
+	m := upstreamStatusRe.FindStringSubmatch(e.Message)
+	if m == nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
+// UpstreamMessage is the upstream service's own error text: the prefix stripped
+// and a {"error":"..."} wrapper unwrapped. Falls back to the trimmed message
+// when it is not in that shape.
+func (e *TargetError) UpstreamMessage() string {
+	m := strings.TrimSpace(upstreamMsgPrefix.ReplaceAllString(e.Message, ""))
+	var w struct {
+		Error string `json:"error"`
+	}
+	if json.Unmarshal([]byte(m), &w) == nil && w.Error != "" {
+		return w.Error
+	}
+	return m
+}
+
+type submitRequest struct {
+	Target  string `json:"target"`
+	Payload any    `json:"payload"`
+}
+
+type submitResponse struct {
+	ID string `json:"id"`
+}
+
+type statusResponse struct {
+	State  string `json:"state"`
+	Result *struct {
+		TargetStatus   int             `json:"target_status"`
+		TargetResponse json.RawMessage `json:"target_response"`
+		// Href is set instead of TargetResponse when the upstream body exceeds
+		// TentaCron's inline cap (256 KiB - a full-year weather series, a large
+		// building batch). It points at a sibling endpoint holding the full body.
+		Href string `json:"href"`
+	} `json:"result"`
+	Error *struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// Do submits a request for the named target with payload, waits for the job to
+// reach a terminal state, and unmarshals the verbatim upstream response into
+// out (nil to discard it). A "failed" or "cancelled" outcome is returned as
+// *TargetError. The whole submit-and-await is bounded by opTimeout (60s).
+func (c *Client) Do(ctx context.Context, target string, payload, out any) error {
+	return c.doWithTimeout(ctx, target, payload, out, opTimeout)
+}
+
+// DoTimeout is Do with an explicit ceiling on the whole submit-and-await in
+// place of the opTimeout default, for a target whose upstream job legitimately
+// runs minutes (a BuEM batch). Pass a value above TentaCron's own job_timeout
+// for that target, so the backend does not abandon a job TentaCron would still
+// finish. Every other caller stays on Do / opTimeout.
+func (c *Client) DoTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	return c.doWithTimeout(ctx, target, payload, out, timeout)
+}
+
+func (c *Client) doWithTimeout(ctx context.Context, target string, payload, out any, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	id, err := c.submit(ctx, target, payload)
+	if err != nil {
+		return err
+	}
+	return c.await(ctx, target, id, out)
+}
+
+func (c *Client) submit(ctx context.Context, target string, payload any) (string, error) {
+	return c.submitWithKey(ctx, target, payload, "")
+}
+
+// submitWithKey submits a request for the named target, setting an
+// Idempotency-Key header when key is non-empty. TentaCron dedups natively: a
+// replay of the same key + identical target+payload returns the STORED job
+// (created=false, same id) instead of enqueuing a duplicate; a different
+// payload under the same key returns 409 idempotency_conflict.
+func (c *Client) submitWithKey(ctx context.Context, target string, payload any, key string) (string, error) {
+	hdr := c.authHeader()
+	if key != "" {
+		hdr.Set("Idempotency-Key", key)
+	}
+	resp, err := c.http.DoJSON(ctx, http.MethodPost, "/v1/requests",
+		submitRequest{Target: target, Payload: payload}, hdr)
+	if err != nil {
+		return "", fmt.Errorf("tentacron submit %q: %w", target, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		return "", fmt.Errorf("tentacron submit %q: unexpected status %d", target, resp.StatusCode)
+	}
+	var sr submitResponse
+	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
+		return "", fmt.Errorf("tentacron submit %q: decode response: %w", target, err)
+	}
+	if sr.ID == "" {
+		return "", fmt.Errorf("tentacron submit %q: empty request id", target)
+	}
+	return sr.ID, nil
+}
+
+func (c *Client) await(ctx context.Context, target, id string, out any) error {
+	st, err := c.awaitTerminal(ctx, target, id)
+	if err != nil {
+		return err
+	}
+	return c.decodeTargetResponse(ctx, target, st, out)
+}
+
+// awaitTerminal polls until the job reaches a terminal state and returns its
+// status. A failed/cancelled outcome is returned as *TargetError. A "completed"
+// status is returned as-is so the caller decides how to read the result body —
+// JSON (decodeTargetResponse) or raw bytes (resultBytes).
+func (c *Client) awaitTerminal(ctx context.Context, target, id string) (statusResponse, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return statusResponse{}, fmt.Errorf("tentacron await %s (%s): %w", id, target, err)
+		}
+		st, err := c.status(ctx, id)
+		if err != nil {
+			return statusResponse{}, err
+		}
+		switch st.State {
+		case "completed":
+			return st, nil
+		case "failed", "cancelled":
+			return statusResponse{}, targetErrorFrom(id, st)
+		}
+		// received / resolving / forwarding / awaiting_target: the ?wait GET
+		// normally already blocked for its full duration; the backstop only
+		// matters if it returned early.
+		select {
+		case <-ctx.Done():
+			return statusResponse{}, fmt.Errorf("tentacron await %s (%s): %w", id, target, ctx.Err())
+		case <-time.After(pollBackstop):
+		}
+	}
+}
+
+// resultBytes returns the completed job's verbatim upstream body as raw bytes,
+// regardless of whether TentaCron inlined it (result.target_response) or
+// spooled it to result.href.
+func (c *Client) resultBytes(ctx context.Context, target string, st statusResponse) ([]byte, error) {
+	if st.Result == nil {
+		return nil, fmt.Errorf("tentacron target %q: completed with no result", target)
+	}
+	body := []byte(st.Result.TargetResponse)
+	if len(body) == 0 {
+		if st.Result.Href == "" {
+			return nil, fmt.Errorf("tentacron target %q: completed with neither target_response nor href", target)
+		}
+		var err error
+		if body, err = c.fetchSpooledResult(ctx, st.Result.Href); err != nil {
+			return nil, fmt.Errorf("tentacron target %q: %w", target, err)
+		}
+	}
+	return body, nil
+}
+
+func (c *Client) status(ctx context.Context, id string) (statusResponse, error) {
+	resp, err := c.http.Do(ctx, http.MethodGet, "/v1/requests/"+url.PathEscape(id)+"?wait="+waitParam, nil, c.authHeader())
+	if err != nil {
+		return statusResponse{}, fmt.Errorf("tentacron poll %s: %w", id, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return statusResponse{}, fmt.Errorf("tentacron poll %s: unexpected status %d", id, resp.StatusCode)
+	}
+	var st statusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
+		return statusResponse{}, fmt.Errorf("tentacron poll %s: decode response: %w", id, err)
+	}
+	return st, nil
+}
+
+func (c *Client) authHeader() http.Header {
+	return http.Header{"X-Api-Key": {c.apiKey}}
+}
+
+// decodeTargetResponse unmarshals the completed job's verbatim upstream body
+// into out. TentaCron inlines the body as result.target_response when it is
+// small; a body over its inline cap (256 KiB) is spooled and result carries an
+// href instead, which this follows with one more authenticated GET so all
+// callers get the body the same way regardless of size.
+func (c *Client) decodeTargetResponse(ctx context.Context, target string, st statusResponse, out any) error {
+	if out == nil {
+		return nil
+	}
+	body, err := c.resultBytes(ctx, target, st)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, out); err != nil {
+		return fmt.Errorf("tentacron target %q: decode target_response: %w", target, err)
+	}
+	return nil
+}
+
+// fetchSpooledResult GETs a spilled-to-href result body (see decodeTargetResponse).
+func (c *Client) fetchSpooledResult(ctx context.Context, href string) ([]byte, error) {
+	resp, err := c.http.Do(ctx, http.MethodGet, href, nil, c.authHeader())
+	if err != nil {
+		return nil, fmt.Errorf("fetch spooled result %s: %w", href, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch spooled result %s: unexpected status %d", href, resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read spooled result %s: %w", href, err)
+	}
+	return b, nil
+}
+
+func targetErrorFrom(id string, st statusResponse) error {
+	if st.Error == nil {
+		return fmt.Errorf("tentacron request %s ended %q with no error detail", id, st.State)
+	}
+	return &TargetError{Code: st.Error.Code, Message: st.Error.Message}
+}
+
+// AsTargetError reports whether err is or wraps a *TargetError, returning it.
+func AsTargetError(err error) (*TargetError, bool) {
+	var te *TargetError
+	if errors.As(err, &te) {
+		return te, true
+	}
+	return nil, false
+}

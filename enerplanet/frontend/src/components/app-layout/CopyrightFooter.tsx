@@ -28,7 +28,7 @@ export const CopyrightFooter: React.FC<CopyrightFooterProps> = ({
     <div
       {...props}
       className={cn(
-        "fixed z-40 animate-in slide-in-from-bottom-4 fade-in duration-700",
+        "absolute z-40 animate-in slide-in-from-bottom-4 fade-in duration-700",
         POSITION_CLASSES[position],
         className
       )}

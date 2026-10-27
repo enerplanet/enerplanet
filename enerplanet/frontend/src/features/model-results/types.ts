@@ -15,12 +15,14 @@ interface SystemwideLevelisedCost {
   carrier: string;
   costs: string;
   techs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
 interface TotalLevelisedCost {
   carrier: string;
   costs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
@@ -104,6 +106,7 @@ interface ModelLevelisedCostRecord {
   carrier: string;
   costs: string;
   techs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
@@ -113,6 +116,7 @@ interface ModelTotalLevelisedCostRecord {
   model_id: number;
   carrier: string;
   costs: string;
+  /** EUR per MWh — the stored unit, NOT €/kWh. See lcoeUnits. */
   value: number;
 }
 
@@ -218,6 +222,38 @@ export interface ModelResults {
   pypsa?: PyPSAResults;
 }
 
+// ---------------------------------------------------------------------------
+// Energy carrier (heat support)
+// ---------------------------------------------------------------------------
+
+/**
+ * Energy carrier bucket label as it appears in result records. Follows
+ * Calliope conventions nominally — "power" is electricity, "heat" the
+ * secondary carrier. NOT a hard enum: the backend may deliver other labels
+ * ("thermal", etc.); treat values as opaque data and only map to display
+ * labels via CARRIER_LABELS.
+ */
+export type EnergyCarrier = string;
+
+/**
+ * Carrier label/i18n table lives in `./carrierUnits` (single source of truth
+ * for labels, units and generation-capability per carrier). Re-exported here
+ * because this module is the types entry point for the results feature.
+ */
+export { CARRIER_LABELS } from './carrierUnits';
+
+
+/** Summary block per carrier, served by the backend structured endpoint. */
+export interface CarrierSummary {
+  sum_production: number;
+  sum_consumption: number;
+  renewable_production: number;
+  grid_import: number;
+  peak_demand: number;
+  timestep_count: number;
+  prod_aggregates: Array<{ techs: string; total: number }>;
+  con_aggregates: Array<{ techs: string; total: number }>;
+}
 
 export interface StructuredModelResults {
   coordinates: CoordinateRecord[];
@@ -236,6 +272,12 @@ export interface StructuredModelResults {
   timestep_count: number;
   prod_aggregates?: Array<{ techs: string; total: number }>;
   con_aggregates?: Array<{ techs: string; total: number }>;
+  /**
+   * Per-carrier summaries (backend serves all carriers when no ?carrier= is
+   * sent). Keyed by the raw carrier label from the webservice output
+   * ("power", "heat", possibly "thermal") — do not assume the set.
+   */
+  carrier_summaries?: Record<string, CarrierSummary>;
   carrier_prod?: CarrierProdRecord[];
   carrier_con?: CarrierConRecord[];
   system_balance?: SystemBalanceRecord[];

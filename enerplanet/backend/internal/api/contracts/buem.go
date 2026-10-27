@@ -1,0 +1,47 @@
+package contracts
+
+import "encoding/json"
+
+// --- Per-building BuEM run ---
+
+// BuemBuildingRunRequest is the POST /api/v1/buem/building body. It carries one
+// building's geometry and its BuEM building block, the same two fields a model
+// run assembles per building, so a caller that has edited an envelope can run
+// exactly what it is showing.
+//
+// building is passed to buem-gateway verbatim and must be complete: this
+// endpoint resolves no U-values and applies no archetype defaults, unlike the
+// model path, which fills them from a TABULA variant when City2TABULA supplies
+// the envelope.
+type BuemBuildingRunRequest struct {
+	OSMID    string          `json:"osm_id" example:"240054621"`
+	Geometry json.RawMessage `json:"geometry" swaggertype:"object"`
+	Building json.RawMessage `json:"building" swaggertype:"object"`
+	// StartDate and EndDate are ignored: the run covers the full calendar year
+	// of the weather choice below.
+	StartDate  string `json:"start_date,omitempty" example:"2018-01-01T00:00:00Z"`
+	EndDate    string `json:"end_date,omitempty" example:"2018-12-31T23:00:00Z"`
+	Resolution int    `json:"resolution,omitempty" example:"60"`
+	// Solver is BuEM's solver block, forwarded as properties.buem.solver;
+	// omitted, BuEM uses its default solver.
+	Solver json.RawMessage `json:"solver,omitempty" swaggertype:"object"`
+	// Outputs selects the load profiles to compute (heating, cooling,
+	// electricity, hot_water, kitchen: none, summary or series), forwarded as
+	// properties.buem.outputs; omitted, BuEM computes its default set.
+	Outputs json.RawMessage `json:"outputs,omitempty" swaggertype:"object"`
+	// WeatherProvider is the model's weather archive, so the run uses the same
+	// series as the model run; omitted, the backend default applies.
+	WeatherProvider string `json:"weather_provider,omitempty" enums:"cosmo-rea6,era5-land,merra-2" example:"merra-2"`
+	// WeatherScenario and WeatherYear are the model's weather: a scenario, or
+	// a real year for validation runs. At most one; with neither, p50.
+	WeatherScenario string `json:"weather_scenario,omitempty" enums:"p10,p50,p90" example:"p50"`
+	WeatherYear     int    `json:"weather_year,omitempty" example:"2019"`
+}
+
+// BuemBuildingRunResponse carries BuEM's result for the building unchanged.
+// buem is the same block a model run merges onto a topology node, including
+// thermal_load_profile.timeseries, which the batch path omits.
+type BuemBuildingRunResponse struct {
+	OSMID string          `json:"osm_id"`
+	BUEM  json.RawMessage `json:"buem" swaggertype:"object"`
+}

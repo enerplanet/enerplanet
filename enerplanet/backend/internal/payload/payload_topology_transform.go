@@ -49,12 +49,14 @@ func indexTransformersByGrid(transformers []interface{}) map[int]map[string]inte
 	return result
 }
 
-// indexBuildingsByGrid indexes buildings by their grid_result_id
+// indexBuildingsByGrid indexes buildings by their grid_result_id, leaving out
+// buildings the user disabled.
 func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interface{} {
 	log := logger.ForComponent("payload")
 	result := make(map[int][]map[string]interface{})
 	skippedCount := 0
 	missingAreaCount := 0
+	disabledCount := 0
 
 	for i, bld := range buildings {
 		bMap, ok := bld.(map[string]interface{})
@@ -67,6 +69,11 @@ func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interfac
 		if !ok {
 			log.Warnf("Building at index %d: missing or invalid properties", i)
 			skippedCount++
+			continue
+		}
+		// The configurator marks a building the user disabled with activated: false.
+		if activated, ok := props["activated"].(bool); ok && !activated {
+			disabledCount++
 			continue
 		}
 
@@ -96,9 +103,9 @@ func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interfac
 		totalBuildings += len(buildings)
 	}
 
-	if skippedCount > 0 || missingAreaCount > 0 {
-		log.Infof("Indexed %d buildings across %d grids, %d standalone buildings, %d with missing area",
-			totalBuildings, len(result), skippedCount, missingAreaCount)
+	if skippedCount > 0 || missingAreaCount > 0 || disabledCount > 0 {
+		log.Infof("Indexed %d buildings across %d grids, %d standalone buildings, %d with missing area, %d disabled",
+			totalBuildings, len(result), skippedCount, missingAreaCount, disabledCount)
 	}
 	return result
 }
@@ -144,6 +151,8 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 	primaryClass := selectPrimaryBuildingFClass(fClasses)
 	selectedFClass := resolveSelectedBuildingFClass(bProps, fClasses)
 	area := getFloatValue(bProps["area"])
+
+	// --- Electricity demand ---
 	explicitDemand := getFloatValue(bProps["yearly_demand_kwh"])
 	if explicitDemand <= 0 {
 		explicitDemand = getFloatValue(bProps["demand_energy"])
@@ -189,6 +198,37 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 		primaryClass = selectedFClass
 	}
 	demandProfile := demandProfileForFClass(primaryClass)
+
+	// --- Heat demand ---
+	// heat_demand_estimated marks the frontend's display estimate, saved with
+	// the feature; only a value without it is user input.
+	var explicitHeatDemand float64
+	if estimated, _ := bProps["heat_demand_estimated"].(bool); !estimated {
+		explicitHeatDemand = getFloatValue(bProps["yearly_heat_demand_kwh"])
+		if explicitHeatDemand <= 0 {
+			explicitHeatDemand = getFloatValue(bProps["demand_heat"])
+		}
+	}
+
+	fClassHeatDemands, yearlyHeatDemandInt := calculateYearlyHeatDemandPerFClass(
+		fClasses,
+		area,
+		bProps["f_class_heat_demands"],
+		explicitHeatDemand,
+	)
+	if len(fClassHeatDemands) == 0 {
+		fClassHeatDemands, yearlyHeatDemandInt = calculateYearlyHeatDemandPerFClass(
+			fClasses,
+			area,
+			bProps["fclass_heat_details"],
+			explicitHeatDemand,
+		)
+	}
+	if yearlyHeatDemandInt <= 0 && area > 0 {
+		yearlyHeatDemandInt = int64(math.Round(area * specificHeatDemandForFClass(primaryClass)))
+	}
+	heatDemandProfile := heatProfileForFClass(primaryClass)
+
 	techs := extractAndTransformTechs(bProps)
 
 	// Convert geometry to point, with fallback to original geometry
@@ -203,19 +243,50 @@ func createBuildingFeature(building map[string]interface{}, poiID int, sessionID
 		"geometry": pointGeom,
 		"id":       fmt.Sprintf("%d", poiID),
 		"properties": map[string]interface{}{
-			"id":              fmt.Sprintf("%d", poiID),
-			"feature_type":    "BasePOI",
-			"type":            primaryClass,
-			"f_class":         primaryClass,
-			"f_class_demands": fClassDemands,
-			"osm_id":          osmID,
-			"area":            area,
-			"demand_profile":  demandProfile,
-			"demand_energy":   yearlyDemandInt,
-			"demand_heat":     0,
-			"created_at":      nil,
-			"modified_at":     nil,
-			"session_id":      fmt.Sprintf("%d", sessionID),
+			"id":                   fmt.Sprintf("%d", poiID),
+			"feature_type":         "BasePOI",
+			"type":                 primaryClass,
+			"f_class":              primaryClass,
+			"f_class_demands":      fClassDemands,
+			"f_class_heat_demands": fClassHeatDemands,
+			"osm_id":               osmID,
+			"area":                 area,
+			"demand_profile":       demandProfile,
+			"demand_energy":        yearlyDemandInt,
+			"demand_heat":          yearlyHeatDemandInt,
+			"demand_heat_profile":  heatDemandProfile,
+			// Set only once the building has been through the heat-demand
+			// resolve-and-save flow; nil otherwise. run_buem reads it
+			// to resolve a TABULA archetype for BuEM's required U-values.
+			"construction_year": bProps["construction_year"],
+			// Per-building refurbishment override ("existing"/"medium"/
+			// "advanced"); nil otherwise, in which case run_buem applies the
+			// model-level default.
+			"refurbishment_level": bProps["refurbishment_level"],
+			// Per-building cooking overrides ("electric"/"gas"/"none", bool);
+			// nil otherwise, in which case run_buem applies the model-level
+			// defaults.
+			"cooking_carrier": bProps["cooking_carrier"],
+			"include_dhw":     bProps["include_dhw"],
+			// Occupant count of a service building (bakery, office, ...);
+			// nil otherwise, BuEM then derives it from floor area.
+			"capacity": bProps["capacity"],
+			// Per-building glazing overrides; nil otherwise, in which case
+			// run_buem sends the TABULA archetype's own window and door
+			// values. A key missing from this list is dropped silently and
+			// the archetype value stands, so anything run_buem reads from a
+			// building's properties has to be copied here.
+			"window_to_wall_ratio": bProps["window_to_wall_ratio"],
+			"window_U":             bProps["window_U"],
+			"window_g_gl":          bProps["window_g_gl"],
+			"door_U":               bProps["door_U"],
+			"created_at":           nil,
+			"modified_at":          nil,
+			"session_id":           fmt.Sprintf("%d", sessionID),
+			// The BuEM building block of a building edited in the
+			// configurator; nil otherwise. run_buem sends it in place of one
+			// built from City2TABULA.
+			"buem": bProps["buem"],
 		},
 		"techs":                    techs,
 		"custom_demand_timeseries": nil,
@@ -373,12 +444,18 @@ func extractConstraintsFromMap(techObj map[string]interface{}) map[string]interf
 	return result
 }
 
-// transformTechObject transforms a single technology object
+// transformTechObject transforms a single technology object, keeping PV arrays.
 func transformTechObject(techObj map[string]interface{}) map[string]interface{} {
+	var result map[string]interface{}
 	if constraints, ok := techObj["constraints"].([]interface{}); ok {
-		return extractConstraintsFromArray(constraints)
+		result = extractConstraintsFromArray(constraints)
+	} else {
+		result = extractConstraintsFromMap(techObj)
 	}
-	return extractConstraintsFromMap(techObj)
+	if arrays, ok := techObj["arrays"].([]interface{}); ok {
+		result["arrays"] = arrays
+	}
+	return result
 }
 
 func extractAndTransformTechs(bProps map[string]interface{}) interface{} {
@@ -395,7 +472,7 @@ func extractAndTransformTechs(bProps map[string]interface{}) interface{} {
 	transformedTechs := make(map[string]interface{})
 	for techName, techData := range tMap {
 		techObj, ok := techData.(map[string]interface{})
-		if !ok {
+		if !ok || !IsSupportedTechnology(techName) {
 			continue
 		}
 		if newTechObj := transformTechObject(techObj); len(newTechObj) > 0 {
@@ -404,6 +481,7 @@ func extractAndTransformTechs(bProps map[string]interface{}) interface{} {
 	}
 
 	if len(transformedTechs) > 0 {
+		fillTechnologyDefaults(transformedTechs)
 		return transformedTechs
 	}
 	return nil

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Style, Fill, Stroke } from "ol/style";
 import { getCenter } from "ol/extent";
 import type { Map as OLMap } from "ol";
-import { pylovoService } from "@/features/configurator/services/pylovoService";
+import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
+import { assignSiteBuildings } from "@/features/configurator/utils/siteStations";
 import { useAuthStore } from "@/store/auth-store";
 import { useTranslation } from "@spatialhub/i18n";
 import { getMapProjectedCenterFromAnyCoordinates } from "@/features/configurator/utils/geometryUtils";
@@ -128,19 +129,28 @@ export const useBuildingAssignMode = ({
       }
       const targetGridId = parsedGridId;
 
-      setIsAssigning(true);
-      try {
-        const userId = user?.id ? String(user.id) : undefined;
-        let successCount = 0;
+      const userId = user?.id ? String(user.id) : undefined;
+      const assignOneByOne = async (): Promise<number> => {
+        let assigned = 0;
         for (const osmId of selectedBuildingsForAssign) {
           try {
             await pylovoService.assignBuilding(osmId, targetGridId, userId, existingModelId, draftId);
-            successCount++;
+            assigned++;
           } catch (e) {
             console.error(`Failed to assign building ${osmId}:`, e);
             notification.showError(`Failed to assign building ${osmId} to transformer`);
           }
         }
+        return assigned;
+      };
+
+      setIsAssigning(true);
+      try {
+        // A site takes the whole selection in one edit, so it succeeds or fails as a whole.
+        const site = siteScope(pylovoGridData);
+        let successCount = selectedBuildingsForAssign.length;
+        if (site) await assignSiteBuildings(site.site_id, pylovoGridData, selectedBuildingsForAssign, targetGridId);
+        else successCount = await assignOneByOne();
 
         if (successCount === selectedBuildingsForAssign.length) {
           notification.showSuccess(t("simulation.building.assignAllSuccess"));
@@ -158,9 +168,9 @@ export const useBuildingAssignMode = ({
         if (allPolygons.length > 0) {
           await refreshGrid();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to assign buildings:", error);
-        notification.showError(t("simulation.building.assignFailed"));
+        notification.showError(error?.response?.data?.error || t("simulation.building.assignFailed"));
       } finally {
         setIsAssigning(false);
         clearBuildingAssignMode();
@@ -176,6 +186,7 @@ export const useBuildingAssignMode = ({
       allPolygons.length,
       refreshGrid,
       clearBuildingAssignMode,
+      pylovoGridData,
     ]
   );
 

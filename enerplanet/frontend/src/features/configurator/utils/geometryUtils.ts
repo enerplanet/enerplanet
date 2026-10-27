@@ -1,5 +1,6 @@
 import { fromLonLat } from "ol/proj";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
+import buffer from "@turf/buffer";
 import { point, polygon } from "@turf/helpers";
 
 /**
@@ -58,12 +59,14 @@ export const getMapProjectedCenterFromAnyCoordinates = (
 
 /**
  * Returns true if the given [lon, lat] coordinate lies inside any of the
- * provided polygons (each polygon is an array of [lon, lat] vertices).
+ * provided polygons (each polygon is an array of [lon, lat] vertices), or
+ * within marginMetres of one.
  * Uses @turf/boolean-point-in-polygon which handles winding order correctly.
  */
 export const isCoordinateInsidePolygons = (
   lonLat: [number, number],
-  polygons: [number, number][][]
+  polygons: [number, number][][],
+  marginMetres = 0
 ): boolean => {
   if (polygons.length === 0) return false;
   const pt = point(lonLat);
@@ -78,8 +81,8 @@ export const isCoordinateInsidePolygons = (
       if (first[0] !== last[0] || first[1] !== last[1]) {
         ring.push([first[0], first[1]]);
       }
-      const polyGeom = polygon([ring]);
-      if (booleanPointInPolygon(pt, polyGeom)) return true;
+      const polyGeom = marginMetres > 0 ? buffer(polygon([ring]), marginMetres, { units: "meters" }) : polygon([ring]);
+      if (polyGeom && booleanPointInPolygon(pt, polyGeom)) return true;
     } catch {
       // Ignore malformed polygons
     }

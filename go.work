@@ -1,9 +1,9 @@
-go 1.25.0
+go 1.26.0
 
 use (
-	./platform-core/auth-service
-	./platform-core/webservice
 	./enerplanet/backend
 	./infrastructure/common
 	./infrastructure/platform
+	./platform-core/auth-service
+	./platform-core/webservice
 )

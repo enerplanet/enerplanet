@@ -1,55 +1,43 @@
 import React from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { RAIL_ICON_SLOT, RAIL_LABEL } from "@/components/app-layout/rail";
 
 interface SidebarButtonProps {
   icon: LucideIcon;
-  tooltip: string;
+  label: string;
   onClick: () => void;
   isActive?: boolean;
   dataTour?: string;
   className?: string;
 }
 
+/** One page in the left rail: its icon, and its name while the rail is expanded. */
 const SidebarButton: React.FC<SidebarButtonProps> = ({
   icon: Icon,
-  tooltip,
+  label,
   onClick,
   isActive = false,
   dataTour,
   className = "",
-}) => {
-  return (
-    <div className="relative group">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onClick}
-            data-tour={dataTour}
-            className={cn(
-              "cursor-pointer w-11 h-11 rounded-button flex items-center justify-center transition-all duration-normal relative",
-              "hover:bg-muted",
-              className
-            )}
-          >
-            <Icon
-              className={cn(
-                "cursor-pointer w-5 h-5",
-                isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-              )}
-            />
-            {isActive && (
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/5 h-0.5 rounded-full bg-foreground" />
-            )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  );
-};
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    data-tour={dataTour}
+    data-rail-expand
+    aria-current={isActive ? "page" : undefined}
+    className={cn(
+      "flex h-11 w-full cursor-pointer items-center rounded-lg transition-colors duration-normal",
+      isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      className
+    )}
+  >
+    <span className={RAIL_ICON_SLOT}>
+      <Icon className="h-5 w-5" aria-hidden="true" />
+    </span>
+    <span className={RAIL_LABEL}>{label}</span>
+  </button>
+);
 
 export default SidebarButton;

@@ -71,6 +71,7 @@ const feedbackKeys = {
 	details: () => [...feedbackKeys.all, 'detail'] as const,
 	detail: (id: number) => [...feedbackKeys.details(), id] as const,
 	user: () => [...feedbackKeys.all, 'user'] as const,
+	unseen: () => [...feedbackKeys.all, 'unseen'] as const,
 };
 
 // Hooks
@@ -142,6 +143,36 @@ export const useDeleteFeedback = () => {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: feedbackKeys.lists() });
+		},
+	});
+};
+
+/**
+ * Ids of the feedback no expert has opened yet (Admin)
+ */
+export const useUnseenFeedback = () => {
+	return useQuery({
+		queryKey: feedbackKeys.unseen(),
+		queryFn: async () => {
+			const { data } = await axios.get<{ data: { ids: number[] } }>('/feedback/unseen');
+			return new Set(data.data.ids);
+		},
+		staleTime: 30000,
+	});
+};
+
+/**
+ * Mark a feedback entry seen for every expert (Admin)
+ */
+export const useMarkFeedbackSeen = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (id: number) => {
+			await axios.post(`/feedback/${id}/seen`);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: feedbackKeys.unseen() });
 		},
 	});
 };

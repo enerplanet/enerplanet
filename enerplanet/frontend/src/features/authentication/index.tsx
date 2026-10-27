@@ -20,7 +20,7 @@ const SSO_QUERY_PARAMETER = "sso";
 // The RENvolveIT toolbox links here; the callback lands the user on return_to.
 function ssoLoginUrl(): string {
 	const base = config.api.baseUrl || "/api";
-	let returnTo = "/app/map";
+	let returnTo = "/app/model-dashboard";
 	try {
 		if (auth.sso.redirectUri) {
 			returnTo = new URL(auth.sso.redirectUri).pathname || returnTo;

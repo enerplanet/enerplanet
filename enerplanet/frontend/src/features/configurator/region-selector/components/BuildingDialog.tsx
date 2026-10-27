@@ -16,16 +16,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@spatialhub/ui";
-import { Building, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building, Eye, EyeOff, Flame, Loader2, Pencil, Plus, Search, Trash2, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
+import { useTranslation } from "@spatialhub/i18n";
 import {
   ALL_F_CLASSES,
   formatFClassLabel,
   isResidentialFClass,
   normalizeFClass,
 } from "@/features/configurator/utils/fClassUtils";
+import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import technologyService from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
 
 interface TechData {
@@ -48,6 +49,8 @@ interface BuildingDialogProps {
     fClasses?: string[];
     selectedFClass?: string;
     yearlyDemandKwh: number;
+    yearlyHeatDemandKwh?: number;
+    heatDemandEstimated?: boolean;
     peakLoadKw: number;
     area: number;
     gridResultId?: number;
@@ -72,6 +75,7 @@ interface BuildingDialogProps {
   } | null;
   onClose: () => void;
   onFClassDemandChange: (fClass: string, demand: number) => void;
+  onHeatDemandChange?: (heatKwh: number) => void;
   onSelectedFClassChange?: (fClass: string) => void;
   onOpenChange: (open: boolean) => void;
   onEditTech?: (techKey: string) => void;
@@ -89,11 +93,6 @@ interface BuildingDialogProps {
     hotWaterElectric?: boolean
   ) => Promise<void>;
   onAddTech?: (tech: Technology) => void;
-  onApplyTemplate?: (techs: Record<string, TechData>) => void;
-  isMultiEdit?: boolean;
-  onToggleMultiEdit?: (value: boolean) => void;
-  multiEditCount?: number;
-  onApplyTechToAll?: (tech: Technology) => void;
   isExcluded?: boolean;
   onToggleExclude?: (buildingId: number) => void;
   onSave?: () => void;
@@ -134,6 +133,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   selectedBuilding,
   onClose,
   onFClassDemandChange,
+  onHeatDemandChange,
   onSelectedFClassChange,
   onOpenChange,
   onEditTech,
@@ -146,6 +146,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   isExcluded = false,
   onToggleExclude,
 }) => {
+  const { t } = useTranslation();
   const techs = selectedBuilding?.techs || {};
   const techEntries = Object.entries(techs);
   const details = selectedBuilding?.fClassDetails ?? [];
@@ -327,21 +328,31 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   const techPickerRef = useRef<HTMLDivElement>(null);
   const [showTechPicker, setShowTechPicker] = useState(false);
   const [availableTechs, setAvailableTechs] = useState<Technology[]>([]);
+  const [availableHeatTechs, setAvailableHeatTechs] = useState<Technology[]>([]);
   const [isLoadingTechs, setIsLoadingTechs] = useState(false);
+  const [pickerCarrier, setPickerCarrier] = useState<"electricity" | "heat">("electricity");
+  const [pickerSearch, setPickerSearch] = useState("");
   const closePicker = useCallback(() => setShowTechPicker(false), []);
   useClickOutside(techPickerRef, showTechPicker, closePicker);
 
   const fetchTechs = useCallback(async () => {
-    if (availableTechs.length > 0) return;
+    if (availableTechs.length > 0 && availableHeatTechs.length > 0) return;
     setIsLoadingTechs(true);
     try {
-      setAvailableTechs(await technologyService.getAll());
+      const catalogue = await loadCatalogue();
+      const typeCards = (types: string[]) =>
+        types.flatMap((type) => {
+          const product = defaultProduct(catalogue, type);
+          return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
+        });
+      setAvailableTechs(typeCards(ELECTRICITY_TYPES));
+      setAvailableHeatTechs(typeCards(HEAT_TYPES));
     } catch (err) {
       console.error("Failed to load technologies:", err);
     } finally {
       setIsLoadingTechs(false);
     }
-  }, [availableTechs.length]);
+  }, [availableTechs.length, availableHeatTechs.length, t]);
 
   // Country-specific metadata
   const isNL = selectedBuilding?.countryCode === "NL";
@@ -353,6 +364,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   const yearlyDemand =
     activeFClassDetail?.yearlyDemandKwh ?? selectedBuilding?.yearlyDemandKwh ?? 0;
   const peakLoad = activeFClassDetail?.peakLoadKw ?? selectedBuilding?.peakLoadKw ?? 0;
+  const yearlyHeatDemand = selectedBuilding?.yearlyHeatDemandKwh ?? 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -360,11 +372,10 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Building className="w-5 h-5" />
-            Building Details
+            {t("regionSelector.buildingDialog.title")}
           </AlertDialogTitle>
           <AlertDialogDescription className="sr-only">
-            View and edit details for the selected building, including type, energy demand, and
-            technologies.
+            {t("regionSelector.buildingDialog.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -378,7 +389,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
               </span>
               {selectedBuilding.fClass && (
                 <span>
-                  <span className="text-muted-foreground">Class:</span>{" "}
+                  <span className="text-muted-foreground">{t("regionSelector.buildingDialog.classLabel")}</span>{" "}
                   <span className="font-medium capitalize">{selectedBuilding.fClass}</span>
                 </span>
               )}
@@ -388,17 +399,17 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
             <div className="pt-2 border-t space-y-3">
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
-                  Building Type (fClass)
+                  {t("regionSelector.buildingDialog.buildingType")}
                 </label>
                 <Select value={selectedFClass} onValueChange={handleFClassChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder={t("regionSelector.buildingDialog.selectType")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
                     {detectedClasses.length > 0 && (
                       <>
                         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          Detected
+                          {t("regionSelector.buildingDialog.detected")}
                         </div>
                         {detectedClasses.map((fc) => (
                           <SelectItem key={fc} value={fc}>
@@ -407,7 +418,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                         ))}
                         <div className="my-1 h-px bg-border" />
                         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                          All Types
+                          {t("regionSelector.buildingDialog.allTypes")}
                         </div>
                       </>
                     )}
@@ -420,10 +431,10 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 </Select>
               </div>
 
-              {/* Yearly Demand */}
+              {/* Yearly Electricity Demand */}
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
-                  Yearly Demand (kWh)
+                  {t("results.buildingDetail.yearlyElectricityDemand")} (kWh)
                 </label>
                 <input
                   type="number"
@@ -439,22 +450,43 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 />
               </div>
 
+              {/* Yearly Heat Demand (editable, present by default) */}
+              <div>
+                <label className="block text-sm text-muted-foreground mb-1">
+                  {t("results.buildingDetail.yearlyHeatDemand")} (kWh)
+                  {selectedBuilding.heatDemandEstimated && (
+                    <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                      {t("results.buildingDetail.estimated")}
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  value={Math.round(yearlyHeatDemand)}
+                  onChange={(e) => {
+                    onHeatDemandChange?.(Number(e.target.value));
+                    onSave?.();
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                />
+              </div>
+
               {/* Peak Load */}
               {hasFiniteNumber(peakLoad) && peakLoad > 0 && (
-                <ReadOnlyRow label="Peak Load" value={peakLoad.toFixed(2)} unit="kW" />
+                <ReadOnlyRow label={t("gridStats.peakLoad")} value={peakLoad.toFixed(2)} unit="kW" />
               )}
             </div>
 
             {/* Building Geometry */}
             <div className="pt-2 border-t space-y-2">
               <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Building Geometry
+                {t("regionSelector.buildingDialog.geometry")}
               </label>
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {/* Editable: Floor Area */}
                 <div>
-                  <span className="block text-xs text-muted-foreground mb-0.5">Floor Area</span>
+                  <span className="block text-xs text-muted-foreground mb-0.5">{t("regionSelector.buildingDialog.floorArea")}</span>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
@@ -469,7 +501,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
 
                 {/* Editable: Floors */}
                 <div>
-                  <span className="block text-xs text-muted-foreground mb-0.5">Floors</span>
+                  <span className="block text-xs text-muted-foreground mb-0.5">{t("regionSelector.buildingDialog.floors")}</span>
                   <input
                     type="number"
                     value={editedFloors}
@@ -486,7 +518,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 {usesHouseholdSize && (
                   <div>
                     <span className="block text-xs text-muted-foreground mb-0.5">
-                      Household Size
+                      {t("regionSelector.buildingDialog.householdSize")}
                     </span>
                     <div className="flex items-center gap-1">
                       <input
@@ -496,7 +528,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                         min={1}
                         className="w-full px-2 py-1 border border-border rounded bg-background text-sm tabular-nums"
                       />
-                      <span className="text-xs text-muted-foreground shrink-0">ppl</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{t("regionSelector.buildingDialog.peopleShort")}</span>
                     </div>
                   </div>
                 )}
@@ -504,7 +536,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 {/* Read-only: Construction Year */}
                 {hasFiniteNumber(selectedBuilding.constructionYear) && (
                   <div>
-                    <span className="block text-xs text-muted-foreground mb-0.5">Constr. Year</span>
+                    <span className="block text-xs text-muted-foreground mb-0.5">{t("regionSelector.buildingDialog.constructionYearShort")}</span>
                     <div className="px-2 py-1 border border-border rounded bg-muted/50 text-sm tabular-nums">
                       {Math.round(selectedBuilding.constructionYear)}
                     </div>
@@ -518,25 +550,29 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 hasFiniteNumber(selectedBuilding.heightGround)) && (
                 <div className="mt-1 space-y-1 rounded-md border border-border bg-muted/30 px-3 py-2">
                   <span className="text-xs font-medium text-muted-foreground">
-                    {isNL ? "3D BAG Heights" : isCZ ? "CUZK Heights" : "Building Heights"}
+                    {isNL
+                      ? t("regionSelector.buildingDialog.sourceHeights", { source: "3D BAG" })
+                      : isCZ
+                        ? t("regionSelector.buildingDialog.sourceHeights", { source: "CUZK" })
+                        : t("regionSelector.buildingDialog.buildingHeights")}
                   </span>
                   {hasFiniteNumber(selectedBuilding.heightMedian) && (
                     <ReadOnlyRow
-                      label="Height Median"
+                      label={t("regionSelector.buildingDialog.heightMedian")}
                       value={selectedBuilding.heightMedian.toFixed(1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightMax) && (
                     <ReadOnlyRow
-                      label="Height Max"
+                      label={t("regionSelector.buildingDialog.heightMax")}
                       value={selectedBuilding.heightMax.toFixed(1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightGround) && (
                     <ReadOnlyRow
-                      label="Height Ground"
+                      label={t("regionSelector.buildingDialog.heightGround")}
                       value={selectedBuilding.heightGround.toFixed(1)}
                       unit="m"
                     />
@@ -546,7 +582,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
 
               {/* Energy label selector */}
               <div className="mt-1 space-y-1">
-                <span className="block text-xs text-muted-foreground mb-0.5">Energy Label</span>
+                <span className="block text-xs text-muted-foreground mb-0.5">{t("regionSelector.buildingDialog.energyLabel")}</span>
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1 flex-wrap p-0.5">
                     {ENERGY_LABELS.map((label) => (
@@ -569,13 +605,13 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                   {selectedBuilding.energyLabel &&
                     selectedBuilding.energyLabel !== editedEnergyLabel && (
                       <span className="text-[10px] text-muted-foreground">
-                        (detected: {selectedBuilding.energyLabel})
+                        {t("regionSelector.buildingDialog.detectedLabel", { label: selectedBuilding.energyLabel })}
                       </span>
                     )}
                 </div>
                 {hasFiniteNumber(selectedBuilding.energyIndex) && (
                   <div className="text-xs text-muted-foreground">
-                    Energy Index:{" "}
+                    {t("regionSelector.buildingDialog.energyIndex")}{" "}
                     <span className="font-medium">{selectedBuilding.energyIndex.toFixed(2)}</span>
                   </div>
                 )}
@@ -584,13 +620,13 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
               {/* Electric Hot Water */}
               <div className="mt-1">
                 <span className="block text-xs text-muted-foreground mb-0.5">
-                  Electric Hot Water
+                  {t("regionSelector.buildingDialog.electricHotWater")}
                 </span>
                 <div className="flex gap-1">
                   {(
                     [
-                      ["Yes", true],
-                      ["No", false],
+                      ["common.yes", true],
+                      ["common.no", false],
                     ] as const
                   ).map(([label, val]) => (
                     <button
@@ -603,7 +639,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                           : "bg-muted/50 text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      {label}
+                      {t(label)}
                     </button>
                   ))}
                 </div>
@@ -622,15 +658,18 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {isRecalculating ? (
                       <>
                         <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                        Recalculating...
+                        {t("regionSelector.buildingDialog.recalculating")}
                       </>
                     ) : (
-                      "Recalculate Demand"
+                      t("regionSelector.buildingDialog.recalculateDemand")
                     )}
                   </Button>
                   <span className="text-[10px] text-muted-foreground">
-                    {editedFloors} fl × {editedArea} m² ={" "}
-                    {(editedFloors * editedArea).toLocaleString()} m²
+                    {t("regionSelector.buildingDialog.totalFloorArea", {
+                      floors: editedFloors,
+                      area: editedArea,
+                      total: (editedFloors * editedArea).toLocaleString(),
+                    })}
                   </span>
                 </div>
               )}
@@ -640,7 +679,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
             <div className="pt-2 border-t space-y-2 relative">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-medium text-foreground">
-                  Technologies ({techEntries.length})
+                  {t("technologies.title")} ({techEntries.length})
                 </label>
                 {onAddTech && (
                   <button
@@ -650,16 +689,16 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       void fetchTechs();
                     }}
                     className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                    title="Add technology"
+                    title={t("technologies.addTechnology")}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Add
+                    {t("common.add")}
                   </button>
                 )}
               </div>
               {techEntries.length === 0 ? (
                 <div className="text-xs text-muted-foreground italic py-2">
-                  No technologies added yet.
+                  {t("regionSelector.buildingDialog.noTechnologiesAdded")}
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -679,7 +718,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                               {techData.alias}
                             </div>
                             <div className="text-[10px] text-muted-foreground leading-tight">
-                              {techData.constraints.length} parameters
+                              {t("regionSelector.buildingDialog.parameterCount", { count: techData.constraints.length })}
                             </div>
                           </div>
                         </div>
@@ -688,7 +727,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                             <button
                               onClick={() => onEditTech(techKey)}
                               className="p-1 hover:bg-muted rounded transition-colors"
-                              title="Edit parameters"
+                              title={t("regionSelector.buildingDialog.editParameters")}
                             >
                               <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
                             </button>
@@ -697,7 +736,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                             <button
                               onClick={() => onRemoveTech(techKey)}
                               className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
-                              title="Remove technology"
+                              title={t("regionSelector.buildingDialog.removeTechnology")}
                             >
                               <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-600" />
                             </button>
@@ -716,19 +755,66 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                   className="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-lg border border-border bg-background shadow-xl"
                 >
                   <div className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground">
-                    Available Technologies
+                    {t("regionSelector.buildingDialog.availableTechnologies")}
                   </div>
                   <div className="max-h-48 overflow-y-auto">
+                    {/* Search */}
+                    <div className="sticky top-0 z-10 bg-background px-2 pt-1 pb-1 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                        <input
+                          type="text"
+                          value={pickerSearch}
+                          onChange={(e) => setPickerSearch(e.target.value)}
+                          placeholder={t("technologies.searchPlaceholder")}
+                          className="w-full rounded border border-border bg-background pl-6 pr-2 py-1 text-[11px] text-foreground outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                    {/* Carrier toggle: electricity / heat */}
+                    <div className="sticky top-0 z-10 flex items-center gap-0.5 bg-background px-2 pt-1 pb-1 border-b border-border">
+                      {([
+                        ["electricity", "technologies.carriers.electricity", Zap],
+                        ["heat", "technologies.carriers.heat", Flame],
+                      ] as const).map(([view, label, Icon]) => (
+                        <button
+                          key={view}
+                          type="button"
+                          onClick={() => setPickerCarrier(view)}
+                          className={`flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                            pickerCarrier === view
+                              ? "bg-muted text-foreground"
+                              : "text-muted-foreground hover:bg-muted/50"
+                          }`}
+                        >
+                          <Icon className={`h-3 w-3 ${view === "heat" ? "text-orange-500" : "text-primary"}`} />
+                          {t(label)}
+                        </button>
+                      ))}
+                    </div>
                     {isLoadingTechs ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
-                    ) : availableTechs.length === 0 ? (
+                    ) : (pickerCarrier === "heat" ? availableHeatTechs : availableTechs).length === 0 ? (
                       <div className="px-3 py-3 text-sm text-muted-foreground">
-                        No technologies available.
+                        {pickerCarrier === "heat" ? t("technologies.noHeatTechnologies") : t("technologies.noTechnologies")}
                       </div>
                     ) : (
-                      availableTechs.map((tech) => {
+                      (() => {
+                        const pool = pickerCarrier === "heat" ? availableHeatTechs : availableTechs;
+                        const q = pickerSearch.trim().toLowerCase();
+                        const filtered = q === "" ? pool : pool.filter((tech) =>
+                          tech.alias.toLowerCase().includes(q) || tech.key.toLowerCase().includes(q)
+                        );
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="px-3 py-3 text-sm text-muted-foreground">
+                              {t("technologies.noSearchResults")}
+                            </div>
+                          );
+                        }
+                        return filtered.map((tech) => {
                         const alreadyAdded = techs[tech.key] !== undefined;
                         return (
                           <button
@@ -746,11 +832,12 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                             </span>
                             <span className="flex-1 truncate">{tech.alias}</span>
                             {alreadyAdded && (
-                              <span className="text-[10px] text-muted-foreground">Added</span>
+                              <span className="text-[10px] text-muted-foreground">{t("regionSelector.buildingDialog.added")}</span>
                             )}
                           </button>
                         );
-                      })
+                        })
+                      })()
                     )}
                   </div>
                 </div>
@@ -762,7 +849,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
               <div className="pt-2 border-t space-y-2">
                 {isNL && selectedBuilding.labelDate && (
                   <div className="text-xs text-muted-foreground">
-                    <span className="font-medium">Label Date:</span> {selectedBuilding.labelDate}
+                    <span className="font-medium">{t("regionSelector.buildingDialog.labelDate")}</span> {selectedBuilding.labelDate}
                   </div>
                 )}
                 {isNL &&
@@ -770,22 +857,22 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     hasFiniteNumber(selectedBuilding.cbsHouseholds) ||
                     hasFiniteNumber(selectedBuilding.cbsAvgHouseholdSize)) && (
                     <div className="space-y-1 text-xs">
-                      <div className="font-medium text-muted-foreground">CBS / Postcode Data</div>
+                      <div className="font-medium text-muted-foreground">{t("regionSelector.buildingDialog.cbsPostcodeData")}</div>
                       {hasFiniteNumber(selectedBuilding.cbsPopulation) && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Population</span>
+                          <span className="text-muted-foreground">{t("regionSelector.buildingDialog.population")}</span>
                           <span>{selectedBuilding.cbsPopulation.toLocaleString()}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsHouseholds) && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Households</span>
+                          <span className="text-muted-foreground">{t("regionSelector.buildingDialog.households")}</span>
                           <span>{selectedBuilding.cbsHouseholds.toLocaleString()}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsAvgHouseholdSize) && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Avg household size</span>
+                          <span className="text-muted-foreground">{t("regionSelector.buildingDialog.avgHouseholdSize")}</span>
                           <span>{selectedBuilding.cbsAvgHouseholdSize.toFixed(2)}</span>
                         </div>
                       )}
@@ -797,7 +884,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       hasFiniteNumber(selectedBuilding.heightMax) ||
                       hasFiniteNumber(selectedBuilding.heightGround)) && (
                       <p>
-                        Heights from{" "}
+                        {t("regionSelector.buildingDialog.heightsFrom")}{" "}
                         <a
                           href="https://3dbag.nl"
                           target="_blank"
@@ -806,13 +893,13 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                         >
                           3D BAG
                         </a>{" "}
-                        by TU Delft 3D Geoinformation · CC BY 4.0
+                        {t("regionSelector.buildingDialog.attributionBy", { name: "TU Delft 3D Geoinformation" })} · CC BY 4.0
                       </p>
                     )}
                     {(selectedBuilding.energyLabel ||
                       hasFiniteNumber(selectedBuilding.energyIndex)) && (
                       <p>
-                        Energy labels from{" "}
+                        {t("regionSelector.buildingDialog.energyLabelsFrom")}{" "}
                         <a
                           href="https://www.ep-online.nl"
                           target="_blank"
@@ -827,7 +914,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {(hasFiniteNumber(selectedBuilding.cbsPopulation) ||
                       hasFiniteNumber(selectedBuilding.cbsHouseholds)) && (
                       <p>
-                        Demographics from{" "}
+                        {t("regionSelector.buildingDialog.demographicsFrom")}{" "}
                         <a
                           href="https://opendata.cbs.nl"
                           target="_blank"
@@ -846,7 +933,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     hasFiniteNumber(selectedBuilding.heightMax) ||
                     hasFiniteNumber(selectedBuilding.heightGround)) && (
                     <p className="text-[10px] text-muted-foreground">
-                      Heights from{" "}
+                      {t("regionSelector.buildingDialog.heightsFrom")}{" "}
                       <a
                         href="https://atom.cuzk.gov.cz"
                         target="_blank"
@@ -855,13 +942,13 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       >
                         ČÚZK LiDAR
                       </a>{" "}
-                      · Czech Office for Surveying, Mapping and Cadastre
+                      · {t("regionSelector.buildingDialog.cuzkName")}
                     </p>
                   )}
                 {usesEubucco && (
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <span>
-                      Building data enriched with{" "}
+                      {t("regionSelector.buildingDialog.enrichedWith")}{" "}
                       <a
                         href="https://eubucco.com"
                         target="_blank"
@@ -881,7 +968,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       >
                         doi:10.1038/s41597-023-02040-2
                       </a>
-                      {" · "}Licensed under{" "}
+                      {" · "}{t("regionSelector.buildingDialog.licensedUnder")}{" "}
                       <a
                         href="https://creativecommons.org/licenses/by/4.0/"
                         target="_blank"
@@ -912,26 +999,26 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {isExcluded ? (
                       <>
                         <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        Include
+                        {t("regionSelector.buildingDialog.include")}
                       </>
                     ) : (
                       <>
                         <EyeOff className="w-3.5 h-3.5 mr-1.5" />
-                        Exclude
+                        {t("regionSelector.buildingDialog.exclude")}
                       </>
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {isExcluded
-                    ? "Include this custom building in the grid (requires regeneration)"
-                    : "Exclude this custom building from the grid (requires regeneration)"}
+                    ? t("regionSelector.buildingDialog.includeTooltip")
+                    : t("regionSelector.buildingDialog.excludeTooltip")}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
           <Button variant="outline" size="sm" onClick={onClose}>
-            Close
+            {t("common.close")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

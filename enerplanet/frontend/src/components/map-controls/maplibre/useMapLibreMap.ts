@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import type { Map as OlMap } from 'ol';
@@ -20,6 +20,8 @@ maplibregl.setWorkerUrl(workerUrl);
 export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolean = false) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  // The map is created a frame after mount; effects that need it re-run on this.
+  const [mapReady, setMapReady] = useState(false);
   const isDrawingRef = useRef(isDrawing);
 
   useEffect(() => { isDrawingRef.current = isDrawing; }, [isDrawing]);
@@ -133,6 +135,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       ];
 
       mapRef.current = map;
+      setMapReady(true);
 
       const createdMap = map;
 
@@ -323,6 +326,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
         mapRef.current.remove();
         mapRef.current = null;
       }
+      setMapReady(false);
     };
   }, [olMap, visible]);
 
@@ -387,5 +391,5 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
     };
   }, [visible, isDrawing]);
 
-  return { containerRef, mapRef };
+  return { containerRef, mapRef, mapReady };
 }

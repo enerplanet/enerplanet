@@ -14,7 +14,7 @@
       "type": "shell",
       "problemMatcher": [],
       "label": "Backend",
-      "command": "cd enerplanet/backend; go run cmd/main.go",
+      "command": "cd enerplanet/backend; COATI_BIN=\"$OLDPWD/submodules/Coati/.venv/bin/coati\" go run cmd/main.go",
       "runOptions": {
         "runOn": "folderOpen"
       }

@@ -11,6 +11,8 @@ import (
 
 	commonModels "platform.local/common/pkg/models"
 	"platform.local/platform/logger"
+
+	resultcapabilities "spatialhub_backend/internal/result/capabilities"
 )
 
 type ResultService struct {
@@ -145,7 +147,8 @@ func (s *ResultService) ProcessModelResult(ctx context.Context, modelID uint, us
 	resultsJSON, _ = summary.ToJSON()
 
 	modelUpdate := map[string]interface{}{
-		"results": datatypes.JSON(resultsJSON),
+		"results":       datatypes.JSON(resultsJSON),
+		"result_source": string(resultcapabilities.SourceLegacy),
 	}
 	if err := s.db.Model(&commonModels.Model{}).Where("id = ?", modelID).Updates(modelUpdate).Error; err != nil {
 		log.Warnf("Failed to update model results model_id=%d err=%v", modelID, err)

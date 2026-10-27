@@ -21,7 +21,6 @@ import { ApiTokensDialog } from "@/features/api-tokens/ApiTokensDialog";
 import { useAuthStore } from "@/store/auth-store";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import axios from "@/lib/axios";
-import Notification from "@/components/ui/Notification";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import type { FormDataConvertible } from "@/hooks/useForm";
 import { useConfirm } from "@/hooks/useConfirmDialog";
@@ -51,6 +50,7 @@ import {
 import { getPaginationParams, filterByGroup, paginateArray } from "@/utils/paginationUtils";
 import { useTranslation } from "@spatialhub/i18n";
 import { useUserSelection } from "@/features/admin-dashboard/hooks/useUserSelection";
+import PolygonLimitsSettings from "@/features/settings/PolygonLimitsSettings";
 
 function getUsersEmptyMessage(
   t: (key: string, params?: Record<string, string>) => string,
@@ -160,10 +160,8 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     model_limit: undefined,
   });
   const {
-    notification,
     showSuccess,
     showError,
-    hide: hideNotification,
     setNotification,
   } = useNotification();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -1293,6 +1291,15 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
         />
       </div>
 
+      {/* Polygon limits per role */}
+      <div className="md-rise space-y-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{t("settings.polygonLimits.title")}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("settings.polygonLimits.subtitle")}</p>
+        </div>
+        <PolygonLimitsSettings />
+      </div>
+
       <UniversalForm
         isOpen={editDialog.isOpen || addDialog.isOpen}
         onClose={() => {
@@ -1462,13 +1469,6 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
         loading={false}
         errors={{}}
         maxWidth="sm"
-      />
-
-      <Notification
-        isOpen={notification.open}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={hideNotification}
       />
     </div>
   );

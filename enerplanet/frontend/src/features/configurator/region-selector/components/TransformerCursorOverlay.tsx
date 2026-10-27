@@ -1,17 +1,18 @@
 import { useTranslation } from "@spatialhub/i18n";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 interface TransformerCursorOverlayProps {
   isAddTransformerMode: boolean;
   isMoveTransformerMode: boolean;
-  cursorPos: { x: number; y: number } | null;
 }
 
 export const TransformerCursorOverlay = ({
   isAddTransformerMode,
   isMoveTransformerMode,
-  cursorPos,
 }: TransformerCursorOverlayProps) => {
   const { t } = useTranslation();
+  // Read here, not passed in: it changes on every pointer move, and only this overlay draws it.
+  const cursorPos = useModelStore((s) => s.transformerCursorPos);
 
   if (!(isAddTransformerMode || isMoveTransformerMode) || !cursorPos) return null;
 

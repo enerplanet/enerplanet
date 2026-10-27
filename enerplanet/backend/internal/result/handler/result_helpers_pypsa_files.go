@@ -446,18 +446,18 @@ func isRenewableGeneratorName(name string) bool {
 
 // Standard cable current ratings (i_nom in kA) from PyPSA line types database.
 var standardLineTypeINom = map[string]float64{
-	"NAYY 4x50 SE":                    0.142,
-	"NAYY 4x120 SE":                   0.230,
-	"NAYY 4x150 SE":                   0.270,
-	"NAYY 4x185 SE":                   0.310,
-	"NAYY 4x240 SE":                   0.364,
-	"NA2XS2Y 1x95 RM/25 12/20 kV":    0.255,
-	"NA2XS2Y 1x150 RM/25 12/20 kV":   0.319,
-	"NA2XS2Y 1x185 RM/25 12/20 kV":   0.366,
-	"NA2XS2Y 1x240 RM/25 12/20 kV":   0.421,
-	"NA2XS2Y 1x95 RM/25 6/10 kV":     0.255,
-	"NA2XS2Y 1x185 RM/25 6/10 kV":    0.366,
-	"NA2XS2Y 1x240 RM/25 6/10 kV":    0.421,
+	"NAYY 4x50 SE":                 0.142,
+	"NAYY 4x120 SE":                0.230,
+	"NAYY 4x150 SE":                0.270,
+	"NAYY 4x185 SE":                0.310,
+	"NAYY 4x240 SE":                0.364,
+	"NA2XS2Y 1x95 RM/25 12/20 kV":  0.255,
+	"NA2XS2Y 1x150 RM/25 12/20 kV": 0.319,
+	"NA2XS2Y 1x185 RM/25 12/20 kV": 0.366,
+	"NA2XS2Y 1x240 RM/25 12/20 kV": 0.421,
+	"NA2XS2Y 1x95 RM/25 6/10 kV":   0.255,
+	"NA2XS2Y 1x185 RM/25 6/10 kV":  0.366,
+	"NA2XS2Y 1x240 RM/25 6/10 kV":  0.421,
 }
 
 // readPyPSALineRatings reads lines.csv and computes s_nom (kVA) for each line

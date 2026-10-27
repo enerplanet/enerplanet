@@ -5,6 +5,7 @@ import (
 
 	"platform.local/common/pkg/httputil"
 	"platform.local/platform/logger"
+	resultcapabilities "spatialhub_backend/internal/result/capabilities"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	resultStore "spatialhub_backend/internal/store/result"
@@ -173,7 +174,8 @@ func (h *ResultHandler) GetStructuredResults(c *gin.Context) {
 	}
 
 	modelIDUint := parseUint(modelID)
-	response := h.buildStructuredResultsResponse(modelIDUint)
+	carrier := c.Query("carrier")
+	response := h.buildStructuredResultsResponse(modelIDUint, carrier)
 	httputil.SuccessResponse(c, response)
 }
 func (h *ResultHandler) GetCarrierTimeSeries(c *gin.Context) {
@@ -195,14 +197,15 @@ func (h *ResultHandler) GetCarrierTimeSeries(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 	aggregate := c.Query("aggregate")
+	carrier := c.Query("carrier")
 
 	response := gin.H{}
 	if aggregate == "daily" {
-		response["carrier_prod"] = h.store.GetDailyCarrierProdTimeSeries(modelIDUint)
-		response["carrier_con"] = h.store.GetDailyCarrierConTimeSeries(modelIDUint)
+		response["carrier_prod"] = h.store.GetDailyCarrierProdTimeSeries(modelIDUint, carrier)
+		response["carrier_con"] = h.store.GetDailyCarrierConTimeSeries(modelIDUint, carrier)
 	} else {
-		response["carrier_prod"] = h.store.GetCarrierProdTimeSeries(modelIDUint)
-		response["carrier_con"] = h.store.GetCarrierConTimeSeries(modelIDUint)
+		response["carrier_prod"] = h.store.GetCarrierProdTimeSeries(modelIDUint, carrier)
+		response["carrier_con"] = h.store.GetCarrierConTimeSeries(modelIDUint, carrier)
 	}
 
 	httputil.SuccessResponse(c, response)
@@ -268,9 +271,10 @@ func (h *ResultHandler) GetLocationTimeSeries(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 	dateRange := dateRangeFilter{begin: c.Query("begin"), end: c.Query("end")}
+	carrier := c.Query("carrier")
 
 	response := gin.H{"location": location}
-	h.fetchLocationTimeSeriesData(modelIDUint, location, dateRange, response)
+	h.fetchLocationTimeSeriesData(modelIDUint, location, dateRange, carrier, response)
 	httputil.SuccessResponse(c, response)
 }
 
@@ -294,7 +298,21 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 
-	response := gin.H{}
+	// Declare what this result actually contains before returning any data: the
+	// UI hides the sections a source cannot provide (and must not render an
+	// empty state that reads as a clean bill of health). The mapping lives in
+	// internal/result/capabilities.
+	rawSource, err := h.store.GetResultSource(modelIDUint)
+	if err != nil {
+		// Unknown provenance declares no capabilities, so the UI hides the
+		// grid sections rather than presenting a guess.
+		logger.ForComponent("result").Errorf("model_id=%d: %v", modelIDUint, err)
+	}
+	source := resultcapabilities.Source(rawSource)
+	response := gin.H{
+		"source":       string(source),
+		"capabilities": resultcapabilities.For(source),
+	}
 
 	if voltage, err := h.store.GetPyPSAVoltage(modelIDUint); err == nil {
 		response["voltage"] = voltage
@@ -316,7 +334,7 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 		response["settings"] = settings
 	}
 
-	response["locations"] = h.store.GetPyPSAVoltageLocations(modelIDUint)
+	response["locations"] = h.store.GetPyPSALocations(modelIDUint)
 
 	extractDir := h.latestExtractedPath(modelIDUint)
 	if extractDir != "" {
