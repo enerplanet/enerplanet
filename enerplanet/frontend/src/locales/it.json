@@ -806,12 +806,14 @@
         "meme": "La simulazione del sistema energetico (MEME) si è interrotta prima del termine.",
         "buem": "Il calcolo del fabbisogno di calore dell'edificio (BuEM) non è riuscito.",
         "pv": "Il calcolo della resa fotovoltaica non è riuscito.",
-        "city2tabula": "Non sono stati trovati dati 3D degli edifici (City2TABULA) per questi edifici, quindi il loro fabbisogno non è stato calcolato."
+        "city2tabula": "Non sono stati trovati dati 3D degli edifici (City2TABULA) per questi edifici, quindi il loro fabbisogno non è stato calcolato.",
+        "meme_size": "Il modello è troppo grande per essere calcolato su questo server."
       },
       "unknown": "Il processo non è riuscito. Riprova più tardi. Se si ripete, segnalalo al team EnerPlanET.",
       "next": "Il modello e i suoi dati non sono cambiati. Eseguilo di nuovo. Se fallisce una seconda volta, segnalalo al team EnerPlanET.",
       "nextFor": {
-        "city2tabula": "Eseguirlo di nuovo non servirà finché l'area non avrà dati 3D degli edifici. Se ti aspettavi dati qui, segnalalo al team EnerPlanET."
+        "city2tabula": "Eseguirlo di nuovo non servirà finché l'area non avrà dati 3D degli edifici. Se ti aspettavi dati qui, segnalalo al team EnerPlanET.",
+        "meme_size": "Rieseguirlo non aiuterà. Riduci il numero di edifici o tecnologie, oppure accorcia il periodo di simulazione, quindi rieseguilo."
       },
       "report": "Segnala",
       "reported": "Segnalato",

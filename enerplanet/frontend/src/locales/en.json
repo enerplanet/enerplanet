@@ -1064,12 +1064,14 @@
         "meme": "The energy system simulation (MEME) stopped before it finished.",
         "buem": "The building heat demand calculation (BuEM) failed.",
         "pv": "The PV yield calculation failed.",
-        "city2tabula": "No 3D building data (City2TABULA) was found for these buildings, so their demand could not be calculated."
+        "city2tabula": "No 3D building data (City2TABULA) was found for these buildings, so their demand could not be calculated.",
+        "meme_size": "The model is too large to calculate on this server."
       },
       "unknown": "The process failed. Try again after some time. If it happens again, report it to the EnerPlanET team.",
       "next": "Your model and its inputs are unchanged. Run it again. If it fails a second time, report it to the EnerPlanET team.",
       "nextFor": {
-        "city2tabula": "Running it again will not help until the area has 3D building data. If you expected data here, report it to the EnerPlanET team."
+        "city2tabula": "Running it again will not help until the area has 3D building data. If you expected data here, report it to the EnerPlanET team.",
+        "meme_size": "Running it again will not help. Reduce the number of buildings or technologies, or shorten the simulation period, then run it again."
       },
       "report": "Report",
       "reported": "Reported",

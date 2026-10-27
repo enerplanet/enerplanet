@@ -14,6 +14,9 @@ const (
 	ServiceBuem        = "buem"
 	ServicePV          = "pv"
 	ServiceCity2TABULA = "city2tabula"
+	// ServiceMemeSize is a model refused before dispatch because its estimated
+	// solve memory exceeds the limit MEME is given per job.
+	ServiceMemeSize = "meme_size"
 )
 
 // FailedResults is the results value written together with status failed:

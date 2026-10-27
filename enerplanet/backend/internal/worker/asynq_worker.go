@@ -44,6 +44,7 @@ type TaskProcessor struct {
 	tentacronClient     *tentacronclient.Client
 	resultZipStore      jobs.ResultZipStore
 	coatiRunner         resultservice.CoatiRunner
+	memeMaxMemoryMB     int
 }
 
 func NewTaskProcessor(
@@ -62,6 +63,7 @@ func NewTaskProcessor(
 	tentacronClient *tentacronclient.Client,
 	resultZipStore jobs.ResultZipStore,
 	coatiRunner resultservice.CoatiRunner,
+	memeMaxMemoryMB int,
 ) *TaskProcessor {
 	return &TaskProcessor{
 		db:                  db,
@@ -83,6 +85,7 @@ func NewTaskProcessor(
 		tentacronClient:     tentacronClient,
 		resultZipStore:      resultZipStore,
 		coatiRunner:         coatiRunner,
+		memeMaxMemoryMB:     memeMaxMemoryMB,
 	}
 }
 
@@ -120,7 +123,7 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient))
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient), p.memeMaxMemoryMB)
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:

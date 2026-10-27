@@ -126,6 +126,7 @@ func HandleDispatchMeme(
 	pvResolver modelPVResolver,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
+	maxMemoryMB int,
 ) (retErr error) {
 	log := logger.ForComponent("job:dispatch_meme")
 
@@ -197,6 +198,9 @@ func HandleDispatchMeme(
 	translated, err := meme.TranslatePayload(calcBytes)
 	if err != nil {
 		return fmt.Errorf("translate payload to MEME job for model %d: %w", p.ModelID, err)
+	}
+	if err := checkMemeSize(translated.Job, maxMemoryMB); err != nil {
+		return modelstore.ServiceFailed(modelstore.ServiceMemeSize, fmt.Errorf("model %d: %w", p.ModelID, err))
 	}
 
 	// 3. Resolve the TentaCron job id. No run recorded OR a TERMINAL run ->
@@ -285,6 +289,22 @@ func HandleDispatchMeme(
 
 	if submittedNow {
 		log.Infof("model %d: MEME dispatch complete, result saved to %s (%d bytes)", model.ID, path, len(resultZip))
+	}
+	return nil
+}
+
+// checkMemeSize refuses a job whose estimated solve memory exceeds maxMemoryMB,
+// so a model the server cannot solve fails at once with its size instead of
+// being killed inside MEME. A maxMemoryMB of 0 sets no limit; the estimate is
+// logged either way.
+func checkMemeSize(job []byte, maxMemoryMB int) error {
+	size, err := meme.EstimateSize(job)
+	if err != nil {
+		return err
+	}
+	logger.ForComponent("job:dispatch_meme").Infof("MEME job: %d combinations, %d timesteps, estimated %d MB", size.Combinations, size.Timesteps, size.MemoryMB)
+	if maxMemoryMB > 0 && size.MemoryMB > maxMemoryMB {
+		return fmt.Errorf("estimated solve memory %d MB (%d combinations, %d timesteps) exceeds the %d MB limit per MEME job", size.MemoryMB, size.Combinations, size.Timesteps, maxMemoryMB)
 	}
 	return nil
 }

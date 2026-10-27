@@ -1064,12 +1064,14 @@
         "meme": "Die Energiesystemsimulation (MEME) wurde vor dem Ende abgebrochen.",
         "buem": "Die Berechnung des Gebäudewärmebedarfs (BuEM) ist fehlgeschlagen.",
         "pv": "Die Berechnung des PV-Ertrags ist fehlgeschlagen.",
-        "city2tabula": "Für diese Gebäude wurden keine 3D-Gebäudedaten (City2TABULA) gefunden, daher konnte ihr Bedarf nicht berechnet werden."
+        "city2tabula": "Für diese Gebäude wurden keine 3D-Gebäudedaten (City2TABULA) gefunden, daher konnte ihr Bedarf nicht berechnet werden.",
+        "meme_size": "Das Modell ist zu groß, um auf diesem Server berechnet zu werden."
       },
       "unknown": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es später erneut. Tritt es wieder auf, melden Sie es dem EnerPlanET-Team.",
       "next": "Ihr Modell und seine Eingaben sind unverändert. Starten Sie es erneut. Schlägt es ein zweites Mal fehl, melden Sie es dem EnerPlanET-Team.",
       "nextFor": {
-        "city2tabula": "Ein erneuter Start hilft erst, wenn für das Gebiet 3D-Gebäudedaten vorliegen. Wenn Sie hier Daten erwartet haben, melden Sie es dem EnerPlanET-Team."
+        "city2tabula": "Ein erneuter Start hilft erst, wenn für das Gebiet 3D-Gebäudedaten vorliegen. Wenn Sie hier Daten erwartet haben, melden Sie es dem EnerPlanET-Team.",
+        "meme_size": "Ein erneuter Start hilft nicht. Verringern Sie die Zahl der Gebäude oder Technologien oder verkürzen Sie den Simulationszeitraum und starten Sie es dann erneut."
       },
       "report": "Melden",
       "reported": "Gemeldet",
