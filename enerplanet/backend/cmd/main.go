@@ -829,10 +829,20 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
 }
 
+// registerWebserviceProxyRoutes serves the admin dashboard's simulation engine
+// view: managers and experts read it, only experts change a worker.
 func registerWebserviceProxyRoutes(api *gin.RouterGroup, client *webservice.Client) {
 	proxy := makeWebserviceProxyHandler(client)
-	api.Any("/webservices", proxy)
-	api.Any("/webservices/*proxyPath", proxy)
+	read := api.Group("", middleware.RequireManagerOrExpert())
+	write := api.Group("", middleware.RequireExpert())
+	for _, path := range []string{"/webservices", "/webservices/*proxyPath"} {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			read.Handle(method, path, proxy)
+		}
+		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+			write.Handle(method, path, proxy)
+		}
+	}
 }
 
 func registerNotificationRoutes(api *gin.RouterGroup, handler *notificationshandler.Handler) {
