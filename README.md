@@ -1,4 +1,4 @@
-# EnerPlanET
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/enerplanet-lockup-green-dark-outline.svg"><img alt="EnerPlanET" src="docs/assets/logo/enerplanet-lockup-green-outline.svg" width="360"></picture>
 
 [![MkDocs](https://github.com/enerplanet/enerplanet/actions/workflows/docs.yml/badge.svg)](https://github.com/enerplanet/enerplanet/actions/workflows/docs.yml)
 
