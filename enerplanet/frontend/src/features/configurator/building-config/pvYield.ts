@@ -22,18 +22,23 @@ export interface PvYieldRequest {
   lat: number;
   lon: number;
   module: Record<string, number>;
-  arrays: { surface_id: string; tilt: number; azimuth: number; area: number; usable_share: number }[];
+  arrays: { surface_id: string; tilt: number; azimuth: number; area: number; usable_share: number; capacity_kw?: number }[];
 }
 
 // The pv_supply settings the PV simulation reads; the rest are costs and limits.
 const MODULE_KEYS = ['losses', 'dc_ac_ratio', 'inv_eff', 'module_type'];
 
-/** Each surface as the view has it, with the usable share stored for it, or the default. */
+/**
+ * Each surface as the view has it, with the usable share stored for it, or
+ * the default. A surface with a module layout is simulated at its panels'
+ * angles and sized by its modules.
+ */
 export function pvYieldRequest(request: PvBuildingRunRequest, context: PvYieldContext): PvYieldRequest {
   const stored = new Map((context.pv.arrays ?? []).map((a) => [a.surface_id, a]));
+  // A building tech keeps its values in constraints; older ones carried them flat.
   const module: Record<string, number> = {};
   for (const key of MODULE_KEYS) {
-    const value = context.pv[key];
+    const value = context.pv.constraints?.find((c) => c.key === key)?.value ?? context.pv[key];
     if (typeof value === 'number') module[key] = value;
   }
   return {
@@ -43,10 +48,11 @@ export function pvYieldRequest(request: PvBuildingRunRequest, context: PvYieldCo
     module,
     arrays: request.surfaces.map((s) => ({
       surface_id: s.id,
-      tilt: s.tilt,
-      azimuth: s.azimuth,
+      tilt: s.panel_tilt ?? s.tilt,
+      azimuth: s.panel_azimuth ?? s.azimuth,
       area: s.area,
       usable_share: stored.get(s.id)?.usable_share ?? DEFAULT_USABLE_SHARE,
+      ...(s.kwp !== undefined && { capacity_kw: s.kwp }),
     })),
   };
 }

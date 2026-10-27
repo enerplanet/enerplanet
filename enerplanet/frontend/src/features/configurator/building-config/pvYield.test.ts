@@ -26,4 +26,35 @@ describe('pvYieldRequest', () => {
       ],
     });
   });
+
+  it('reads the module settings from the stored constraints, as a building tech keeps them', () => {
+    const request = pvYieldRequest(
+      { osm_id: '7', surfaces: [{ id: 'south', area: 42, tilt: 30, azimuth: 175 }] },
+      {
+        location: [12.96, 48.83],
+        pv: { alias: 'PV', constraints: [
+          { key: 'losses', value: 0.14 },
+          { key: 'dc_ac_ratio', value: 1.2 },
+          { key: 'inv_eff', value: 96 },
+          { key: 'module_type', value: 0 },
+          { key: 'cost_energy_cap', value: 575 },
+        ] },
+      },
+    );
+
+    expect(request.module).toEqual({ losses: 0.14, dc_ac_ratio: 1.2, inv_eff: 96, module_type: 0 });
+  });
+
+  it('sends a laid-out surface at its panel angles and the capacity of its modules', () => {
+    const request = pvYieldRequest(
+      { osm_id: '7', surfaces: [
+        { id: 'flat', area: 100, tilt: 2, azimuth: 90, modules: 30, kwp: 12, panel_tilt: 15, panel_azimuth: 180 },
+      ] },
+      { location: [12.96, 48.83], pv: { alias: 'PV' } },
+    );
+
+    expect(request.arrays).toEqual([
+      { surface_id: 'flat', tilt: 15, azimuth: 180, area: 100, usable_share: 0.8, capacity_kw: 12 },
+    ]);
+  });
 });

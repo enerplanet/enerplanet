@@ -850,9 +850,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         type={techOperations.selectedTechForDialog?.key ?? null}
         current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
         applyToAll={techOperations.isAddingTechToAll}
-        onPick={(product) => {
+        onPick={(product, usableShare) => {
           const tech = asBuildingTechnology(product);
-          techOperations.handleSaveTechToBuildingBulk(tech.key, defaultConstraints(product), techOperations.isAddingTechToAll, tech);
+          techOperations.handleSaveTechToBuildingBulk(tech.key, defaultConstraints(product), techOperations.isAddingTechToAll, tech, usableShare);
           closeTechDialog();
         }}
         onDefineOwn={(product) => {

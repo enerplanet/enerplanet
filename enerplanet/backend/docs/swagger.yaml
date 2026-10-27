@@ -781,6 +781,12 @@ definitions:
     type: object
   spatialhub_backend_internal_api_contracts.PVSurfacesResponse:
     properties:
+      country:
+        description: |-
+          Country is the database the surfaces came from, as given or resolved
+          from lon and lat; GET /v1/city2tabula/geometry takes the same value.
+        example: germany
+        type: string
       surfaces:
         items:
           $ref: '#/definitions/spatialhub_backend_internal_pv.Surface'

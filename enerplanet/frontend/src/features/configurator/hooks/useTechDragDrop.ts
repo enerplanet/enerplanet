@@ -3,6 +3,9 @@ import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import { getCenter } from "ol/extent";
+import { toLonLat, type ProjectionLike } from "ol/proj";
+import { DEFAULT_PV_MODULE } from "@thd-spatial-ai/building-configurator";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
@@ -10,6 +13,9 @@ import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAre
 import { HEAT_SUPPLY_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import { hasHeatTech } from "@/features/configurator/utils/heatResolution";
 import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
+import { fetchBestFitArrays, type BuildingPlace } from "@/features/configurator/building-config/pvBestFit";
+import { DEFAULT_USABLE_SHARE } from "@/features/configurator/building-config/usePvMode";
+import { forEachLimited } from "@/components/map-controls/maplibre/useLod2Surfaces";
 
 /** Whether a building carries any technology or a heat link to a producer. */
 const hasTechs = (f: Feature<Geometry>): boolean =>
@@ -69,6 +75,33 @@ export const applyToBuildings = (
     count++;
   }
   return count;
+};
+
+/**
+ * Stores best-fit PV arrays at one usable share on each of the buildings that
+ * carries PV, and returns how many could not be laid out. Those keep automatic
+ * placement, which the backend sizes by roof area.
+ */
+export const layOutPv = async (buildings: Feature<Geometry>[], usableShare: number, projection: ProjectionLike): Promise<number> => {
+  let country: string | null = null;
+  let failed = 0;
+  await forEachLimited(buildings, async (f) => {
+    const osmId = String(f.get("osm_id"));
+    const extent = f.getGeometry()?.getExtent();
+    const point = extent && toLonLat(getCenter(extent), projection);
+    const place: BuildingPlace | null = country ? { country } : point ? { lon: point[0], lat: point[1] } : null;
+    if (!place) { failed++; return; }
+    try {
+      const result = await fetchBestFitArrays(osmId, place, usableShare, DEFAULT_PV_MODULE);
+      country = result.country;
+      const techs = f.get("techs");
+      if (techs?.pv_supply) f.set("techs", { ...techs, pv_supply: { ...techs.pv_supply, arrays: result.arrays } });
+    } catch (err) {
+      console.warn(`[pv] no best-fit layout for building ${osmId}`, err);
+      failed++;
+    }
+  }, () => false);
+  return failed;
 };
 
 /** A heat supply waiting for the user to choose which buildings it goes on. */
@@ -139,7 +172,23 @@ export const useTechDragDrop = ({
     // Highlight is handled inline via the feature's own style
   }, [map, draggingTech, mapRef]);
 
-  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false, product?: Technology) => {
+  /** Lays out PV on the buildings and reports those it could not; then runs done. */
+  const layOutPvAndReport = useCallback((buildings: Feature<Geometry>[], usableShare: number, done?: () => void) => {
+    void layOutPv(buildings, usableShare, map?.getView().getProjection() ?? "EPSG:3857").then((failed) => {
+      if (failed > 0) showError(t("gridNotifications.pvLayoutFailed", { count: failed }));
+      setIsModified(true);
+      done?.();
+    });
+  }, [map, showError, t, setIsModified]);
+
+  /** PV on one building gets the best fit unless it has arrays, then continues in the 3D view, where its surfaces can be changed. */
+  const continuePvOnBuilding = useCallback((building: Feature<Geometry>, hasArrays: boolean, usableShare: number) => {
+    const open = () => openBuilding(String(building.get("osm_id")), { pv: true });
+    if (hasArrays) open();
+    else layOutPvAndReport([building], usableShare, open);
+  }, [openBuilding, layOutPvAndReport]);
+
+  const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false, product?: Technology, usableShare: number = DEFAULT_USABLE_SHARE) => {
     const source = product ?? selectedTechForDialog;
     if (!selectedBuildingForTech || !source) return;
     const entry = { alias: source.alias, icon: source.icon, constraints, ...(source.product && { product: source.product }) };
@@ -151,6 +200,7 @@ export const useTechDragDrop = ({
       } else {
         const count = applyToBuildings(buildings, techKey, entry);
         showSuccess(t("gridNotifications.techAddedToAll", { tech: source.alias, count }));
+        if (techKey === "pv_supply") layOutPvAndReport(buildings, usableShare);
       }
     } else {
       const existing = selectedBuildingForTech.get("techs") || {};
@@ -160,15 +210,14 @@ export const useTechDragDrop = ({
       selectedBuildingForTech.set("techs", existing);
       selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
       showSuccess(t("gridNotifications.techAddedToBuilding", { tech: source.alias }));
-      // PV on one building continues in the 3D view, where its surfaces are chosen.
-      if (techKey === "pv_supply") openBuilding(String(selectedBuildingForTech.get("osm_id")), { pv: true });
+      if (techKey === "pv_supply") continuePvOnBuilding(selectedBuildingForTech, Boolean(arrays), usableShare);
     }
     setTechDialogOpen(false);
     setSelectedTechForDialog(null);
     setSelectedBuildingForTech(null);
     setIsAddingTechToAll(false);
     setIsModified(true);
-  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, openBuilding]);
+  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, layOutPvAndReport, continuePvOnBuilding]);
 
   /** Applies the waiting heat supply to the chosen buildings, or drops it when scope is null. */
   const resolveHeatScope = useCallback((scope: HeatScope | null) => {

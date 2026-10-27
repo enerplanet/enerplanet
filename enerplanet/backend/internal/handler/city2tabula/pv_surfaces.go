@@ -60,7 +60,7 @@ func (h *Handler) PVSurfaces(c *gin.Context) {
 			surfaces = append(surfaces, s)
 		}
 	}
-	c.JSON(http.StatusOK, contracts.PVSurfacesResponse{Surfaces: surfaces})
+	c.JSON(http.StatusOK, contracts.PVSurfacesResponse{Country: country, Surfaces: surfaces})
 }
 
 // pointCountry returns the country query parameter, or resolves it from lon and lat.

@@ -4,10 +4,12 @@ import "spatialhub_backend/internal/city2tabula"
 
 const (
 	// KWPerSqm matches the building configurator's PV model.
-	KWPerSqm             = 0.2
-	DefaultUsableShare   = 0.8
-	minRoofAreaSqm       = 10
-	maxRoofTiltDeg       = 60
+	KWPerSqm           = 0.2
+	DefaultUsableShare = 0.8
+	minRoofAreaSqm     = 10
+	maxRoofTiltDeg     = 60
+	// Matches the building configurator's FLAT_MAX_TILT_DEG: below it, modules are racked.
+	flatRoofMaxTiltDeg   = 10
 	flatRoofPanelTilt    = 15
 	flatRoofPanelAzimuth = 180
 )
@@ -39,7 +41,7 @@ type Surface struct {
 }
 
 // Surfaces returns every roof and outer wall with an area and angles. A roof qualifies
-// at least 10 m2, tilt up to 60 and facing east to west, or flat; a wall never
+// at least 10 m2, tilt up to 60 and facing east to west, or flat (tilt under 10); a wall never
 // qualifies and is suggested at the same area and orientation.
 func Surfaces(surfaces []city2tabula.Surface) []Surface {
 	var out []Surface
@@ -78,7 +80,7 @@ func hasShape(s city2tabula.Surface) bool {
 func roof(s city2tabula.Surface) Surface {
 	big := *s.AreaSqm >= minRoofAreaSqm
 	// City2TABULA tilt 90 is flat; azimuth -1 marks a near-horizontal surface.
-	if *s.Azimuth < 0 {
+	if *s.Azimuth < 0 || 90-*s.Tilt < flatRoofMaxTiltDeg {
 		return Surface{Array: FlatRoofArray(s.ID, *s.AreaSqm), Kind: "roof", Qualifies: big, Suggested: big}
 	}
 	ok := big && facesEastToWest(*s.Azimuth) && 90-*s.Tilt <= maxRoofTiltDeg

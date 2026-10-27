@@ -25,6 +25,7 @@ func TestRoofArraysPicksQualifyingRoofs(t *testing.T) {
 		surface("steep", "RoofSurface", 40, 20, 180), // 70 degrees
 		surface("small", "RoofSurface", 9.9, 55, 180),
 		surface("flat", "RoofSurface", 120, 90, -1),
+		surface("low-north", "RoofSurface", 50, 85, 0), // 5 degrees: racked as flat
 		surface("wall", "WallSurface", 80, 0, 180),
 		sliver,
 	})
@@ -33,9 +34,10 @@ func TestRoofArraysPicksQualifyingRoofs(t *testing.T) {
 	for i, a := range arrays {
 		ids[i] = a.SurfaceID
 	}
-	assert.Equal(t, []string{"south", "east", "west", "flat"}, ids)
+	assert.Equal(t, []string{"south", "east", "west", "flat", "low-north"}, ids)
 	assert.Equal(t, Array{SurfaceID: "south", Tilt: 35, Azimuth: 180, AreaSqm: 40, UsableShare: 0.8}, arrays[0])
 	assert.Equal(t, Array{SurfaceID: "flat", Tilt: 15, Azimuth: 180, AreaSqm: 120, UsableShare: 0.8}, arrays[3])
+	assert.Equal(t, Array{SurfaceID: "low-north", Tilt: 15, Azimuth: 180, AreaSqm: 50, UsableShare: 0.8}, arrays[4])
 }
 
 func TestMaxCapacityKW(t *testing.T) {

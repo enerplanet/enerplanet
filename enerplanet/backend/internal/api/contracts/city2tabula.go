@@ -172,5 +172,8 @@ type EnrichResponse struct {
 
 // PVSurfacesResponse lists a building's roof and wall surfaces for PV.
 type PVSurfacesResponse struct {
+	// Country is the database the surfaces came from, as given or resolved
+	// from lon and lat; GET /v1/city2tabula/geometry takes the same value.
+	Country  string       `json:"country" example:"germany"`
 	Surfaces []pv.Surface `json:"surfaces"`
 }

@@ -11,7 +11,7 @@
 import { useCallback, useMemo, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
-import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
+import { Building3DView, DEFAULT_PV_MODULE, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { config } from '@/configuration/app';
 import { isExpert } from '@/features/admin-dashboard/utils/accessLevelUtils';
@@ -183,9 +183,9 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
-  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t);
+  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null);
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
-  const { technologies, pvSurfaceIds } = useBuildingTechnologies(osmId, country, techs, storeTechs);
+  const { technologies, pvSurfaceIds, pvSurfaces } = useBuildingTechnologies(osmId, country, techs, storeTechs);
 
   if (preparing) {
     return (
@@ -233,6 +233,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
         pv={pvMode.pv}
         pvSurfaceIds={pvSurfaceIds}
+        pvSurfaces={pvSurfaces}
+        pvModule={DEFAULT_PV_MODULE}
         technologies={technologies}
         defaultMode={isExpert(user) ? 'expert' : 'basic'}
         language={i18n.language}
