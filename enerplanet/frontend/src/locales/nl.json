@@ -168,22 +168,21 @@
       "moveToWorkspace": "Verplaatsen naar Werkruimte",
       "profile": "Profiel",
       "documentation": "Documentatie",
-      "restartTour": "Tour herstarten",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
-      "theme": "Thema",
-      "searchLocation": "Zoek locatie"
+      "theme": "Thema"
     },
     "sidebar": {
       "energySimulations": "Energiesimulaties",
       "map": "Kaart",
-      "locations": "Locaties",
       "simulationReports": "Modelvergelijking",
       "technologies": "Technologieën"
     },
     "menu": {
-      "profile": "Profiel",
       "settings": "Instellingen",
-      "logout": "Uitloggen"
+      "privacyTerms": "Privacy en voorwaarden",
+      "logout": "Uitloggen",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Resultaten Bekijken",
@@ -891,7 +890,10 @@
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",
     "selectedCount_other": "{{count}} geselecteerd",
-    "clearSelection": "Selectie wissen"
+    "clearSelection": "Selectie wissen",
+    "starredFilter": "Met ster",
+    "starredFilterHint": "Alleen modellen met ster tonen",
+    "noStarredModels": "Nog geen modellen met ster. Geef een model een ster naast de naam om het hier te vinden."
   },
   "polygon": {
     "drawRegion": "Teken je regio",
@@ -974,7 +976,6 @@
     "subtitle": "Uw commandocentrum voor risicobeoordeling",
     "navigation": "Navigatie",
     "overview": "Overzicht",
-    "profile": "Profiel",
     "settings": "Instellingen",
     "logout": "Uitloggen",
     "tabs": {
@@ -1048,8 +1049,6 @@
     "quickActions": {
       "title": "Snelle Acties",
       "subtitle": "Navigeer naar belangrijke functies",
-      "interactiveMap": "Interactieve Kaart",
-      "viewRiskMap": "Bekijk risicobeoordelingskaart",
       "riskModels": "Risicomodellen",
       "manageRiskModels": "Beheer risicomodellen",
       "settings": "Instellingen",
@@ -1219,18 +1218,10 @@
     "refresh": "Vernieuwen"
   },
   "profile": {
-    "title": "Profielinstellingen",
-    "subtitle": "Beheer uw persoonlijke gegevens en accountvoorkeuren",
-    "goBack": "Terug",
     "loadingProfile": "Uw profiel laden...",
-    "defaultUser": "Gebruiker",
     "accessLevel": "Toegangsniveau",
     "notSpecified": "Niet gespecificeerd",
-    "personalInfo": "Persoonlijke informatie",
-    "personalInfoDescription": "Werk uw profielgegevens hieronder bij",
     "readOnly": "alleen-lezen",
-    "saving": "Opslaan...",
-    "saveChanges": "Wijzigingen opslaan",
     "fields": {
       "fullName": "Volledige naam",
       "email": "E-mailadres",
@@ -1245,11 +1236,8 @@
       "phone": "+31 6 12345678"
     },
     "accessLevels": {
-      "basic": "Basis",
       "basicDescription": "Standaard toegang tot basisfuncties",
-      "intermediate": "Gemiddeld",
       "intermediateDescription": "Uitgebreide toegang met geavanceerde functies",
-      "expert": "Expert",
       "expertDescription": "Volledige toegang tot alle functies"
     },
     "notifications": {
@@ -1456,7 +1444,9 @@
       "creating": "Simulatie wordt gemaakt...",
       "updating": "Simulatie wordt bijgewerkt...",
       "cancel": "Annuleren",
-      "regenerateFirst": "Genereer het net opnieuw voordat u opslaat."
+      "regenerateFirst": "Genereer het net opnieuw voordat u opslaat.",
+      "completeFirst": "Voer een modelnaam en een simulatieperiode in en teken een gebied om op te slaan.",
+      "saveShortcut": "Opslaan (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Mijn gebouwen",
@@ -1598,12 +1588,6 @@
       "discard": "Wijzigingen verwerpen"
     },
     "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
-    "cooking": {
-      "label": "Koken",
-      "electric": "Elektrisch",
-      "gas": "Gas",
-      "hint": "Bij gas wordt het koken in de gebouwen een gasvraag uit een gaslevering"
-    },
     "runMode": {
       "label": "Rekenmodus",
       "plan": "Plannen",
@@ -1630,6 +1614,11 @@
     "largeModel": {
       "title": "Dit model heeft {{count}} gebouwen",
       "description": "Modellen met meer dan {{limit}} gebouwen duren aanzienlijk langer: elk gebouw loopt door BuEM en Calliope lost de uurlijkse vraag van elk gebouw op. Een heel jaar kan tientallen minuten duren. U kunt het toch opslaan en uitvoeren."
+    },
+    "sections": {
+      "grid": "Net",
+      "model": "Model",
+      "energySystem": "Energiesysteem"
     },
     "analysis": {
       "button": "Gebouwen analyseren",
@@ -2171,23 +2160,11 @@
   "settings": {
     "title": "Instellingen",
     "subtitle": "Pas uw ervaring en voorkeuren aan",
-    "configuration": "Configuratie",
-    "goBack": "Terug",
     "tabs": {
+      "profile": "Profiel",
       "general": "Algemeen",
-      "display": "Weergave",
       "notifications": "Meldingen",
       "advanced": "Geavanceerd"
-    },
-    "stats": {
-      "language": "Taal",
-      "theme": "Thema",
-      "notifications": "Meldingen",
-      "accessLevel": "Toegangsniveau",
-      "enabled": "Ingeschakeld",
-      "disabled": "Uitgeschakeld",
-      "system": "Systeem",
-      "user": "Gebruiker"
     },
     "language": {
       "title": "Taal",
@@ -2201,32 +2178,19 @@
       "title": "Kaartlocatie",
       "subtitle": "Opgeslagen posities",
       "syncing": "Synchroniseren...",
-      "searchPlaceholder": "Zoek locatie...",
+      "searchPlaceholder": "Zoek een plaats of voer lat, lon in",
       "current": "Huidig",
       "noLocation": "Geen locatie ingesteld",
       "savedLocations": "Opgeslagen Locaties",
       "clearAll": "Alles wissen",
-      "syncNote": "Locaties worden gesynchroniseerd met uw account"
+      "syncNote": "Locaties worden gesynchroniseerd met uw account",
+      "pickHint": "Of klik op de kaart om de locatie in te stellen."
     },
     "locationSearch": {
       "placeholder": "Zoek locatie...",
       "searching": "Zoeken...",
       "noResults": "Geen locaties gevonden",
       "searchFailed": "Zoeken mislukt"
-    },
-    "dataDisplay": {
-      "title": "Data en Weergave",
-      "subtitle": "Eenheden en opmaak",
-      "temperature": "Temperatuur",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Afstand",
-      "kilometers": "Kilometers",
-      "miles": "Mijlen",
-      "windSpeed": "Windsnelheid",
-      "knots": "knopen",
-      "dataRefresh": "Data Verversing",
-      "min": "min"
     },
     "notifications": {
       "title": "Meldingen",
@@ -2381,16 +2345,12 @@
     "resetTopDown": "Terug naar bovenaanzicht",
     "rightClickRotate": "Rechtsklik + slepen om te draaien",
     "regions": "regio's",
-    "myModels": "mijn modellen",
     "grids": "rasters",
     "countries": "landen",
     "footprintOnlyBuildings_one": "{{count}} gebouw heeft geen 3D-stadsdata en toont alleen de plattegrond",
     "footprintOnlyBuildings_other": "{{count}} gebouwen hebben geen 3D-stadsdata en tonen alleen de plattegrond"
   },
   "privacy": {
-    "dataAndPrivacy": "Gegevens & Privacy",
-    "acceptTerms": "Privacyvoorwaarden accepteren",
-    "openSettings": "Gegevens- en privacy-instellingen openen",
     "dialogTitle": "Gegevensverwerking & Privacy",
     "cartoDescription": "Om u onze diensten te kunnen leveren, maken we gebruik van CARTO en OSMF als externe kaartproviders.",
     "sharedWithCarto": "Door te accepteren worden de volgende gegevens gedeeld met CARTO en OSMF:",
@@ -2558,7 +2518,10 @@
       "descriptions": {
         "targetWorkspace": "Kies de werkruimte waarnaar het model wordt verplaatst"
       },
-      "defaultWorkspace": "Standaard Werkruimte"
+      "defaultWorkspace": "Standaard Werkruimte",
+      "noOtherWorkspace": "Er is nog geen andere werkruimte. Geef een nieuwe een naam en het model wordt erheen verplaatst.",
+      "createAndMove": "Werkruimte maken en verplaatsen",
+      "createAndMoveFailed": "De werkruimte kon niet worden gemaakt of het model kon er niet naartoe worden verplaatst. Probeer het opnieuw."
     },
     "shareModel": {
       "title": "Deel met een Individuele Gebruiker",
@@ -3150,7 +3113,7 @@
   },
   "buildingConfig": {
     "backToMap": "Terug naar de kaart",
-    "preparing": "De 3D-gegevens van dit gebouw worden voorbereid. City2TABULA haalt de gebouwen in het gebied op en koppelt ze, wat de eerste keer dat een gebied wordt gebruikt enkele minuten kan duren. Het gebouw wordt hier geopend zodra het klaar is.",
+    "preparing": "3D-gegevens voor dit gebouw worden voorbereid.",
     "loading": "Gebouw laden…",
     "noGeometry": "City2TABULA bevat de 3D-geometrie van dit gebouw niet meer.",
     "credit3dData": "3D-gegevens",

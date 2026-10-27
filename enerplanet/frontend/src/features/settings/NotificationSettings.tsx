@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Smartphone, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@spatialhub/ui";
 import { settingsService } from "@/features/settings/services/settings";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -149,21 +150,12 @@ const NotificationSettings: React.FC = () => {
                 <p className="text-[10px] text-muted-foreground">{t('settings.notifications.notifyWhenComplete')}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleToggle('email')}
+            <Switch
+              checked={emailNotifications}
+              onCheckedChange={() => handleToggle('email')}
               disabled={saving}
-              className={cn(
-                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 active:scale-95",
-                emailNotifications ? "bg-primary" : "bg-muted-foreground/30",
-                saving && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <span className={cn(
-                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-                emailNotifications ? "translate-x-5" : "translate-x-0.5"
-              )} />
-            </button>
+              aria-label={t('settings.notifications.email')}
+            />
           </div>
         </div>
 
@@ -195,21 +187,12 @@ const NotificationSettings: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleToggle('browser')}
+            <Switch
+              checked={browserNotifications}
+              onCheckedChange={() => handleToggle('browser')}
               disabled={saving || !isSupported}
-              className={cn(
-                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 active:scale-95",
-                browserNotifications ? "bg-primary" : "bg-muted-foreground/30",
-                (saving || !isSupported) && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <span className={cn(
-                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
-                browserNotifications ? "translate-x-5" : "translate-x-0.5"
-              )} />
-            </button>
+              aria-label={t('settings.notifications.browser')}
+            />
           </div>
         </div>
       </div>

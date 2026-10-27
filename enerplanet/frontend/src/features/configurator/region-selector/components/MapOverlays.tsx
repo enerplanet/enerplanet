@@ -1,7 +1,7 @@
-import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
+import { MAP_TOP_CENTRE } from "@/components/map-controls/WorkflowBar";
 import { useTranslation } from "@spatialhub/i18n";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
@@ -254,11 +254,9 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
 
     return (
         <>
-            <MapSearchBar />
-
-            {/* Grid Generation Loader - minimal floating pill at top center */}
+            {/* Grid Generation Loader - minimal floating pill, in the slot below the workflow pill */}
             {isGeneratingGrid && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
+                <div style={MAP_TOP_CENTRE} className="absolute top-16 -translate-x-1/2 z-40">
                     <div className="md-rise flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
                         {/* Spinning icon */}
                         <div className="relative w-5 h-5">

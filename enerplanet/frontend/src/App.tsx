@@ -1,5 +1,5 @@
 import { useEffect, Suspense, lazy } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginForm, RegisterForm, ForgotPasswordForm } from "./features/authentication";
 import { LayoutProvider } from "@/providers/layout-provider";
 import { AppLayout } from "@/components/app-layout/AppLayout";
@@ -9,12 +9,10 @@ import { TooltipProvider } from "@spatialhub/ui";
 import { Loader2 } from 'lucide-react';
 
 // Lazy loaded components for code splitting
-const MapComponent = lazy(() => import("./features/interactive-map").then(module => ({ default: module.MapComponent })));
 const EnergyRiskDashboard = lazy(() => import("@/features/model-dashboard/components").then(module => ({ default: module.EnergyRiskDashboard })));
 const Dashboard = lazy(() => import("@/features/admin-dashboard").then(module => ({ default: module.Dashboard })));
 const FeedbackComponent = lazy(() => import("@/features/user-feedback").then(module => ({ default: module.FeedbackComponent })));
 const SettingsPage = lazy(() => import("@/features/settings/SettingsPage"));
-const ProfilePage = lazy(() => import("@/features/profile").then(module => ({ default: module.ProfilePage })));
 const NotificationsPage = lazy(() => import("@/features/notifications/NotificationsPage"));
 const AreaSelect = lazy(() => import("@/features/configurator/region-selector/AreaSelect").then(module => ({ default: module.AreaSelect })));
 const AssessmentViewer = lazy(() => import("@/features/assessment-viewer").then(module => ({ default: module.AssessmentViewer })));
@@ -27,6 +25,7 @@ const SimulationCharts = lazy(() => import("@/features/simulation-charts").then(
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
 const LandingPage = lazy(() => import("./features/landing"));
 
+import { Authorized } from "@/middleware/authorized";
 import { ProductTour } from "@/features/guided-tour/ProductTour";
 import NotificationProvider from "@/features/notifications/components/NotificationProvider";
 
@@ -65,7 +64,8 @@ const App: React.FC<AppProps> = () => {
                 </Route>
 
                 <Route element={<Middleware type="auth" />}>
-                  <Route path="/app/map" element={<MapComponent />} />
+                  {/* Legacy path: redirects to the model dashboard so old links and SSO return URLs keep working. */}
+                  <Route path="/app/map" element={<Navigate to="/app/model-dashboard" replace />} />
                   <Route path="/app/feedback" element={<FeedbackComponent />} />
                 </Route>
 
@@ -95,8 +95,12 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/locations/create" element={<LocationCreator />} />
                   <Route path="/app/locations/view/:id" element={<LocationViewer />} />
                   <Route path="/app/locations/edit/:id" element={<LocationCreator editMode={true} />} />
-                  <Route path="/app/profile" element={<ProfilePage />} />
-                  <Route path="/app/admin-dashboard" element={<Dashboard />} />
+                  <Route path="/app/profile" element={<Navigate to="/app/settings" replace />} />
+                  <Route path="/app/admin-dashboard" element={
+                      <Authorized access={["manager", "expert"]} fallback={<Navigate to="/app/model-dashboard" replace />}>
+                        <Dashboard />
+                      </Authorized>
+                  } />
                   <Route path="/app/settings" element={<SettingsPage />} />
                   <Route path="/app/notifications" element={<NotificationsPage />} />
                 </Route>

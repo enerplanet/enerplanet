@@ -228,22 +228,21 @@
       "moveToWorkspace": "In Arbeitsbereich verschieben",
       "profile": "Profil",
       "documentation": "Dokumentation",
-      "restartTour": "Tour neu starten",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
-      "theme": "Design",
-      "searchLocation": "Standort suchen"
+      "theme": "Design"
     },
     "sidebar": {
       "energySimulations": "Energiesimulationen",
       "map": "Karte",
-      "locations": "Standorte",
       "simulationReports": "Modellvergleich",
       "technologies": "Technologien"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Einstellungen",
-      "logout": "Abmelden"
+      "privacyTerms": "Datenschutz & Bedingungen",
+      "logout": "Abmelden",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Ergebnisse anzeigen",
@@ -405,7 +404,10 @@
       "descriptions": {
         "targetWorkspace": "Wählen Sie den Arbeitsbereich, in den das Modell verschoben werden soll"
       },
-      "defaultWorkspace": "Standard-Arbeitsbereich"
+      "defaultWorkspace": "Standard-Arbeitsbereich",
+      "noOtherWorkspace": "Es gibt noch keinen anderen Arbeitsbereich. Geben Sie einem neuen einen Namen, und das Modell wird dorthin verschoben.",
+      "createAndMove": "Arbeitsbereich anlegen und verschieben",
+      "createAndMoveFailed": "Der Arbeitsbereich konnte nicht angelegt oder das Modell nicht verschoben werden. Bitte erneut versuchen."
     },
     "shareModel": {
       "title": "Mit einem einzelnen Benutzer teilen",
@@ -1147,7 +1149,10 @@
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",
     "selectedCount_other": "{{count}} ausgewählt",
-    "clearSelection": "Auswahl aufheben"
+    "clearSelection": "Auswahl aufheben",
+    "starredFilter": "Markiert",
+    "starredFilterHint": "Nur markierte Modelle anzeigen",
+    "noStarredModels": "Noch keine markierten Modelle. Markieren Sie ein Modell mit dem Stern neben seinem Namen, um es hier zu finden."
   },
   "polygon": {
     "drawRegion": "Zeichnen Sie Ihre Region",
@@ -1231,7 +1236,6 @@
     "managePlatform": "Verwalten Sie Ihre Energiesimulationsplattform",
     "administrator": "Administrator",
     "loadingContent": "Inhalt wird geladen...",
-    "profile": "Profil",
     "settings": "Einstellungen",
     "logout": "Abmelden",
     "tabs": {
@@ -1305,8 +1309,6 @@
     "quickActions": {
       "title": "Schnellaktionen",
       "subtitle": "Zu wichtigen Funktionen navigieren",
-      "interactiveMap": "Interaktive Karte",
-      "viewRiskMap": "Risikobewertungskarte anzeigen",
       "riskModels": "Risikomodelle",
       "manageRiskModels": "Risikomodelle verwalten",
       "settings": "Einstellungen",
@@ -1471,18 +1473,10 @@
     "refresh": "Aktualisieren"
   },
   "profile": {
-    "title": "Profileinstellungen",
-    "subtitle": "Verwalten Sie Ihre persönlichen Daten und Kontoeinstellungen",
-    "goBack": "Zurück",
     "loadingProfile": "Profil wird geladen...",
-    "defaultUser": "Benutzer",
     "accessLevel": "Zugriffsebene",
     "notSpecified": "Nicht angegeben",
-    "personalInfo": "Persönliche Informationen",
-    "personalInfoDescription": "Aktualisieren Sie Ihre Profildaten unten",
     "readOnly": "schreibgeschützt",
-    "saving": "Speichern...",
-    "saveChanges": "Änderungen speichern",
     "fields": {
       "fullName": "Vollständiger Name",
       "email": "E-Mail-Adresse",
@@ -1497,11 +1491,8 @@
       "phone": "+49 (0) 123 456789"
     },
     "accessLevels": {
-      "basic": "Basis",
       "basicDescription": "Standardzugriff auf grundlegende Funktionen",
-      "intermediate": "Fortgeschritten",
       "intermediateDescription": "Erweiterter Zugriff mit erweiterten Funktionen",
-      "expert": "Experte",
       "expertDescription": "Vollzugriff auf alle Funktionen"
     },
     "notifications": {
@@ -1763,7 +1754,9 @@
       "creating": "Simulation wird erstellt...",
       "updating": "Simulation wird aktualisiert...",
       "cancel": "Abbrechen",
-      "regenerateFirst": "Erzeugen Sie das Netz vor dem Speichern neu."
+      "regenerateFirst": "Erzeugen Sie das Netz vor dem Speichern neu.",
+      "completeFirst": "Zum Speichern einen Modellnamen und einen Simulationszeitraum eingeben und ein Gebiet zeichnen.",
+      "saveShortcut": "Speichern (Strg+S)"
     },
     "mapHeader": {
       "myBuildings": "Meine Gebäude",
@@ -1850,12 +1843,6 @@
       "discard": "Änderungen verwerfen"
     },
     "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version",
-    "cooking": {
-      "label": "Kochen",
-      "electric": "Elektrisch",
-      "gas": "Gas",
-      "hint": "Bei Gas wird das Kochen in den Gebäuden zu einem Gasbedarf aus einer Gasversorgung"
-    },
     "runMode": {
       "label": "Betriebsart",
       "plan": "Planen",
@@ -1882,6 +1869,11 @@
     "largeModel": {
       "title": "Dieses Modell hat {{count}} Gebäude",
       "description": "Modelle mit mehr als {{limit}} Gebäuden brauchen deutlich länger: Jedes Gebäude läuft durch BuEM, und Calliope löst den stündlichen Bedarf jedes Gebäudes. Ein ganzes Jahr kann Dutzende Minuten dauern. Sie können es trotzdem speichern und ausführen."
+    },
+    "sections": {
+      "grid": "Netz",
+      "model": "Modell",
+      "energySystem": "Energiesystem"
     },
     "analysis": {
       "button": "Gebäude analysieren",
@@ -2540,23 +2532,11 @@
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Passen Sie Ihre Erfahrung und Präferenzen an",
-    "configuration": "Konfiguration",
-    "goBack": "Zurück",
     "tabs": {
+      "profile": "Profil",
       "general": "Allgemein",
-      "display": "Anzeige",
       "notifications": "Benachrichtigungen",
       "advanced": "Erweitert"
-    },
-    "stats": {
-      "language": "Sprache",
-      "theme": "Design",
-      "notifications": "Benachrichtigungen",
-      "accessLevel": "Zugriffsstufe",
-      "enabled": "Aktiviert",
-      "disabled": "Deaktiviert",
-      "system": "System",
-      "user": "Benutzer"
     },
     "language": {
       "title": "Sprache",
@@ -2570,32 +2550,19 @@
       "title": "Kartenstandort",
       "subtitle": "Gespeicherte Positionen",
       "syncing": "Synchronisiere...",
-      "searchPlaceholder": "Standort suchen...",
+      "searchPlaceholder": "Ort suchen oder Breite, Länge eingeben",
       "current": "Aktuell",
       "noLocation": "Kein Standort festgelegt",
       "savedLocations": "Gespeicherte Standorte",
       "clearAll": "Alle löschen",
-      "syncNote": "Standorte werden mit Ihrem Konto synchronisiert"
+      "syncNote": "Standorte werden mit Ihrem Konto synchronisiert",
+      "pickHint": "Oder auf die Karte klicken, um den Standort festzulegen."
     },
     "locationSearch": {
       "placeholder": "Standort suchen...",
       "searching": "Suche...",
       "noResults": "Keine Standorte gefunden",
       "searchFailed": "Suche fehlgeschlagen"
-    },
-    "dataDisplay": {
-      "title": "Daten & Anzeige",
-      "subtitle": "Einheiten und Formatierung",
-      "temperature": "Temperatur",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Entfernung",
-      "kilometers": "Kilometer",
-      "miles": "Meilen",
-      "windSpeed": "Windgeschwindigkeit",
-      "knots": "Knoten",
-      "dataRefresh": "Datenaktualisierung",
-      "min": "Min"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -2750,16 +2717,12 @@
     "resetTopDown": "Auf Draufsicht zurücksetzen",
     "rightClickRotate": "Rechtsklick + ziehen zum Drehen",
     "regions": "Regionen",
-    "myModels": "Meine Modelle",
     "grids": "Raster",
     "countries": "Länder",
     "footprintOnlyBuildings_one": "{{count}} Gebäude hat keine 3D-Stadtdaten und wird nur als Grundriss gezeigt",
     "footprintOnlyBuildings_other": "{{count}} Gebäude haben keine 3D-Stadtdaten und werden nur als Grundriss gezeigt"
   },
   "privacy": {
-    "dataAndPrivacy": "Daten & Datenschutz",
-    "acceptTerms": "Datenschutzbedingungen akzeptieren",
-    "openSettings": "Daten- & Datenschutzeinstellungen öffnen",
     "dialogTitle": "Datenverarbeitung & Datenschutz",
     "cartoDescription": "Um Ihnen unsere Dienste anbieten zu können, nutzen wir CARTO und OSMF als Drittanbieter für Kartendienste.",
     "sharedWithCarto": "Mit der Annahme werden folgende Daten mit CARTO und OSMF geteilt:",
@@ -3140,7 +3103,7 @@
   },
   "buildingConfig": {
     "backToMap": "Zurück zur Karte",
-    "preparing": "Die 3D-Daten dieses Gebäudes werden vorbereitet. City2TABULA extrahiert und verknüpft die Gebäude des Gebiets. Beim ersten Aufruf eines Gebiets kann das einige Minuten dauern. Das Gebäude öffnet sich hier, sobald es bereit ist.",
+    "preparing": "3D-Daten für dieses Gebäude werden vorbereitet.",
     "loading": "Gebäude wird geladen…",
     "noGeometry": "City2TABULA enthält die 3D-Geometrie dieses Gebäudes nicht mehr.",
     "credit3dData": "3D-Daten",

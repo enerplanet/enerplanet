@@ -12,7 +12,8 @@ interface MapLibre3DControlsProps {
   footprintOnly?: number;
 }
 
-// Under the three zoom and centre buttons (size-8, gap-2) of MapControls.
+// Under the zoom and centre buttons (size-8, gap-2) of MapControls; top-left
+// also leaves room for the configurator's shortcuts button in that column.
 const RESET_STYLE: Record<MapControlsPlacement, { className: string; style: React.CSSProperties }> = {
   "top-right": { className: "absolute z-50 pointer-events-auto", style: { top: 152, right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
   "top-left": { className: "absolute z-[5] pointer-events-auto", style: { top: "11rem", left: "1rem" } },

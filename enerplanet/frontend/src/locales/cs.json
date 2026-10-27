@@ -168,22 +168,21 @@
       "moveToWorkspace": "Přesunout do Pracovního Prostoru",
       "profile": "Profil",
       "documentation": "Dokumentace",
-      "restartTour": "Restartovat prohlídku",
+      "restartTour": "Product Tour",
       "feedback": "Zpětná vazba",
-      "theme": "Motiv",
-      "searchLocation": "Hledat místo"
+      "theme": "Motiv"
     },
     "sidebar": {
       "energySimulations": "Energetické Simulace",
       "map": "Mapa",
-      "locations": "Polohy",
       "simulationReports": "Porovnání Modelů",
       "technologies": "Technologie"
     },
     "menu": {
-      "profile": "Profil",
       "settings": "Nastavení",
-      "logout": "Odhlásit"
+      "privacyTerms": "Soukromí a podmínky",
+      "logout": "Odhlásit",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Zobrazit Výsledky",
@@ -906,7 +905,10 @@
     "selectedCount_few": "{{count}} vybrány",
     "selectedCount_many": "{{count}} vybráno",
     "selectedCount_other": "{{count}} vybráno",
-    "clearSelection": "Zrušit výběr"
+    "clearSelection": "Zrušit výběr",
+    "starredFilter": "Označené",
+    "starredFilterHint": "Zobrazit jen označené modely",
+    "noStarredModels": "Zatím žádné označené modely. Označte model hvězdičkou vedle jeho názvu a najdete ho zde."
   },
   "polygon": {
     "drawRegion": "Nakreslete svůj region",
@@ -989,7 +991,6 @@
     "subtitle": "Vaše velitelské centrum pro hodnocení rizik",
     "navigation": "Navigace",
     "overview": "Přehled",
-    "profile": "Profil",
     "settings": "Nastavení",
     "logout": "Odhlásit",
     "tabs": {
@@ -1063,8 +1064,6 @@
     "quickActions": {
       "title": "Rychlé Akce",
       "subtitle": "Přejít na klíčové funkce",
-      "interactiveMap": "Interaktivní Mapa",
-      "viewRiskMap": "Zobrazit mapu hodnocení rizik",
       "riskModels": "Modely Rizik",
       "manageRiskModels": "Spravovat modely rizik",
       "settings": "Nastavení",
@@ -1234,18 +1233,10 @@
     "refresh": "Obnovit"
   },
   "profile": {
-    "title": "Nastavení profilu",
-    "subtitle": "Spravujte své osobní údaje a předvolby účtu",
-    "goBack": "Zpět",
     "loadingProfile": "Načítání vašeho profilu...",
-    "defaultUser": "Uživatel",
     "accessLevel": "Úroveň přístupu",
     "notSpecified": "Nespecifikováno",
-    "personalInfo": "Osobní informace",
-    "personalInfoDescription": "Aktualizujte své profilové údaje níže",
     "readOnly": "pouze pro čtení",
-    "saving": "Ukládání...",
-    "saveChanges": "Uložit změny",
     "fields": {
       "fullName": "Celé jméno",
       "email": "E-mailová adresa",
@@ -1260,11 +1251,8 @@
       "phone": "+420 123 456 789"
     },
     "accessLevels": {
-      "basic": "Základní",
       "basicDescription": "Standardní přístup k základním funkcím",
-      "intermediate": "Střední",
       "intermediateDescription": "Rozšířený přístup s pokročilými funkcemi",
-      "expert": "Expert",
       "expertDescription": "Plný přístup ke všem funkcím"
     },
     "notifications": {
@@ -1471,7 +1459,9 @@
       "creating": "Vytváření simulace...",
       "updating": "Aktualizace simulace...",
       "cancel": "Zrušit",
-      "regenerateFirst": "Před uložením síť znovu vytvořte."
+      "regenerateFirst": "Před uložením síť znovu vytvořte.",
+      "completeFirst": "Pro uložení zadejte název modelu a období simulace a nakreslete oblast.",
+      "saveShortcut": "Uložit (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Moje budovy",
@@ -1613,12 +1603,6 @@
       "discard": "Zahodit změny"
     },
     "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi",
-    "cooking": {
-      "label": "Vaření",
-      "electric": "Elektřina",
-      "gas": "Plyn",
-      "hint": "Při plynu se vaření v budovách stává poptávkou po plynu z dodávky plynu"
-    },
     "runMode": {
       "label": "Režim výpočtu",
       "plan": "Plánování",
@@ -1645,6 +1629,11 @@
     "largeModel": {
       "title": "Tento model má {{count}} budov",
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
+    },
+    "sections": {
+      "grid": "Síť",
+      "model": "Model",
+      "energySystem": "Energetický systém"
     },
     "analysis": {
       "button": "Analyzovat budovy",
@@ -2190,23 +2179,11 @@
   "settings": {
     "title": "Nastavení",
     "subtitle": "Přizpůsobte si svůj zážitek a preference",
-    "configuration": "Konfigurace",
-    "goBack": "Zpět",
     "tabs": {
+      "profile": "Profil",
       "general": "Obecné",
-      "display": "Zobrazení",
       "notifications": "Oznámení",
       "advanced": "Pokročilé"
-    },
-    "stats": {
-      "language": "Jazyk",
-      "theme": "Téma",
-      "notifications": "Oznámení",
-      "accessLevel": "Úroveň Přístupu",
-      "enabled": "Povoleno",
-      "disabled": "Zakázáno",
-      "system": "Systém",
-      "user": "Uživatel"
     },
     "language": {
       "title": "Jazyk",
@@ -2220,32 +2197,19 @@
       "title": "Poloha Mapy",
       "subtitle": "Uložené pozice",
       "syncing": "Synchronizace...",
-      "searchPlaceholder": "Vyhledat polohu...",
+      "searchPlaceholder": "Hledat místo nebo zadat šířku, délku",
       "current": "Aktuální",
       "noLocation": "Není nastavena žádná poloha",
       "savedLocations": "Uložené Polohy",
       "clearAll": "Smazat vše",
-      "syncNote": "Polohy se synchronizují s vaším účtem"
+      "syncNote": "Polohy se synchronizují s vaším účtem",
+      "pickHint": "Nebo klikněte do mapy a nastavte polohu."
     },
     "locationSearch": {
       "placeholder": "Vyhledat polohu...",
       "searching": "Vyhledávání...",
       "noResults": "Nebyly nalezeny žádné polohy",
       "searchFailed": "Vyhledávání selhalo"
-    },
-    "dataDisplay": {
-      "title": "Data a Zobrazení",
-      "subtitle": "Jednotky a formátování",
-      "temperature": "Teplota",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Vzdálenost",
-      "kilometers": "Kilometry",
-      "miles": "Míle",
-      "windSpeed": "Rychlost Větru",
-      "knots": "uzly",
-      "dataRefresh": "Obnovení Dat",
-      "min": "min"
     },
     "notifications": {
       "title": "Oznámení",
@@ -2400,7 +2364,6 @@
     "resetTopDown": "Obnovit pohled shora",
     "rightClickRotate": "Pravé tlačítko + táhnout pro otočení",
     "regions": "regiony",
-    "myModels": "moje modely",
     "grids": "mřížky",
     "countries": "země",
     "footprintOnlyBuildings_one": "{{count}} budova nemá 3D data a ukazuje jen půdorys",
@@ -2409,9 +2372,6 @@
     "footprintOnlyBuildings_other": "{{count}} budov nemá 3D data a ukazuje jen půdorys"
   },
   "privacy": {
-    "dataAndPrivacy": "Data a soukromí",
-    "acceptTerms": "Přijmout podmínky ochrany soukromí",
-    "openSettings": "Otevřít nastavení dat a soukromí",
     "dialogTitle": "Zpracování dat a soukromí",
     "cartoDescription": "Pro poskytování našich služeb využíváme CARTO a OSMF jako poskytovatele mapových služeb třetí strany.",
     "sharedWithCarto": "Přijetím budou s CARTO a OSMF sdíleny následující údaje:",
@@ -2579,7 +2539,10 @@
       "descriptions": {
         "targetWorkspace": "Vyberte pracovní prostor, do kterého přesunout model"
       },
-      "defaultWorkspace": "Výchozí Pracovní Prostor"
+      "defaultWorkspace": "Výchozí Pracovní Prostor",
+      "noOtherWorkspace": "Zatím neexistuje žádný jiný pracovní prostor. Pojmenujte nový a model se do něj přesune.",
+      "createAndMove": "Vytvořit pracovní prostor a přesunout",
+      "createAndMoveFailed": "Pracovní prostor se nepodařilo vytvořit nebo do něj přesunout model. Zkuste to znovu."
     },
     "shareModel": {
       "title": "Sdílet s Jednotlivým Uživatelem",
@@ -3171,7 +3134,7 @@
   },
   "buildingConfig": {
     "backToMap": "Zpět na mapu",
-    "preparing": "Připravují se 3D data této budovy. City2TABULA extrahuje a propojuje budovy v oblasti, což může při prvním použití oblasti trvat několik minut. Budova se zde otevře, jakmile bude připravena.",
+    "preparing": "Připravujeme 3D data pro tuto budovu.",
     "loading": "Načítání budovy…",
     "noGeometry": "City2TABULA již neobsahuje 3D geometrii této budovy.",
     "credit3dData": "3D data",

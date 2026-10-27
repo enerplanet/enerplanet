@@ -228,22 +228,21 @@
       "moveToWorkspace": "Move to Workspace",
       "profile": "Profile",
       "documentation": "Documentation",
-      "restartTour": "Restart tour",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
-      "theme": "Theme",
-      "searchLocation": "Search for a location"
+      "theme": "Theme"
     },
     "sidebar": {
       "energySimulations": "Energy Simulations",
       "map": "Map",
-      "locations": "Locations",
       "simulationReports": "Model Comparison",
       "technologies": "Technologies"
     },
     "menu": {
-      "profile": "Profile",
       "settings": "Settings",
-      "logout": "Log out"
+      "privacyTerms": "Privacy & Terms",
+      "logout": "Log out",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "View Results",
@@ -405,7 +404,10 @@
       "descriptions": {
         "targetWorkspace": "Choose the workspace to move the model to"
       },
-      "defaultWorkspace": "Default Workspace"
+      "defaultWorkspace": "Default Workspace",
+      "noOtherWorkspace": "There is no other workspace yet. Name a new one, and the model moves into it.",
+      "createAndMove": "Create workspace and move",
+      "createAndMoveFailed": "The workspace could not be created, or the model could not be moved into it. Please try again."
     },
     "shareModel": {
       "title": "Share with an Individual User",
@@ -1147,7 +1149,10 @@
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",
     "selectedCount_other": "{{count}} selected",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "starredFilter": "Starred",
+    "starredFilterHint": "Show only starred models",
+    "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here."
   },
   "polygon": {
     "drawRegion": "Draw Your Region",
@@ -1231,7 +1236,6 @@
     "managePlatform": "Manage your Energy Simulation Platform",
     "administrator": "Administrator",
     "loadingContent": "Loading content...",
-    "profile": "Profile",
     "settings": "Settings",
     "logout": "Logout",
     "tabs": {
@@ -1305,8 +1309,6 @@
     "quickActions": {
       "title": "Quick Actions",
       "subtitle": "Navigate to key features",
-      "interactiveMap": "Interactive Map",
-      "viewRiskMap": "View risk assessment map",
       "riskModels": "Risk Models",
       "manageRiskModels": "Manage risk models",
       "settings": "Settings",
@@ -1471,18 +1473,10 @@
     }
   },
   "profile": {
-    "title": "Profile Settings",
-    "subtitle": "Manage your personal information and account preferences",
-    "goBack": "Go back",
     "loadingProfile": "Loading your profile...",
-    "defaultUser": "User",
     "accessLevel": "Access Level",
     "notSpecified": "Not specified",
-    "personalInfo": "Personal Information",
-    "personalInfoDescription": "Update your profile details below",
     "readOnly": "read-only",
-    "saving": "Saving...",
-    "saveChanges": "Save Changes",
     "fields": {
       "fullName": "Full Name",
       "email": "Email Address",
@@ -1497,11 +1491,8 @@
       "phone": "+1 (555) 000-0000"
     },
     "accessLevels": {
-      "basic": "Basic",
       "basicDescription": "Standard access to basic features",
-      "intermediate": "Intermediate",
       "intermediateDescription": "Extended access with advanced features",
-      "expert": "Expert",
       "expertDescription": "Full access to all features"
     },
     "notifications": {
@@ -1763,7 +1754,9 @@
       "creating": "Creating Simulation...",
       "updating": "Updating Simulation...",
       "cancel": "Cancel",
-      "regenerateFirst": "Regenerate the grid before saving."
+      "regenerateFirst": "Regenerate the grid before saving.",
+      "completeFirst": "Enter a model name and a simulation period, and draw an area, to save.",
+      "saveShortcut": "Save (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "My Buildings",
@@ -1850,12 +1843,6 @@
       "discard": "Discard changes"
     },
     "resolutionComingSoon": "30-minute resolution coming in a future release",
-    "cooking": {
-      "label": "Cooking",
-      "electric": "Electric",
-      "gas": "Gas",
-      "hint": "With gas, the buildings' cooking becomes a gas demand bought from a gas supply"
-    },
     "runMode": {
       "label": "Run mode",
       "plan": "Plan",
@@ -1882,6 +1869,11 @@
     "largeModel": {
       "title": "This model has {{count}} buildings",
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
+    },
+    "sections": {
+      "grid": "Grid",
+      "model": "Model",
+      "energySystem": "Energy system"
     },
     "analysis": {
       "button": "Analyse buildings",
@@ -2540,23 +2532,11 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Customize your experience and preferences",
-    "configuration": "Configuration",
-    "goBack": "Go back",
     "tabs": {
+      "profile": "Profile",
       "general": "General",
-      "display": "Display",
       "notifications": "Notifications",
       "advanced": "Advanced"
-    },
-    "stats": {
-      "language": "Language",
-      "theme": "Theme",
-      "notifications": "Notifications",
-      "accessLevel": "Access Level",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "system": "System",
-      "user": "User"
     },
     "language": {
       "title": "Language",
@@ -2570,32 +2550,19 @@
       "title": "Map Location",
       "subtitle": "Saved positions",
       "syncing": "Syncing...",
-      "searchPlaceholder": "Search for a location...",
+      "searchPlaceholder": "Search a place, or enter lat, lon",
       "current": "Current",
       "noLocation": "No location set",
       "savedLocations": "Saved Locations",
       "clearAll": "Clear All",
-      "syncNote": "Locations sync to your account"
+      "syncNote": "Locations sync to your account",
+      "pickHint": "Or click the map to set the location."
     },
     "locationSearch": {
       "placeholder": "Search location...",
       "searching": "Searching...",
       "noResults": "No locations found",
       "searchFailed": "Search failed"
-    },
-    "dataDisplay": {
-      "title": "Data & Display",
-      "subtitle": "Units and formatting",
-      "temperature": "Temperature",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Distance",
-      "kilometers": "Kilometers",
-      "miles": "Miles",
-      "windSpeed": "Wind Speed",
-      "knots": "knots",
-      "dataRefresh": "Data Refresh",
-      "min": "min"
     },
     "notifications": {
       "title": "Notifications",
@@ -2750,16 +2717,12 @@
     "resetTopDown": "Reset to top-down",
     "rightClickRotate": "Right-click + drag to rotate",
     "regions": "regions",
-    "myModels": "my models",
     "grids": "grids",
     "countries": "countries",
     "footprintOnlyBuildings_one": "{{count}} building has no 3D city data and shows only its footprint",
     "footprintOnlyBuildings_other": "{{count}} buildings have no 3D city data and show only their footprint"
   },
   "privacy": {
-    "dataAndPrivacy": "Data & Privacy",
-    "acceptTerms": "Accept Privacy Terms",
-    "openSettings": "Open data & privacy settings",
     "dialogTitle": "Data Processing & Privacy",
     "cartoDescription": "To provide you with our services, we rely on CARTO and OSMF as third-party mapping providers.",
     "sharedWithCarto": "By accepting, the following details will be shared with CARTO and OSMF respectively:",
@@ -3140,7 +3103,7 @@
   },
   "buildingConfig": {
     "backToMap": "Back to map",
-    "preparing": "Preparing this building's 3D data. City2TABULA is extracting and linking the area's buildings, which can take a few minutes the first time an area is used. The building opens here when it is ready.",
+    "preparing": "Preparing 3D data for this building.",
     "loading": "Loading this building…",
     "noGeometry": "City2TABULA no longer holds this building's 3D geometry.",
     "credit3dData": "3D data",

@@ -11,16 +11,16 @@ interface MapControlsProps {
   onZoomOut: () => void;
   onCenterMap: () => void;
   placement?: MapControlsPlacement;
+  /** Further buttons below the zoom and centre buttons, in the same column. */
+  children?: React.ReactNode;
 }
 
-// top-left sits under the map search button (MapSearchBar: top-4 left-4, size-8) and
-// below its z-10, so the expanded search covers the buttons.
 const PLACEMENT_STYLE: Record<MapControlsPlacement, { className: string; style: React.CSSProperties }> = {
   "top-right": { className: "absolute top-4 z-50 pointer-events-auto", style: { right: "calc(1rem + var(--sidebar-offset, 0rem))" } },
-  "top-left": { className: "absolute z-[5] pointer-events-auto", style: { left: "1rem", top: "3.5rem" } },
+  "top-left": { className: "absolute z-[5] pointer-events-auto", style: { left: "1rem", top: "1rem" } },
 };
 
-export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement = "top-right" }) => {
+export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, onCenterMap, placement = "top-right", children }) => {
   const { t } = useTranslation();
   const tooltipSide = placement === "top-left" ? "right" : "left";
   
@@ -70,6 +70,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onZoomIn, onZoomOut, o
             {t('map.centerMap')}
           </TooltipContent>
         </Tooltip>
+        {children}
       </div>
     </div>
   );

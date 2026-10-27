@@ -264,23 +264,25 @@ export const useAreaSelect = ({
     const updateModelMutation = useUpdateModelMutation2();
     const createModelMutation = useCreateModelMutation();
 
-    /** Saves the model and returns its id, or undefined when it was not saved. A new model returns to the dashboard unless stayOnPage. */
-    const saveModel = useCallback(async (stayOnPage: boolean): Promise<number | undefined> => {
+    /** Saves the model and returns its id, or undefined when it was not saved. */
+    const saveModel = useCallback(async (): Promise<number | undefined> => {
         const data = getUpdatedPylovoData(); const user = useAuthStore.getState().user;
         const userId = user?.id ? String(user.id) : undefined;
-        return saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, navigate, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current, stayOnPage });
-    }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, allPolygons, currentWorkspace?.id, getUpdatedPylovoData, advancedParams, draftId, setIsSaving, updateModelMutation, createModelMutation, navigate]);
+        return saveAreaData({ fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates: allPolygons, workspaceId: currentWorkspace?.id, updateModelMutation, createModelMutation, setIsSaving, pylovoData: data, advancedParams, draftId, userId, originalModel: originalModelRef.current });
+    }, [fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, allPolygons, currentWorkspace?.id, getUpdatedPylovoData, advancedParams, draftId, setIsSaving, updateModelMutation, createModelMutation]);
 
     const handleQuickSave = useCallback(async () => {
-        await saveModel(false);
+        const id = await saveModel();
         setIsModified(false);
-    }, [saveModel, setIsModified]);
+        // A new model reopens in edit mode, so the next save updates it rather than creating another.
+        if (id && !editMode) { isInternalNavRef.current = true; navigate(`/app/model-dashboard/edit/${id}`, { replace: true }); }
+    }, [saveModel, setIsModified, editMode, navigate]);
 
     /** Saves a new or changed model, then starts the analysis of its buildings; returns whether it started. */
     const handleAnalyse = useCallback(async (): Promise<boolean> => {
         let id = editMode ? modelId : undefined;
         if (!id || isModified) {
-            id = await saveModel(true);
+            id = await saveModel();
             if (!id) { showError(t("simulation.analysis.saveFailed")); return false; }
             setIsModified(false);
         }
@@ -355,7 +357,7 @@ function gridErrorMessage(err: unknown, siteMode: boolean, fallback: string): st
 
 /** Saves the area as a model and returns its id, or undefined when it was not saved. */
 async function saveAreaData(params: any): Promise<number | undefined> {
-    const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel, stayOnPage } = params;
+    const { fromDate, toDate, modelName, resolution, editMode, modelId, onAreaSelected, polygonCoordinates, workspaceId, updateModelMutation, createModelMutation, setIsSaving, pylovoData, advancedParams, draftId, userId, originalModel } = params;
     if (!fromDate || !toDate || !modelName?.trim() || !polygonCoordinates?.length) return undefined;
     setIsSaving(true);
     try {
@@ -383,7 +385,6 @@ async function saveAreaData(params: any): Promise<number | undefined> {
             if (draftId && newModel?.data?.id) try { await pylovoService.finalizeTransformers(draftId, newModel.data.id, userId); } catch { /* non-critical */ }
             // Not fatal: an analysis finds the same results stored by key.
             if (draftId && newModel?.data?.id) await modelService.claimDraftSeries(newModel.data.id, draftId).catch((err) => console.warn(`claiming draft ${draftId} series for model ${newModel.data.id} failed`, err));
-            if (!stayOnPage) params.navigate(DASHBOARD_ROUTE);
             return newModel?.data?.id;
         }
     } catch (err) { console.error('saving the model failed', err); return undefined; }

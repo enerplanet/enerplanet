@@ -23,7 +23,7 @@ import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID, type DatasetCredit } from './c
 import { configuratorServicesFor } from './heatClient';
 import { modelRunContext } from './runContext';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
-import { usePreparationStepText } from './useAreaPreparation';
+import { PreparationProgress } from './PreparationProgress';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useDemandProfile } from './useDemandProfile';
@@ -42,7 +42,7 @@ const Notice: FC<{ children: ReactNode; onBack: () => void }> = ({ children, onB
   return (
     <div className="inset-0 flex h-full items-center justify-center">
       <div className="bg-card text-muted-foreground flex flex-col items-center gap-4 rounded-lg px-6 py-5 text-sm shadow-2xl">
-        <p className="max-w-md text-center">{children}</p>
+        <div className="flex max-w-md flex-col items-center gap-3 text-center">{children}</div>
         <button
           type="button"
           onClick={onBack}
@@ -182,7 +182,6 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const toDate = useModelStore((s) => s.toDate);
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const preparationStep = usePreparationStepText();
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
   const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t);
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
@@ -191,8 +190,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   if (preparing) {
     return (
       <Notice onBack={onExit}>
-        {t('buildingConfig.preparing')}
-        {preparationStep && <span className="text-foreground mt-2 block font-medium">{preparationStep}</span>}
+        <p>{t('buildingConfig.preparing')}</p>
+        <PreparationProgress />
       </Notice>
     );
   }

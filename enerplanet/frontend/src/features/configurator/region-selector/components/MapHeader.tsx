@@ -1,54 +1,11 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { FileDown, FileUp, Loader2, Lock, MapPin, RefreshCw } from "lucide-react";
+import { Switch, Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { FileDown, FileUp, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
-import type { FC, ReactNode } from "react";
-
-interface ModernToggleProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  icon: ReactNode;
-  activeColorClass?: string;
-  ariaLabel?: string;
-}
-
-const ModernToggle: FC<ModernToggleProps> = ({
-  checked,
-  onCheckedChange,
-  icon,
-  activeColorClass = "text-blue-600",
-  ariaLabel,
-}) => {
-  return (
-    <button
-      onClick={() => onCheckedChange(!checked)}
-      className={`
-                relative inline-flex h-5 w-10 items-center rounded-full
-                transition-all duration-300 ease-in-out cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary
-                ${checked ? "bg-slate-700" : "bg-gray-300 dark:bg-gray-600"}
-            `}
-      aria-label={ariaLabel}
-      type="button"
-    >
-      <span
-        className={`
-                    absolute h-4 w-4 rounded-full bg-white shadow-sm flex items-center justify-center
-                    transition-all duration-300 ease-in-out
-                `}
-        style={{ transform: checked ? "translateX(22px)" : "translateX(2px)" }}
-      >
-        <div
-          className={`w-3 h-3 ${checked ? activeColorClass.replace("bg-", "text-") : "text-gray-400"}`}
-        >
-          {icon}
-        </div>
-      </span>
-    </button>
-  );
-};
+import type { FC } from "react";
 
 interface MapHeaderProps {
   allPolygonsCount: number;
@@ -105,12 +62,11 @@ export const MapHeader: FC<MapHeaderProps> = ({
   modelRegionName,
 }) => {
   const { t } = useTranslation();
-  // relative z-30: md-fade-in animates with fill-mode both, which creates a
-  // permanent stacking context that traps the region dropdown's own z-50 here.
-  // Without a stacking order the header loses to the map canvas below it; 30
-  // clears the map while staying under the z-50 notification toast.
+  // relative z-40: md-fade-in animates with fill-mode both, which creates a
+  // permanent stacking context that traps the dropdowns' own z-50 here. 40 lifts
+  // them over the map's z-30 overlays while staying under the z-50 toasts.
   return (
-    <div className="md-fade-in relative z-30 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-1.5">
+    <div className="md-fade-in relative z-40 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-1.5">
       <div className="flex items-center gap-2">
         {!isLoadingPreference && (
           <Tooltip>
@@ -229,12 +185,10 @@ export const MapHeader: FC<MapHeaderProps> = ({
               {t("simulation.mapHeader.myBuildings")}
               <InfoIcon tooltipKey="privateBuildings" position="bottom" />
             </span>
-            <ModernToggle
+            <Switch
               checked={includePrivateBuildings}
               onCheckedChange={onTogglePrivateBuildings}
-              icon={<Lock className="w-full h-full" />}
-              activeColorClass="text-blue-600"
-              ariaLabel={t("simulation.mapHeader.toggleMyBuildings")}
+              aria-label={t("simulation.mapHeader.toggleMyBuildings")}
             />
           </div>
         )}

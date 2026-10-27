@@ -278,6 +278,19 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 };
 
 
+const INFO_GLYPH = (
+	<svg className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" fill="currentColor" viewBox="0 0 20 20">
+		<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+	</svg>
+);
+
+/** An info icon whose tooltip shows the given, already translated, title and description. */
+export const TextInfoIcon: FC<{ title: string; description: string; position?: TooltipPosition }> = ({ title, description, position = 'top' }) => (
+	<InfoTooltip content={{ title, description }} position={position}>
+		{INFO_GLYPH}
+	</InfoTooltip>
+);
+
 // Convenience component for info icons
 interface InfoIconProps {
 	tooltipKey: TooltipKey;
@@ -311,9 +324,7 @@ export const InfoIcon: FC<InfoIconProps> = ({
 	
 	return (
 		<InfoTooltip content={content} position={position} className={className}>
-			<svg className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" fill="currentColor" viewBox="0 0 20 20">
-				<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-			</svg>
+			{INFO_GLYPH}
 		</InfoTooltip>
 	);
 };

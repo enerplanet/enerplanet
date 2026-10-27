@@ -298,23 +298,29 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
 }) => {
   const { t } = useTranslation();
   const toggleFavorite = useFavoriteModelsStore((s) => s.toggleFavorite);
-  const isFavorite = useFavoriteModelsStore((s) => s.isFavorite);
-  const favorited = isFavorite(model.id);
+  // Selects the flag itself: selecting isFavorite returns the same function on every
+  // change, so the row would not re-render when its star is toggled.
+  const favorited = useFavoriteModelsStore((s) => s.favoriteIds.includes(model.id));
   const level = model.level || 0;
-  // Copies sit in their family's block (ModelDashboard); only the name is indented.
+  // Copies follow their original; only the name is indented.
   const nameIndentClass = level > 0 ? "pl-6" : "";
+  // An original starts below a full-width line; a copy's line starts at the
+  // name column, so the family reads as one block.
+  const copyDivider = level > 0 ? "border-t border-border/60" : "";
   const canManageModel = canUserDeleteModel(model);
 
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
-  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${
-    isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : ""
-  }`;
+  // Copies sit on a shade of the original's background.
+  const rowShade = isSelected ? "bg-muted/60 shadow-[inset_2px_0_0_0_var(--primary)]" : level > 0 ? "bg-muted/30" : "";
+  const rowClassName = `md-row-in group transition-colors duration-150 hover:bg-muted/40 ${level === 0 ? "border-t border-border" : ""} ${rowShade}`;
+  // The first cell of a copy has no top line, so the bars of a family's copies join into one.
+  const copyBar = level > 0 ? "relative pl-7 before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-muted-foreground/30" : "pl-4";
 
   return (
     <tr className={rowClassName} style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}>
-      <td className="pl-4 pr-2 py-2.5">
+      <td className={`pr-2 py-2.5 ${copyBar}`}>
         <div className="flex items-center justify-center gap-1.5">
           <input
             type="checkbox"
@@ -338,7 +344,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass}`}>
+      <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass} ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
             <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
@@ -359,7 +365,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {isActiveStatus(model.status) ? (
             <RunStages status={model.status} />
@@ -414,11 +420,11 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className="hidden px-4 py-2.5 md:table-cell">
+      <td className={`hidden px-4 py-2.5 md:table-cell ${copyDivider}`}>
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
-      <td className="px-4 py-2.5">
+      <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex items-center gap-1 transition-opacity duration-150 sm:opacity-80 sm:group-hover:opacity-100">
           <ModelActions
             model={model}

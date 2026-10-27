@@ -20,6 +20,8 @@ export const useModelsQuery = (params?: {
 	sort_order?: string;
 	/** families: limit, offset and total count originals with their copies. */
 	group?: "families";
+	/** Comma-separated model ids to list only those; an empty string lists none. */
+	ids?: string;
 }, options?: { requireWorkspace?: boolean }) => {
 	const requireWorkspace = options?.requireWorkspace ?? true;
 	return useQuery({

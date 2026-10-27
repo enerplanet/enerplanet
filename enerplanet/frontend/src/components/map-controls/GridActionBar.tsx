@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Building2, Activity, Loader2, Check, Flame } from "lucide-react";
+import { Building2, Loader2, Flame } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 
@@ -24,9 +24,6 @@ interface GridActionBarProps {
     onToggleAddTransformerMode: () => void;
     isBuildingAssignMode: boolean;
     onStartBuildingAssignMode: () => void;
-    onRunPowerFlow: () => Promise<boolean>;
-    isRunningPowerFlow: boolean;
-    hasPowerFlowResults: boolean;
     onResolveAllHeat: () => Promise<void>;
     isResolvingHeat: boolean;
 }
@@ -37,14 +34,10 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     onToggleAddTransformerMode,
     isBuildingAssignMode,
     onStartBuildingAssignMode,
-    onRunPowerFlow,
-    isRunningPowerFlow,
-    hasPowerFlowResults,
     onResolveAllHeat,
     isResolvingHeat,
 }) => {
     const { t } = useTranslation();
-
     if (!hasGridData) return null;
 
     return (
@@ -103,7 +96,7 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     title={t("workflow.resolveHeatAction") || "Resolve heat"}
                     disabled={isResolvingHeat}
                     className="
-                        flex items-center gap-2 px-4 py-2.5 text-foreground hover:bg-muted/80 transition-colors
+                        flex items-center gap-2 px-4 py-2.5 rounded-r-full text-foreground hover:bg-muted/80 transition-colors
                         disabled:opacity-50 disabled:cursor-not-allowed
                     "
                 >
@@ -117,39 +110,6 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     </span>
                 </button>
 
-                <div className="w-px h-6 bg-border/50" />
-
-                {/* Power Flow */}
-                <button
-                    type="button"
-                    onClick={onRunPowerFlow}
-                    aria-label={hasPowerFlowResults ? t("workflow.rerunPowerFlowAction") : t("workflow.runPowerFlowAction")}
-                    title={hasPowerFlowResults ? t("workflow.rerunPowerFlowAction") : t("workflow.runPowerFlowAction")}
-                    disabled={isRunningPowerFlow}
-                    className={`
-                        flex items-center gap-2 px-4 py-2.5 rounded-r-full transition-colors
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        ${hasPowerFlowResults
-                            ? "text-amber-600 dark:text-amber-400 hover:bg-muted/80"
-                            : "text-foreground hover:bg-muted/80"
-                        }
-                    `}
-                >
-                    {isRunningPowerFlow ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : hasPowerFlowResults ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                        <Activity className="w-4 h-4" />
-                    )}
-                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
-                        {hasPowerFlowResults
-                            ? t("workflow.rerunPowerFlowAction")
-                            : t("workflow.runPowerFlowAction")
-                        }
-                    </span>
-                    <InfoIcon tooltipKey="powerFlow" position="top" />
-                </button>
             </div>
         </div>
     );

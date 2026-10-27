@@ -11,7 +11,7 @@ import {
   Edit,
   Eye,
   RefreshCw,
-  MapPinned,
+  MapPinHouse,
 } from 'lucide-react';
 import { useCustomLocationStore } from '@/features/locations/store/custom-location-store';
 import type { CustomLocation } from '@/features/locations/services/customLocationService';
@@ -211,7 +211,7 @@ const LocationsPage: FC = () => {
   return (
     <div className={PAGE_SHELL_CLASS}>
       <PageHeader
-        icon={MapPinned}
+        icon={MapPinHouse}
         title={t('locations.title')}
         subtitle={t('locations.subtitle')}
         actions={

@@ -4,9 +4,10 @@ import { useMapProvider } from "@/providers/map-context";
 import { initializeMap } from '@/features/interactive-map/utils/mapUtils';
 import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import type { MapControlsPlacement } from "@/components/map-controls/MapControls";
+import { BaseLayerSwitcher } from "@/components/map-controls/BaseLayerSwitcher";
 
 interface MapContainerProps {
-	topBar: ReactNode;
+	topBar?: ReactNode;
 	sidebar?: ReactNode;
 	showSidebar?: boolean;
 	mapOverlays?: ReactNode;
@@ -19,6 +20,8 @@ interface MapContainerProps {
 	onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
 	sidebarWidth?: string;
 	controlsPlacement?: MapControlsPlacement;
+	/** Further map buttons in the zoom and centre column. */
+	controlsExtra?: ReactNode;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -35,6 +38,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 	onDragOver,
 	sidebarWidth = "20rem",
 	controlsPlacement,
+	controlsExtra,
 }) => {
 	const { mapRef, initMapInstance, MapControls } = useMapProvider();
 	const { map } = useMapStore();
@@ -56,9 +60,11 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 					['--sidebar-offset']: showSidebar ? sidebarWidth : '0rem',
 				}}
 			>
-				<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
-					{topBar}
-				</div>
+				{topBar && (
+					<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
+						{topBar}
+					</div>
+				)}
 
 				{mapHeader && (
 					<div className="flex-shrink-0" style={{ paddingRight: "var(--sidebar-offset)" }}>
@@ -79,7 +85,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 									onDragOver={onDragOver}
 								/>
 
-								{map && !muted && <MapControls placement={controlsPlacement} />}
+								{map && !muted && <MapControls placement={controlsPlacement}>{controlsExtra}</MapControls>}
+								{map && !muted && <BaseLayerSwitcher />}
 
 								{mapOverlays}
 

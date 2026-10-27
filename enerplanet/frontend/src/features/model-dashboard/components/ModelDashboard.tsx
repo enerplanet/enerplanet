@@ -6,6 +6,7 @@ import {
 	Settings,
 	Search,
 	ArrowUpDown,
+	Star,
 	RefreshCw,
 	ChevronUp,
 	ChevronDown,
@@ -14,10 +15,10 @@ import {
 	FolderInput,
 	Copy,
 	Edit,
-	BarChart3,
+	LayoutDashboard,
 	AlertCircle,
 	GitCompareArrows,
-	Zap,
+	Play,
 	MoreHorizontal,
 } from "lucide-react";
 
@@ -129,23 +130,15 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 	);
 }
 
-// Copies sit in a box inset by its cell's p-3 (0.75rem) and the box's 1px border.
-const COPY_INSET = "0.75rem + 1px";
-
-/**
- * Column widths shared by the model table and the copies' table inside it. The
- * name column takes the rest; with inset, the outer columns shrink by
- * COPY_INSET so every copy column lines up with the parent rows.
- */
-function ModelColumns({ inset = false }: { inset?: boolean }) {
-	const edge = (width: string) => (inset ? `calc(${width} - (${COPY_INSET}))` : width);
+/** Column widths of the model table; the name column takes the rest. */
+function ModelColumns() {
 	return (
 		<colgroup>
-			<col style={{ width: edge("5rem") }} />
+			<col style={{ width: "5rem" }} />
 			<col />
 			<col style={{ width: "24rem" }} />
 			<col className="hidden md:table-column" style={{ width: "10rem" }} />
-			<col style={{ width: edge("22rem") }} />
+			<col style={{ width: "22rem" }} />
 		</colgroup>
 	);
 }
@@ -254,6 +247,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [currentPage, setCurrentPage] = useState<number>(0);
 	const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 	const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>(undefined);
+	const [starredOnly, setStarredOnly] = useState(false);
+	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
 
 	const { data: modelsResponse, isLoading: isLoadingModels, refetch: refetchModels } = useModelsQuery({
 		limit: itemsPerPage,
@@ -263,6 +258,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		sort_by: orderBy,
 		sort_order: order,
 		group: "families",
+		ids: starredOnly ? favoriteIds.join(",") : undefined,
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
@@ -414,19 +410,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	const filteredModels = models;
 
-	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
-	const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-	const sortedModels = useMemo(() => {
-		// Server already sorts by orderBy/order — only reorder favorites to top
-		return [...filteredModels].sort((a, b) => {
-			const aFav = favoriteIdSet.has(a.id) ? 0 : 1;
-			const bFav = favoriteIdSet.has(b.id) ? 0 : 1;
-			return aFav - bFav;
-		});
-	}, [filteredModels, favoriteIdSet]);
-
-	const orderedModels = useMemo(() => organizeModelsHierarchically(sortedModels), [sortedModels]);
+	// The server's order stands; starring a model filters, it does not move it.
+	const orderedModels = useMemo(() => organizeModelsHierarchically(filteredModels), [filteredModels]);
 
 	const paginatedModels = orderedModels;
 	const modelTitlesByID = useMemo(() => {
@@ -674,7 +659,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleRunMeme([model.id]);
 	}, [handleRunMeme]);
 
-	// A model the MEME run action offers on: the same statuses the per-row Zap
+	// A model the MEME run action offers on: the same statuses the per-row Play
 	// shows for (draft | modified | failed). completed/published are excluded.
 	const bulkRunnableModels = useMemo(
 		() => selectedModels.filter((model: Model) =>
@@ -764,7 +749,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		},
 		{
 			key: "bulk-run-meme",
-			icon: Zap,
+			icon: Play,
 			tooltip: getRunMemeTooltip(),
 			variant: "warning" as const,
 			onClick: handleBulkRunMeme,
@@ -819,7 +804,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
 				{/* Page header */}
 				<PageHeader
-					icon={BarChart3}
+					icon={LayoutDashboard}
 					title={t('model.dashboard')}
 					subtitle={t('model.manageConfigurations')}
 					actions={
@@ -884,10 +869,10 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 						</div>
 					)}
 
-					{/* Main Content Card */}
-					<div className={`md-rise ${CARD_CLASS}`} style={{ animationDelay: "60ms" }}>
+					{/* Toolbar and table, each in its own card */}
+					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
-						<div className="flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5">
+						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
 							{/* Search */}
 							<div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
 								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -899,6 +884,17 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 									className={SEARCH_INPUT_CLASS}
 								/>
 							</div>
+
+							<button
+								type="button"
+								onClick={() => { setStarredOnly((on) => !on); setCurrentPage(0); }}
+								aria-pressed={starredOnly}
+								title={t('model.starredFilterHint')}
+								className={`${TOOLBAR_BUTTON_CLASS} ${starredOnly ? "bg-muted" : ""}`}
+							>
+								<Star className={`h-4 w-4 ${starredOnly ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} aria-hidden="true" />
+								{t('model.starredFilter')}
+							</button>
 
 								{/* Workspace Controls */}
 								<div className="flex items-center gap-2">
@@ -991,7 +987,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							</div>
 
 							{/* Table */}
-							<div className="border-t border-border p-4 sm:px-5 sm:pb-5">
+							<div>
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
 								<div className="space-y-3">
@@ -1011,12 +1007,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className="md-fade-in overflow-hidden rounded-xl border border-border">
+										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
 									<div className="w-full overflow-auto">
 										<table className="w-full min-w-[75rem] table-fixed">
 											<ModelColumns />
 											<thead>
-												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted/40"}`}>
+												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
 													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
@@ -1095,30 +1091,17 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 													)}
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-border bg-card">
+											<tbody className="bg-card">
 												{families.map(({ original, copies }) => (
 													<Fragment key={original.id}>
 														{renderRow(original)}
-														{copies.length > 0 && (
-															<tr>
-																<td colSpan={5} className="p-3">
-																	<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-muted/30">
-																		<table className="w-full table-fixed">
-																			<ModelColumns inset />
-																			<tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-																				{copies.map(renderRow)}
-																			</tbody>
-																		</table>
-																	</div>
-																</td>
-															</tr>
-														)}
+														{copies.map(renderRow)}
 													</Fragment>
 												))}
 											</tbody>
 										</table>
 									</div>
-									{sortedModels.length > 0 && (
+									{filteredModels.length > 0 && (
 										<Pagination
 											currentPage={currentPage}
 											totalItems={totalItems}
@@ -1128,47 +1111,52 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
 											resultsLabel={t("model.family.pagination")}
+											className="bg-muted"
 										/>
 									)}
 								</div>
 							) : (
 								<div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
 									<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
-										<BarChart3 className="h-7 w-7 text-muted-foreground" />
+										<LayoutDashboard className="h-7 w-7 text-muted-foreground" />
 									</div>
 									<h3 className="text-base font-semibold tracking-tight text-foreground">{t('model.noModelsFound')}</h3>
 									<p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-										{filterText
-											? t('model.noModelsMatch', { search: filterText })
-											: t('model.noModelsYet')}
+										{starredOnly
+											? t('model.noStarredModels')
+											: filterText
+												? t('model.noModelsMatch', { search: filterText })
+												: t('model.noModelsYet')}
 									</p>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span>
-												<button
-													onClick={handleNewModel}
-													disabled={isModelLimitReached}
-													className={`mt-6 ${
-														isModelLimitReached
-															? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
-															: PRIMARY_BUTTON_CLASS
-													}`}
-												>
-													{isModelLimitReached ? (
-														<AlertCircle className="h-4 w-4" />
-													) : (
-														<Plus className="h-4 w-4" />
-													)}
-													{t('model.createFirstModel')}
-												</button>
-											</span>
-										</TooltipTrigger>
-										{isModelLimitReached && (
-											<TooltipContent>
-												{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
-											</TooltipContent>
-										)}
-									</Tooltip>
+									{!starredOnly && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span>
+													<button
+														onClick={handleNewModel}
+														disabled={isModelLimitReached}
+														className={`mt-6 ${
+															isModelLimitReached
+																? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
+																: PRIMARY_BUTTON_CLASS
+														}`}
+													>
+														{isModelLimitReached ? (
+															<AlertCircle className="h-4 w-4" />
+														) : (
+															<Plus className="h-4 w-4" />
+														)}
+														{t('model.createFirstModel')}
+													</button>
+												</span>
+											</TooltipTrigger>
+											{isModelLimitReached && (
+												<TooltipContent>
+													{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
+												</TooltipContent>
+											)}
+										</Tooltip>
+									)}
 								</div>
 							)}
 							</>

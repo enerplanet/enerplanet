@@ -9,7 +9,6 @@ import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useA
 import { PolygonDrawer } from "@/features/polygon-drawer";
 import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
-import { PolygonDrawingGuide } from "@/components/map-controls/PolygonDrawingGuide";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
@@ -58,6 +57,8 @@ import {
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
 import { GridStatsBadge } from "./components/GridStatsBadge";
+import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
 import { UnsavedChangesDialog } from "./components/UnsavedChangesDialog";
@@ -475,30 +476,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     buildingCoords: reassignmentLineAnchor,
   });
 
-  // ── Handle run power flow ────────────────────────────────────────
-  const handleRunPowerFlow = useCallback(async () => {
-    try {
-      const success = await pylovoLayers.runPowerFlowAnalysis();
-      if (success) {
-        notification.showSuccess(
-          t("simulation.powerFlow.success") ||
-            "Power flow analysis completed. Line colors now show load utilization."
-        );
-      } else {
-        notification.showError(
-          t("simulation.powerFlow.noData") || "No grid data available for power flow analysis."
-        );
-      }
-      return success;
-    } catch (error) {
-      console.error("Power flow analysis error:", error);
-      notification.showError(
-        t("simulation.powerFlow.error") || "Power flow analysis failed. Check console for details."
-      );
-      return false;
-    }
-  }, [pylovoLayers, notification, t]);
-
   // Read again after a save, after an analysis starts, and after the configurator
   // closes, where a building's run may have been repeated.
   const { buildingId: openBuildingId } = useConfiguratorParams();
@@ -582,7 +559,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       <MapContainer
         key={editMode ? `edit-${existingModelId}` : "create"}
         modal={false}
-        topBar={null}
         sidebar={
           <SidebarPanel
             state={state}
@@ -618,6 +594,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
+            <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
+              <WorkflowBar
+                polygonCount={state.allPolygons.length}
+                isGeneratingGrid={state.isGeneratingGrid}
+                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                siteMode={siteMode}
+                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+              />
+            </div>
             {gridResultIds.length > 0 && (
               <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
                 <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
@@ -660,19 +645,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {!editMode && (
-              <PolygonDrawingGuide
-                canDraw
-                isDrawing={state.isDrawing}
-                polygonCount={state.allPolygons.length}
-                currentPointCount={currentPointCount}
-                enableEditing={true}
-                isGeneratingGrid={state.isGeneratingGrid}
-                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
-                hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
-                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-              />
+            {isMapLibre3D && (
+              <div className="pointer-events-none absolute top-16 z-30 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs font-medium text-white shadow-md" style={MAP_TOP_CENTRE}>
+                {t("drawing.view3dOnly", "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.")}
+              </div>
             )}
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
@@ -680,9 +656,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               onToggleAddTransformerMode={addTransformer.toggleAddTransformerMode}
               isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
               onStartBuildingAssignMode={buildingAssign.startBuildingAssignMode}
-              onRunPowerFlow={handleRunPowerFlow}
-              isRunningPowerFlow={pylovoLayers.isRunningPowerFlow}
-              hasPowerFlowResults={pylovoLayers.powerFlowResults.size > 0}
               onResolveAllHeat={handleResolveAllHeat}
               isResolvingHeat={isResolvingHeat}
             />
@@ -731,6 +704,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         showSidebar={true}
         sidebarWidth="clamp(18rem, 30vw, 26rem)"
         controlsPlacement="top-left"
+        controlsExtra={<ShortcutsMenu />}
       />
 
       <AreaSelectTour
@@ -749,7 +723,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onPointerTargetChange={setPointerTarget}
         onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
         onSketchCannotClose={(reason) => notification.showError(t(reason === "too-few-corners" ? "drawing.needThreeCorners" : "drawing.cornersInLine"))}
-        suspended={activeMode !== null}
+        // 3D is for viewing: the area is drawn and edited on the 2D map.
+        suspended={activeMode !== null || isMapLibre3D}
         allowMultiple
         clearTrigger={state.clearTrigger}
         initialPolygons={importedPolygons ?? (editMode ? state.loadedCoordinates : undefined)}

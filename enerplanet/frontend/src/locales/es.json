@@ -228,22 +228,21 @@
       "moveToWorkspace": "Mover a Espacio de Trabajo",
       "profile": "Perfil",
       "documentation": "Documentación",
-      "restartTour": "Reiniciar tour",
+      "restartTour": "Product Tour",
       "feedback": "Comentarios",
-      "theme": "Tema",
-      "searchLocation": "Buscar ubicación"
+      "theme": "Tema"
     },
     "sidebar": {
       "energySimulations": "Simulaciones de Energía",
       "map": "Mapa",
-      "locations": "Ubicaciones",
       "simulationReports": "Comparación de Modelos",
       "technologies": "Tecnologías"
     },
     "menu": {
-      "profile": "Perfil",
       "settings": "Configuración",
-      "logout": "Cerrar Sesión"
+      "privacyTerms": "Privacidad y condiciones",
+      "logout": "Cerrar Sesión",
+      "adminPanel": "Admin Panel"
     },
     "modelActions": {
       "viewResults": "Ver Resultados",
@@ -405,7 +404,10 @@
       "descriptions": {
         "targetWorkspace": "Elija el espacio de trabajo al que mover el modelo"
       },
-      "defaultWorkspace": "Espacio de Trabajo Predeterminado"
+      "defaultWorkspace": "Espacio de Trabajo Predeterminado",
+      "noOtherWorkspace": "Todavía no hay otro espacio de trabajo. Ponga nombre a uno nuevo y el modelo se moverá a él.",
+      "createAndMove": "Crear espacio de trabajo y mover",
+      "createAndMoveFailed": "No se pudo crear el espacio de trabajo o mover el modelo a él. Inténtelo de nuevo."
     },
     "shareModel": {
       "title": "Compartir con un Usuario Individual",
@@ -1148,7 +1150,10 @@
     "workspaceActions": "Acciones del espacio de trabajo",
     "selectedCount_one": "{{count}} seleccionado",
     "selectedCount_other": "{{count}} seleccionados",
-    "clearSelection": "Quitar selección"
+    "clearSelection": "Quitar selección",
+    "starredFilter": "Destacados",
+    "starredFilterHint": "Mostrar solo los modelos destacados",
+    "noStarredModels": "Aún no hay modelos destacados. Destaque un modelo con la estrella junto a su nombre para encontrarlo aquí."
   },
   "polygon": {
     "drawRegion": "Dibuja tu región",
@@ -1231,7 +1236,6 @@
     "subtitle": "Tu centro de mando de evaluación de riesgos",
     "navigation": "Navegación",
     "overview": "Resumen",
-    "profile": "Perfil",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "tabs": {
@@ -1305,8 +1309,6 @@
     "quickActions": {
       "title": "Acciones Rápidas",
       "subtitle": "Navegar a funciones clave",
-      "interactiveMap": "Mapa Interactivo",
-      "viewRiskMap": "Ver mapa de evaluación de riesgos",
       "riskModels": "Modelos de Riesgo",
       "manageRiskModels": "Gestionar modelos de riesgo",
       "settings": "Configuración",
@@ -1476,18 +1478,10 @@
     "refresh": "Actualizar"
   },
   "profile": {
-    "title": "Configuración de perfil",
-    "subtitle": "Gestiona tu información personal y preferencias de cuenta",
-    "goBack": "Volver",
     "loadingProfile": "Cargando tu perfil...",
-    "defaultUser": "Usuario",
     "accessLevel": "Nivel de acceso",
     "notSpecified": "No especificado",
-    "personalInfo": "Información personal",
-    "personalInfoDescription": "Actualiza los detalles de tu perfil a continuación",
     "readOnly": "solo lectura",
-    "saving": "Guardando...",
-    "saveChanges": "Guardar cambios",
     "fields": {
       "fullName": "Nombre completo",
       "email": "Correo electrónico",
@@ -1502,11 +1496,8 @@
       "phone": "+34 600 000 000"
     },
     "accessLevels": {
-      "basic": "Básico",
       "basicDescription": "Acceso estándar a funciones básicas",
-      "intermediate": "Intermedio",
       "intermediateDescription": "Acceso extendido con funciones avanzadas",
-      "expert": "Experto",
       "expertDescription": "Acceso completo a todas las funciones"
     },
     "notifications": {
@@ -1713,7 +1704,9 @@
       "creating": "Creando simulación...",
       "updating": "Actualizando simulación...",
       "cancel": "Cancelar",
-      "regenerateFirst": "Regenere la red antes de guardar."
+      "regenerateFirst": "Regenere la red antes de guardar.",
+      "completeFirst": "Para guardar, introduzca un nombre de modelo y un periodo de simulación, y dibuje un área.",
+      "saveShortcut": "Guardar (Ctrl+S)"
     },
     "mapHeader": {
       "myBuildings": "Mis edificios",
@@ -1855,12 +1848,6 @@
       "discard": "Descartar cambios"
     },
     "resolutionComingSoon": "La resolución de 30 minutos llegará en una versión futura",
-    "cooking": {
-      "label": "Cocina",
-      "electric": "Eléctrica",
-      "gas": "Gas",
-      "hint": "Con gas, la cocina de los edificios pasa a ser una demanda de gas comprada a un suministro de gas"
-    },
     "runMode": {
       "label": "Modo de cálculo",
       "plan": "Planificar",
@@ -1887,6 +1874,11 @@
     "largeModel": {
       "title": "Este modelo tiene {{count}} edificios",
       "description": "Los modelos con más de {{limit}} edificios tardan bastante más en calcularse: cada edificio pasa por BuEM y Calliope resuelve la demanda horaria de cada edificio. Un año completo puede tardar decenas de minutos. Aun así puede guardarlo y ejecutarlo."
+    },
+    "sections": {
+      "grid": "Red",
+      "model": "Modelo",
+      "energySystem": "Sistema energético"
     },
     "analysis": {
       "button": "Analizar edificios",
@@ -2545,23 +2537,11 @@
   "settings": {
     "title": "Configuración",
     "subtitle": "Personaliza tu experiencia y preferencias",
-    "configuration": "Configuración",
-    "goBack": "Volver",
     "tabs": {
+      "profile": "Perfil",
       "general": "General",
-      "display": "Visualización",
       "notifications": "Notificaciones",
       "advanced": "Avanzado"
-    },
-    "stats": {
-      "language": "Idioma",
-      "theme": "Tema",
-      "notifications": "Notificaciones",
-      "accessLevel": "Nivel de Acceso",
-      "enabled": "Habilitado",
-      "disabled": "Deshabilitado",
-      "system": "Sistema",
-      "user": "Usuario"
     },
     "language": {
       "title": "Idioma",
@@ -2575,32 +2555,19 @@
       "title": "Ubicación del Mapa",
       "subtitle": "Posiciones guardadas",
       "syncing": "Sincronizando...",
-      "searchPlaceholder": "Buscar ubicación...",
+      "searchPlaceholder": "Buscar un lugar o introducir lat, lon",
       "current": "Actual",
       "noLocation": "Sin ubicación establecida",
       "savedLocations": "Ubicaciones Guardadas",
       "clearAll": "Borrar todo",
-      "syncNote": "Las ubicaciones se sincronizan con tu cuenta"
+      "syncNote": "Las ubicaciones se sincronizan con tu cuenta",
+      "pickHint": "O haga clic en el mapa para fijar la ubicación."
     },
     "locationSearch": {
       "placeholder": "Buscar ubicación...",
       "searching": "Buscando...",
       "noResults": "No se encontraron ubicaciones",
       "searchFailed": "Búsqueda fallida"
-    },
-    "dataDisplay": {
-      "title": "Datos y Visualización",
-      "subtitle": "Unidades y formato",
-      "temperature": "Temperatura",
-      "celsius": "Celsius",
-      "fahrenheit": "Fahrenheit",
-      "distance": "Distancia",
-      "kilometers": "Kilómetros",
-      "miles": "Millas",
-      "windSpeed": "Velocidad del Viento",
-      "knots": "nudos",
-      "dataRefresh": "Actualización de Datos",
-      "min": "min"
     },
     "notifications": {
       "title": "Notificaciones",
@@ -2755,16 +2722,12 @@
     "resetTopDown": "Restablecer vista superior",
     "rightClickRotate": "Clic derecho + arrastrar para rotar",
     "regions": "regiones",
-    "myModels": "mis modelos",
     "grids": "cuadrículas",
     "countries": "países",
     "footprintOnlyBuildings_one": "{{count}} edificio no tiene datos 3D y solo muestra su huella",
     "footprintOnlyBuildings_other": "{{count}} edificios no tienen datos 3D y solo muestran su huella"
   },
   "privacy": {
-    "dataAndPrivacy": "Datos y privacidad",
-    "acceptTerms": "Aceptar términos de privacidad",
-    "openSettings": "Abrir configuración de datos y privacidad",
     "dialogTitle": "Procesamiento de datos y privacidad",
     "cartoDescription": "Para proporcionarle nuestros servicios, utilizamos CARTO y OSMF como proveedores externos de mapas.",
     "sharedWithCarto": "Al aceptar, se compartirán los siguientes datos con CARTO y OSMF respectivamente:",
@@ -3145,7 +3108,7 @@
   },
   "buildingConfig": {
     "backToMap": "Volver al mapa",
-    "preparing": "Preparando los datos 3D de este edificio. City2TABULA está extrayendo y vinculando los edificios de la zona, lo que puede tardar unos minutos la primera vez que se usa una zona. El edificio se abrirá aquí cuando esté listo.",
+    "preparing": "Preparando los datos 3D de este edificio.",
     "loading": "Cargando este edificio…",
     "noGeometry": "City2TABULA ya no contiene la geometría 3D de este edificio.",
     "credit3dData": "Datos 3D",

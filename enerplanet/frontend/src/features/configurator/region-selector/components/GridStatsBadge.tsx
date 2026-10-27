@@ -1,5 +1,5 @@
 import { useState, useEffect, type FC } from "react";
-import { Building2, Zap, Cable, Activity, Loader2, Info } from "lucide-react";
+import { Building2, Zap, Cable, Activity, Loader2, Info, ChevronDown } from "lucide-react";
 import { pylovoService, siteScope, type GridStatistics } from "@/features/configurator/services/pylovoService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,9 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
     const { t } = useTranslation();
     const [statistics, setStatistics] = useState<GridStatistics | null>(null);
     const [loading, setLoading] = useState(false);
+    // Open on every visit: the building and transformer counts matter most on large models.
+    const [collapsed, setCollapsed] = useState(false);
+    const toggleCollapsed = () => setCollapsed(!collapsed);
     // Joined so a new array with the same ids does not refetch.
     const selectionKey = buildingOsmIds?.join(",") ?? "";
     const site = siteScope(useModelStore((s) => s.pylovoGridData));
@@ -68,14 +71,21 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
 
     return (
         <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
-            {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+            <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-expanded={!collapsed}
+                className={cn("flex w-full cursor-pointer items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/60", !collapsed && "border-b border-border")}
+            >
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs font-semibold text-foreground">{t("gridStats.title")}</span>
                 <span className="text-[10px] text-foreground/70 font-medium px-1.5 py-0.5 bg-muted rounded ml-auto">
                     {gridResultIds.length} {t("gridStats.clusters", { count: gridResultIds.length })}
                 </span>
-            </div>
+                <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", collapsed && "-rotate-90")} aria-hidden="true" />
+            </button>
+
+            {!collapsed && (<>
 
             {/* Main stats grid */}
             <div className="grid grid-cols-4 gap-1 p-2">
@@ -161,6 +171,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
                     {t("gridStats.sourceNote")}
                 </p>
             </div>
+            </>)}
         </div>
     );
 };

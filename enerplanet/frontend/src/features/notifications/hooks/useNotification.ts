@@ -1,15 +1,17 @@
 import { useCallback } from 'react';
-import { usePageMessages, type PageMessageSeverity } from '@/features/notifications/pageMessages';
+import { useToastStore, type ToastSeverity } from '@/features/notifications/toastStore';
 
 interface NotificationState {
     open: boolean;
     message: string;
-    severity: PageMessageSeverity;
+    severity: ToastSeverity;
 }
 
-/** Shows page messages (success, error, warning, info) in the header next to the bell. */
+/** Shows page messages (success, error, warning, info) in the toast stack. */
 export const useNotification = () => {
-    const { show, dismiss } = usePageMessages();
+    const push = useToastStore((st) => st.push);
+    const dismiss = useToastStore((st) => st.dismissOldest);
+    const show = useCallback((message: string, severity: ToastSeverity) => push({ message, severity }), [push]);
 
     const showSuccess = useCallback((message: string) => show(message, "success"), [show]);
     const showError = useCallback((message: string) => show(message, "error"), [show]);

@@ -11,7 +11,7 @@ import {
   Home,
   Building2,
   LucideIcon,
-  Microchip,
+  Cpu,
   Upload,
   Plus,
   FileText,
@@ -678,7 +678,7 @@ export default function TechnologiesPage() {
         <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
 
         <PageHeader
-          icon={Microchip}
+          icon={Cpu}
           title={t('technologies.title')}
           subtitle={t('technologies.subtitle')}
           actions={

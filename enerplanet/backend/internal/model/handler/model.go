@@ -274,6 +274,8 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 // @Param        search       query  string  false  "Search models by title (case-insensitive)"
 // @Param        workspace_id query  int     false  "Filter by workspace ID"
 // @Param        group        query  string  false  "families: limit, offset and total count originals with their copies, so a page never splits a family"  Enums(families)
+// @Param        ids          query  string  false  "Comma-separated model ids to list only those, for example 12,31; an empty value lists none"
+// @Failure      400  {object}  contracts.ErrorResponse
 // @Success      200  {object}  contracts.GetModelsResponse
 // @Failure      401  {object}  contracts.ErrorResponse
 // @Failure      500  {object}  contracts.ErrorResponse
@@ -307,6 +309,14 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	}
 
 	query = h.applySearchFilter(query, search)
+	if raw, set := c.GetQuery("ids"); set {
+		ids, err := parseModelIDs(raw)
+		if err != nil {
+			httputil.BadRequest(c, err.Error())
+			return
+		}
+		query = applyIDFilter(query, ids)
+	}
 
 	fetch := h.fetchModelsWithQuery
 	if c.Query("group") == "families" {

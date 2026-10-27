@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	modelservice "spatialhub_backend/internal/model/service"
@@ -248,6 +249,32 @@ func (h *ModelHandler) applySearchFilter(query *gorm.DB, search string) *gorm.DB
 		query = query.Where("title ILIKE ?", "%"+search+"%")
 	}
 	return query
+}
+
+// parseModelIDs reads the ids query parameter, a comma-separated list of model
+// ids. An empty list is valid and matches no model.
+func parseModelIDs(raw string) ([]uint, error) {
+	ids := []uint{}
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := strconv.ParseUint(part, 10, 64)
+		if err != nil || id == 0 {
+			return nil, fmt.Errorf("invalid model id %q in ids", part)
+		}
+		ids = append(ids, uint(id))
+	}
+	return ids, nil
+}
+
+// applyIDFilter limits query to the given model ids; with none, it matches nothing.
+func applyIDFilter(query *gorm.DB, ids []uint) *gorm.DB {
+	if len(ids) == 0 {
+		return query.Where("1 = 0")
+	}
+	return query.Where("id IN ?", ids)
 }
 
 func (h *ModelHandler) fetchModelsWithQuery(query *gorm.DB, limit, offset int, sortBy, sortOrder string) ([]models.Model, int64, error) {
