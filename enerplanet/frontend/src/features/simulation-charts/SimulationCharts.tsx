@@ -260,7 +260,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           setError1('No simulation results available');
         }
       } catch (error) {
-        console.error(`Failed to fetch model ${selectedModelId1}:`, error);
+        console.error('Failed to fetch model', selectedModelId1, error);
         setError1('Failed to load model data');
       } finally {
         setLoading1(false);
@@ -304,7 +304,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           setError2('No simulation results available');
         }
       } catch (error) {
-        console.error(`Failed to fetch model ${selectedModelId2}:`, error);
+        console.error('Failed to fetch model', selectedModelId2, error);
         setError2('Failed to load model data');
       } finally {
         setLoading2(false);
