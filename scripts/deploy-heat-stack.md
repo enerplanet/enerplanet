@@ -311,8 +311,6 @@ CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
   scripts/deploy-heat-stack.sh --prefix sim2 render
 ```
 
-Each checkout logs the commit it ends on.
-
 ---
 
 ## Troubleshooting

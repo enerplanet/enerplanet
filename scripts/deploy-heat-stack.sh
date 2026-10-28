@@ -231,23 +231,22 @@ resolve_ports() {
 }
 
 # ── Repositories ──────────────────────────────────────────────────────────────
-# checkout DIR REPO REF — clone at REF, or move an existing checkout onto it,
-# and log the commit it ends on.
+# checkout DIR REPO REF — clone at REF, or move an existing checkout onto it.
 checkout() {
   local dir="$1" repo="$2" ref="$3" path="$DEPS_DIR/$1"
   if [ -d "$path/.git" ]; then
     if [ "$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)" != "HEAD" ]; then
-      warn "$path is on a branch; leaving it alone at $(git -C "$path" rev-parse --short HEAD) (pin: $ref)"
+      warn "$path is on a branch; leaving it alone (pin: $ref)"
       return 0
     fi
     git -C "$path" fetch -q --tags origin
     git -C "$path" checkout -q "$ref"
-    ok "updated $dir -> $ref ($(git -C "$path" rev-parse --short HEAD))"
+    ok "updated $dir -> $ref"
   else
     log "cloning $dir at $ref"
     git clone -q "$repo" "$path"
     git -C "$path" checkout -q "$ref"
-    ok "cloned $dir -> $ref ($(git -C "$path" rev-parse --short HEAD))"
+    ok "cloned $dir -> $ref"
   fi
 }
 
@@ -470,21 +469,9 @@ pylovo_env() {
   fi
 }
 
-# The API reads consumer_categories and the grid tables as it starts, so the
-# database comes up and takes the PyLovo fixture before the API is started;
-# load_fixtures later leaves the loaded database alone.
 up_pylovo() {
-  log "PyLovo (postgres + redis, fixture, then api)"
+  log "PyLovo (api + postgres + redis)"
   pylovo_env
-  (
-    cd "$pylovo_dir"
-    docker compose -p "$PREFIX-pylovo" \
-      -f docker-compose.dev.yml -f "$OVR_DIR/pylovo.yml" up -d --wait postgres redis
-  )
-  if [ "$DO_FIXTURES" = 1 ]; then
-    PYLOVO_DB_CONTAINER="$PREFIX-pylovo-postgres" bash "$LOAD_SH" pylovo \
-      || die "the PyLovo fixture did not load; the API would fail on a missing schema"
-  fi
   (
     cd "$pylovo_dir"
     docker compose -p "$PREFIX-pylovo" \
