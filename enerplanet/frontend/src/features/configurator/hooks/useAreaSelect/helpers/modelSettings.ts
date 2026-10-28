@@ -33,3 +33,8 @@ export function settingsChanged(loaded: LoadedModelSettings, current: ModelSetti
         || current.runMode !== loadedMode
         || !sameWeather(current.weather, weatherFromConfig(loaded.config));
 }
+
+/** Whether leaving now loses work: a new model once an area is drawn, a saved model once it is edited. */
+export function hasUnsavedChanges(editMode: boolean, isModified: boolean, polygonCount: number): boolean {
+    return editMode ? isModified : polygonCount > 0;
+}

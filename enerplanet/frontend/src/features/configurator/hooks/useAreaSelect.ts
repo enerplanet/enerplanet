@@ -22,7 +22,7 @@ import { useMapClickHandlers } from '@/features/configurator/hooks/useMapClickHa
 import { generateUUID } from '@/utils/uuid';
 import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
 import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
-import { settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
+import { hasUnsavedChanges, settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
 import { areaBuildingLimit } from '@/features/configurator/utils/areaLimit';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
@@ -91,8 +91,9 @@ export const useAreaSelect = ({
     useEffect(() => { if (editMode && !editModeInitializedRef.current && !isLoadingModel && originalModelRef.current) editModeInitializedRef.current = true; }, [editMode, isLoadingModel]);
 
     // ── Browser back intercept ──
-    useEffect(() => { if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return; window.history.pushState(null, '', window.location.href); const h = () => { setShowUnsavedDialog(true); window.history.pushState(null, '', window.location.href); }; window.addEventListener('popstate', h); return () => window.removeEventListener('popstate', h); }, [editMode, isModified]);
-    useEffect(() => { if (!editMode || !isModified || useAuthStore.getState().isSessionExpired) return; const orig = window.history.pushState.bind(window.history); const patched: typeof window.history.pushState = (data, _u, url) => { if (isInternalNavRef.current) { isInternalNavRef.current = false; orig(data, _u, url); return; } let target: string | null = null; if (typeof url === 'string') try { target = new URL(url, window.location.origin).pathname; } catch { target = url; } if (target && target !== window.location.pathname) { setPendingNavigationUrl(target); setShowUnsavedDialog(true); return; } orig(data, _u, url); }; window.history.pushState = patched; return () => { window.history.pushState = orig; }; }, [editMode, isModified]);
+    const unsaved = hasUnsavedChanges(editMode, isModified, allPolygons.length);
+    useEffect(() => { if (!unsaved || useAuthStore.getState().isSessionExpired) return; window.history.pushState(null, '', window.location.href); const h = () => { setShowUnsavedDialog(true); window.history.pushState(null, '', window.location.href); }; window.addEventListener('popstate', h); return () => window.removeEventListener('popstate', h); }, [unsaved]);
+    useEffect(() => { if (!unsaved || useAuthStore.getState().isSessionExpired) return; const orig = window.history.pushState.bind(window.history); const patched: typeof window.history.pushState = (data, _u, url) => { if (isInternalNavRef.current) { isInternalNavRef.current = false; orig(data, _u, url); return; } let target: string | null = null; if (typeof url === 'string') try { target = new URL(url, window.location.origin).pathname; } catch { target = url; } if (target && target !== window.location.pathname) { setPendingNavigationUrl(target); setShowUnsavedDialog(true); return; } orig(data, _u, url); }; window.history.pushState = patched; return () => { window.history.pushState = orig; }; }, [unsaved]);
 
     // ── Handlers ──
     // The weather and the stored series cover one calendar year, so a period stays in one year:
@@ -113,7 +114,7 @@ export const useAreaSelect = ({
     }, [fromDate, toDate, setFromDate, setToDate, showWarning, t]);
     const handleTourComplete = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
     const handleTourSkip = useCallback(() => { setShowAreaSelectTour(false); void axios.patch('/settings', { area_select_tour_completed: true }).catch(() => { }); }, [setShowAreaSelectTour]);
-    const handleCancel = useCallback(() => { if (onCancel) { onCancel(); return; } if (isModified && editMode) { setShowUnsavedDialog(true); return; } isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [onCancel, navigate, isModified, editMode, setShowUnsavedDialog]);
+    const handleCancel = useCallback(() => { if (onCancel) { onCancel(); return; } if (unsaved) { setShowUnsavedDialog(true); return; } isInternalNavRef.current = true; navigate(DASHBOARD_ROUTE); }, [onCancel, navigate, unsaved, setShowUnsavedDialog]);
     const handleResetAdvancedParams = useCallback(() => setAdvancedParams(getDefaultAdvancedParameters()), [setAdvancedParams]);
 
     // Detect metadata changes
