@@ -92,7 +92,7 @@ func (r PVResolver) Attach(ctx context.Context, model *commonModels.Model, calc 
 	}
 	w := modelSeriesWindow(model.FromDate, model.ToDate, pvResolution(calc.Resolution))
 	for _, b := range buildings {
-		setPVArrays(b, profiles, w)
+		setPVArrays(b, profiles, w, calc.Mode == "operate")
 	}
 	return nil
 }
@@ -443,8 +443,10 @@ func (r PVResolver) placeArrays(ctx context.Context, model *commonModels.Model, 
 	return nil
 }
 
-// setPVArrays replaces the building's pv_supply by its pv_arrays entries.
-func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow) {
+// setPVArrays replaces the building's pv_supply by its pv_arrays entries. An
+// array's laid-out capacity is the most its surface holds: fixed holds it at
+// that (operate), otherwise the solver sizes it between 0 and that (plan).
+func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow, fixed bool) {
 	delete(b.techs, "pv_supply")
 	if len(b.arrays) == 0 {
 		return
@@ -459,7 +461,9 @@ func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow) {
 		}
 		if a.CapacityKW != nil {
 			entry["cont_energy_cap_max"] = *a.CapacityKW
-			entry["cont_energy_cap_min"] = *a.CapacityKW
+			if fixed {
+				entry["cont_energy_cap_min"] = *a.CapacityKW
+			}
 		}
 		for _, k := range pvCarriedKeys {
 			if v, ok := b.module[k]; ok {
