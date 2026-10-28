@@ -29,14 +29,19 @@ export const asBuildingTechnology = (product: Technology): Technology => ({
 export const defaultConstraints = (product: Technology): { key: string; value: number | string }[] =>
   product.constraints.map((c) => ({ key: c.key, value: c.default_value }));
 
-let catalogue: Promise<Technology[]> | null = null;
+let pending: Promise<Technology[]> | null = null;
 
-/** The technology catalogue, fetched once; the bundled defaults when the API fails. */
+/**
+ * The technology catalogue as it is now; the bundled defaults when the API fails.
+ * Callers loading at the same time share one request, but no result is kept, so
+ * a technology added or renamed since shows on the next load.
+ */
 export function loadCatalogue(): Promise<Technology[]> {
-  catalogue ??= technologyService.getAll().catch(async () => {
-    catalogue = null;
-    const response = await fetch("/initial-data/techs/default_technologies.json");
-    return response.ok ? ((await response.json()).technologies as Technology[]) : [];
-  });
-  return catalogue;
+  pending ??= technologyService.getAll()
+    .catch(async () => {
+      const response = await fetch("/initial-data/techs/default_technologies.json");
+      return response.ok ? ((await response.json()).technologies as Technology[]) : [];
+    })
+    .finally(() => { pending = null; });
+  return pending;
 }

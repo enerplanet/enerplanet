@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import type { Technology } from './services/technologyService';
-import { asBuildingTechnology, defaultConstraints, defaultProduct, productsOfType } from './catalogue';
+import { describe, it, expect, vi } from 'vitest';
+import technologyService, { type Technology } from './services/technologyService';
+import { asBuildingTechnology, defaultConstraints, defaultProduct, loadCatalogue, productsOfType } from './catalogue';
+
+vi.mock('./services/technologyService', () => ({ default: { getAll: vi.fn() } }));
 
 const product = (key: string, type?: string): Technology => ({
   key, type, alias: key, icon: 'flame', description: '',
@@ -32,5 +34,19 @@ describe('catalogue', () => {
     expect(tech.key).toBe('air_source_heat_pump');
     expect(tech.product).toBe('air_source_heat_pump__6kw');
     expect(defaultConstraints(tech)).toEqual([{ key: 'cont_energy_eff', value: 3.1 }]);
+  });
+});
+
+describe('loadCatalogue', () => {
+  it('fetches the current list on every load, sharing a request still in flight', async () => {
+    const getAll = vi.mocked(technologyService.getAll);
+    getAll.mockResolvedValueOnce([product('pv_supply')]).mockResolvedValueOnce([product('pv_supply'), product('pv_supply_v1', 'pv_supply')]);
+
+    const [first, same] = await Promise.all([loadCatalogue(), loadCatalogue()]);
+    const later = await loadCatalogue();
+
+    expect(first).toBe(same);
+    expect(later.map((p) => p.key)).toEqual(['pv_supply', 'pv_supply_v1']);
+    expect(getAll).toHaveBeenCalledTimes(2);
   });
 });
