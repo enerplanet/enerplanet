@@ -3132,7 +3132,6 @@
     },
     "sharedOutline": "Ce contour couvre {{count}} bâtiments 3D. Affiché et modifiable : le plus grand. La demande de chaleur est calculée pour chacun et additionnée.",
     "tech": {
-      "pvCapacity": "Puissance des surfaces PV",
       "size": "Taille",
       "sizeMax": "Taille maximale",
       "power": "Puissance",
@@ -3143,7 +3142,6 @@
       "efficiency": "Rendement",
       "investment": "Investissement",
       "price": "Prix",
-      "pvSurfaces": "Surfaces PV",
       "required": "Saisissez une valeur",
       "positive": "Doit être supérieur à 0",
       "notNegative": "Doit être 0 ou plus",

@@ -3127,7 +3127,6 @@
     },
     "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed.",
     "tech": {
-      "pvCapacity": "Capacity from the PV surfaces",
       "size": "Size",
       "sizeMax": "Maximum size",
       "power": "Power",
@@ -3138,7 +3137,6 @@
       "efficiency": "Efficiency",
       "investment": "Investment",
       "price": "Price",
-      "pvSurfaces": "PV surfaces",
       "required": "Enter a value",
       "positive": "Must be above 0",
       "notNegative": "Must be 0 or more",
