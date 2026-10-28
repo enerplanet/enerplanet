@@ -75,6 +75,10 @@ describe("stored BuEM", () => {
     expect(fromStoredBuem("268425674", footprint, stored, 3).identity.storeys).toBe(2);
   });
 
+  it("reopens a building at its footprint's location", () => {
+    expect(fromStoredBuem("268425674", footprint, toStoredBuem(opened)).identity.coordinates).toEqual([6.02, 52.1]);
+  });
+
   it("finds nothing stored on a building nobody edited", () => {
     expect(storedBuemOf({ osm_id: "1", f_class: "house" })).toBeNull();
     expect(storedBuemOf(undefined)).toBeNull();
