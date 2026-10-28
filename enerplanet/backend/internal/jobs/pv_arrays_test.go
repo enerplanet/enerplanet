@@ -153,7 +153,7 @@ func TestPVResolverPlacesSimulatesAndWindowsArrays(t *testing.T) {
 	b2 := techs(0, "to")["pv_arrays"].([]interface{})[0].(map[string]interface{})
 	assert.Equal(t, "r1", b2["surface_id"])
 	assert.Equal(t, 3.0, b2["cont_energy_cap_max"])
-	assert.Equal(t, 3.0, b2["cont_energy_cap_min"])
+	assert.NotContains(t, b2, "cont_energy_cap_min", "a plan model sizes a laid-out array between 0 and its layout")
 
 	b3 := techs(1, "from")["pv_arrays"].([]interface{})[0].(map[string]interface{})
 	assert.Equal(t, "", b3["surface_id"], "no 3D data: one flat array on the footprint")
@@ -252,4 +252,25 @@ func TestAnnualYieldSumsArraysAndSimulatesOnlyChangedOnes(t *testing.T) {
 	yield(tilted)
 	require.Len(t, tilted.requests, 1)
 	assert.Equal(t, 20.0, tilted.requests[0].Tilt)
+}
+
+func TestSetPVArraysFixesALaidOutArrayOnlyInOperate(t *testing.T) {
+	laidOut := func() *pvBuilding {
+		capacity := 3.0
+		return &pvBuilding{osmID: "2", techs: map[string]interface{}{"pv_supply": map[string]interface{}{}}, module: map[string]interface{}{},
+			arrays: []pv.Array{{SurfaceID: "r1", AreaSqm: 25, UsableShare: 0.5, CapacityKW: &capacity}}}
+	}
+	entry := func(b *pvBuilding) map[string]interface{} {
+		return b.techs["pv_arrays"].([]interface{})[0].(map[string]interface{})
+	}
+
+	plan := laidOut()
+	setPVArrays(plan, nil, seriesWindow{}, false)
+	assert.Equal(t, 3.0, entry(plan)["cont_energy_cap_max"])
+	assert.NotContains(t, entry(plan), "cont_energy_cap_min")
+
+	operate := laidOut()
+	setPVArrays(operate, nil, seriesWindow{}, true)
+	assert.Equal(t, 3.0, entry(operate)["cont_energy_cap_max"])
+	assert.Equal(t, 3.0, entry(operate)["cont_energy_cap_min"])
 }
