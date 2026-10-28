@@ -129,6 +129,8 @@ Options:
   --tentacron-port N     host port for TentaCron (default 8400)
   --pylovo-port N        host port for PyLovo    (default 8186)
   --no-fixtures          do not git-lfs pull or load the fixtures
+  --weather-api-key K    key TentaCron presents to weather-serve
+                         (default dev-weather-key, matching TentaCron's .env.dev)
   --volumes              `down` also removes this stack's volumes
   --dry-run              print the plan, change nothing
   -h, --help             this text
