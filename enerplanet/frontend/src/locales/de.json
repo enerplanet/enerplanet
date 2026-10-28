@@ -3127,7 +3127,6 @@
     },
     "sharedOutline": "Dieser Umriss umfasst {{count}} 3D-Gebäude. Angezeigt und bearbeitbar: das größte. Der Wärmebedarf wird für jedes berechnet und summiert.",
     "tech": {
-      "pvCapacity": "Leistung aus den PV-Flächen",
       "size": "Größe",
       "sizeMax": "Maximale Größe",
       "power": "Leistung",
@@ -3138,7 +3137,6 @@
       "efficiency": "Wirkungsgrad",
       "investment": "Investition",
       "price": "Preis",
-      "pvSurfaces": "PV-Flächen",
       "required": "Wert eingeben",
       "positive": "Muss größer als 0 sein",
       "notNegative": "Muss 0 oder größer sein",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { pvCapacityKw, removeTech, setTechField, technologyCards, type BuildingTechs } from './buildingTechnologies';
+import { removeTech, setTechField, technologyCards, type BuildingTechs } from './buildingTechnologies';
 
 const t = (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string | undefined) ?? key;
 
@@ -20,17 +20,13 @@ const techs: BuildingTechs = {
   },
 };
 
-const roof = { surface_id: 'r1', tilt: 30, azimuth: 180, area: 50, usable_share: 0.8 };
-
 describe('technologyCards', () => {
-  it('lists each technology with its fields, unbounded sizes as null and PV capacity from the surfaces', () => {
-    const cards = technologyCards(techs, [roof], 'plan', {}, t);
+  it('lists each technology but PV with its fields, unbounded sizes as null', () => {
+    const cards = technologyCards(techs, 'plan', {}, t);
     const byId = Object.fromEntries(cards.map((c) => [c.id, c]));
 
-    expect(byId.pv_supply.fields.map((f) => [f.key, f.value, f.editable ?? false])).toEqual([
-      ['capacity', 8, false],
-      ['cost_energy_cap', 900, true],
-    ]);
+    // The configurator draws PV's own card from the pv prop.
+    expect(byId.pv_supply).toBeUndefined();
     expect(byId.battery_storage.fields.map((f) => [f.key, f.value])).toEqual([
       ['cont_energy_cap_max', 5], ['cont_storage_cap_max', null], ['cost_storage_cap', 400],
     ]);
@@ -39,13 +35,13 @@ describe('technologyCards', () => {
 
   it('labels sizes as maximum sizes in plan mode only', () => {
     const label = (mode: 'plan' | 'operate') =>
-      technologyCards(techs, [], mode, {}, t).find((c) => c.id === 'air_source_heat_pump')!.fields[0].label;
+      technologyCards(techs, mode, {}, t).find((c) => c.id === 'air_source_heat_pump')!.fields[0].label;
     expect(label('plan')).toBe('buildingConfig.tech.sizeMax');
     expect(label('operate')).toBe('buildingConfig.tech.size');
   });
 
   it('shows a refused value\'s error under its field', () => {
-    const cards = technologyCards(techs, [], 'plan', { 'air_source_heat_pump:cont_energy_eff': 'Must be above 0' }, t);
+    const cards = technologyCards(techs, 'plan', { 'air_source_heat_pump:cont_energy_eff': 'Must be above 0' }, t);
     const cop = cards.find((c) => c.id === 'air_source_heat_pump')!.fields.find((f) => f.key === 'cont_energy_eff');
     expect(cop?.error).toBe('Must be above 0');
   });
@@ -70,13 +66,9 @@ describe('setTechField', () => {
   });
 });
 
-describe('removeTech and pvCapacityKw', () => {
+describe('removeTech', () => {
   it('removes one technology without changing the input', () => {
     expect(Object.keys(removeTech(techs, 'battery_storage'))).toEqual(['pv_supply', 'air_source_heat_pump']);
     expect(Object.keys(techs)).toHaveLength(3);
-  });
-
-  it('sizes PV from the usable area unless an array sets its capacity', () => {
-    expect(pvCapacityKw([roof, { ...roof, surface_id: 'r2', capacity_kw: 3 }])).toBeCloseTo(11, 6);
   });
 });
