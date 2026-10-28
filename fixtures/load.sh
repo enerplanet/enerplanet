@@ -133,7 +133,7 @@ load_city2tabula() {
   load_c2t_sources
   c2t_settings || return 0
   restore_c2t nl city2tabula_loenen.sql.gz
-  restore_c2t de city2tabula_bremen.sql.gz
+  restore_c2t de city2tabula_germany.sql.gz
   restore_c2t at city2tabula_vienna.sql.gz
   restore_c2t cz city2tabula_brno.sql.gz
 }

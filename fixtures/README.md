@@ -13,6 +13,7 @@ The credit lines, in short:
 |---|---|---|---|
 | 3DBAG | Loenen 3D buildings | © 3DBAG by tudelft3d and 3DGI | CC BY 4.0 |
 | LoD2 Land Bremen | Bremen 3D buildings | Quellenvermerk: Landesamt GeoInformation Bremen | CC BY 4.0 |
+| 3D-Gebäudemodell LoD2 NRW | Köln 3D buildings | Geobasis NRW | DL-DE-ZERO-2.0 |
 | Generalisiertes Dachmodell | Vienna 3D buildings | Datenquelle: Stadt Wien – data.wien.gv.at | CC BY 4.0 |
 | 3D model budov | Brno 3D buildings | Data o 3D modelu budov byla získána pod licencí CC BY z data.brno.cz. | CC BY 4.0 |
 | TABULA | archetypes, all countries | IEE Projects TABULA + EPISCOPE (www.episcope.eu) | TABULA/EPISCOPE terms of use |
@@ -37,6 +38,7 @@ is drawn there. Elsewhere in the area, buildings have no 3D data.
 |---|---|---|---|---|---|---|
 | Loenen | NL | postcode 7371 | 6.01175 52.09877 to 6.03662 52.11506 | south of lat 52.11099 | 737 (333) | 3DBAG |
 | Bremen | DE | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | 8.79239 53.09770 to 8.80586 53.10312 | west of lon 8.79613 | 836 (419) | LoD2 Land Bremen |
+| Köln | DE | postcode 50969, clipped to the 3D box | 6.93635 50.90625 to 6.94755 50.91353 | west of lon 6.94132 | 972 (487) | 3D-Gebäudemodell LoD2, Geobasis NRW |
 | Vienna | AT | postcodes 1010, 1070, 1080 and 1090, clipped to `pylovo/vienna_coverage.wkt` | 16.33877 48.20692 to 16.35360 48.21506 | west of lon 16.34686 | 927 (514) | Generalisiertes Dachmodell (LoD2), Stadt Wien |
 | Brno | CZ | box 16.603 49.190 to 16.613 49.200 inside postcode 60200, `pylovo/brno_box.wkt` | 16.60300 49.19000 to 16.61262 49.19996 | south of lat 49.19430 | 655 (370) | 3D model budov, Brno |
 
@@ -49,15 +51,16 @@ run; draw it clear of the line to test on-request processing.
 | File | Size | Used by | Site | Purpose | Loaded by |
 |---|---|---|---|---|---|
 | `city2tabula/city2tabula_loenen.sql.gz` | 4.1 MB | City2TABULA | Loenen | the full database for the processed part: CityDB import, TABULA archetypes, envelopes, surfaces and links to PyLovo buildings | `load.sh city2tabula`, into `<DB_NAME>_nl` |
-| `city2tabula/city2tabula_bremen.sql.gz` | 4.4 MB | City2TABULA | Bremen | as above | `load.sh city2tabula`, into `<DB_NAME>_de` |
+| `city2tabula/city2tabula_germany.sql.gz` | 9.7 MB | City2TABULA | Bremen, Köln | as above | `load.sh city2tabula`, into `<DB_NAME>_de` |
 | `city2tabula/city2tabula_vienna.sql.gz` | 25.1 MB | City2TABULA | Vienna | as above | `load.sh city2tabula`, into `<DB_NAME>_at` |
 | `city2tabula/city2tabula_brno.sql.gz` | 11.6 MB | City2TABULA | Brno | as above | `load.sh city2tabula`, into `<DB_NAME>_cz` |
 | `city2tabula/lod2/netherlands/3dbag/` | 1.0 MB | City2TABULA | Loenen | 3D source for the whole box, CityJSON, with `attribution.json` | `load.sh city2tabula`, into the City2TABULA checkout's `data/lod2/` |
 | `city2tabula/lod2/germany/bremen/` | 1.6 MB | City2TABULA | Bremen | 3D source for the whole box, CityGML, with `attribution.json` | as above |
+| `city2tabula/lod2/germany/nrw/` | 2.9 MB | City2TABULA | Köln | 3D source for the whole box, CityGML, with `attribution.json` | as above |
 | `city2tabula/lod2/austria/vienna/` | 8.1 MB | City2TABULA | Vienna | 3D source for the whole box, CityGML, with `attribution.json` | as above |
 | `city2tabula/lod2/czechia/brno/` | 2.0 MB | City2TABULA | Brno | 3D source for the whole box, CityJSON, with `attribution.json` | as above |
-| `pylovo/pylovo_fixture.sql.gz` | 7.8 MB | PyLovo | all four | low-voltage grids, buildings and their inputs, for every site in one database | `make pylovo-fixture` (`load.sh pylovo`), before PyLovo starts |
-| `pylovo/bremen_tile.wkt` | 4 kB | `export_pylovo.py` | Bremen | the clip polygon the PyLovo fixture is cut to | not loaded; regeneration input |
+| `pylovo/pylovo_fixture.sql.gz` | 8.4 MB | PyLovo | all five | low-voltage grids, buildings and their inputs, for every site in one database | `make pylovo-fixture` (`load.sh pylovo`), before PyLovo starts |
+| `pylovo/germany_coverage.wkt` | 4 kB | `export_pylovo.py` | Bremen, Köln | the clip polygon the PyLovo fixture is cut to: Bremen's LoD2 tile and the Köln box | not loaded; regeneration input |
 | `pylovo/vienna_coverage.wkt` | 5 kB | `export_pylovo.py` | Vienna | as above | not loaded; regeneration input |
 | `pylovo/brno_box.wkt` | 4 kB | `export_pylovo.py` | Brno | as above | not loaded; regeneration input |
 | `weather/cosmo_rea6/netherlands/output/COSMO_REA6_2018_annual_all_attrs.nc` | 5.1 MB | weather-serve | Loenen, Heeten, Köln | hourly 2018 weather, a 3×3 block per site side by side on the x axis (3×9 cells) | `load.sh weather`, into the weather checkout's `data/` |
