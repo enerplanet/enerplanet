@@ -3138,7 +3138,6 @@
     },
     "sharedOutline": "Questo contorno comprende {{count}} edifici 3D. Mostrato e modificabile: il più grande. Il fabbisogno di calore è calcolato per ciascuno e sommato.",
     "tech": {
-      "pvCapacity": "Potenza dalle superfici FV",
       "size": "Taglia",
       "sizeMax": "Taglia massima",
       "power": "Potenza",
@@ -3149,7 +3148,6 @@
       "efficiency": "Rendimento",
       "investment": "Investimento",
       "price": "Prezzo",
-      "pvSurfaces": "Superfici FV",
       "required": "Inserire un valore",
       "positive": "Deve essere maggiore di 0",
       "notNegative": "Deve essere 0 o più",

@@ -6,7 +6,7 @@
 
 import type { TechCard, TechField } from '@thd-spatial-ai/building-configurator';
 
-import { KWP_PER_M2, type PvArray } from './usePvMode';
+import type { PvArray } from './usePvMode';
 
 interface Constraint {
   key: string;
@@ -67,33 +67,21 @@ function cardValue(raw: unknown): number | null | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-/** kWp of the PV arrays, each its usable area at KWP_PER_M2 unless it sets its own capacity. */
-export function pvCapacityKw(arrays: readonly (PvArray & { capacity_kw?: number })[]): number {
-  return arrays.reduce((sum, a) => sum + (a.capacity_kw ?? a.area * a.usable_share * KWP_PER_M2), 0);
-}
-
 /** Edits are refused per field; the message is shown under it until a valid value arrives. */
 export type FieldErrors = Record<string, string>;
 
 /** Key of one field's error in FieldErrors. */
 export const errorKey = (techKey: string, fieldKey: string) => `${techKey}:${fieldKey}`;
 
-/**
- * One card per installed technology. pvArrays are the arrays PV covers now:
- * the stored ones, or the qualifying roofs while placement is automatic.
- */
+/** One card per installed technology except PV, whose card the configurator draws from its pv prop. */
 export function technologyCards(
   techs: BuildingTechs,
-  pvArrays: readonly PvArray[],
   runMode: 'plan' | 'operate',
   errors: FieldErrors,
   t: Translate,
 ): Omit<TechCard, 'action'>[] {
-  return Object.entries(techs).map(([techKey, tech]) => {
+  return Object.entries(techs).filter(([techKey]) => techKey !== 'pv_supply').map(([techKey, tech]) => {
     const fields: TechField[] = [];
-    if (techKey === 'pv_supply') {
-      fields.push({ key: 'capacity', label: t('buildingConfig.tech.pvCapacity'), value: round(pvCapacityKw(pvArrays)), unit: 'kWp' });
-    }
     for (const spec of FIELDS[techKey] ?? DEFAULT_FIELDS) {
       const value = cardValue(tech.constraints?.find((c) => c.key === spec.key)?.value);
       if (value === undefined) continue;
@@ -113,7 +101,6 @@ export function technologyCards(
   });
 }
 
-const round = (value: number) => Math.round(value * 100) / 100;
 
 /**
  * Sets one constraint of one technology. Returns the new techs, or the reason

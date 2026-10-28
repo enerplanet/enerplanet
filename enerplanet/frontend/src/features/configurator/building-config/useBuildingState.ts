@@ -135,6 +135,15 @@ async function resolveBuilding(
 }
 
 /**
+ * What to show instead of resolving while the area's preparation run is still
+ * working on this building; null to resolve it. A run that ended, even failed or
+ * empty, does not hold it: enrich answers from City2TABULA's current data.
+ */
+export function heldByRun(runState: PreparationStatus | 'ready'): BuildingStateResult | null {
+  return runState !== 'ready' && isPreparing(runState) ? { ...EMPTY, preparing: true } : null;
+}
+
+/**
  * Resolves one building by osm_id, or reports why it could not.
  *
  * The result keeps its identity until the osm_id changes: the configurator
@@ -168,9 +177,8 @@ export function useBuildingState(osmId: string | null): BuildingStateResult {
     if (!feature) return setResult(failed('This building is not in the loaded grid.'));
     const box = bboxOf(feature.geometry);
     if (!box) return setResult(failed('This building has no usable footprint.'));
-    if (runState !== 'ready' && isPreparing(runState)) return setResult({ ...EMPTY, preparing: true });
-    if (runState === 'no_data') return setResult(failed('City2TABULA has no 3D data for this building.'));
-    if (runState === 'failed') return setResult(failed('City2TABULA could not prepare the 3D data for this building.'));
+    const held = heldByRun(runState);
+    if (held) return setResult(held);
 
     setResult({ ...EMPTY, loading: true });
     resolveBuilding(osmId, feature, box)

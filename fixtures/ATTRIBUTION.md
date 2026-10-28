@@ -102,11 +102,11 @@ above is visibly cited as the source.
 Modifications: the per-country archetype rows City2TABULA imports into its
 `tabula` schema, carried in each dump: the Dutch set (135 rows) in
 `city2tabula_loenen.sql.gz`, the German set (232 rows) in
-`city2tabula_bremen.sql.gz`, the Austrian set (165 rows) in
+`city2tabula_germany.sql.gz`, the Austrian set (165 rows) in
 `city2tabula_vienna.sql.gz` and the Czech set (84 rows) in
 `city2tabula_brno.sql.gz`. No values were altered.
 
-## fixtures/city2tabula/city2tabula_bremen.sql.gz and lod2/germany/bremen/
+## fixtures/city2tabula/city2tabula_germany.sql.gz (Bremen part) and lod2/germany/bremen/
 
 Derived from `3D-Gebäudemodell LoD2 Land Bremen`, licensed CC BY 4.0
 (https://creativecommons.org/licenses/by/4.0/).
@@ -131,6 +131,28 @@ including the imported source geometry. Both files redistribute an excerpt of
 the source model.
 
 CC BY 4.0 requires both the credit above and this statement of modification.
+
+## fixtures/city2tabula/city2tabula_germany.sql.gz (Köln part) and lod2/germany/nrw/
+
+Derived from `3D-Gebäudemodell LoD2` of North Rhine-Westphalia, published by
+Bezirksregierung Köln, Geobasis NRW, under the Datenlizenz Deutschland – Zero –
+Version 2.0 (https://www.govdata.de/dl-de/zero-2-0).
+
+> Geobasis NRW — https://www.bezreg-koeln.nrw.de/geobasis-nrw
+
+DL-DE-ZERO-2.0 requires neither credit nor a statement of modification; both
+are given here as for the other extracts. Terms and product page:
+
+> https://www.bezreg-koeln.nrw.de/geobasis-nrw/produkte-und-dienste/3d-gebaeudemodelle
+
+Modifications: an excerpt of the source model for the box 6.93635 50.90625 to
+6.94755 50.91353 (EPSG:4326) in Köln, selected by footprint centroid and limited
+to the 972 buildings that also exist in the PyLovo fixture, exported as CityGML
+1.0 and compressed (`lod2/germany/nrw/gml/koeln.gml.gz`). City2TABULA imported
+the part of the box west of longitude 6.94132, extracted building envelope
+attributes and surface geometry and linked the buildings to PyLovo: 487
+buildings and 9,259 surfaces. The database dump holds that import, including
+the imported source geometry, beside the Bremen import above.
 
 ## fixtures/city2tabula/city2tabula_vienna.sql.gz and lod2/austria/vienna/
 
@@ -203,12 +225,12 @@ usage classification, floor areas, low-voltage grid assignment and transformer
 rated powers in these files are PyLovo output rather than OpenStreetMap data.
 
 Modifications: the database fixture carries the grids, buildings, lines and
-transformers of four areas: postcode 7371 around Loenen; the five Bremen
-postcodes the LoD2 tile above intersects; Vienna postcodes 1010, 1070, 1080 and
-1090; and Brno postcode 60200. Outside Loenen it keeps only the grids whose
-buildings all lie inside that site's clip (the Bremen tile,
-`vienna_coverage.wkt`, `brno_box.wkt`). 221 grids, 9,073 buildings, 17,782
-lines, 39 transformers. Postcode geometries are clipped to the same polygons,
+transformers of five areas: postcode 7371 around Loenen; the five Bremen
+postcodes the LoD2 tile above intersects; Köln postcode 50969; Vienna postcodes
+1010, 1070, 1080 and 1090; and Brno postcode 60200. Outside Loenen it keeps only
+the grids whose buildings all lie inside that site's clip (the Bremen tile and
+the Köln box in `germany_coverage.wkt`, `vienna_coverage.wkt`, `brno_box.wkt`).
+235 grids, 9,589 buildings, 18,805 lines, 42 transformers. Postcode geometries are clipped to the same polygons,
 so the extent the fixture advertises is the extent it can serve.
 
 The Brno postcode row keeps only the postcode number. Its geometry is the clip

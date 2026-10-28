@@ -3158,7 +3158,6 @@
     },
     "sharedOutline": "Ten obrys obejmuje {{count}} budynków 3D. Wyświetlany i edytowalny: największy. Zapotrzebowanie na ciepło jest liczone dla każdego i sumowane.",
     "tech": {
-      "pvCapacity": "Moc z powierzchni PV",
       "size": "Wielkość",
       "sizeMax": "Maksymalna wielkość",
       "power": "Moc",
@@ -3169,7 +3168,6 @@
       "efficiency": "Sprawność",
       "investment": "Inwestycja",
       "price": "Cena",
-      "pvSurfaces": "Powierzchnie PV",
       "required": "Wpisz wartość",
       "positive": "Musi być większe od 0",
       "notNegative": "Musi wynosić 0 lub więcej",

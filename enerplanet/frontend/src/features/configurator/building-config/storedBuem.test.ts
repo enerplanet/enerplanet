@@ -56,9 +56,9 @@ describe("stored BuEM", () => {
     const stored = toStoredBuem(withYear);
     const reopened = toStoredBuem(fromStoredBuem("268425674", footprint, stored));
 
-    expect(stored.construction_year).toBe(1968);
+    expect(stored.configurator.construction_year).toBe(1968);
     expect(stored.building).not.toHaveProperty("construction_period");
-    expect(reopened.construction_year).toBe(1968);
+    expect(reopened.configurator.construction_year).toBe(1968);
   });
 
   it("reopens a block saved without its storey count with City2TABULA's count", () => {
@@ -73,6 +73,10 @@ describe("stored BuEM", () => {
     const stored = { ...saved, building: { ...saved.building, n_storeys: 2 } };
 
     expect(fromStoredBuem("268425674", footprint, stored, 3).identity.storeys).toBe(2);
+  });
+
+  it("reopens a building at its footprint's location", () => {
+    expect(fromStoredBuem("268425674", footprint, toStoredBuem(opened)).identity.coordinates).toEqual([6.02, 52.1]);
   });
 
   it("finds nothing stored on a building nobody edited", () => {

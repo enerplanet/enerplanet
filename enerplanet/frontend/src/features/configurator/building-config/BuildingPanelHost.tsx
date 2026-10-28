@@ -11,7 +11,7 @@
 import { useCallback, useMemo, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
-import { Building3DView, DEFAULT_PV_MODULE, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
+import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { config } from '@/configuration/app';
 import { isExpert } from '@/features/admin-dashboard/utils/accessLevelUtils';
@@ -147,6 +147,16 @@ const Credits: FC<{ credits: DatasetCredit[] }> = ({ credits }) => {
   );
 };
 
+/**
+ * The notice shown instead of the view while a building's PV surfaces load, or
+ * when they failed to load for a view opened to place PV; null to show the view.
+ * Without the surfaces any other view opens without PV.
+ */
+function pvNotice(hasPv: boolean, forPv: boolean, pvMode: { pv: unknown; failed: boolean }): string | null {
+  if (pvMode.failed) return forPv ? 'buildingConfig.pv.unavailable' : null;
+  return hasPv && !pvMode.pv ? 'buildingConfig.loading' : null;
+}
+
 interface PanelBodyProps {
   osmId: string;
   /** A saved model's id; without it the building belongs to the draft. */
@@ -156,8 +166,10 @@ interface PanelBodyProps {
   onExit: () => void;
   onEdited?: OnBuildingEdited;
   onReset?: OnBuildingReset;
-  /** The building's PV in PV mode, otherwise null. */
+  /** The building's PV technology, or null when it has none. */
   pv: BuildingPv | null;
+  /** Opened to place PV: the view starts on its Technologies tab. */
+  forPv: boolean;
   onPvArrays?: OnPvArrays;
   /** The building's technologies when the view opens. */
   techs: BuildingTechs | null;
@@ -168,7 +180,7 @@ interface PanelBodyProps {
   locationFor?: (osmId: string) => [number, number] | null;
 }
 
-const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, onPvArrays, techs, onTechsChange, techsFor, locationFor }) => {
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, forPv, onPvArrays, techs, onTechsChange, techsFor, locationFor }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited, buildingCount } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
@@ -185,7 +197,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
   const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null);
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
-  const { technologies, pvSurfaceIds, pvSurfaces } = useBuildingTechnologies(osmId, country, techs, storeTechs);
+  const { technologies } = useBuildingTechnologies(techs, storeTechs);
 
   if (preparing) {
     return (
@@ -210,8 +222,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   // A geometry failure is reported rather than passed on as null, which the
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice onBack={onExit}>{geometryError}</Notice>;
-  if (pv && pvMode.failed) return <Notice onBack={onExit}>{t('buildingConfig.pv.unavailable')}</Notice>;
-  if (pv && !pvMode.pv) return <Notice onBack={onExit}>{t('buildingConfig.loading')}</Notice>;
+  const pvWait = pvNotice(pv !== null, forPv, pvMode);
+  if (pvWait) return <Notice onBack={onExit}>{t(pvWait)}</Notice>;
 
   const detached = edited && geometry !== null
     && isEnvelopeDetached(geometry.surfaces, new Set(Object.keys(building.envelope)));
@@ -232,10 +244,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         seriesCsvUrl={seriesCsvUrl}
         attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
         pv={pvMode.pv}
-        pvSurfaceIds={pvSurfaceIds}
-        pvSurfaces={pvSurfaces}
-        pvModule={DEFAULT_PV_MODULE}
         technologies={technologies}
+        defaultTab={forPv ? 'technologies' : undefined}
         defaultMode={isExpert(user) ? 'expert' : 'basic'}
         language={i18n.language}
       />
@@ -282,7 +292,8 @@ export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId
         onExit={close}
         onEdited={onBuildingEdited}
         onReset={onBuildingReset}
-        pv={pvMode ? pvFor?.(buildingId) ?? null : null}
+        pv={pvFor?.(buildingId) ?? null}
+        forPv={pvMode}
         onPvArrays={onPvArrays}
         techs={techsFor?.(buildingId) ?? null}
         onTechsChange={onTechsChange}
