@@ -302,17 +302,16 @@ docker run --rm --network sim2-tentacron-net curlimages/curl \
 
 ## Pins
 
-Versions are pinned at the top of the script and are a copy of `repos.conf`.
-Each can be overridden from the environment:
+The script reads every `_REPO`, `_DIR`, `_REF`, `_PORT` and image tag from the
+clone's `repos.conf`, and checks out each service at its `_REF`. A variable
+already set in the environment wins over the file:
 
 ```bash
 CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
   scripts/deploy-heat-stack.sh --prefix sim2 render
 ```
 
-Keep this list and `repos.conf` in step when a pin moves. Note that the script
-does not read `repos.conf` itself — only `fixtures/load.sh` does, for the
-checkout directory names.
+Each checkout logs the commit it ends on.
 
 ---
 
@@ -322,6 +321,7 @@ checkout directory names.
 |---|---|---|
 | `Docker Compose X is too old` | The `!reset` / `!override` tags need 2.24 | Update the Compose plugin |
 | `<repo> has no repos.conf` | Run from outside an enerplanet clone, or `--repo` points elsewhere | `--repo DIR`, or run it in the clone that has one |
+| `<repo>/repos.conf sets no <VAR>` | The clone's `repos.conf` lacks a pin the script needs | Pull the current `dev`, or set `<VAR>` in the environment |
 | `network <prefix>-pylovo-net … was not created for project` | Expected. A later service joins a network an earlier one created | Nothing — it attaches rather than recreating |
 | A checkout you expect at a pin is on a branch | The "left alone" rule above | Move that checkout to the pinned ref yourself |
 | `city2tabula` on-request runs fail | The country's database fixture was not loaded | Re-run without `--no-fixtures`, or `make fixtures` |

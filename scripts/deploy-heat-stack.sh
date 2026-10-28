@@ -7,10 +7,10 @@
 # Not standalone: it must be run from a clone of enerplanet, because that clone
 # is what supplies fixtures/ (the committed test data) and is where the service
 # checkouts go — the same dependencies/ layout `make setup-repos` creates. It
-# reads the Makefile not at all; the pins below are a copy of repos.conf and can
-# be overridden from the environment. It needs only git, git-lfs and Docker
-# Compose 2.24+ (for the `!reset` / `!override` tags used to strip ports and
-# rename things).
+# reads the Makefile not at all; the pins come from that clone's repos.conf,
+# and a variable already set in the environment wins over it. It needs only
+# git, git-lfs and Docker Compose 2.24+ (for the `!reset` / `!override` tags
+# used to strip ports and rename things).
 #
 #   scripts/deploy-heat-stack.sh --prefix sim2 up
 #   scripts/deploy-heat-stack.sh --prefix sim2 render   # generate + validate only
@@ -51,45 +51,6 @@
 #   pylovo-api-dev) are re-added as network aliases in the overrides.
 #
 set -euo pipefail
-
-# ── Pins (copy of repos.conf; override from the environment if needed) ────────
-TENTACRON_REPO=${TENTACRON_REPO:-https://github.com/enerplanet/TentaCron.git}
-TENTACRON_DIR=${TENTACRON_DIR:-TentaCron}
-TENTACRON_REF=${TENTACRON_REF:-cfbc26a243b6fd492230f5d2cfcb8e4e466ea0ad}
-TENTACRON_PORT=${TENTACRON_PORT:-8400}
-
-MEME_REPO=${MEME_REPO:-https://github.com/enerplanet/meme.git}
-MEME_DIR=${MEME_DIR:-meme}
-MEME_REF=${MEME_REF:-v0.2.0-alpha}
-
-BUEM_REPO=${BUEM_REPO:-https://github.com/enerplanet/buem-gateway.git}
-BUEM_DIR=${BUEM_DIR:-buem-gateway}
-BUEM_REF=${BUEM_REF:-v7.5.0}
-BUEM_GATEWAY_IMAGE_TAG=${BUEM_GATEWAY_IMAGE_TAG:-7.5.0}
-BUEM_MODEL_IMAGE_TAG=${BUEM_MODEL_IMAGE_TAG:-6.10.0}
-
-IGNIS_REPO=${IGNIS_REPO:-https://github.com/THD-Spatial-AI/ignis.git}
-IGNIS_DIR=${IGNIS_DIR:-ignis}
-IGNIS_REF=${IGNIS_REF:-v0.8.0}
-IGNIS_IMAGE_TAG=${IGNIS_IMAGE_TAG:-0.8.0}
-
-CITY2TABULA_REPO=${CITY2TABULA_REPO:-https://github.com/THD-Spatial-AI/city2tabula.git}
-CITY2TABULA_DIR=${CITY2TABULA_DIR:-city2tabula}
-CITY2TABULA_REF=${CITY2TABULA_REF:-v0.16.0}
-CITY2TABULA_IMAGE_TAG=${CITY2TABULA_IMAGE_TAG:-0.16.0}
-
-WEATHER_REPO=${WEATHER_REPO:-https://github.com/enerplanet/weather.git}
-WEATHER_DIR=${WEATHER_DIR:-weather}
-WEATHER_REF=${WEATHER_REF:-v2.3.0}
-WEATHER_IMAGE_TAG=${WEATHER_IMAGE_TAG:-2.3.0}
-
-PV_SERVICE_REPO=${PV_SERVICE_REPO:-https://github.com/enerplanet/pysam-pv.git}
-PV_SERVICE_DIR=${PV_SERVICE_DIR:-pysam-pv}
-PV_SERVICE_REF=${PV_SERVICE_REF:-5c1959b207b86876b618399050994f85d9475624}
-
-PYLOVO_REPO=${PYLOVO_REPO:-https://github.com/enerplanet/enerplanet-pylovo.git}
-PYLOVO_DIR=${PYLOVO_DIR:-enerplanet-pylovo}
-PYLOVO_REF=${PYLOVO_REF:-11dd4fc4950f2e3d2a3542124784c23d3c6988cb}
 
 # Fixtures come from the enerplanet checkout this script lives in, not from a
 # clone of our own; --no-fixtures skips pulling and loading them entirely.
@@ -170,6 +131,24 @@ REPO_ROOT="${REPO:-$(cd "$SELF_DIR/.." && pwd)}"
 [ -d "$REPO_ROOT" ] || die "--repo $REPO_ROOT is not a directory"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 
+# The pins: every _REPO, _DIR, _REF, _PORT and image tag, from repos.conf, the
+# single record of what the platform runs.
+REPOS_CONF="$REPO_ROOT/repos.conf"
+[ -f "$REPOS_CONF" ] || die "$REPO_ROOT has no repos.conf — is it an enerplanet checkout? Use --repo DIR"
+while IFS='=' read -r key value; do
+  if [[ $key =~ ^[A-Z0-9_]+$ ]] && [ -z "${!key:-}" ]; then export "$key=$value"; fi
+done < "$REPOS_CONF"
+for var in TENTACRON_REPO TENTACRON_DIR TENTACRON_REF TENTACRON_PORT \
+           MEME_REPO MEME_DIR MEME_REF \
+           BUEM_REPO BUEM_DIR BUEM_REF BUEM_GATEWAY_IMAGE_TAG BUEM_MODEL_IMAGE_TAG \
+           IGNIS_REPO IGNIS_DIR IGNIS_REF IGNIS_IMAGE_TAG \
+           CITY2TABULA_REPO CITY2TABULA_DIR CITY2TABULA_REF CITY2TABULA_IMAGE_TAG \
+           WEATHER_REPO WEATHER_DIR WEATHER_REF WEATHER_IMAGE_TAG \
+           PV_SERVICE_REPO PV_SERVICE_DIR PV_SERVICE_REF \
+           PYLOVO_REPO PYLOVO_DIR PYLOVO_REF; do
+  [ -n "${!var:-}" ] || die "$REPOS_CONF sets no $var"
+done
+
 DEPS_DIR="$REPO_ROOT/dependencies"  # every service checkout lives here
 LOAD_SH="$REPO_ROOT/fixtures/load.sh"
 
@@ -202,7 +181,6 @@ preflight() {
   command -v git >/dev/null || die "git not found"
 
   if [ "$DO_FIXTURES" = 1 ]; then
-    [ -f "$REPO_ROOT/repos.conf" ] || die "$REPO_ROOT has no repos.conf — is it an enerplanet checkout? Use --repo DIR, or --no-fixtures"
     [ -f "$LOAD_SH" ] || die "$REPO_ROOT has no fixtures/load.sh — is it an enerplanet checkout? Use --repo DIR, or --no-fixtures"
     command -v gzip >/dev/null || die "gzip not found (the fixture dumps are gzipped)"
     if ! git lfs version >/dev/null 2>&1; then
@@ -253,22 +231,23 @@ resolve_ports() {
 }
 
 # ── Repositories ──────────────────────────────────────────────────────────────
-# checkout DIR REPO REF — clone at REF, or move an existing checkout onto it.
+# checkout DIR REPO REF — clone at REF, or move an existing checkout onto it,
+# and log the commit it ends on.
 checkout() {
   local dir="$1" repo="$2" ref="$3" path="$DEPS_DIR/$1"
   if [ -d "$path/.git" ]; then
     if [ "$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)" != "HEAD" ]; then
-      warn "$path is on a branch; leaving it alone (pin: $ref)"
+      warn "$path is on a branch; leaving it alone at $(git -C "$path" rev-parse --short HEAD) (pin: $ref)"
       return 0
     fi
     git -C "$path" fetch -q --tags origin
     git -C "$path" checkout -q "$ref"
-    ok "updated $dir -> $ref"
+    ok "updated $dir -> $ref ($(git -C "$path" rev-parse --short HEAD))"
   else
     log "cloning $dir at $ref"
     git clone -q "$repo" "$path"
     git -C "$path" checkout -q "$ref"
-    ok "cloned $dir -> $ref"
+    ok "cloned $dir -> $ref ($(git -C "$path" rev-parse --short HEAD))"
   fi
 }
 
@@ -491,9 +470,21 @@ pylovo_env() {
   fi
 }
 
+# The API reads consumer_categories and the grid tables as it starts, so the
+# database comes up and takes the PyLovo fixture before the API is started;
+# load_fixtures later leaves the loaded database alone.
 up_pylovo() {
-  log "PyLovo (api + postgres + redis)"
+  log "PyLovo (postgres + redis, fixture, then api)"
   pylovo_env
+  (
+    cd "$pylovo_dir"
+    docker compose -p "$PREFIX-pylovo" \
+      -f docker-compose.dev.yml -f "$OVR_DIR/pylovo.yml" up -d --wait postgres redis
+  )
+  if [ "$DO_FIXTURES" = 1 ]; then
+    PYLOVO_DB_CONTAINER="$PREFIX-pylovo-postgres" bash "$LOAD_SH" pylovo \
+      || die "the PyLovo fixture did not load; the API would fail on a missing schema"
+  fi
   (
     cd "$pylovo_dir"
     docker compose -p "$PREFIX-pylovo" \
