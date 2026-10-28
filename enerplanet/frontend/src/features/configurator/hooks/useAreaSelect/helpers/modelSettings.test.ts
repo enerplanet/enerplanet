@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { settingsChanged, type LoadedModelSettings, type ModelSettings } from "./modelSettings";
+import { hasUnsavedChanges, settingsChanged, type LoadedModelSettings, type ModelSettings } from "./modelSettings";
 
 const loaded: LoadedModelSettings = { title: "Loenen", from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, config: {} };
 const current: ModelSettings = { title: "Loenen", fromDate: "2018-01-01", toDate: "2018-12-31", resolution: 60, cookingCarrier: "electric", runMode: "plan", weather: { provider: null, choice: "p50" } };
@@ -27,5 +27,17 @@ describe("settingsChanged", () => {
     expect(settingsChanged(loaded, { ...current, title: "Loenen 2" })).toBe(true);
     expect(settingsChanged(loaded, { ...current, toDate: "2018-06-30" })).toBe(true);
     expect(settingsChanged(loaded, { ...current, resolution: 15 })).toBe(true);
+  });
+});
+
+describe("hasUnsavedChanges", () => {
+  it("counts a new model as unsaved once an area is drawn", () => {
+    expect(hasUnsavedChanges(false, false, 0)).toBe(false);
+    expect(hasUnsavedChanges(false, false, 1)).toBe(true);
+  });
+
+  it("counts a saved model as unsaved only after an edit", () => {
+    expect(hasUnsavedChanges(true, false, 1)).toBe(false);
+    expect(hasUnsavedChanges(true, true, 1)).toBe(true);
   });
 });
