@@ -98,6 +98,7 @@ and takes the path without it. Each box is split in two:
 |---|---|---|---|
 | Loenen | 6.01175 52.09877 to 6.03662 52.11506 | south of lat 52.11099 | 737 (333) |
 | Bremen | 8.79239 53.09770 to 8.80586 53.10312 | west of lon 8.79613 | 836 (419) |
+| Köln | 6.93635 50.90625 to 6.94755 50.91353 | west of lon 6.94132 | 972 (487) |
 | Vienna | 16.33877 48.20692 to 16.35360 48.21506 | west of lon 16.34686 | 927 (514) |
 | Brno | 16.60300 49.19000 to 16.61262 49.19996 | south of lat 49.19430 | 655 (370) |
 
@@ -115,13 +116,15 @@ The PyLovo extent of each region:
 |---|---|---|---|
 | Loenen, Netherlands | postcode 7371 | 3DBAG | EPSG:28992 |
 | Bremen, Germany | LoD2 tile `LoD2_32_486_5882_2_HB`, 8.7909 53.0873 to 8.8208 53.1053 | LoD2 Land Bremen | EPSG:25832 |
+| Köln, Germany | postcode 50969, clipped to the 3D box (in `fixtures/pylovo/germany_coverage.wkt`) | 3D-Gebäudemodell LoD2, Geobasis NRW | EPSG:25832 |
 | Vienna, Austria | postcodes 1010, 1070, 1080 and 1090, clipped to `fixtures/pylovo/vienna_coverage.wkt` | Generalisiertes Dachmodell, Stadt Wien | EPSG:31256 |
 | Brno, Czechia | box 16.603 49.190 to 16.613 49.200 in postcode 60200, `fixtures/pylovo/brno_box.wkt` | 3D model budov, Brno | EPSG:5514 |
 
 The region is defined by whichever is narrower, the postcode or the 3D source.
 Loenen's postcode falls inside the 3DBAG cut, so it is used whole. Bremen's
 tile straddles five postcodes and covers none of them completely, so the five
-are clipped to the tile instead. Brno has 3D data for the whole city, so it is
+are clipped to the tile instead. Köln's box lies inside postcode 50969,
+which is clipped to the box. Brno has 3D data for the whole city, so it is
 cut to a box of about 0.7 by 1.1 km in the centre to keep the fixture small.
 Clipping the geometry rather than shipping the
 administrative boundary is what keeps the extent the UI advertises equal to the
@@ -145,7 +148,7 @@ reprojected at load time, because the join between them is precomputed in
 | Fixture | Size | Populates | Lands in |
 |---|---|---|---|
 | `city2tabula/city2tabula_loenen.sql.gz` | 4.1 MB | 333 buildings, 6,778 surfaces, 333 links (all matched), 135 Dutch TABULA rows, and the CityDB import they come from | a new `<DB_NAME>_nl` database |
-| `city2tabula/city2tabula_bremen.sql.gz` | 4.4 MB | 419 buildings, 7,440 surfaces, 419 links (all matched), 232 German TABULA rows, and the CityDB import | a new `<DB_NAME>_de` database |
+| `city2tabula/city2tabula_germany.sql.gz` | 9.7 MB | Bremen and Köln: 906 buildings (419 and 487), 16,699 surfaces, 906 links (all matched), 232 German TABULA rows, and the CityDB import | a new `<DB_NAME>_de` database |
 | `city2tabula/city2tabula_vienna.sql.gz` | 25.1 MB | 514 buildings, 39,295 surfaces, 514 links (all matched), 165 Austrian TABULA rows, and the CityDB import | a new `<DB_NAME>_at` database |
 | `city2tabula/city2tabula_brno.sql.gz` | 11.6 MB | 370 buildings, 20,648 surfaces, 370 links (all matched), 84 Czech TABULA rows, and the CityDB import | a new `<DB_NAME>_cz` database |
 | `city2tabula/lod2/<country>/<dataset>/` | 1.0 to 8.1 MB per site | the 3D source of the whole box (CityJSON for Loenen and Brno, CityGML for Bremen and Vienna), with its `attribution.json` | the City2TABULA checkout's `data/lod2/`, mounted into the server |
@@ -175,10 +178,10 @@ them from `PYLOVO_FDW_*` on its first run (see Connection settings).
 ```bash
 ./fixtures/export_pylovo.py --scope NL:7371 \
     --scope DE:28195 --scope DE:28209 --scope DE:28215 \
-    --scope DE:28217 --scope DE:28219 \
+    --scope DE:28217 --scope DE:28219 --scope DE:50969 \
     --scope AT:1010 --scope AT:1070 --scope AT:1080 --scope AT:1090 \
     --scope CZ:60200 \
-    --clip DE:fixtures/pylovo/bremen_tile.wkt \
+    --clip DE:fixtures/pylovo/germany_coverage.wkt \
     --clip AT:fixtures/pylovo/vienna_coverage.wkt \
     --clip CZ:fixtures/pylovo/brno_box.wkt \
     --state-name NL:gelderland=Gelderland \
@@ -464,7 +467,8 @@ credit and a statement of modification. `fixtures/ATTRIBUTION.md` carries both
 for every extract in this repository, the smoke test's own GeoJSON fixtures
 included, and must be updated whenever one is added or replaced.
 
-Sources currently redistributed: 3DBAG, LoD2 Land Bremen, Stadt Wien's
+Sources currently redistributed: 3DBAG, LoD2 Land Bremen, Geobasis NRW's
+3D-Gebäudemodell LoD2 (DL-DE-ZERO-2.0), Stadt Wien's
 Generalisiertes Dachmodell, Brno's 3D model budov, Statistik Austria
 municipal boundaries, CBS postcode areas, ČSÚ postcode polygons and
 Deutscher Wetterdienst's COSMO-REA6 (all CC BY 4.0); NASA GMAO's MERRA-2
