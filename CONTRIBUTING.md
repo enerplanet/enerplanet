@@ -23,7 +23,10 @@ cd enerplanet
 
 ### 2. Create a Branch
 
+Branch from `dev`, the integration branch:
+
 ```bash
+git checkout dev && git pull
 git checkout -b fix/short-description    # Bug fix
 git checkout -b feat/short-description   # New feature
 git checkout -b docs/short-description   # Documentation
@@ -60,7 +63,7 @@ git push -u origin <your-branch>
 
 ### 6. Open a Pull Request
 
-Target the `main` branch. Include:
+Target the `dev` branch; `main` takes only release merges from `dev`. Include:
 
 - What changed and why
 - Steps to test the change
