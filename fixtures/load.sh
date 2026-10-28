@@ -147,8 +147,8 @@ PYLOVO_DB_CONTAINER="${PYLOVO_DB_CONTAINER:-postgres}"
 load_pylovo() {
   local src="$HERE/pylovo/pylovo_fixture.sql.gz"
   [ -f "$src" ] || return 0
-  # repos.conf carries no PYLOVO_DIR: the Makefile clones this one to a fixed
-  # path rather than a configured one.
+  # PYLOVO_DIR comes from repos.conf when run through make; the Makefile still
+  # clones pylovo to that same fixed path.
   local dir="$ROOT/dependencies/${PYLOVO_DIR:-enerplanet-pylovo}"
   local envfile="$dir/.env.docker"
   # An empty .env.docker (left by an interrupted setup) counts as missing.
