@@ -103,7 +103,10 @@ mount_source() {
 # exists with different content is reported and kept, because City2TABULA
 # skips files it has already imported and would not pick up the change.
 copy_new() {
-  local src="$1" dest="$2" rel copied=0
+  local src="$1" dest="$2" rel copied=0 denied
+  # Docker creates a missing bind-mount source owned by root.
+  denied="$(find "$dest" -type d ! -writable -print -quit)"
+  [ -z "$denied" ] || die "$denied is not writable by $(id -un) (owner $(stat -c %U "$denied")); run: sudo chown -R $(id -un): $dest"
   while IFS= read -r rel; do
     if [ ! -e "$dest/$rel" ]; then
       mkdir -p "$(dirname "$dest/$rel")"

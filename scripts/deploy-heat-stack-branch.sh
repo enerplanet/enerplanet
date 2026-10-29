@@ -482,6 +482,9 @@ up_ignis() {
 
 up_city2tabula() {
   log "City2TABULA (built)"
+  # Bind-mount sources Docker would otherwise create owned by root, which
+  # deploy-fixture.sh then cannot copy into.
+  mkdir -p "$c2t_dir/data/lod2" "$c2t_dir/data/lod3" "$c2t_dir/data/attributes"
   (
     cd "$c2t_dir/environment/http"
     export C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG"
