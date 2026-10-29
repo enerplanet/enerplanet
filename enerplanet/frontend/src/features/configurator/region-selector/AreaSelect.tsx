@@ -11,6 +11,7 @@ import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useConfirm } from "@/hooks/useConfirmDialog";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
 import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
@@ -329,6 +330,20 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const activeMode = useModelStore((s) => s.activeMode);
   const siteMode = useModelStore((s) => s.siteMode);
   suppressDialogOnClickRef.current = activeMode !== null;
+
+  // Leaving a custom grid drops its placed transformers, so that switch asks first.
+  const confirm = useConfirm();
+  const switchGridMode = (on: boolean) => {
+    if (on || state.allPolygons.length === 0) return void actions.handleSwitchGridMode(on);
+    void confirm({
+      type: "warning",
+      title: t("simulation.siteMode.leaveTitle"),
+      description: t("simulation.siteMode.leaveDescription"),
+      confirmLabel: t("simulation.siteMode.leaveConfirm"),
+      cancelLabel: t("common.cancel"),
+      onConfirm: async () => void actions.handleSwitchGridMode(false),
+    });
+  };
 
   const markModified = useCallback(() => setIsModified(true), [setIsModified]);
   const buildingSelection = useBuildingSelection({
@@ -694,6 +709,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
             includePrivateBuildings={state.includePrivateBuildings}
             onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
+            siteMode={siteMode}
+            onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
             availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
