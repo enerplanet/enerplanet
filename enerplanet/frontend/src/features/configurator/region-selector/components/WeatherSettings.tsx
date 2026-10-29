@@ -1,0 +1,142 @@
+import type { FC } from "react";
+import { Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
+import { useTranslation } from "@spatialhub/i18n";
+import { cn } from "@/lib/utils";
+import { useModelStore } from "@/features/configurator/store/modelStore";
+import { useWeatherArchives } from "@/features/configurator/hooks/useWeatherYears";
+import { isScenario, type WeatherChoice } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
+
+// Archive names as weather-serve lists them, with their published names.
+const ARCHIVE_NAMES: Record<string, string> = {
+  "merra-2": "MERRA-2",
+  "era5-land": "ERA5-Land",
+  "cosmo-rea6": "COSMO-REA6",
+};
+
+// Low to high solar irradiance, the order the row shows them in.
+const SCENARIOS: WeatherChoice[] = ["p10", "p50", "p90"];
+
+interface WeatherSettingsProps {
+  /** Shows the archive picker; everyone else runs on the default archive. */
+  isExpert: boolean;
+  /** Switches between scenario and historic weather; the caller moves the period to fit. */
+  onModeChange: (scenario: boolean) => void;
+}
+
+/**
+ * The weather a model's runs use: a scenario year (typical, low or high solar) or
+ * the recorded weather of a historic year, chosen first because it decides how the
+ * period's year is set. Experts also pick the archive.
+ */
+export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChange }) => {
+  const { t } = useTranslation();
+  const weather = useModelStore((s) => s.weather);
+  const setWeather = useModelStore((s) => s.setWeather);
+  const scenario = isScenario(weather);
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3" data-tour="weather">
+      <p className="text-sm font-medium text-foreground">{t("simulation.weather.title")}</p>
+
+      <ChoiceToggle
+        label={t("simulation.weather.mode.label")}
+        value={scenario ? "scenario" : "year"}
+        options={["scenario", "year"].map((mode) => ({ value: mode, label: t(`simulation.weather.mode.${mode}`) }))}
+        onChange={(mode) => onModeChange(mode === "scenario")}
+      />
+
+      {scenario ? (
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">{t("simulation.weather.year")}</p>
+          <ChoiceToggle
+            label={t("simulation.weather.year")}
+            value={weather.choice}
+            options={SCENARIOS.map((choice) => ({
+              value: choice,
+              label: t(`simulation.weather.shortChoices.${choice}`),
+              title: t(`simulation.weather.choices.${choice}`),
+            }))}
+            onChange={(choice) => setWeather({ ...weather, choice: choice as WeatherChoice })}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">{t("simulation.weather.hints.scenario")}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("simulation.weather.hints.year")}</p>
+      )}
+
+      {isExpert && <ArchiveSelect />}
+    </div>
+  );
+};
+
+/** title, when set, is the option's full name, shown on hover. */
+interface ChoiceOption { value: string; label: string; title?: string }
+
+/** A row of mutually exclusive choices, one click each. */
+const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (
+  <div role="radiogroup" aria-label={label} className="flex gap-1 rounded-md bg-muted p-1">
+    {options.map((option) => (
+      <button
+        key={option.value}
+        type="button"
+        role="radio"
+        aria-checked={value === option.value}
+        title={option.title}
+        onClick={() => value !== option.value && onChange(option.value)}
+        className={cn(
+          "h-7 flex-1 cursor-pointer rounded px-2 text-xs font-medium transition-colors",
+          value === option.value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
+
+/** The weather archive by name; its coverage is behind the info icon. */
+const ArchiveSelect: FC = () => {
+  const { t } = useTranslation();
+  const weather = useModelStore((s) => s.weather);
+  const setWeather = useModelStore((s) => s.setWeather);
+  const { defaultProvider, archives, scenarioYears } = useWeatherArchives();
+  const archive = weather.provider ?? defaultProvider ?? "";
+  const names = Object.keys(archives);
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+        {t("simulation.weather.archive")}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" aria-label={t("simulation.weather.coverage")} className="cursor-help">
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs space-y-1">
+            <p className="font-medium">{t("simulation.weather.coverage")}</p>
+            {names.map((name) => (
+              <div key={name}>
+                <p className="font-medium">{ARCHIVE_NAMES[name] ?? name}</p>
+                <p>{t("simulation.weather.historicYears", { count: archives[name].length, range: yearRange(archives[name]) })}</p>
+                {scenarioYears[name]?.length > 0 && (
+                  <p>{t("simulation.weather.scenarioYears", { count: scenarioYears[name].length, range: yearRange(scenarioYears[name]) })}</p>
+                )}
+              </div>
+            ))}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <ChoiceToggle
+        label={t("simulation.weather.archive")}
+        value={archive}
+        options={names.map((name) => ({ value: name, label: ARCHIVE_NAMES[name] ?? name }))}
+        onChange={(value) => setWeather({ ...weather, provider: value === defaultProvider ? null : value })}
+      />
+    </div>
+  );
+};
+
+/** First and last year, or the one year when they are the same. */
+const yearRange = (years: number[]): string => (years.length > 1 ? `${years[0]}–${years.at(-1)}` : String(years[0]));

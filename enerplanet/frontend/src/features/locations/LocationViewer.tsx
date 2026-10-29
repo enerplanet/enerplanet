@@ -1,6 +1,6 @@
 import { useState, useEffect, type FC } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit, MapPin, Globe, Lock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, MapPin, Loader2 } from 'lucide-react';
 import { MapContainer } from '@/components/shared/MapContainer';
 import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { PolygonDrawer } from '@/features/polygon-drawer';
@@ -113,21 +113,6 @@ const LocationViewer: FC = () => {
                 <span className="text-xs text-muted-foreground">Energy Demand</span>
                 <span className="text-sm font-medium text-foreground">{location.demand_energy.toLocaleString()} kWh/yr</span>
               </div>
-            </div>
-
-            {/* Visibility */}
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-              {location.is_public ? (
-                <>
-                  <Globe className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-600">Public</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Private</span>
-                </>
-              )}
             </div>
 
             {/* Tags */}

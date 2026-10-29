@@ -2,7 +2,6 @@ import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { CopyrightFooter } from "@/components/app-layout/CopyrightFooter";
 import { MapContainer } from "@/components/shared/MapContainer";
 import axios from "@/lib/axios";
 import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -18,8 +17,6 @@ import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
-// Map controls are provided by MapContainer; add search bar overlay locally
-import MapSearchBar from "@/features/interactive-map/MapSearchBar";
 import {
 	Button,
 	Select,
@@ -307,10 +304,7 @@ export const AssessmentViewer: React.FC = () => {
 				</div>
 			)}
 
-			<MapSearchBar />
 			<MapControls />
-
-			<CopyrightFooter position="bottom-left-sidebar" />
 		</>
 	);
 

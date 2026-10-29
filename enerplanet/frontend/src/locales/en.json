@@ -10,13 +10,15 @@
     "menu": {
       "profile": "Profile",
       "settings": "Settings",
-      "logout": "Log out"
+      "logout": "Log out",
+      "privacyTerms": "Privacy & Terms",
+      "adminPanel": "Admin Panel"
     },
     "tooltips": {
       "profile": "Profile",
       "theme": "Theme",
       "documentation": "Documentation",
-      "restartTour": "Restart tour",
+      "restartTour": "Product Tour",
       "feedback": "Feedback",
       "searchLocation": "Search for a location",
       "viewOnMap": "View on Map",
@@ -39,7 +41,10 @@
       "cannotEditCompleted": "Cannot edit completed model",
       "editConfiguration": "Edit Configuration",
       "moveToWorkspace": "Move to Workspace",
-      "shareModel": "Share Model"
+      "shareModel": "Share Model",
+      "downloadFailed": "Download failed: {{reason}}",
+      "runWithMeme": "Run with Calliope",
+      "runPypsaOnMeme": "Run power flow (PyPSA)"
     },
     "pagination": {
       "loading": "Loading...",
@@ -117,7 +122,7 @@
       "osmStandard": "Standard OpenStreetMap layer",
       "osmHumanitarian": "Humanitarian style OpenStreetMap",
       "cartoPositron": "Light theme base map by CartoDB",
-      "cartoDark": "",
+      "cartoDark": "Dark raster base map by CartoDB",
       "cartoVoyager": "Detailed raster base map by CartoDB",
       "openTopoMap": "Topographic style map",
       "maplibre3d": "3D buildings on satellite imagery",
@@ -274,8 +279,8 @@
     "assignBuildings": "Assign Buildings",
     "assignBuildingsHint": "Link buildings to transformers",
     "title": "Workflow",
-    "clickAddTransformer": "Click button in bottom bar",
-    "clickOnMapInPolygon": "Click on map inside polygon",
+    "clickAddTransformer": "Click the button in the bottom bar",
+    "clickOnMapInPolygon": "Click on the map inside the polygon",
     "clickToSelectBuilding": "Click to select a building",
     "then": "then",
     "clickTransformer": "click transformer",
@@ -283,7 +288,10 @@
     "assignBuildingsInstruction": "Select buildings → click target transformer",
     "illustrationStep": "Step {{step}}",
     "clickToSelect": "click to select",
-    "toCancel": "to cancel"
+    "toCancel": "to cancel",
+    "optional": "optional",
+    "resolveHeatAction": "Resolve heat",
+    "auto": "auto"
   },
   "map": {
     "zoomIn": "Zoom In",
@@ -295,13 +303,15 @@
     "countries": "countries",
     "regions": "regions",
     "myModels": "my models",
-    "fitToExtent": "Fit to extent"
+    "fitToExtent": "Fit to extent",
+    "footprintOnlyBuildings_one": "{{count}} building has no 3D city data and shows only its footprint",
+    "footprintOnlyBuildings_other": "{{count}} buildings have no 3D city data and show only their footprint"
   },
   "polygon": {
     "editPolygon": "Edit Polygon",
-    "moveVertex": "Move corners",
-    "addVertex": "Add point",
-    "removeVertexHint": "click on vertex",
+    "moveVertex": "Drag a corner to move it",
+    "addVertex": "Drag an edge to add a corner",
+    "removeVertexHint": "click on a corner to delete it",
     "escToClear": "to clear polygon",
     "rotate3d": "3D View",
     "rotate3dHint": "Right-click + drag to rotate and see buildings in 3D",
@@ -320,7 +330,24 @@
     "pointsAdded": "{{count}} added",
     "moveVertexHint": "Drag any vertex to adjust",
     "addVertexHint": "Click on any edge",
-    "removeVertex": "Remove point"
+    "removeVertex": "Remove point",
+    "removePolygonHint": "click on polygon to delete it",
+    "shortcuts": "Shortcuts",
+    "groupDrawing": "Drawing",
+    "groupDeleting": "Deleting",
+    "groupNavigating": "Navigating",
+    "rotate3dDrag": "drag to rotate the 3D view",
+    "spacePanHint": "drag to pan the map",
+    "rightClickCloseHint": "to close the polygon",
+    "keyRightClick": "Right-click",
+    "keySpace": "Space",
+    "dismissGuide": "Dismiss guide",
+    "groupBuildings": "Buildings",
+    "disableBuildingHint": "click a building to disable or enable it",
+    "selectBuildingHint": "click buildings to select them",
+    "disableSelectedHint": "disables the selected buildings",
+    "keyCtrl": "Ctrl",
+    "keyDelete": "Delete"
   },
   "dashboard": {
     "stats": {
@@ -330,7 +357,12 @@
       "completed": "Completed",
       "published": "Published",
       "modelLimit": "Model Limit",
-      "unlimited": "Unlimited"
+      "unlimited": "Unlimited",
+      "modelsCount_one": "{{count}} model",
+      "modelsCount_other": "{{count}} models",
+      "inProgressCount": "{{count}} in progress",
+      "completedCount": "{{count}} completed",
+      "limitUsed": "limit {{used}}/{{limit}}"
     }
   },
   "modelsManagement": {
@@ -612,7 +644,10 @@
       "defaultWorkspace": "Default Workspace",
       "descriptions": {
         "targetWorkspace": "Choose the workspace to move the model to"
-      }
+      },
+      "noOtherWorkspace": "There is no other workspace yet. Name a new one, and the model moves into it.",
+      "createAndMove": "Create workspace and move",
+      "createAndMoveFailed": "The workspace could not be created, or the model could not be moved into it. Please try again."
     },
     "shareModel": {
       "title": "Share with an Individual User",
@@ -842,6 +877,15 @@
       "adminResponse": "Admin Response:",
       "respondedOn": "Responded on:",
       "subtitle": "View complete feedback information"
+    },
+    "unseen": "Not opened by any admin yet",
+    "runReport": {
+      "title": "Failed run",
+      "model": "Model",
+      "stage": "Stage",
+      "service": "Service",
+      "failedAt": "Failed at",
+      "openModel": "Open the model"
     }
   },
   "pylovoManagement": {
@@ -1127,7 +1171,11 @@
       "max": "Max",
       "avg": "Avg",
       "loading": "Loading",
-      "noLoadingData": "No loading data available"
+      "noLoadingData": "No loading data available",
+      "notInResult": "Not in this result",
+      "transmissionUtilization": "Transmission Utilization",
+      "overloadedConnection": "Overloaded wire",
+      "loadingPreliminary": "Preliminary: each wire is rated against the weakest cable in its grid, so a high utilisation overstates the actual cable."
     },
     "buildingDetail": {
       "building": "Building",
@@ -1166,7 +1214,12 @@
       "residential": "Residential",
       "h1Demand": "H1 Demand",
       "powerTransmission": "Power Transmission",
-      "sources": "Sources"
+      "sources": "Sources",
+      "electricityDemand": "Electricity",
+      "heatDemand": "Heat",
+      "yearlyElectricityDemand": "Yearly Electricity Demand",
+      "yearlyHeatDemand": "Yearly Heat Demand",
+      "estimated": "estimated"
     },
     "costInfo": {
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
@@ -1277,7 +1330,12 @@
       "hour": "Hour",
       "noDataLoadCurve": "No data available for load curve",
       "hourlyGenerationProfile": "Hourly Generation Profile",
-      "hourlyGenerationProfileDesc": "Displays hourly energy generation patterns, showing how production varies throughout the day and across seasons."
+      "hourlyGenerationProfileDesc": "Displays hourly energy generation patterns, showing how production varies throughout the day and across seasons.",
+      "dailyEnergyBalanceDescHeat": "Shows the daily balance between heat supplied (e.g. by heat pumps) and heat demand across all technologies in the system.",
+      "energy": "Energy",
+      "dailyLoadProfileDescHeat": "Shows heat demand patterns over a 24-hour period with automatic detection of peak demand periods.",
+      "demandDurationCurve": "Demand duration curve",
+      "demandDurationCurveDesc": "Ranks hourly heat demand from highest to lowest so you can see peak demand and how it falls off across the year."
     },
     "metrics": {
       "selfSufficiency": "Self-Sufficiency",
@@ -1346,7 +1404,9 @@
       "deficit": "Deficit",
       "deficitDesc": "Demand exceeds generation",
       "balance": "Balance",
-      "powerW": "Power (W)"
+      "powerW": "Power (W)",
+      "energy": "Energy",
+      "unmet": "Unmet"
     },
     "title": "Simulation Results",
     "unableToLoad": "Unable to Load Results",
@@ -1426,8 +1486,22 @@
       "commercialDemand": "Commercial Demand",
       "publicDemand": "Public Building Demand",
       "industrialDemand": "Industrial Demand",
-      "agriculturalDemand": "Agricultural Demand"
-    }
+      "agriculturalDemand": "Agricultural Demand",
+      "otherBuildings": "Other buildings"
+    },
+    "carrier": {
+      "toggleLabel": "Energy carrier",
+      "electricity": "Electricity",
+      "heat": "Heat",
+      "gas": "Gas",
+      "oil": "Oil",
+      "toggleItemHint": "Show results for this carrier"
+    },
+    "copies_one": "{{count}} copy",
+    "copies_other": "{{count}} copies",
+    "notRun": "not run",
+    "inModels_one": "in {{count}} model",
+    "inModels_other": "in {{count}} models"
   },
   "gridNotifications": {
     "dropOnBuilding": "Please drop the technology on a building",
@@ -1454,7 +1528,15 @@
     "gridUpdated": "Grid updated: {{count}} buildings",
     "buildingLimitExceeded": "Area contains {{count}} buildings, which exceeds your limit of {{limit}}. Please draw a smaller polygon or adjust your limit in Settings.",
     "techAddedToAll": "{{tech}} added to {{count}} buildings",
-    "techRemovedFromAll": "{{tech}} removed from {{count}} buildings"
+    "techRemovedFromAll": "{{tech}} removed from {{count}} buildings",
+    "pvLayoutFailed": "PV on {{count}} buildings could not be laid out on their 3D roofs and is sized by roof area instead.",
+    "allTechsRemoved": "Technologies removed from {{count}} buildings",
+    "heatAutoAssigned": "Heat technologies assigned automatically.",
+    "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
+    "areaOverLimit": {
+      "title": "This area holds {{buildings}} buildings; a model may hold {{limit}}",
+      "description": "Reduce the area by about {{excess}} buildings. It stays on the map, and the grid is fetched once it fits."
+    }
   },
   "simulation": {
     "building": {
@@ -1472,7 +1554,8 @@
       "assignToTransformer": "Assign Buildings",
       "assignDescription": "Select buildings and assign them to a transformer",
       "selectedCount": "{{count}} building(s) selected",
-      "finish": "Finish"
+      "finish": "Finish",
+      "back": "Back"
     },
     "powerFlow": {
       "success": "Power flow analysis completed. Line colors now show load utilization.",
@@ -1484,23 +1567,62 @@
       "running": "Analyzing..."
     },
     "transformer": {
-      "clickToPlace": "Click inside the polygon to place a transformer",
+      "clickToPlace": "Click on the map to place the transformer",
       "add": "Add Transformer",
       "addButton": "Add Transformer",
       "clickToAdd": "Click to add transformer to the map",
       "clickToCancel": "Click to cancel adding transformer",
       "clickToMove": "Click to move",
       "movingSuccess": "Transformer moved successfully",
-      "movingFailed": "Failed to move transformer"
+      "movingFailed": "Failed to move transformer",
+      "addSubtitle": "Choose a capacity for the new transformer",
+      "adding": "Adding...",
+      "location": "Location",
+      "selectCapacity": "Select Capacity",
+      "voltageHint": "Steps down medium voltage for buildings",
+      "donePlacing": "Done",
+      "clickToPlaceCursor": "Click to place",
+      "userPlaced": "User Placed",
+      "dialogDescription": "View and modify transformer settings. Changes affect connected buildings.",
+      "gridId": "Grid ID",
+      "voltageTransformation": "Voltage Transformation",
+      "mediumVoltage": "Medium Voltage",
+      "lowVoltage": "Low Voltage",
+      "mvShort": "MV",
+      "lvShort": "LV",
+      "mvDescription": "Medium voltage from utility substation, 3-phase AC power distributed through underground cables or overhead lines",
+      "lvDescription": "Low voltage output - 400V between phases (3-phase) or 230V phase-to-neutral (single-phase) for residential and commercial buildings",
+      "stepDownNote": "This transformer steps down voltage for safe building distribution while maintaining power capacity.",
+      "ratedPower": "Rated Power",
+      "selectKva": "Select kVA"
     },
     "mapHeader": {
-      "clearAll": "Clear All",
+      "clearAll": "Remove all polygons",
       "public": "Public",
       "togglePublicBuildings": "Toggle public buildings",
       "myBuildings": "My Buildings",
       "toggleMyBuildings": "Toggle my buildings",
       "multiplePolygons": "Multiple Polygons",
-      "toggleMultiplePolygons": "Toggle multiple polygons"
+      "toggleMultiplePolygons": "Toggle multiple polygons",
+      "resetArea": "Reset Area",
+      "resetAreaConfirmTitle": "Reset the area?",
+      "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
+      "disableSelected": "Disable selected buildings",
+      "importArea": "Import area",
+      "exportArea": "Export area",
+      "regenerateGrid": "Regenerate grid",
+      "regenerateGridHint": "The area or its transformers changed. Regenerate to cluster the buildings around them and update the grid.",
+      "importAreaError": {
+        "invalid": "The file is not valid GeoJSON.",
+        "noPolygon": "The file contains no polygon.",
+        "unknownCrs": "The coordinate system {{detail}} is not supported; export the area in EPSG:4326.",
+        "notGeoJSON": "Only GeoJSON files can be imported: a .geojson or .json file.",
+        "tooLarge": "The file is too large ({{detail}}); files up to 5 MB can be imported.",
+        "tooComplex": "The area is too detailed ({{detail}} polygons / vertices); up to 100 polygons and 10,000 vertices can be imported.",
+        "outOfRange": "A coordinate ({{detail}}) is outside the longitude and latitude range. If the file uses metres, it must name its coordinate system (crs)."
+      },
+      "importAreaHint": "Load a model area from a GeoJSON file (.geojson or .json) with Polygon or MultiPolygon features. Coordinates in WGS 84 (EPSG:4326) or a national grid such as ETRS89 / UTM, as QGIS exports them. Up to 100 polygons, 10,000 points and 5 MB. The file replaces the drawn area.",
+      "exportAreaHint": "Download the drawn area as a GeoJSON file (WGS 84, EPSG:4326). Import it into another model or open it in QGIS."
     },
     "title": "Simulation Configuration",
     "actions": {
@@ -1509,7 +1631,10 @@
       "creating": "Creating Simulation...",
       "saveAndExit": "Save & Exit",
       "create": "Create Energy Simulation",
-      "update": "Update Energy Simulation"
+      "update": "Update Energy Simulation",
+      "regenerateFirst": "Regenerate the grid before saving.",
+      "completeFirst": "Enter a model name and a simulation period, and draw an area, to save.",
+      "saveShortcut": "Save (Ctrl+S)"
     },
     "modelName": "Model Name",
     "modelNamePlaceholder": "Enter a name for your energy simulation",
@@ -1536,17 +1661,195 @@
       "resolution": "Resolution"
     },
     "tip": "Tip: Click on the map to draw your area of interest. The system will run energy simulation for the selected region during the specified time period.",
-    "parameters": "Parameters"
+    "parameters": "Parameters",
+    "mode": {
+      "label": "Mode",
+      "simple": "Simple",
+      "advanced": "Advanced"
+    },
+    "prepare3d": {
+      "pending": "Waiting to prepare 3D building data for this area...",
+      "running": "Preparing 3D building data for this area...",
+      "step": "Step {{index}} of {{count}}: {{label}}",
+      "stages": {
+        "import": "Loading 3D building data",
+        "extract_features": "Measuring roofs, walls and floors",
+        "link_buildings": "Matching 3D buildings to the map"
+      }
+    },
+    "mapOverlay": {
+      "analyzingArea": "Analyzing area",
+      "canHostChargers": "Chargers it can host: {{count}}",
+      "limitedChargers": "Limited, chargers: {{count}}",
+      "connectedBuildings": "Connected buildings",
+      "types": "Types",
+      "moreCount": "+{{count}} more",
+      "clickForDetails": "Click for more details",
+      "class": "Class",
+      "buemTotal": "Total: {{value}}",
+      "kitchenGas": "Kitchen gas: {{value}}",
+      "geometry3d": "3D geometry: City2TABULA",
+      "asModelled": "Building, as modelled",
+      "storeys": "Storeys (3D geometry)",
+      "floorArea": "Floor area",
+      "roomHeight": "Room height",
+      "envelope": "Envelope reference (TABULA)",
+      "useType": {
+        "SFH": "Single-family house",
+        "TH": "Terraced house",
+        "MFH": "Multi-family house",
+        "AB": "Apartment block",
+        "bakery": "Bakery",
+        "clinic": "Clinic",
+        "hotel": "Hotel",
+        "office": "Office",
+        "restaurant": "Restaurant",
+        "school": "School",
+        "supermarket": "Supermarket",
+        "warehouse": "Warehouse"
+      },
+      "buemFailed": "BuEM failed: {{reason}}",
+      "buemShared": "Counted with another building: {{detail}}",
+      "buemPending": "BuEM result pending",
+      "floors": "Floors",
+      "height": "Height",
+      "heightMedian": "Height (median)",
+      "built": "Built",
+      "label": "Label",
+      "energyIndex": "Energy Index",
+      "labelDate": "Label date",
+      "population": "Population",
+      "households": "Households",
+      "avgHouseholdSize": "Avg household size",
+      "cbsNote": "CBS values are postcode-area statistics (PC6 preferred, PC4 fallback), not single-building values.",
+      "sourcesNl": "Sources: {{epOnline}} (terms apply) and {{cbs}}.",
+      "technologiesCount": "Technologies ({{count}})",
+      "dropToAddTech": "Drop to add technology",
+      "clickToEdit": "Click to edit details",
+      "mvLine": "MV Line",
+      "normallyOpen": "Normally Open",
+      "length": "Length",
+      "type": "Type",
+      "bus": "Bus",
+      "disabled": "Disabled",
+      "notAnalysed": "Not analysed yet"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved changes",
+      "description": "You have unsaved changes in this model. Please save manually before leaving or discard your changes.",
+      "continueEditing": "Continue editing",
+      "discard": "Discard changes"
+    },
+    "resolutionComingSoon": "30-minute resolution coming in a future release",
+    "runMode": {
+      "label": "Run mode",
+      "plan": "Plan",
+      "operate": "Operate",
+      "planHint": "Choose the size of each technology at least cost",
+      "operateHint": "Keep each technology at its maximum size and optimise only its use",
+      "unsized": "Buildings that need a size for operate mode: {{count}}. Click an entry to set it.",
+      "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
+      "fields": {
+        "cont_energy_cap_max": "maximum size",
+        "cont_storage_cap_max": "storage size"
+      },
+      "fieldNeeded": "Operate mode needs a finite size here",
+      "moreFieldsNeeded": "Fields that need a size: {{count}}"
+    },
+    "siteMode": {
+      "label": "Custom Grid",
+      "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
+      "switchHint": "Switching regenerates the grid for the drawn area.",
+      "leaveTitle": "Leave the custom grid?",
+      "leaveDescription": "The grid for the drawn area is regenerated from the pre-generated grid. Transformers you placed are lost.",
+      "leaveConfirm": "Switch"
+    },
+    "largeModel": {
+      "title": "This model has {{count}} buildings",
+      "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
+    },
+    "sections": {
+      "grid": "Grid",
+      "model": "Model",
+      "energySystem": "Energy system"
+    },
+    "analysis": {
+      "button": "Analyse buildings",
+      "running": "Calculating demand: {{done}} of {{total}} buildings",
+      "done": "Buildings analysed: {{count}}",
+      "failed": "not analysed: {{count}} (hover a building for the reason)",
+      "notYet": "Not analysed yet. Analysing calculates each building's heating, cooling and electricity demand.",
+      "needsInputs": "Enter a model name and a simulation period to analyse the buildings.",
+      "saveFailed": "The model could not be saved, so the analysis did not start.",
+      "startFailed": "The analysis could not be started."
+    },
+    "periodWithinYear": "Multi-year simulation is not supported yet, so both dates are now in {{year}}.",
+    "periodYear": "Year",
+    "weather": {
+      "title": "Weather",
+      "archive": "Weather archive",
+      "year": "Weather year",
+      "choices": {
+        "p50": "Typical year (P50)",
+        "p10": "Low solar year (P10)",
+        "p90": "High solar year (P90)"
+      },
+      "hints": {
+        "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
+        "year": "Pick the historic year in the simulation period below; the run uses that year's recorded weather."
+      },
+      "mode": {
+        "label": "Weather mode",
+        "scenario": "Scenario",
+        "year": "Historic year"
+      },
+      "coverage": "Coverage",
+      "historicYears_one": "historic year {{range}}",
+      "historicYears_other": "historic years {{range}} ({{count}} years)",
+      "scenarioYears_one": "scenarios from year {{range}}",
+      "scenarioYears_other": "scenarios from {{count}} years, {{range}}",
+      "shortChoices": {
+        "p10": "Low (P10)",
+        "p50": "Typical (P50)",
+        "p90": "High (P90)"
+      }
+    },
+    "periodParts": {
+      "label": "Period",
+      "year": "Whole year",
+      "q1": "Q1",
+      "q2": "Q2",
+      "q3": "Q3",
+      "q4": "Q4"
+    },
+    "periodScenarioYear": "Scenario year",
+    "periodScenarioHint": "Scenario weather is not tied to a calendar year. Pick the days and months to simulate; the dates are saved in a fixed reference year."
   },
   "transformer": {
     "movingSuccess": "",
     "movingFailed": "",
-    "clickToMove": ""
+    "clickToMove": "",
+    "onlyInsidePolygon": "Transformers can only be placed inside the selected area",
+    "onlyNearPolygon": "Transformers can be placed up to 200 m outside the selected area"
   },
   "drawing": {
     "clickToClose": "Click to close",
     "start": "Start",
-    "clickToDraw": "Click to draw"
+    "clickToDraw": "Click to draw",
+    "buildingNotStart": "Click opens this building. Start the area next to it.",
+    "secondCorner": "Click to place the second corner",
+    "thirdCorner": "Click to place the third corner",
+    "rightClickToFinish": "Right-click to finish the area",
+    "needThreeCorners": "An area needs at least three corners.",
+    "cornersInLine": "These corners are on one straight line. Add a corner off the line to make an area.",
+    "clickToDelete": "Click to delete this polygon",
+    "clickToDeleteCorner": "Click to delete this corner",
+    "clickToDeleteTriangle": "Click to delete this polygon (three corners is the minimum)",
+    "polygonNoArea": "The corners of this area were on one straight line, so it was not kept.",
+    "clickToDisableBuilding": "Click to disable this building",
+    "clickToEnableBuilding": "Click to enable this building again",
+    "clickToSelectBuilding": "Click to select this building",
+    "clickToDeselectBuilding": "Click to remove this building from the selection"
   },
   "gridStats": {
     "analyzing": "Analyzing grid...",
@@ -1564,7 +1867,14 @@
     "trafosLabel": "Trafos",
     "clusters": "cluster",
     "clusters_plural": "clusters",
-    "costDescription": "Infrastructure costs incl. cables & transformers"
+    "costDescription": "Infrastructure costs incl. cables & transformers",
+    "buildingsTooltip": "Total buildings detected from OpenStreetMap within the selected area. Each building's energy demand is estimated by PyLoVo using area, floors, household size and energy label.",
+    "trafosTooltip": "Transformers sized by PyLoVo to handle the simultaneous load. Standard sizes (100 to 630 kVA) are selected from German equipment catalogues.",
+    "cablesTooltip": "LV distribution cables routed by PyLoVo between buildings and transformers.",
+    "lengthTooltip": "Total length of all LV cables in the grid. Routing follows the shortest path between building connection points and transformer positions.",
+    "selectionNote": "Selected buildings and the cables connecting them to their transformers. Whole grid: {{buildings}} buildings, {{cables}} cables, {{km}} km.",
+    "capacityTooltip": "Total rated power of all transformers (kVA). Transformers are selected from standard German LV sizes to cover the simultaneous load with a safety margin.",
+    "sourceNote": "Estimated by the PyLoVo grid engine."
   },
   "regionSelector": {
     "3dBuildingData": "LiDAR 3D building heights available",
@@ -1581,7 +1891,56 @@
     "coverageHigh": "High data coverage",
     "coverageMedium": "Medium data coverage",
     "coverageLow": "Low data coverage",
-    "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids"
+    "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids",
+    "buildingDialog": {
+      "title": "Building Details",
+      "description": "View and edit details for the selected building, including type, energy demand, and technologies.",
+      "classLabel": "Class:",
+      "buildingType": "Building Type (fClass)",
+      "selectType": "Select type",
+      "detected": "Detected",
+      "allTypes": "All Types",
+      "geometry": "Building Geometry",
+      "floorArea": "Floor Area",
+      "floors": "Floors",
+      "householdSize": "Household Size",
+      "peopleShort": "ppl",
+      "constructionYearShort": "Constr. Year",
+      "sourceHeights": "{{source}} Heights",
+      "buildingHeights": "Building Heights",
+      "heightMedian": "Height Median",
+      "heightMax": "Height Max",
+      "heightGround": "Height Ground",
+      "energyLabel": "Energy Label",
+      "detectedLabel": "(detected: {{label}})",
+      "energyIndex": "Energy Index:",
+      "electricHotWater": "Electric Hot Water",
+      "recalculating": "Recalculating...",
+      "recalculateDemand": "Recalculate Demand",
+      "totalFloorArea": "{{floors}} fl × {{area}} m² = {{total}} m²",
+      "noTechnologiesAdded": "No technologies added yet.",
+      "parameterCount": "Parameters: {{count}}",
+      "editParameters": "Edit parameters",
+      "removeTechnology": "Remove technology",
+      "availableTechnologies": "Available Technologies",
+      "added": "Added",
+      "labelDate": "Label Date:",
+      "cbsPostcodeData": "CBS / Postcode Data",
+      "population": "Population",
+      "households": "Households",
+      "avgHouseholdSize": "Avg household size",
+      "heightsFrom": "Heights from",
+      "attributionBy": "by {{name}}",
+      "energyLabelsFrom": "Energy labels from",
+      "demographicsFrom": "Demographics from",
+      "cuzkName": "Czech Office for Surveying, Mapping and Cadastre",
+      "enrichedWith": "Building data enriched with",
+      "licensedUnder": "Licensed under",
+      "include": "Include",
+      "exclude": "Exclude",
+      "includeTooltip": "Include this custom building in the grid (requires regeneration)",
+      "excludeTooltip": "Exclude this custom building from the grid (requires regeneration)"
+    }
   },
   "areaStats": {
     "title": "Area Overview",
@@ -1600,7 +1959,10 @@
     "categories": {
       "supply": "Supply",
       "storage": "Storage",
-      "other": "Other"
+      "other": "Other",
+      "conversion": "Conversion",
+      "networks": "Networks",
+      "otdbAdditions": "OpenTech-DB Additions"
     },
     "paramModal": {
       "title": "Add New Parameter",
@@ -1764,6 +2126,81 @@
         "name": "Non-Households consumers supply",
         "description": "Commercial and industrial energy consumption profile"
       }
+    },
+    "types": {
+      "pv_supply": "Photovoltaics",
+      "battery_storage": "Battery storage",
+      "air_source_heat_pump": "Air-source heat pump",
+      "ground_source_heat_pump": "Ground-source heat pump",
+      "electric_boilers": "Electric boiler",
+      "gas_boiler": "Gas boiler",
+      "air_conditioner": "Air conditioner",
+      "gas_supply": "Gas supply"
+    },
+    "products": {
+      "title": "Choose a product: {{type}}",
+      "applyToBuilding": "Pick a product for this building. Its parameters come with it; use \"Define my own\" to change them.",
+      "applyToAll": "Pick a product for all buildings. Its parameters come with it; use \"Define my own\" to change them.",
+      "usableShare": "Usable roof share",
+      "usableShareHint": "Share of each roof the panels may cover. Each roof gets the whole modules that fit inside it.",
+      "efficiency": "Efficiency {{value}}",
+      "cost": "{{value}} EUR/kW",
+      "lifetime": "{{value}} years",
+      "defineOwn": "Define my own",
+      "count": "Products: {{count}}"
+    },
+    "carrierToggleLabel": "Technology carrier",
+    "carriers": {
+      "electricity": "Electricity",
+      "heat": "Heat"
+    },
+    "heatSourceHint": "Heat technologies come from OpenTech-DB and are optimized by Calliope.",
+    "noHeatTechnologies": "No heat technologies available",
+    "searchPlaceholder": "Search technologies…",
+    "noSearchResults": "No technologies match your search",
+    "otdbElectricityHint": "OpenTech-DB additions — Calliope optimizes their capacity.",
+    "heatBootstrap": {
+      "title": "Heat technologies",
+      "description": "Choose how to add heat technologies to the buildings.",
+      "prompt": "Heat demand has been assigned to the buildings. How do you want to add heating technologies?",
+      "autoAssign": "Auto-assign",
+      "autoAssignDescription": "Give every building the expected-fit heating tech for its type (e.g. heat pump for houses, gas boiler for apartments, CHP for industrial). You can override any assignment afterwards.",
+      "manual": "Manual",
+      "manualDescription": "Leave technologies empty. Pick each building's heating tech by hand afterwards."
+    },
+    "addToAllBuildings": "Add to all buildings",
+    "removeFromAllBuildings": "Remove from all buildings",
+    "removeAll": "Remove all technologies",
+    "removeAllConfirmTitle": "Remove all technologies?",
+    "removeAllConfirmDescription": "Removes every technology and heat link from {{count}} buildings in this model, including those assigned automatically. Save the model to keep the change.",
+    "paramCount": "Parameters: {{count}}",
+    "paramDialog": {
+      "description": "Configure technology parameters for this building",
+      "turbineSummary": "{{power}} kW · {{diameter}}m rotor",
+      "selectPlaceholder": "Select...",
+      "searchTurbines": "Search wind turbines...",
+      "noTurbinesMatch": "No turbines match your search",
+      "noTurbinesAvailable": "No turbines available",
+      "turbinesShown": "Turbines shown: {{shown}} of {{total}}",
+      "selectHeight": "Select height",
+      "required": "Required",
+      "minValue": "Min: {{value}}",
+      "maxValue": "Max: {{value}}",
+      "infinity": "Infinity",
+      "applyingTo": "Applying to:",
+      "allBuildings": "All Buildings",
+      "osmId": "(OSM: {{id}})",
+      "fuelPrice": "@ {{price}} €/MWh (external fuel default)",
+      "totalCount": "Total: {{count}}",
+      "constraints": "Constraints",
+      "applyToAllBuildings": "Apply to All Buildings",
+      "applyTechnology": "Apply Technology"
+    },
+    "heatScope": {
+      "title": "Add {{tech}} to all buildings?",
+      "description": "A building has one heat supply. {{withHeat}} buildings already have one, {{without}} have none.",
+      "missing": "Only buildings without heat supply ({{count}})",
+      "replace": "Replace on all buildings ({{count}})"
     }
   },
   "parameters": {
@@ -1857,7 +2294,20 @@
     "monetary_inv_cost_energy_cap": "Investment cost per unit of energy capacity.",
     "monetary_inv_cost_storage_cap": "Investment cost per unit of storage capacity.",
     "monetary_purchase_cost_sum": "Total purchase cost including all components.",
-    "monetary_sale_cost_sum": "Total revenue from selling energy or services."
+    "monetary_sale_cost_sum": "Total revenue from selling energy or services.",
+    "advanced": {
+      "title": "Advanced Parameters",
+      "description": "Configure advanced parameters for your Energy assessment",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "decreaseMinimum": "Decrease minimum value",
+      "increaseMinimum": "Increase minimum value",
+      "decreaseMaximum": "Decrease maximum value",
+      "increaseMaximum": "Increase maximum value",
+      "selectOption": "Select option",
+      "resetToDefaults": "Reset to Defaults",
+      "applyChanges": "Apply Changes"
+    }
   },
   "tour": {
     "areaSelect": {
@@ -2057,7 +2507,43 @@
     "queue": "Queue",
     "parent": "Parent",
     "anotherModel": "another model",
-    "waiting": "Waiting"
+    "waiting": "Waiting",
+    "failure": {
+      "service": {
+        "meme": "The energy system simulation (MEME) stopped before it finished.",
+        "buem": "The building heat demand calculation (BuEM) failed.",
+        "pv": "The PV yield calculation failed.",
+        "city2tabula": "No 3D building data (City2TABULA) was found for these buildings, so their demand could not be calculated.",
+        "meme_size": "The model is too large to calculate on this server."
+      },
+      "unknown": "The process failed. Try again after some time. If it happens again, report it to the EnerPlanET team.",
+      "next": "Your model and its inputs are unchanged. Run it again. If it fails a second time, report it to the EnerPlanET team.",
+      "nextFor": {
+        "city2tabula": "Running it again will not help until the area has 3D building data. If you expected data here, report it to the EnerPlanET team.",
+        "meme_size": "Running it again will not help. Reduce the number of buildings or technologies, or shorten the simulation period, then run it again."
+      },
+      "report": "Report",
+      "reported": "Reported",
+      "reportedHint": "Reported to the EnerPlanET team. You get a notification when it is resolved."
+    },
+    "demandFallbackTitle": "Some buildings use constant demand",
+    "demandFallbackWarning": "{{fallback}} of {{total}} buildings had no hourly demand profile (no 3D data) and use their yearly demand spread evenly over the year.",
+    "family": {
+      "show": "Show copies of {{name}}",
+      "hide": "Hide copies of {{name}}",
+      "copies_one": "{{count}} copy",
+      "copies_other": "{{count}} copies",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "pagination": "families"
+    },
+    "workspaceActions": "Workspace actions",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "clearSelection": "Clear selection",
+    "starredFilter": "Starred",
+    "starredFilterHint": "Show only starred models",
+    "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here."
   },
   "landing": {
     "contact": {
@@ -2510,12 +2996,13 @@
       "savedLocations": "Saved Locations",
       "clearAll": "Clear All",
       "syncing": "Syncing...",
-      "searchPlaceholder": "Search for a location...",
+      "searchPlaceholder": "Search a place, or enter lat, lon",
       "current": "Current",
       "noLocation": "No location set",
       "syncNote": "Locations sync to your account",
       "title": "Map Location",
-      "subtitle": "Saved positions"
+      "subtitle": "Saved positions",
+      "pickHint": "Or click the map to set the location."
     },
     "dataDisplay": {
       "temperature": "Temperature",
@@ -2583,7 +3070,8 @@
       "display": "Display",
       "notifications": "Notifications",
       "advanced": "Advanced",
-      "experimentalFeatures": "Experimental Features"
+      "experimentalFeatures": "Experimental Features",
+      "profile": "Profile"
     },
     "featureFlags": {
       "title": "Feature Flags",
@@ -2682,7 +3170,8 @@
       "loginRequired": "Please log in to submit feedback",
       "submitFailed": "Failed to submit feedback. Please try again later.",
       "payloadTooLarge": "The attachment is too large. Please use smaller images.",
-      "imageTooLarge": "Image size must be less than 15MB"
+      "imageTooLarge": "Image size must be less than 15MB",
+      "alreadyReported": "This model already has an open report. You get a notification when it is resolved."
     },
     "subtitle": "Help us improve your experience",
     "category": "Feedback Category",
@@ -2716,6 +3205,9 @@
       "improvementDescription": "Enhance existing features",
       "general": "General",
       "generalDescription": "Other feedback"
+    },
+    "runReport": {
+      "attached": "The failed run, the service that failed and the technical details are attached to this report automatically."
     }
   },
   "weather": {
@@ -2760,7 +3252,12 @@
     "published": "Published",
     "failed": "Failed",
     "cancelled": "Cancelled",
-    "modified": "Modified"
+    "modified": "Modified",
+    "failedAt": {
+      "queue": "Preparation failed",
+      "running": "Simulation failed",
+      "processing": "Processing failed"
+    }
   },
   "auth": {
     "signIn": "Sign In",
@@ -2957,6 +3454,43 @@
       "title": "Building Usage Type",
       "description": "Functional classification from OpenStreetMap tags. Determines the Standard Load Profile (SLP) class and energy intensity assumptions for demand estimation.",
       "example": "Residential types (house, apartments) use SLP H0. Commercial (retail, office) use G0-G6. Industrial uses G3."
+    }
+  },
+  "buildingConfig": {
+    "backToMap": "Back to map",
+    "preparing": "Preparing 3D data for this building.",
+    "loading": "Loading this building…",
+    "noGeometry": "City2TABULA no longer holds this building's 3D geometry.",
+    "credit3dData": "3D data",
+    "modifiedBy": "modified by {{name}}",
+    "reset": {
+      "notice": "The saved edits of this building belong to an older version of its 3D data, so its surfaces cannot be shown.",
+      "action": "Reset to current 3D data",
+      "confirmTitle": "Discard the saved edits?",
+      "confirmDescription": "This building's saved envelope edits are removed and it loads from the current 3D data. Saving the model makes this permanent."
+    },
+    "pv": {
+      "shadingNotice": "The simulation does not consider shading from trees or neighbouring buildings.",
+      "unavailable": "The building's PV surfaces could not be loaded.",
+      "otherRoof": "Roof on another 3D building ({{n}} of {{total}})",
+      "otherWall": "Wall on another 3D building ({{n}} of {{total}})"
+    },
+    "sharedOutline": "This outline covers {{count}} 3D buildings. Shown and editable: the largest. Heat demand is computed for each of them and summed.",
+    "tech": {
+      "size": "Size",
+      "sizeMax": "Maximum size",
+      "power": "Power",
+      "powerMax": "Maximum power",
+      "energy": "Energy",
+      "energyMax": "Maximum energy",
+      "cop": "COP",
+      "efficiency": "Efficiency",
+      "investment": "Investment",
+      "price": "Price",
+      "required": "Enter a value",
+      "positive": "Must be above 0",
+      "notNegative": "Must be 0 or more",
+      "notEditable": "This value cannot be edited here"
     }
   }
 }

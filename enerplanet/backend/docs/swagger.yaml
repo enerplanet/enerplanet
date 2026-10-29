@@ -1,5 +1,94 @@
 basePath: /api
 definitions:
+  internal_handler_city2tabula.SurfacesResponse:
+    properties:
+      attributions:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.SurfacesBuilding'
+        type: array
+      country:
+        example: germany
+        type: string
+      next_cursor:
+        type: string
+    type: object
+  internal_middleware.WhoAmIResponse:
+    properties:
+      access_level:
+        type: string
+      authentication_method:
+        type: string
+      email:
+        type: string
+      issuer:
+        type: string
+      subject:
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.AreaBuilding:
+    properties:
+      buem:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      building_count:
+        description: |-
+          BuildingCount is how many 3D buildings this OSM way covers, as a
+          terraced row mapped as one outline does. The fields above describe the
+          largest of them; heat demand is computed for each and summed.
+        example: 1
+        type: integer
+      dataset_id:
+        description: |-
+          DatasetID names the source dataset; its credit is the attributions entry
+          with the same dataset_id.
+        example: nl-3dbag-loenen
+        type: string
+      default_construction_year:
+        description: |-
+          Derived from the TABULA variant's construction-period range (ignis
+          Year1_Building/Year2_Building); set only when TabulaVariantCode
+          resolved and ignis had year data for it. A user-entered construction
+          year, once saved, takes precedence over this estimate.
+        example: 1963
+        type: integer
+      footprint_geojson:
+        items:
+          type: integer
+        type: array
+      match_type:
+        example: 1
+        type: integer
+      object_id:
+        example: DEBW_1
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.AreaEnrichRequest:
+    properties:
+      bbox:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox'
+      country:
+        example: netherlands
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.AreaEnrichResponse:
+    properties:
+      data:
+        additionalProperties:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaBuilding'
+        type: object
+      total:
+        example: 249
+        type: integer
+      with_geometry:
+        example: 249
+        type: integer
+    type: object
   spatialhub_backend_internal_api_contracts.BoundaryData:
     properties:
       boundary:
@@ -31,6 +120,292 @@ definitions:
         example: 2145268
         type: integer
     type: object
+  spatialhub_backend_internal_api_contracts.BuemBuilding:
+    properties:
+      envelope:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemEnvelope'
+      footprint_area:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity'
+      h_room:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichQuantity'
+      n_storeys:
+        example: 3
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest:
+    properties:
+      building:
+        type: object
+      end_date:
+        example: "2018-12-31T23:00:00Z"
+        type: string
+      geometry:
+        type: object
+      osm_id:
+        example: "240054621"
+        type: string
+      outputs:
+        description: |-
+          Outputs selects the load profiles to compute (heating, cooling,
+          electricity, hot_water, kitchen: none, summary or series), forwarded as
+          properties.buem.outputs; omitted, BuEM computes its default set.
+        type: object
+      resolution:
+        example: 60
+        type: integer
+      solver:
+        description: |-
+          Solver is BuEM's solver block, forwarded as properties.buem.solver;
+          omitted, BuEM uses its default solver.
+        type: object
+      start_date:
+        description: |-
+          StartDate and EndDate are ignored: the run covers the full calendar year
+          of the weather choice below.
+        example: "2018-01-01T00:00:00Z"
+        type: string
+      weather_provider:
+        description: |-
+          WeatherProvider is the model's weather archive, so the run uses the same
+          series as the model run; omitted, the backend default applies.
+        enum:
+        - cosmo-rea6
+        - era5-land
+        - merra-2
+        example: merra-2
+        type: string
+      weather_scenario:
+        description: |-
+          WeatherScenario and WeatherYear are the model's weather: a scenario, or
+          a real year for validation runs. At most one; with neither, p50.
+        enum:
+        - p10
+        - p50
+        - p90
+        example: p50
+        type: string
+      weather_year:
+        example: 2019
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse:
+    properties:
+      buem:
+        type: object
+      osm_id:
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemEnvelope:
+    properties:
+      elements:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.EnvelopeElement'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.BuemNode:
+    properties:
+      building:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuilding'
+    type: object
+  spatialhub_backend_internal_api_contracts.BuildingDemandProfile:
+    properties:
+      a_ref_m2:
+        example: 6648.84
+        type: number
+      building_type:
+        description: |-
+          building_type is what was modelled: a TABULA residential type (SFH, TH,
+          MFH, AB) or a BuEM service id (bakery, clinic, hotel, office,
+          restaurant, school, supermarket, warehouse). For a service id
+          hot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.
+        example: SFH
+        type: string
+      cooling_kwh_a:
+        example: 312.4
+        type: number
+      electricity_kwh_a:
+        example: 2105
+        type: number
+      error_message:
+        example: no City2TABULA envelope for this building
+        type: string
+      h_room_m:
+        example: 2.5
+        type: number
+      heating_kwh_a:
+        example: 4823.5
+        type: number
+      hot_water_kwh_a:
+        type: number
+      kitchen_kwh_a:
+        type: number
+      n_storeys:
+        description: |-
+          The BuEM inputs of a resolved building: storeys and room height from its
+          3D geometry, and the conditioned floor area A_ref in m2.
+        example: 6
+        type: integer
+      osm_id:
+        example: "240054621"
+        type: string
+      refurbishment_level:
+        example: existing
+        type: string
+      status:
+        example: resolved
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse:
+    properties:
+      building_ref:
+        example: "268426401"
+        type: string
+      series:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.SeriesSummary'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest:
+    properties:
+      draft_id:
+        example: 3f6c2a1e-8b1d-4c2e-9a7f-1e2d3c4b5a69
+        type: string
+    required:
+    - draft_id
+    type: object
+  spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse:
+    properties:
+      moved:
+        example: 24
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichBbox:
+    properties:
+      xmax:
+        example: 6.13
+        type: number
+      xmin:
+        example: 6.09
+        type: number
+      ymax:
+        example: 51.93
+        type: number
+      ymin:
+        example: 51.9
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichQuantity:
+    properties:
+      unit:
+        example: m
+        type: string
+      value:
+        example: 2.5
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichRequest:
+    properties:
+      bbox:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichBbox'
+      country:
+        example: germany
+        type: string
+      osm_ids:
+        example:
+        - "240054621"
+        - "240054622"
+        items:
+          type: string
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichResponse:
+    properties:
+      attributions:
+        description: |-
+          Attributions credits every dataset the buildings in data come from, and
+          TABULA when any of them carries a TABULA type, as City2TABULA returns them.
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      country:
+        description: |-
+          Country is the database the buildings came from, as given or resolved
+          from the bbox centre; GET /v1/city2tabula/geometry takes the same value.
+        example: netherlands
+        type: string
+      data:
+        additionalProperties:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichedBuilding'
+        type: object
+      missing:
+        example:
+        - "240054999"
+        items:
+          type: string
+        type: array
+      resolved:
+        example: 40
+        type: integer
+      run_id:
+        example: a1b2c3d4
+        type: string
+      stage:
+        example: extract_features
+        type: string
+      stage_count:
+        example: 3
+        type: integer
+      stage_index:
+        example: 2
+        type: integer
+      stage_label:
+        example: Extracting building features
+        type: string
+      status:
+        example: completed
+        type: string
+      total:
+        example: 42
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.EnrichedBuilding:
+    properties:
+      buem:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemNode'
+      building_count:
+        description: |-
+          BuildingCount is how many 3D buildings this OSM way covers, as a
+          terraced row mapped as one outline does. The fields above describe the
+          largest of them; heat demand is computed for each and summed.
+        example: 1
+        type: integer
+      dataset_id:
+        description: |-
+          DatasetID names the source dataset; its credit is the attributions entry
+          with the same dataset_id.
+        example: nl-3dbag-loenen
+        type: string
+      default_construction_year:
+        description: |-
+          Derived from the TABULA variant's construction-period range (ignis
+          Year1_Building/Year2_Building); set only when TabulaVariantCode
+          resolved and ignis had year data for it. A user-entered construction
+          year, once saved, takes precedence over this estimate.
+        example: 1963
+        type: integer
+      match_type:
+        example: 1
+        type: integer
+      object_id:
+        example: DEBW_1
+        type: string
+      tabula_variant_code:
+        example: DE.N.SFH.05.Gen.ReEx.001.001
+        type: string
+    type: object
   spatialhub_backend_internal_api_contracts.ErrorResponse:
     properties:
       error:
@@ -41,6 +416,22 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BoundaryData'
+      success:
+        example: true
+        type: boolean
+    type: object
+  spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse:
+    properties:
+      data:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData'
+      success:
+        example: true
+        type: boolean
+    type: object
+  spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisVariantsData'
       success:
         example: true
         type: boolean
@@ -65,6 +456,198 @@ definitions:
         type: boolean
       total:
         example: 25
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse:
+    properties:
+      available:
+        example: false
+        type: boolean
+      grid_regions:
+        description: |-
+          GridRegions names the PyLovo regions whose extent overlaps the area, as
+          "<country_code>/<state_code>". Empty when HasGrid is false.
+        example:
+        - DE/bremen
+        items:
+          type: string
+        type: array
+      has_3d_data:
+        description: |-
+          Has3DData is true when City2TABULA holds LOD2 buildings here at all,
+          matched or not.
+        example: true
+        type: boolean
+      has_grid:
+        description: |-
+          HasGrid is true when PyLovo reports generated grids for a region covering
+          this area. Status does not imply it: City2TABULA links 3D buildings to
+          PyLovo's input buildings (res/oth), never to generated grids, so an area
+          can be ready with HasGrid false. Demand modelling needs only the link; a
+          node-based caller needs HasGrid too, since nodes are transformer areas.
+        example: false
+        type: boolean
+      linked_buildings:
+        description: |-
+          LinkedBuildings is City2TABULA's coverage count for the area, above zero
+          exactly when Status is ready. It counts attempted matches rather than
+          successful ones, so both it and a ready status overstate coverage until
+          City2TABULA excludes the rows where 3D and OSM failed to pair.
+        example: 0
+        type: integer
+      status:
+        example: linkable
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile:
+    properties:
+      resolution_minutes:
+        type: integer
+      start:
+        type: string
+      summary:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary'
+      timeseries_ref:
+        type: string
+      vectors:
+        items:
+          type: string
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho:
+    properties:
+      building_type:
+        type: string
+      construction_year:
+        type: integer
+      country:
+        type: string
+      f_class:
+        type: string
+      floor_area_m2:
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatDemandProfileSummary:
+    properties:
+      cooling_total_kwh:
+        type: number
+      electricity_total_kwh:
+        type: number
+      heating_total_kwh:
+        type: number
+      peak_cooling_kw:
+        type: number
+      peak_heating_kw:
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest:
+    properties:
+      building_type:
+        example: SFH
+        type: string
+      construction_year:
+        example: 1975
+        type: integer
+      country:
+        example: germany
+        type: string
+      f_class:
+        example: detached
+        type: string
+      floor_area_m2:
+        example: 120
+        type: number
+      osm_id:
+        example: "240054621"
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse:
+    properties:
+      heating_demand_kwh_a:
+        example: 12000
+        type: integer
+      hourly_profile:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandHourlyProfile'
+      inputs_echoed:
+        $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandInputsEcho'
+      osm_id:
+        type: string
+      source:
+        example: estimate
+        type: string
+      specific_heating_demand_kwh_m2a:
+        example: 100
+        type: number
+      tabula_variant_code:
+        type: string
+      warnings:
+        items:
+          type: string
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.IgnisFieldMetadata:
+    properties:
+      key:
+        example: A_C_Ref_Input
+        type: string
+      label:
+        example: Reference floor area
+        type: string
+      unit:
+        example: m2
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.IgnisFieldMetadataData:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.IgnisFieldMetadata'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.IgnisVariantsData:
+    properties:
+      country:
+        example: germany
+        type: string
+      data:
+        example:
+        - DE.N.SFH.01.Gen
+        items:
+          type: string
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.ModelAnalysisResponse:
+    properties:
+      buildings:
+        example: 42
+        type: integer
+      status:
+        example: queued
+        type: string
+    type: object
+  spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse:
+    properties:
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile'
+        type: array
+      failed:
+        example: 2
+        type: integer
+      pending:
+        example: 10
+        type: integer
+      resolved:
+        example: 30
+        type: integer
+      shared:
+        example: 1
+        type: integer
+      status:
+        example: resolving
+        type: string
+      total:
+        example: 42
         type: integer
     type: object
   spatialhub_backend_internal_api_contracts.ModelSummary:
@@ -118,6 +701,317 @@ definitions:
         example: 1
         type: integer
     type: object
+  spatialhub_backend_internal_api_contracts.PVArray:
+    properties:
+      area:
+        description: Area is the surface area in m².
+        example: 40
+        type: number
+      azimuth:
+        description: Azimuth is in degrees clockwise from north; 180 is south.
+        example: 180
+        type: number
+      capacity_kw:
+        description: CapacityKW fixes the array's capacity; omitted, it is 0.2 kW
+          per m² of usable area.
+        example: 6.4
+        type: number
+      surface_id:
+        example: DEBY_LOD2_105317878_roof_1
+        type: string
+      tilt:
+        description: |-
+          Tilt is the surface's, in degrees from horizontal. Below 5 the surface
+          counts as flat and carries south-facing panels at 15 degrees.
+        example: 35
+        type: number
+      usable_share:
+        description: UsableShare is the part of the area with modules, above 0 and
+          at most 1.
+        example: 0.8
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.PVBuildingYieldRequest:
+    properties:
+      arrays:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVArray'
+        type: array
+      lat:
+        example: 48.83
+        type: number
+      lon:
+        example: 12.96
+        type: number
+      module:
+        description: |-
+          Module holds the building's PV module settings (losses, dc_ac_ratio,
+          inv_eff, module_type); a missing setting takes the platform default.
+        type: object
+      osm_id:
+        example: "240054621"
+        type: string
+      weather_provider:
+        description: |-
+          WeatherProvider, WeatherScenario and WeatherYear choose the weather. Send
+          WeatherScenario or WeatherYear, not both; with neither, the default archive
+          and typical year are used.
+        enum:
+        - cosmo-rea6
+        - era5-land
+        - merra-2
+        example: merra-2
+        type: string
+      weather_scenario:
+        enum:
+        - p10
+        - p50
+        - p90
+        example: p50
+        type: string
+      weather_year:
+        example: 2019
+        type: integer
+    type: object
+  spatialhub_backend_internal_api_contracts.PVBuildingYieldResponse:
+    properties:
+      annual_kwh:
+        example: 6120.5
+        type: number
+    type: object
+  spatialhub_backend_internal_api_contracts.PVSurfacesResponse:
+    properties:
+      country:
+        description: |-
+          Country is the database the surfaces came from, as given or resolved
+          from lon and lat; GET /v1/city2tabula/geometry takes the same value.
+        example: germany
+        type: string
+      surfaces:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_pv.Surface'
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.SeriesSummary:
+    properties:
+      daily:
+        description: |-
+          Daily holds one value per calendar day from Start, Monthly one per
+          calendar month. Weekly holds one per seven days from Start, the last
+          possibly shorter.
+        items:
+          type: number
+        type: array
+      energy_unit:
+        description: EnergyUnit is the unit of Total, Daily, Weekly and Monthly (kWh
+          for kW).
+        type: string
+      monthly:
+        items:
+          type: number
+        type: array
+      name:
+        description: 'name is the series: heating, cooling, electricity, hot_water,
+          kitchen.'
+        example: heating
+        type: string
+      part:
+        description: part is the roof face for a PV series, empty for a whole-building
+          series.
+        type: string
+      peak:
+        type: number
+      peak_time:
+        type: string
+      peak_unit:
+        type: string
+      producer_version:
+        example: 6.10.0+21f79d7ce08016a6df43e81aaad6aa7493c40c25
+        type: string
+      resolution_minutes:
+        example: 60
+        type: integer
+      source:
+        enum:
+        - default
+        - user
+        - uploaded
+        example: default
+        type: string
+      start:
+        example: "1900-01-01T00:00:00Z"
+        type: string
+      total:
+        type: number
+      weekly:
+        items:
+          type: number
+        type: array
+    type: object
+  spatialhub_backend_internal_api_contracts.SeriesWindowResponse:
+    properties:
+      building_ref:
+        example: "268426401"
+        type: string
+      part:
+        type: string
+      resolution_minutes:
+        example: 60
+        type: integer
+      series:
+        example: heating
+        type: string
+      start:
+        example: "1900-01-01T00:00:00Z"
+        type: string
+      unit:
+        example: kW
+        type: string
+      values:
+        items:
+          type: number
+        type: array
+      week:
+        example: 0
+        type: integer
+    type: object
+  spatialhub_backend_internal_city2tabula.BuildingGeometry:
+    properties:
+      dataset_id:
+        type: string
+      footprint_geojson:
+        items:
+          type: integer
+        type: array
+      object_id:
+        type: string
+      surfaces:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.SurfaceGeometry'
+        type: array
+    type: object
+  spatialhub_backend_internal_city2tabula.DatasetCredit:
+    properties:
+      changes:
+        type: string
+      credit:
+        type: string
+      credit_url:
+        type: string
+      dataset:
+        type: string
+      dataset_id:
+        type: string
+      licence:
+        type: string
+      licence_url:
+        type: string
+      provider:
+        type: string
+      terms_url:
+        type: string
+    type: object
+  spatialhub_backend_internal_city2tabula.EnvelopeElement:
+    properties:
+      U:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      area:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      azimuth:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      b_transmission:
+        allOf:
+        - $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+        description: 'TABULA b_Transmission: adjacency correction for elements next
+          to unheated space'
+      id:
+        example: w1
+        type: string
+      tilt:
+        $ref: '#/definitions/spatialhub_backend_internal_city2tabula.Quantity'
+      type:
+        example: wall
+        type: string
+    type: object
+  spatialhub_backend_internal_city2tabula.GeometryResult:
+    properties:
+      attributions:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.DatasetCredit'
+        type: array
+      buildings:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.BuildingGeometry'
+        type: array
+    type: object
+  spatialhub_backend_internal_city2tabula.Quantity:
+    properties:
+      unit:
+        example: m2
+        type: string
+      value:
+        example: 30
+        type: number
+    type: object
+  spatialhub_backend_internal_city2tabula.SurfaceGeometry:
+    properties:
+      geojson:
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  spatialhub_backend_internal_city2tabula.SurfacesBuilding:
+    properties:
+      object_id:
+        type: string
+      osm_ids:
+        items:
+          type: string
+        type: array
+      surfaces:
+        items:
+          $ref: '#/definitions/spatialhub_backend_internal_city2tabula.WGS84Surface'
+        type: array
+    type: object
+  spatialhub_backend_internal_city2tabula.WGS84Surface:
+    properties:
+      geometry:
+        type: object
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  spatialhub_backend_internal_pv.Surface:
+    properties:
+      area:
+        type: number
+      azimuth:
+        type: number
+      capacity_kw:
+        type: number
+      kind:
+        type: string
+      object_id:
+        description: ObjectID is the 3D building the surface belongs to; an OSM way
+          can cover several.
+        type: string
+      qualifies:
+        type: boolean
+      suggested:
+        type: boolean
+      surface_id:
+        type: string
+      tilt:
+        type: number
+      usable_share:
+        type: number
+    type: object
+host: localhost:8000
 info:
   contact: {}
   description: |-
@@ -126,6 +1020,74 @@ info:
   title: EnerPlanET API
   version: "1.0"
 paths:
+  /auth/whoami:
+    get:
+      description: SpatialHub subject and effective API permissions; never returns
+        credentials.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_middleware.WhoAmIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SpatialHubBearer: []
+      - APITokenAuth: []
+      - SessionAuth: []
+      summary: Resolve the current API identity
+      tags:
+      - Authentication
+  /drafts/{draft_id}/buildings/{building_ref}/buem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        As the model route, for a model not saved yet. The result is linked to the draft
+        and moves to the model when it is saved (POST /models/{id}/series/claim-draft).
+      parameters:
+      - description: Draft id the frontend created for the unsaved model
+        in: path
+        name: draft_id
+        required: true
+        type: string
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Building geometry and BuEM building block
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for one building of an unsaved model and store the result
+      tags:
+      - BuEM
   /models:
     get:
       consumes:
@@ -152,6 +1114,18 @@ paths:
         in: query
         name: workspace_id
         type: integer
+      - description: 'families: limit, offset and total count originals with their
+          copies, so a page never splits a family'
+        enum:
+        - families
+        in: query
+        name: group
+        type: string
+      - description: Comma-separated model ids to list only those, for example 12,31;
+          an empty value lists none
+        in: query
+        name: ids
+        type: string
       produces:
       - application/json
       responses:
@@ -159,6 +1133,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetModelsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
@@ -169,10 +1147,1022 @@ paths:
             $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
       security:
       - SessionAuth: []
+      - APITokenAuth: []
+      - SpatialHubBearer: []
       summary: List models for the authenticated user
       tags:
       - EnerPlanET
-  /v2/pylovo/boundary:
+  /models/{id}/analyse:
+    post:
+      description: |-
+        Starts the BuEM demand analysis of every building in the saved model. Saving a
+        model does not start it. Poll GET /models/{id}/demand-profiles for progress until
+        its status is "completed". A request while an analysis of the model is still
+        running returns status "running" and starts nothing new.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelAnalysisResponse'
+        "403":
+          description: Not allowed to edit the model
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Model not found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "409":
+          description: The model uses the estimated heat demand
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "422":
+          description: The model has no buildings to analyse
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "503":
+          description: The job queue is not configured
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Analyse every building of a model
+      tags:
+      - EnerPlanET
+  /models/{id}/buildings/{building_ref}/buem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs the building with the block the caller supplies, as POST /v1/buem/building
+        does, then stores the result once under its request key and links it to the
+        building as source user. A request whose key is already stored makes no BuEM call.
+        Returns the building's demand summary. Needs edit permission on the model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Building geometry and BuEM building block
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for one building of a model and store the result
+      tags:
+      - BuEM
+  /models/{id}/buildings/{building_ref}/demand-profile:
+    get:
+      description: |-
+        Returns, for each series linked to the building, its total, peak and daily, weekly
+        and monthly energy. Full series are not returned; use the week endpoint or the CSV
+        download. 404 when the building has no stored series in this model yet.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one building's demand profile summary
+      tags:
+      - EnerPlanET
+  /models/{id}/buildings/{building_ref}/series.csv:
+    get:
+      description: |-
+        One row per time step: a UTC timestamp, then one column per series named
+        "<series> [<unit>]". Cooling is written positive. 404 when the building has no
+        stored series in this model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Download one building's series as CSV
+      tags:
+      - EnerPlanET
+  /models/{id}/buildings/{building_ref}/series/{series}:
+    get:
+      description: |-
+        Returns the power values of one week of a series, for the hourly chart. week 0 is
+        the first seven days from the series' start. 400 for a week outside the series,
+        404 when the building or series is not stored in this model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Building OSM id, or c2t:<object_id>
+        in: path
+        name: building_ref
+        required: true
+        type: string
+      - description: Series name, for example heating
+        in: path
+        name: series
+        required: true
+        type: string
+      - description: Week from the start, default 0
+        in: query
+        name: week
+        type: integer
+      - description: Roof face, for a PV series
+        in: query
+        name: part
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.SeriesWindowResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one week of a building's series
+      tags:
+      - EnerPlanET
+  /models/{id}/demand-profiles:
+    get:
+      description: |-
+        Returns every building's resolved annual energy profile for a model, along with
+        resolution progress. Profiles are produced by POST /models/{id}/analyse and by a
+        simulation run; poll this endpoint until status
+        is "completed" to show a progress bar. A building with status "failed" carries
+        error_message explaining why (no envelope match, BuEM rejected it, etc.) - that is
+        a per-building outcome, not an endpoint error.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ModelDemandProfilesResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get a model's per-building BuEM energy profiles
+      tags:
+      - EnerPlanET
+  /models/{id}/results:
+    get:
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SpatialHubBearer: []
+      - APITokenAuth: []
+      - SessionAuth: []
+      summary: Read results for an accessible model
+      tags:
+      - EnerPlanET
+  /models/{id}/series.zip:
+    get:
+      description: |-
+        One CSV per building, in the format of the per-building CSV download. 404 when
+        no building of the model has stored series yet.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Download every building's series of a model as a ZIP of CSV files
+      tags:
+      - EnerPlanET
+  /models/{id}/series/claim-draft:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Links stored for the draft id the frontend created before the model's first save
+        move to the model; a link the model already has for the same building and series
+        is kept. Call once after creating the model. Needs edit permission on the model.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Draft id
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ClaimDraftSeriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Move an unsaved model's stored series to the saved model
+      tags:
+      - EnerPlanET
+  /v1/buem/building:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs one building through BuEM with the envelope the caller supplies, and returns
+        BuEM's block for it including the hourly series. Unlike a model run, the envelope
+        is taken from the request rather than looked up in City2TABULA, so a building that
+        has no 3D match, or whose surfaces a user has edited, can still be run. The
+        building block is forwarded to buem-gateway as sent and must be complete: no
+        U-value resolution or archetype default is applied here. The one addition: a block
+        that sets neither building.thermal.comfortT_lb nor comfortT_ub gets 18 and 21 degC.
+        weather_provider selects the weather archive; omitted, the backend default applies.
+        weather_scenario (p10, p50, p90) or weather_year selects the weather, at most one;
+        with neither, p50. The run covers that full calendar year hourly (1900 for a
+        scenario); start_date and end_date are ignored.
+      parameters:
+      - description: Building geometry and BuEM building block
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuemBuildingRunResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run BuEM for a single building
+      tags:
+      - BuEM
+  /v1/city2tabula/enrich:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Given a drawn area (its PyLovo osm_ids and the bbox, and optionally the country)
+        returns a per-osm_id
+        merge map of BuEM envelope data. Returns 200 "completed" when every osm_id is already
+        linked, or 202 "running" with a run_id when a bbox-scoped pipeline run was triggered
+        (the buildings resolved so far are returned alongside). Poll GET .../enrich/{run_id}.
+      parameters:
+      - description: Drawn area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Resolve City2TABULA 3D data for a drawn area
+      tags:
+      - City2TABULA
+  /v1/city2tabula/enrich/{run_id}:
+    get:
+      description: |-
+        Proxies the City2TABULA run status. When the run has completed and country and
+        osm_ids are given as query parameters, also returns the merge map for those buildings,
+        so the client polls one endpoint and gets data when ready.
+      parameters:
+      - description: Run id from the 202 enrich response
+        in: path
+        name: run_id
+        required: true
+        type: string
+      - description: Country, required to receive data on completion
+        in: query
+        name: country
+        type: string
+      - description: Comma-separated osm_ids, required to receive data on completion
+        in: query
+        name: osm_ids
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.EnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "404":
+          description: No run with this id (stale or mistyped)
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Poll a City2TABULA enrich run
+      tags:
+      - City2TABULA
+  /v1/city2tabula/enrich/area:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Returns every LOD2 building City2TABULA holds inside the bbox with its BuEM
+        envelope and footprint, keyed by object_id. Unlike the osm_ids endpoint this
+        needs no building list, so a caller with only an area can fetch 3D data. The
+        trade-off is identity: City2TABULA's area query cannot report the PyLovo link,
+        so the result carries no osm_id and cannot be joined to demand profiles.
+        Footprints are in the country's storage CRS, not WGS84.
+      parameters:
+      - description: Area
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.AreaEnrichResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Resolve City2TABULA 3D data for an area, without osm_ids
+      tags:
+      - City2TABULA
+  /v1/city2tabula/geometry:
+    get:
+      description: |-
+        Returns the building's footprint and every envelope surface polygon, for
+        rendering it in 3D. Surface ids are the City2TABULA surface row ids that the
+        BuEM envelope elements carry, so a clicked face resolves back to its element
+        without a second lookup. Geometry is in the country's storage CRS, or in WGS84
+        with srid=4326, where surfaces keep z as height above sea level and the
+        footprint is 2D. One building per call.
+      parameters:
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected
+        in: query
+        name: country
+        required: true
+        type: string
+      - description: City2TABULA building object_id
+        in: query
+        name: object_ids
+        required: true
+        type: string
+      - description: 4326 for WGS84; omitted, the country's storage CRS
+        in: query
+        name: srid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_city2tabula.GeometryResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Envelope surface geometry for a building
+      tags:
+      - City2TABULA
+  /v1/city2tabula/pv-surfaces:
+    get:
+      description: |-
+        Returns every roof and outer wall of the building with its area, tilt from horizontal
+        and azimuth clockwise from north, whether automatic PV placement uses it (roofs only)
+        and whether it is suggested for PV. When the OSM way covers several 3D buildings, every building's
+        surfaces are returned, each with the object_id of its building.
+        Empty when City2TABULA has no 3D data for the building.
+      parameters:
+      - description: OSM id of the building
+        in: query
+        name: osm_id
+        required: true
+        type: string
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected. Resolved from lon and lat when absent
+        in: query
+        name: country
+        type: string
+      - description: Building longitude (WGS84), when country is absent
+        in: query
+        name: lon
+        type: number
+      - description: Building latitude (WGS84), when country is absent
+        in: query
+        name: lat
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVSurfacesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Roof and wall surfaces of a building for PV
+      tags:
+      - City2TABULA
+  /v1/city2tabula/surfaces:
+    get:
+      description: |-
+        Returns one page of the LoD2 roof and wall polygons of every building whose
+        footprint intersects the bbox, in WGS84 with z as height above sea level, for
+        drawing the area in 3D. Each building lists its linked OSM ways, best match
+        first. Surface ids are the ids /v1/city2tabula/geometry and stored PV arrays
+        use. Pass next_cursor back as cursor until it is null. Without a country, the
+        country is worked out from the bbox centre and returned.
+      parameters:
+      - description: Country name, e.g. germany; case-insensitive. ISO2 codes are
+          rejected
+        in: query
+        name: country
+        type: string
+      - description: West longitude
+        in: query
+        name: xmin
+        required: true
+        type: number
+      - description: South latitude
+        in: query
+        name: ymin
+        required: true
+        type: number
+      - description: East longitude
+        in: query
+        name: xmax
+        required: true
+        type: number
+      - description: North latitude
+        in: query
+        name: ymax
+        required: true
+        type: number
+      - description: next_cursor of the previous page; omitted for the first page
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_city2tabula.SurfacesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: LoD2 roofs and walls of the buildings in an area
+      tags:
+      - City2TABULA
+  /v1/heat-demand/resolve:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Given a building's usage class, floor area, and (for a residential building)
+        its TABULA type / construction year / country, returns its annual space-heating
+        demand (kWh/a), the specific demand (kWh/m2.a) and a source flag ("ignis" when a
+        TABULA archetype matched, "estimate" otherwise). tabula_variant_code is set only
+        for source "ignis". hourly_profile is currently always null (source "buem" is not
+        yet wired). A residential building that falls back to the estimate carries a
+        warning naming why.
+      parameters:
+      - description: Building inputs
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatDemandResolveResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Resolve a building's annual space-heating demand
+      tags:
+      - HeatDemand
+  /v1/heat/availability:
+    get:
+      description: |-
+        Answers, for a drawn area, whether it can be modelled now ("ready"), needs only a
+        City2TABULA link run over data that is already there ("linkable"), or is missing one
+        of the two datasets entirely ("partial"). has_3d_data and has_grid say which half is
+        missing in the last case.
+      parameters:
+      - description: Country
+        example: netherlands
+        in: query
+        name: country
+        required: true
+        type: string
+      - description: Area west edge (WGS84 lon)
+        in: query
+        name: xmin
+        required: true
+        type: number
+      - description: Area south edge (WGS84 lat)
+        in: query
+        name: ymin
+        required: true
+        type: number
+      - description: Area east edge (WGS84 lon)
+        in: query
+        name: xmax
+        required: true
+        type: number
+      - description: Area north edge (WGS84 lat)
+        in: query
+        name: ymax
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.HeatAvailabilityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Report whether heat modelling is available for an area
+      tags:
+      - City2TABULA
+  /v1/ignis/calculate/{code}:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Runs ignis's EN ISO 13790 pipeline for a variant code, with any TABULA inputs the
+        caller overrides in the body. Returns the annual specific heat demand.
+      parameters:
+      - description: TABULA variant code
+        example: NL.N.SFH.05.Gen.ReEx.001.001
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: TABULA input overrides
+        in: body
+        name: request
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Run the TABULA annual heat-demand calculation for a variant
+      tags:
+      - Ignis
+  /v1/ignis/data/{code}:
+    get:
+      description: |-
+        Returns every TABULA input for a variant code: the U-values, areas and
+        appearance parameters the configurator shows and edits.
+      parameters:
+      - description: TABULA variant code
+        example: NL.N.SFH.05.Gen.ReEx.001.001
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get one TABULA variant's full record
+      tags:
+      - Ignis
+  /v1/ignis/fields:
+    get:
+      description: |-
+        Returns the country-independent TABULA input-field catalogue (label, unit) used
+        to label the heat-demand form's inputs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisFieldMetadataResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: Get the TABULA input-field catalogue
+      tags:
+      - Ignis
+  /v1/ignis/variants/{country_iso2}:
+    get:
+      description: |-
+        Lists every TABULA archetype variant code ignis has for a country, for the
+        heat-demand form's building-type dropdown.
+      parameters:
+      - description: ISO 3166-1 alpha-2 country code
+        example: DE
+        in: path
+        name: country_iso2
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: List a country's TABULA variant codes
+      tags:
+      - Ignis
+  /v1/ignis/variants/{country_iso2}/match:
+    get:
+      description: |-
+        Resolves a construction year to its TABULA period and returns that period's
+        refurbishment variants for the building type, existing state first. This is the
+        list behind the building configurator's refurbishment-level selector.
+      parameters:
+      - description: ISO 3166-1 alpha-2 country code
+        example: NL
+        in: path
+        name: country_iso2
+        required: true
+        type: string
+      - description: TABULA building type
+        example: SFH
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Construction year
+        example: 1975
+        in: query
+        name: year
+        required: true
+        type: integer
+      - description: TABULA subtype; ignis uses Gen when absent
+        example: Gen
+        in: query
+        name: subtype
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.GetIgnisVariantsResponse'
+        "400":
+          description: ignis declined the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: ignis unavailable
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: List the TABULA refurbishment variants matching a building
+      tags:
+      - Ignis
+  /v1/pv/building-yield:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Returns the building's PV generation in kWh over a full calendar year of the chosen
+        weather, the span of a BuEM run's totals. Send weather_scenario or weather_year, not both.
+        A request that needs new simulation can take up to 30 s; repeat requests for unchanged
+        arrays return faster.
+      parameters:
+      - description: Arrays, location and weather
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVBuildingYieldRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.PVBuildingYieldResponse'
+        "400":
+          description: Invalid arrays, location or weather; fix the request
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+        "502":
+          description: The weather or PV service failed; retrying later may help
+          schema:
+            $ref: '#/definitions/spatialhub_backend_internal_api_contracts.ErrorResponse'
+      security:
+      - SessionAuth: []
+      summary: PV yield of one building
+      tags:
+      - PV
+  /v1/pylovo/boundary:
     get:
       description: |-
         Returns the administrative boundary polygon (GeoJSON) for a given lat/lon.
@@ -213,6 +2203,40 @@ paths:
       summary: Get administrative boundary by coordinates
       tags:
       - EnerPlanET
+  /weather/years:
+    get:
+      description: Per weather archive (provider), the years with processed weather
+        data, and the archive runs use by default. A simulation period with historic
+        weather must lie within one of these years. scenario_coverage lists, per archive,
+        the complete scenarios and the years they draw months from; both are null
+        while the weather service does not report them.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'default_provider, providers: {name: [years]} and scenario_coverage:
+            {name: {scenarios, source_years}}'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "502":
+          description: The weather service could not be reached; retrying later may
+            help
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Weather years available for simulations
+      tags:
+      - EnerPlanET
+schemes:
+- http
 securityDefinitions:
   APITokenAuth:
     description: 'API token obtained via POST /api/users/{userId}/tokens. Format:
@@ -224,5 +2248,12 @@ securityDefinitions:
     description: Session cookie obtained via POST /api/login
     in: cookie
     name: session_id
+    type: apiKey
+  SpatialHubBearer:
+    description: Bearer <SpatialHub access token>, obtained by the toolbox backend
+      through JWT Authorization Grant. Requires configured integration and enerplanet:read
+      scope. Direct RENvolveIT tokens are not accepted.
+    in: header
+    name: Authorization
     type: apiKey
 swagger: "2.0"

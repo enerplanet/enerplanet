@@ -40,7 +40,7 @@ interface TransformerEntry {
   ratedPowerKva: number;
 }
 
-function AreaEditComponent({ context, onUpdate }: ModuleProps) {
+function AreaEditComponent({ context }: ModuleProps) {
   const [sizes, setSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<TransformerEntry | null>(null);
@@ -49,7 +49,6 @@ function AreaEditComponent({ context, onUpdate }: ModuleProps) {
   const [error, setError] = useState<string | null>(null);
 
   const gridData = context.gridData;
-  const gridResultIds = context.gridResultIds ?? [];
 
   useEffect(() => {
     let cancelled = false;
@@ -87,39 +86,6 @@ function AreaEditComponent({ context, onUpdate }: ModuleProps) {
     const user = useAuthStore.getState().user;
     return user?.id ? String(user.id) : undefined;
   }, []);
-
-  const handleAddTransformer = useCallback(
-    async (kva: number) => {
-      setBusy(true);
-      setError(null);
-      setMessage(null);
-      try {
-        const result = await pylovoService.addTransformer({
-          coordinates: [0, 0],
-          kva,
-          grid_result_ids: gridResultIds,
-          user_id: getUserId(),
-          model_id: context.modelId,
-          draft_id: context.draftId,
-        });
-        onUpdate({
-          transformers: result.transformer,
-          transformerAssignments: (result.reassigned_buildings?.features ?? []).map(
-            (f: { properties?: Record<string, unknown> | null }) => ({
-              buildingId: Number((f.properties ?? {}).osm_id ?? 0),
-              transformerId: result.new_grid_id,
-            })
-          ),
-        });
-        setMessage(`Transformer added (${result.reassigned_count} buildings reassigned).`);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to add transformer");
-      } finally {
-        setBusy(false);
-      }
-    },
-    [gridResultIds, getUserId, context.modelId, context.draftId, onUpdate]
-  );
 
   const handleDeleteTransformer = useCallback(
     async (gridResultId: number) => {
@@ -247,8 +213,7 @@ function AreaEditComponent({ context, onUpdate }: ModuleProps) {
         onClose={() => setDialogOpen(false)}
         onChangeKva={() => {}}
         onOpenChange={setDialogOpen}
-        mode={selected ? "view" : "add"}
-        onAddTransformer={handleAddTransformer}
+        canEdit={!!selected}
         onDeleteTransformer={handleDeleteTransformer}
         onMoveTransformer={(id) => handleMoveTransformer(id)}
       />

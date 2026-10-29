@@ -213,6 +213,10 @@ class ModelService {
     workspace_id?: number;
     sort_by?: string;
     sort_order?: string;
+    /** families: limit, offset and total count originals with their copies. */
+    group?: "families";
+    /** Comma-separated model ids to list only those; an empty string lists none. */
+    ids?: string;
   }): Promise<ModelListResponse> {
     const response = await axios.get(this.baseURL, { params });
     return response.data;
@@ -238,8 +242,31 @@ class ModelService {
     return response.data;
   }
 
-  async startCalculation(id: number): Promise<ModelResponse> {
-    const response = await axios.post(`/calculation/start/${id}`);
+  // Moves the BuEM series stored for an unsaved model's draft to the saved model.
+  async claimDraftSeries(id: number, draftId: string): Promise<{ moved: number }> {
+    const response = await axios.post(`/models/${id}/series/claim-draft`, { draft_id: draftId });
+    return response.data;
+  }
+
+  // Starts the demand analysis of every building of a saved model; progress is
+  // read from GET /models/{id}/demand-profiles. "running" when one was already under way.
+  async analyseModel(id: number): Promise<{ status: "queued" | "running"; buildings: number }> {
+    const response = await axios.post(`/models/${id}/analyse`);
+    return response.data;
+  }
+
+  // Dispatch the model to MEME (via TentaCron).
+  async runMeme(id: number): Promise<ModelResponse> {
+    const response = await axios.post(`/models/${id}/run-meme`);
+    return response.data;
+  }
+
+  // Dispatch the isolated PyPSA power-flow leg (the add-on): builds a
+  // MEME meme-pypsa job from the model's parsed Calliope results. The backend
+  // refuses (400) unless the Calliope leg completed, so the UI only offers it
+  // on completed models.
+  async runMemePypsa(id: number): Promise<ModelResponse> {
+    const response = await axios.post(`/models/${id}/run-meme-pypsa`);
     return response.data;
   }
 

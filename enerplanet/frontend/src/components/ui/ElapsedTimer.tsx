@@ -46,7 +46,7 @@ const ElapsedTimer: React.FC<ElapsedTimerProps> = ({
 			<TooltipTrigger asChild>
 				<div className={`flex items-center gap-1 text-xs text-muted-foreground cursor-pointer ${className}`}>
 					<Clock className={`w-3 h-3 ${showBlinkingIcon && isRunning ? 'animate-pulse' : ''}`} />
-					<span className="font-mono text-foreground">{formatElapsedTime(elapsedTime)}</span>
+					<span className="whitespace-nowrap font-mono text-foreground">{formatElapsedTime(elapsedTime)}</span>
 				</div>
 			</TooltipTrigger>
 			<TooltipContent>

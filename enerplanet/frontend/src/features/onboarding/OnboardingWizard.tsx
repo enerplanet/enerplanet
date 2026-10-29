@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Button } from '@spatialhub/ui';
-import { ChevronRight, ChevronLeft, Check, Globe, Cloud, Map, Bell } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Globe, Map, Bell } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
-import WeatherSettings from '@/features/weather/WeatherSettings';
 import MapLocationSettings from '@/features/settings/MapLocationSettings';
 import NotificationSettings from '@/features/settings/NotificationSettings';
 import axios from '@/lib/axios';
@@ -68,12 +67,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onComplete 
       icon: <Globe className="w-5 h-5 text-foreground" />,
     },
     {
-      id: 'weather',
-      titleKey: 'onboarding.weather.title',
-      descriptionKey: 'onboarding.weather.description',
-      icon: <Cloud className="w-5 h-5 text-foreground" />,
-    },
-    {
       id: 'map',
       titleKey: 'onboarding.map.title',
       descriptionKey: 'onboarding.map.description',
@@ -94,8 +87,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onComplete 
         return <WelcomeStep key={`${langKey}-${i18n.language}`} />;
       case 'language':
         return <LanguageStep onLanguageChange={handleLanguageChanged} />;
-      case 'weather':
-        return <div className="p-4"><WeatherSettings /></div>;
       case 'map':
         return <div className="p-4"><MapLocationSettings /></div>;
       case 'notifications':

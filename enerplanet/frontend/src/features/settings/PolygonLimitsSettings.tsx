@@ -3,7 +3,6 @@ import { ChevronDown, Check, RotateCcw, Building2, Loader2 } from "lucide-react"
 import { usePolygonLimitsStore, POLYGON_LIMIT_OPTIONS, ACCESS_LEVELS, ACCESS_LEVEL_LABELS, type AccessLevel } from "@/features/polygon-drawer/store/polygon-limits-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotification } from "@/features/notifications/hooks/useNotification";
-import Notification from "@/components/ui/Notification";
 import { useTranslation } from "@spatialhub/i18n";
 
 interface LimitDropdownProps {
@@ -103,7 +102,7 @@ const PolygonLimitsSettings: React.FC = () => {
 	const user = useAuthStore((state) => state.user);
 	const { limits, isLoading, setLimitForLevel, resetToDefaults, getEffectiveLimit, fetchLimits } = usePolygonLimitsStore();
 	const [isResetting, setIsResetting] = useState(false);
-	const { notification, showSuccess, showError, hide } = useNotification();
+	const { showSuccess, showError } = useNotification();
 	
 	const accessLevel = (user?.access_level ?? 'very_low') as AccessLevel;
 	const isExpert = accessLevel === 'expert';
@@ -138,15 +137,6 @@ const PolygonLimitsSettings: React.FC = () => {
 
 	return (
 		<div className="space-y-2">
-			{notification.open && (
-				<Notification
-					isOpen={notification.open}
-					severity={notification.severity}
-					message={notification.message}
-					onClose={hide}
-				/>
-			)}
-			
 			{/* Current user limit */}
 			<div className="flex items-center justify-between text-xs">
 				<span className="text-muted-foreground">{t('settings.polygonLimits.yourLimit')}</span>

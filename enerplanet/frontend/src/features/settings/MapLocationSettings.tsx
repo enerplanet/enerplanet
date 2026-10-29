@@ -5,6 +5,7 @@ import { updateMapToSavedLocation } from '@/features/interactive-map/store/map-s
 import { Loader2 } from 'lucide-react';
 import { LocationSearch } from './components/LocationSearch';
 import { SavedLocationsList } from './components/SavedLocationsList';
+import { MapPointPicker } from './components/MapPointPicker';
 import { useTranslation } from '@spatialhub/i18n';
 
 const MapLocationSettings: React.FC = () => {
@@ -33,6 +34,13 @@ const MapLocationSettings: React.FC = () => {
     updateMapToSavedLocation(loc);
   };
 
+  const handlePick = (latitude: number, longitude: number, zoom: number) => {
+    const name = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    const loc = { id: `point:${name}`, name, latitude, longitude, zoom, source: 'map' as const };
+    addSavedLocation(loc);
+    updateMapToSavedLocation(loc);
+  };
+
   const handleRemoveLocation = (id: string) => {
     removeSavedLocation(id);
     setTimeout(() => updateMapToSavedLocation(), 100);
@@ -47,14 +55,14 @@ const MapLocationSettings: React.FC = () => {
     <div className="space-y-2">
       {/* Status */}
       {storeLoading && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-lg">
+        <div className="md-fade-in flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-lg">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
           <span>{t('settings.mapLocation.syncing')}</span>
         </div>
       )}
 
       {syncError && (
-        <div className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+        <div className="md-fade-in text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
           {syncError}
         </div>
       )}
@@ -65,6 +73,9 @@ const MapLocationSettings: React.FC = () => {
         isLocationAdded={(r) => savedLocations.some(loc => loc.id === r.id.toString())}
         placeholder={t('settings.mapLocation.searchPlaceholder')}
       />
+
+      <MapPointPicker latitude={location.latitude} longitude={location.longitude} zoom={location.zoom} onPick={handlePick} />
+      <p className="text-xs text-muted-foreground">{t('settings.mapLocation.pickHint')}</p>
 
       {/* Current Location */}
       <div className="text-xs text-muted-foreground">
@@ -90,4 +101,3 @@ const MapLocationSettings: React.FC = () => {
 };
 
 export default MapLocationSettings;
-

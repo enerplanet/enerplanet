@@ -1,12 +1,16 @@
 import { FC, useCallback, useMemo, type ReactNode } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { StructuredModelResults, CostRecord } from '@/features/model-results/types';
+import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
+import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 
 interface ComparisonChartsProps {
   results1: StructuredModelResults;
   results2: StructuredModelResults;
+  /** Carrier both sides were fetched for — drives units and chart availability. */
+  carrier?: string;
 }
 
 const TECH_KEYS = {
@@ -194,7 +198,8 @@ const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics =>
   const peakDemand = Math.abs(results.peak_demand || 0);
 
   const lcoeFromStructured = extractTotalLcoe(results);
-  const lcoeFallback = renewableProduction > 0 ? totalCost / renewableProduction : 0;
+  // No stored levelised cost => 0 = "not reported". Do not derive one from
+  // cost ÷ renewable energy: that is not an LCOE and reads as authoritative.
 
   const selfSufficiency = totalConsumption > 0
     ? normalizeMetricValue(Math.min(100, (renewableProduction / totalConsumption) * 100))
@@ -213,7 +218,7 @@ const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics =>
     totalCost,
     selfSufficiency,
     gridDependency,
-    lcoe: lcoeFromStructured ?? lcoeFallback,
+    lcoe: lcoeFromStructured ?? 0,
   };
 };
 
@@ -225,20 +230,24 @@ const formatShortNumber = (value: number, decimals = 0): string => {
 };
 
 const SectionHeader: FC<{ children: ReactNode }> = ({ children }) => (
-  <div className="bg-muted rounded-lg px-4 py-2 text-center text-xs font-semibold text-foreground sm:text-sm border border-border">
+  <div className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
     {children}
   </div>
 );
 
 const ChartCard: FC<{ children: ReactNode }> = ({ children }) => (
-  <div className="bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+  <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:border-muted-foreground/30 hover:shadow-md">
     <div className="p-6">{children}</div>
   </div>
 );
 
-export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2 }) => {
+export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2, carrier }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  // Supply-vs-demand compares generation with load: only meaningful for a
+  // generating carrier. Capacity / cost / economics charts are model-level.
+  const generation = isGenerationCarrier(carrier);
+  const { energyUnit } = carrierDisplay(carrier);
 
   const metrics1 = useMemo(() => calculateMetrics(results1), [results1]);
   const metrics2 = useMemo(() => calculateMetrics(results2), [results2]);
@@ -271,7 +280,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const label = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${label}</strong><br/>`;
           params.forEach((p) => {
-            const unit = p.seriesName === selfSuffKey ? '%' : 'kWh';
+            const unit = p.seriesName === selfSuffKey ? '%' : energyUnit;
             const val = unit === '%' ? p.value.toFixed(1) : formatShortNumber(p.value, 1);
             html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${val} ${unit}</span><br/>`;
           });
@@ -297,7 +306,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       yAxis: [
         {
           type: 'value' as const,
-          name: 'kWh',
+          name: energyUnit,
           nameTextStyle: { color: themeColors.textMuted, fontSize: 10, padding: [0, 0, 0, 30] },
           nameLocation: 'end' as const,
           splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
@@ -355,7 +364,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         },
       ],
     };
-  }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors]);
+  }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors, energyUnit]);
 
   const capacityByTechOption = useMemo(() => {
     const cap1 = getInstalledCapacityMix(results1);
@@ -585,7 +594,11 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
   }, [results1, results2, t, baselineLabel, comparisonLabel, translateTech, themeColors]);
 
   const gaugeOption = useMemo(() => {
-    const maxLcoe = Math.max(metrics1.lcoe, metrics2.lcoe, 0.1) * 1.2;
+    // Stored LCOE is EUR/MWh; the gauges read ct/kWh (300 -> 30).
+    const maxLcoe = Math.max(lcoeToCtkwh(metrics1.lcoe), lcoeToCtkwh(metrics2.lcoe), 0.1) * 1.2;
+    // No stored levelised cost on either side => no LCOE gauges at all, rather
+    // than two dials confidently reading 0.0 ct/kWh.
+    const hasLcoe = metrics1.lcoe > 0 || metrics2.lcoe > 0;
 
     const buildGauge = (
       center: [string, string],
@@ -646,24 +659,26 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           (v: number) => formatPercentValue(v, 1),
           18,
         ),
-        buildGauge(
-          ['62%', '58%'],
-          '#8B5CF6',
-          metrics1.lcoe,
-          t('simulationComparison.charts.lcoeBaseline', 'Baseline LCOE'),
-          maxLcoe,
-          (v: number) => `€${v.toFixed(3)}/kWh`,
-          13,
-        ),
-        buildGauge(
-          ['86%', '58%'],
-          '#A855F7',
-          metrics2.lcoe,
-          t('simulationComparison.charts.lcoeComparison', 'Comparison LCOE'),
-          maxLcoe,
-          (v: number) => `€${v.toFixed(3)}/kWh`,
-          13,
-        ),
+        ...(hasLcoe ? [
+          buildGauge(
+            ['62%', '58%'],
+            '#8B5CF6',
+            lcoeToCtkwh(metrics1.lcoe),
+            t('simulationComparison.charts.lcoeBaseline', 'Baseline LCOE'),
+            maxLcoe,
+            (v: number) => `${v.toFixed(1)} ct/kWh`,
+            13,
+          ),
+          buildGauge(
+            ['86%', '58%'],
+            '#A855F7',
+            lcoeToCtkwh(metrics2.lcoe),
+            t('simulationComparison.charts.lcoeComparison', 'Comparison LCOE'),
+            maxLcoe,
+            (v: number) => `${v.toFixed(1)} ct/kWh`,
+            13,
+          ),
+        ] : []),
       ],
     };
   }, [metrics1, metrics2, t, themeColors]);
@@ -740,7 +755,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
     return {
       title: {
         text: t('simulationComparison.charts.lcoeByTechnology', 'LCOE by Technology'),
-        subtext: t('simulationComparison.charts.levelisedCost', 'Levelised cost of energy (€/kWh)'),
+        subtext: t('simulationComparison.charts.levelisedCost', 'Levelised cost of energy (ct/kWh)'),
         left: 'left',
         textStyle: { fontSize: 14, fontWeight: 600, color: themeColors.text },
         subtextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -756,7 +771,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           const tech = params[0]?.axisValue;
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${p.value.toFixed(3)} €/kWh</span><br/>`;
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${p.value.toFixed(1)} ct/kWh</span><br/>`;
           });
           return html;
         },
@@ -770,10 +785,10 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       xAxis: { type: 'category' as const, data: allKeys.map(translateTech), axisLabel: { color: themeColors.textSubtle, fontSize: 11 } },
       yAxis: {
         type: 'value' as const,
-        name: '€/kWh',
+        name: 'ct/kWh',
         nameTextStyle: { color: themeColors.textMuted, fontSize: 10 },
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
-        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `€${v.toFixed(2)}` },
+        axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${v.toFixed(0)}` },
       },
       series: [
         {
@@ -781,14 +796,14 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           type: 'bar' as const,
           barWidth: '35%',
           itemStyle: { color: BASELINE_COLOR, borderRadius: [4, 4, 0, 0] },
-          data: allKeys.map((k) => lcoe1[k] || 0),
+          data: allKeys.map((k) => lcoeToCtkwh(lcoe1[k] || 0)),
         },
         {
           name: comparisonLabel,
           type: 'bar' as const,
           barWidth: '35%',
           itemStyle: { color: COMPARISON_COLOR, borderRadius: [4, 4, 0, 0] },
-          data: allKeys.map((k) => lcoe2[k] || 0),
+          data: allKeys.map((k) => lcoeToCtkwh(lcoe2[k] || 0)),
         },
       ],
     };
@@ -954,10 +969,12 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         {t('simulationComparison.charts.energyCapacityAnalysis', 'Energy & Capacity Analysis')}
       </SectionHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard>
-          <ReactECharts option={energyCoverageOption} style={{ height: '360px' }} />
-        </ChartCard>
+      <div className={`grid grid-cols-1 gap-6 ${generation ? 'lg:grid-cols-2' : ''}`}>
+        {generation && (
+          <ChartCard>
+            <ReactECharts option={energyCoverageOption} style={{ height: '360px' }} />
+          </ChartCard>
+        )}
         <ChartCard>
           <ReactECharts option={capacityByTechOption} style={{ height: '360px' }} />
         </ChartCard>

@@ -1,0 +1,274 @@
+# Fixture data sources
+
+Small extracts of third-party datasets are committed to this repository so the
+test suite runs without downloading the originals. Each entry below states the
+source, its licence and what was changed. This file covers every such extract,
+including the smoke test's own fixtures outside this directory.
+
+City2TABULA changes every 3D extract below in the same way, stated here once:
+
+> City2TABULA derives building attributes (areas, heights, volume, storeys,
+> TABULA type) from the geometry, merges a building's parts into one
+> building, removes or clips faces shared between parts, and omits buildings
+> without wall or roof faces.
+
+Its processing is documented at https://thd-spatial-ai.github.io/city2tabula/code/sql-pipeline/.
+
+## fixtures/city2tabula/city2tabula_loenen.sql.gz and lod2/netherlands/3dbag/
+
+Derived from the 3DBAG dataset, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+> (c) 3DBAG by tudelft3d and 3DGI — https://docs.3dbag.nl/en/copyright/
+
+Modifications: an excerpt of 3DBAG for the box 6.01175 52.09877 to 6.03662
+52.11506 (EPSG:4326) around Loenen, selected by footprint centroid and limited
+to the 737 buildings that also exist in the PyLovo fixture, exported as
+CityJSON 2.0 and compressed (`lod2/netherlands/3dbag/cityjson/loenen.json.gz`).
+City2TABULA imported the part of the box south of latitude 52.11099, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 333 buildings and 6,778 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+3DBAG.
+
+CC BY 4.0 requires both the credit above and this statement of modification.
+
+## fixtures/weather/cosmo_rea6, the Dutch, German, Austrian and Czech cuts
+
+Covers `COSMO_REA6_2018_annual_all_attrs.nc` under
+`fixtures/weather/cosmo_rea6/netherlands/output/`, `.../germany/output/`,
+`.../austria/output/` and `.../czech_republic/output/`.
+
+COSMO-REA6 regional reanalysis, produced by the Hans-Ertel-Centre for Weather
+Research (HErZ) at the Universities of Bonn and Cologne and distributed by
+Deutscher Wetterdienst (DWD) on its open data server, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/,
+https://opendata.dwd.de/climate_environment/REA/Terms_of_use.txt).
+
+> Datenbasis: Deutscher Wetterdienst, Ausschnitt, eigene Elemente ergänzt
+
+DWD's source-notice templates (https://www.dwd.de/copyright) use "Quelle:
+Deutscher Wetterdienst" for unchanged data and "Datenbasis: Deutscher
+Wetterdienst" followed by the kind of change for processed data, which
+applies here.
+
+Modifications: processed by the `weather` pipeline, which standardises
+variable names and derives further variables, then cut to a window around
+each site and recompressed: 3 by 3 cells around Loenen, Netherlands, from the
+Dutch 2018 annual archive, 4 by 4 cells around Bremen, Germany, from the
+German 2018 annual archive, 4 by 4 cells around Vienna, Austria, from the
+Austrian 2018 annual archive, and 4 by 4 cells around Brno, Czechia, from the
+Czech 2018 annual archive. Full year, hourly, 13 variables each.
+
+## fixtures/weather/merra2, the Dutch, German, Austrian and Czech scenario cuts
+
+Covers `merra2_p10_*`, `merra2_p50_*` and `merra2_p90_*` (months 01 to 12)
+under `fixtures/weather/merra2/netherlands/output/percentile/`,
+`.../germany/...`, `.../austria/...` and `.../czech_republic/...`.
+
+MERRA-2 reanalysis by NASA's Global Modeling and Assimilation Office (GMAO),
+distributed by the Goddard Earth Sciences Data and Information Services Center
+(GES DISC) under the NASA EOSDIS data use guidance
+(https://earthdata.nasa.gov/engage/open-data-services-software-policies/data-use-guidance,
+https://disc.gsfc.nasa.gov/data-guidelines). Collections used:
+
+> Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 tavg1_2d_slv_Nx:
+> 2d,1-Hourly,Time-Averaged,Single-Level,Assimilation,Single-Level Diagnostics
+> V5.12.4, Greenbelt, MD, USA, Goddard Earth Sciences Data and Information
+> Services Center (GES DISC), https://doi.org/10.5067/VJAFPLI1CSIV
+
+> Global Modeling and Assimilation Office (GMAO) (2015), MERRA-2 tavg1_2d_rad_Nx:
+> 2d,1-Hourly,Time-Averaged,Single-Level,Assimilation,Radiation Diagnostics
+> V5.12.4, Greenbelt, MD, USA, Goddard Earth Sciences Data and Information
+> Services Center (GES DISC), https://doi.org/10.5067/Q9QMY5PBNV1T
+
+Modifications: hourly values from 1980 to 2025 were ranked by monthly global
+horizontal irradiance into 10th, 50th and 90th percentile months (p10, p50,
+p90), reduced to the variables T, GHI, PS, WS_10M, U_10M and V_10M, and cut to
+the one MERRA-2 grid cell covering each fixture site.
+
+## The TABULA archetypes in the four City2TABULA dumps
+
+The TABULA building typology, by Institut Wohnen und Umwelt (IWU), Darmstadt,
+produced in the Intelligent Energy Europe projects TABULA and EPISCOPE.
+
+> IEE Projects TABULA + EPISCOPE (www.episcope.eu)
+
+The data is not under a Creative Commons licence. Its terms of use, on the
+download page https://episcope.eu/communication/download/, grant
+non-exclusive use of the files and datasets on condition that the credit
+above is visibly cited as the source.
+
+Modifications: the per-country archetype rows City2TABULA imports into its
+`tabula` schema, carried in each dump: the Dutch set (135 rows) in
+`city2tabula_loenen.sql.gz`, the German set (232 rows) in
+`city2tabula_germany.sql.gz`, the Austrian set (165 rows) in
+`city2tabula_vienna.sql.gz` and the Czech set (84 rows) in
+`city2tabula_brno.sql.gz`. No values were altered.
+
+## fixtures/city2tabula/city2tabula_germany.sql.gz (Bremen part) and lod2/germany/bremen/
+
+Derived from `3D-Gebäudemodell LoD2 Land Bremen`, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+> Quellenvermerk: Landesamt GeoInformation Bremen —
+> https://www.geo.bremen.de/
+
+The licence is named in the dataset's MetaVer metadata record, which also
+records that no access restrictions apply:
+
+> https://www.metaver.de/trefferanzeige?docuuid=226971C2-6677-4B79-95F3-C5311F1275C8
+
+
+Modifications: an excerpt of the source model for the box 8.79239 53.09770 to
+8.80586 53.10312 (EPSG:4326) in Bremen, selected by footprint centroid and
+limited to the 836 buildings that also exist in the PyLovo fixture, exported as
+CityGML 1.0 and compressed (`lod2/germany/bremen/gml/bremen.gml.gz`).
+City2TABULA imported the part of the box west of longitude 8.79613, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 419 buildings and 7,440 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+the source model.
+
+CC BY 4.0 requires both the credit above and this statement of modification.
+
+## fixtures/city2tabula/city2tabula_germany.sql.gz (Köln part) and lod2/germany/nrw/
+
+Derived from `3D-Gebäudemodell LoD2` of North Rhine-Westphalia, published by
+Bezirksregierung Köln, Geobasis NRW, under the Datenlizenz Deutschland – Zero –
+Version 2.0 (https://www.govdata.de/dl-de/zero-2-0).
+
+> Geobasis NRW — https://www.bezreg-koeln.nrw.de/geobasis-nrw
+
+DL-DE-ZERO-2.0 requires neither credit nor a statement of modification; both
+are given here as for the other extracts. Terms and product page:
+
+> https://www.bezreg-koeln.nrw.de/geobasis-nrw/produkte-und-dienste/3d-gebaeudemodelle
+
+Modifications: an excerpt of the source model for the box 6.93635 50.90625 to
+6.94755 50.91353 (EPSG:4326) in Köln, selected by footprint centroid and limited
+to the 972 buildings that also exist in the PyLovo fixture, exported as CityGML
+1.0 and compressed (`lod2/germany/nrw/gml/koeln.gml.gz`). City2TABULA imported
+the part of the box west of longitude 6.94132, extracted building envelope
+attributes and surface geometry and linked the buildings to PyLovo: 487
+buildings and 9,259 surfaces. The database dump holds that import, including
+the imported source geometry, beside the Bremen import above.
+
+## fixtures/city2tabula/city2tabula_vienna.sql.gz and lod2/austria/vienna/
+
+Derived from `Generalisiertes Dachmodell (LOD2.1)` in CityGML, by Stadt Wien
+(MA 41 Stadtvermessung und Geoinformation), licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/).
+
+> Datenquelle: Stadt Wien – data.wien.gv.at (https://data.wien.gv.at)
+
+The licence is stated on the dataset page,
+https://www.wien.gv.at/stadtplanung/generalisiertes-dachmodell, and the credit
+wording in the Vienna open data terms of use,
+https://digitales.wien.gv.at/ogd-nutzungsbedingungen/.
+
+Modifications: an excerpt of the source model for the box 16.33877 48.20692 to
+16.35360 48.21506 (EPSG:4326) in Vienna, selected by footprint centroid and
+limited to the 927 buildings that also exist in the PyLovo fixture, exported as
+CityGML 1.0 and compressed (`lod2/austria/vienna/gml/vienna.gml.gz`).
+City2TABULA imported the part of the box west of longitude 16.34686, extracted
+building envelope attributes and surface geometry and linked the buildings to
+PyLovo: 514 buildings and 39,295 surfaces. The database dump holds that import,
+including the imported source geometry. Both files redistribute an excerpt of
+the source model.
+
+CC BY 4.0 requires both the credit above and this statement of modification.
+
+## fixtures/city2tabula/city2tabula_brno.sql.gz and lod2/czechia/brno/
+
+Derived from `3D model budov / 3D Building Model`, published by Statutární
+město Brno on its open data portal, data.brno.cz (dataset item
+`dc95041d63e44e129ba0d9258a1dddb4`).
+
+> Data o 3D modelu budov byla získána pod licencí CC BY z data.brno.cz.
+
+The dataset's licence field reads `CC BY`. The portal's licence page,
+https://data.brno.cz/data/licence/, sets CC BY 4.0 as the default for its data
+and gives the citation template the credit above follows, with the dataset
+name substituted.
+
+Modifications: the photogrammetric LoD2 building model (captured 2020 to 2023,
+EPSG:5514) was converted from Esri FileGDB to CityJSON, grouping faces into
+buildings by `RUIAN_IBO` and mapping surface codes to ground, wall and roof
+surfaces. From that, an excerpt for the box 16.60300 49.19000 to 16.61262
+49.19996 (EPSG:4326), selected by footprint centroid and limited to the 655
+buildings that also exist in the PyLovo fixture, was exported as CityJSON 2.0
+and compressed (`lod2/czechia/brno/cityjson/brno.json.gz`). City2TABULA
+imported the part of the box south of latitude 49.19430, extracted envelope
+attributes and surface geometry and linked the buildings to PyLovo: 370
+buildings and 20,648 surfaces. The database dump holds that import, including
+the imported source geometry. Both files redistribute an excerpt of the source
+model.
+
+## fixtures/pylovo/pylovo_fixture.sql.gz, the example models and the smoke GeoJSON fixtures
+
+Covers `fixtures/pylovo/pylovo_fixture.sql.gz`, `fixtures/models/*.json` and
+`enerplanet/backend/scripts/smoke/*_buildings.geojson` /
+`*_transformers.geojson`.
+
+Building footprints, building identifiers and transformer positions produced by
+PyLovo, whose inputs come primarily from OpenStreetMap via Geofabrik extracts
+and the Overpass API.
+
+> © OpenStreetMap contributors — https://www.openstreetmap.org/copyright
+
+OpenStreetMap data is licensed under the Open Database License (ODbL) 1.0.
+
+PyLovo itself (`enerplanet/enerplanet-pylovo`, a fork of `tum-ens/pylovo`) is
+MIT licensed, © BigGeoData & Spatial AI, Technische Hochschule Deggendorf. The
+usage classification, floor areas, low-voltage grid assignment and transformer
+rated powers in these files are PyLovo output rather than OpenStreetMap data.
+
+Modifications: the database fixture carries the grids, buildings, lines and
+transformers of five areas: postcode 7371 around Loenen; the five Bremen
+postcodes the LoD2 tile above intersects; Köln postcode 50969; Vienna postcodes
+1010, 1070, 1080 and 1090; and Brno postcode 60200. Outside Loenen it keeps only
+the grids whose buildings all lie inside that site's clip (the Bremen tile and
+the Köln box in `germany_coverage.wkt`, `vienna_coverage.wkt`, `brno_box.wkt`).
+235 grids, 9,589 buildings, 18,805 lines, 42 transformers. Postcode geometries are clipped to the same polygons,
+so the extent the fixture advertises is the extent it can serve.
+
+The Brno postcode row keeps only the postcode number. Its geometry is the clip
+box, its label reads `60200 Czechia` and its area is the box's, so it carries
+no geometry or attribute of the source postcode dataset.
+
+The Loenen postcode geometry and its household figures are from Statistics
+Netherlands, the 2023 PC4 postcode areas and the key figures per postcode,
+licensed CC BY 4.0 (https://www.cbs.nl/en-gb/about-us/website/copyright).
+
+> Source: Statistics Netherlands (CBS)
+
+The Brno postcode number, and which buildings belong to it, come from the
+postcode polygons of the Czech Statistical Office as packaged by RCzechia
+(https://rczechia.jla-data.net), licensed CC BY 4.0
+(https://csu.gov.cz/csu/czso/podminky_pro_vyuzivani_a_dalsi_zverejnovani_statistickych_udaju_csu).
+The fixture's postcode row is derived data, not an official ČSÚ figure.
+
+> Zdroj: Český statistický úřad (ČSÚ)
+
+The Vienna postcode geometries are Vienna district boundaries from the
+Statistik Austria municipal boundaries, edition 2026-01-01, licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/), clipped as above.
+
+> Datenquelle: Statistik Austria
+> (https://data.statistik.gv.at/web/meta.jsp?dataset=OGDEXT_GEM_1)
+
+The example models are one saved model each for Loenen and Bremen, 8 and 7
+buildings, exported as the request body the frontend sends: footprints and
+PyLovo-derived properties as above, plus the lines and transformer of the grid
+they sit on.
+
+The smoke GeoJSON files are separate: a handful of buildings within one
+bounding box, exported carrying the OpenStreetMap identifier and footprint
+alongside the PyLovo-derived properties above. The Loenen file's
+`grid_result_id` is a placeholder, not a real grid.
+
+!!! note
+    ODbL's share-alike terms can extend to a redistributed derivative database,
+    not only to attribution. Confirm what they require of this repository before
+    distributing these files more widely.

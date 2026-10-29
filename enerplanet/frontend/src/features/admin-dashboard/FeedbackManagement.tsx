@@ -28,20 +28,23 @@ import { IconX } from "@tabler/icons-react";
 import Pagination from "@/components/ui/Pagination";
 import ModelActionGroup from "@/components/shared/ModelActionGroup";
 import { UniversalForm, FormSection } from "@spatialhub/forms";
-import Notification from "@/components/ui/Notification";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import { useConfirm } from "@/hooks/useConfirmDialog";
-import { formatDateTime24h, formatDate } from "@/utils/dateHelpers";
+import { formatDateTime24h } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { RunReportPanel } from "./components/RunReportPanel";
 import {
   useFeedbackList,
   useUpdateFeedback,
   useDeleteFeedback,
   FeedbackItem,
   useAllFeedback,
+  useUnseenFeedback,
+  useMarkFeedbackSeen,
 } from "@/features/admin-dashboard/hooks/useFeedbackQuery";
 
 const COLOR_GRAY_NEUTRAL = "text-gray-500 dark:text-gray-400";
@@ -148,6 +151,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
     ? rawFeedbacks.filter((f) => f.subject.toLowerCase().includes(searchQuery.toLowerCase()))
     : rawFeedbacks;
   const allFeedbacks = useAllFeedback().data || [];
+  const unseen = useUnseenFeedback().data;
+  const markSeen = useMarkFeedbackSeen();
   const totalCount = feedbackData?.total || 0;
 
   // Edit form state
@@ -165,22 +170,13 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   const [formLoading, setFormLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Notification state
-  const [notification, setNotification] = useState({
-    isOpen: false,
-    message: "",
-    severity: "success" as "success" | "error" | "warning" | "info",
-  });
+  const { show } = useNotification();
 
   const showNotification = (
     message: string,
     severity: "success" | "error" | "warning" | "info" = "success"
   ) => {
-    setNotification({
-      isOpen: true,
-      message,
-      severity,
-    });
+    show(message, severity);
   };
 
   // Handle form changes
@@ -298,6 +294,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   };
 
   const handleViewFeedback = (feedback: FeedbackItem) => {
+    if (unseen?.has(feedback.id)) markSeen.mutate(feedback.id);
     setSelectedFeedback(feedback);
     setImageLoadFailed({});
     setLightboxImageIndex(0);
@@ -395,19 +392,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
     }
   };
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-4 h-4 ${star <= rating ? "text-gray-700 fill-gray-700" : "text-gray-300"}`}
-          />
-        ))}
-      </div>
-    );
-  };
-
   const getStatusCounts = () => {
     const pending = allFeedbacks.filter((f: FeedbackItem) => f.status === "pending").length;
     const inProgress = allFeedbacks.filter((f: FeedbackItem) => f.status === "in_progress").length;
@@ -465,8 +449,24 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
 
   if (loading && feedbacks.length === 0) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <span className="sr-only">{t("common.loading")}</span>
+        <div className="border-b border-border bg-muted/40 px-4 py-3">
+          <div className="md-skeleton h-3 w-36 rounded-md bg-muted" />
+        </div>
+        <div className="divide-y divide-border">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+              <div
+                className="md-skeleton h-3.5 w-full max-w-[220px] rounded-md bg-muted"
+                style={{ animationDelay: `${i * 90}ms` }}
+              />
+              <div className="md-skeleton hidden h-5 w-20 shrink-0 rounded-full bg-muted sm:block" />
+              <div className="md-skeleton hidden h-3.5 w-24 shrink-0 rounded-md bg-muted md:block" />
+              <div className="md-skeleton ml-auto h-6 w-24 shrink-0 rounded-md bg-muted" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -474,9 +474,9 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="md-rise flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-muted rounded-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card shadow-sm">
             <MessageSquare className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
@@ -496,7 +496,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   setTimeout(() => setIsRefreshing(false), 1000);
                 }}
                 disabled={loading}
-                className="p-2.5 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-4 h-4 transition-transform duration-500 ${loading || isRefreshing ? "animate-spin" : ""}`}
@@ -540,7 +540,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
       </div>
 
       {/* Filters */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="md-rise bg-card rounded-xl border border-border p-4 shadow-sm" style={{ animationDelay: "60ms" }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
@@ -557,7 +557,7 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="h-9 rounded-lg border border-input bg-background pl-9 pr-3 text-sm text-foreground shadow-sm transition-colors duration-150 placeholder:text-muted-foreground hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <div className="absolute left-3 top-2.5 text-muted-foreground">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,33 +662,30 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
       </div>
 
       {/* Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="md-rise bg-card rounded-xl border border-border overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
+        <div className="md-fade-in overflow-x-auto">
           <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.subject")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.category")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.priority")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.status")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t("feedbackManagement.table.rating")}
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.user")}
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.created")}
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t("feedbackManagement.table.actions")}
                 </th>
               </tr>
@@ -696,9 +693,9 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
             <tbody className="divide-y divide-border">
               {feedbacks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
+                  <td colSpan={7} className="px-6 py-16 text-center">
+                    <div className="md-fade-in flex flex-col items-center justify-center gap-3">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center border border-border shadow-sm">
                         <MessageSquare className="w-8 h-8 text-gray-400 dark:text-gray-300" />
                       </div>
                       <div>
@@ -717,16 +714,25 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                   const displayUserName =
                     feedback.user?.name || feedback.user_name || t("common.unknown");
                   const displayUserEmail = feedback.user?.email || feedback.user_email || "";
+                  const isUnseen = unseen?.has(feedback.id) ?? false;
                   return (
                     <tr
                       key={feedback.id}
-                      className="hover:bg-muted/50 transition-colors duration-150"
+                      className="transition-colors duration-150 hover:bg-muted/40"
                     >
-                      <td className="px-6 py-4 max-w-[200px]">
+                      <td className="px-6 py-4 max-w-[260px]">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
+                            {isUnseen && (
+                              <span
+                                className="w-2 h-2 flex-shrink-0 rounded-full bg-blue-600"
+                                role="img"
+                                aria-label={t("feedbackManagement.unseen")}
+                                title={t("feedbackManagement.unseen")}
+                              />
+                            )}
                             <div
-                              className="text-sm font-medium text-foreground truncate"
+                              className={`text-sm text-foreground truncate ${isUnseen ? "font-semibold" : "font-medium"}`}
                               title={feedback.subject}
                             >
                               {truncateWords(feedback.subject, 4)}
@@ -811,7 +817,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                             );
                           })()}
                       </td>
-                      <td className="px-6 py-4">{renderStars(feedback.rating)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center text-white text-xs font-medium">
@@ -830,8 +835,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-foreground">
-                          {formatDate(feedback.created_at)}
+                        <span className="text-sm text-foreground whitespace-nowrap">
+                          {formatDateTime24h(feedback.created_at)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -1007,6 +1012,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                         </div>
                       </div>
 
+                      {selectedFeedback.category === "bug" && <RunReportPanel feedbackId={selectedFeedback.id} />}
+
                       {/* Attached Images Gallery */}
                       {(() => {
                         const { items: images, fromJson } = parseFeedbackImages(selectedFeedback);
@@ -1085,14 +1092,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
                           </div>
                         );
                       })()}
-
-                      {/* Rating */}
-                      <div>
-                        <h5 className="text-sm font-medium text-foreground mb-2">
-                          {t("feedbackManagement.viewDialog.rating")}
-                        </h5>
-                        <div>{renderStars(selectedFeedback.rating)}</div>
-                      </div>
 
                       {/* User & Date Info */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1277,14 +1276,6 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
         loading={formLoading}
         errors={formErrors}
         maxWidth="lg"
-      />
-
-      {/* Notification */}
-      <Notification
-        isOpen={notification.isOpen}
-        message={notification.message}
-        severity={notification.severity}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
       />
     </div>
   );

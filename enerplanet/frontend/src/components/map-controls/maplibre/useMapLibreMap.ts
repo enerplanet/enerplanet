@@ -1,9 +1,14 @@
-import { useEffect, useRef } from 'react';
-import maplibregl from 'maplibre-gl';
+import { useEffect, useRef, useState } from 'react';
+import * as maplibregl from 'maplibre-gl';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import type { Map as OlMap } from 'ol';
 import { DoubleClickZoom, DragPan, MouseWheelZoom, PinchZoom } from 'ol/interaction';
 import { BASE_STYLE } from './maplibre-styles';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+
+// maplibre-gl loads its worker relative to its own module, which Vite's dependency
+// bundling moves; the worker file is self-contained, so its own URL works in dev and build.
+maplibregl.setWorkerUrl(workerUrl);
 
 /**
  * Hook: Initialize and manage the MapLibre map instance.
@@ -15,6 +20,8 @@ import { BASE_STYLE } from './maplibre-styles';
 export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolean = false) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  // The map is created a frame after mount; effects that need it re-run on this.
+  const [mapReady, setMapReady] = useState(false);
   const isDrawingRef = useRef(isDrawing);
 
   useEffect(() => { isDrawingRef.current = isDrawing; }, [isDrawing]);
@@ -128,6 +135,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       ];
 
       mapRef.current = map;
+      setMapReady(true);
 
       const createdMap = map;
 
@@ -318,6 +326,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
         mapRef.current.remove();
         mapRef.current = null;
       }
+      setMapReady(false);
     };
   }, [olMap, visible]);
 
@@ -382,5 +391,5 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
     };
   }, [visible, isDrawing]);
 
-  return { containerRef, mapRef };
+  return { containerRef, mapRef, mapReady };
 }

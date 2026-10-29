@@ -86,6 +86,15 @@ func RateLimit() gin.HandlerFunc {
 	rl := newRateLimiter(limit, time.Minute)
 
 	return func(c *gin.Context) {
+		// Gin resolves the route before running this, and leaves FullPath empty
+		// when nothing matched. Letting those through to NoRoute keeps a missing
+		// route answering 404: counted against the quota it answers 429 instead,
+		// so a client that retries on failure hides its own typo behind a
+		// throttle and reads the 429 as a server problem.
+		if c.FullPath() == "" {
+			c.Next()
+			return
+		}
 		if !rl.allow(c.ClientIP()) {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
 			return

@@ -8,37 +8,37 @@ export type ChipSize = "small" | "medium";
 
 const CHIP_COLOR_CLASSES: Record<ChipColor, Record<ChipVariant, string>> = {
 	default: {
-		filled: "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200",
+		filled: "bg-slate-200 text-slate-900 border border-slate-400 hover:bg-slate-300",
 		outlined: "border-2 border-slate-300 text-slate-700 bg-white hover:bg-slate-50",
 		gradient: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300"
 	},
 	primary: {
-		filled: "bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200",
+		filled: "bg-blue-200 text-blue-900 border border-blue-400 hover:bg-blue-300",
 		outlined: "border-2 border-blue-400 text-blue-700 bg-white hover:bg-blue-50",
 		gradient: "bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-md hover:shadow-lg"
 	},
 	secondary: {
-		filled: "bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200",
+		filled: "bg-amber-200 text-amber-900 border border-amber-400 hover:bg-amber-300",
 		outlined: "border-2 border-amber-400 text-amber-700 bg-white hover:bg-amber-50",
 		gradient: "bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md hover:shadow-lg"
 	},
 	error: {
-		filled: "bg-red-100 text-red-800 border border-red-200 hover:bg-red-200",
+		filled: "bg-red-200 text-red-900 border border-red-400 hover:bg-red-300",
 		outlined: "border-2 border-red-400 text-red-700 bg-white hover:bg-red-50",
 		gradient: "bg-gradient-to-r from-red-400 to-red-500 text-white shadow-md hover:shadow-lg"
 	},
 	info: {
-		filled: "bg-cyan-100 text-cyan-800 border border-cyan-200 hover:bg-cyan-200",
+		filled: "bg-cyan-200 text-cyan-900 border border-cyan-400 hover:bg-cyan-300",
 		outlined: "border-2 border-cyan-400 text-cyan-700 bg-white hover:bg-cyan-50",
 		gradient: "bg-gradient-to-r from-cyan-400 to-blue-400 text-white shadow-md hover:shadow-lg"
 	},
 	success: {
-		filled: "bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200",
+		filled: "bg-emerald-200 text-emerald-900 border border-emerald-400 hover:bg-emerald-300",
 		outlined: "border-2 border-emerald-400 text-emerald-700 bg-white hover:bg-emerald-50",
 		gradient: "bg-gradient-to-r from-emerald-400 to-green-500 text-white shadow-md hover:shadow-lg"
 	},
 	warning: {
-		filled: "bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200",
+		filled: "bg-yellow-200 text-yellow-900 border border-yellow-400 hover:bg-yellow-300",
 		outlined: "border-2 border-yellow-400 text-yellow-700 bg-white hover:bg-yellow-50",
 		gradient: "bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md hover:shadow-lg"
 	},

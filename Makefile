@@ -19,6 +19,23 @@ ENV_FILE           := --env-file .env
 PLATFORM_COMPOSE   := $(ENV_FILE) -f platform-core/docker-compose.yml -f platform-core/docker-compose.dev.yml
 ENERPLANET_COMPOSE := $(ENV_FILE) -f enerplanet/docker-compose.yml -f enerplanet/docker-compose.dev.yml
 
+# Runs a backend binary (/app/migrate, /app/seed) in the app image.
+BACKEND_RUN := docker compose $(ENERPLANET_COMPOSE) run --rm --build --no-deps --entrypoint
+
+# Runs a bash script from the repo with curl, jq and the docker CLI, so the host
+# needs none of them. $(1) is the working directory. Scripts reach the host via
+# host.docker.internal, as Docker Desktop can have host networking switched off.
+SCRIPTS_IMAGE := enerplanet-scripts
+# The scripts' optional settings, forwarded only when set in the caller's shell.
+SCRIPT_ENV := $(foreach v,SMOKE_SITE KEEP_MODEL POLL_TIMEOUT_S SMOKE_EMAIL SMOKE_PASSWORD SEED_EMAIL SEED_PASSWORD WAIT_S TENTACRON_API_KEY,-e $(v))
+define run_script
+	@printf 'FROM alpine:3.20\nRUN apk add --no-cache bash curl jq docker-cli\n' | docker build -q -t $(SCRIPTS_IMAGE) - >/dev/null
+	@docker run --rm --add-host=host.docker.internal:host-gateway $(SCRIPT_ENV) \
+		-e BACKEND_URL="$${BACKEND_URL:-http://host.docker.internal:8000}" \
+		-e TENTACRON_URL="$${TENTACRON_URL:-http://host.docker.internal:$(TENTACRON_PORT)}" \
+		-v "$(CURDIR)":/repo -v /var/run/docker.sock:/var/run/docker.sock -w /repo/$(1) $(SCRIPTS_IMAGE) bash $(2)
+endef
+
 .env:
 	@cp .env.example .env
 	@echo "$(GREEN)Created .env from .env.example$(NC)"
@@ -32,23 +49,70 @@ help:
 	@echo "  make update             Pull latest changes and update environment"
 	@echo ""
 	@echo "$(YELLOW)SECTION 2: ADMIN & DEVELOPER TOOLS$(NC)"
-	@echo "  make up                 Start all services (Core + App)"
-	@echo "  make down               Stop all services"
+	@echo "  make up                 Start every service: platform, PyLovo, heat stack, app"
+	@echo "  make down               Stop the platform services, PyLovo and the app"
 	@echo "  make logs               Follow service logs"
 	@echo "  make migrate            Run database migrations"
 	@echo "  make seed               Seed the database"
 	@echo "  make init-keycloak      Re-initialize Keycloak"
 	@echo "  make reset-db           Wipe and reset PostgreSQL database"
 	@echo "  make pull-repos         Update all sub-repositories"
+	@echo "  make fixtures           Load the committed test fixtures into the services"
+	@echo "  make fixtures-reload    Drop the fixture databases and load the fixtures afresh"
+	@echo "  make example-models     Create the example models (development only, backend running)"
+	@echo "  make smoke              Run the heat workflow smoke test against the running stack"
+	@echo "  make tentacron-stack         Start the heat stack (tentacron, ignis, city2tabula, weather, buem, meme, pv-service)"
+	@echo "  make pv-service              Build and start the PV service on the shared network (repos.conf port)"
+	@echo "  make coati                   Set up Coati, which turns MEME results into the results the backend stores"
+	@echo "  make city2tabula             Start City2TABULA on the shared network (repos.conf port)"
+	@echo "  make weather                 Start weather-serve on the shared network (repos.conf port)"
 	@echo "  make sonar              Run SonarQube analysis"
 
 # ==============================================================================
 # SECTION 1: CORE COMMANDS
 # ==============================================================================
 
+# Fixture files are Git LFS objects; without git lfs pull they are pointer
+# text and the loader copies a few hundred bytes that no service can read.
+.PHONY: fixtures
+fixtures:
+	@git lfs pull --include=fixtures
+	@./fixtures/load.sh
+
+# pylovo's `make dev` loads its full Bremen dump unless pylovo_db already
+# exists, and the loader never overwrites a populated database, so the pylovo
+# fixture has to go in before the pylovo target runs.
+.PHONY: pylovo-fixture
+pylovo-fixture:
+	@git lfs pull --include=fixtures/pylovo
+	@./fixtures/load.sh pylovo
+
+# Drops every fixture database and loads the committed fixtures afresh; anything
+# else built in those databases, such as a full-country PyLovo grid, is lost.
+# PyLovo stays down until its fixture is in, for the reason given above.
+.PHONY: fixtures-reload
+fixtures-reload:
+	@git lfs pull --include=fixtures
+	@$(MAKE) -C dependencies/enerplanet-pylovo down
+	@for c in nl de at cz; do docker exec city2tabula-db psql -U postgres -qc "drop database if exists city2tabula_$$c with (force)"; done
+	@docker exec postgres psql -U postgres -qc 'drop database if exists pylovo_db with (force)'
+	@FORCE=1 ./fixtures/load.sh
+	@$(MAKE) pylovo
+	@docker restart city2tabula >/dev/null
+
+# Needs the backend running. The script itself refuses outside APP_ENV=development.
+.PHONY: example-models
+example-models:
+	@git lfs pull --include=fixtures/models
+	$(call run_script,,fixtures/example_models.sh)
+
+.PHONY: smoke
+smoke:
+	$(call run_script,enerplanet/backend,scripts/smoke/heat_workflow_smoke.sh)
+
 .PHONY: setup
-setup: git-credential-cache setup-repos env-setup install pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed webservice pylovo dev-bg list-bg
-	@echo "$(GREEN)Setup complete! Access your application at http://localhost:3000$(NC)"
+setup: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures up example-models
+	@echo "$(GREEN)Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678$(NC)"
 
 
 .PHONY: dev-bg list-bg clean-bg clean-docker
@@ -59,7 +123,7 @@ dev-bg:
 	@tmux has-session -t $(SESSION_NAME) 2>/dev/null && \
 		(echo "Error: Session '$(SESSION_NAME)' is already running. Run 'make clean-bg' first.") || \
 		(tmux new-session -d -s $(SESSION_NAME) -n frontend "cd $(FRONT_DIR) && npm run dev" && \
-		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && go run cmd/main.go" && \
+		 tmux new-window -t $(SESSION_NAME) -n backend "cd $(BACK_DIR) && BUEM_VERSION='$(BUEM_MODEL_IMAGE_TAG)' PV_VERSION='$(PV_SERVICE_REF)' COATI_BIN='$(CURDIR)/submodules/Coati/.venv/bin/coati' go run cmd/main.go" && \
 		 echo "Services started successfully!" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Access Frontend:  http://localhost:3000" && \
@@ -67,6 +131,7 @@ dev-bg:
 		 echo "Password:         12345678" && \
 		 echo "-------------------------------------------------------" && \
 		 echo "Run 'make list-bg' to see status or 'make clean-bg' to stop.")
+	@$(MAKE) example-models
 
 # 2. Show active background sessions
 list-bg:
@@ -86,7 +151,7 @@ clean-docker:
 
 
 .PHONY: update
-update: git-credential-cache setup-repos install migrate webservice pylovo
+update: git-credential-cache setup-repos migrate webservice pylovo
 	git pull
 	@echo "$(GREEN)Update complete!$(NC)"
 
@@ -95,31 +160,52 @@ update: git-credential-cache setup-repos install migrate webservice pylovo
 # ==============================================================================
 
 .PHONY: up
-up: .env
-	@docker network create spatialhub-net 2>/dev/null || true
-	@docker compose $(PLATFORM_COMPOSE) up -d
-	@docker compose $(ENERPLANET_COMPOSE) up -d --build
+# PyLovo stops and starts with the platform Postgres: its pooled connections do
+# not survive a Postgres restart, and each worker fails a request before
+# reconnecting.
+up: up-deps
+	@docker compose $(ENERPLANET_COMPOSE) up -d --build energy-backend
 	@echo "$(GREEN)All services started.$(NC)"
+
+.PHONY: up-deps
+# Every service except the backend, for `make dev`, which runs the backend on
+# the host instead. PLATFORM_SERVICES are the platform-core services started,
+# with their dependencies. The legacy webservice is left out: neither the
+# backend's start nor MEME runs need it.
+PLATFORM_SERVICES ?= redis auth-service
+up-deps: .env
+	@docker network create spatialhub-net 2>/dev/null || true
+	@docker compose $(PLATFORM_COMPOSE) up -d $(PLATFORM_SERVICES)
+	@$(MAKE) pylovo
+	@$(MAKE) tentacron-stack
+
+.PHONY: dev health
+dev:
+	@scripts/dev.sh up
+
+health:
+	@scripts/dev.sh health
 
 .PHONY: down
 down: .env
 	@docker compose $(ENERPLANET_COMPOSE) down
+	@$(MAKE) -C dependencies/enerplanet-pylovo down
 	@docker compose $(PLATFORM_COMPOSE) down
-	@echo "$(GREEN)All services stopped.$(NC)"
+	@echo "$(GREEN)Platform, PyLovo and app stopped; the heat stack keeps running.$(NC)"
 
 .PHONY: logs
 logs: .env
 	@docker compose $(PLATFORM_COMPOSE) logs -f
 
 .PHONY: migrate
-migrate:
+migrate: .env
 	@echo "$(CYAN)Running migrations...$(NC)"
-	@cd enerplanet/backend && go run cmd/migrate/migration.go
+	@$(BACKEND_RUN) /app/migrate energy-backend
 
 .PHONY: seed
-seed:
+seed: .env
 	@echo "$(CYAN)Seeding database...$(NC)"
-	@cd enerplanet/backend && go run cmd/seed/*.go
+	@$(BACKEND_RUN) /app/seed energy-backend
 
 .PHONY: init-keycloak
 init-keycloak: .env
@@ -162,12 +248,38 @@ git-credential-cache:
 		git config credential.helper 'cache --timeout=120'; \
 	fi
 
+# pinned_checkout DIR REPO REF: clones REPO at release tag REF. An existing
+# checkout on a pin (detached HEAD) moves to REF; one on a branch is left
+# alone, since it may be a developer's own work.
+define pinned_checkout
+	@if [ ! -d dependencies/$(1) ]; then git clone -q --branch $(3) $(2) dependencies/$(1); \
+	elif git -C dependencies/$(1) symbolic-ref -q HEAD >/dev/null; then echo "dependencies/$(1) is on a branch, left alone (pin: $(3))"; \
+	else git -C dependencies/$(1) fetch -q --tags && git -C dependencies/$(1) checkout -q $(3); fi
+endef
+
 .PHONY: setup-repos
 setup-repos:
 	@echo "$(CYAN)Updating repositories...$(NC)"
 	git submodule update --init
-	@[ -d dependencies/simulation-engine ] && (cd dependencies/simulation-engine && git pull && git lfs pull) || git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git lfs pull
-	@[ -d dependencies/pylovo2enerplanet ] && (cd dependencies/pylovo2enerplanet && git pull && git lfs pull) || git clone $(PYLOVO_REPO) dependencies/pylovo2enerplanet && cd dependencies/pylovo2enerplanet && git lfs pull
+	@# Pinned to PYLOVO_REF (see repos.conf). An existing checkout is left alone:
+	@# it may be a developer's own branch.
+	@[ -d dependencies/enerplanet-pylovo ] || (git clone $(PYLOVO_REPO) dependencies/enerplanet-pylovo && cd dependencies/enerplanet-pylovo && git checkout -q $(PYLOVO_REF) && git lfs pull)
+	@# Pinned to OPENTECHDB_REF, a commit. An existing checkout is left alone: it
+	@# may be a developer's own branch.
+	@[ -d dependencies/$(OPENTECHDB_DIR) ] || (git clone -q $(OPENTECHDB_REPO) dependencies/$(OPENTECHDB_DIR) && git -C dependencies/$(OPENTECHDB_DIR) checkout -q $(OPENTECHDB_REF) && git -C dependencies/$(OPENTECHDB_DIR) lfs pull)
+	$(call pinned_checkout,$(IGNIS_DIR),$(IGNIS_REPO),$(IGNIS_REF))
+	$(call pinned_checkout,$(BUEM_DIR),$(BUEM_REPO),$(BUEM_REF))
+	@# Pinned to MEME_REF. A checkout on a branch is left alone: it may be a
+	@# developer's own.
+	$(call pinned_checkout,$(MEME_DIR),$(MEME_REPO),$(MEME_REF))
+	@# Pinned to TENTACRON_REF (see repos.conf). An existing checkout is left alone:
+	@# it may be a developer's own branch.
+	@[ -d dependencies/$(TENTACRON_DIR) ] || (git clone $(TENTACRON_REPO) dependencies/$(TENTACRON_DIR) && git -C dependencies/$(TENTACRON_DIR) checkout -q $(TENTACRON_REF))
+	$(call pinned_checkout,$(CITY2TABULA_DIR),$(CITY2TABULA_REPO),$(CITY2TABULA_REF))
+	$(call pinned_checkout,$(WEATHER_DIR),$(WEATHER_REPO),$(WEATHER_REF))
+	@# Pinned to a commit, which `git clone --branch` cannot take. An existing
+	@# checkout is left alone: it may be a developer's own branch.
+	@[ -d dependencies/$(PV_SERVICE_DIR) ] || (git clone -q $(PV_SERVICE_REPO) dependencies/$(PV_SERVICE_DIR) && git -C dependencies/$(PV_SERVICE_DIR) checkout -q $(PV_SERVICE_REF))
 
 .PHONY: env-setup
 env-setup:
@@ -218,12 +330,122 @@ db-create:
 
 .PHONY: up-services
 up-services: .env
-	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service webservice
+	@docker compose $(PLATFORM_COMPOSE) up -d --build auth-service
 
 .PHONY: webservice
+# Cloned here rather than in setup-repos: only the Calliope/PyPSA simulation
+# needs it, and its 6 GB of LFS data would otherwise land on every checkout.
 webservice:
+	@[ -d dependencies/simulation-engine ] || (git clone $(SIMENGINE_REPO) dependencies/simulation-engine && cd dependencies/simulation-engine && git checkout -q $(SIMENGINE_REF) && git lfs pull)
 	@cd dependencies/simulation-engine && make build && make up-min
 
+# pylovo's `make dev` returns before the API answers, so this waits for it.
 .PHONY: pylovo
 pylovo:
-	@cd dependencies/pylovo2enerplanet && make dev
+	@cd dependencies/enerplanet-pylovo && test -s .env.docker || cp .env.example .env.docker && make dev
+	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
+		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
+
+
+.PHONY: tentacron-stack
+# meme is left out until its translator and parser packages are released; it
+# serves only the simulation step. `make meme` starts it on its own.
+tentacron-stack: tentacron-network ignis city2tabula weather buem meme pv-service tentacron
+	@# These services' own compose files set no restart policy, so after a Docker
+	@# restart they stay down. Remove once each pinned version sets one.
+	@docker update --restart unless-stopped tentacron-env-tentacron-1 >/dev/null
+	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/pv-service/tentacron are reachable on network 'tentacron-net'$(NC)"
+
+.PHONY: tentacron-network
+# ignis and city2tabula declare tentacron-net in their compose files, and
+# Compose refuses a same-named network whose com.docker.compose.network
+# label differs from the key, so the label is set here to match.
+tentacron-network:
+	@docker network create --label com.docker.compose.network=tentacron-net tentacron-net 2>/dev/null || true
+
+.PHONY: tentacron
+tentacron: tentacron-network
+	@cd dependencies/$(TENTACRON_DIR)/environment && make build ENV=dev
+	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d tentacron
+	@docker network connect tentacron-net tentacron-env-tentacron-1 2>/dev/null || true
+	@echo "$(GREEN)TentaCron up on http://localhost:$(TENTACRON_PORT), attached to 'tentacron-net'$(NC)"
+
+.PHONY: ignis
+ignis: tentacron-network
+	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose -f docker-compose.prod.yml up -d
+	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: buem
+buem: tentacron-network
+	@cd dependencies/$(BUEM_DIR)/environment/http && HOST_PORT=$(BUEM_PORT) BUEM_GATEWAY_IMAGE_TAG=$(BUEM_GATEWAY_IMAGE_TAG) BUEM_MODEL_IMAGE_TAG=$(BUEM_MODEL_IMAGE_TAG) docker compose -f docker-compose.yml up -d
+	@echo "$(GREEN)BuEM up on http://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: meme
+meme: tentacron-network
+	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
+	@# MEME's compose does not join tentacron-net, so the alias is set here: it gives
+	@# TentaCron a name that survives a rename or a second instance. Reconnect only
+	@# when the alias is missing; disconnect fails harmlessly when not yet connected.
+	@docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{if eq $$k "tentacron-net"}}{{$$v.Aliases}}{{end}}{{end}}' meme-env-api-1 | grep -qw meme || \
+		{ docker network disconnect tentacron-net meme-env-api-1 2>/dev/null; docker network connect --alias meme tentacron-net meme-env-api-1; }
+	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
+
+# weather and city2tabula pull rather than build: both publish an image, and
+# building them locally costs the conda environment and the Go/JDK/citydb
+# toolchain respectively for no gain. meme still builds, having no image.
+.PHONY: pv-service
+pv-service: tentacron-network
+	@cd dependencies/$(PV_SERVICE_DIR) && HOST_PORT=$(PV_SERVICE_PORT) docker compose up -d --build
+	@echo "$(GREEN)PV service up on http://localhost:$(PV_SERVICE_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: weather
+weather: tentacron-network
+	@# Docker Engine creates a missing bind-mount source as root, and the
+	@# fixture loader, run as the user, then cannot copy the weather cuts into it.
+	@mkdir -p dependencies/$(WEATHER_DIR)/data
+	@cd dependencies/$(WEATHER_DIR) && set -a && . $(CURDIR)/dependencies/$(TENTACRON_DIR)/environment/.env.dev && set +a && unset COMPOSE_PROJECT_NAME PORT HOST_PORT CONFIG IMAGE_TAG RELEASE_IMAGE && WEATHER_API_KEYS="$$WEATHER_API_KEY" HOST_PORT=$(WEATHER_PORT) WEATHER_IMAGE=ghcr.io/enerplanet/weather:$(WEATHER_IMAGE_TAG) docker compose -f infrastructure/container/docker-compose.serve.yml up -d --pull always
+	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
+
+# On-request runs link new buildings to PyLovo over postgres_fdw, which
+# connects from city2tabula-db, so that container joins spatialhub-net to reach
+# the platform Postgres holding pylovo_db by name.
+PYLOVO_FDW_HOST ?= postgres
+PYLOVO_FDW_PORT ?= 5432
+PYLOVO_FDW_DBNAME ?= pylovo_db
+PYLOVO_FDW_USER ?= postgres
+PYLOVO_FDW_PASSWORD ?= postgres
+
+.PHONY: city2tabula
+city2tabula: tentacron-network ignis
+	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) PYLOVO_FDW_HOST=$(PYLOVO_FDW_HOST) PYLOVO_FDW_PORT=$(PYLOVO_FDW_PORT) PYLOVO_FDW_DBNAME=$(PYLOVO_FDW_DBNAME) PYLOVO_FDW_USER=$(PYLOVO_FDW_USER) PYLOVO_FDW_PASSWORD=$(PYLOVO_FDW_PASSWORD) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' city2tabula-db | grep -q '"spatialhub-net"' || docker network connect spatialhub-net city2tabula-db
+	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
+
+.PHONY: opentech-db
+opentech-db: .opentech-db-setup
+	@cd dependencies/$(OPENTECHDB_DIR) && .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8004
+
+.PHONY: .opentech-db-setup
+.opentech-db-setup:
+	@cd dependencies/$(OPENTECHDB_DIR) && \
+		[ -f .env ] || cp .env.example .env; \
+		[ -d .venv ] || (python3 -m venv .venv && .venv/bin/pip install --quiet --upgrade pip && .venv/bin/pip install --quiet -r requirements.txt)
+
+# Coati is a HARD dependency of the result-ingest path (Step 6): a git submodule
+# under submodules/Coati (version-pinned by this repo, updatable on demand),
+# NOT a soft/externally-installed dependency. The backend shells out to its CLI
+# (resolved via COATI_BIN, else coati on PATH, else submodules/Coati/.venv/bin).
+# Until enerplanet-coati is published to PyPI, `make coati` provisions the
+# submodule's venv; the swap to `pip install enerplanet-coati==<pin>` then only
+# touches this target and the runner's COATI_BIN default. In PRODUCTION this
+# target's venv step is repeated at container build (Option B: bake the venv
+# into the image, set COATI_BIN) — see internal/result/service/coati.go.
+.PHONY: coati
+coati: .coati-setup
+	@echo "$(GREEN)Coati ready: submodules/Coati/.venv/bin/coati$(NC)"
+
+.PHONY: .coati-setup
+.coati-setup:
+	@git submodule update --init submodules/Coati
+	@cd submodules/Coati && \
+		[ -d .venv ] || (python3 -m venv .venv && .venv/bin/pip install --quiet --upgrade pip && .venv/bin/pip install --quiet -e .)

@@ -11,28 +11,29 @@ import {
 } from '@/features/configurator/utils/transformUtils';
 import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { Model } from '@/features/model-dashboard/services/modelService';
+import type { ModelMenuRow } from '@/features/model-results/utils/modelMenu';
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
+import { PanelSkeleton } from '@/components/ui/Skeletons';
+import { StatsStrip } from '@/components/ui/StatsStrip';
+import { PRIMARY_BUTTON_CLASS, TOOLBAR_ICON_BUTTON_CLASS } from '@/components/ui/toolbar';
 import {
   ArrowLeft,
   Loader2,
   MapPin,
   Calendar,
   Clock,
-  Zap,
-  TrendingUp,
   DollarSign,
   BarChart3,
   X,
   Building2,
   Network,
   LineChart,
-  Sun,
-  Gauge,
   ChevronDown,
   Check,
   FileBarChart,
+  Layers,
   Activity,
   Info,
 } from 'lucide-react';
@@ -48,7 +49,7 @@ import {
   WindTurbineInfo,
 } from '@/features/model-results/hooks/useModelResultsData';
 import { BuildingResultData, BusStatusData } from './components/map/ResultsMapTypes';
-import MetricCard from './components/ui/MetricCard';
+import CarrierToggle from './components/CarrierToggle';
 import OverviewPanel from './components/panels/OverviewPanel';
 import EnergyPanel from './components/panels/EnergyPanel';
 import GridPanel from './components/panels/GridPanel';
@@ -56,8 +57,17 @@ import BuildingDetailPanel from './components/panels/BuildingDetailPanel';
 import CostPanel from './components/panels/CostPanel';
 import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
+import { capabilitiesFrom } from '@/config/resultCapabilities';
+import {
+  carrierLabelKey,
+  formatCarrierEnergy,
+  formatCarrierPower,
+  isGenerationCarrier,
+} from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
+import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
+import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
 
@@ -65,39 +75,73 @@ type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'buil
 
 // Extracted component: Model dropdown list item
 interface ModelDropdownItemProps {
-  model: Model;
+  row: ModelMenuRow;
   isSelected: boolean;
   onSelect: (model: Model) => void;
   style?: React.CSSProperties;
 }
 
-const ModelDropdownItem = ({ model, isSelected, onSelect, style }: ModelDropdownItemProps) => (
-  <div style={style} className="px-1.5 py-0.5">
-    <button
-      onClick={() => onSelect(model)}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md transition-all duration-150 text-left group text-sm hover:bg-muted text-foreground ${
-        isSelected ? 'bg-muted' : ''
-      }`}
-    >
-      <div className="flex items-center justify-center w-6 h-6 rounded transition-colors bg-muted">
-        <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
+// A family is one framed block: the parent opens it, its last copy closes it,
+// and a rail joins the parent's icon to each copy. Heights match menuRowHeight.
+const familyFrame: Record<ModelMenuRow['role'], string> = {
+  parent: 'rounded-t-lg border border-b-0 border-border bg-muted/40 pt-1',
+  copy: 'border-x border-border bg-muted/40',
+  single: '',
+};
+
+const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownItemProps) => {
+  const { t } = useTranslation();
+  const { model, role, copyCount, selectable, closesFamily } = row;
+  const Icon = role === 'parent' ? Layers : FileBarChart;
+  return (
+    <div style={style} className={`px-1.5 ${closesFamily ? 'pb-2' : ''}`}>
+      <div className={`relative h-full px-1 ${familyFrame[role]} ${closesFamily ? 'rounded-b-lg border-b pb-1' : ''}`}>
+        {role === 'parent' && <span className="absolute left-[26px] top-[38px] bottom-0 w-px bg-muted-foreground/40" aria-hidden="true" />}
+        {role === 'copy' && (
+          <>
+            <span className={`absolute left-[26px] top-0 w-px bg-muted-foreground/40 ${closesFamily ? 'h-1/2' : 'bottom-0'}`} aria-hidden="true" />
+            <span className="absolute left-[26px] top-1/2 h-px w-3 bg-muted-foreground/40" aria-hidden="true" />
+          </>
+        )}
+        <button
+          onClick={() => onSelect(model)}
+          disabled={!selectable}
+          className={`relative flex h-full w-full items-center gap-2 rounded-md py-1.5 pr-2.5 text-left text-foreground transition-all duration-150 ${
+            role === 'copy' ? 'pl-9 text-[13px]' : 'pl-2.5 text-sm'
+          } ${selectable ? 'hover:bg-background' : 'cursor-default opacity-60'} ${
+            isSelected ? 'bg-background shadow-sm ring-1 ring-primary/40' : ''
+          }`}
+        >
+          <div className={`flex items-center justify-center rounded bg-muted ${role === 'copy' ? 'h-5 w-5' : 'h-6 w-6'}`}>
+            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
+              {model.title}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {role === 'parent' && (
+                <span className="rounded-full bg-background px-1.5 font-medium text-foreground">
+                  {t('results.copies', { count: copyCount })}
+                </span>
+              )}
+              {!selectable && <span>{t('results.notRun')}</span>}
+              {model.region && <span>{model.region}</span>}
+              <span>{new Date(model.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+          {isSelected && (
+            <Check className="w-4 h-4 text-foreground flex-shrink-0" />
+          )}
+        </button>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className={`truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
-          {model.title}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {model.region && <span>{model.region}</span>}
-          <span>•</span>
-          <span>{new Date(model.created_at).toLocaleDateString()}</span>
-        </div>
-      </div>
-      {isSelected && (
-        <Check className="w-4 h-4 text-foreground flex-shrink-0" />
-      )}
-    </button>
-  </div>
-);
+    </div>
+  );
+};
+
+/** Row height in the virtualised menu: the parent's top border and padding, and a gap after each family. */
+const menuRowHeight = (row: ModelMenuRow): number =>
+  row.role === 'parent' ? 56 : row.closesFamily ? 62 : 50;
 
 // Calculate bus status data from PyPSA results
 function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusData[] {
@@ -151,25 +195,6 @@ function calculateBusStatusData(pypsaData: PyPSAModelResults | null): BusStatusD
   });
 }
 
-// Format energy value with appropriate units
-function formatEnergy(kwh: number): string {
-  if (kwh >= 1000000) {
-    return `${(kwh / 1000000).toFixed(2)} GWh`;
-  } else if (kwh >= 1000) {
-    return `${(kwh / 1000).toFixed(2)} MWh`;
-  }
-  return `${kwh.toFixed(1)} kWh`;
-}
-
-function formatPower(kw: number): string {
-  const abs = Math.abs(kw);
-  if (!Number.isFinite(kw)) return '0';
-  if (abs >= 1000) return `${(kw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(kw * 1000).toFixed(1)} W`;
-  if (abs === 0) return '0.0 kW';
-  return `${(kw * 1_000_000).toFixed(1)} mW`;
-}
 
 const FLOATING_POINT_EPSILON = 1e-6;
 
@@ -242,9 +267,10 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     ? normalizeDisplayValue(gridImport / totalSupply, 6)
     : 1;
 
-  const lcoe = structuredLcoe
-    ? Math.abs(structuredLcoe.value)
-    : (renewableProduction > 0 ? totalCost / renewableProduction : 0);
+  // Stored levelised cost is EUR/MWh (see lcoeUnits). No stored value => 0,
+  // meaning "not reported": the cost UI hides an LCOE it does not have rather
+  // than deriving one from cost ÷ renewable energy, which is not an LCOE.
+  const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
   return {
     total_generation_kwh: totalProduction,
@@ -256,7 +282,7 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
     peak_demand_kw: peakDemand,
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
-    lcoe_eur_kwh: lcoe,
+    lcoe_eur_mwh: lcoe,
     co2_savings_kg: renewableProduction * 0.4,
   };
 }
@@ -401,6 +427,9 @@ export const ModelResultsViewer = () => {
     loading,
     error,
     initialWorkspace,
+    carrier,
+    setCarrier,
+    availableCarriers,
   } = useModelData(modelId);
 
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingResultData | null>(null);
@@ -415,13 +444,14 @@ export const ModelResultsViewer = () => {
   const dropdownScrollRef = useRef<HTMLDivElement>(null);
 
   // Use custom hooks
-  const { completedModels, isLoadingModels } = useCompletedModels(currentWorkspace);
+  const { modelMenu, isLoadingModels } = useCompletedModels(currentWorkspace);
 
   // Virtualizer for the model list
   const virtualizer = useVirtualizer({
-    count: completedModels.length,
+    count: modelMenu.rows.length,
     getScrollElement: () => dropdownScrollRef.current,
-    estimateSize: () => 52, // Height of ModelDropdownItem
+    estimateSize: (index) => menuRowHeight(modelMenu.rows[index]),
+    getItemKey: (index) => modelMenu.rows[index].model.id,
     overscan: 5,
   });
 
@@ -455,14 +485,14 @@ export const ModelResultsViewer = () => {
   }, []);
 
   // Calculate derived data
-  const capacityData = useMemo(() => (results ? transformToCapacityData(results, t) : []), [results, t]);
+  const capacityData = useMemo(() => (results ? transformToCapacityData(results, t, model?.config?.buildings) : []), [results, t, model?.config?.buildings]);
   const costBreakdown = useMemo(() => {
     if (structuredResults?.cost && structuredResults.cost.length > 0) {
       return transformStructuredCostBreakdown(structuredResults);
     }
     return results ? transformToCostBreakdown(results) : [];
   }, [structuredResults, results]);
-  const energyFlow = useMemo(() => (results ? transformToEnergyFlow(results, t) : { nodes: [], links: [] }), [results, t]);
+  const energyFlow = useMemo(() => (results ? transformToEnergyFlow(results, t, model?.config?.buildings) : { nodes: [], links: [] }), [results, t, model?.config?.buildings]);
 
   // Buildings GeoJSON for MapLibre 3D overlay
   const buildingsGeoJSON = useMemo(() => {
@@ -482,6 +512,58 @@ export const ModelResultsViewer = () => {
   const transformersGeoJSON = useMemo(() => {
     return (model?.config as any)?.transformers ?? null;
   }, [(model?.config as any)?.transformers]);
+
+  // Data-driven connection layer: the model config `lines` have no endpoints, so
+  // they cannot be joined to a wire. Instead draw each wire as a straight segment
+  // between its two node coordinates (bus0 -> bus1) and colour it red when its
+  // peak utilisation exceeds 100% — keyed the same way the topology keys an edge
+  // (connectionKey). Served to both the 2D (OpenLayers) and MapLibre-3D paths.
+  const connectionsGeoJSON = useMemo<GeoJSON.FeatureCollection | null>(() => {
+    const rows = pypsaData?.line_loading;
+    const coords = results?.coordinates;
+    if (!rows?.length || !coords) return null;
+
+    // Coordinates are keyed by location id; match against the connection's bus
+    // ids in either vocabulary (`n1` / legacy `ID_1`) via normalizeLocId.
+    const coordEntries = Object.entries(coords).map(
+      ([id, c]) => [normalizeLocId(id), [c.x, c.y] as [number, number]] as const,
+    );
+    const coordFor = (id: string): [number, number] | null => {
+      const direct = coords[id];
+      if (direct) return [direct.x, direct.y];
+      const norm = normalizeLocId(id);
+      const hit = coordEntries.find(([key]) => key === norm);
+      return hit ? hit[1] : null;
+    };
+
+    // One entry per connection with its peak utilisation across timesteps.
+    const connections = new Map<string, { bus0: string; bus1: string; percent: number }>();
+    rows.forEach(row => {
+      if (!row.bus0 || !row.bus1) return;
+      if (row.loading_percent === undefined || row.loading_percent === null) return;
+      const key = connectionKey(row.bus0, row.bus1);
+      const prev = connections.get(key);
+      connections.set(key, {
+        bus0: row.bus0,
+        bus1: row.bus1,
+        percent: prev ? Math.max(prev.percent, row.loading_percent) : row.loading_percent,
+      });
+    });
+
+    const features: GeoJSON.Feature[] = [];
+    connections.forEach(({ bus0, bus1, percent }) => {
+      const a = coordFor(bus0);
+      const b = coordFor(bus1);
+      if (!a || !b) return;
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [a, b] },
+        properties: { overloaded: isOverloaded(percent), loadingPercent: percent },
+      });
+    });
+
+    return features.length > 0 ? { type: 'FeatureCollection', features } : null;
+  }, [pypsaData?.line_loading, results?.coordinates]);
 
   // Calculate accurate summary
   const summary = useMemo(() => {
@@ -510,7 +592,9 @@ export const ModelResultsViewer = () => {
     return calculateBusStatusData(pypsaData);
   }, [pypsaData]);
 
-
+  // What this result actually contains (declared by the backend). Absent block
+  // => least capable, so a stale backend can never un-hide a section.
+  const capabilities = useMemo(() => capabilitiesFrom(pypsaData), [pypsaData]);
 
   // Use shared map for model results visualization
   useModelResultsMap({
@@ -520,8 +604,11 @@ export const ModelResultsViewer = () => {
     onTransformerHover: setHighlightedBuildings,
     onTooltipChange: setMapTooltip,
     busStatusData,
-    showBusMarkers: rightPanelView === 'grid',
+    // Bus markers are voltage-derived; without voltage they would all default to
+    // a green "1.00" — so never create them for a result that has no voltage.
+    showBusMarkers: rightPanelView === 'grid' && capabilities.voltage,
     highlightedBuildings,
+    connectionGeoJSON: connectionsGeoJSON,
   });
 
   
@@ -539,8 +626,8 @@ export const ModelResultsViewer = () => {
       // power_transmission records link buildings to transformers via to_loc field
       if (tech === 'power_transmission' && location && toLoc) {
         connections.push({
-          bus0: location.replace(/^ID_/, ''), // "ID_1" → "1"
-          bus1: toLoc, // "Trafo_36646"
+          bus0: location.replace(/^ID_/i, ''), // legacy "ID_1" → "1"; current ids pass through
+          bus1: toLoc, // legacy "Trafo_36646" / current "ntrafo_82"
         });
       }
     });
@@ -562,6 +649,7 @@ export const ModelResultsViewer = () => {
         <BuildingDetailPanel
           building={selectedBuilding}
           modelId={modelId}
+          carrier={carrier}
           turbineData={turbineData}
         />
       );
@@ -583,7 +671,7 @@ export const ModelResultsViewer = () => {
           />
         );
       case 'energy':
-        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} />;
+        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       case 'cost':
         return (
           <CostPanel
@@ -600,6 +688,7 @@ export const ModelResultsViewer = () => {
         return (
           <GridPanel
             pypsaData={pypsaData}
+            capabilities={capabilities}
             selectedBus={selectedBus}
             setSelectedBus={setSelectedBus}
             selectedVoltage={selectedVoltage}
@@ -610,7 +699,7 @@ export const ModelResultsViewer = () => {
           />
         );
       case 'system':
-        return <SystemPanel structuredResults={structuredResults} modelId={modelId} />;
+        return <SystemPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       default:
         return null;
     }
@@ -619,20 +708,21 @@ export const ModelResultsViewer = () => {
     capacityData, costBreakdown, energyFlow, avgCapacityFactor,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
+    carrier, capabilities,
   ]);
 
   if (error || (!model && !loading)) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BarChart3 className="w-8 h-8 text-destructive" />
+      <div className="md-scope flex h-full items-center justify-center bg-background p-6">
+        <div className="md-fade-in flex max-w-md flex-col items-center rounded-xl border border-destructive/30 bg-card px-6 py-12 text-center shadow-sm">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+            <BarChart3 className="h-7 w-7 text-destructive" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">{t('results.unableToLoad')}</h2>
-          <p className="text-muted-foreground mb-6">{error || t('results.modelNotFound')}</p>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{t('results.unableToLoad')}</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">{error || t('results.modelNotFound')}</p>
           <button
             onClick={() => navigate('/app/model-dashboard')}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className={`mt-6 ${PRIMARY_BUTTON_CLASS}`}
           >
             {t('results.backToDashboard')}
           </button>
@@ -642,17 +732,18 @@ export const ModelResultsViewer = () => {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col overflow-hidden">
+    <div className="md-scope flex h-full flex-col overflow-hidden bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border flex-shrink-0">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="px-4 py-4 sm:px-6">
+          <div className="md-rise flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(isFromAdmin ? '/app/admin-dashboard' : '/app/model-dashboard')}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className={TOOLBAR_ICON_BUTTON_CLASS}
+                aria-label={t('common.back')}
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
 
               {!isFromAdmin && (
@@ -669,10 +760,10 @@ export const ModelResultsViewer = () => {
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                          className="flex items-center gap-2.5 px-3 py-2 bg-card border border-border rounded-lg hover:border-muted-foreground/50 hover:shadow-sm transition-all duration-200"
+                          className="flex h-9 items-center gap-2.5 rounded-lg border border-border bg-card px-3 shadow-sm transition-all duration-200 hover:border-muted-foreground/40 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isLoadingModels}
                         >
-                          <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted">
                             <FileBarChart className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
                           <span className="font-normal text-foreground max-w-[180px] truncate text-sm">
@@ -689,14 +780,14 @@ export const ModelResultsViewer = () => {
                       <div className="absolute top-full left-0 mt-1.5 w-80 bg-card border border-border rounded-lg shadow-lg z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="p-2 border-b border-border">
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {t('results.completedSimulations')} {completedModels.length > 0 && `(${completedModels.length})`}
+                            {t('results.completedSimulations')} {modelMenu.runCount > 0 && `(${modelMenu.runCount}) · ${t('results.inModels', { count: modelMenu.familyCount })}`}
                           </span>
                         </div>
                         <div 
                           ref={dropdownScrollRef}
                           className="max-h-64 overflow-y-auto"
                         >
-                          {completedModels.length === 0 ? (
+                          {modelMenu.rows.length === 0 ? (
                             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                               {isLoadingModels ? t('results.loadingModels') : t('results.noCompletedSimulations')}
                             </div>
@@ -710,9 +801,9 @@ export const ModelResultsViewer = () => {
                             >
                               {virtualizer.getVirtualItems().map((virtualRow) => (
                                 <ModelDropdownItem
-                                  key={completedModels[virtualRow.index].id}
-                                  model={completedModels[virtualRow.index]}
-                                  isSelected={completedModels[virtualRow.index].id === modelId}
+                                  key={modelMenu.rows[virtualRow.index].model.id}
+                                  row={modelMenu.rows[virtualRow.index]}
+                                  isSelected={modelMenu.rows[virtualRow.index].model.id === modelId}
                                   onSelect={handleModelSelect}
                                   style={{
                                     position: 'absolute',
@@ -761,12 +852,20 @@ export const ModelResultsViewer = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {model.resolution}h {t('results.resolution')}
+                    {model.resolution} min {t('results.resolution')}
                   </span>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Energy carrier toggle (electricity / heat) — only when multiple carriers present */}
+              {!loading && (
+                <CarrierToggle
+                  carriers={availableCarriers}
+                  activeCarrier={carrier}
+                  onSelect={setCarrier}
+                />
+              )}
               {/* Power Flow Convergence Status */}
               {structuredResults?.pypsa && (
                 <Tooltip>
@@ -810,6 +909,29 @@ export const ModelResultsViewer = () => {
           </div>
         </div>
 
+        {/* Summary Metrics Bar - placeholder while the results load */}
+        {loading && (
+          <div className="px-4 pb-4 sm:px-6" aria-busy="true" aria-live="polite">
+            <div className="flex flex-wrap items-center gap-2">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-3"
+                >
+                  <div
+                    className="md-skeleton h-2.5 w-16 rounded bg-muted"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  />
+                  <div
+                    className="md-skeleton h-3 w-12 rounded bg-muted"
+                    style={{ animationDelay: `${i * 60 + 30}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Summary Metrics Bar */}
         {!loading && summary && (() => {
           const simDays = model ? (() => {
@@ -821,60 +943,63 @@ export const ModelResultsViewer = () => {
             return null;
           })() : null;
           const periodLabel = simDays ? `${t('results.metrics.over')} ${simDays} ${t('results.chartLabels.days')}` : undefined;
-          const installedRenewable = supplyCapacity.length > 0
-            ? formatPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0))
+          // Generation / import / self-sufficiency are electricity notions: they
+          // are meaningless for a heat demand served by heat pumps, so gate them
+          // on the carrier instead of printing zeros with a kWh suffix.
+          const generation = isGenerationCarrier(carrier);
+          const carrierLabel = (() => {
+            const key = carrierLabelKey(carrier);
+            return key ? t(key) : carrier;
+          })();
+          const installedRenewable = generation && supplyCapacity.length > 0
+            ? formatCarrierPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0), carrier)
             : undefined;
+          const generationItems = generation
+            ? [
+                {
+                  label: t('results.metrics.renewableGen'),
+                  value: formatCarrierEnergy(summary.renewable_production_kwh, carrier),
+                  hint: installedRenewable
+                    ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}`
+                    : periodLabel,
+                },
+                {
+                  label: t('results.metrics.gridImport'),
+                  value: formatCarrierEnergy(summary.grid_import_kwh, carrier),
+                  hint: periodLabel,
+                },
+                {
+                  label: t('results.metrics.selfSufficiency'),
+                  value: `${(summary.self_sufficiency_rate * 100).toFixed(1)}%`,
+                  hint: t('results.metrics.selfSufficiencyDesc'),
+                },
+              ]
+            : [];
           return (
-            <div className="px-6 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <MetricCard
-                  icon={Zap}
-                  label={t('results.metrics.totalDemand')}
-                  value={formatEnergy(summary.total_demand_kwh)}
-                  subtitle={periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Sun}
-                  label={t('results.metrics.renewableGen')}
-                  value={formatEnergy(summary.renewable_production_kwh)}
-                  subtitle={installedRenewable ? `${t('results.metrics.from')} ${installedRenewable} ${t('results.metrics.installed')}` : periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Network}
-                  label={t('results.metrics.gridImport')}
-                  value={formatEnergy(summary.grid_import_kwh)}
-                  subtitle={periodLabel}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={TrendingUp}
-                  label={t('results.metrics.selfSufficiency')}
-                  value={`${(summary.self_sufficiency_rate * 100).toFixed(1)}%`}
-                  subtitle={t('results.metrics.selfSufficiencyDesc')}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={Gauge}
-                  label={t('results.metrics.peakDemand')}
-                  value={formatPower(summary.peak_demand_kw)}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-                <MetricCard
-                  icon={DollarSign}
-                  label={t('results.metrics.totalCost')}
-                  value={`€${summary.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
-                  subtitle={periodLabel ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}` : t('results.metrics.equipmentAndRunning')}
-                  color="text-foreground"
-                  bgColor="bg-muted"
-                />
-              </div>
+            <div className="px-4 pb-4 sm:px-6">
+              <StatsStrip
+                className="md-fade-in"
+                items={[
+                  {
+                    label: t('results.metrics.totalDemand'),
+                    value: formatCarrierEnergy(summary.total_demand_kwh, carrier),
+                    hint: carrierLabel && periodLabel ? `${carrierLabel} · ${periodLabel}` : periodLabel,
+                  },
+                  ...generationItems,
+                  {
+                    label: t('results.metrics.peakDemand'),
+                    value: formatCarrierPower(summary.peak_demand_kw, carrier),
+                    hint: periodLabel,
+                  },
+                  {
+                    label: t('results.metrics.totalCost'),
+                    value: `€${summary.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                    hint: periodLabel
+                      ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}`
+                      : t('results.metrics.equipmentAndRunning'),
+                  },
+                ]}
+              />
             </div>
           );
         })()}
@@ -893,9 +1018,12 @@ export const ModelResultsViewer = () => {
               linesGeoJSON={linesGeoJSON}
               mvLinesGeoJSON={mvLinesGeoJSON}
               transformersGeoJSON={transformersGeoJSON}
+              connectionGeoJSON={connectionsGeoJSON}
               visible={isMapLibre3D}
             />
           )}
+
+          <CopyrightFooter />
 
           {/* Map Info Panel - shows on hover (tooltip) or click (selectedBuilding) */}
           {model && (
@@ -932,7 +1060,10 @@ export const ModelResultsViewer = () => {
                       <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{selectedBuilding.area.toFixed(0)} m²</span></span>
                     )}
                     {selectedBuilding.yearlyDemandKwh != null && selectedBuilding.yearlyDemandKwh > 0 && (
-                      <span><span className="text-muted-foreground">{t('results.buildingDetail.demand', 'Demand')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                    )}
+                    {selectedBuilding.yearlyHeatDemandKwh != null && selectedBuilding.yearlyHeatDemandKwh > 0 && (
+                      <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{selectedBuilding.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{selectedBuilding.heatDemandEstimated ? '*' : ''}</span></span>
                     )}
                   </div>
                   {selectedBuilding.technologies.length > 0 && (
@@ -974,7 +1105,10 @@ export const ModelResultsViewer = () => {
                           <span><span className="text-muted-foreground">{t('results.buildingDetail.area', 'Area')}: </span><span className="font-semibold text-foreground">{mapTooltip.area.toFixed(0)} m²</span></span>
                         )}
                         {mapTooltip.yearlyDemandKwh != null && mapTooltip.yearlyDemandKwh > 0 && (
-                          <span><span className="text-muted-foreground">{t('results.buildingDetail.demand', 'Demand')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.electricityDemand', 'Electricity')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh</span></span>
+                        )}
+                        {mapTooltip.yearlyHeatDemandKwh != null && mapTooltip.yearlyHeatDemandKwh > 0 && (
+                          <span><span className="text-muted-foreground">{t('results.buildingDetail.heatDemand', 'Heat')}: </span><span className="font-semibold text-foreground">{mapTooltip.yearlyHeatDemandKwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh{mapTooltip.heatDemandEstimated ? '*' : ''}</span></span>
                         )}
                       </div>
                       {mapTooltip.techs && Object.keys(mapTooltip.techs).length > 0 && (
@@ -998,10 +1132,29 @@ export const ModelResultsViewer = () => {
         {/* Right Panel - Charts or Building Details */}
         <div className="flex-1 flex flex-col overflow-hidden bg-muted/30">
           {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground font-medium">{t('results.loadingResults')}</p>
+            <div className="flex h-full flex-col overflow-hidden">
+              {/* Tab bar placeholder */}
+              <div className="flex-shrink-0 border-b border-border bg-card px-4 pt-3">
+                <div className="flex gap-1 pb-2.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="md-skeleton h-6 w-24 rounded-md bg-muted"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 space-y-4 overflow-hidden p-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t('results.loadingResults')}</span>
+                </div>
+                <PanelSkeleton height="h-40" />
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <PanelSkeleton className="lg:col-span-2" height="h-56" />
+                  <PanelSkeleton className="lg:col-span-1" height="h-56" />
+                </div>
               </div>
             </div>
           ) : (
@@ -1024,19 +1177,32 @@ export const ModelResultsViewer = () => {
                       setRightPanelView(tab.id);
                       setSelectedBuilding(null);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                    className={`group/tab relative flex items-center gap-1.5 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                       rightPanelView === tab.id && !selectedBuilding
-                        ? 'bg-background text-foreground border-t border-x border-border -mb-px'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        ? '-mb-px border-x border-t border-border bg-background text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
+                    <tab.icon
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        rightPanelView === tab.id && !selectedBuilding
+                          ? ''
+                          : 'group-hover/tab:scale-110'
+                      }`}
+                    />
                     {tab.label}
+                    {/* Active indicator that slides in under the label */}
+                    <span
+                      className={`pointer-events-none absolute inset-x-3 bottom-0 h-0.5 origin-center rounded-full bg-primary transition-transform duration-300 ${
+                        rightPanelView === tab.id && !selectedBuilding ? 'scale-x-100' : 'scale-x-0'
+                      }`}
+                      aria-hidden="true"
+                    />
                   </button>
                 ))}
                 {selectedBuilding && (
                   <div
-                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg bg-background text-foreground border-t border-x border-border -mb-px"
+                    className="md-fade-in -mb-px flex items-center gap-1.5 rounded-t-lg border-x border-t border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground"
                   >
                     <Building2 className="w-4 h-4" />
                     {selectedBuilding.fClass === 'Transformer' ? t('results.transformer') : `${t('results.building')} ${selectedBuilding.osmId || selectedBuilding.buildingId}`}
@@ -1060,14 +1226,13 @@ export const ModelResultsViewer = () => {
 
               {/* Summary Info - Right side */}
               {modelStats && !selectedBuilding && (
-                <div className="flex items-center gap-3 text-sm text-foreground pr-2">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4" />
+                <div className="md-fade-in mb-2 flex items-center gap-2 pr-2">
+                  <span className="flex h-8 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 text-sm font-medium tabular-nums text-foreground">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                     {modelStats.totalBuildings}
                   </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <img src="/images/transformer-icon-black.svg" alt="Transformer" className="w-4 h-4" />
+                  <span className="flex h-8 items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 text-sm font-medium tabular-nums text-foreground">
+                    <img src="/images/transformer-icon-black.svg" alt="Transformer" className="h-4 w-4 dark:invert" />
                     {modelStats.transformerCount}
                   </span>
                 </div>
@@ -1076,8 +1241,11 @@ export const ModelResultsViewer = () => {
             </div>
           </div>
 
-          {/* Panel Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Panel Content - keyed so switching tabs cross-fades the new panel in */}
+          <div
+            key={selectedBuilding ? `building-${selectedBuilding.buildingId}` : rightPanelView}
+            className="md-fade-in flex-1 overflow-y-auto"
+          >
             {panelContent}
           </div>
         </>

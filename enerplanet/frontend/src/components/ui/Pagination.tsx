@@ -11,6 +11,8 @@ interface PaginationProps {
 	readonly pageSizeOptions?: number[];
 	readonly className?: string;
 	readonly isLoading?: boolean;
+	/** The word after the total, for example "families"; "results" when unset. */
+	readonly resultsLabel?: string;
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -20,8 +22,9 @@ const Pagination: React.FC<PaginationProps> = ({
 	onPageChange,
 	onItemsPerPageChange,
 	pageSizeOptions = [5, 10, 25],
-	className = "",
+	className = "bg-card",
 	isLoading = false,
+	resultsLabel,
 }) => {
 	const { t } = useTranslation();
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -82,7 +85,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	};
 	
 	return (
-		<div className={`bg-card px-4 py-3 border-t border-border sm:px-6 ${className}`}>
+		<div className={`px-4 py-3 border-t border-border sm:px-6 ${className}`}>
 			<div className="flex flex-col sm:flex-row justify-between items-center gap-3">
 				{/* Results info */}
 				<div className="flex items-center">
@@ -100,7 +103,7 @@ const Pagination: React.FC<PaginationProps> = ({
 									<>
 										{t("common.pagination.showing")} <span className="font-medium text-foreground">{startItem}</span> {t("common.pagination.to")}{" "}
 										<span className="font-medium text-foreground">{endItem}</span> {t("common.pagination.of")}{" "}
-										<span className="font-medium text-foreground">{totalItems}</span> {t("common.pagination.results")}
+										<span className="font-medium text-foreground">{totalItems}</span> {resultsLabel ?? t("common.pagination.results")}
 									</>
 								)}
 							</>
@@ -114,7 +117,7 @@ const Pagination: React.FC<PaginationProps> = ({
 						<button
 							onClick={() => !isLoading && setIsDropdownOpen(!isDropdownOpen)}
 							disabled={isLoading}
-							className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted border border-border rounded-lg hover:bg-muted/80 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+							className="flex items-center gap-2 px-3 py-1.5 text-sm bg-card border border-border rounded-lg hover:bg-muted transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<span className="text-foreground">{itemsPerPage}</span>
 							<span className="text-muted-foreground">{t("common.pagination.perPage")}</span>
@@ -151,7 +154,7 @@ const Pagination: React.FC<PaginationProps> = ({
 							<button
 								onClick={() => onPageChange(Math.max(0, validCurrentPage - 1))}
 								disabled={validCurrentPage === 0 || isLoading || totalPages <= 1}
-								className="p-1.5 rounded-lg border border-border bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-all duration-200 group"
+								className="p-1.5 rounded-lg border border-border bg-card disabled:*:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-all duration-200 group"
 								aria-label={t("common.pagination.previousPage")}
 							>
 								<ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
@@ -185,7 +188,7 @@ const Pagination: React.FC<PaginationProps> = ({
 							<button
 								onClick={() => onPageChange(Math.min(totalPages - 1, validCurrentPage + 1))}
 								disabled={validCurrentPage >= totalPages - 1 || isLoading || totalPages <= 1}
-								className="p-1.5 rounded-lg border border-border bg-card disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-all duration-200 group"
+								className="p-1.5 rounded-lg border border-border bg-card disabled:*:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-all duration-200 group"
 								aria-label={t("common.pagination.nextPage")}
 							>
 								<ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />

@@ -3,6 +3,20 @@ import { Search, Loader2, Check } from "lucide-react";
 import { geocodingService, GeocodingResult } from "@/features/interactive-map/services/geocoding";
 import { useTranslation } from "@spatialhub/i18n";
 
+// "lat, lon" in decimal degrees; a comma, semicolon or spaces separate them.
+const COORDINATES = /^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/;
+
+/** The point a query names as "lat, lon", or null when it is not a valid pair of coordinates. */
+export function parseCoordinates(query: string): GeocodingResult | null {
+  const match = COORDINATES.exec(query);
+  if (!match) return null;
+  const latitude = Number(match[1]);
+  const longitude = Number(match[2]);
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  const name = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  return { id: `point:${name}`, name, latitude, longitude, source: "coordinates" };
+}
+
 interface LocationSearchProps {
   onSelect: (result: GeocodingResult) => void;
   isLocationAdded?: (result: GeocodingResult) => boolean;
@@ -26,6 +40,12 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({
   useEffect(() => {
     if (!search.trim()) {
       setResults([]);
+      setError(null);
+      return;
+    }
+    const point = parseCoordinates(search);
+    if (point) {
+      setResults([point]);
       setError(null);
       return;
     }
@@ -66,7 +86,7 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({
           placeholder={placeholder || t('settings.locationSearch.placeholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm border-2 border-input rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
+          className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg bg-background dark:bg-input text-foreground placeholder:text-muted-foreground focus:border-transparent focus:ring-2 focus:ring-ring transition-colors duration-150"
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               setSearch("");
@@ -83,22 +103,23 @@ export const LocationSearch: React.FC<LocationSearchProps> = ({
       </div>
 
       {loading && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+        <p className="md-fade-in text-xs text-muted-foreground flex items-center gap-1.5">
           <Loader2 className="w-3 h-3 animate-spin" />
           {t('settings.locationSearch.searching')}
         </p>
       )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="md-fade-in text-xs text-destructive">{error}</p>}
 
       {!loading && results.length > 0 && (
-        <div className="border-2 border-input rounded-lg max-h-40 overflow-auto divide-y divide-border bg-card shadow-lg">
-          {results.map((r) => {
+        <div className="md-fade-in border-2 border-input rounded-lg max-h-40 overflow-auto divide-y divide-border bg-card shadow-lg">
+          {results.map((r, index) => {
             const added = isLocationAdded ? isLocationAdded(r) : false;
             return (
               <button
                 type="button"
                 key={r.id}
-                className="w-full text-left px-3 py-2.5 hover:bg-muted text-sm text-foreground flex items-center justify-between transition-colors"
+                style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}
+                className="md-row-in w-full text-left px-3 py-2.5 hover:bg-muted/60 text-sm text-foreground flex items-center justify-between transition-colors duration-150"
                 onClick={() => handleSelect(r)}
               >
                 <span className="truncate text-foreground">{r.name}</span>

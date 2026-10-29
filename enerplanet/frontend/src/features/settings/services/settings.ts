@@ -4,19 +4,6 @@ interface UserSettings {
   [key: string]: string;
 }
 
-interface WeatherLocation {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  source?: string;
-}
-
-interface WeatherLocationData {
-  location: WeatherLocation;
-  customLocations: WeatherLocation[];
-}
-
 interface MapLocation {
   id: string;
   name: string;
@@ -134,30 +121,6 @@ class SettingsService {
     }
   }
 
-  async getWeatherLocation(): Promise<WeatherLocationData | null> {
-    try {
-      const settings = await this.getAllSettings();
-      if (!settings.weather_location) return null;
-      const parsed = JSON.parse(settings.weather_location) as unknown;
-      return parsed as WeatherLocationData;
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('Failed to parse weather location:', e);
-      return null;
-    }
-  }
-
-  async setWeatherLocation(location: WeatherLocationData): Promise<boolean> {
-    try {
-      const value = JSON.stringify(location);
-      await axios.put<{ success: boolean }>(`${this.BASE_PATH}/weather-location`, { weather_location: value });
-      this.invalidateCache();
-      return true;
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('Failed to save weather location:', e);
-      return false;
-    }
-  }
-
   async getMapLocation(): Promise<MapLocationData | null> {
     try {
       const settings = await this.getAllSettings();
@@ -178,17 +141,6 @@ class SettingsService {
       return true;
     } catch (e) {
       if (import.meta.env.DEV) console.error('Failed to save map location:', e);
-      return false;
-    }
-  }
-
-  async deleteWeatherLocation(): Promise<boolean> {
-    try {
-      await axios.put<{ success: boolean }>(`${this.BASE_PATH}/weather-location`, { weather_location: '' });
-      this.invalidateCache();
-      return true;
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Failed to delete weather location:', error);
       return false;
     }
   }

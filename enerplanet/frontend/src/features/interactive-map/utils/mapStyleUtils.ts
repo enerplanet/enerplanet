@@ -229,6 +229,29 @@ function getIconSpacing(resolution: number, baseSpacing: number = 28): number {
     return maxSpacing - (maxSpacing - minSpacing) * t;
 }
 
+// Tech icon styles are shared by every building with the same icon, size, offset and stroke,
+// and each draws at its building's centre through a geometry function, so a redraw creates none.
+const techIconStyles = new Map<string, Style>();
+const TECH_ICON_STYLE_LIMIT = 5000;
+
+const extentCentre = (feature: FeatureLike) => {
+    const geometry = feature.getGeometry();
+    return geometry ? new Point(getCenter(geometry.getExtent())) : undefined;
+};
+
+function sharedTechIconStyle(key: string, make: () => Style): Style {
+    let style = techIconStyles.get(key);
+    if (!style) {
+        if (techIconStyles.size >= TECH_ICON_STYLE_LIMIT) techIconStyles.clear();
+        style = make();
+        techIconStyles.set(key, style);
+    }
+    return style;
+}
+
+/** Rounds a zoom-dependent size to a step, so nearby zoom levels share styles. */
+const step = (value: number, size: number) => Math.round(value / size) * size;
+
 // Helper to add tech indicator icons to a feature's styles
 function addTechIconStyles(
     styles: Style[],
@@ -242,18 +265,15 @@ function addTechIconStyles(
 
     const techKeys = Object.keys(techs);
     const numTechs = techKeys.length;
-    const geometry = feature.getGeometry();
-    if (!geometry) return;
+    if (!feature.getGeometry()) return;
 
-    const extent = geometry.getExtent();
-    const center = getCenter(extent);
     const currentResolution = resolution || 1;
-    const iconScale = getIconScale(currentResolution, 0.85);
-    const iconRadius = getIconRadius(currentResolution, 14);
+    const iconScale = step(getIconScale(currentResolution, 0.85), 0.02);
+    const iconRadius = step(getIconRadius(currentResolution, 14), 0.5);
 
     if (iconScale <= 0 || iconRadius <= 0) return;
 
-    const iconSpacing = getIconSpacing(currentResolution, 24);
+    const iconSpacing = step(getIconSpacing(currentResolution, 24), 1);
     const startOffset = -((numTechs - 1) * iconSpacing) / 2;
 
     techKeys.forEach((key, index) => {
@@ -261,21 +281,22 @@ function addTechIconStyles(
         const techIcon = tech?.icon || 'default';
         const iconPath = `/images/tech-icons/${techIcon}.svg`;
         const offsetX = startOffset + (index * iconSpacing);
+        const zIndex = baseZIndex + index;
 
         // White background circle + Tech icon
         styles.push(
-            new Style({
-                geometry: new Point(center),
+            sharedTechIconStyle(`circle|${iconRadius}|${strokeColor}|${offsetX}|${zIndex}`, () => new Style({
+                geometry: extentCentre,
                 image: new CircleStyle({
                     radius: iconRadius,
                     fill: new Fill({ color: '#ffffff' }),
                     stroke: new Stroke({ color: strokeColor, width: Math.max(0.5, 1.5 * (iconRadius / 10)) }),
                     displacement: [offsetX, 0]
                 }),
-                zIndex: baseZIndex + index
-            }),
-            new Style({
-                geometry: new Point(center),
+                zIndex,
+            })),
+            sharedTechIconStyle(`icon|${iconPath}|${iconScale}|${offsetX}|${zIndex + 1}`, () => new Style({
+                geometry: extentCentre,
                 image: new Icon({
                     src: iconPath,
                     scale: iconScale,
@@ -284,19 +305,30 @@ function addTechIconStyles(
                     anchorYUnits: 'fraction',
                     displacement: [offsetX, 0]
                 }),
-                zIndex: baseZIndex + 1 + index
-            })
+                zIndex: zIndex + 1,
+            }))
         );
     });
 }
 
 // Returns a style function for OpenLayers that responds to zoom/resolution changes
+// Red outline for a building whose technologies lack a size in operate mode (useOperateSizes).
+const OPERATE_UNSIZED_OUTLINE = new Style({
+    fill: new Fill({ color: 'rgba(220, 38, 38, 0.6)' }),
+    stroke: new Stroke({ color: '#dc2626', width: 4 }),
+    image: new CircleStyle({ radius: 16, stroke: new Stroke({ color: '#dc2626', width: 4 }) }),
+    // Above the building's own fill (99, 100), below its icons (1001 and up).
+    zIndex: 101,
+});
+
 export function createBuildingStyleFunction(
     colorByTransformer: boolean = false,
     colorByDemand: boolean = false,
 ): StyleFunction {
     return (feature: FeatureLike, resolution: number): Style | Style[] | void => {
-        return buildingSimpleStyleFunction(feature as Feature<Geometry>, colorByTransformer, colorByDemand, resolution);
+        const base = buildingSimpleStyleFunction(feature as Feature<Geometry>, colorByTransformer, colorByDemand, resolution);
+        if (!feature.get('operate_unsized')) return base;
+        return [...(Array.isArray(base) ? base : [base]), OPERATE_UNSIZED_OUTLINE];
     };
 }
 
@@ -476,6 +508,37 @@ function getUtilizationBarColor(utilization: number): string {
     if (utilization >= 80) return '#ef4444';  // Red
     if (utilization >= 60) return '#eab308';  // Yellow
     return '#22c55e';                          // Green
+}
+
+/**
+ * Zoom at or below which a grid is shown in overview: transformers as counts and
+ * a drawn area without its corner markers, so several models stay readable.
+ */
+export const OVERVIEW_ZOOM = 15.5;
+
+const transformerCountStyles = new Map<number, Style>();
+
+/** Style of an OpenLayers cluster of transformers: one badge with their count. */
+export function transformerCountStyle(cluster: FeatureLike): Style {
+    const count = (cluster.get('features') as unknown[] | undefined)?.length ?? 1;
+    let style = transformerCountStyles.get(count);
+    if (!style) {
+        style = new Style({
+            image: new CircleStyle({
+                radius: count > 1 ? 11 : 6,
+                fill: new Fill({ color: '#f59e0b' }),
+                stroke: new Stroke({ color: '#ffffff', width: 2 }),
+            }),
+            text: count > 1 ? new Text({
+                text: String(count),
+                font: 'bold 11px sans-serif',
+                fill: new Fill({ color: '#ffffff' }),
+            }) : undefined,
+            zIndex: 999,
+        });
+        transformerCountStyles.set(count, style);
+    }
+    return style;
 }
 
 export function transformerStyleFunction(feature?: Feature<Geometry>, resolution?: number): Style[] {
@@ -1008,103 +1071,6 @@ export function selectedBoundaryStyleFunction(_feature: Feature<Geometry>, resol
             }),
             stroke: new Stroke({
                 color: 'rgba(217, 119, 6, 0.9)',
-                width: 3,
-                lineDash: [16, 8],
-                lineCap: 'round',
-                lineJoin: 'round'
-            })
-        }),
-        new Style({
-            stroke: new Stroke({
-                color: 'rgba(255, 255, 255, 0.6)',
-                width: 1,
-                lineDash: [16, 8],
-                lineDashOffset: 4,
-                lineCap: 'round'
-            })
-        })
-    ];
-}
-
-/**
- * Style for search result boundary — uses a bold rose/magenta color
- * to clearly stand out from default (indigo), selected (amber), and the green map background.
- */
-export function searchBoundaryStyleFunction(_feature: Feature<Geometry>, resolution?: number): Style[] {
-    const res = resolution || 1;
-
-    if (res > 20) {
-        return [
-            new Style({
-                stroke: new Stroke({
-                    color: 'rgba(190, 24, 93, 0.20)',
-                    width: 8,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                })
-            }),
-            new Style({
-                stroke: new Stroke({
-                    color: 'rgba(190, 24, 93, 0.85)',
-                    width: 3,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                })
-            })
-        ];
-    }
-
-    if (res > 5) {
-        return [
-            new Style({
-                stroke: new Stroke({
-                    color: 'rgba(190, 24, 93, 0.22)',
-                    width: 10,
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                })
-            }),
-            new Style({
-                stroke: new Stroke({
-                    color: 'rgba(190, 24, 93, 0.88)',
-                    width: 3,
-                    lineDash: [16, 8],
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                })
-            }),
-            new Style({
-                stroke: new Stroke({
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    width: 1,
-                    lineDash: [16, 8],
-                    lineDashOffset: 4,
-                    lineCap: 'round'
-                })
-            })
-        ];
-    }
-
-    return [
-        new Style({
-            stroke: new Stroke({
-                color: 'rgba(190, 24, 93, 0.20)',
-                width: 12,
-                lineCap: 'round',
-                lineJoin: 'round'
-            })
-        }),
-        new Style({
-            stroke: new Stroke({
-                color: 'rgba(131, 24, 67, 0.25)',
-                width: 7,
-                lineCap: 'round',
-                lineJoin: 'round'
-            })
-        }),
-        new Style({
-            stroke: new Stroke({
-                color: 'rgba(190, 24, 93, 0.92)',
                 width: 3,
                 lineDash: [16, 8],
                 lineCap: 'round',

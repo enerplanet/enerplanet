@@ -1,9 +1,16 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { Popup as MapLibrePopup } from 'maplibre-gl';
 import {
   BUILDING_COLORS, LV_LINE_COLORS, MV_LINE_COLORS,
   TRANSFORMER_COLORS, POLYGON_COLORS, CLUSTER_COLORS, BOUNDARY_COLORS, USER_MODEL_COLORS,
 } from './maplibre-styles';
+
+/** Popup content as text: model titles and region names are user or data input, never HTML. */
+function boldText(text: string): HTMLElement {
+  const b = document.createElement('b');
+  b.textContent = text;
+  return b;
+}
 
 /**
  * Optimized MapLibre Layer Management.
@@ -86,18 +93,10 @@ function toFeatureCollection(input: any): GeoJSON.FeatureCollection | null {
   return null;
 }
 
-const heightExpr: maplibregl.ExpressionSpecification = [
-  'case',
-  ['all', ['has', 'height_max'], ['!=', ['get', 'height_max'], null], ['>', ['get', 'height_max'], 0]],
-  ['get', 'height_max'],
-  ['all', ['has', 'height'], ['!=', ['get', 'height'], null], ['>', ['get', 'height'], 0]],
-  ['get', 'height'],
-  ['all', ['has', 'floors_3dbag'], ['!=', ['get', 'floors_3dbag'], null], ['>', ['get', 'floors_3dbag'], 0]],
-  ['*', ['get', 'floors_3dbag'], 3],
-  ['all', ['has', 'floors'], ['!=', ['get', 'floors'], null], ['>', ['get', 'floors'], 0]],
-  ['*', ['get', 'floors'], 3],
-  0,
-];
+// Footprints lie flat in 3D: the buildings themselves are City2TABULA's LoD2
+// surfaces (see maplibre-lod2), since the footprint heights are estimates.
+// Highlights sit slightly above the footprint so they draw over it.
+const HIGHLIGHT_HEIGHT = 0.1;
 
 const separatorWidthExpr: maplibregl.ExpressionSpecification = [
   'interpolate',
@@ -176,7 +175,7 @@ export function addOrUpdateBuildings(
       source: 'buildings-3d',
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': heightExpr,
+        'fill-extrusion-height': 0,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.92,
         'fill-extrusion-vertical-gradient': true,
@@ -206,7 +205,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_cluster_key'], '__none__'],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', heightExpr, 2.4],
+        'fill-extrusion-height': HIGHLIGHT_HEIGHT,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.98,
       },
@@ -243,7 +242,7 @@ export function addOrUpdateBuildings(
       filter: ['==', ['get', '_assign_selected'], true],
       paint: {
         'fill-extrusion-color': ['get', '_cluster_color'],
-        'fill-extrusion-height': ['+', heightExpr, 3.2],
+        'fill-extrusion-height': HIGHLIGHT_HEIGHT,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.82,
       },
@@ -360,6 +359,39 @@ export function addOrUpdateMvLines(map: maplibregl.Map, geojson: any): void {
       type: 'line',
       source: 'mv-lines',
       paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 1.5, 'line-opacity': 0.9 },
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+    });
+  }
+}
+
+/**
+ * Data-driven connection layer for model results: one straight wire segment per
+ * connection (bus0 -> bus1), red when its peak utilisation exceeds 100%.
+ */
+export function addOrUpdateConnections(map: maplibregl.Map, geojson: GeoJSON.FeatureCollection | null): void {
+  if (!geojson?.features?.length) {
+    clearSource(map, 'result-connections');
+    return;
+  }
+
+  const existing = map.getSource('result-connections') as maplibregl.GeoJSONSource | undefined;
+  if (existing) {
+    existing.setData(geojson);
+    return;
+  }
+
+  map.addSource('result-connections', { type: 'geojson', data: geojson });
+
+  if (!map.getLayer('result-connections-line')) {
+    map.addLayer({
+      id: 'result-connections-line',
+      type: 'line',
+      source: 'result-connections',
+      paint: {
+        'line-color': ['case', ['==', ['get', 'overloaded'], true], '#ef4444', '#64748b'],
+        'line-width': ['case', ['==', ['get', 'overloaded'], true], 4, 2.5],
+        'line-opacity': 0.95,
+      },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
   }
@@ -530,12 +562,19 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
     return;
   }
 
+  const closeRing = (ring: [number, number][]): [number, number][] => {
+    if (ring.length < 3) return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] === last[0] && first[1] === last[1]) return ring;
+    return [...ring, [first[0], first[1]]];
+  };
   const fc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
       properties: {},
-      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [c]) },
+      geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [closeRing(c)]) },
     }],
   };
 
@@ -611,7 +650,7 @@ export function setupUserModelInteractions(
         ]);
       }
 
-      popup.setLngLat(e.lngLat).setHTML(`<b>${props?.title || 'Untitled'}</b>`).addTo(map);
+      popup.setLngLat(e.lngLat).setDOMContent(boldText(String(props?.title || 'Untitled'))).addTo(map);
     } else {
       if (hoveredId !== null) {
         hoveredId = null;
@@ -669,7 +708,7 @@ export function setupBoundaryInteractions(
         ]);
       }
 
-      popup.setLngLat(e.lngLat).setHTML(`<b>${name}</b>`).addTo(map);
+      popup.setLngLat(e.lngLat).setDOMContent(boldText(String(name))).addTo(map);
     } else {
       if (hoveredName) {
         hoveredName = null;

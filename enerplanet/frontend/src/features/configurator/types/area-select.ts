@@ -67,8 +67,10 @@ export interface UseAreaSelectProps {
 	pylovoData?: PylovoGridData;
 	advancedParams?: AdvancedParametersState;
 	buildingLimit?: number;
-	// When true, prevents building/transformer dialogs from opening on click
-	suppressDialogOnClick?: boolean;
+	// Ref read at click-time to prevent building/transformer dialogs from opening
+	// when an interaction mode (add/move transformer, building assign) is active.
+	// A ref is used because the mode states live in hooks called after useAreaSelect.
+	suppressDialogOnClickRef?: React.RefObject<boolean>;
 	// Draft ID for new models (before saving) - used to scope user-placed transformers
 	draftId?: string;
 }
@@ -97,6 +99,8 @@ export interface PylovoGridData {
 		features: GeoJSONFeature[];
 	};
 	grids?: unknown;
+	/** Present on a site grid: the pylovo site and the revision it was generated from. */
+	meta?: { mode?: string; site_id?: number; revision?: number };
 	boundary?: {
 		region: {
 			name: string;
@@ -123,12 +127,10 @@ export interface AreaSelectState {
 	advancedParams: AdvancedParametersState;
 	showAdvancedParams: boolean;
 	isDrawing: boolean;
-	allowMultiplePolygons: boolean;
 	clearTrigger: number;
-	cursorPos: { x: number; y: number } | null;
+	pointerOnMap: boolean;
 	isGeneratingGrid: boolean;
 	// Custom building filters
-	includePublicBuildings: boolean;
 	includePrivateBuildings: boolean;
 	excludedBuildingIds: Set<number>;
 	// Unsaved changes tracking
@@ -151,13 +153,17 @@ export interface AreaSelectActions {
 	handleResetAdvancedParams: () => void;
 	handlePolygonDrawn: (coordinates: [number, number][], allPolygons: [number, number][][]) => Promise<void>;
 	handlePolygonModified: (allPolygons: [number, number][][]) => Promise<void>;
+	handleSiteRegenerate: (siteId: number) => Promise<void>;
+	handleRegenerateGrid: () => Promise<void>;
+	/** Sets the grid mode and regenerates the grid for the drawn area in it. */
+	handleSwitchGridMode: (on: boolean) => Promise<void>;
 	handleClearAllPolygons: () => void;
-	setAllowMultiplePolygons: (allow: boolean) => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions
-	setIncludePublicBuildings: (include: boolean) => void;
 	setIncludePrivateBuildings: (include: boolean) => void;
 	toggleBuildingExclusion: (buildingId: number) => void;
 	clearExcludedBuildings: () => void;
 	handleQuickSave: () => Promise<void>;
+	/** Saves a new or changed model, then starts the analysis of its buildings; resolves to whether it started. */
+	handleAnalyse: () => Promise<boolean>;
 }

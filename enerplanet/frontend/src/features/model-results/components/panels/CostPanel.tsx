@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle } from 'lucide-react';
+import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   CostAnalysisChart,
@@ -11,6 +12,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
 import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import { energyKwhFromCost } from '../../lcoeUnits';
 
 
 const COST_TECH_I18N_KEYS: Record<string, string> = {
@@ -52,7 +54,8 @@ interface CostPanelProps {
   structuredResults: StructuredModelResults | null | undefined;
   summary?: {
     total_cost_eur: number;
-    lcoe_eur_kwh: number;
+    /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
+    lcoe_eur_mwh: number;
   } | null;
   simulationPeriod?: {
     from_date: string;
@@ -123,7 +126,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         const totalCost = costByTech[tech] || 0;
         const investCost = investByTech[tech] || 0;
         const variableCost = Math.max(0, totalCost - investCost);
-        const energyProduced = lcoe > 0 ? totalCost / lcoe : 0; // kWh
+        const energyProduced = energyKwhFromCost(totalCost, lcoe); // kWh
         return {
           tech,
           label: getTechLabel(tech, t),
@@ -188,18 +191,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
   const hasData = costBreakdown.length > 0 || lcoeData.length > 0 || investmentData.length > 0;
 
   if (!hasData) {
-    return (
-      <div className="p-8 flex items-center justify-center h-full">
-        <div className="text-center text-muted-foreground">
-          <PieChart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{t('results.chartLabels.noCostData')}</p>
-        </div>
-      </div>
-    );
+    return <PanelEmptyState icon={PieChart} title={t('results.chartLabels.noCostData')} />;
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Simulation period info banner */}
       {periodInfo.isPartialYear && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex items-start gap-3">
@@ -222,7 +218,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
       {/* Top row: Cost Distribution + System Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {costBreakdown.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-2">
+          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-primary" />
               {t('results.charts.costDistribution')}
@@ -244,7 +240,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_kwh}
+                lcoe={summary?.lcoe_eur_mwh}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}
@@ -254,7 +250,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         )}
 
         {systemCostSummary && systemCostSummary.totalCost > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-1">
+          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Gauge className="w-4 h-4 text-primary" />
               {t('results.charts.systemCostSummary')}
@@ -286,7 +282,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
       {/* Bottom row: LCOE Comparison + Investment Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {lcoeData.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4">
+          <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               {t('results.charts.lcoeComparison')}
@@ -302,7 +298,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         )}
 
         {investmentData.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4">
+          <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
               {t('results.charts.investmentVsOperating')}

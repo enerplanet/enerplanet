@@ -1,43 +1,11 @@
 import { normalizeFClassToken } from "@/features/configurator/utils/buildingFeatureExtraction";
+import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 
 export interface FClassDetail {
     fClass: string;
     yearlyDemandKwh: number;
     peakLoadKw: number;
 }
-
-const parseFlexibleNumberString = (input: string): number | null => {
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    const compact = trimmed.replace(/[\s\u00A0\u202F]/g, "");
-
-    // 1,234.56
-    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(compact)) {
-        const parsed = Number(compact.replace(/,/g, ""));
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    // 1.234,56
-    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(compact)) {
-        const parsed = Number(compact.replace(/\./g, "").replace(",", "."));
-        return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    const normalized = compact.includes(",") && !compact.includes(".")
-        ? compact.replace(",", ".")
-        : compact;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-};
-
-const toFiniteNumber = (value: unknown): number | null => {
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-    if (typeof value === "string") {
-        return parseFlexibleNumberString(value);
-    }
-    return null;
-};
 
 const parseStoredFClassDetails = (
     storedDetails: unknown,

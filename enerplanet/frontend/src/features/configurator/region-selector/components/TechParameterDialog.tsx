@@ -29,6 +29,7 @@ import {
   Wind,
   Leaf,
   Flame,
+  Snowflake,
   Droplets,
   Home,
   Building2,
@@ -36,6 +37,7 @@ import {
   SolarPanel,
   Fan,
   ChevronDown,
+  ChevronUp,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -51,6 +53,10 @@ import {
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import { useTranslation } from "@spatialhub/i18n";
+import { FUEL_BY_TYPE } from "@/features/technologies/catalogue";
+import { useModelStore } from "@/features/configurator/store/modelStore";
+import { OPERATE_SIZE_FIELDS, isFiniteValue } from "@/features/configurator/utils/operateSizes";
+import { pricedFuelCarrier, carrierPrice } from "@/features/configurator/utils/carrierPrices";
 
 // Wind turbine data structure
 interface WindTurbineData {
@@ -66,6 +72,7 @@ const iconMap: Record<string, LucideIcon> = {
   wind: Wind,
   leaf: Leaf,
   flame: Flame,
+  snowflake: Snowflake,
   droplets: Droplets,
   home: Home,
   "building-2": Building2,
@@ -73,9 +80,6 @@ const iconMap: Record<string, LucideIcon> = {
   "wind-turbine": Fan,
 };
 
-// TODO: Replace these maps with a key registry file (src/locales/i18n-keys.ts)
-// that lists all dynamic keys as literal t() calls so i18next-parser can detect them.
-// Then simplify usage to: t(`parameters.${paramKey}`) / t(`parameters.names.${paramKey}`)
 // Parameter description keys for i18n - these map to translation keys
 const parameterDescriptionKeys: Record<string, string> = {
   cont_energy_cap_max: "parameters.cont_energy_cap_max",
@@ -203,10 +207,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
   value,
   options,
   onChange,
-  placeholder = "Select...",
+  placeholder,
   error = false,
   turbineData,
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -259,11 +264,11 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
                   {selectedTurbineName}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {turbineInfo.nominal_power} kW · {turbineInfo.rotor_diameter}m rotor
+                  {t("technologies.paramDialog.turbineSummary", { power: turbineInfo.nominal_power, diameter: turbineInfo.rotor_diameter })}
                 </span>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground">{placeholder}</span>
+              <span className="text-sm text-muted-foreground">{placeholder ?? t("technologies.paramDialog.selectPlaceholder")}</span>
             )}
           </div>
           <ChevronDown
@@ -281,7 +286,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search wind turbines..."
+              placeholder={t("technologies.paramDialog.searchTurbines")}
               className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder-muted-foreground text-foreground"
               autoFocus
             />
@@ -292,7 +297,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
         <div className="max-h-[220px] overflow-y-auto p-1.5">
           {filteredOptions.length === 0 ? (
             <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-              {searchTerm ? "No turbines match your search" : "No turbines available"}
+              {searchTerm ? t("technologies.paramDialog.noTurbinesMatch") : t("technologies.paramDialog.noTurbinesAvailable")}
             </div>
           ) : (
             <div className="space-y-0.5">
@@ -354,7 +359,7 @@ const SearchableSelect: FC<SearchableSelectProps> = ({
 
         <div className="px-3 py-2 border-t border-border bg-muted/30 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {filteredOptions.length} of {options.length} turbines
+            {t("technologies.paramDialog.turbinesShown", { shown: filteredOptions.length, total: options.length })}
           </span>
         </div>
       </DropdownMenuContent>
@@ -371,6 +376,7 @@ interface HubHeightSelectProps {
 }
 
 const HubHeightSelect: FC<HubHeightSelectProps> = ({ value, options, onChange, error = false }) => {
+  const { t } = useTranslation();
   return (
     <Select value={String(value)} onValueChange={(val) => onChange(Number(val))}>
       <SelectTrigger
@@ -388,7 +394,7 @@ const HubHeightSelect: FC<HubHeightSelectProps> = ({ value, options, onChange, e
           </svg>
         </div>
         <div className="flex-1 text-left">
-          <SelectValue placeholder="Select height" />
+          <SelectValue placeholder={t("technologies.paramDialog.selectHeight")} />
         </div>
       </SelectTrigger>
       <SelectContent>
@@ -429,7 +435,37 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   const [windTurbineData, setWindTurbineData] = useState<Record<string, WindTurbineData>>({});
   const [hubHeightOptions, setHubHeightOptions] = useState<number[]>([]);
   const [disabledFields, setDisabledFields] = useState<Set<string>>(new Set());
+  const [fuelCarrier, setFuelCarrier] = useState<string | undefined>(undefined);
   const contentRef = useRef<HTMLDivElement>(null);
+  const runMode = useModelStore((s) => s.runMode);
+  // Flagged size fields scrolled out of view; a hint below the list points to them.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hiddenFlagged, setHiddenFlagged] = useState({ count: 0, above: false });
+  const flaggedOutOfView = useCallback((): Element[] => {
+    const box = scrollRef.current;
+    if (!box) return [];
+    const view = box.getBoundingClientRect();
+    return [...box.querySelectorAll("[data-operate-missing]")].filter((row) => {
+      const r = row.getBoundingClientRect();
+      return r.top < view.top || r.bottom > view.bottom;
+    });
+  }, []);
+  const updateHiddenFlagged = useCallback(() => {
+    const hidden = flaggedOutOfView();
+    const above = hidden.length > 0 && hidden[0].getBoundingClientRect().top < (scrollRef.current?.getBoundingClientRect().top ?? 0);
+    setHiddenFlagged((prev) => (prev.count === hidden.length && prev.above === above ? prev : { count: hidden.length, above }));
+  }, [flaggedOutOfView]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(updateHiddenFlagged);
+    return () => cancelAnimationFrame(frame);
+  });
+
+  // In operate mode, bring the first size operate needs into view.
+  useEffect(() => {
+    if (!open || runMode !== "operate") return;
+    const timer = setTimeout(() => contentRef.current?.querySelector("[data-operate-missing]")?.scrollIntoView({ block: "center" }), 150);
+    return () => clearTimeout(timer);
+  }, [open, runMode, technology]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get translated parameter name/alias
@@ -451,13 +487,10 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       if (staticDescriptions[paramKey]) return staticDescriptions[paramKey];
       if (parameterDescriptionKeys[paramKey]) {
         return t(parameterDescriptionKeys[paramKey], {
-          defaultValue: `${alias} - Configure this parameter based on your requirements.`,
+          defaultValue: t("parameters.defaultDescription", { alias }),
         });
       }
-      return t("parameters.defaultDescription", {
-        alias,
-        defaultValue: `${alias} - Configure this parameter based on your requirements.`,
-      });
+      return t("parameters.defaultDescription", { alias });
     },
     [t]
   );
@@ -527,6 +560,11 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     };
 
     loadDynamicOptions();
+  }, [technology]);
+
+  useEffect(() => {
+    const fuels = technology ? FUEL_BY_TYPE[technology.key] : undefined;
+    setFuelCarrier(fuels ? pricedFuelCarrier(fuels) : undefined);
   }, [technology]);
 
   // Handle turbine type selection change
@@ -624,19 +662,19 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     const numValue = typeof value === "string" ? Number.parseFloat(value) : value;
 
     if (constraint.required && (value === "" || value === null || value === undefined)) {
-      return `Required`;
+      return t("technologies.paramDialog.required");
     }
 
     if (typeof numValue === "number" && !Number.isNaN(numValue)) {
       if (constraint.min !== null && numValue < constraint.min) {
-        return `Min: ${constraint.min}`;
+        return t("technologies.paramDialog.minValue", { value: constraint.min });
       }
       if (
         constraint.max !== null &&
         constraint.max !== "INF" &&
         numValue > Number(constraint.max)
       ) {
-        return `Max: ${constraint.max}`;
+        return t("technologies.paramDialog.maxValue", { value: constraint.max });
       }
     }
 
@@ -739,6 +777,9 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       key: constraint.key,
       value: constraintValues[constraint.key],
     }));
+    if (fuelCarrier) {
+      constraints.push({ key: "carrier_price_eur_mwh", value: carrierPrice(fuelCarrier) });
+    }
 
     onSave(technology.key, constraints, false);
     setIsSaving(false);
@@ -769,6 +810,9 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
       key: constraint.key,
       value: constraintValues[constraint.key],
     }));
+    if (fuelCarrier) {
+      constraints.push({ key: "carrier_price_eur_mwh", value: carrierPrice(fuelCarrier) });
+    }
 
     onSave(technology.key, constraints, true);
     setIsSaving(false);
@@ -782,7 +826,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
   if (!technology) return null;
 
   const IconComponent = iconMap[technology.icon] || Settings2;
-  const buildingType = building?.get("type") || "Unknown";
+  const buildingType = building?.get("type") || t("common.unknown");
   const buildingOsmId = building?.get("osm_id") || "";
 
   // Categorize constraints
@@ -799,6 +843,8 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     const description = getDescription(constraint.key, translatedName, constraint.description);
     const isDisabled = disabledFields.has(constraint.key);
     const isInfinityField = infinityFields.has(constraint.key);
+    const operateFields = OPERATE_SIZE_FIELDS[technology.type || technology.key] ?? [];
+    const needsSize = runMode === "operate" && operateFields.includes(constraint.key) && !isFiniteValue(value);
 
     // Check if it's a dropdown (use dynamic options if available)
     const options = dynamicOptions[constraint.key] || constraint.options;
@@ -867,7 +913,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             <SelectTrigger
               className={`w-full h-8 px-2 bg-background border rounded text-xs text-foreground focus:ring-1 focus:ring-ring ${error ? "border-red-500" : "border-border"}`}
             >
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t("technologies.paramDialog.selectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {options?.map((opt) => (
@@ -885,7 +931,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <input
           type={typeof constraint.default_value === "number" ? "number" : "text"}
           value={displayValue ?? ""}
-          placeholder={isInfinityField ? "Infinity" : ""}
+          placeholder={isInfinityField ? t("technologies.paramDialog.infinity") : ""}
           disabled={isDisabled}
           onChange={(e) => {
             const raw = e.target.value;
@@ -904,7 +950,11 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     };
 
     return (
-      <tr key={constraint.key} className="hover:bg-muted/30 transition-colors">
+      <tr
+        key={constraint.key}
+        data-operate-missing={needsSize || undefined}
+        className={needsSize ? "bg-red-50 ring-2 ring-inset ring-red-500 dark:bg-red-950/40" : "hover:bg-muted/30 transition-colors"}
+      >
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
             <div>
@@ -943,6 +993,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
         <td className="px-3 py-2.5">
           {renderControl()}
           {error && <p className="text-[10px] text-red-500 text-right mt-0.5">{error}</p>}
+          {needsSize && <p className="text-[10px] font-medium text-red-600 text-right mt-0.5">{t("simulation.runMode.fieldNeeded")}</p>}
         </td>
         <td className="px-3 py-2.5 text-right">
           <span className="text-xs text-muted-foreground">{constraint.unit || "—"}</span>
@@ -973,16 +1024,16 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             <thead>
               <tr className="bg-muted/50">
                 <th className="px-3 py-2 text-left text-[11px] font-semibold text-foreground">
-                  Parameter
+                  {t("technologies.form.parameter")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-32">
-                  Value
+                  {t("results.chartLabels.value")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-20">
-                  Unit
+                  {t("technologies.form.unit")}
                 </th>
                 <th className="px-3 py-2 text-right text-[11px] font-semibold text-foreground w-24">
-                  Range
+                  {t("technologies.form.range")}
                 </th>
               </tr>
             </thead>
@@ -1005,7 +1056,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
     >
       <AlertDialogContent ref={contentRef} className="sm:max-w-2xl p-5">
         <AlertDialogDescription className="sr-only">
-          Configure technology parameters for this building
+          {t("technologies.paramDialog.description")}
         </AlertDialogDescription>
         <Button
           ref={closeButtonRef}
@@ -1028,26 +1079,43 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
           <AlertDialogDescription className="mt-1">
             {technology.description}
             <span className="block text-xs mt-1.5 text-muted-foreground/70">
-              Applying to:{" "}
-              <span className="font-medium">{showApplyToAll ? "All Buildings" : buildingType}</span>{" "}
-              {showApplyToAll ? "" : `(OSM: ${buildingOsmId})`}
+              {t("technologies.paramDialog.applyingTo")}{" "}
+              <span className="font-medium">{showApplyToAll ? t("technologies.paramDialog.allBuildings") : buildingType}</span>{" "}
+              {showApplyToAll ? "" : t("technologies.paramDialog.osmId", { id: buildingOsmId })}
             </span>
+            {fuelCarrier && (
+              <span className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground/70">
+                <Flame className="w-3 h-3 text-amber-500" />
+                <span className="font-medium text-foreground">{fuelCarrier}</span>
+                <span>{t("technologies.paramDialog.fuelPrice", { price: carrierPrice(fuelCarrier) })}</span>
+              </span>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="relative max-h-[55dvh] overflow-visible border-y border-border py-4">
-          <div className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
+          <div ref={scrollRef} onScroll={updateHiddenFlagged} className="max-h-[50dvh] overflow-auto no-scrollbar pr-2">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Parameters</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("technologies.parameters")}</h3>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                {technology.constraints.length} total
+                {t("technologies.paramDialog.totalCount", { count: technology.constraints.length })}
               </span>
             </div>
 
-            {renderSection("Configuration", configConstraints)}
-            {renderSection("Constraints", contConstraints)}
-            {renderSection("Costs", costConstraints)}
+            {renderSection(t("results.configuration"), configConstraints)}
+            {renderSection(t("technologies.paramDialog.constraints"), contConstraints)}
+            {renderSection(t("results.buildingDetail.costs"), costConstraints)}
           </div>
+          {hiddenFlagged.count > 0 && (
+            <button
+              type="button"
+              onClick={() => flaggedOutOfView()[0]?.scrollIntoView({ block: "center", behavior: "smooth" })}
+              className="absolute bottom-1 left-1/2 z-10 flex -translate-x-1/2 cursor-pointer items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white shadow-md hover:bg-red-700"
+            >
+              {t("simulation.runMode.moreFieldsNeeded", { count: hiddenFlagged.count })}
+              {hiddenFlagged.above ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
 
         <AlertDialogFooter className="pt-4 gap-3">
@@ -1057,7 +1125,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
             onClick={handleClose}
             className="rounded-xl cursor-pointer text-sm h-10 px-5 font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="default"
@@ -1067,7 +1135,7 @@ export const TechParameterDialog: FC<TechParameterDialogProps> = ({
           >
             {(() => {
               if (isSaving) return <Loader2 className="w-4 h-4 animate-spin" />;
-              return showApplyToAll ? "Apply to All Buildings" : "Apply Technology";
+              return showApplyToAll ? t("technologies.paramDialog.applyToAllBuildings") : t("technologies.paramDialog.applyTechnology");
             })()}
           </Button>
         </AlertDialogFooter>

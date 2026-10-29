@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   Send,
-  MessageSquare,
   Bug,
   Lightbulb,
   Star,
@@ -32,12 +31,18 @@ import {
   ChevronUp,
   Shield,
   Loader2,
+  Info,
 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth-store";
 import axios from "@/lib/axios";
 import { useTranslation } from "@spatialhub/i18n";
+import SectionShell from "@/components/ui/SectionShell";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
+import { OPEN_RUN_REPORTS_KEY, RUN_REPORT_STATE_KEY, type RunReportTarget } from "./runReport";
 
 // Types
 interface FeedbackFormData {
@@ -119,6 +124,15 @@ const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080, quality = 
     img.src = url;
   });
 
+/** The message shown when submitting the form fails with error. */
+const submitErrorMessage = (error: unknown, t: ReturnType<typeof useTranslation>["t"]): string => {
+  const status = error && typeof error === 'object' && 'response' in error ? (error as { response?: { status?: number } }).response?.status : undefined;
+  if (status === 413) return t("feedback.errors.payloadTooLarge", "The attachment is too large. Please use smaller images.");
+  if (status === 409) return t("feedback.errors.alreadyReported");
+  if (error instanceof Error) return error.message;
+  return t("feedback.errors.submitFailed");
+};
+
 const ALERT_STYLES = {
   success: "bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200",
   error: "bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200",
@@ -198,7 +212,8 @@ const Snackbar: React.FC<SnackbarState & { onClose: () => void }> = ({
 };
 
 const SuccessScreen: React.FC<{ t: (key: string) => string }> = ({ t }) => (
-  <div className="max-w-2xl mx-auto p-6 animate-fade-in">
+  <SectionShell title={t("feedback.title")} subtitle={t("feedback.subtitle")}>
+    <div className="md-scope max-w-2xl mx-auto p-6 animate-fade-in">
     <div className="bg-card text-card-foreground rounded-xl p-8 shadow-sm border border-border text-center">
       <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center mx-auto mb-5">
         <CheckCircle className="w-7 h-7 text-primary-foreground" />
@@ -211,7 +226,8 @@ const SuccessScreen: React.FC<{ t: (key: string) => string }> = ({ t }) => (
         {t("feedback.success.reference")}: FB-{Date.now().toString().slice(-6)}
       </p>
     </div>
-  </div>
+    </div>
+  </SectionShell>
 );
 
 const FormSection: React.FC<{
@@ -219,14 +235,14 @@ const FormSection: React.FC<{
   required?: boolean;
   children: React.ReactNode;
 }> = ({ title, required, children }) => (
-  <div className="bg-card text-card-foreground rounded-xl p-5 shadow-sm border border-border">
+  <section className="space-y-3">
     {title && (
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+      <h3 className="text-sm font-semibold text-foreground">
         {title} {required && <span className="text-red-500">*</span>}
       </h3>
     )}
     {children}
-  </div>
+  </section>
 );
 
 // Types for user feedback history
@@ -285,7 +301,7 @@ const MyFeedbackHistory: React.FC<{ userId: string; refreshTrigger: number }> = 
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-6">
+    <div className="md-rise mb-6" style={{ animationDelay: "60ms" }}>
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -296,7 +312,7 @@ const MyFeedbackHistory: React.FC<{ userId: string; refreshTrigger: number }> = 
       </button>
 
       {expanded && (
-        <div className="space-y-2">
+        <div className="md-fade-in space-y-2">
           {items.map(item => {
             const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
             const statusKey = item.status === "in_progress" ? "in_progress" : item.status;
@@ -352,12 +368,18 @@ export const FeedbackComponent: React.FC = () => {
   useDocumentTitle(t('feedback.title'));
   
   const { user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { showSuccess } = useNotification();
+  const reportRun = (location.state as Record<string, RunReportTarget | undefined> | null)?.[RUN_REPORT_STATE_KEY];
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const [feedbackData, setFeedbackData] = useState<FeedbackFormData>({
-    category: "",
-    subject: "",
+    category: reportRun ? "bug" : "general",
+    // feedbacks.subject holds 255 characters.
+    subject: reportRun ? `${reportRun.stage ? t(`modelStatus.failedAt.${reportRun.stage}`) : t("model.failed")}: ${reportRun.title}`.slice(0, 255) : "",
     message: "",
     rating: 0,
     images: [],
@@ -588,6 +610,9 @@ export const FeedbackComponent: React.FC = () => {
       formData.append('category', feedbackData.category);
       formData.append('subject', feedbackData.subject);
       formData.append('message', feedbackData.message);
+      if (reportRun) {
+        formData.append('model_id', String(reportRun.id));
+      }
       formData.append('rating', feedbackData.rating.toString());
       for (const image of feedbackData.images) {
         formData.append('images', image);
@@ -600,6 +625,12 @@ export const FeedbackComponent: React.FC = () => {
       });
 
       if (data.success) {
+        if (reportRun) {
+          queryClient.invalidateQueries({ queryKey: OPEN_RUN_REPORTS_KEY });
+          showSuccess(t("model.failure.reportedHint"));
+          navigate("/app/model-dashboard", { replace: true });
+          return;
+        }
         setSubmitted(true);
         setHistoryRefresh(prev => prev + 1);
         setSnackbar({
@@ -611,7 +642,7 @@ export const FeedbackComponent: React.FC = () => {
         // Reset form after 3 seconds
         setTimeout(() => {
           setFeedbackData({
-            category: "",
+            category: "general",
             subject: "",
             message: "",
             rating: 0,
@@ -625,15 +656,9 @@ export const FeedbackComponent: React.FC = () => {
       }
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error("Error submitting feedback:", error);
-      let message = t("feedback.errors.submitFailed");
-      if (error && typeof error === 'object' && 'response' in error && (error as { response?: { status?: number } }).response?.status === 413) {
-        message = t("feedback.errors.payloadTooLarge", "The attachment is too large. Please use smaller images.");
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
       setSnackbar({
         open: true,
-        message,
+        message: submitErrorMessage(error, t),
         severity: "error",
       });
     } finally {
@@ -641,76 +666,46 @@ export const FeedbackComponent: React.FC = () => {
     }
   };
 
-  const isFormValid = feedbackData.category && feedbackData.subject && feedbackData.message;
+  const isFormValid = feedbackData.category && feedbackData.subject && (feedbackData.message || reportRun);
 
   if (submitted) {
     return <SuccessScreen t={t} />;
   }
 
-  // Category config with translated labels
-  const getCategoryConfig = (key: CategoryKey) => ({
-    icon: CATEGORY_ICONS[key],
+  // Categories double as the left-rail items, matching the Legal tab rail.
+  const categoryTabs = (Object.keys(CATEGORY_ICONS) as CategoryKey[]).map((key) => ({
+    key,
     label: t(`feedback.categories.${key}`),
-    description: t(`feedback.categories.${key}Description`)
-  });
+    icon: CATEGORY_ICONS[key],
+  }));
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-background text-foreground">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black rounded-xl p-6 mb-6 text-white shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
-            <MessageSquare className="w-6 h-6" />
+    <SectionShell
+      title={t("feedback.title")}
+      subtitle={t("feedback.subtitle")}
+      tabs={categoryTabs}
+      activeTab={feedbackData.category}
+      onTabChange={(key) => updateField("category", key)}
+    >
+      <div className="container mx-auto px-4 py-8 text-foreground">
+        <header className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="flex h-8 w-8 items-center justify-center text-primary">
+              {CATEGORY_ICONS[feedbackData.category as CategoryKey]}
+            </span>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t(`feedback.categories.${feedbackData.category}`)}
+            </h1>
           </div>
-          <div>
-            <h1 className="text-xl font-bold">{t("feedback.title")}</h1>
-            <p className="text-gray-300 text-sm">{t("feedback.subtitle")}</p>
-          </div>
-        </div>
-      </div>
+          <p className="text-sm text-muted-foreground">
+            {t(`feedback.categories.${feedbackData.category}Description`)}
+          </p>
+        </header>
 
       {/* My Feedback History */}
       {user?.id && <MyFeedbackHistory userId={String(user.id)} refreshTrigger={historyRefresh} />}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Category Selection */}
-        <FormSection title={t("feedback.category")} required>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {(Object.keys(CATEGORY_ICONS) as CategoryKey[]).map((key) => {
-                const config = getCategoryConfig(key);
-                const isSelected = feedbackData.category === key;
-                
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => updateField("category", key)}
-                    className={`
-                      p-4 rounded-xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left
-                      ${isSelected 
-                        ? 'border-primary bg-accent' 
-                        : 'border-border hover:border-muted-foreground bg-card'
-                      }
-                    `}
-                  >
-                    <div className={`p-2 rounded-lg inline-flex mb-2 ${isSelected ? 'bg-primary' : 'bg-muted'}`}>
-                      <span className={isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}>
-                        {config.icon}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground">
-                      {config.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {config.description}
-                    </p>
-                  </button>
-                );
-              }
-            )}
-          </div>
-        </FormSection>
-
+      <form onSubmit={handleSubmit} className="md-rise space-y-4" style={{ animationDelay: "120ms" }}>
         {/* Subject */}
         <FormSection title={t("feedback.subject")} required>
           <input
@@ -724,7 +719,7 @@ export const FeedbackComponent: React.FC = () => {
         </FormSection>
 
         {/* Message with Markdown Editor */}
-        <FormSection title={t("feedback.message")} required>
+        <FormSection title={t("feedback.message")} required={!reportRun}>
           <div className="border border-border rounded-lg overflow-hidden">
             {/* Toolbar */}
             <div className="flex items-center justify-between border-b border-border bg-muted/30 px-2 py-1.5">
@@ -813,7 +808,7 @@ export const FeedbackComponent: React.FC = () => {
                   onChange={(e) => updateField("message", e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={t("feedback.messagePlaceholder")}
-                  required
+                  required={!reportRun}
                   rows={10}
                   className="w-full px-4 py-3 bg-background dark:bg-input text-foreground placeholder-muted-foreground resize-y min-h-[200px] focus:outline-none text-sm font-mono leading-relaxed"
                 />
@@ -931,16 +926,17 @@ export const FeedbackComponent: React.FC = () => {
           </div>
         </FormSection>
 
-        {/* Rating */}
-        <FormSection title={t("feedback.rating")}>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{t("feedback.ratingDescription")}</span>
-            <Rating 
-              value={feedbackData.rating} 
-              onChange={(value) => updateField("rating", value)} 
-            />
-          </div>
-        </FormSection>
+        {!reportRun && (
+          <FormSection title={t("feedback.rating")}>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">{t("feedback.ratingDescription")}</span>
+              <Rating 
+                value={feedbackData.rating} 
+                onChange={(value) => updateField("rating", value)} 
+              />
+            </div>
+          </FormSection>
+        )}
 
         {/* Submit */}
         <FormSection title="">
@@ -951,6 +947,13 @@ export const FeedbackComponent: React.FC = () => {
                 <div className="w-full bg-muted rounded-full h-1.5">
                   <div className="bg-primary h-1.5 rounded-full animate-pulse w-2/3" />
                 </div>
+              </div>
+            )}
+
+            {reportRun && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 px-3.5 py-3 text-sm text-foreground/90">
+                <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span>{t("feedback.runReport.attached")}</span>
               </div>
             )}
 
@@ -977,7 +980,7 @@ export const FeedbackComponent: React.FC = () => {
         {...snackbar}
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       />
-    </div>
+      </div>
+    </SectionShell>
   );
 };
-

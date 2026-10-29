@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { config } from '@/configuration/app';
-import { useAuthStore } from '@/store/auth-store';
+import { useEffect, useState, useCallback } from 'react';
+import { subscribeNotifications } from '@/features/notifications/notificationStream';
 
 interface BrowserNotification {
   id: number;
@@ -33,25 +32,9 @@ const focusWindow = (): void => {
   maybeWindow.focus?.();
 };
 
-const buildStreamUrl = (): string => {
-  const base = config.api.baseUrl || '/api';
-  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${normalizedBase}/notifications/stream`;
-};
-
 export const useBrowserNotifications = (enabled: boolean, useInAppPanel = true) => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
-  const [isConnected, setIsConnected] = useState(false);
   const [currentNotification, setCurrentNotification] = useState<InAppNotification | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearReconnectTimeout = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-  }, []);
 
   const requestPermission = useCallback(async () => {
     if (!hasNotificationSupport()) {
@@ -142,93 +125,12 @@ export const useBrowserNotifications = (enabled: boolean, useInAppPanel = true) 
     }
   }, [permission, showNotification, useInAppPanel]);
 
-  const closeEventSource = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.removeEventListener('notification', handleNotificationEvent as EventListener);
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    setIsConnected(false);
-  }, [handleNotificationEvent]);
-
-  const connectSSE = useCallback(() => {
-    // Connect if enabled, regardless of notification permission when using in-app panel
-    if (!enabled) {
-      return;
-    }
-    
-    // Don't connect if user is not authenticated
-    const user = useAuthStore.getState().user;
-    if (!user) {
-      return;
-    }
-    
-    // Only require permission when not using in-app panel
-    if (!useInAppPanel && permission !== 'granted') {
-      return;
-    }
-
-    try {
-      const streamUrl = buildStreamUrl();
-      const eventSource = new EventSource(streamUrl, {
-        withCredentials: true,
-      });
-
-      eventSource.onopen = () => {
-        setIsConnected(true);
-      };
-
-      eventSource.addEventListener('notification', handleNotificationEvent as EventListener);
-
-      eventSource.onerror = () => {
-        setIsConnected(false);
-        eventSource.removeEventListener('notification', handleNotificationEvent as EventListener);
-        eventSource.close();
-        clearReconnectTimeout();
-        
-        // Only reconnect if user is still authenticated
-        const user = useAuthStore.getState().user;
-        if (!user) {
-          return;
-        }
-        
-        reconnectTimeoutRef.current = setTimeout(() => {
-          // Double-check user is still authenticated before reconnecting
-          const currentUser = useAuthStore.getState().user;
-          if (currentUser) {
-            connectSSE();
-          }
-        }, 5000);
-      };
-
-      eventSourceRef.current = eventSource;
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Error connecting to SSE:', error);
-    }
-  }, [enabled, permission, useInAppPanel, handleNotificationEvent, clearReconnectTimeout]);
-
   useEffect(() => {
-    // Close if disabled
-    if (!enabled) {
-      closeEventSource();
-      clearReconnectTimeout();
-      return;
-    }
-    
-    // Close if not using in-app panel and no permission
-    if (!useInAppPanel && permission !== 'granted') {
-      closeEventSource();
-      clearReconnectTimeout();
-      return;
-    }
-
-    connectSSE();
-
-    return () => {
-      closeEventSource();
-      clearReconnectTimeout();
-    };
-  }, [enabled, permission, useInAppPanel, connectSSE, closeEventSource, clearReconnectTimeout]);
+    if (!enabled) return;
+    // Without the in-app panel, events are only shown as browser notifications.
+    if (!useInAppPanel && permission !== 'granted') return;
+    return subscribeNotifications(handleNotificationEvent);
+  }, [enabled, permission, useInAppPanel, handleNotificationEvent]);
 
   useEffect(() => {
     if (hasNotificationSupport()) {
@@ -244,7 +146,6 @@ export const useBrowserNotifications = (enabled: boolean, useInAppPanel = true) 
     permission,
     requestPermission,
     showNotification,
-    isConnected,
     isSupported: hasNotificationSupport(),
     currentNotification,
     clearNotification,

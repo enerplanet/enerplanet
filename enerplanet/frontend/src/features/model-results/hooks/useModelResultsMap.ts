@@ -8,6 +8,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
+import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
 import type { Geometry } from 'ol/geom';
 import { fromLonLat, toLonLat } from 'ol/proj';
@@ -19,6 +20,7 @@ import {
 } from '@/features/interactive-map/utils/mapStyleUtils';
 import { loadGridLayers, removeGridLayers, fitToFeatures } from '@/features/configurator/utils/gridLayerUtils';
 import { getFeatureFClasses, getPrimaryFClass } from '@/features/configurator/utils/fClassUtils';
+import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from '@/features/configurator/utils/heatDemand';
 import { ModelInfo, ModelResults } from '@/features/model-results/types';
 import { BuildingResultData, BusStatusData } from '@/features/model-results/components/map/ResultsMapTypes';
 
@@ -37,6 +39,10 @@ export interface MapTooltipData {
   fClasses?: string[];
   area?: number;
   yearlyDemandKwh?: number;
+  /** Yearly heat demand (kWh) — mirrored from backend TABULA estimate or props.demand_heat. */
+  yearlyHeatDemandKwh?: number;
+  /** True when heat demand is estimated locally. */
+  heatDemandEstimated?: boolean;
   techs?: Record<string, unknown>;
 }
 
@@ -199,6 +205,7 @@ const createTransformerTooltip = (
 const createBuildingTooltip = (pixel: number[], props: any): MapTooltipData => {
   const fClasses = getFeatureFClasses(props);
   const primary = getPrimaryFClass(props) || 'unknown';
+  const heat = estimateYearlyHeatDemand(primary, props.area, explicitHeatDemandKwh(props));
   return {
     x: pixel[0],
     y: pixel[1],
@@ -209,6 +216,8 @@ const createBuildingTooltip = (pixel: number[], props: any): MapTooltipData => {
     fClasses,
     area: props.area,
     yearlyDemandKwh: props.yearly_demand_kwh || props.demand_energy,
+    yearlyHeatDemandKwh: heat.kwh,
+    heatDemandEstimated: heat.estimated,
     techs: props.techs,
   };
 };
@@ -222,6 +231,12 @@ interface UseModelResultsMapOptions {
   busStatusData?: BusStatusData[];
   showBusMarkers?: boolean;
   highlightedBuildings?: string[] | null;
+  /**
+   * Data-driven connection layer: one straight wire segment per connection
+   * (bus0 -> bus1) in EPSG:4326, with an `overloaded` property. Drawn on the 2D
+   * map; red when the connection's peak utilisation exceeds 100%.
+   */
+  connectionGeoJSON?: GeoJSON.FeatureCollection | null;
 }
 
 export const useModelResultsMap = ({
@@ -233,12 +248,14 @@ export const useModelResultsMap = ({
   busStatusData,
   showBusMarkers = false,
   highlightedBuildings,
+  connectionGeoJSON,
 }: UseModelResultsMapOptions) => {
   const { map } = useMapStore();
   const layersRef = useRef<VectorLayer<VectorSource>[]>([]);
   const polygonLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const buildingSourceRef = useRef<VectorSource | null>(null);
   const busLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const connectionLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Use state for hovered transformer (like AreaSelect) to prevent blinking
   const [hoveredTransformerId, setHoveredTransformerId] = useState<number | null>(null);
@@ -420,6 +437,47 @@ export const useModelResultsMap = ({
     };
   }, [map, showBusMarkers, busStatusData, results?.coordinates, highlightedBuildings]);
 
+  // Data-driven connection layer: each wire drawn as a straight segment between
+  // its two node coordinates (bus0 -> bus1), red when its peak utilisation
+  // exceeds 100%. Above the base grid layers, below the bus markers.
+  useEffect(() => {
+    if (!map) return;
+
+    if (connectionLayerRef.current) {
+      map.removeLayer(connectionLayerRef.current);
+      connectionLayerRef.current = null;
+    }
+
+    if (!connectionGeoJSON?.features?.length) return;
+
+    const source = new VectorSource();
+    connectionGeoJSON.features.forEach(feature => {
+      const geom = feature.geometry;
+      if (!geom || geom.type !== 'LineString') return;
+      const projected = (geom.coordinates as [number, number][]).map(c => fromLonLat(c));
+      const lineFeature = new Feature({ geometry: new LineString(projected) });
+      const overloaded = (feature.properties as Record<string, unknown> | null)?.overloaded === true;
+      lineFeature.setStyle(new Style({
+        stroke: new Stroke({
+          color: overloaded ? '#ef4444' : '#64748b',
+          width: overloaded ? 4 : 2.5,
+        }),
+        zIndex: overloaded ? 20 : 10,
+      }));
+      source.addFeature(lineFeature);
+    });
+
+    connectionLayerRef.current = new VectorLayer({ source, zIndex: 150 });
+    map.addLayer(connectionLayerRef.current);
+
+    return () => {
+      if (connectionLayerRef.current) {
+        map.removeLayer(connectionLayerRef.current);
+        connectionLayerRef.current = null;
+      }
+    };
+  }, [map, connectionGeoJSON]);
+
   // Click and hover handlers
   useEffect(() => {
     if (!map) return;
@@ -450,6 +508,7 @@ export const useModelResultsMap = ({
         let match: CoordinateMatch = { locationId: undefined, techs: [], totalDemand: 0, totalProduction: 0 };
         const yearlyDemandKwh = toFiniteNumber(props.yearly_demand_kwh ?? props.demand_energy);
         const peakLoadKw = toFiniteNumber(props.peak_load_kw ?? props.peak_load);
+        const heat = estimateYearlyHeatDemand(primaryFClass, props.area, explicitHeatDemandKwh(props));
 
         if (results?.coordinates) {
           const geom = (clickedFeature as any).getGeometry();
@@ -487,6 +546,8 @@ export const useModelResultsMap = ({
           techConfig: props.techs,
           // Energy demand
           yearlyDemandKwh,
+          yearlyHeatDemandKwh: heat.kwh,
+          heatDemandEstimated: heat.estimated,
           peakLoadKw,
           // Building enrichment (3D BAG for NL, EUBUCCO for DE/AT/others)
           bagId: props.bag_id,

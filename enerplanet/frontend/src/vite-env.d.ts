@@ -1,10 +1,29 @@
 /// <reference types="vite/client" />
 
 import "react";
+
+// Mirror @radix-ui/react-primitive's CSSProperties augmentation so the two
+// React type instances (libs/ + frontend/) stay structurally identical.
 declare module "react" {
   interface CSSProperties {
     [varName: `--radix-${string}`]: string | number | undefined | null;
   }
+}
+
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string;
+  readonly VITE_SSO_ENABLED?: string;
+  readonly VITE_KEYCLOAK_URL?: string;
+  readonly VITE_KEYCLOAK_REALM?: string;
+  readonly VITE_KEYCLOAK_CLIENT_ID?: string;
+  readonly VITE_KEYCLOAK_IDP_HINT?: string;
+  readonly VITE_KEYCLOAK_REDIRECT_URI?: string;
+  readonly VITE_CARTO_BASEMAP_API_KEY?: string;
+  readonly VITE_SHOW_RESULT_GAPS?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }
 
 // Allow importing CSS modules without TS errors

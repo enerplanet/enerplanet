@@ -1,5 +1,9 @@
 import { Info } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 
 interface ParameterInfoTooltipProps {
@@ -8,9 +12,6 @@ interface ParameterInfoTooltipProps {
   description?: string;
 }
 
-// TODO: Replace this map with a key registry file (src/locales/i18n-keys.ts)
-// that lists all dynamic keys as literal t() calls so i18next-parser can detect them.
-// Then simplify usage to: t(`parameters.${paramKey}`)
 // Parameter description keys for translation
 const parameterDescriptionKeys: Record<string, string> = {
   cont_energy_cap_max: "parameters.cont_energy_cap_max",
@@ -41,20 +42,15 @@ export default function ParameterInfoTooltip({
   description,
 }: Readonly<ParameterInfoTooltipProps>) {
   const { t } = useTranslation();
-
+  
   const getDescription = (key: string, aliasText: string, customDescription?: string): string => {
     if (customDescription) return customDescription;
     if (parameterDescriptionKeys[key]) {
-      return t(parameterDescriptionKeys[key], {
-        defaultValue: `${aliasText} - Configure this parameter based on your technology specifications.`,
-      });
+      return t(parameterDescriptionKeys[key], { defaultValue: `${aliasText} - Configure this parameter based on your technology specifications.` });
     }
-    return t("parameters.defaultDescription", {
-      alias: aliasText,
-      defaultValue: `${aliasText} - Configure this parameter based on your technology specifications.`,
-    });
+    return t('parameters.defaultDescription', { alias: aliasText, defaultValue: `${aliasText} - Configure this parameter based on your technology specifications.` });
   };
-
+  
   const tooltipDescription = getDescription(paramKey, alias, description);
 
   return (
@@ -64,8 +60,8 @@ export default function ParameterInfoTooltip({
           <Info className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </TooltipTrigger>
-      <TooltipContent
-        side="top"
+      <TooltipContent 
+        side="top" 
         className="max-w-xs p-3 bg-popover border border-border rounded-lg shadow-lg"
       >
         <div className="space-y-1.5">

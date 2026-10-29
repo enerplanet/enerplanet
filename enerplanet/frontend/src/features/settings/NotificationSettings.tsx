@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Smartphone, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@spatialhub/ui";
 import { settingsService } from "@/features/settings/services/settings";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -97,8 +98,22 @@ const NotificationSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-4">
-        <div className="text-xs text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
+      <div className="space-y-2">
+        <span className="sr-only">{t('common.loading')}</span>
+        {[0, 1].map((i) => (
+          <div key={i} className="px-2.5 py-2 rounded-md border border-border bg-card">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="md-skeleton h-6 w-6 rounded bg-muted" style={{ animationDelay: `${i * 90}ms` }} />
+                <div className="space-y-1.5">
+                  <div className="md-skeleton h-2.5 w-24 rounded bg-muted" style={{ animationDelay: `${i * 90}ms` }} />
+                  <div className="md-skeleton h-2 w-32 rounded bg-muted" style={{ animationDelay: `${i * 90 + 45}ms` }} />
+                </div>
+              </div>
+              <div className="md-skeleton h-5 w-9 rounded-full bg-muted" style={{ animationDelay: `${i * 90}ms` }} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -107,7 +122,7 @@ const NotificationSettings: React.FC = () => {
     <div className="space-y-2">
       {/* Status indicator */}
       {saved && (
-        <div className="flex items-center gap-1.5 text-green-600 text-[10px] bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+        <div className="md-fade-in flex items-center gap-1.5 text-green-600 text-[10px] bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
           <CheckCircle2 className="w-3 h-3" />
           <span>{t('common.saved')}</span>
         </div>
@@ -117,7 +132,7 @@ const NotificationSettings: React.FC = () => {
       <div className="space-y-2">
         {/* Email Notifications */}
         <div className={cn(
-          "px-2.5 py-2 rounded-md border transition-all duration-200",
+          "md-row-in px-2.5 py-2 rounded-md border transition-all duration-200",
           emailNotifications 
             ? "border-primary/50 bg-muted/50" 
             : "border-border bg-card"
@@ -135,31 +150,22 @@ const NotificationSettings: React.FC = () => {
                 <p className="text-[10px] text-muted-foreground">{t('settings.notifications.notifyWhenComplete')}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleToggle('email')}
+            <Switch
+              checked={emailNotifications}
+              onCheckedChange={() => handleToggle('email')}
               disabled={saving}
-              className={cn(
-                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-                emailNotifications ? "bg-primary" : "bg-muted-foreground/30",
-                saving && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <span className={cn(
-                "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
-                emailNotifications ? "translate-x-5" : "translate-x-0.5"
-              )} />
-            </button>
+              aria-label={t('settings.notifications.email')}
+            />
           </div>
         </div>
 
         {/* Browser Notifications */}
         <div className={cn(
-          "px-2.5 py-2 rounded-md border transition-all duration-200",
+          "md-row-in px-2.5 py-2 rounded-md border transition-all duration-200",
           browserNotifications 
             ? "border-primary/50 bg-muted/50" 
             : "border-border bg-card"
-        )}>
+        )} style={{ animationDelay: "30ms" }}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className={cn(
@@ -181,21 +187,12 @@ const NotificationSettings: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleToggle('browser')}
+            <Switch
+              checked={browserNotifications}
+              onCheckedChange={() => handleToggle('browser')}
               disabled={saving || !isSupported}
-              className={cn(
-                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-                browserNotifications ? "bg-primary" : "bg-muted-foreground/30",
-                (saving || !isSupported) && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <span className={cn(
-                "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
-                browserNotifications ? "translate-x-5" : "translate-x-0.5"
-              )} />
-            </button>
+              aria-label={t('settings.notifications.browser')}
+            />
           </div>
         </div>
       </div>

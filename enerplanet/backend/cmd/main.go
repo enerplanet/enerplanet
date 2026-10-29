@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,32 +15,51 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"spatialhub_backend/internal/apitoken"
+	"spatialhub_backend/internal/bearerauth"
+	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/cache"
+	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/config"
 	"spatialhub_backend/internal/events"
+	"spatialhub_backend/internal/geo"
+	buemhandler "spatialhub_backend/internal/handler/buem"
+	city2tabulahandler "spatialhub_backend/internal/handler/city2tabula"
 	feedback "spatialhub_backend/internal/handler/feedback"
 	grouphandler "spatialhub_backend/internal/handler/group"
-	locationhandler "spatialhub_backend/internal/handler/location"
+	heatdemandhandler "spatialhub_backend/internal/handler/heatdemand"
+	"spatialhub_backend/internal/handler/ignis"
 	notificationshandler "spatialhub_backend/internal/handler/notifications"
+	pvhandler "spatialhub_backend/internal/handler/pv"
 	"spatialhub_backend/internal/handler/pylovo"
 	"spatialhub_backend/internal/handler/render"
 	settingshandler "spatialhub_backend/internal/handler/settings"
 	technologyhandler "spatialhub_backend/internal/handler/technology"
 	usershandler "spatialhub_backend/internal/handler/users"
 	"spatialhub_backend/internal/handler/weather"
+	ignisclient "spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
+	opentechdb "spatialhub_backend/internal/opentechdb"
+	"spatialhub_backend/internal/pv"
 	resulthandler "spatialhub_backend/internal/result/handler"
+	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/services"
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
+	modelstore "spatialhub_backend/internal/store/model"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
+	seriesstore "spatialhub_backend/internal/store/series"
+	usersstore "spatialhub_backend/internal/store/users"
+	"spatialhub_backend/internal/tentacron"
+	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
 	"spatialhub_backend/internal/worker"
 	workspacehandler "spatialhub_backend/internal/workspace/handler"
 
+	"platform.local/common/pkg/constants"
+	httpcheckclient "platform.local/common/pkg/httpclient"
 	"platform.local/common/pkg/httputil"
 	authplatform "platform.local/platform/auth"
 	platformconfig "platform.local/platform/config"
@@ -96,6 +116,8 @@ const (
 // @description     Unified API for the EnerPlanET energy planning platform.
 // @description     Includes native backend endpoints and proxied Pylovo (grid/boundary) services.
 
+// @host      localhost:8000
+// @schemes   http
 // @BasePath  /api
 
 // @securityDefinitions.apikey SessionAuth
@@ -107,6 +129,11 @@ const (
 // @in                         header
 // @name                       Authorization
 // @description API token obtained via POST /api/users/{userId}/tokens. Format: Bearer whf_xxx
+
+// @securityDefinitions.apikey SpatialHubBearer
+// @in header
+// @name Authorization
+// @description Bearer <SpatialHub access token>, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.
 
 func main() {
 	// Set GIN to release mode to disable debug messages
@@ -126,8 +153,32 @@ func main() {
 		return
 	}
 
+	if err := config.ValidateBuemVersion(cfg.BuemVersion); err != nil {
+		log.Errorf("%v", err)
+	}
 	platformconfig.SetupTimezone(cfg.AppTimezone, log)
 	serverAddr := fmt.Sprintf("%s:%s", cfg.AppHost, cfg.AppPort)
+
+	// The container HEALTHCHECK runs `/app/server --health-check` as a separate
+	// process inside the running container.
+	if len(os.Args) > 1 && os.Args[1] == "--health-check" {
+		healthy := false
+		if resp, err := httpcheckclient.New(fmt.Sprintf("http://127.0.0.1:%s", cfg.AppPort), httpcheckclient.WithTimeout(5 * time.Second)).DoBytes(context.Background(), "GET", "/api/health", nil, nil); err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+			healthy = true
+		} else if err != nil {
+			log.Printf("health check probe error: %v", err)
+		} else if resp == nil {
+			log.Println("health check probe: no response")
+		} else {
+			log.Printf("health check probe: unexpected status %v", resp.StatusCode)
+		}
+		if !healthy {
+			log.Printf("health check failed: server did not answer /api/health with %v", http.StatusOK)
+			os.Exit(1)
+		}
+		log.Info("health check ok")
+		os.Exit(0)
+	}
 
 	appDeps := initializeInfrastructure(cfg, log)
 	defer appDeps.Close()
@@ -162,6 +213,8 @@ type AppDependencies struct {
 	WebserviceClient    *webservice.Client
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
+	City2TabulaClient   *city2tabula.Client
+	TentacronClient     *tentacron.Client
 	Cfg                 *config.Config
 }
 
@@ -214,6 +267,7 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 		Queues: map[string]int{
 			"notifications": 5,
 			"results":       3,
+			"buem":          3,
 		},
 	})
 
@@ -236,12 +290,33 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 
 	notificationService := services.NewNotificationService(db, emailService, redisClient, nil)
 	webserviceClient := webservice.NewClient(cfg.WebserviceServiceURL)
+	tentacronClient := tentacron.New(cfg.TentacronServiceURL, cfg.TentacronAPIKey)
+	city2tabulaClient := city2tabula.NewClient(tentacronClient)
+	weatherClient := weatherclient.NewClient(tentacronClient)
+	buemClient := buem.NewClient(tentacronClient)
+	runBuemIgnisClient := ignisclient.NewClient(tentacronClient)
 
-	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient)
+	resultZipStore := jobs.NewFilesystemResultZipStore(constants.StorageDataDir)
+
+	// Coati runs as a subprocess (COATI_BIN or `coati` on PATH) behind the thin
+	// CoatiRunner interface; a sidecar HTTP impl can replace it later.
+	coatiRunner := resultservice.SubprocessCoatiRunner{}
+
+	taskProcessor := worker.NewTaskProcessor(db, redisClient, notificationService, webserviceClient, asynqClient, city2tabulaClient, weatherClient, cfg.WeatherProvider, cfg.BuemVersion, cfg.PVVersion, buemClient, runBuemIgnisClient, tentacronClient, resultZipStore, coatiRunner, cfg.MemeMaxJobMemoryMB)
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("broadcast_notification", taskProcessor.ProcessTask)
 	mux.HandleFunc("process_result", taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeRunBuem, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeResolveDemandProfiles, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeTriggerCity2TabulaRun, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMeme, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemeResult, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeDispatchMemePyPSA, taskProcessor.ProcessTask)
+	mux.HandleFunc(jobs.TypeIngestMemePyPSAResult, taskProcessor.ProcessTask)
 	mux.HandleFunc(jobs.TypeDomainEvent, taskProcessor.ProcessTask)
+
+	go startOrphanedRunSweep(db, jobs.AsynqLiveTasks{Inspector: asynq.NewInspector(asynqRedisOpt), Queues: []string{"buem", "results"}}, log)
+	go startSeriesSweep(db, log)
 
 	go func() {
 		if err := asynqServer.Run(mux); err != nil {
@@ -269,6 +344,8 @@ func initializeInfrastructure(cfg *config.Config, log *logrus.Logger) *AppDepend
 		WebserviceClient:    webserviceClient,
 		KeycloakCache:       keycloakCache,
 		SyncCache:           syncCache,
+		City2TabulaClient:   city2tabulaClient,
+		TentacronClient:     tentacronClient,
 		Cfg:                 cfg,
 	}
 }
@@ -330,6 +407,8 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 		WebserviceClient:    deps.WebserviceClient,
 		KeycloakCache:       deps.KeycloakCache,
 		SyncCache:           deps.SyncCache,
+		City2TabulaClient:   deps.City2TabulaClient,
+		TentacronClient:     deps.TentacronClient,
 	}
 	configureProtectedAPI(r, routeDeps)
 
@@ -342,6 +421,7 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 
 	r.Static("/assets", "./www/assets")
 	r.Static("/images", "./www/images")
+	r.Static("/brand", "./www/brand")
 	r.StaticFile("/vite.svg", "./www/vite.svg")
 
 	r.NoRoute(func(c *gin.Context) {
@@ -527,6 +607,11 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	// Swagger UI
 	api.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// OpenTech-DB proxy — public read-only access to technology catalogue
+	opentechDBClient := opentechdb.NewClient(cfg.OpenTechDBServiceURL)
+	api.Any("/opentech-db/*proxyPath", opentechdb.ProxyHandler(opentechDBClient))
+	api.Any("/opentech-db", opentechdb.ProxyHandler(opentechDBClient))
+
 	authProxy := platformproxy.MustNewHandler(cfg.AuthServiceURL, platformproxy.HandlerOptions{
 		Component:            "auth_proxy",
 		ForwardCookies:       true,
@@ -551,12 +636,12 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	regionStore := region.NewStore(db)
 	pylovoInstanceStore := pylovoinstance.NewStore(db)
 	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore)
-	api.GET("/v2/pylovo/boundary", pylovoHandler.GetBoundary)
-	api.GET("/v2/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
-	api.GET("/v2/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
+	api.GET("/v1/pylovo/boundary", pylovoHandler.GetBoundary)
+	api.GET("/v1/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
+	api.GET("/v1/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
 
 	// Public feedback endpoint (landing page contact form, no auth required)
-	publicFeedbackHandler := feedback.NewFeedbackHandler(db)
+	publicFeedbackHandler := feedback.NewFeedbackHandler(db, nil)
 	api.POST("/feedback/public", publicFeedbackHandler.CreatePublicFeedback)
 }
 
@@ -572,13 +657,20 @@ type RouteDeps struct {
 	WebserviceClient    *webservice.Client
 	KeycloakCache       *cache.KeycloakCacheService
 	SyncCache           *cache.SyncCacheService
+	City2TabulaClient   *city2tabula.Client
+	TentacronClient     *tentacron.Client
 }
 
 // configureProtectedAPI registers protected API routes that require a valid session.
 func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	protectedAPI := r.Group("/api")
-	// API tokens authenticate before session auth.
+	bearerVerifier, err := bearerauth.New(deps.Cfg.BearerAuth)
+	if err != nil {
+		panic(fmt.Sprintf("invalid bearer authentication configuration: %v", err))
+	}
+	// Tokens before sessions.
 	protectedAPI.Use(middleware.APITokenAuth(apitoken.NewService(apitokenstore.NewStore(deps.DB))))
+	protectedAPI.Use(middleware.BearerAuth(bearerVerifier))
 	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
 		AuthServiceURL:             deps.Cfg.AuthServiceURL,
 		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
@@ -586,11 +678,17 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 		IsProduction:               deps.Cfg.AppEnv == "production",
 	}))
 
+	protectedAPI.GET("/auth/whoami", middleware.WhoAmI(deps.Cfg.BearerAuth.Issuer))
+
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 
-	feedbackHandler := feedback.NewFeedbackHandler(deps.DB)
+	feedbackHandler := feedback.NewFeedbackHandler(deps.DB, services.FeedbackNotifier{
+		Notifications: deps.NotificationService,
+		Users:         usersstore.New(deps.Cfg),
+		Tokens:        deps.AdminTokenProvider,
+	})
 	usersHandler := usershandler.New(deps.Cfg, deps.DB, deps.SessionStore, deps.AdminTokenProvider)
 	settingsHandler := settingshandler.NewSettingsHandler(deps.DB)
 	notificationsHandler := notificationshandler.NewHandlerWithAsynqAndRedis(deps.DB, deps.AsynqClient, deps.RedisClient)
@@ -616,21 +714,34 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
-	weatherHandler := weather.NewWeatherHandler()
+	weatherHandler := weather.NewWeatherHandler(weatherclient.NewClient(deps.TentacronClient), deps.Cfg.WeatherProvider)
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
 	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
+	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient, modelstore.NewStore(deps.DB)))
+
+	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
+	registerIgnisRoutes(protectedAPI, ignisHandler)
 
 	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
-	locationHandler := locationhandler.NewLocationHandler(deps.DB)
-	registerLocationRoutes(protectedAPI, locationHandler)
+	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB), geo.NewNominatimResolver(deps.DB))
+	registerCity2TabulaRoutes(protectedAPI, city2tabulaHandler)
 
-	locationShareHandler := locationhandler.NewLocationShareHandler(deps.DB)
-	registerLocationShareRoutes(protectedAPI, locationShareHandler)
+	heatDemandHandler := heatdemandhandler.NewHandler(deps.TentacronClient)
+	registerHeatDemandRoutes(protectedAPI, heatDemandHandler)
+
+	buemHandler := buemhandler.NewHandler(deps.TentacronClient, deps.Cfg.WeatherProvider, seriesstore.NewStore(deps.DB), deps.Cfg.BuemVersion, modelHandler)
+	registerBuemRoutes(protectedAPI, buemHandler)
+
+	pvYields := jobs.PVResolver{
+		Weather: weatherclient.NewClient(deps.TentacronClient), WeatherProvider: deps.Cfg.WeatherProvider,
+		PV: pv.NewClient(deps.TentacronClient), Series: seriesstore.NewStore(deps.DB), Version: deps.Cfg.PVVersion,
+	}
+	protectedAPI.POST("/v1/pv/building-yield", pvhandler.NewHandler(pvYields).BuildingYield)
 
 	// Energy demand is calculated dynamically based on building area and type
 }
@@ -652,6 +763,9 @@ func registerTechnologyRoutes(api *gin.RouterGroup, handler *technologyhandler.H
 func registerProfileRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
 	api.GET("/users/profile", handler.GetProfile)
 	api.PUT("/users/profile", handler.UpdateProfile)
+	api.POST("/users/profile/tokens", handler.CreateUserToken)
+	api.GET("/users/profile/tokens", handler.ListUserTokens)
+	api.DELETE("/users/profile/tokens/:tokenId", handler.RevokeUserToken)
 }
 
 func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.SettingsHandler) {
@@ -678,16 +792,24 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {
 	api.POST("/feedback", handler.CreateFeedback)
-	api.GET("/feedback", handler.GetFeedbackList)
 	api.GET("/feedback/my", handler.GetMyFeedback)
-	api.GET("/feedback/search", handler.SearchFeedback)
-	api.GET("/feedback/stats", handler.GetFeedbackStats)
-	api.GET("/feedback/user/:user_id", handler.GetUserFeedback)
+	api.GET("/feedback/my/open-run-reports", handler.GetMyOpenRunReports)
+	// The image handlers let the feedback's author or an expert through.
 	api.GET(routeFeedbackByID+"/image", handler.GetFeedbackImage)
 	api.GET(routeFeedbackByID+"/images/:index", handler.GetFeedbackImageByIndex)
-	api.GET(routeFeedbackByID, handler.GetFeedbackByID)
-	api.PUT(routeFeedbackByID, handler.UpdateFeedback)
-	api.DELETE(routeFeedbackByID, handler.DeleteFeedback)
+
+	// These act on every user's feedback.
+	expert := api.Group("", middleware.RequireExpert())
+	expert.GET("/feedback", handler.GetFeedbackList)
+	expert.GET("/feedback/search", handler.SearchFeedback)
+	expert.GET("/feedback/stats", handler.GetFeedbackStats)
+	expert.GET("/feedback/unseen", handler.GetUnseenFeedback)
+	expert.GET("/feedback/user/:user_id", handler.GetUserFeedback)
+	expert.GET(routeFeedbackByID, handler.GetFeedbackByID)
+	expert.GET(routeFeedbackByID+"/run-report", handler.GetRunReport)
+	expert.POST(routeFeedbackByID+"/seen", handler.MarkFeedbackSeen)
+	expert.PUT(routeFeedbackByID, handler.UpdateFeedback)
+	expert.DELETE(routeFeedbackByID, handler.DeleteFeedback)
 }
 
 func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Handler) {
@@ -702,16 +824,26 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
 
-	// Per-user API tokens (managed by experts, or managers for their own users).
+	// Managed tokens
 	api.POST(routeUsersByID+"/tokens", handler.CreateUserToken)
 	api.GET(routeUsersByID+"/tokens", handler.ListUserTokens)
 	api.DELETE(routeUsersByID+"/tokens/:tokenId", handler.RevokeUserToken)
 }
 
+// registerWebserviceProxyRoutes serves the admin dashboard's simulation engine
+// view: managers and experts read it, only experts change a worker.
 func registerWebserviceProxyRoutes(api *gin.RouterGroup, client *webservice.Client) {
 	proxy := makeWebserviceProxyHandler(client)
-	api.Any("/webservices", proxy)
-	api.Any("/webservices/*proxyPath", proxy)
+	read := api.Group("", middleware.RequireManagerOrExpert())
+	write := api.Group("", middleware.RequireExpert())
+	for _, path := range []string{"/webservices", "/webservices/*proxyPath"} {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			read.Handle(method, path, proxy)
+		}
+		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+			write.Handle(method, path, proxy)
+		}
+	}
 }
 
 func registerNotificationRoutes(api *gin.RouterGroup, handler *notificationshandler.Handler) {
@@ -771,6 +903,13 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
+	api.POST(routeModelByID+"/analyse", modelHandler.AnalyseModel)
+	api.GET(routeModelByID+"/demand-profiles", modelHandler.GetModelDemandProfiles)
+	api.GET(routeModelByID+"/buildings/:building_ref/demand-profile", modelHandler.GetBuildingDemandProfile)
+	api.GET(routeModelByID+"/buildings/:building_ref/series/:series", modelHandler.GetBuildingSeriesWeek)
+	api.GET(routeModelByID+"/buildings/:building_ref/series.csv", modelHandler.GetBuildingSeriesCSV)
+	api.GET(routeModelByID+"/series.zip", modelHandler.GetModelSeriesZip)
+	api.POST(routeModelByID+"/series/claim-draft", modelHandler.ClaimDraftSeries)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
@@ -780,6 +919,8 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/download", resultHandler.DownloadModelResult)
 	api.POST(routeModelByID+"/reprocess-results", resultHandler.ReprocessModelResults)
 	api.POST("/calculation/start/:id", modelHandler.StartCalculation)
+	api.POST(routeModelByID+"/run-meme", modelHandler.StartMemeCalculation)
+	api.POST(routeModelByID+"/run-meme-pypsa", modelHandler.StartMemePyPSACalculation)
 	api.GET("/results/:id", resultHandler.GetResult)
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
 }
@@ -814,79 +955,150 @@ func registerWeatherRoutes(api *gin.RouterGroup, handler *weather.WeatherHandler
 	weatherRoutes := api.Group("/weather")
 	weatherRoutes.GET("", handler.GetWeather)
 	weatherRoutes.GET("/current", handler.GetCurrentWeather)
+	weatherRoutes.GET("/years", handler.GetYears)
+}
+
+// registerCity2TabulaRoutes wires the on-request 3D-data endpoints: the enrich
+// pair, which resolves City2TABULA envelope data for a drawn area's buildings
+// and is consumed by the Building Configurator, and the heat availability
+// check, which reports whether an area can be modelled before anything is
+// drawn against it. Neither is a proxy for City2TABULA's own API.
+func registerCity2TabulaRoutes(api *gin.RouterGroup, handler *city2tabulahandler.Handler) {
+	api.POST("/v1/city2tabula/enrich", handler.Enrich)
+	api.GET("/v1/city2tabula/enrich/:run_id", handler.EnrichStatus)
+	api.POST("/v1/city2tabula/enrich/area", handler.EnrichArea)
+	api.GET("/v1/city2tabula/geometry", handler.Geometry)
+	api.GET("/v1/city2tabula/surfaces", handler.Surfaces)
+	api.GET("/v1/city2tabula/pv-surfaces", handler.PVSurfaces)
+	api.GET("/v1/heat/availability", handler.Availability)
+}
+
+// registerHeatDemandRoutes wires the heat-demand resolve endpoint, which turns
+// the simple building form's inputs into an annual heating demand plus a source
+// flag. Stateless; not model-scoped yet (the ignis and BuEM paths add model
+// context when they land - see #50 / #57).
+func registerHeatDemandRoutes(api *gin.RouterGroup, handler *heatdemandhandler.Handler) {
+	api.POST("/v1/heat-demand/resolve", handler.Resolve)
+}
+
+// registerBuemRoutes wires the per-building BuEM run behind the building
+// configurator. The model path runs BuEM from the run_buem job instead; this is
+// the interactive one, and the only route that takes an envelope from the
+// caller rather than from City2TABULA.
+func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
+	api.POST("/v1/buem/building", handler.RunBuilding)
+	api.POST("/models/:id/buildings/:building_ref/buem", handler.RunModelBuilding)
+	api.POST("/drafts/:draft_id/buildings/:building_ref/buem", handler.RunDraftBuilding)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {
-	api.POST("/v2/pylovo/generate-grid", handler.GenerateGrid)
-	api.GET("/v2/pylovo/transformer-sizes", handler.GetTransformerSizes)
-	api.GET("/v2/pylovo/consumer-categories", handler.GetConsumerCategories)
-	api.POST("/v2/pylovo/grid-statistics", handler.GetGridStatistics)
-	api.POST("/v2/pylovo/cable-costs", handler.GetCableCosts)
-	api.POST("/v2/pylovo/power-flow", handler.RunPowerFlow)
-	api.GET("/v2/pylovo/cable-types", handler.GetCableTypes)
-	api.GET("/v2/pylovo/equipment-costs", handler.GetEquipmentCosts)
-	api.GET("/v2/pylovo/voltage-settings", handler.GetVoltageSettings)
-	api.POST("/v2/pylovo/custom-buildings", handler.AddCustomBuilding)
-	api.GET("/v2/pylovo/custom-buildings", handler.GetCustomBuildings)
-	api.DELETE("/v2/pylovo/custom-buildings/:id", handler.DeleteCustomBuilding)
-	api.POST("/v2/pylovo/estimate-energy", handler.EstimateEnergy)
-	api.POST("/v2/pylovo/estimate-energy-batch", handler.EstimateEnergyBatch)
+	api.POST("/v1/pylovo/generate-grid", handler.GenerateGrid)
+	api.POST("/v1/pylovo/building-count", handler.CountBuildings)
+	api.GET("/v1/pylovo/transformer-sizes", handler.GetTransformerSizes)
+	api.GET("/v1/pylovo/consumer-categories", handler.GetConsumerCategories)
+	api.POST("/v1/pylovo/grid-statistics", handler.GetGridStatistics)
+	api.POST("/v1/pylovo/cable-costs", handler.GetCableCosts)
+	api.POST("/v1/pylovo/power-flow", handler.RunPowerFlow)
+	api.GET("/v1/pylovo/cable-types", handler.GetCableTypes)
+	api.GET("/v1/pylovo/equipment-costs", handler.GetEquipmentCosts)
+	api.GET("/v1/pylovo/voltage-settings", handler.GetVoltageSettings)
+	api.POST("/v1/pylovo/custom-buildings", handler.AddCustomBuilding)
+	api.GET("/v1/pylovo/custom-buildings", handler.GetCustomBuildings)
+	api.DELETE("/v1/pylovo/custom-buildings/:id", handler.DeleteCustomBuilding)
+	api.POST("/v1/pylovo/estimate-energy", handler.EstimateEnergy)
+	api.POST("/v1/pylovo/estimate-energy-batch", handler.EstimateEnergyBatch)
 	// Transformer management routes
-	api.POST("/v2/pylovo/add-transformer", handler.AddTransformer)
-	api.POST("/v2/pylovo/delete-transformer", handler.DeleteTransformer)
-	api.POST("/v2/pylovo/move-transformer", handler.MoveTransformer)
-	api.POST("/v2/pylovo/assign-building", handler.AssignBuilding)
-	api.POST("/v2/pylovo/finalize-transformers", handler.FinalizeTransformers)
-	// Pipeline management routes
-	api.POST("/v2/pylovo/pipeline/run", handler.RunPipeline)
-	api.GET("/v2/pylovo/pipeline/status/:job_id", handler.GetPipelineStatus)
-	api.GET("/v2/pylovo/pipeline/regions", handler.GetPipelineRegions)
-	api.GET("/v2/pylovo/pipeline/history", handler.GetPipelineHistory)
-	api.GET("/v2/pylovo/pipeline/states/:country", handler.GetCountryStates)
-	api.DELETE("/v2/pylovo/pipeline/states/:country/:state", handler.DeleteStateData)
-	// Cached region management
-	api.GET("/v2/pylovo/regions/cached", handler.GetCachedRegions)
-	api.PATCH("/v2/pylovo/regions/cached/:id", handler.ToggleCachedRegion)
-	api.DELETE("/v2/pylovo/regions/cached/:id", handler.DeleteCachedRegion)
+	api.POST("/v1/pylovo/add-transformer", handler.AddTransformer)
+	api.POST("/v1/pylovo/delete-transformer", handler.DeleteTransformer)
+	api.POST("/v1/pylovo/move-transformer", handler.MoveTransformer)
+	api.POST("/v1/pylovo/assign-building", handler.AssignBuilding)
+	api.POST("/v1/pylovo/finalize-transformers", handler.FinalizeTransformers)
+	// The pipeline rebuilds and deletes PyLovo data for every user, and the
+	// cached-region writes change the regions everyone sees: experts only.
+	pipeline := api.Group("/v1/pylovo/pipeline", middleware.RequireExpert())
+	pipeline.POST("/run", handler.RunPipeline)
+	pipeline.GET("/status/:job_id", handler.GetPipelineStatus)
+	pipeline.GET("/regions", handler.GetPipelineRegions)
+	pipeline.GET("/history", handler.GetPipelineHistory)
+	pipeline.GET("/states/:country", handler.GetCountryStates)
+	pipeline.DELETE("/states/:country/:state", handler.DeleteStateData)
+	api.GET("/v1/pylovo/regions/cached", handler.GetCachedRegions)
+	cachedRegions := api.Group("/v1/pylovo/regions/cached", middleware.RequireExpert())
+	cachedRegions.PATCH("/:id", handler.ToggleCachedRegion)
+	cachedRegions.DELETE("/:id", handler.DeleteCachedRegion)
 	// Boundary routes are registered in configurePublicAPI (no auth required)
 }
 
+// registerSiteRoutes registers the site-mode routes; each checks the site's owner.
+func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
+	sites := api.Group("/v1/pylovo/sites")
+	sites.POST("", handler.CreateSite)
+	sites.GET("", handler.ListSites)
+	sites.GET("/:id", handler.GetSite)
+	sites.DELETE("/:id", handler.DeleteSite)
+	sites.POST("/:id/generate", handler.GenerateSite)
+	sites.GET("/:id/jobs/:job_id", handler.GetSiteJob)
+	sites.GET("/:id/grid", handler.GetSiteGrid)
+	sites.GET("/:id/transformers", handler.GetSiteTransformers)
+	sites.PUT("/:id/transformers", handler.PutSiteTransformers)
+}
+
+// registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
+func registerIgnisRoutes(api *gin.RouterGroup, handler *ignis.IgnisHandler) {
+	api.GET("/v1/ignis/variants/:country_iso2", handler.GetVariants)
+	api.GET("/v1/ignis/fields", handler.GetFieldMetadata)
+	api.GET("/v1/ignis/variants/:country_iso2/match", handler.MatchVariants)
+	api.GET("/v1/ignis/data/:code", handler.GetVariantData)
+	api.POST("/v1/ignis/calculate/:code", handler.Calculate)
+}
+
+// The PyLovo instance list decides where the backend sends PyLovo requests:
+// experts only.
 func registerPylovoManagementRoutes(api *gin.RouterGroup, handler *pylovo.ManagementHandler) {
-	api.GET("/pylovo-services", handler.List)
-	api.POST("/pylovo-services", handler.Create)
-	api.GET("/pylovo-services/summary", handler.GetSummary)
-	api.GET("/pylovo-services/:id", handler.GetByID)
-	api.PUT("/pylovo-services/:id", handler.Update)
-	api.DELETE("/pylovo-services/:id", handler.Delete)
-	api.GET("/pylovo-services/:id/ping", handler.Ping)
-	api.POST("/pylovo-services/:id/primary", handler.SetPrimary)
-	api.POST("/pylovo-services/:id/available", handler.MarkAvailable)
-	api.POST("/pylovo-services/:id/unavailable", handler.MarkUnavailable)
+	services := api.Group("/pylovo-services", middleware.RequireExpert())
+	services.GET("", handler.List)
+	services.POST("", handler.Create)
+	services.GET("/summary", handler.GetSummary)
+	services.GET("/:id", handler.GetByID)
+	services.PUT("/:id", handler.Update)
+	services.DELETE("/:id", handler.Delete)
+	services.GET("/:id/ping", handler.Ping)
+	services.POST("/:id/primary", handler.SetPrimary)
+	services.POST("/:id/available", handler.MarkAvailable)
+	services.POST("/:id/unavailable", handler.MarkUnavailable)
 }
 
-func registerLocationRoutes(api *gin.RouterGroup, handler *locationhandler.LocationHandler) {
-	locations := api.Group("/locations")
-	locations.GET("", handler.GetUserLocations)
-	locations.GET("/public", handler.GetPublicLocations)
-	locations.GET("/all", handler.GetAllAccessibleLocations)
-	locations.GET("/geojson", handler.GetUserLocationsGeoJSON)
-	locations.POST("", handler.CreateLocation)
-	locations.GET("/:id", handler.GetLocation)
-	locations.PUT("/:id", handler.UpdateLocation)
-	locations.DELETE("/:id", handler.DeleteLocation)
-	locations.POST("/:id/copy", handler.CopyLocation)
+// startOrphanedRunSweep fails, at startup and every five minutes, the models
+// a stopped backend left in a run status with no task to finish them.
+func startOrphanedRunSweep(db *gorm.DB, live jobs.AsynqLiveTasks, log *logrus.Logger) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		failed, err := jobs.FailOrphanedRuns(db, live, time.Now().UTC())
+		if err != nil {
+			log.Errorf("orphaned run sweep failed: %v", err)
+		} else if len(failed) > 0 {
+			log.Warnf("orphaned run sweep: marked models %v failed, their runs had no task left", failed)
+		}
+		<-ticker.C
+	}
 }
 
-func registerLocationShareRoutes(api *gin.RouterGroup, handler *locationhandler.LocationShareHandler) {
-	locations := api.Group("/locations")
-	// Share routes
-	locations.GET("/:id/shares", handler.GetShares)
-	locations.POST("/:id/share/user", handler.ShareWithUser)
-	locations.POST("/:id/share/workspace", handler.ShareWithWorkspace)
-	locations.POST("/:id/share/group", handler.ShareWithGroup)
-	locations.DELETE("/:id/share/user/:shareId", handler.RemoveUserShare)
-	locations.DELETE("/:id/share/workspace/:shareId", handler.RemoveWorkspaceShare)
-	locations.DELETE("/:id/share/group/:shareId", handler.RemoveGroupShare)
+// startSeriesSweep deletes, at startup and daily, the BuEM and PV profiles
+// older than a day that no link refers to. Uploaded profiles are kept.
+func startSeriesSweep(db *gorm.DB, log *logrus.Logger) {
+	store := seriesstore.NewStore(db)
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		deleted, err := store.DeleteUnreferenced(time.Now().UTC().Add(-24 * time.Hour))
+		if err != nil {
+			log.Errorf("series sweep failed: %v", err)
+		} else if deleted > 0 {
+			log.Infof("series sweep: deleted %d unreferenced generated profiles", deleted)
+		}
+		<-ticker.C
+	}
 }
 
 func startFeedbackCleanup(db *gorm.DB, log *logrus.Logger) {

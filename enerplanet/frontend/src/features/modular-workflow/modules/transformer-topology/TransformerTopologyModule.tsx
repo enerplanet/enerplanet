@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { BaseModule } from "../base/BaseModule";
 import type { ModuleProps } from "../../types/module";
 import { pylovoService } from "../../../configurator/services/pylovoService";
@@ -30,7 +30,7 @@ export class TransformerTopologyModule extends BaseModule {
   readonly component = TransformerTopologyComponent;
 }
 
-function TransformerTopologyComponent({ context, onUpdate }: ModuleProps) {
+function TransformerTopologyComponent({ context }: ModuleProps) {
   const [sizes, setSizes] = useState<{ kva: number; cost_eur: number }[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -46,27 +46,6 @@ function TransformerTopologyComponent({ context, onUpdate }: ModuleProps) {
       cancelled = true;
     };
   }, []);
-
-  const handleAddTransformer = useCallback(
-    async (kva: number) => {
-      const gridResultIds = context.gridResultIds ?? [];
-      const result = await pylovoService.addTransformer({
-        coordinates: [0, 0],
-        kva,
-        grid_result_ids: gridResultIds,
-      });
-      onUpdate({
-        transformers: result.transformer,
-        transformerAssignments: (result.reassigned_buildings?.features ?? []).map(
-          (f: { properties?: Record<string, unknown> | null }) => ({
-            buildingId: Number((f.properties ?? {}).osm_id ?? 0),
-            transformerId: result.new_grid_id,
-          })
-        ),
-      });
-    },
-    [context.gridResultIds, onUpdate]
-  );
 
   return (
     <div className="p-4 space-y-3">
@@ -86,8 +65,6 @@ function TransformerTopologyComponent({ context, onUpdate }: ModuleProps) {
         onClose={() => setDialogOpen(false)}
         onChangeKva={() => {}}
         onOpenChange={setDialogOpen}
-        mode="add"
-        onAddTransformer={handleAddTransformer}
       />
     </div>
   );

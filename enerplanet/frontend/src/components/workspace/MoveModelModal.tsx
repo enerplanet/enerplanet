@@ -4,7 +4,7 @@ import type { FormDataConvertible } from '@/hooks/useForm';
 import { workspaceService, type Workspace } from '@/components/workspace/services/workspaceService';
 import { modelService, type Model } from '@/features/model-dashboard/services/modelService';
 import { UniversalForm } from '@spatialhub/forms';
-import { getMoveModelFormSections } from '@/configuration/formConfigurations';
+import { getMoveModelFormSections, getWorkspaceFormSections, validateWorkspaceForm } from '@/configuration/formConfigurations';
 import { useTranslation } from '@spatialhub/i18n';
 
 const MOVE_MODEL_TITLE = 'Move Model';
@@ -50,6 +50,8 @@ export const MoveModelModal: React.FC<MoveModelModalProps> = ({
         workspace_id: null,
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    // Used only when there is no other workspace: the models move into a new one with this name.
+    const [newWorkspaceName, setNewWorkspaceName] = useState('');
 
     const loadWorkspaces = useCallback(async () => {
         setIsLoading(true);
@@ -87,6 +89,7 @@ export const MoveModelModal: React.FC<MoveModelModalProps> = ({
     const handleClose = () => {
         if (!isSubmitting) {
             setFormData({ workspace_id: null });
+            setNewWorkspaceName('');
             setFormErrors({});
             onClose();
         }
@@ -109,6 +112,38 @@ export const MoveModelModal: React.FC<MoveModelModalProps> = ({
         }
     };
 
+    const moveTo = async (workspaceId: number) => {
+        if (isBulkMove) {
+            await modelService.bulkMoveModels(models.map(m => m.id), workspaceId);
+        } else {
+            await modelService.moveModel(model!.id, workspaceId);
+        }
+    };
+
+    /** Creates the named workspace and moves the models into it, for when no other workspace exists. */
+    const handleCreateAndMove = async () => {
+        const errors = validateWorkspaceForm({ name: newWorkspaceName }, t);
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+        setIsSubmitting(true);
+        setFormErrors({});
+        try {
+            const workspace = await workspaceService.createWorkspace({ name: newWorkspaceName.trim() });
+            await moveTo(workspace.id);
+            queryClient.invalidateQueries({ queryKey: ["models", "list"] });
+            queryClient.invalidateQueries({ queryKey: ["models", "stats"] });
+            onSuccess?.();
+            setIsSubmitting(false);
+            handleClose();
+        } catch (error) {
+            if (import.meta.env.DEV) console.error(`Failed to create workspace "${newWorkspaceName}" and move model(s):`, error);
+            setFormErrors({ name: t('forms.moveModel.createAndMoveFailed') });
+            setIsSubmitting(false);
+        }
+    };
+
     const handleSubmit = async () => {
         if (!formData.workspace_id) {
             setFormErrors({ workspace_id: 'Please select a workspace' });
@@ -119,12 +154,7 @@ export const MoveModelModal: React.FC<MoveModelModalProps> = ({
         setFormErrors({});
 
         try {
-            if (isBulkMove) {
-                const modelIds = models.map(m => m.id);
-                await modelService.bulkMoveModels(modelIds, formData.workspace_id);
-            } else {
-                await modelService.moveModel(model!.id, formData.workspace_id);
-            }
+            await moveTo(formData.workspace_id);
 
             // Invalidate all model list caches across all workspaces
             queryClient.invalidateQueries({ queryKey: ["models", "list"] });
@@ -149,20 +179,26 @@ export const MoveModelModal: React.FC<MoveModelModalProps> = ({
     }
 
     if (workspaces.length === 0) {
+        const [details] = getWorkspaceFormSections(t);
+        const nameSection = { ...details, fields: details.fields.filter((field) => field.key === 'name') };
         return (
             <UniversalForm
                 isOpen={isOpen}
                 onClose={handleClose}
                 title={isBulkMove ? MOVE_MODELS_TITLE : MOVE_MODEL_TITLE}
-                description="No other workspaces available. Create a new workspace first."
+                description={t('forms.moveModel.noOtherWorkspace')}
                 variant="default"
-                sections={[]}
-                values={{}}
-                onChange={() => {}}
-                onSubmit={handleClose}
-                submitText="Close"
-                loading={false}
-                errors={{}}
+                sections={[nameSection]}
+                values={{ name: newWorkspaceName }}
+                onChange={(key, value) => {
+                    if (key !== 'name') return;
+                    setNewWorkspaceName(String(value ?? ''));
+                    setFormErrors({});
+                }}
+                onSubmit={handleCreateAndMove}
+                submitText={t('forms.moveModel.createAndMove')}
+                loading={isSubmitting}
+                errors={formErrors}
             />
         );
     }

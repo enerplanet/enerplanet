@@ -4,7 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
 	Plus,
 	Settings,
-	Filter,
+	Search,
+	ArrowUpDown,
+	Star,
 	RefreshCw,
 	ChevronUp,
 	ChevronDown,
@@ -13,15 +15,26 @@ import {
 	FolderInput,
 	Copy,
 	Edit,
-	BarChart3,
+	LayoutDashboard,
 	AlertCircle,
-	Play,
 	GitCompareArrows,
+	Play,
+	MoreHorizontal,
 } from "lucide-react";
 
 import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
-import ModelStatsCards from "@/components/ui/cards/ModelStatsCards";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { ModelStatsSummary } from "./ModelStatsSummary";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ListSkeleton } from "@/components/ui/Skeletons";
+import {
+	CARD_CLASS,
+	PAGE_SHELL_CLASS,
+	PRIMARY_BUTTON_CLASS,
+	SEARCH_INPUT_CLASS,
+	TOOLBAR_BUTTON_CLASS,
+	TOOLBAR_ICON_BUTTON_CLASS,
+} from "@/components/ui/toolbar";
+import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import Pagination from "@/components/ui/Pagination";
 import { useConfirm } from "@/hooks/useConfirmDialog";
 import Chip from "@/components/ui/Chip";
@@ -38,7 +51,6 @@ import { MoveModelModal } from "@/components/workspace/MoveModelModal";
 import { ShareModelModal } from "@/features/model-dashboard/components/ShareModelModal";
 import { BulkCopyModal } from "@/features/model-dashboard/components/BulkCopyModal";
 import { useNotification } from "@/features/notifications/hooks/useNotification";
-import Notification from "@/components/ui/Notification";
 import { type Workspace, workspaceService } from "@/components/workspace/services/workspaceService";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { useAuthStore } from "@/store/auth-store";
@@ -50,7 +62,6 @@ import ModelActionGroup, { type ActionConfig } from "@/components/shared/ModelAc
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import { ModelTableRow } from "./ModelTableRow";
-import { useWebservices } from "@/features/admin-dashboard/hooks/useWebservices";
 import { processModelTimingUpdates, type TimingUpdate } from "@/features/model-dashboard/utils/modelTimingUtils";
 import { organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { useTranslation } from "@spatialhub/i18n";
@@ -87,6 +98,51 @@ function checkOwnership(
 	return Boolean(idMatches || emailMatches);
 }
 
+interface SortHeaderButtonProps {
+	field: string;
+	label: string;
+	orderBy: string;
+	order: "asc" | "desc";
+	onSort: (field: string) => void;
+}
+
+function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderButtonProps) {
+	const isActive = orderBy === field;
+
+	return (
+		<button
+			onClick={() => onSort(field)}
+			className="group/sort inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors duration-150 hover:text-foreground"
+		>
+			{label}
+			{isActive ? (
+				<span className="flex h-4 w-4 items-center justify-center rounded bg-muted text-foreground">
+					{order === "asc" ? (
+						<ChevronUp className="h-3 w-3" />
+					) : (
+						<ChevronDown className="h-3 w-3" />
+					)}
+				</span>
+			) : (
+				<ArrowUpDown className="h-3 w-3 opacity-0 transition-opacity duration-150 group-hover/sort:opacity-50" />
+			)}
+		</button>
+	);
+}
+
+/** Column widths of the model table; the name column takes the rest. */
+function ModelColumns() {
+	return (
+		<colgroup>
+			<col style={{ width: "5rem" }} />
+			<col />
+			<col style={{ width: "24rem" }} />
+			<col className="hidden md:table-column" style={{ width: "10rem" }} />
+			<col style={{ width: "22rem" }} />
+		</colgroup>
+	);
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity -- Large component with complex state management, permission checks, and UI logic
 export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const { t } = useTranslation();
@@ -111,7 +167,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [isCopyWsOpen, setIsCopyWsOpen] = useState(false);
 	const [wsReloadKey, setWsReloadKey] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const { notification, showSuccess, showError, hide: hideNotification } = useNotification();
+	const { showSuccess, showError } = useNotification();
 
 	useEffect(() => {
 		initializeWorkspace();
@@ -191,6 +247,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	const [currentPage, setCurrentPage] = useState<number>(0);
 	const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 	const [currentWorkspaceId, setCurrentWorkspaceId] = useState<number | undefined>(undefined);
+	const [starredOnly, setStarredOnly] = useState(false);
+	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
 
 	const { data: modelsResponse, isLoading: isLoadingModels, refetch: refetchModels } = useModelsQuery({
 		limit: itemsPerPage,
@@ -199,12 +257,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		workspace_id: currentWorkspaceId,
 		sort_by: orderBy,
 		sort_order: order,
+		group: "families",
+		ids: starredOnly ? favoriteIds.join(",") : undefined,
 	});
 
 	const { data: statsResponse, isSuccess: statsLoaded } = useModelStatsQuery();
-
-	const { summary: webserviceSummary } = useWebservices({}, { autoRefresh: true, refreshInterval: 10000 });
-	const hasAvailableWebservice = (webserviceSummary?.available ?? 0) > 0;
 
 	const modelsData = useMemo(() => modelsResponse?.data || [], [modelsResponse?.data]);
 
@@ -269,18 +326,23 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		clearSelection,
 	} = useModelSelection();
 
+	const handleDownloadError = useCallback((reason: string) => {
+		showError(t("common.modelActions.downloadFailed", { reason }));
+	}, [showError, t]);
+
 	const {
 		handleEdit,
 		handleView,
 		handleCopy,
 		handleDelete,
-		handleCalculate,
+		handleRunMeme,
 		handleDownload,
 		updateTitle: updateTitleHandler,
 		handleBulkDelete: bulkDeleteHandler,
 	} = useModelDashboardHandlers({
 		onRefresh: async () => { await refetchModels(); },
 		onStatsRefresh: loadStats,
+		onDownloadError: handleDownloadError,
 	});
 
 	const setWorkspaceFilter = useCallback((workspaceId: number | undefined) => {
@@ -348,19 +410,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	const filteredModels = models;
 
-	const favoriteIds = useFavoriteModelsStore(s => s.favoriteIds);
-	const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-	const sortedModels = useMemo(() => {
-		// Server already sorts by orderBy/order — only reorder favorites to top
-		return [...filteredModels].sort((a, b) => {
-			const aFav = favoriteIdSet.has(a.id) ? 0 : 1;
-			const bFav = favoriteIdSet.has(b.id) ? 0 : 1;
-			return aFav - bFav;
-		});
-	}, [filteredModels, favoriteIdSet]);
-
-	const orderedModels = useMemo(() => organizeModelsHierarchically(sortedModels), [sortedModels]);
+	// The server's order stands; starring a model filters, it does not move it.
+	const orderedModels = useMemo(() => organizeModelsHierarchically(filteredModels), [filteredModels]);
 
 	const paginatedModels = orderedModels;
 	const modelTitlesByID = useMemo(() => {
@@ -378,6 +429,40 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return children;
 	}, [paginatedModels]);
+	const failedChildCountByParentID = useMemo(() => {
+		const failed = new Map<number, number>();
+		for (const model of paginatedModels) {
+			if (!model.parent_model_id || model.status !== "failed") continue;
+			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+		}
+		return failed;
+	}, [paginatedModels]);
+	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
+	const toggleFamily = useCallback((modelId: number) => {
+		setCollapsedFamilies((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(modelId)) next.add(modelId);
+			return next;
+		});
+	}, []);
+	const visibleModels = useMemo(
+		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		[paginatedModels, collapsedFamilies],
+	);
+
+	// Each original with the copies shown below it; a copy whose original is
+	// not on the page is its own family.
+	const families = useMemo(() => {
+		const list: { original: (typeof visibleModels)[number]; copies: (typeof visibleModels)[number][] }[] = [];
+		for (const model of visibleModels) {
+			const last = list.at(-1);
+			if (model.level > 0 && last && last.original.id === model.parent_model_id) last.copies.push(model);
+			else list.push({ original: model, copies: [] });
+		}
+		return list;
+	}, [visibleModels]);
+	const rowIndexByID = useMemo(() => new Map(visibleModels.map((m, i) => [m.id, i])), [visibleModels]);
+	const rowIndex = (model: Model) => rowIndexByID.get(model.id) ?? 0;
 
 	const { showBulkDeleteConfirm } = useBulkOperations({
 		selectedModels,
@@ -570,23 +655,24 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return selectedModels.some((model: Model) => canUserDeleteModel(model));
 	}, [selectedModels, canUserDeleteModel]);
 
-	const canCalculateAnySelected = useMemo(() => {
-		return hasAvailableWebservice && selectedModels.some((model: Model) => !isModelDisabled(model));
-	}, [selectedModels, isModelDisabled, hasAvailableWebservice]);
+	const handleRunMemeSingle = useCallback((model: Model) => {
+		handleRunMeme([model.id]);
+	}, [handleRunMeme]);
 
-	const calculatableCount = useMemo(() => {
-		return selectedModels.filter((model: Model) => !isModelDisabled(model)).length;
-	}, [selectedModels, isModelDisabled]);
+	// A model the MEME run action offers on: the same statuses the per-row Play
+	// shows for (draft | modified | failed). completed/published are excluded.
+	const bulkRunnableModels = useMemo(
+		() => selectedModels.filter((model: Model) =>
+			model.status === 'draft' || model.status === 'modified' || model.status === 'failed'),
+		[selectedModels]
+	);
+	const canRunMemeAnySelected = bulkRunnableModels.length > 0;
 
-	const handleBulkCalculate = useCallback(async () => {
-		const calculatableModels = selectedModels.filter((model: Model) => !isModelDisabled(model));
-		const modelIds = calculatableModels.map((m) => m.id);
-		await handleCalculate(modelIds);
+	const handleBulkRunMeme = useCallback(async () => {
+		if (bulkRunnableModels.length === 0) return;
+		await handleRunMeme(bulkRunnableModels.map((model) => model.id));
 		clearSelection();
-	}, [selectedModels, isModelDisabled, handleCalculate, clearSelection]);
-	const handleCalculateSingle = useCallback((model: Model) => {
-		handleCalculate([model.id]);
-	}, [handleCalculate]);
+	}, [bulkRunnableModels, handleRunMeme, clearSelection]);
 
 	const handleBulkCopy = useCallback(() => {
 		if (document.activeElement instanceof HTMLElement) {
@@ -612,19 +698,16 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		return t('model.cannotMove');
 	}, [selectedModels.length, canMoveAnySelected, t]);
 
-	const getCalculateTooltip = useCallback(() => {
-		if (!hasAvailableWebservice) {
-			return t('model.noWebserviceAvailable');
-		}
-		if (canCalculateAnySelected) {
-			return `${t('model.calculate')} ${calculatableCount} ${t('model.selected')}`;
-		}
-		return t('model.cannotCalculate');
-	}, [hasAvailableWebservice, canCalculateAnySelected, calculatableCount, t]);
-
 	const getCopyTooltip = useCallback(() => {
 		return `${t('model.copy')} ${selectedModels.length} ${t('model.selected')}`;
 	}, [selectedModels.length, t]);
+
+	const getRunMemeTooltip = useCallback(() => {
+		if (canRunMemeAnySelected) {
+			return `${t('common.modelActions.runWithMeme')} ${bulkRunnableModels.length} ${t('model.selected')}`;
+		}
+		return t('model.cannotCalculate');
+	}, [canRunMemeAnySelected, bulkRunnableModels.length, t]);
 
 	const getDeleteTooltip = useCallback(() => {
 		if (canDeleteAnySelected) {
@@ -665,12 +748,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: handleBulkCopy,
 		},
 		{
-			key: "bulk-calculate",
+			key: "bulk-run-meme",
 			icon: Play,
-			tooltip: getCalculateTooltip(),
-			variant: "success" as const,
-			onClick: handleBulkCalculate,
-			disabled: !canCalculateAnySelected,
+			tooltip: getRunMemeTooltip(),
+			variant: "warning" as const,
+			onClick: handleBulkRunMeme,
+			disabled: !canRunMemeAnySelected,
 		},
 		{
 			key: "bulk-delete",
@@ -680,23 +763,51 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onClick: showBulkDeleteConfirm,
 			disabled: !canDeleteAnySelected,
 		},
-	], [getMoveTooltip, getCopyTooltip, getCalculateTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkCalculate, showBulkDeleteConfirm, canMoveAnySelected, canCalculateAnySelected, canDeleteAnySelected, t]);
+	], [getMoveTooltip, getCopyTooltip, getRunMemeTooltip, getDeleteTooltip, handleBulkMoveToWorkspace, handleBulkCopy, handleBulkRunMeme, showBulkDeleteConfirm, canMoveAnySelected, canRunMemeAnySelected, canDeleteAnySelected, t]);
+
+	const renderRow = (model: (typeof visibleModels)[number]) => (
+		<ModelTableRow
+			key={model.id}
+			model={model}
+			index={rowIndex(model)}
+			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
+			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
+			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
+			familyCollapsed={collapsedFamilies.has(model.id)}
+			onToggleFamily={toggleFamily}
+			currentUserId={user?.id ? String(user.id) : undefined}
+			userAccessLevel={user?.access_level}
+			isSelected={isSelected(model)}
+			isEditing={editingModel?.id === model.id}
+			editTitle={editTitle}
+			calculationStartTimes={calculationStartTimes}
+			calculationCompletionInfo={calculationCompletionInfo}
+			canUserDeleteModel={canUserDeleteModel}
+			onSelect={handleSelectModel}
+			onStartEdit={startTitleEdit}
+			onEditTitleChange={setEditTitle}
+			onUpdateTitle={updateTitle}
+			onCancelEdit={cancelTitleEdit}
+			onView={handleView}
+			onEdit={handleEdit}
+			onDownload={handleDownload}
+			onCopy={handleCopy}
+			onRunMeme={handleRunMemeSingle}
+			onDelete={handleSingleDelete}
+			onShare={handleShare}
+			onMoveToWorkspace={handleMoveToWorkspace}
+		/>
+	);
 
 	return (
 		<Fragment>
-				<div className="relative p-4 w-full space-y-4 bg-background overflow-x-hidden overflow-y-scroll">
-				{/* Header Section */}
-				<div className="relative bg-card py-4 border border-border rounded-lg px-5 shadow-sm">
-					<div className="w-full flex justify-between items-center">
-						<div className="flex items-center gap-3">
-							<div className="p-2 bg-muted rounded-lg">
-								<BarChart3 className="w-5 h-5 text-muted-foreground" />
-							</div>
-							<div>
-								<h1 className="text-xl font-semibold text-foreground">{t('model.dashboard')}</h1>
-								<p className="text-xs text-muted-foreground">{t('model.manageConfigurations')}</p>
-							</div>
-						</div>
+				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
+				{/* Page header */}
+				<PageHeader
+					icon={LayoutDashboard}
+					title={t('model.dashboard')}
+					subtitle={t('model.manageConfigurations')}
+					actions={
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<span>
@@ -704,16 +815,16 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										onClick={handleNewModel}
 										disabled={isModelLimitReached}
 										data-tour="new-assessment"
-										className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${
+										className={
 											isModelLimitReached
-												? 'bg-muted text-muted-foreground cursor-not-allowed'
-												: 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md'
-										}`}
+												? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
+												: PRIMARY_BUTTON_CLASS
+										}
 									>
 										{isModelLimitReached ? (
-											<AlertCircle className="w-4 h-4" />
+											<AlertCircle className="h-4 w-4" />
 										) : (
-											<Plus className="w-4 h-4" />
+											<Plus className="h-4 w-4" />
 										)}
 										{t('model.newModel')}
 									</button>
@@ -725,16 +836,13 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								</TooltipContent>
 							)}
 						</Tooltip>
-					</div>
-				</div>
+					}
+				/>
 
-				<div className="w-full space-y-4">
-					{/* Stats Cards */}
-					{statsLoaded && <ModelStatsCards stats={stats} variant="compact" />}
-
+				<div className="w-full space-y-5">
 					{/* Groups Section */}
 					{groups.length > 0 && (
-						<div className="bg-card rounded-lg px-4 py-3 shadow-sm border border-border">
+						<div className="md-rise rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm">
 							<div className="flex items-center gap-2 mb-3">
 								<Settings className="w-4 h-4 text-muted-foreground" />
 								<h3 className="text-sm font-medium text-foreground">{t('model.modelGroups')}</h3>
@@ -761,30 +869,38 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 						</div>
 					)}
 
-					{/* Main Content Card */}
-					<div className="bg-card rounded-lg shadow-sm border border-border">
-						<div className="p-4">
-							{/* Toolbar */}
-							<div className="flex flex-wrap items-center gap-2 mb-4">
-								{/* Search */}
-								<div className="flex-1 min-w-[200px] max-w-md">
-									<div className="relative">
-										<Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-										<input
-											type="text"
-											placeholder={t('model.searchModels')}
-											value={filterText}
-											onChange={(e) => setFilterText(e.target.value)}
-											className="w-full pl-9 pr-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background hover:bg-accent focus:bg-background transition-colors text-sm text-foreground placeholder-muted-foreground"
-										/>
-									</div>
-								</div>
+					{/* Toolbar and table, each in its own card */}
+					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
+						{/* Filter toolbar */}
+						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
+							{/* Search */}
+							<div className="relative w-full sm:w-auto sm:min-w-[220px] sm:flex-1 sm:max-w-xs">
+								<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<input
+									type="text"
+									placeholder={t('model.searchModels')}
+									value={filterText}
+									onChange={(e) => setFilterText(e.target.value)}
+									className={SEARCH_INPUT_CLASS}
+								/>
+							</div>
+
+							<button
+								type="button"
+								onClick={() => { setStarredOnly((on) => !on); setCurrentPage(0); }}
+								aria-pressed={starredOnly}
+								title={t('model.starredFilterHint')}
+								className={`${TOOLBAR_BUTTON_CLASS} ${starredOnly ? "bg-muted" : ""}`}
+							>
+								<Star className={`h-4 w-4 ${starredOnly ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} aria-hidden="true" />
+								{t('model.starredFilter')}
+							</button>
 
 								{/* Workspace Controls */}
 								<div className="flex items-center gap-2">
 									{isLoadingWorkspace ? (
-										<div className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-xl bg-card text-sm">
-											<RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+										<div className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm shadow-sm">
+											<RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
 											<span className="font-medium text-muted-foreground">{t('model.loadingWorkspace')}</span>
 										</div>
 									) : (
@@ -811,10 +927,10 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 													<button
 														onClick={handleRefresh}
 														disabled={isRefreshing || isLoading}
-														className="p-2.5 border border-border rounded-xl hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card"
+														className={TOOLBAR_ICON_BUTTON_CLASS}
 														aria-label={t('model.refreshModels')}
 													>
-														<RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
+														<RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
 													</button>
 												</TooltipTrigger>
 												<TooltipContent>
@@ -824,122 +940,65 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										</>
 									)}
 
-									{/* Compare button - always visible */}
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="inline-flex">
-												<button
-													onClick={handleCompareSelected}
-													disabled={!canCompareSelected}
-													className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl hover:bg-accent text-sm transition-colors bg-card disabled:opacity-50 disabled:cursor-not-allowed"
-												>
-													<GitCompareArrows className="w-4 h-4 text-muted-foreground" />
-													<span className="text-foreground">{t('model.compare')}</span>
-												</button>
-											</span>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p>{canCompareSelected ? t('model.compare') : t('model.compareRequires2Completed')}</p>
-										</TooltipContent>
-									</Tooltip>
-
 									{currentWorkspace && (
-										<>
-											{canManageWorkspace && (
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<button
-															onClick={() => setIsShareWsOpen(true)}
-															className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl hover:bg-accent text-sm transition-colors bg-card"
-														>
-															<Share className="w-4 h-4 text-muted-foreground" />
-															<span className="text-foreground">{t('model.share')}</span>
-														</button>
-													</TooltipTrigger>
-													<TooltipContent>
-														{t('model.shareWorkspace')}
-													</TooltipContent>
-												</Tooltip>
-											)}
-
+										<DropdownMenu>
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<button
-														onClick={() => setIsCopyWsOpen(true)}
-														className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl hover:bg-accent text-sm transition-colors bg-card"
-													>
-														<Copy className="w-4 h-4 text-muted-foreground" />
-														<span className="text-foreground">{t('model.copy')}</span>
-													</button>
+													<DropdownMenuTrigger asChild>
+														<button className={TOOLBAR_ICON_BUTTON_CLASS} aria-label={t("model.workspaceActions")}>
+															<MoreHorizontal className="h-4 w-4" />
+														</button>
+													</DropdownMenuTrigger>
 												</TooltipTrigger>
-												<TooltipContent>
-													{t('model.copyWorkspace')}
-												</TooltipContent>
+												<TooltipContent>{t("model.workspaceActions")}</TooltipContent>
 											</Tooltip>
-
-											{!currentWorkspace.is_default && canManageWorkspace && (
-												<>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={() => setIsRenameWsOpen(true)}
-																className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-xl hover:bg-accent text-sm transition-colors bg-card"
-															>
-																<Edit className="w-4 h-4 text-muted-foreground" />
-																<span className="text-foreground">{t('model.rename')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.renameWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<button
-																onClick={handleDeleteWorkspace}
-																className="flex items-center gap-1.5 px-3 py-2 border border-destructive/50 rounded-xl hover:bg-destructive/10 text-sm transition-colors bg-card text-destructive"
-															>
-																<Trash2 className="w-4 h-4" />
-																<span>{t('model.delete')}</span>
-															</button>
-														</TooltipTrigger>
-														<TooltipContent>
-															{t('model.deleteWorkspace')}
-														</TooltipContent>
-													</Tooltip>
-												</>
-											)}
-										</>
-									)}
-
-									{/* Bulk Actions - placed after workspace delete button */}
-									{selectedModels.length > 0 && (
-										<div className="flex items-center gap-2 ml-2 pl-2 border-l-2 border-foreground/30">
-											<span className="text-xs font-medium text-muted-foreground">{t('model.actions')}:</span>
-											
-											<div className="px-2 py-1 border border-border rounded-md bg-muted/50">
-												<ModelActionGroup
-													actions={bulkActions}
-													layout="horizontal"
-													size="small"
-												/>
-											</div>
-										</div>
+											<DropdownMenuContent align="start" className="w-40">
+												{canManageWorkspace && (
+													<DropdownMenuItem className="cursor-pointer" onClick={() => setIsShareWsOpen(true)}>
+														<Share className="h-4 w-4" />
+														{t("model.share")}
+													</DropdownMenuItem>
+												)}
+												<DropdownMenuItem className="cursor-pointer" onClick={() => setIsCopyWsOpen(true)}>
+													<Copy className="h-4 w-4" />
+													{t("model.copy")}
+												</DropdownMenuItem>
+												{!currentWorkspace.is_default && canManageWorkspace && (
+													<>
+														<DropdownMenuItem className="cursor-pointer" onClick={() => setIsRenameWsOpen(true)}>
+															<Edit className="h-4 w-4" />
+															{t("model.rename")}
+														</DropdownMenuItem>
+														<DropdownMenuItem className="cursor-pointer text-red-700 focus:text-red-700 dark:text-red-400" onClick={handleDeleteWorkspace}>
+															<Trash2 className="h-4 w-4" />
+															{t("model.delete")}
+														</DropdownMenuItem>
+													</>
+												)}
+											</DropdownMenuContent>
+										</DropdownMenu>
 									)}
 								</div>
+
+								{/* Compact stats summary, in the toolbar */}
+								{statsLoaded && (
+									<ModelStatsSummary stats={stats} className="max-sm:w-full sm:ml-auto" />
+								)}
 							</div>
 
+							{/* Table */}
+							<div>
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
-								<div className="p-12 text-center bg-muted/50 rounded-xl">
-									<div className="flex items-center justify-center gap-3 mb-3">
-										<RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-										<span className="text-lg font-medium text-foreground">
+								<div className="space-y-3">
+									<div className="flex items-center gap-2 text-sm text-muted-foreground">
+										<RefreshCw className="h-4 w-4 animate-spin" />
+										<span>
 											{isLoadingWorkspace ? t('model.loadingWorkspace') : t('model.loadingModels')}
 										</span>
 									</div>
-									<p className="text-sm text-muted-foreground">
+									<ListSkeleton />
+									<p className="sr-only">
 										{isLoadingWorkspace
 											? t('model.loadingWorkspaceDescription')
 											: t('model.loadingModelsDescription')}
@@ -948,12 +1007,13 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className="border border-border rounded-xl overflow-hidden">
+										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
 									<div className="w-full overflow-auto">
-										<table className="w-full table-auto">
+										<table className="w-full min-w-[75rem] table-fixed">
+											<ModelColumns />
 											<thead>
-												<tr className="bg-muted/50">
-													<th className="w-12 px-4 py-3 text-center">
+												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
+													<th className="px-4 py-2.5 text-center">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -962,7 +1022,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																		selectedModels.length === filteredModels.length && filteredModels.length > 0
 																	}
 																	onChange={() => handleSelectAll(filteredModels)}
-																	className="w-4 h-4 text-foreground rounded border-input focus:ring-ring focus:ring-offset-0 cursor-pointer"
+																	className="h-4 w-4 cursor-pointer rounded border-input accent-primary focus:ring-ring focus:ring-offset-0"
 																/>
 															</TooltipTrigger>
 															<TooltipContent>
@@ -970,98 +1030,78 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 															</TooltipContent>
 														</Tooltip>
 													</th>
-													<th className="px-4 py-3 text-left">
-														<button
-															onClick={() => handleSort("title")}
-															className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-														>
-															{t('model.name')}
-															{orderBy === "title" && (
-																<span className="flex items-center justify-center w-4 h-4 bg-muted rounded">
-																	{order === "asc" ? (
-																		<ChevronUp className="w-3 h-3" />
-																	) : (
-																		<ChevronDown className="w-3 h-3" />
-																	)}
+													{selectedModels.length > 0 ? (
+														<th colSpan={4} className="px-4 py-1 text-left">
+															<div className="flex items-center gap-2">
+																<span className="mr-2 text-sm font-semibold text-foreground">
+																	{t("model.selectedCount", { count: selectedModels.length })}
 																</span>
-															)}
-														</button>
-													</th>
-													<th className="px-4 py-3 text-left">
-														<button
-															onClick={() => handleSort("status")}
-															className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-														>
-															{t('model.status')}
-															{orderBy === "status" && (
-																<span className="flex items-center justify-center w-4 h-4 bg-muted rounded">
-																	{order === "asc" ? (
-																		<ChevronUp className="w-3 h-3" />
-																	) : (
-																		<ChevronDown className="w-3 h-3" />
-																	)}
-																</span>
-															)}
-														</button>
-													</th>
-													<th className="px-4 py-3 text-left">
-														<button
-															onClick={() => handleSort("created_at")}
-															className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-														>
-															{t('model.created')}
-															{orderBy === "created_at" && (
-																<span className="flex items-center justify-center w-4 h-4 bg-muted rounded">
-																	{order === "asc" ? (
-																		<ChevronUp className="w-3 h-3" />
-																	) : (
-																		<ChevronDown className="w-3 h-3" />
-																	)}
-																</span>
-															)}
-														</button>
-													</th>
-													<th className="px-4 py-3 text-left">
-														<span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
-													</th>
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<span className="inline-flex">
+																			<button onClick={handleCompareSelected} disabled={!canCompareSelected} className={TOOLBAR_BUTTON_CLASS}>
+																				<GitCompareArrows className="h-4 w-4 text-muted-foreground" />
+																				{t("model.compare")}
+																			</button>
+																		</span>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{canCompareSelected ? t("model.compare") : t("model.compareRequires2Completed")}</p>
+																	</TooltipContent>
+																</Tooltip>
+																<ModelActionGroup actions={bulkActions} layout="horizontal" size="medium" />
+																<button onClick={clearSelection} className="ml-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+																	{t("model.clearSelection")}
+																</button>
+															</div>
+														</th>
+													) : (
+														<>
+															<th className="px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="title"
+																	label={t('model.name')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="px-4 py-2.5 text-left">
+																<SortHeaderButton
+																	field="status"
+																	label={t('model.status')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="hidden px-4 py-2.5 text-left md:table-cell">
+																<SortHeaderButton
+																	field="created_at"
+																	label={t('model.created')}
+																	orderBy={orderBy}
+																	order={order}
+																	onSort={handleSort}
+																/>
+															</th>
+															<th className="px-4 py-2.5 text-left">
+																<span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('model.actions')}</span>
+															</th>
+														</>
+													)}
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-border bg-card">
-												{paginatedModels.map((model) => (
-													<ModelTableRow
-														key={model.id}
-														model={model}
-														modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-														parentModelTitle={model.parent_model_id ? modelTitlesByID.get(model.parent_model_id) : undefined}
-														hasChildren={(childCountByParentID.get(model.id) ?? 0) > 0}
-														currentUserId={user?.id ? String(user.id) : undefined}
-														userAccessLevel={user?.access_level}
-														isSelected={isSelected(model)}
-														isEditing={editingModel?.id === model.id}
-														editTitle={editTitle}
-														calculationStartTimes={calculationStartTimes}
-														calculationCompletionInfo={calculationCompletionInfo}
-														canUserDeleteModel={canUserDeleteModel}
-														hasAvailableWebservice={hasAvailableWebservice}
-														onSelect={handleSelectModel}
-														onStartEdit={startTitleEdit}
-														onEditTitleChange={setEditTitle}
-														onUpdateTitle={updateTitle}
-														onCancelEdit={cancelTitleEdit}
-														onView={handleView}
-														onEdit={handleEdit}
-														onDownload={handleDownload}
-														onCopy={handleCopy}
-														onCalculate={handleCalculateSingle}
-														onDelete={handleSingleDelete}
-														onShare={handleShare}
-														onMoveToWorkspace={handleMoveToWorkspace}
-													/>
+											<tbody className="bg-card">
+												{families.map(({ original, copies }) => (
+													<Fragment key={original.id}>
+														{renderRow(original)}
+														{copies.map(renderRow)}
+													</Fragment>
 												))}
 											</tbody>
 										</table>
 									</div>
-									{sortedModels.length > 0 && (
+									{filteredModels.length > 0 && (
 										<Pagination
 											currentPage={currentPage}
 											totalItems={totalItems}
@@ -1070,47 +1110,53 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
+											resultsLabel={t("model.family.pagination")}
+											className="bg-muted"
 										/>
 									)}
 								</div>
 							) : (
-								<div className="p-12 text-center bg-muted/50 rounded-xl">
-									<div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-2xl flex items-center justify-center">
-										<BarChart3 className="w-8 h-8 text-muted-foreground" />
+								<div className="md-fade-in flex flex-col items-center rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center">
+									<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+										<LayoutDashboard className="h-7 w-7 text-muted-foreground" />
 									</div>
-									<h3 className="text-lg font-semibold text-foreground mb-2">{t('model.noModelsFound')}</h3>
-									<p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-										{filterText
-											? t('model.noModelsMatch', { search: filterText })
-											: t('model.noModelsYet')}
+									<h3 className="text-base font-semibold tracking-tight text-foreground">{t('model.noModelsFound')}</h3>
+									<p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+										{starredOnly
+											? t('model.noStarredModels')
+											: filterText
+												? t('model.noModelsMatch', { search: filterText })
+												: t('model.noModelsYet')}
 									</p>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span>
-												<button
-													onClick={handleNewModel}
-													disabled={isModelLimitReached}
-													className={`inline-flex items-center gap-2 px-5 py-2.5 font-medium rounded-xl transition-all shadow-md ${
-														isModelLimitReached
-															? 'bg-muted text-muted-foreground cursor-not-allowed'
-															: 'bg-primary text-primary-foreground hover:bg-primary/90'
-													}`}
-												>
-													{isModelLimitReached ? (
-														<AlertCircle className="w-4 h-4" />
-													) : (
-														<Plus className="w-4 h-4" />
-													)}
-													{t('model.createFirstModel')}
-												</button>
-											</span>
-										</TooltipTrigger>
-										{isModelLimitReached && (
-											<TooltipContent>
-												{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
-											</TooltipContent>
-										)}
-									</Tooltip>
+									{!starredOnly && (
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span>
+													<button
+														onClick={handleNewModel}
+														disabled={isModelLimitReached}
+														className={`mt-6 ${
+															isModelLimitReached
+																? 'inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-muted px-4 text-sm font-medium text-muted-foreground shadow-sm'
+																: PRIMARY_BUTTON_CLASS
+														}`}
+													>
+														{isModelLimitReached ? (
+															<AlertCircle className="h-4 w-4" />
+														) : (
+															<Plus className="h-4 w-4" />
+														)}
+														{t('model.createFirstModel')}
+													</button>
+												</span>
+											</TooltipTrigger>
+											{isModelLimitReached && (
+												<TooltipContent>
+													{t('model.limitReached', { current: stats.total, limit: stats.model_limit })}
+												</TooltipContent>
+											)}
+										</Tooltip>
+									)}
 								</div>
 							)}
 							</>
@@ -1163,33 +1209,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					/>
 
 				</div>
-
-				{/* Floating Action Button */}
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<button
-							onClick={handleNewModel}
-							disabled={isModelLimitReached}
-							className={`fixed bottom-6 right-6 w-14 h-14 rounded-2xl shadow-xl transition-all duration-200 flex items-center justify-center ${
-								isModelLimitReached
-									? 'bg-muted text-muted-foreground cursor-not-allowed'
-									: 'bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105'
-							}`}
-						>
-							{isModelLimitReached ? (
-								<AlertCircle className="w-6 h-6" />
-							) : (
-								<Plus className="w-6 h-6" />
-							)}
-						</button>
-					</TooltipTrigger>
-					<TooltipContent>
-						{isModelLimitReached
-							? t('model.limitReached', { current: stats.total, limit: stats.model_limit })
-							: t('model.newModel')
-						}
-					</TooltipContent>
-				</Tooltip>
 			</div>
 
 			
@@ -1208,13 +1227,6 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 				onSuccess={() => {
 					clearSelection();
 				}}
-			/>
-
-			<Notification
-				isOpen={notification.open}
-				message={notification.message}
-				severity={notification.severity}
-				onClose={hideNotification}
 			/>
 		</Fragment>
 	);

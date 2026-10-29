@@ -105,7 +105,7 @@ const NotificationManagement: React.FC = () => {
               type="button"
               onClick={() => setShowServiceDropdown(!showServiceDropdown)}
               className={`
-                w-full px-2.5 py-1.5 rounded-md border transition-all duration-200 flex items-center justify-between text-foreground
+                w-full px-2.5 py-1.5 rounded-md border transition-all duration-200 flex items-center justify-between text-foreground active:scale-[0.99]
                 ${selectedService 
                   ? 'border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-900' 
                   : 'border-gray-200 dark:border-gray-700 bg-background hover:border-gray-400 dark:hover:border-gray-500'
@@ -122,12 +122,12 @@ const NotificationManagement: React.FC = () => {
                   <span className="text-xs text-muted-foreground">{t('settings.sendNotification.selectService')}</span>
                 )}
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${showServiceDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${showServiceDropdown ? 'rotate-180' : ''}`} />
             </button>
             
             {showServiceDropdown && (
-              <div className="absolute z-10 w-full mt-1 bg-card border border-gray-200 dark:border-gray-700 rounded-md shadow-lg overflow-hidden">
-                {services.map((service) => (
+              <div className="md-fade-in absolute z-10 w-full mt-1 bg-card border border-gray-200 dark:border-gray-700 rounded-md shadow-lg overflow-hidden">
+                {services.map((service, index) => (
                   <button
                     key={service.value}
                     type="button"
@@ -135,8 +135,9 @@ const NotificationManagement: React.FC = () => {
                       handleChange('service', service.value);
                       setShowServiceDropdown(false);
                     }}
+                    style={{ animationDelay: `${Math.min(index * 30, 240)}ms` }}
                     className={`
-                      w-full px-2.5 py-1.5 text-xs flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors
+                      md-row-in w-full px-2.5 py-1.5 text-xs flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150
                       ${form.service === service.value ? 'bg-gray-50 dark:bg-gray-900' : ''}
                     `}
                   >
@@ -163,7 +164,7 @@ const NotificationManagement: React.FC = () => {
             value={form.date}
             min={today}
             onChange={(e) => handleChange('date', e.target.value)}
-            className="flex-1 px-2.5 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded-md bg-background text-foreground focus:border-gray-900 dark:focus:border-gray-100 focus:outline-none transition-colors"
+            className="flex-1 px-2.5 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-700 rounded-md bg-background text-foreground hover:border-gray-400 dark:hover:border-gray-500 focus:border-gray-900 dark:focus:border-gray-100 focus:outline-none transition-colors duration-150"
           />
           <div className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-md bg-background">
             <Clock className="w-3 h-3 text-muted-foreground" />
@@ -194,21 +195,21 @@ const NotificationManagement: React.FC = () => {
           value={form.message}
           onChange={(e) => handleChange('message', e.target.value)}
           placeholder={t('settings.sendNotification.messagePlaceholder')}
-          className="w-full h-16 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-background text-foreground focus:border-gray-900 dark:focus:border-gray-100 focus:outline-none transition-colors resize-none placeholder:text-muted-foreground"
+          className="w-full h-16 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-md bg-background text-foreground hover:border-gray-400 dark:hover:border-gray-500 focus:border-gray-900 dark:focus:border-gray-100 focus:outline-none transition-colors duration-150 resize-none placeholder:text-muted-foreground"
           maxLength={200}
           required
         />
 
         {/* Status Messages */}
         {successMessage && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <div className="md-fade-in flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
             <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             <span className="text-xs font-medium text-green-700 dark:text-green-400">{successMessage}</span>
           </div>
         )}
 
         {errorMessage && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <div className="md-fade-in flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
             <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
             <span className="text-xs font-medium text-red-700 dark:text-red-400">{errorMessage}</span>
           </div>
@@ -221,7 +222,7 @@ const NotificationManagement: React.FC = () => {
           className={`
             w-full px-2.5 py-1.5 rounded-md border transition-all duration-200 flex items-center justify-center gap-2 text-xs font-medium
             ${isFormValid && !isSending
-              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200'
+              ? 'border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 hover:shadow-md active:scale-[0.98]'
               : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }
           `}

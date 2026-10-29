@@ -131,17 +131,20 @@ function sanitizeDownloadFilename(filename: string | null | undefined, fallback:
 export function downloadBlobResponse(response: AxiosResponse<Blob>, fallbackFilename: string): string {
   const contentDisposition = getHeaderValue(response.headers, 'content-disposition');
   const parsedFilename = extractFilenameFromContentDisposition(contentDisposition);
-  const filename = sanitizeDownloadFilename(parsedFilename, fallbackFilename);
+  return downloadBlob(response.data, parsedFilename, fallbackFilename);
+}
 
-  const blob = response.data;
+/** Saves blob as a file named filename (sanitised, fallback when empty) and returns the name used. */
+export function downloadBlob(blob: Blob, filename: string | null | undefined, fallbackFilename: string): string {
+  const name = sanitizeDownloadFilename(filename, fallbackFilename);
   const url = globalThis.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = name;
   document.body.appendChild(link);
   link.click();
   link.remove();
   globalThis.URL.revokeObjectURL(url);
 
-  return filename;
+  return name;
 }

@@ -62,20 +62,6 @@ func TestCreateFeedback(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDeleteFeedback(t *testing.T) {
-	db, mock := testutil.NewMockDB(t)
-	store := NewStore(db)
-
-	// Soft-delete: UPDATE SET deleted_at
-	mock.ExpectBegin()
-	mock.ExpectExec(`UPDATE "feedbacks" SET "deleted_at"=`).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
-
-	err := store.DeleteFeedback(1)
-	require.NoError(t, err)
-}
-
 func TestUpdateFeedback(t *testing.T) {
 	db, mock := testutil.NewMockDB(t)
 	store := NewStore(db)

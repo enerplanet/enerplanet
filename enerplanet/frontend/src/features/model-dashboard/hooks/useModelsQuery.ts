@@ -18,6 +18,10 @@ export const useModelsQuery = (params?: {
 	workspace_id?: number;
 	sort_by?: string;
 	sort_order?: string;
+	/** families: limit, offset and total count originals with their copies. */
+	group?: "families";
+	/** Comma-separated model ids to list only those; an empty string lists none. */
+	ids?: string;
 }, options?: { requireWorkspace?: boolean }) => {
 	const requireWorkspace = options?.requireWorkspace ?? true;
 	return useQuery({
@@ -122,11 +126,53 @@ export const useUpdateModelMutation = () => {
 	});
 };
 
-export const useStartCalculationMutation = () => {
+// Dispatch the model to MEME (via TentaCron) rather than the legacy webservice.
+export const useRunMemeMutation = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: number) => modelService.startCalculation(id),
+		mutationFn: (id: number) => modelService.runMeme(id),
+		onMutate: async (id) => {
+			await queryClient.cancelQueries({ queryKey: modelKeys.lists() });
+			const previousModels = queryClient.getQueriesData({ queryKey: modelKeys.lists() });
+
+			queryClient.setQueriesData(
+				{ queryKey: modelKeys.lists() },
+				(old: ModelListResponse | undefined) => {
+					if (!old || !Array.isArray(old.data)) return old;
+					return {
+						...old,
+						data: old.data.map((model: Model) =>
+							model.id === id ? { ...model, status: "queue" as const } : model
+						),
+					} as ModelListResponse;
+				}
+			);
+
+			return { previousModels };
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: modelKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: modelKeys.stats() });
+		},
+		onError: (_error, _id, context) => {
+			if (context?.previousModels) {
+				for (const [queryKey, data] of context.previousModels) {
+					queryClient.setQueryData(queryKey, data);
+				}
+			}
+		},
+	});
+};
+
+// Dispatch the isolated PyPSA power-flow leg (the add-on). Same
+// optimistic/rollback shape as useRunMemeMutation: on dispatch the model goes
+// to 'queue' and both lists + stats invalidate on success.
+export const useRunMemePypsaMutation = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: number) => modelService.runMemePypsa(id),
 		onMutate: async (id) => {
 			await queryClient.cancelQueries({ queryKey: modelKeys.lists() });
 			const previousModels = queryClient.getQueriesData({ queryKey: modelKeys.lists() });

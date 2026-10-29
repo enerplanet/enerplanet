@@ -269,6 +269,57 @@ func centroidFromGeom(geom map[string]interface{}) (float64, float64, error) {
 	return sy / n, sx / n, nil
 }
 
+// BBoxFromGeoJSON extracts a WGS84 (lon/lat) bounding box from a GeoJSON
+// geometry stored as raw JSON. Supports Point (a zero-size box at that
+// point), Polygon, and MultiPolygon — the same shapes CentroidFromGeoJSON
+// handles, since both read the same model.Coordinates field.
+func BBoxFromGeoJSON(raw json.RawMessage) (xmin, ymin, xmax, ymax float64, err error) {
+	var geom map[string]interface{}
+	if err := json.Unmarshal(raw, &geom); err != nil {
+		return 0, 0, 0, 0, fmt.Errorf("invalid geojson: %w", err)
+	}
+	return bboxFromGeom(geom)
+}
+
+func bboxFromGeom(geom map[string]interface{}) (xmin, ymin, xmax, ymax float64, err error) {
+	gt, _ := geom["type"].(string)
+	coords, ok := geom["coordinates"]
+	if !ok {
+		return 0, 0, 0, 0, errors.New("geometry missing coordinates")
+	}
+	var pts [][]float64
+	switch gt {
+	case "Point":
+		arr, ok := coords.([]interface{})
+		if !ok || len(arr) < 2 {
+			return 0, 0, 0, 0, errors.New("invalid Point coordinates")
+		}
+		lon, lat := toFloat(arr[0]), toFloat(arr[1])
+		return lon, lat, lon, lat, nil
+	case "Polygon":
+		pts = outerRing(coords)
+	case "MultiPolygon":
+		arr, ok := coords.([]interface{})
+		if !ok || len(arr) == 0 {
+			return 0, 0, 0, 0, errors.New("empty MultiPolygon")
+		}
+		pts = outerRing(arr[0])
+	default:
+		return 0, 0, 0, 0, fmt.Errorf("unsupported geometry type: %s", gt)
+	}
+	if len(pts) == 0 {
+		return 0, 0, 0, 0, errors.New("no points in geometry")
+	}
+	// points are [lon, lat]
+	xmin, ymin = pts[0][0], pts[0][1]
+	xmax, ymax = pts[0][0], pts[0][1]
+	for _, p := range pts[1:] {
+		xmin, xmax = min(xmin, p[0]), max(xmax, p[0])
+		ymin, ymax = min(ymin, p[1]), max(ymax, p[1])
+	}
+	return xmin, ymin, xmax, ymax, nil
+}
+
 func outerRing(polyCoords interface{}) [][]float64 {
 	rings, ok := polyCoords.([]interface{})
 	if !ok || len(rings) == 0 {

@@ -1,19 +1,49 @@
 # API Token Guide — Programmatic Access to Models
 
-This guide explains how an **expert** issues a personal access token for a
-user, and how that user accesses their wildfire models and results from any
-external application (scripts, Postman, other apps) using the token.
+This guide explains how users generate personal API tokens in Enerplanet,
+and access their models and results from scripts, Postman or other apps.
+Experts and managers can also issue and revoke tokens for users they manage.
+
+The RENvolveIT toolbox does not use these tokens. It sends SpatialHub access
+tokens instead; see [SpatialHub tokens](#spatialhub-tokens-renvolveit-toolbox).
 
 - Base URL (local development): `http://localhost:8000/api`
-- Base URL (production): `https://wildfire.th-deg.de/api`
+- Base URL (production): `https://enerplanet.th-deg.de/api`
 
 ---
 
-## Part 1 — Issuing a token (expert)
+## Part 1 — Generating and managing tokens
 
-Tokens are created by experts from the admin dashboard and handed to the user.
-A token always acts **as that user**: it can see exactly the models the user
-owns or that were shared with them — nothing more.
+A token acts as its owner, with access to models they own or that were shared
+with them. Tokens do not grant expert or manager privileges.
+
+### Your own tokens
+
+1. Sign into Enerplanet, including through RENvolveIT if that is your login provider.
+2. Open **Profile → API Tokens → Manage my API tokens**.
+3. Enter a name and expiry, then click **Generate token**. Normal users can
+   create read-only tokens; experts and managers can also select read & write.
+4. Copy the token immediately. Its full value is shown once; only a hash is stored.
+5. Return to the same dialog to see token status or click **Revoke**.
+
+The profile endpoints require a browser login session and always use that
+session's user ID:
+
+| Method | Endpoint | Action |
+| --- | --- | --- |
+| POST | `/api/users/profile/tokens` | Generate your token |
+| GET | `/api/users/profile/tokens` | List your token metadata |
+| DELETE | `/api/users/profile/tokens/{tokenId}` | Revoke your token |
+
+API tokens cannot manage tokens. Experts can still manage every user's tokens
+from User Management; managers can manage tokens within their groups, including
+tokens users generated themselves.
+
+Normal users cannot request `full` scope through the API either: the server
+returns `403`. For write access, ask an expert or your manager to issue a token.
+This creation restriction does not change existing tokens.
+
+### Issuing a token for another user
 
 1. Log in with an **expert** account.
 2. Go to **Admin Dashboard → User Management**.
@@ -98,7 +128,8 @@ print(metrics)
 ### Selecting a model
 
 `GET /models` returns **all the models you can access** — your own plus any
-shared with you. You pick the one you want from that list. Each entry includes:
+shared with you. The first call also links workspace invites and model shares
+sent to your email to your account, even with a read-only token. You pick the one you want from that list. Each entry includes:
 
 - `id` — the model id you pass to every other `/models/{id}/...` endpoint.
 - `title` — the human name of the model (e.g. `Galicia`), so you can recognise it.
@@ -202,7 +233,7 @@ with the user's normal permissions and limits.
 
 | Response                          | Meaning                                                      | Fix                                                      |
 | --------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
-| `401 Invalid API token`           | Token unknown, expired, or revoked                           | Ask an expert for a new token                            |
+| `401 Invalid API token`           | Token unknown, expired, or revoked                           | Generate a new token in your profile                     |
 | `401 Session not found`           | `Authorization` header missing or malformed                  | Header must be exactly `Bearer whf_…`                    |
 | `403 This API token is read-only` | Write attempt with a read-only token                         | Ask for a `full`-scope token if writing is really needed |
 | `403 Access denied`               | The model belongs to another user and is not shared with you | Request access via model sharing                         |
@@ -220,7 +251,7 @@ with the user's normal permissions and limits.
   role — admin endpoints are not reachable with a token.
 - Default scope is read-only; default lifetime is 90 days.
 - Every token request is audit-logged (token id, user, route); creation and
-  revocation are logged with the acting expert.
+  revocation are logged with the acting user.
 - Revocation is immediate.
 
 ## Part 5 — Manager access (creating users & API tokens)
@@ -242,6 +273,24 @@ tokens. So a manager can both onboard a user and issue them an API token from
 this one screen.
 
 ---
+
+## SpatialHub tokens (RENvolveIT toolbox)
+
+The toolbox backend sends a short-lived SpatialHub access token instead of a
+`whf_` token. These tokens:
+
+- can only read (`GET`) models and results, and need the `enerplanet:read` scope;
+- act as the user, like a personal token (including the invite linking above);
+- are checked locally and cannot be revoked, so a disabled user keeps access
+  until the token expires.
+
+**For operators:** keep the `spatialhub` realm's *Access Token Lifespan*
+(5 minutes today) at or below `KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS`
+(900 seconds). This lifespan is how long a disabled user can still read data.
+Longer tokens are rejected.
+
+After Keycloak rotates its signing key, new tokens can fail with `401` for up
+to 30 seconds while the API waits to download the new key.
 
 ## Troubleshooting
 

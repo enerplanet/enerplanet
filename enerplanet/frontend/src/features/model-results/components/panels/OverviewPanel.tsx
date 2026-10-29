@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { CHART_CARD_CLASS } from '../ui/PanelStates';
 import {
   Activity,
   BarChart3,
@@ -245,7 +246,8 @@ interface SummaryData {
   self_sufficiency_rate: number;
   grid_dependency_rate: number;
   total_cost_eur: number;
-  lcoe_eur_kwh: number;
+  /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
+  lcoe_eur_mwh: number;
 }
 
 interface OverviewPanelProps {
@@ -278,10 +280,10 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
   }, [simulationPeriod]);
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Performance Gauges */}
       {summary && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
             {t('results.charts.systemPerformance')}
@@ -300,7 +302,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {capacityData.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-2">
+          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-primary" />
               {t('results.charts.technologyCapacity')}
@@ -313,7 +315,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
         )}
 
         {costBreakdown.length > 0 && (
-          <div className="bg-card rounded-xl border border-border p-4 lg:col-span-1">
+          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-primary" />
               {t('results.charts.costDistribution')}
@@ -323,7 +325,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_kwh}
+                lcoe={summary?.lcoe_eur_mwh}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}
@@ -335,7 +337,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
 
       {/* Energy Flow */}
       {energyFlow.nodes.length > 2 && energyFlow.links.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Network className="w-4 h-4 text-primary" />
             {t('results.charts.energyFlow')}

@@ -12,15 +12,20 @@ import (
 
 // Technology represents an energy technology
 type Technology struct {
-	ID          uint       `gorm:"primaryKey"`
-	Key         string     `gorm:"type:varchar(255);not null"`
-	Alias       string     `gorm:"type:varchar(255);not null"`
-	Icon        *string    `gorm:"type:varchar(100)"`
-	Description *string    `gorm:"type:text"`
-	UserID      *string    `gorm:"type:varchar(255)"`
-	CreatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	UpdatedAt   time.Time  `gorm:"default:CURRENT_TIMESTAMP"`
-	Constraints []TechnologyConstraint `gorm:"foreignKey:TechnologyID"`
+	ID           uint                   `gorm:"primaryKey"`
+	Key          string                 `gorm:"type:varchar(255);not null"`
+	Type         string                 `gorm:"type:varchar(255);not null"`
+	Manufacturer *string                `gorm:"type:varchar(255)"`
+	Model        *string                `gorm:"type:varchar(255)"`
+	DatasheetURL *string                `gorm:"type:text;column:datasheet_url"`
+	Source       *string                `gorm:"type:text"`
+	Alias        string                 `gorm:"type:varchar(255);not null"`
+	Icon         *string                `gorm:"type:varchar(100)"`
+	Description  *string                `gorm:"type:text"`
+	UserID       *string                `gorm:"type:varchar(255)"`
+	CreatedAt    time.Time              `gorm:"default:CURRENT_TIMESTAMP"`
+	UpdatedAt    time.Time              `gorm:"default:CURRENT_TIMESTAMP"`
+	Constraints  []TechnologyConstraint `gorm:"foreignKey:TechnologyID"`
 }
 
 // TechnologyConstraint represents a configurable parameter for a technology
@@ -59,24 +64,29 @@ type TechnologiesJSON struct {
 }
 
 type TechnologyJSON struct {
-	Key         string           `json:"key"`
-	Alias       string           `json:"alias"`
-	Icon        string           `json:"icon"`
-	Description string           `json:"description"`
-	Constraints []ConstraintJSON `json:"constraints"`
+	Key          string           `json:"key"`
+	Type         string           `json:"type"`
+	Manufacturer string           `json:"manufacturer"`
+	Model        string           `json:"model"`
+	DatasheetURL string           `json:"datasheet_url"`
+	Source       string           `json:"source"`
+	Alias        string           `json:"alias"`
+	Icon         string           `json:"icon"`
+	Description  string           `json:"description"`
+	Constraints  []ConstraintJSON `json:"constraints"`
 }
 
 type ConstraintJSON struct {
-	Key          string      `json:"key"`
-	Alias        string      `json:"alias"`
-	DefaultValue interface{} `json:"default_value"`
-	Unit         *string     `json:"unit"`
-	Min          interface{} `json:"min"`
-	Max          interface{} `json:"max"`
-	Required     *bool       `json:"required"`
-	OsmBasedValue *string    `json:"osm_based_value"`
-	RelationData interface{} `json:"relationData"` // Changed from *string to interface{}
-	Options      []string    `json:"options"`
+	Key           string      `json:"key"`
+	Alias         string      `json:"alias"`
+	DefaultValue  interface{} `json:"default_value"`
+	Unit          *string     `json:"unit"`
+	Min           interface{} `json:"min"`
+	Max           interface{} `json:"max"`
+	Required      *bool       `json:"required"`
+	OsmBasedValue *string     `json:"osm_based_value"`
+	RelationData  interface{} `json:"relationData"` // Changed from *string to interface{}
+	Options       []string    `json:"options"`
 }
 
 // TechDescriptionJSON represents the tech_description_data.json structure
@@ -176,12 +186,20 @@ func seedTechnologies(db *gorm.DB) {
 		icon := techJSON.Icon
 		description := techJSON.Description
 
+		if techJSON.Type == "" {
+			techJSON.Type = techJSON.Key
+		}
 		tech := Technology{
-			Key:         techJSON.Key,
-			Alias:       techJSON.Alias,
-			Icon:        &icon,
-			Description: &description,
-			UserID:      nil, // Default technologies have no user_id
+			Key:          techJSON.Key,
+			Type:         techJSON.Type,
+			Manufacturer: optionalString(techJSON.Manufacturer),
+			Model:        optionalString(techJSON.Model),
+			DatasheetURL: optionalString(techJSON.DatasheetURL),
+			Source:       optionalString(techJSON.Source),
+			Alias:        techJSON.Alias,
+			Icon:         &icon,
+			Description:  &description,
+			UserID:       nil, // Default technologies have no user_id
 		}
 
 		if err := db.Create(&tech).Error; err != nil {
@@ -313,4 +331,12 @@ func seedTechnologies(db *gorm.DB) {
 	}
 
 	log.Printf("Successfully seeded %d technologies", len(techData.Technologies))
+}
+
+// optionalString returns nil for an empty string.
+func optionalString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

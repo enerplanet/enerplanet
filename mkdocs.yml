@@ -13,7 +13,9 @@ edit_uri: edit/main/docs/
 # Theme configuration
 theme:
   name: material
-  logo: assets/Logo_of_the_Technical_University_of_Munich.svg
+  custom_dir: overrides
+  logo: assets/logo/enerplanet-lockup-green-dark-outline.svg
+  favicon: assets/logo/favicon.ico
   features:
     - announce.dismiss
     - content.action.edit
@@ -38,20 +40,22 @@ theme:
   language: en
   palette:
     - media: "(prefers-color-scheme)"
+      primary: custom
+      accent: custom
       toggle:
         icon: material/link
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: black
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/toggle-switch-off
         name: Switch to system preference
@@ -114,7 +118,10 @@ nav:
   - EnerPlanET Platform:
       - Overview: enerplanet/index.md
       - Installation: enerplanet/installation.md
+      - Test Data: enerplanet/test-data.md
       - Architecture: enerplanet/architecture.md
+      - Heat Demand Resolution: enerplanet/heat-demand-flow.md
+      - OSM Ways and 3D Buildings: enerplanet/osm-ways-and-3d-buildings.md
       - Deployment: enerplanet/deployment.md
       - Authentication (Keycloak): enerplanet/keycloak.md
       - Identity Brokering: enerplanet/keycloak-identity-brokering.md
@@ -131,6 +138,9 @@ nav:
       - Energy Technologies: webservice/technologies.md
   - Open Source:
       - Checklist: getting-started/open-source-checklist.md
+
+extra_css:
+  - stylesheets/extra.css
 
 # Copyright
 copyright: |

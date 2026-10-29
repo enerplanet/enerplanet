@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import Draw, { type DrawEvent } from "ol/interaction/Draw";
 import Modify, { type ModifyEvent } from "ol/interaction/Modify";
+import DragPan from "ol/interaction/DragPan";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import { toLonLat, fromLonLat } from "ol/proj";
@@ -9,10 +10,21 @@ import type Polygon from "ol/geom/Polygon";
 import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
 import { Feature } from "ol";
-import { Polygon as OLPolygon, Point } from "ol/geom";
-import { platformModifierKeyOnly } from "ol/events/condition";
+import { MultiPoint, Polygon as OLPolygon, Point } from "ol/geom";
+import { altKeyOnly, noModifierKeys, primaryAction, shiftKeyOnly } from "ol/events/condition";
+import type MapBrowserEvent from "ol/MapBrowserEvent";
+import { getArea } from "ol/sphere";
 import buffer from "@turf/buffer";
 import type { Feature as GeoJSONFeature, Polygon as GeoJSONPolygon, Position } from "geojson";
+import { OVERVIEW_ZOOM } from "@/features/interactive-map/utils/mapStyleUtils";
+
+/** What a click at the pointer would act on: a polygon corner (of a triangle), a polygon's inside, or empty map. */
+export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "building" | "outside";
+
+// Modify's default pixelTolerance: the distance at which it picks up a vertex.
+const CORNER_TOLERANCE_PX = 10;
+// Below this a polygon covers nothing, e.g. corners that all lie on one line.
+const MIN_POLYGON_AREA_M2 = 1;
 
 interface PolygonDrawerProps {
   map: Map | null;
@@ -21,6 +33,14 @@ interface PolygonDrawerProps {
   onDrawingChange?: (isDrawing: boolean) => void;
   onPointCountChange?: (count: number) => void;
   onClearAll?: () => void;
+  /** True while another map tool owns clicks and the cursor; the drawer then does nothing. */
+  suspended?: boolean;
+  /** Called when a drawn or edited polygon is discarded for having no area. */
+  onPolygonRejected?: () => void;
+  /** Called when a right-click cannot close the sketch: too few corners, or all on one line. */
+  onSketchCannotClose?: (reason: "too-few-corners" | "corners-in-line") => void;
+  /** Called when the pointer moves onto a polygon corner, into a polygon, or out to empty map. */
+  onPointerTargetChange?: (target: PointerTarget) => void;
   allowMultiple?: boolean;
   clearTrigger?: number;
   initialPolygons?: [number, number][][];
@@ -45,6 +65,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   onDrawingChange,
   onPointCountChange,
   onClearAll,
+  onPointerTargetChange,
+  onPolygonRejected,
+  onSketchCannotClose,
+  suspended = false,
   allowMultiple = false,
   clearTrigger = 0,
   initialPolygons,
@@ -59,6 +83,9 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const onDrawingChangeRef = useRef(onDrawingChange);
   const onPointCountChangeRef = useRef(onPointCountChange);
   const onClearAllRef = useRef(onClearAll);
+  const onPointerTargetChangeRef = useRef(onPointerTargetChange);
+  const onPolygonRejectedRef = useRef(onPolygonRejected);
+  const onSketchCannotCloseRef = useRef(onSketchCannotClose);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const bufferSourceRef = useRef<VectorSource | null>(null);
   const startPointSourceRef = useRef<VectorSource | null>(null);
@@ -68,6 +95,14 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   const modifyInteractionRef = useRef<Modify | null>(null);
   const modifyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sourceReady, setSourceReady] = useState(false);
+  // Read by the draw handlers so toggling multiple polygons does not rebuild the
+  // layers, which would drop every polygon drawn so far.
+  const allowMultipleRef = useRef(allowMultiple);
+  const disableAfterDrawRef = useRef(disableAfterDraw);
+  allowMultipleRef.current = allowMultiple;
+  disableAfterDrawRef.current = disableAfterDraw;
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
 
   useEffect(() => {
     bufferDistanceRef.current = bufferDistanceMeters;
@@ -79,7 +114,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     onDrawingChangeRef.current = onDrawingChange;
     onPointCountChangeRef.current = onPointCountChange;
     onClearAllRef.current = onClearAll;
-  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll]);
+    onPointerTargetChangeRef.current = onPointerTargetChange;
+    onPolygonRejectedRef.current = onPolygonRejected;
+    onSketchCannotCloseRef.current = onSketchCannotClose;
+  }, [onPolygonDrawn, onPolygonModified, onDrawingChange, onPointCountChange, onClearAll, onPointerTargetChange, onPolygonRejected, onSketchCannotClose]);
 
   useEffect(() => {
     if (clearTrigger > 0 && vectorSourceRef.current) {
@@ -88,14 +126,14 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       startPointSourceRef.current?.clear();
       allPolygonsRef.current = [];
       // Re-enable draw interaction when cleared (check for duplicates)
-      if (map && drawInteractionRef.current && disableAfterDraw && !allowMultiple) {
+      if (map && drawInteractionRef.current && disableAfterDrawRef.current && !allowMultipleRef.current) {
         const interactions = map.getInteractions().getArray();
         if (!interactions.includes(drawInteractionRef.current)) {
           map.addInteraction(drawInteractionRef.current);
         }
       }
     }
-  }, [clearTrigger, map, disableAfterDraw, allowMultiple]);
+  }, [clearTrigger, map]);
 
   useEffect(() => {
     if (
@@ -142,13 +180,30 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
       // Disable drawing when initial polygons are loaded (edit mode)
       // Drawing will be re-enabled when user clears all polygons
-      if (disableAfterDraw && !allowMultiple && drawInteractionRef.current) {
+      if (disableAfterDrawRef.current && !allowMultipleRef.current && drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
       }
 
       return () => clearTimeout(timer);
     }
-  }, [initialPolygons, sourceReady, map, disableAfterDraw, allowMultiple]);
+  }, [initialPolygons, sourceReady, map]);
+
+  // While another tool is active the drawer releases the cursor it set and stops drawing.
+  useEffect(() => {
+    if (!map || !suspended) return;
+    drawInteractionRef.current?.setActive(false);
+    map.getViewport().style.cursor = "";
+  }, [map, suspended]);
+
+  // Toggling multiple polygons only changes whether another polygon may be drawn.
+  useEffect(() => {
+    const draw = drawInteractionRef.current;
+    if (!map || !draw) return;
+    const onMap = map.getInteractions().getArray().includes(draw);
+    const mayDraw = allowMultiple || !disableAfterDraw || allPolygonsRef.current.length === 0;
+    if (mayDraw && !onMap) map.addInteraction(draw);
+    if (!mayDraw && onMap) map.removeInteraction(draw);
+  }, [map, allowMultiple, disableAfterDraw, sourceReady]);
 
   useEffect(() => {
     if (!map) {
@@ -159,17 +214,33 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     vectorSourceRef.current = vectorSource;
     setSourceReady(true);
 
+    const outlineStyle = new Style({
+      fill: new Fill({
+        color: "transparent",
+      }),
+      stroke: new Stroke({
+        color: "#000000",
+        width: 2.5,
+      }),
+    });
+    // A marker on every corner shows where the polygon can be grabbed.
+    const cornerStyle = new Style({
+      geometry: (feature) => {
+        const ring = (feature.getGeometry() as Polygon).getCoordinates()[0];
+        return new MultiPoint(ring.slice(0, -1));
+      },
+      image: new CircleStyle({
+        radius: 4,
+        fill: new Fill({ color: "#ffffff" }),
+        stroke: new Stroke({ color: "#111827", width: 1.5 }),
+      }),
+    });
     const vectorLayer = new VectorLayer({
       source: vectorSource,
-      style: new Style({
-        fill: new Fill({
-          color: "transparent",
-        }),
-        stroke: new Stroke({
-          color: "#000000",
-          width: 2.5,
-        }),
-      }),
+      style: (_feature, resolution) =>
+        (map.getView().getZoomForResolution(resolution) ?? Infinity) > OVERVIEW_ZOOM
+          ? [outlineStyle, cornerStyle]
+          : [outlineStyle],
       zIndex: 2000, // High z-index to ensure polygon stays on top of all grid layers
     });
 
@@ -231,11 +302,22 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
     const sketchStyle = new Style({
       fill: new Fill({ color: "rgba(0, 0, 0, 0.05)" }),
       stroke: new Stroke({ color: "#000000", width: 2, lineDash: [4, 4] }),
-      image: new CircleStyle({ radius: 4, fill: new Fill({ color: "#000000" }) }),
     });
 
-    // Track keydown handler so cleanup can remove it
+    const hasNoArea = (geom: Polygon) => getArea(geom, { projection: map.getView().getProjection() }) < MIN_POLYGON_AREA_M2;
+    let spaceHeld = false;
+    let removePanHandlers: (() => void) | null = null;
     let handleContextMenu: ((e: MouseEvent) => void) | null = null;
+    let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
+    let handleShiftClick: ((evt: MapBrowserEvent) => void) | null = null;
+    let handlePointerMove: ((evt: MapBrowserEvent) => void) | null = null;
+
+    // A click on a building or transformer opens it, so a new polygon cannot start there.
+    const onModelFeature = (pixel: number[]): boolean =>
+      map.forEachFeatureAtPixel(pixel, (f) => {
+        const type = f.get("feature_type");
+        return type === "building" || type === "transformer" ? true : undefined;
+      }) === true;
 
     // Only add draw interaction if not in readOnly mode
     if (!readOnly) {
@@ -243,6 +325,15 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         source: vectorSource,
         type: "Polygon",
         style: sketchStyle,
+        // Primary button only, so a right-click never adds a vertex or starts a new sketch. With several
+        // polygons allowed, a click inside a drawn polygon selects what is there instead of adding a vertex.
+        condition: (event) =>
+          primaryAction(event) &&
+          noModifierKeys(event) &&
+          !spaceHeld &&
+          !suspendedRef.current &&
+          !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0) &&
+          (sketching || !onModelFeature(event.pixel)),
       });
       drawInteractionRef.current = draw;
 
@@ -253,7 +344,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       let isFirstPoint = true;
 
       draw.on("drawstart", (event: DrawEvent) => {
-        if (!allowMultiple) {
+        if (!allowMultipleRef.current) {
           vectorSource.clear();
           bufferSourceRef.current?.clear();
           startPointSourceRef.current?.clear();
@@ -270,8 +361,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
         geom.on("change", () => {
           const coords = geom.getCoordinates()[0];
-          // Report point count (subtract 1 because last point is cursor position)
-          const pointCount = Math.max(0, coords.length - 1);
+          const pointCount = sketchVertexCount(geom);
           if (onPointCountChangeRef.current) {
             onPointCountChangeRef.current(pointCount);
           }
@@ -289,8 +379,8 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           }
 
           // Check if cursor is near start point (need at least 3 points to close)
-          if (startCoord && coords.length > 3) {
-            const cursorCoord = coords[coords.length - 1];
+          if (startCoord && sketchVertexCount(geom) >= 3) {
+            const cursorCoord = coords[coords.length - 2];
             const startPixel = map.getPixelFromCoordinate(startCoord);
             const cursorPixel = map.getPixelFromCoordinate(cursorCoord);
 
@@ -310,20 +400,11 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
                   features[0].set("isNearStart", isNearStartPoint);
                 }
 
-                // Change cursor style
-                const viewport = map.getViewport();
-                if (isNearStartPoint) {
-                  viewport.style.cursor = "pointer";
-                } else {
-                  viewport.style.cursor = "crosshair";
-                }
+                applyCursor();
               }
             }
           }
         });
-
-        // Set crosshair cursor when drawing starts
-        map.getViewport().style.cursor = "crosshair";
 
         if (onDrawingChangeRef.current) {
           onDrawingChangeRef.current(true);
@@ -336,9 +417,6 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         startCoord = null;
         isNearStartPoint = false;
 
-        // Reset cursor
-        map.getViewport().style.cursor = "";
-
         // Reset point count
         if (onPointCountChangeRef.current) {
           onPointCountChangeRef.current(0);
@@ -346,6 +424,14 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 
         const polygon = event.feature.getGeometry() as Polygon;
         const coords = polygon.getCoordinates()[0];
+
+        // Draw adds the feature to the source right after drawend, so it is removed once added.
+        if (hasNoArea(polygon)) {
+          vectorSource.once("addfeature", (e) => { if (e.feature) vectorSource.removeFeature(e.feature); });
+          onDrawingChangeRef.current?.(false);
+          onPolygonRejectedRef.current?.();
+          return;
+        }
 
         let lonLatCoords = coords.map((coord: Coordinate) => {
           const [lon, lat] = toLonLat(coord);
@@ -375,7 +461,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         }
 
         // Disable drawing after first polygon if disableAfterDraw is true
-        if (disableAfterDraw && !allowMultiple) {
+        if (disableAfterDrawRef.current && !allowMultipleRef.current) {
           map.removeInteraction(draw);
         }
       });
@@ -384,10 +470,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (enableEditing) {
         const modify = new Modify({
           source: vectorSource,
-          // Alt+click to delete vertices
-          deleteCondition: (event) => {
-            return platformModifierKeyOnly(event) && event.type === "singleclick";
-          },
+          deleteCondition: (event) => altKeyOnly(event) && event.type === "singleclick",
           // Style for vertices during editing
           style: new Style({
             image: new CircleStyle({
@@ -401,33 +484,37 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         map.addInteraction(modify);
         modify.getOverlay().setZIndex(MODIFY_SKETCH_Z_INDEX);
 
+        // Modify inserts a vertex on pointerdown within pixelTolerance of an edge, so a press near the
+        // boundary that is not dragged leaves an extra corner with the shape unchanged. Such a press is
+        // undone: a corner made from an edge stays only once it is dragged.
+        const polygonAreas = () =>
+          vectorSource.getFeatures().map((f) => (f.getGeometry() as Polygon | undefined)?.getArea() ?? 0);
+        const cornerTotal = () =>
+          vectorSource.getFeatures().reduce((n, f) => n + (f.getGeometry() as Polygon).getCoordinates()[0].length, 0);
+        let areasAtStart: number[] = [];
+        let cornersAtStart = 0;
+        let ringsAtStart: { feature: Feature; coords: Coordinate[][] }[] = [];
+        modify.on("modifystart", () => {
+          areasAtStart = polygonAreas();
+          cornersAtStart = cornerTotal();
+          ringsAtStart = vectorSource.getFeatures().map((f) => ({ feature: f, coords: (f.getGeometry() as Polygon).getCoordinates() }));
+        });
+
         // Handle modification end - sync allPolygonsRef and notify parent
         modify.on("modifyend", (_event: ModifyEvent) => {
-          // Rebuild allPolygonsRef from current features IMMEDIATELY for visual feedback
-          const features = vectorSource.getFeatures();
-          const updatedPolygons: [number, number][][] = [];
-
-          for (const feature of features) {
-            const geom = feature.getGeometry() as Polygon;
-            if (geom) {
-              const coords = geom.getCoordinates()[0];
-              let lonLatCoords = coords.map((coord: Coordinate) => {
-                const [lon, lat] = toLonLat(coord);
-                return [lon, lat] as [number, number];
-              });
-
-              // Remove duplicate closing point if present
-              if (
-                lonLatCoords.length > 2 &&
-                lonLatCoords[0][0] === lonLatCoords.at(-1)?.[0] &&
-                lonLatCoords[0][1] === lonLatCoords.at(-1)?.[1]
-              ) {
-                lonLatCoords = lonLatCoords.slice(0, -1);
-              }
-
-              updatedPolygons.push(lonLatCoords);
-            }
+          const areas = polygonAreas();
+          // Area equality misses a drag that keeps the area exactly; compare coordinates if that matters.
+          const shapeUnchanged =
+            areas.length === areasAtStart.length &&
+            areas.every((a, i) => Math.abs(a - areasAtStart[i]) <= 1e-9 * Math.max(1, a));
+          if (shapeUnchanged) {
+            if (cornerTotal() > cornersAtStart) ringsAtStart.forEach(({ feature, coords }) => (feature.getGeometry() as Polygon).setCoordinates(coords));
+            return;
           }
+          const flattened = vectorSource.getFeatures().filter((f) => hasNoArea(f.getGeometry() as Polygon));
+          flattened.forEach((f) => vectorSource.removeFeature(f));
+          if (flattened.length > 0) onPolygonRejectedRef.current?.();
+          const updatedPolygons = polygonsFromSource(vectorSource);
 
           // Update local state immediately
           allPolygonsRef.current = updatedPolygons;
@@ -443,35 +530,199 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           }
 
           modifyDebounceRef.current = setTimeout(() => {
-            if (onPolygonModifiedRef.current) {
-              onPolygonModifiedRef.current([...updatedPolygons]);
-            }
+            if (updatedPolygons.length === 0) onClearAllRef.current?.();
+            else onPolygonModifiedRef.current?.([...updatedPolygons]);
           }, 300); // 300ms debounce for API call only
         });
       }
 
-      // Right-click to finish and close polygon (need at least 3 vertices)
+      // While sketching: right-click closes a polygon of three or more vertices, Escape abandons it.
+      let sketching = false;
       let currentPointCount = 0;
-      handleContextMenu = (e: MouseEvent) => {
-        if (currentPointCount >= 3 && drawInteractionRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          drawInteractionRef.current.finishDrawing();
-        }
-      };
-
-      // Track point count from geometry change events for the right-click handler
-      draw.on("drawstart", (evt: DrawEvent) => {
+      let sketchGeom: Polygon | null = null;
+      const endSketch = () => {
+        sketching = false;
         currentPointCount = 0;
+        startPointSourceRef.current?.clear();
+        onPointCountChangeRef.current?.(0);
+        onDrawingChangeRef.current?.(false);
+        syncPan();
+        applyCursor();
+      };
+      handleContextMenu = (e: MouseEvent) => {
+        if (!sketching) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentPointCount < 3 || !sketchGeom) {
+          onSketchCannotCloseRef.current?.("too-few-corners");
+          return;
+        }
+        // The sketch ring ends with the cursor position and the closing vertex.
+        const placed = sketchGeom.getCoordinates()[0].slice(0, -2);
+        if (hasNoArea(new OLPolygon([[...placed, placed[0]]]))) {
+          onSketchCannotCloseRef.current?.("corners-in-line");
+          return;
+        }
+        drawInteractionRef.current?.finishDrawing();
+      };
+      handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && sketching) drawInteractionRef.current?.abortDrawing();
+      };
+      draw.on("drawstart", (evt: DrawEvent) => {
+        sketching = true;
+        currentPointCount = 0;
+        syncPan();
+        applyCursor();
         const geom = evt.feature.getGeometry() as Polygon;
+        sketchGeom = geom;
         geom.on("change", () => {
-          const coords = geom.getCoordinates()[0];
-          currentPointCount = Math.max(0, coords.length - 1);
+          currentPointCount = sketchVertexCount(geom);
         });
       });
       draw.on("drawend", () => {
+        sketching = false;
         currentPointCount = 0;
+        syncPan();
+        applyCursor();
       });
+      draw.on("drawabort", endSketch);
+
+      // While sketching, the map pans only with Space held, so a slip while placing a vertex cannot move
+      // it. Space shows an open hand, a pan a closed fist. Space is taken only with the pointer on the map.
+      const dragPans = map.getInteractions().getArray().filter((i): i is DragPan => i instanceof DragPan);
+      const viewport = map.getViewport();
+      let pointerOverMap = false;
+      let buttonDown = false;
+      let panning = false;
+      let modifierHeld = false;
+      function syncPan() {
+        dragPans.forEach((p) => p.setActive(!sketching || spaceHeld));
+      }
+      // One place sets the cursor, so it always names the tool a click or drag would use: Space pans,
+      // Alt picks a corner and Shift a polygon; otherwise drawing, or whatever is under the pointer.
+      function applyCursor() {
+        if (suspendedRef.current) return;
+        let cursor = "";
+        if (panning) cursor = "grabbing";
+        else if (spaceHeld) cursor = "grab";
+        else if (modifierHeld) cursor = "pointer";
+        else if (sketching) cursor = isNearStartPoint ? "pointer" : "crosshair";
+        else if (allowMultipleRef.current || targetFeature) cursor = cursorFor[pointerTarget];
+        viewport.style.cursor = cursor;
+      }
+      const onKey = (e: KeyboardEvent) => {
+        modifierHeld = e.altKey || e.shiftKey;
+        if (e.code === "Space" && (e.type === "keyup" || pointerOverMap)) {
+          if (pointerOverMap) e.preventDefault();
+          spaceHeld = e.type === "keydown";
+          syncPan();
+        }
+        applyCursor();
+      };
+      const onBlur = () => {
+        spaceHeld = false;
+        modifierHeld = false;
+        syncPan();
+        applyCursor();
+      };
+      const onEnter = () => { pointerOverMap = true; };
+      const onLeave = () => { pointerOverMap = false; };
+      const onDown = () => { buttonDown = true; };
+      const onUp = () => { buttonDown = false; };
+      const onMoveStart = () => {
+        panning = buttonDown && (!sketching || spaceHeld);
+        applyCursor();
+      };
+      const onMoveEnd = () => {
+        panning = false;
+        applyCursor();
+      };
+      document.addEventListener("keydown", onKey);
+      document.addEventListener("keyup", onKey);
+      window.addEventListener("blur", onBlur);
+      viewport.addEventListener("pointerenter", onEnter);
+      viewport.addEventListener("pointerleave", onLeave);
+      viewport.addEventListener("pointerdown", onDown);
+      document.addEventListener("pointerup", onUp);
+      map.on("movestart", onMoveStart);
+      map.on("moveend", onMoveEnd);
+      removePanHandlers = () => {
+        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("keyup", onKey);
+        window.removeEventListener("blur", onBlur);
+        viewport.removeEventListener("pointerenter", onEnter);
+        viewport.removeEventListener("pointerleave", onLeave);
+        viewport.removeEventListener("pointerdown", onDown);
+        document.removeEventListener("pointerup", onUp);
+        map.un("movestart", onMoveStart);
+        map.un("moveend", onMoveEnd);
+        dragPans.forEach((p) => p.setActive(true));
+      };
+
+      // Shift+click deletes the finished polygon under the cursor. Alt+click deletes a corner (Modify's
+      // deleteCondition), except on a triangle, which Modify keeps: there it deletes the whole polygon.
+      const removePolygon = (feature: Feature) => {
+        vectorSource.removeFeature(feature);
+        const remaining = polygonsFromSource(vectorSource);
+        allPolygonsRef.current = remaining;
+        recomputeBuffers(bufferDistanceRef.current);
+        if (remaining.length === 0) onClearAllRef.current?.();
+        else onPolygonModifiedRef.current?.(remaining);
+      };
+      const cornerFeatureAt = (pixel: number[]) =>
+        enableEditing
+          ? vectorSource.getFeatures().find((f) =>
+              (f.getGeometry() as Polygon).getCoordinates()[0].some((c) => {
+                const p = map.getPixelFromCoordinate(c);
+                return p && Math.hypot(p[0] - pixel[0], p[1] - pixel[1]) <= CORNER_TOLERANCE_PX;
+              })
+            )
+          : undefined;
+      let pointerTarget: PointerTarget = "outside";
+      let targetFeature: Feature | undefined;
+      let onTriangleCorner = false;
+      handleShiftClick = (evt: MapBrowserEvent) => {
+        if (sketching || suspendedRef.current) return;
+        if (shiftKeyOnly(evt)) {
+          const hit = vectorSource.getFeaturesAtCoordinate(evt.coordinate)[0];
+          if (hit) removePolygon(hit);
+        } else if (altKeyOnly(evt) && onTriangleCorner && targetFeature) {
+          removePolygon(targetFeature);
+        }
+      };
+      map.on("singleclick", handleShiftClick);
+
+      // Near a corner the cursor shows it can be moved. Inside a polygon the map is for selecting, so
+      // drawing pauses and the cursor is a hand. Outside, a crosshair.
+      const cursorFor: Record<PointerTarget, string> = {
+        corner: "move",
+        "triangle-corner": "move",
+        polygon: "pointer",
+        building: "pointer",
+        outside: "crosshair",
+      };
+      handlePointerMove = (evt: MapBrowserEvent) => {
+        if (sketching || evt.dragging || spaceHeld || suspendedRef.current) return;
+        let target: PointerTarget = "outside";
+        onTriangleCorner = false;
+        targetFeature = cornerFeatureAt(evt.pixel);
+        if (targetFeature) {
+          const corners = (targetFeature.getGeometry() as Polygon).getCoordinates()[0].length - 1;
+          onTriangleCorner = corners <= 3;
+          target = onTriangleCorner ? "triangle-corner" : "corner";
+        } else if (vectorSource.getFeaturesAtCoordinate(evt.coordinate).length > 0) {
+          target = "polygon";
+        } else if (onModelFeature(evt.pixel)) {
+          target = "building";
+        }
+        if (allowMultipleRef.current) draw.setActive(target === "outside");
+        const changed = target !== pointerTarget;
+        pointerTarget = target;
+        applyCursor();
+        if (changed) onPointerTargetChangeRef.current?.(target);
+      };
+      map.on("pointermove", handlePointerMove);
+      document.addEventListener("keydown", handleKeyDown);
 
       map.getViewport().addEventListener("contextmenu", handleContextMenu);
     }
@@ -481,6 +732,11 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       if (handleContextMenu) {
         map.getViewport().removeEventListener("contextmenu", handleContextMenu);
       }
+      if (handleKeyDown) document.removeEventListener("keydown", handleKeyDown);
+      if (handleShiftClick) map.un("singleclick", handleShiftClick);
+      if (handlePointerMove) map.un("pointermove", handlePointerMove);
+      removePanHandlers?.();
+      map.getViewport().style.cursor = "";
       if (drawInteractionRef.current) {
         map.removeInteraction(drawInteractionRef.current);
       }
@@ -502,7 +758,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       allPolygonsRef.current = [];
       setSourceReady(false);
     };
-  }, [map, allowMultiple, disableAfterDraw, readOnly, enableEditing]);
+  }, [map, readOnly, enableEditing]);
 
   const recomputeBuffers = (distanceMeters: number) => {
     const source = bufferSourceRef.current;
@@ -528,6 +784,22 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   }, [bufferDistanceMeters]);
 
   return null;
+};
+
+/** Vertices the user has placed: the sketch ring also holds the cursor position and the closing vertex. */
+const sketchVertexCount = (geom: Polygon): number => Math.max(0, geom.getCoordinates()[0].length - 2);
+
+/** The source's polygons as lon/lat rings, without the repeated closing vertex. */
+const polygonsFromSource = (source: VectorSource): [number, number][][] => {
+  const polygons: [number, number][][] = [];
+  for (const feature of source.getFeatures()) {
+    const geom = feature.getGeometry() as Polygon | undefined;
+    if (!geom) continue;
+    let ring = geom.getCoordinates()[0].map((coord: Coordinate) => toLonLat(coord) as [number, number]);
+    if (ring.length > 2 && ring[0][0] === ring.at(-1)?.[0] && ring[0][1] === ring.at(-1)?.[1]) ring = ring.slice(0, -1);
+    polygons.push(ring);
+  }
+  return polygons;
 };
 
 const processPolygonBuffer = (

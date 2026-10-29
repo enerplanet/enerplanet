@@ -97,7 +97,6 @@ function RegionSelectWrapper({ context, onUpdate }: ModuleProps) {
           user_id: userId,
           model_id: context.modelId,
           draft_id: context.draftId,
-          include_public_buildings: true,
           include_private_buildings: true,
         });
         if (genId !== genIdRef.current) return;

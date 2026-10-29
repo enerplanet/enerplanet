@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+import { CHART_CARD_CLASS } from '../ui/PanelStates';
 import {
   Activity,
   Battery,
   Building2,
   DollarSign,
+  Flame,
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -35,6 +37,7 @@ interface WindTurbineInfo {
 interface BuildingDetailPanelProps {
   building: BuildingResultData;
   modelId: number;
+  carrier?: string;
   turbineData?: Record<string, WindTurbineInfo>;
 }
 
@@ -93,10 +96,10 @@ const getEnergyLabelColor = (label: string): string => {
   return colors[label] || "bg-muted text-muted-foreground";
 };
 
-const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDetailPanelProps) => {
+const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {} }: BuildingDetailPanelProps) => {
   const [timeSeriesData, setTimeSeriesData] = useState<LocationTimeSeriesData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<BuildingTab>("energy");
+  const [activeTab, setActiveTab] = useState<BuildingTab>('energy');
   const { t } = useTranslation();
 
   const turbineIdToName = useMemo(() => {
@@ -138,7 +141,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       if (!building.matchedLocationId) return;
       setLoading(true);
       try {
-        const data = await fetchLocationTimeSeries(modelId, building.matchedLocationId);
+        const data = await fetchLocationTimeSeries(modelId, building.matchedLocationId, undefined, undefined, carrier);
         setTimeSeriesData(data);
       } catch (error) {
         console.error("Failed to load time series:", error);
@@ -147,7 +150,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       }
     };
     loadTimeSeries();
-  }, [modelId, building.matchedLocationId]);
+  }, [modelId, building.matchedLocationId, carrier]);
 
   const fClassLabels = useMemo(() => {
     const rawClasses =
@@ -161,6 +164,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
     building.fClass === "Transformer" ||
     (building.fClasses ?? []).some((value) => value.toLowerCase() === "transformer");
 
+  // totalProduction and totalDemand sum installed capacities (kW), not energy.
   const energyBalance = building.totalProduction - building.totalDemand;
 
   // Compute self-sufficiency for this building
@@ -183,9 +187,9 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
   const yearBuilt = building.constructionYear || building.yearBuilt;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="md-stagger p-4 space-y-4">
       {/* Header */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="p-4">
           <div className="flex items-start gap-3">
             <div className="p-2.5 bg-primary/10 rounded-xl">
@@ -324,7 +328,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       </div>
 
       {/* Energy Metrics */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className={CHART_CARD_CLASS}>
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5" />
           {t("results.buildingDetail.energyOverview", "Energy Overview")}
@@ -335,7 +339,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
               <div className="flex items-center gap-1.5 mb-1">
                 <Zap className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-[10px] font-medium text-muted-foreground">
-                  {t("results.buildingDetail.yearlyDemand", "Yearly Demand")}
+                  {t("results.buildingDetail.yearlyElectricityDemand", "Yearly Electricity Demand")}
                 </span>
               </div>
               <p className="text-base font-bold text-foreground">
@@ -348,6 +352,24 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
               )}
             </div>
           )}
+          {building.yearlyHeatDemandKwh != null && building.yearlyHeatDemandKwh > 0 && (
+            <div className="bg-muted/50 rounded-lg p-3 border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {t("results.buildingDetail.yearlyHeatDemand", "Yearly Heat Demand")}
+                </span>
+                {building.heatDemandEstimated && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                    {t("results.buildingDetail.estimated", "estimated")}
+                  </span>
+                )}
+              </div>
+              <p className="text-base font-bold text-foreground">
+                {formatEnergy(building.yearlyHeatDemandKwh)}
+              </p>
+            </div>
+          )}
           <div className="bg-muted/50 rounded-lg p-3 border border-border">
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
@@ -356,7 +378,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
               </span>
             </div>
             <p className="text-base font-bold text-foreground">
-              {formatEnergy(building.totalProduction)}
+              {formatPower(building.totalProduction)}
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 border border-border">
@@ -367,7 +389,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
               </span>
             </div>
             <p className="text-base font-bold text-foreground">
-              {formatEnergy(-Math.abs(building.totalDemand))}
+              {formatPower(-Math.abs(building.totalDemand))}
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 border border-border">
@@ -377,7 +399,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
                 {t("results.buildingDetail.balance")}
               </span>
             </div>
-            <p className="text-base font-bold text-foreground">{formatEnergy(energyBalance)}</p>
+            <p className="text-base font-bold text-foreground">{formatPower(energyBalance)}</p>
             {building.totalDemand > 0 && (
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {selfSufficiency.toFixed(1)}%{" "}
@@ -403,7 +425,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
 
       {/* Technologies */}
       {building.technologies.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={CHART_CARD_CLASS}>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <Sun className="w-3.5 h-3.5" />
             {t("results.buildingDetail.installedTechnologies", "Installed Technologies")}
@@ -442,7 +464,7 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
       )}
 
       {/* Energy / Cost Tabs */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div className="flex border-b border-border">
           {[
             {
@@ -459,10 +481,10 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-all duration-200 ${
                 activeTab === tab.id
-                  ? "bg-card text-foreground border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground bg-muted/30"
+                  ? "border-b-2 border-primary bg-card text-foreground"
+                  : "border-b-2 border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -471,15 +493,18 @@ const BuildingDetailPanel = ({ building, modelId, turbineData = {} }: BuildingDe
           ))}
         </div>
 
-        <div className="p-4">
+        <div key={activeTab} className="md-fade-in p-4">
           {(() => {
             if (loading) {
               return (
-                <div className="flex flex-col items-center justify-center h-[300px]">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    {t("results.buildingDetail.loadingTimeSeries", "Loading time series...")}
-                  </p>
+                <div className="space-y-3" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>
+                      {t("results.buildingDetail.loadingTimeSeries", "Loading time series...")}
+                    </span>
+                  </div>
+                  <div className="md-skeleton h-[260px] w-full rounded-lg bg-muted" />
                 </div>
               );
             }

@@ -1,5 +1,7 @@
 export const MAP_ZOOM = {
   DEFAULT: 12,
+  // Around the preferred location: a quarter of a few hundred buildings, the scale a model area is drawn at.
+  LOCATION: 16,
   MIN: 1,
   MAX: 20,
 } as const;

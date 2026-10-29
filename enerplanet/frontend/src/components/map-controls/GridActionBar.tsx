@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Building2, Activity, Loader2, Check } from "lucide-react";
+import { Building2, Loader2, Flame } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
 
@@ -24,9 +24,8 @@ interface GridActionBarProps {
     onToggleAddTransformerMode: () => void;
     isBuildingAssignMode: boolean;
     onStartBuildingAssignMode: () => void;
-    onRunPowerFlow: () => Promise<boolean>;
-    isRunningPowerFlow: boolean;
-    hasPowerFlowResults: boolean;
+    onResolveAllHeat: () => Promise<void>;
+    isResolvingHeat: boolean;
 }
 
 export const GridActionBar: FC<GridActionBarProps> = ({
@@ -35,31 +34,32 @@ export const GridActionBar: FC<GridActionBarProps> = ({
     onToggleAddTransformerMode,
     isBuildingAssignMode,
     onStartBuildingAssignMode,
-    onRunPowerFlow,
-    isRunningPowerFlow,
-    hasPowerFlowResults,
+    onResolveAllHeat,
+    isResolvingHeat,
 }) => {
     const { t } = useTranslation();
-
     if (!hasGridData) return null;
 
     return (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-2 fade-in duration-300">
-            <div className="flex items-center bg-card/95 backdrop-blur-md border border-border rounded-full shadow-lg">
+        // Centred under the visible map, which ends where the sidebar starts.
+        <div className="absolute bottom-10 z-40 -translate-x-1/2" style={{ left: "calc((100% - var(--sidebar-offset, 0rem)) / 2)" }}>
+            <div className="flex items-center bg-card border border-border rounded-full shadow-lg animate-in slide-in-from-bottom-2 fade-in duration-300">
                 {/* Add Transformer */}
                 <button
                     type="button"
                     onClick={onToggleAddTransformerMode}
+                    aria-label={t("workflow.addTransformerAction")}
+                    title={t("workflow.addTransformerAction")}
                     className={`
                         flex items-center gap-2 px-4 py-2.5 rounded-l-full transition-colors
                         ${isAddTransformerMode
-                            ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                            ? "bg-primary/10 text-foreground"
                             : "text-foreground hover:bg-muted/80"
                         }
                     `}
                 >
-                    <TransformerIcon className={`w-4 h-4 ${isAddTransformerMode ? "text-green-500" : ""}`} />
-                    <span className="text-xs font-medium whitespace-nowrap">
+                    <TransformerIcon className={`w-4 h-4 ${isAddTransformerMode ? "text-primary" : ""}`} />
+                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                         {t("workflow.addTransformerAction")}
                     </span>
                     <InfoIcon tooltipKey="addTransformer" position="top" />
@@ -73,10 +73,12 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                         <button
                             type="button"
                             onClick={onStartBuildingAssignMode}
+                    aria-label={t("workflow.assignBuildingsAction")}
+                    title={t("workflow.assignBuildingsAction")}
                             className="flex items-center gap-2 px-4 py-2.5 text-foreground hover:bg-muted/80 transition-colors"
                         >
                             <Building2 className="w-4 h-4" />
-                            <span className="text-xs font-medium whitespace-nowrap">
+                            <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
                                 {t("workflow.assignBuildingsAction")}
                             </span>
                             <InfoIcon tooltipKey="assignBuildings" position="top" />
@@ -86,35 +88,28 @@ export const GridActionBar: FC<GridActionBarProps> = ({
                     </>
                 )}
 
-                {/* Power Flow */}
+                {/* Resolve heat (refresh heat tech assignment) */}
                 <button
                     type="button"
-                    onClick={onRunPowerFlow}
-                    disabled={isRunningPowerFlow}
-                    className={`
-                        flex items-center gap-2 px-4 py-2.5 rounded-r-full transition-colors
+                    onClick={() => void onResolveAllHeat()}
+                    aria-label={t("workflow.resolveHeatAction") || "Resolve heat"}
+                    title={t("workflow.resolveHeatAction") || "Resolve heat"}
+                    disabled={isResolvingHeat}
+                    className="
+                        flex items-center gap-2 px-4 py-2.5 rounded-r-full text-foreground hover:bg-muted/80 transition-colors
                         disabled:opacity-50 disabled:cursor-not-allowed
-                        ${hasPowerFlowResults
-                            ? "text-amber-600 dark:text-amber-400 hover:bg-muted/80"
-                            : "text-foreground hover:bg-muted/80"
-                        }
-                    `}
+                    "
                 >
-                    {isRunningPowerFlow ? (
+                    {isResolvingHeat ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : hasPowerFlowResults ? (
-                        <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                        <Activity className="w-4 h-4" />
+                        <Flame className="w-4 h-4 text-orange-500" />
                     )}
-                    <span className="text-xs font-medium whitespace-nowrap">
-                        {hasPowerFlowResults
-                            ? t("workflow.rerunPowerFlowAction")
-                            : t("workflow.runPowerFlowAction")
-                        }
+                    <span className="hidden text-xs font-medium whitespace-nowrap xl:inline">
+                        {t("workflow.resolveHeatAction") || "Resolve heat"}
                     </span>
-                    <InfoIcon tooltipKey="powerFlow" position="top" />
                 </button>
+
             </div>
         </div>
     );
