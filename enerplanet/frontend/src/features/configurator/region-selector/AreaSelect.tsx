@@ -345,6 +345,19 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     });
   };
 
+  // A reset drops every drawn polygon, placed transformer and building
+  // assignment, so it asks before firing.
+  const resetArea = () => {
+    void confirm({
+      type: "warning",
+      title: t("simulation.mapHeader.resetAreaConfirmTitle"),
+      description: t("simulation.mapHeader.resetAreaConfirmDescription"),
+      confirmLabel: t("simulation.mapHeader.resetArea"),
+      cancelLabel: t("common.cancel"),
+      onConfirm: async () => void regionSelection.handleClearAllWithModes(),
+    });
+  };
+
   const markModified = useCallback(() => setIsModified(true), [setIsModified]);
   const buildingSelection = useBuildingSelection({
     map,
@@ -694,7 +707,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         mapHeader={
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
-            onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            onClearAllPolygons={resetArea}
             onImportArea={handleImportArea}
             onExportArea={handleExportArea}
             onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}

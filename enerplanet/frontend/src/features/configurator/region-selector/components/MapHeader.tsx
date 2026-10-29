@@ -207,7 +207,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
               onClick={onClearAllPolygons}
               className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap"
             >
-              {t("simulation.mapHeader.clearAll")} ({allPolygonsCount})
+              {t("simulation.mapHeader.resetArea")}
             </button>
           </div>
         )}
