@@ -4,7 +4,7 @@
 # buildings, building attributes, weather and PyLovo grids) into a heat stack
 # running under the same prefix.
 #
-#   scripts/deploy-fixture.sh --prefix sim2 /srv/enerplanet-test-data/v2
+#   scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v2
 #
 # The folder holds any of 3d/<country>/<provider>/, attributes/<country>/<provider>/,
 # weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. Files are added

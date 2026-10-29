@@ -12,7 +12,7 @@ GHCR. Test data is loaded separately with
 
 ```bash
 scripts/deploy-heat-stack-branch.sh --prefix sim2 up
-scripts/deploy-fixture.sh --prefix sim2 /srv/enerplanet-test-data/v2
+scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v2
 ```
 
 Run it from a clone of enerplanet. The service checkouts go in that clone's

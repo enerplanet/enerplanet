@@ -601,7 +601,7 @@ Reach the private services through their containers:
   docker exec $PREFIX-city2tabula-db psql -U postgres -l
   docker logs -f $PREFIX-tentacron-env-tentacron-1
 
-Load test data with: scripts/deploy-fixture.sh --prefix $PREFIX <test-data>/vN
+Load test data with: scripts/deploy-fixture.sh --prefix $PREFIX /path/to/enerplanet-test-data/vN
 Tear down with:      $0 --prefix $PREFIX down
 EOF
 }

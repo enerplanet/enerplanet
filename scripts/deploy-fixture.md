@@ -10,7 +10,7 @@ running under a prefix. A region becomes usable in EnerPlanET once its 3D
 buildings, its PyLovo grids and weather covering it are loaded.
 
 ```bash
-scripts/deploy-fixture.sh --prefix sim2 /srv/enerplanet-test-data/v2
+scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v2
 ```
 
 The stack must be up first, from
@@ -29,13 +29,15 @@ enerplanet-test-data/
 ```
 
 Each version is a complete snapshot of every region so far, not a difference
-from the one before. A server needs only the newest folder.
+from the one before. A server needs only the newest folder. The shared folder
+holds everything except `weather/`, which is too large to keep there and is
+sent to the server separately (see [Weather](#weather)).
 
-| Path in `vN/` | Content | Goes to |
+| Path in `vN/` on the server | Content | Goes to |
 |---|---|---|
 | `3d/<country>/<provider>/` | 3D building files with their `attribution.json` | City2TABULA `data/lod2/<country>/<provider>/`, then imported |
 | `attributes/<country>/<provider>/` | building attributes, such as BAG building use | City2TABULA `data/attributes/<country>/<provider>/`, then imported |
-| `weather/<provider>/<country>/output/` | weather archives cut to the regions, in weather-serve's own layout | weather-serve `/data/`, served from the next request on |
+| `weather/<provider>/<country>/output/` | per-country weather archives in weather-serve's own layout, sent separately | weather-serve `/data/`, served from the next request on |
 | `pylovo/<name>.sql.gz` | one PyLovo dump holding every region's grids | replaces the stack's PyLovo database |
 | `README.md` | what this version holds | not loaded |
 
@@ -43,21 +45,27 @@ from the one before. A server needs only the newest folder.
 `austria`, `czechia`, `germany`, `netherlands` and so on. The script stops on
 any other folder name before it copies anything.
 
-`weather/` holds the per-country archives of a weather data directory, which
-are the only files weather-serve reads besides the provider-wide fallback.
-Copy just those:
-
-```bash
-cd <weather checkout>/data
-cp -r --parents */*/output <path>/vN/weather/
-```
-
-Leave out the provider-wide archives (`<provider>/output/`), downloads and
-logs: they are hundreds of GB, and the per-country archives already serve
-every region.
-
 Any of the four parts may be absent. A version without `pylovo/` leaves the
 PyLovo database as it is.
+
+## Weather
+
+`weather/` holds the per-country archives (`<provider>/<country>/output/`) of
+a weather data directory, the only files weather-serve reads besides its
+provider-wide fallback. They are sent from the machine that holds the weather
+data straight into the server's version folder, over SSH:
+
+```bash
+cd /path/to/weather/data
+rsync -aR --partial --info=progress2 */austria/output */netherlands/output \
+  user@server:/path/to/enerplanet-test-data/vN/weather/
+```
+
+`-R` keeps the `<provider>/<country>/output/` paths. weather-serve answers a
+point from the nearest country whose bounding box contains it, so send the
+countries whose boxes hold the regions; a region near a border may be served
+from the neighbouring country. Leave out the provider-wide archives
+(`<provider>/output/`), downloads and logs, which are hundreds of GB.
 
 ## What a run does
 
@@ -86,10 +94,21 @@ imported, and PyLovo is restored again from the same dump.
 
 ## Deploying a new version
 
+From your machine, send the version folder and its weather:
+
 ```bash
-cp -r /path/to/enerplanet-test-data/v3 /srv/enerplanet-test-data/
-scripts/deploy-fixture.sh --prefix sim2 /srv/enerplanet-test-data/v3
-rm -r /srv/enerplanet-test-data/v2
+rsync -a --partial --info=progress2 /path/to/enerplanet-test-data/v3 \
+  user@server:/path/to/enerplanet-test-data/
+cd /path/to/weather/data
+rsync -aR --partial --info=progress2 */austria/output */netherlands/output \
+  user@server:/path/to/enerplanet-test-data/v3/weather/
+```
+
+On the server:
+
+```bash
+scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v3
+rm -r /path/to/enerplanet-test-data/v2
 ```
 
 The previous folder can be removed once the run succeeds; nothing reads from
@@ -104,10 +123,10 @@ it afterwards. Redeploying the stack is not needed.
    `attribution.json`. City2TABULA refuses a provider folder without one.
 4. Export a new PyLovo dump of every region, including the new one, to
    `vN+1/pylovo/`, replacing the old dump.
-5. Replace `vN+1/weather/` with your local weather-serve's data directory.
-6. Describe the version in `vN+1/README.md`, add a `CHANGELOG.md` entry, and
+5. Describe the version in `vN+1/README.md`, add a `CHANGELOG.md` entry, and
    add the region to the root `README.md`.
-7. Copy `vN+1` to the server and run the script on it.
+6. Send `vN+1` and the weather to the server and run the script, as in
+   [Deploying a new version](#deploying-a-new-version).
 
 Check the weather before publishing: a point outside every cut is refused
 with `archive_not_servable`.
