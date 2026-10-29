@@ -421,6 +421,7 @@ func configureRoutes(r *gin.Engine, cfg *config.Config, deps *AppDependencies, r
 
 	r.Static("/assets", "./www/assets")
 	r.Static("/images", "./www/images")
+	r.Static("/brand", "./www/brand")
 	r.StaticFile("/vite.svg", "./www/vite.svg")
 
 	r.NoRoute(func(c *gin.Context) {
