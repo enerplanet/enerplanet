@@ -1673,6 +1673,11 @@
   },
   "simulation": {
     "title": "Simulationskonfiguration",
+    "mode": {
+      "label": "Modus",
+      "simple": "Einfach",
+      "advanced": "Erweitert"
+    },
     "modelName": "Modellname",
     "modelNamePlaceholder": "Geben Sie einen Namen für Ihre Energiesimulation ein",
     "simulationPeriod": "Simulationszeitraum",
@@ -1763,6 +1768,9 @@
     },
     "mapHeader": {
       "myBuildings": "Meine Gebäude",
+      "resetArea": "Bereich zurücksetzen",
+      "resetAreaConfirmTitle": "Bereich zurücksetzen?",
+      "resetAreaConfirmDescription": "Entfernt alle gezeichneten Polygone, gesetzte Transformatoren und Gebäudezuordnungen.",
       "clearAll": "Alle Polygone entfernen",
       "toggleMyBuildings": "Meine Gebäude umschalten",
       "disableSelected": "Ausgewählte Gebäude deaktivieren",

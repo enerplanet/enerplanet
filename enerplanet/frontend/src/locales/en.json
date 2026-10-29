@@ -1673,6 +1673,11 @@
   },
   "simulation": {
     "title": "Simulation Configuration",
+    "mode": {
+      "label": "Mode",
+      "simple": "Simple",
+      "advanced": "Advanced"
+    },
     "modelName": "Model Name",
     "modelNamePlaceholder": "Enter a name for your energy simulation",
     "simulationPeriod": "Simulation Period",
@@ -1763,6 +1768,9 @@
     },
     "mapHeader": {
       "myBuildings": "My Buildings",
+      "resetArea": "Reset Area",
+      "resetAreaConfirmTitle": "Reset the area?",
+      "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
       "clearAll": "Remove all polygons",
       "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings",
@@ -1862,7 +1870,7 @@
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
-      "label": "Custom grid",
+      "label": "Custom Grid",
       "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
       "switchHint": "Switching regenerates the grid for the drawn area.",
       "leaveTitle": "Leave the custom grid?",

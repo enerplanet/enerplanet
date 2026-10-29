@@ -11,6 +11,7 @@ import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useConfirm } from "@/hooks/useConfirmDialog";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { type Workspace } from "@/components/workspace/services/workspaceService";
 import { MapLibre3DOverlay } from "@/components/map-controls/maplibre";
@@ -329,6 +330,33 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const activeMode = useModelStore((s) => s.activeMode);
   const siteMode = useModelStore((s) => s.siteMode);
   suppressDialogOnClickRef.current = activeMode !== null;
+
+  // Leaving a custom grid drops its placed transformers, so that switch asks first.
+  const confirm = useConfirm();
+  const switchGridMode = (on: boolean) => {
+    if (on || state.allPolygons.length === 0) return void actions.handleSwitchGridMode(on);
+    void confirm({
+      type: "warning",
+      title: t("simulation.siteMode.leaveTitle"),
+      description: t("simulation.siteMode.leaveDescription"),
+      confirmLabel: t("simulation.siteMode.leaveConfirm"),
+      cancelLabel: t("common.cancel"),
+      onConfirm: async () => void actions.handleSwitchGridMode(false),
+    });
+  };
+
+  // A reset drops every drawn polygon, placed transformer and building
+  // assignment, so it asks before firing.
+  const resetArea = () => {
+    void confirm({
+      type: "warning",
+      title: t("simulation.mapHeader.resetAreaConfirmTitle"),
+      description: t("simulation.mapHeader.resetAreaConfirmDescription"),
+      confirmLabel: t("simulation.mapHeader.resetArea"),
+      cancelLabel: t("common.cancel"),
+      onConfirm: async () => void regionSelection.handleClearAllWithModes(),
+    });
+  };
 
   const markModified = useCallback(() => setIsModified(true), [setIsModified]);
   const buildingSelection = useBuildingSelection({
@@ -679,7 +707,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         mapHeader={
           <MapHeader
             allPolygonsCount={state.allPolygons.length}
-            onClearAllPolygons={regionSelection.handleClearAllWithModes}
+            onClearAllPolygons={resetArea}
             onImportArea={handleImportArea}
             onExportArea={handleExportArea}
             onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}
@@ -694,6 +722,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
             includePrivateBuildings={state.includePrivateBuildings}
             onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
+            siteMode={siteMode}
+            onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
             availableRegions={editMode ? undefined : pylovoLayers.availableRegions}

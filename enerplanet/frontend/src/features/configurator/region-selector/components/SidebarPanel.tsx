@@ -14,7 +14,6 @@ import { parseDate } from "@internationalized/date";
 import { cn } from "@/lib/utils";
 import {
   Button,
-  Switch,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -25,19 +24,16 @@ import {
   Loader2,
   ChevronRight,
   CircuitBoard,
-  Activity,
-  MapPinned,
   Building2,
   Info,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
-import { useConfirm } from "@/hooks/useConfirmDialog";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
+import { useConfiguratorModeStore } from "@/features/configurator/store/configuratorModeStore";
 import { useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
-import { TOOLTIP_CONTENTS } from "@/components/shared/tooltip-contents";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
 import { useEffect, useRef, type FC, type ChangeEvent, type ReactNode } from "react";
@@ -274,28 +270,15 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const appLang = i18n.language?.split("-")[0] || "en";
+  const configuratorMode = useConfiguratorModeStore((s) => s.mode);
+  const setConfiguratorMode = useConfiguratorModeStore((s) => s.setMode);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
-  const siteMode = useModelStore((s) => s.siteMode);
   const gridStale = useModelStore((s) => s.gridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
   const { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
   const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
-  const confirm = useConfirm();
-  const hasArea = state.allPolygons.length > 0;
-  // Leaving a custom grid drops its placed transformers, so that switch asks first.
-  const switchGridMode = (on: boolean) => {
-    if (on || !hasArea) return void actions.handleSwitchGridMode(on);
-    void confirm({
-      type: "warning",
-      title: t("simulation.siteMode.leaveTitle"),
-      description: t("simulation.siteMode.leaveDescription"),
-      confirmLabel: t("simulation.siteMode.leaveConfirm"),
-      cancelLabel: t("common.cancel"),
-      onConfirm: async () => void actions.handleSwitchGridMode(false),
-    });
-  };
   // A model is saved only with a name, a period and an area, and never with a grid older than its edits.
   const complete = Boolean(state.fromDate && state.toDate && state.modelName.trim()) && allPolygonsCount > 0;
   const canSave = complete && !state.isSaving && !gridStale;
@@ -318,27 +301,20 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
-      <div className="flex items-center px-3 pt-4">
-        <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
+      <div className="flex items-center justify-between px-3 pt-4">
+        <h3 className="text-base font-semibold text-foreground">{t("simulation.title")}</h3>
+        <SegmentedControl
+          aria-label={t("simulation.mode.label")}
+          value={configuratorMode}
+          onChange={setConfiguratorMode}
+          options={[
+            { value: "simple", label: t("simulation.mode.simple") },
+            { value: "advanced", label: t("simulation.mode.advanced") },
+          ]}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4 px-3">
-        <PanelSection title={t("simulation.sections.grid")}>
-          <SettingRow
-            label={t("simulation.siteMode.label")}
-            hint={hasArea ? `${t("simulation.siteMode.hint")} ${t("simulation.siteMode.switchHint")}` : t("simulation.siteMode.hint")}
-            icon={MapPinned}
-          >
-            <Switch
-              id="site-mode-toggle"
-              aria-label={t("simulation.siteMode.label")}
-              disabled={state.isGeneratingGrid}
-              checked={siteMode}
-              onCheckedChange={switchGridMode}
-            />
-          </SettingRow>
-        </PanelSection>
-
         <PanelSection title={t("simulation.sections.model")}>
           <div className="relative" data-tour="model-name">
             <label
@@ -356,7 +332,9 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
             />
           </div>
-          <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
+          {configuratorMode === "advanced" && (
+            <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
+          )}
           <div className="relative" data-tour="date-range">
             <DateRangePicker
               value={
@@ -433,18 +411,23 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </div>
             <PeriodParts onPick={choosePeriodPart} />
           </div>
+                    {/* Only 60-minute steps are offered: a 30-minute resolution made no
+              measurable difference for EnerPlanET models, so the option was removed.
+              To offer it again, add it to the options array below (e.g.
+              { value: "30", label: "30 min" }) and drop the disabled/Coming Soon
+              styling once it actually runs. */}
           <SettingRow label={t("simulation.resolution")} hint={t("simulation.resolutionHint")} dataTour="resolution">
             <SegmentedControl
               aria-label={t("simulation.resolution")}
               value={String(state.resolution)}
               onChange={(value) => actions.setResolution(Number(value))}
               options={[
-                { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
                 { value: "60", label: "60 min" },
               ]}
             />
           </SettingRow>
-          <div>
+          {configuratorMode === "advanced" && (
+            <div>
             <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
               <SegmentedControl
                 aria-label={t("simulation.runMode.label")}
@@ -481,6 +464,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               </div>
             )}
           </div>
+          )}
         </PanelSection>
 
         <PanelSection title={t("simulation.sections.energySystem")}>
@@ -498,21 +482,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             </Button>
           </div>
-          <SettingRow
-            label={t("simulation.pypsaSimulation")}
-            hint={t("tooltips.pypsaSimulation.description", { defaultValue: TOOLTIP_CONTENTS.pypsaSimulation.description })}
-            icon={Activity}
-          >
-            <Switch
-              id="pypsa-toggle"
-              aria-label={t("simulation.pypsaSimulation")}
-              disabled
-              checked={advancedParams.pypsa_enabled}
-              onCheckedChange={(checked) =>
-                onAdvancedParamsChange({ ...advancedParams, pypsa_enabled: checked })
-              }
-            />
-          </SettingRow>
         </PanelSection>
       </div>
 
