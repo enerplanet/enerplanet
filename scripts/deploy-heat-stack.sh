@@ -13,7 +13,8 @@
 # used to strip ports and rename things).
 #
 #   scripts/deploy-heat-stack.sh --prefix sim2 up
-#   scripts/deploy-heat-stack.sh --prefix sim2 render   # generate + validate only
+#   scripts/deploy-heat-stack.sh --prefix sim2 render    # generate + validate only
+#   scripts/deploy-heat-stack.sh --prefix sim2 fixtures  # (re)load the fixture sets
 #   scripts/deploy-heat-stack.sh --prefix sim2 status
 #   scripts/deploy-heat-stack.sh --prefix sim2 down
 #
@@ -62,6 +63,7 @@ WEATHER_API_KEY=${WEATHER_API_KEY:-dev-weather-key}
 PREFIX=""
 REPO=""
 WORKDIR=""
+FIXTURES_DIR=""
 TENTACRON_HOST_PORT=""
 PYLOVO_HOST_PORT=""
 DO_FIXTURES=1
@@ -90,13 +92,14 @@ Options:
   --tentacron-port N     host port for TentaCron (default 8400)
   --pylovo-port N        host port for PyLovo    (default 8186)
   --no-fixtures          do not git-lfs pull or load the fixtures
+  --fixtures-dir DIR     read the fixture data from DIR instead of <repo>/fixtures
   --weather-api-key K    key TentaCron presents to weather-serve
                          (default dev-weather-key, matching TentaCron's .env.dev)
   --volumes              `down` also removes this stack's volumes
   --dry-run              print the plan, change nothing
   -h, --help             this text
 
-Commands: up (default) | render | status | down
+Commands: up (default) | render | fixtures | status | down
 USAGE
 }
 
@@ -110,10 +113,11 @@ while [ $# -gt 0 ]; do
     --pylovo-port)    PYLOVO_HOST_PORT="${2:?}"; shift 2 ;;
     --weather-api-key) WEATHER_API_KEY="${2:?}"; shift 2 ;;
     --no-fixtures)    DO_FIXTURES=0; shift ;;
+    --fixtures-dir)   FIXTURES_DIR="${2:?--fixtures-dir needs a value}"; shift 2 ;;
     --volumes)        DOWN_VOLUMES=1; shift ;;
     --dry-run)        DRY_RUN=1; shift ;;
     -h|--help)        usage; exit 0 ;;
-    up|render|status|down) COMMAND="$1"; shift ;;
+    up|render|fixtures|status|down) COMMAND="$1"; shift ;;
     -*)               die "unknown option '$1' (try --help)" ;;
     *)                die "unknown command '$1' (try --help)" ;;
   esac
@@ -203,6 +207,21 @@ port_in_use() {
   return 1
 }
 
+# stop_published_containers — a redeploy of a prefix that is still running
+# would see its own containers holding the wanted host ports and drift one
+# port up on every `up`. Stop the two containers that publish to the host, so
+# the scan that follows re-selects the original ports instead. Only the two
+# published services matter: every other service of the stack is private.
+stop_published_containers() {
+  local name
+  for name in "${PREFIX}-tentacron-env-tentacron-1" "${PREFIX}-pylovo-api-dev"; do
+    if docker ps --format '{{.Names}}' | grep -qx "$name"; then
+      log "stopping running $name (frees its host ports for re-selection)"
+      docker stop "$name" || warn "could not stop $name; its ports may be scanned as busy"
+    fi
+  done
+}
+
 # pick_port WANTED LABEL — sets PICKED_PORT to WANTED when free, else to the
 # next free port above it. It writes a variable rather than printing, so that
 # the failure path can still abort the whole script from inside the function.
@@ -222,7 +241,9 @@ pick_port() {
 
 # The two ports this stack publishes. Everything else is private, so these are
 # the only host ports it can collide on; both are moved to the next free one
-# when the wanted port is taken.
+# when the wanted port is taken by something that is not this stack (a
+# redeploy of this prefix has its own containers stopped beforehand, so its
+# original ports re-select instead of drifting).
 resolve_ports() {
   pick_port "${TENTACRON_HOST_PORT:-$TENTACRON_PORT}" tentacron
   TENTACRON_HOST_PORT="$PICKED_PORT"
@@ -562,6 +583,7 @@ up_tentacron() {
 
 load_fixtures() {
   log "loading fixtures (weather, city2tabula, pylovo)"
+  [ -n "$FIXTURES_DIR" ] && export FIXTURES_DIR
   # load.sh takes the target containers from the environment and its checkouts
   # from <repo root>/dependencies, which is this repo's own layout.
   C2T_DB_CONTAINER="$PREFIX-city2tabula-db" \
@@ -641,6 +663,21 @@ cmd_status() {
   return 0
 }
 
+cmd_fixtures() {
+  log "loading fixtures (weather, city2tabula, pylovo)"
+  [ -n "$FIXTURES_DIR" ] && export FIXTURES_DIR
+  # load.sh is idempotent — "load what is missing, leave what is present" —
+  # so a clean run over all three sets proves the data is in place, and any
+  # gap it finds it reloads.
+  if C2T_DB_CONTAINER="$PREFIX-city2tabula-db" \
+     PYLOVO_DB_CONTAINER="$PREFIX-pylovo-postgres" \
+     bash "$LOAD_SH" weather city2tabula pylovo; then
+    ok "all fixture sets are loaded"
+  else
+    die "at least one fixture set failed to load"
+  fi
+}
+
 # down_one LABEL DIR BASE OVR PROJECT [compose args...]
 # `down` interpolates the compose files too, so the services whose files use
 # ${VAR:?} need the same variables and env files `up` gave them.
@@ -705,6 +742,9 @@ case "$COMMAND" in
     ;;
   up)
     preflight
+    if [ "$DRY_RUN" != 1 ]; then
+      stop_published_containers
+    fi
     resolve_ports
     if [ "$DRY_RUN" = 1 ]; then
       log "dry run: would deploy prefix '$PREFIX' in $WORKDIR"
@@ -719,6 +759,7 @@ case "$COMMAND" in
     validate_overrides
     cmd_up
     ;;
-  status) preflight; cmd_status ;;
-  down)   preflight; cmd_down ;;
+  status)   preflight; cmd_status ;;
+  fixtures) preflight; cmd_fixtures ;;
+  down)     preflight; cmd_down ;;
 esac

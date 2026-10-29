@@ -11,6 +11,7 @@ the app container — is **not** part of this stack.
 ```bash
 scripts/deploy-heat-stack.sh --prefix sim2 up        # deploy
 scripts/deploy-heat-stack.sh --prefix sim2 render    # generate + validate, deploy nothing
+scripts/deploy-heat-stack.sh --prefix sim2 fixtures  # (re)load the fixture sets
 scripts/deploy-heat-stack.sh --prefix sim2 status
 scripts/deploy-heat-stack.sh --prefix sim2 down
 ```
@@ -92,6 +93,7 @@ Docker memory: 16 GB, more for larger models.
 | `--tentacron-port N` | Host port for TentaCron. Default `8400`. |
 | `--pylovo-port N` | Host port for PyLovo. Default `8186`. |
 | `--no-fixtures` | Do not git-lfs pull or load the fixtures. |
+| `--fixtures-dir DIR` | Read the fixture data from `DIR` instead of `<repo>/fixtures`. |
 | `--weather-api-key K` | Key TentaCron presents to weather-serve. Default `dev-weather-key`, matching TentaCron's `.env.dev`. |
 | `--volumes` | `down` also removes this stack's volumes. |
 | `--dry-run` | Print the plan and change nothing. |
@@ -173,6 +175,36 @@ PYLOVO_HOST_PORT=8186
 …
 ```
 
+### `fixtures`
+
+(Re)loads the fixture sets on demand. It runs `fixtures/load.sh weather
+city2tabula pylovo` with the loader's default "never overwrite" mode, which
+skips whatever is already present and reloads anything that is missing:
+
+```
+$ scripts/deploy-heat-stack.sh --prefix sim2 fixtures
+==> loading fixtures (weather, city2tabula, pylovo)
+== loading fixtures from …/enerplanet/fixtures ==
+SKIP  weather: …/COSMO_REA6_2018_annual_all_attrs.nc already present …
+== 0 loaded, N skipped, 0 failed ==
+  ok all fixture sets are loaded
+```
+
+Same thing `up` does at the end — this is the way to re-run only that step. The
+target DB containers (`<prefix>-city2tabula-db`, `<prefix>-pylovo-postgres`)
+are taken from the environment, so the data always lands in this prefix's
+containers. The command exits non-zero if any fixture fails to load, which is
+how you'd find out that a set was never loaded (`load.sh` reports it missing
+rather than silently skipping). Use `status` to check which containers are up.
+
+The source of the data defaults to `<repo>/fixtures`; point it elsewhere with
+`--fixtures-dir` (e.g. a shared drive or an older fixture cut against a pinned
+service tag):
+
+```bash
+scripts/deploy-heat-stack.sh --prefix sim2 --fixtures-dir /data/fixtures-pinned fixtures
+```
+
 ### `down`
 
 Stops and removes this prefix's containers and networks. Add `--volumes` to
@@ -240,7 +272,7 @@ weather cuts and City2TABULA LoD2 sources into the service checkouts and
 restores the databases. `--no-fixtures` skips the step entirely, for a clone
 whose fixtures are already pulled and loaded.
 
-`load.sh` is used **unmodified**. It takes its target containers from the
+`load.sh` is used as-is. It takes its target containers from the
 environment (`C2T_DB_CONTAINER`, `PYLOVO_DB_CONTAINER`), which is how the
 fixtures land in this stack's containers rather than the host's, and it resolves
 its checkouts as `<repo>/dependencies/<dir>` — the layout the script creates.
