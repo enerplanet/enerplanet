@@ -115,7 +115,8 @@ type PylovoRegion struct {
 		OsmID       int64  `json:"osm_id"`
 		OsmType     string `json:"osm_type"`
 	} `json:"region,omitempty"`
-	Boundary json.RawMessage `json:"boundary,omitempty"`
+	Boundary  json.RawMessage `json:"boundary,omitempty"`
+	Postcodes json.RawMessage `json:"postcodes,omitempty"`
 }
 
 func normalizeStateCode(value string) string {
@@ -170,9 +171,12 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 			continue
 		}
 
-		var boundaryJSON datatypes.JSON
+		var boundaryJSON, postcodesJSON datatypes.JSON
 		if r.Boundary != nil {
 			boundaryJSON = datatypes.JSON(r.Boundary)
+		}
+		if r.Postcodes != nil {
+			postcodesJSON = datatypes.JSON(r.Postcodes)
 		}
 
 		currentRegions = append(currentRegions, models.CachedRegion{
@@ -192,6 +196,7 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 			BboxEast:    r.Bbox.East,
 			BboxNorth:   r.Bbox.North,
 			Boundary:    boundaryJSON,
+			Postcodes:   postcodesJSON,
 		})
 	}
 
@@ -208,7 +213,7 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 			DoUpdates: clause.AssignmentColumns([]string{
 				"region_name", "grid_count", "has3_d", "centroid_lat", "centroid_lon",
 				"bbox_west", "bbox_south", "bbox_east", "bbox_north", "boundary",
-				"admin_level", "osm_id", "osm_type", "country", "updated_at",
+				"admin_level", "osm_id", "osm_type", "country", "postcodes", "updated_at",
 			}),
 		}).CreateInBatches(currentRegions, 100).Error; err != nil {
 			return fmt.Errorf("batch upsert regions: %w", err)
@@ -250,6 +255,7 @@ func BuildAvailableRegionsResponse(regions []models.CachedRegion) ([]byte, error
 		Bbox        bbox            `json:"bbox"`
 		Region      *regionInfo     `json:"region,omitempty"`
 		Boundary    json.RawMessage `json:"boundary,omitempty"`
+		Postcodes   json.RawMessage `json:"postcodes,omitempty"`
 	}
 
 	entries := make([]regionEntry, 0, len(regions))
@@ -273,6 +279,9 @@ func BuildAvailableRegionsResponse(regions []models.CachedRegion) ([]byte, error
 		}
 		if r.Boundary != nil {
 			entry.Boundary = json.RawMessage(r.Boundary)
+		}
+		if r.Postcodes != nil {
+			entry.Postcodes = json.RawMessage(r.Postcodes)
 		}
 		entries = append(entries, entry)
 	}

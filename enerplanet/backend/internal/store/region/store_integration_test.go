@@ -38,6 +38,7 @@ func scratchDB(t *testing.T) *gorm.DB {
 		"029_add_enabled_to_cached_regions.sql",
 		"031_add_has3d_to_cached_regions.sql",
 		"034_add_state_code_to_cached_regions.sql",
+		"053_add_postcodes_to_cached_regions.sql",
 	} {
 		migration, err := os.ReadFile("../../../migrations/" + name)
 		require.NoError(t, err)
@@ -62,6 +63,40 @@ func answer(t *testing.T, pairs ...[2]string) []byte {
 	body, err := json.Marshal(map[string]any{"status": "success", "regions": regions})
 	require.NoError(t, err)
 	return body
+}
+
+// postcodeAnswer is one region's answer listing its postcodes.
+func postcodeAnswer(t *testing.T, postcodes ...string) []byte {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{"status": "success", "regions": []map[string]any{{
+		"country_code": "DE",
+		"state_code":   "bavaria",
+		"grid_count":   5,
+		"postcodes":    postcodes,
+		"region":       map[string]any{"name": "Bayern", "country": "Germany"},
+	}}})
+	require.NoError(t, err)
+	return body
+}
+
+// servedPostcodes returns the postcodes of the first region in the response
+// the backend builds from the cache.
+func servedPostcodes(t *testing.T, s *Store) []string {
+	t.Helper()
+	regions, err := s.GetEnabledCachedRegions()
+	require.NoError(t, err)
+	body, err := BuildAvailableRegionsResponse(regions)
+	require.NoError(t, err)
+	var resp struct {
+		Data struct {
+			Regions []struct {
+				Postcodes []string `json:"postcodes"`
+			} `json:"regions"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(body, &resp))
+	require.Len(t, resp.Data.Regions, 1)
+	return resp.Data.Regions[0].Postcodes
 }
 
 func listed(t *testing.T, s *Store) []string {
@@ -102,4 +137,14 @@ func TestClearGridCounts_ListsNothingUntilTheNextAnswer(t *testing.T) {
 
 	require.NoError(t, s.UpsertRegionsFromAPI(answer(t, [2]string{"DE", "nrw"})))
 	assert.Equal(t, []string{"DE/nrw"}, listed(t, s))
+}
+
+func TestUpsertRegionsFromAPI_ServesTheLatestPostcodes(t *testing.T) {
+	s := NewStore(scratchDB(t))
+
+	require.NoError(t, s.UpsertRegionsFromAPI(postcodeAnswer(t, "94469")))
+	assert.Equal(t, []string{"94469"}, servedPostcodes(t, s))
+
+	require.NoError(t, s.UpsertRegionsFromAPI(postcodeAnswer(t, "94447", "94469")))
+	assert.Equal(t, []string{"94447", "94469"}, servedPostcodes(t, s))
 }

@@ -25,6 +25,7 @@ type CachedRegion struct {
 	BboxEast    float64        `json:"bbox_east"`
 	BboxNorth   float64        `json:"bbox_north"`
 	Boundary    datatypes.JSON `json:"boundary" gorm:"type:jsonb"`
+	Postcodes   datatypes.JSON `json:"postcodes" gorm:"type:jsonb"`
 	CreatedAt   time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
 }
