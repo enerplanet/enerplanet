@@ -100,8 +100,7 @@ type modelPVResolver interface {
 
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
-// seam (electricity only; heat carriers are not translated),
-// submits it over TentaCron's "meme" target, and persists the result zip.
+// seam, submits it over TentaCron's "meme" target, and persists the result zip.
 //
 // TentaCron is itself the durable single-instance SQLite queue (ADR-0002) and
 // polls MEME to completion (response.mode: poll, ADR-0004); the produced job
@@ -175,6 +174,9 @@ func HandleDispatchMeme(
 		warning, err := checkDemandCoverage(calc.Topology, covered)
 		if err != nil {
 			return modelstore.ServiceFailed(modelstore.ServiceCity2TABULA, fmt.Errorf("model %d: %w", p.ModelID, err))
+		}
+		if err := checkHeatCoverage(calc.Topology, covered); err != nil {
+			return modelstore.ServiceFailed(modelstore.ServiceBuem, fmt.Errorf("model %d: %w", p.ModelID, err))
 		}
 		if warning != nil {
 			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)

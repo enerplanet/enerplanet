@@ -3,6 +3,7 @@ package jobs
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -49,6 +50,38 @@ func checkDemandCoverage(topology []interface{}, covered map[string]bool) (*dema
 		return nil, nil
 	}
 	return &demandFallbackWarning{Code: demandFallbackCode, Fallback: total - with, Total: total}, nil
+}
+
+// heatShownMax is how many buildings a missing-heat error names.
+const heatShownMax = 10
+
+// checkHeatCoverage fails when a building with a heat technology has no BuEM
+// heat series, leaving out the covered ways as demandCoverage does. MEME takes
+// a building's heat demand from that series only, so it would get none.
+func checkHeatCoverage(topology []interface{}, covered map[string]bool) error {
+	var missing []string
+	for _, feature := range payloadBuildings(topology) {
+		props, _ := feature["properties"].(map[string]interface{})
+		id := fmt.Sprint(props["osm_id"])
+		techs, _ := feature["techs"].(map[string]interface{})
+		series, _ := props["demand_series"].(map[string]interface{})
+		if _, ok := series["heat"]; !ok && !covered[id] && hasAnyTech(techs, heatTechs) {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	shown := missing
+	if len(shown) > heatShownMax {
+		shown = shown[:heatShownMax]
+	}
+	more := ""
+	if len(missing) > len(shown) {
+		more = fmt.Sprintf(" and %d more", len(missing)-len(shown))
+	}
+	return fmt.Errorf("%d buildings with a heat technology have no BuEM heat profile, so their heat demand would be zero: %s%s (the configurator map shows why for each)",
+		len(missing), strings.Join(shown, ", "), more)
 }
 
 // setModelWarning stores w in results, or clears them so an old warning does not outlive its run.
