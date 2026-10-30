@@ -75,6 +75,15 @@ func (rs *Store) ToggleCachedRegion(id uint, enabled bool) error {
 	return nil
 }
 
+// ClearGridCounts empties the region list until the next PyLovo answer fills
+// it. Rows are kept so an expert's enabled flags survive.
+func (rs *Store) ClearGridCounts() error {
+	if err := rs.db.Model(&models.CachedRegion{}).Where("grid_count > 0").Update("grid_count", 0).Error; err != nil {
+		return fmt.Errorf("clear cached region grid counts: %w", err)
+	}
+	return nil
+}
+
 // PylovoRegionResponse represents the response from the PyLovo API
 type PylovoRegionResponse struct {
 	Status  string         `json:"status"`
@@ -117,8 +126,8 @@ func normalizeCountryCode(value string) string {
 	return strings.ToUpper(strings.TrimSpace(value))
 }
 
-// UpsertRegionsFromAPI parses the PyLovo API response, upserts current regions,
-// and prunes stale cached rows for the countries included in the payload.
+// UpsertRegionsFromAPI parses the PyLovo API response and makes it the region
+// list: regions missing from it, in any country, are no longer listed.
 func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 	var parsed PylovoRegionResponse
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
@@ -129,7 +138,7 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 		var wrapper struct {
 			Data PylovoRegionResponse `json:"data"`
 		}
-		if err := json.Unmarshal(responseBody, &wrapper); err == nil {
+		if err := json.Unmarshal(responseBody, &wrapper); err == nil && wrapper.Data.Status != "" {
 			parsed = wrapper.Data
 		}
 	}
@@ -138,7 +147,6 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 		return nil
 	}
 
-	currentByCountry := make(map[string]map[string]struct{})
 	currentRegions := make([]models.CachedRegion, 0, len(parsed.Regions))
 
 	for _, r := range parsed.Regions {
@@ -161,11 +169,6 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 		if stateCode == "" {
 			continue
 		}
-
-		if _, ok := currentByCountry[countryCode]; !ok {
-			currentByCountry[countryCode] = make(map[string]struct{})
-		}
-		currentByCountry[countryCode][stateCode] = struct{}{}
 
 		var boundaryJSON datatypes.JSON
 		if r.Boundary != nil {
@@ -193,20 +196,11 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 	}
 
 	return rs.db.Transaction(func(tx *gorm.DB) error {
-		for countryCode, stateCodes := range currentByCountry {
-			codes := make([]string, 0, len(stateCodes))
-			for stateCode := range stateCodes {
-				codes = append(codes, stateCode)
-			}
-			if len(codes) == 0 {
-				continue
-			}
-
-			if err := tx.Model(&models.CachedRegion{}).
-				Where("country_code = ? AND state_code NOT IN ?", countryCode, codes).
-				Update("grid_count", 0).Error; err != nil {
-				return fmt.Errorf("zero stale cached regions for %s: %w", countryCode, err)
-			}
+		if err := NewStore(tx).ClearGridCounts(); err != nil {
+			return err
+		}
+		if len(currentRegions) == 0 {
+			return nil
 		}
 
 		if err := tx.Clauses(clause.OnConflict{

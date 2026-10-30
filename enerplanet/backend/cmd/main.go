@@ -725,7 +725,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
 
-	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
+	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore, region.NewStore(deps.DB))
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
 	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB), geo.NewNominatimResolver(deps.DB))
