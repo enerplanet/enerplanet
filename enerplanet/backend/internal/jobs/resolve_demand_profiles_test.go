@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/ignis"
+	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/store/demandprofile"
 	"spatialhub_backend/internal/weather"
 )
@@ -213,4 +215,13 @@ func TestDemandBuildings(t *testing.T) {
 func TestDemandBuildings_withoutCountryIsAnError(t *testing.T) {
 	_, _, err := DemandBuildings(&commonModels.Model{Config: []byte(memeTopologyConfig)})
 	require.Error(t, err)
+}
+
+func TestResolveAndLink_reportsABuemFailure(t *testing.T) {
+	profiles := newFakeProfileStore()
+	// No BuEM version: resolveSeries fails before anything is submitted.
+	err := resolveAndLink(context.Background(), quiet, nil, 7, "rev", testRun(1), payload.CalculationPayload{Resolution: 60}, "", &fakeRunner{}, profiles, newMemStore())
+
+	assert.ErrorIs(t, err, errBuemUnresolved, "the run must know BuEM did not resolve")
+	assert.Equal(t, "failed", profiles.saved["b00"].Status, "and every building is still recorded as failed")
 }
