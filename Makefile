@@ -94,11 +94,11 @@ pylovo-fixture:
 fixtures-reload:
 	@git lfs pull --include=fixtures
 	@$(MAKE) -C dependencies/enerplanet-pylovo down
-	@for c in nl de at cz; do docker exec city2tabula-db psql -U postgres -qc "drop database if exists city2tabula_$$c with (force)"; done
+	@for c in nl de at cz; do docker exec city2tabula-db-1 psql -U postgres -qc "drop database if exists city2tabula_$$c with (force)"; done
 	@docker exec postgres psql -U postgres -qc 'drop database if exists pylovo_db with (force)'
 	@FORCE=1 ./fixtures/load.sh
 	@$(MAKE) pylovo
-	@docker restart city2tabula >/dev/null
+	@docker restart city2tabula-api-1 >/dev/null
 
 # Needs the backend running. The script itself refuses outside APP_ENV=development.
 .PHONY: example-models
@@ -332,17 +332,14 @@ webservice:
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -s .env.docker || cp .env.example .env.docker && make dev
-	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
-		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
+	@for i in $$(seq 60); do docker exec pylovo-api-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
+		echo "pylovo-api-1 did not answer /health within 120s, see 'docker logs pylovo-api-1'"; exit 1
 
 
 .PHONY: tentacron-stack
 # meme is left out until its translator and parser packages are released; it
 # serves only the simulation step. `make meme` starts it on its own.
 tentacron-stack: tentacron-network ignis city2tabula weather buem meme pv-service tentacron
-	@# These services' own compose files set no restart policy, so after a Docker
-	@# restart they stay down. Remove once each pinned version sets one.
-	@docker update --restart unless-stopped tentacron-env-tentacron-1 >/dev/null
 	@echo "$(GREEN)TentaCron stack up. city2tabula/weather/ignis/buem/meme/pv-service/tentacron are reachable on network 'tentacron-net'$(NC)"
 
 .PHONY: tentacron-network
@@ -354,29 +351,22 @@ tentacron-network:
 
 .PHONY: tentacron
 tentacron: tentacron-network
-	@cd dependencies/$(TENTACRON_DIR)/environment && make build ENV=dev
-	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d tentacron
-	@docker network connect tentacron-net tentacron-env-tentacron-1 2>/dev/null || true
+	@cd dependencies/$(TENTACRON_DIR)/environment && HOST_PORT=$(TENTACRON_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
 	@echo "$(GREEN)TentaCron up on http://localhost:$(TENTACRON_PORT), attached to 'tentacron-net'$(NC)"
 
 .PHONY: ignis
 ignis: tentacron-network
-	@cd dependencies/$(IGNIS_DIR)/environment/http && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose -f docker-compose.prod.yml up -d
+	@cd dependencies/$(IGNIS_DIR)/environment && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose up -d --pull always --no-build
 	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
 buem: tentacron-network
-	@cd dependencies/$(BUEM_DIR)/environment/http && HOST_PORT=$(BUEM_PORT) BUEM_GATEWAY_IMAGE_TAG=$(BUEM_IMAGE_TAG) BUEM_MODEL_IMAGE_TAG=$(BUEM_MODEL_IMAGE_TAG) docker compose -f docker-compose.yml up -d
+	@cd dependencies/$(BUEM_DIR)/environment && HOST_PORT=$(BUEM_PORT) BUEM_GATEWAY_IMAGE_TAG=$(BUEM_IMAGE_TAG) BUEM_MODEL_IMAGE_TAG=$(BUEM_MODEL_IMAGE_TAG) docker compose up -d --pull always --no-build
 	@echo "$(GREEN)BuEM up on http://localhost:$(BUEM_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: meme
 meme: tentacron-network
 	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
-	@# MEME's compose does not join tentacron-net, so the alias is set here: it gives
-	@# TentaCron a name that survives a rename or a second instance. Reconnect only
-	@# when the alias is missing; disconnect fails harmlessly when not yet connected.
-	@docker inspect -f '{{range $$k, $$v := .NetworkSettings.Networks}}{{if eq $$k "tentacron-net"}}{{$$v.Aliases}}{{end}}{{end}}' meme-env-api-1 | grep -qw meme || \
-		{ docker network disconnect tentacron-net meme-env-api-1 2>/dev/null; docker network connect --alias meme tentacron-net meme-env-api-1; }
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
 # weather and city2tabula pull rather than build: both publish an image, and
@@ -384,7 +374,7 @@ meme: tentacron-network
 # toolchain respectively for no gain. meme still builds, having no image.
 .PHONY: pv-service
 pv-service: tentacron-network
-	@cd dependencies/$(PV_SERVICE_DIR) && HOST_PORT=$(PV_SERVICE_PORT) docker compose up -d --build
+	@cd dependencies/$(PV_SERVICE_DIR) && HOST_PORT=$(PV_SERVICE_PORT) docker compose -f $(PV_SERVICE_COMPOSE) up -d --build
 	@echo "$(GREEN)PV service up on http://localhost:$(PV_SERVICE_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: weather
@@ -396,7 +386,7 @@ weather: tentacron-network
 	@echo "$(GREEN)weather-serve up on http://localhost:$(WEATHER_PORT), on 'tentacron-net'$(NC)"
 
 # On-request runs link new buildings to PyLovo over postgres_fdw, which
-# connects from city2tabula-db, so that container joins spatialhub-net to reach
+# connects from city2tabula-db-1, so that container joins spatialhub-net to reach
 # the platform Postgres holding pylovo_db by name.
 PYLOVO_FDW_HOST ?= postgres
 PYLOVO_FDW_PORT ?= 5432
@@ -406,8 +396,8 @@ PYLOVO_FDW_PASSWORD ?= postgres
 
 .PHONY: city2tabula
 city2tabula: tentacron-network ignis
-	@cd dependencies/$(CITY2TABULA_DIR)/environment/http && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) PYLOVO_FDW_HOST=$(PYLOVO_FDW_HOST) PYLOVO_FDW_PORT=$(PYLOVO_FDW_PORT) PYLOVO_FDW_DBNAME=$(PYLOVO_FDW_DBNAME) PYLOVO_FDW_USER=$(PYLOVO_FDW_USER) PYLOVO_FDW_PASSWORD=$(PYLOVO_FDW_PASSWORD) docker compose --env-file docker.env -f docker-compose.yml up -d --pull always city2tabula
-	@docker inspect -f '{{json .NetworkSettings.Networks}}' city2tabula-db | grep -q '"spatialhub-net"' || docker network connect spatialhub-net city2tabula-db
+	@cd dependencies/$(CITY2TABULA_DIR)/environment && HOST_PORT=$(CITY2TABULA_PORT) C2T_IMAGE_TAG=$(CITY2TABULA_IMAGE_TAG) PYLOVO_FDW_HOST=$(PYLOVO_FDW_HOST) PYLOVO_FDW_PORT=$(PYLOVO_FDW_PORT) PYLOVO_FDW_DBNAME=$(PYLOVO_FDW_DBNAME) PYLOVO_FDW_USER=$(PYLOVO_FDW_USER) PYLOVO_FDW_PASSWORD=$(PYLOVO_FDW_PASSWORD) docker compose --env-file docker.env up -d --pull always --no-build
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' city2tabula-db-1 | grep -q '"spatialhub-net"' || docker network connect spatialhub-net city2tabula-db-1
 	@echo "$(GREEN)city2tabula up on http://localhost:$(CITY2TABULA_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: opentech-db

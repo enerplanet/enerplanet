@@ -404,7 +404,7 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 				"Restart the Pylovo service"
 		} else if strings.Contains(err.Error(), "connection refused") {
 			msg += " — Pylovo service is not running. " +
-				"Run: docker compose up -d pylovo-api"
+				"Run: make pylovo"
 		}
 		logger.Logger.Error(msg)
 		httputil.InternalError(c, "Internal server error")
