@@ -9,7 +9,8 @@
 # The folder holds any of 3d/<country>/<provider>/, attributes/<country>/<provider>/,
 # weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. Files are added
 # to what is there; the PyLovo dump replaces the stack's PyLovo database as a
-# whole.
+# whole. 3D files are only copied: City2TABULA imports the tiles under a drawn
+# area when a model is first run there.
 # scripts/deploy-fixture.md describes the layout and how to add a region.
 #
 set -euo pipefail
@@ -129,38 +130,21 @@ c2t_cli() {
   docker exec -e COUNTRY="$country" "$C2T" ./c2t "$@"
 }
 
-# import_country COUNTRY: imports the files City2TABULA has not imported yet,
-# creating the country's database on its first import.
-import_country() {
-  local country="$1" db
-  db="${C2T_DB_NAME}_$(code_of "$country")"
-  if [ -z "$(c2t_psql -d postgres -c "select 1 from pg_database where datname = '$db'")" ]; then
-    log "City2TABULA $country: creating $db"
-    c2t_cli "$country" -create-db
-  elif [ "$(c2t_psql -d "$db" -c "select to_regnamespace('citydb') is not null and to_regnamespace('lod2') is not null and to_regnamespace('tabula') is not null")" != t ]; then
-    die "$db in $C2T_DB holds only a restored repository fixture (deploy-heat-stack.sh without --no-fixtures) and cannot take an import; drop it first"
-  else
-    log "City2TABULA $country: importing new files into $db"
-    c2t_cli "$country" -import-data
-  fi
-  ok "City2TABULA $country: imported"
-}
-
+# load_3d copies 3D and attribute files without importing them. A whole-country
+# import would leave every building unprocessed, and City2TABULA's on-request run
+# extracts all unprocessed buildings of a country, not only those it was asked for.
 load_3d() {
   local lod2 attrs dir country
   lod2="$(mount_source "$C2T" /app/data/lod2)"
   attrs="$(mount_source "$C2T" /app/data/attributes)"
-  local -A countries=()
   for dir in "$FIXTURE_DIR"/3d/*/ "$FIXTURE_DIR"/attributes/*/; do
     [ -d "$dir" ] || continue
     country="$(basename "$dir")"
     code_of "$country" >/dev/null \
       || die "$dir: $country is not a City2TABULA country; use one of: $(sed 's/:[a-z]*//g' <<<"$COUNTRIES" | xargs)"
-    countries["$country"]=1
   done
   if [ -d "$FIXTURE_DIR/3d" ]; then copy_new "$FIXTURE_DIR/3d" "$lod2"; fi
   if [ -d "$FIXTURE_DIR/attributes" ]; then copy_new "$FIXTURE_DIR/attributes" "$attrs"; fi
-  for country in "${!countries[@]}"; do import_country "$country"; done
 }
 
 # weather-serve looks up <provider>/<country>/output under /data on every
