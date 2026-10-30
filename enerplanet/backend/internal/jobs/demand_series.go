@@ -7,6 +7,7 @@ import (
 
 	commonModels "platform.local/common/pkg/models"
 
+	"spatialhub_backend/internal/contenthash"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/store/series"
 )
@@ -41,9 +42,10 @@ type demandSeriesReader interface {
 	LinkedSeries(owner series.Owner, buildingRef string) ([]series.LinkedSeries, error)
 }
 
-// attachModelDemandSeries adds the BuEM series stored for model to the
-// buildings of its calculation payload (see attachDemandSeries). A payload
-// without a topology has no buildings to attach to.
+// attachModelDemandSeries adds the BuEM series linked for model's current
+// config to the buildings of its calculation payload (see attachDemandSeries).
+// A link made for an earlier config is left out: its building did not resolve
+// in this run. A payload without a topology has no buildings to attach to.
 func attachModelDemandSeries(reader demandSeriesReader, model *commonModels.Model, built interface{}) error {
 	calc, ok := built.(payload.CalculationPayload)
 	if !ok || len(calc.Topology) == 0 {
@@ -53,7 +55,17 @@ func attachModelDemandSeries(reader demandSeriesReader, model *commonModels.Mode
 	if err != nil {
 		return fmt.Errorf("read stored demand series of model %d: %w", model.ID, err)
 	}
-	attachDemandSeries(calc.Topology, linked, modelSeriesWindow(model.FromDate, model.ToDate, calc.Resolution))
+	revision, err := contenthash.Of(model.Config)
+	if err != nil {
+		return fmt.Errorf("hash config of model %d: %w", model.ID, err)
+	}
+	current := linked[:0:0]
+	for _, l := range linked {
+		if l.Revision == revision {
+			current = append(current, l)
+		}
+	}
+	attachDemandSeries(calc.Topology, current, modelSeriesWindow(model.FromDate, model.ToDate, calc.Resolution))
 	return nil
 }
 
