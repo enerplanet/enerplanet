@@ -23,7 +23,6 @@ Run it from a clone of enerplanet. The service checkouts go in that clone's
 | Command | What it does |
 |---|---|
 | `up` (default) | Writes the override files, checks out every service at its branch tip, builds every image, starts the stack |
-| `render` | Everything `up` does except building and starting; validates all eight compose projects. `--dry-run` stops after writing the override files |
 | `status` | Lists the prefix's containers, networks, port assignment and the loaded test data version |
 | `down` | Stops and removes the prefix's containers and networks; `--volumes` also drops its databases |
 
@@ -32,20 +31,23 @@ long time and tens of GB of disk. Later runs reuse Docker's build cache.
 
 ## Branches
 
-Each service is checked out at `origin/<_BRANCH>` from `repos.conf` and built
-with its repository's http compose file.
+Each service is checked out at `origin/<_BRANCH>` from `repos.conf` and
+started from its checkout with:
 
-| Service | `repos.conf` keys | Compose file |
-|---|---|---|
-| TentaCron | `TENTACRON_*` | `environment/docker-compose.yml` |
-| MEME | `MEME_*` | `environment/docker-compose.yml` |
-| buem-gateway | `BUEM_*` | `environment/http/docker-compose.build.yml` |
-| buem-model | `BUEM_MODEL_*` | built from `enerplanet/buem`, `infrastructure/container/Dockerfile` |
-| ignis | `IGNIS_*` | `environment/http/docker-compose.yml` |
-| City2TABULA | `CITY2TABULA_*` | `environment/http/docker-compose.yml`, server only |
-| weather | `WEATHER_*` | `infrastructure/container/docker-compose.serve.yml` |
-| PV service | `PV_SERVICE_*` | `docker-compose.yml` |
-| PyLovo | `PYLOVO_*` | `docker-compose.dev.yml`, plus its own postgres and redis |
+```bash
+docker compose -f <_COMPOSE> [--env-file <_ENV_FILE>] -f <prefix override> up -d --build [<_SERVICES>]
+```
+
+| Key | Meaning |
+|---|---|
+| `<SERVICE>_COMPOSE` | Compose file that builds the service, relative to its checkout |
+| `<SERVICE>_ENV_FILE` | Env file passed to compose, relative to its checkout. Optional |
+| `<SERVICE>_SERVICES` | The one compose service to start, when not all of them. Optional |
+
+buem-model has no compose key: it is built from the `BUEM_MODEL_*` checkout
+through buem-gateway's compose file. TentaCron's image is built with
+`make build ENV=dev` in its `environment/` before compose starts it. PyLovo
+gets its own postgres and redis from the prefix override.
 
 A variable set in the environment wins over `repos.conf`, so one service can
 be built from another branch for a single run:
@@ -94,13 +96,12 @@ data again.
 | Option | Meaning |
 |---|---|
 | `--prefix NAME` | Required. Namespaces every container, network and volume. Lowercase letters, digits and dashes |
-| `--repo DIR` | The enerplanet checkout to use. Default: the one the script lives in |
-| `--workdir DIR` | Where the generated override files go. Default `<repo>/.local/heat-stack/NAME` |
 | `--tentacron-port N` | Host port for TentaCron. Default `8400`, or the next free port |
 | `--pylovo-port N` | Host port for PyLovo. Default `8186`, or the next free port |
 | `--weather-api-key K` | Key TentaCron presents to weather-serve. Default `dev-weather-key` |
 | `--volumes` | `down` also removes the prefix's volumes |
-| `--dry-run` | Print the plan and change nothing |
+
+The generated override files go in `.local/heat-stack/<prefix>/overrides`.
 
 How the prefix renames containers, networks and ports, and how to reach the
 private services, is described in
@@ -119,8 +120,8 @@ script applies it the same way.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `repos.conf sets no BUEM_MODEL_REPO` (or another `_BRANCH` key) | The clone's `repos.conf` predates this script | Pull the current `dev` |
+| `repos.conf sets no BUEM_MODEL_REPO` (or another `_BRANCH` or `_COMPOSE` key) | The clone's `repos.conf` predates this script | Pull the current `dev` |
 | `<path> is on a local branch; leaving it alone` | That checkout holds local work | Build it as it is, or detach it: `git -C <path> checkout --detach` |
 | `git lfs pull failed in <path>` | No LFS access or no network | Fix access and re-run; the build would lack data files |
 | A build fails | The branch tip does not build | Fix the branch, or set `<SERVICE>_BRANCH` to one that builds |
-| Port warning `using 8401 instead` | The default port is taken | Pin it with `--tentacron-port` or `--pylovo-port` |
+| Port warning `host port 8400 is in use, using 8401` | The default port is taken | Pin it with `--tentacron-port` or `--pylovo-port` |

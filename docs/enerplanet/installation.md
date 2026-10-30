@@ -75,16 +75,16 @@ the container is reached only on the internal Docker network.
 | `keycloak` | Login and user accounts | 8080 | pulled | platform-core |
 | `auth-service` | The platform's login layer in front of Keycloak | 8001 | built locally | platform-core |
 | `energy-backend` | EnerPlanET API and the built frontend (container mode only) | 8000 | built locally | enerplanet |
-| `pylovo-api-dev` | Low-voltage grid generation | 8086 | built locally | enerplanet-pylovo |
-| `tentacron-env-tentacron-1` | Single entry point to the services below: routing, job queue, polling | 8400 | built locally | TentaCron |
-| `meme-env-api-1` | Translates a model into Calliope or PyPSA and runs the solver | 8401 | built locally | meme |
-| `buem-gateway-http-buem-gateway-1` | BuEM API: validates requests, batches buildings | 8402 | pulled | buem-gateway |
-| `buem-gateway-http-buem-model-1` | BuEM building simulation | - | pulled | buem |
-| `ignis-http-ignis-1` | TABULA U-values and annual heat demand | 8403 | pulled | ignis |
-| `ignis-http-db-1` | ignis's TABULA database | - | pulled | ignis |
-| `city2tabula` | 3D city data: building envelopes, footprints, links to PyLovo buildings | 8404 | pulled | city2tabula |
-| `city2tabula-db` | One City2TABULA database per country | - | pulled | city2tabula |
-| `weather-serve` | Hourly weather: P10/P50/P90 scenarios and real years | 8406 | pulled | weather |
+| `pylovo-api-1` | Low-voltage grid generation | 8086 | built locally | enerplanet-pylovo |
+| `tentacron-api-1` | Single entry point to the services below: routing, job queue, polling | 8400 | built locally | TentaCron |
+| `meme-api-1` | Translates a model into Calliope or PyPSA and runs the solver | 8401 | built locally | meme |
+| `buem-gateway-api-1` | BuEM API: validates requests, batches buildings | 8402 | pulled | buem-gateway |
+| `buem-gateway-model-1` | BuEM building simulation | - | pulled | buem |
+| `ignis-api-1` | TABULA U-values and annual heat demand | 8403 | pulled | ignis |
+| `ignis-db-1` | ignis's TABULA database | - | pulled | ignis |
+| `city2tabula-api-1` | 3D city data: building envelopes, footprints, links to PyLovo buildings | 8404 | pulled | city2tabula |
+| `city2tabula-db-1` | One City2TABULA database per country | - | pulled | city2tabula |
+| `weather-api-1` | Hourly weather: P10/P50/P90 scenarios and real years | 8406 | pulled | weather |
 
 The backend reaches every heat service through TentaCron, and PyLovo
 directly. A model's BuEM, weather, City2TABULA and ignis calls never go to
@@ -224,4 +224,4 @@ separate `docker volume prune -a`.
 | `go: download go1.26.0 ... unexpected EOF`, or the auth-service build hangs at `go mod download` | The build downloads a Go toolchain and the download failed | Run `make setup` again |
 | A simulation fails with `coati binary not found` | The host backend has no `COATI_BIN` | Start it with `make dev`, which sets it; `make coati` installs the Coati CLI |
 | A Calliope run ends with `signal: killed` | The solver ran out of Docker memory | Raise Docker Desktop's memory, or use a smaller model |
-| `FAIL  city2tabula: container city2tabula-db is not running` | City2TABULA was not started | `make city2tabula`, then `make fixtures` |
+| `FAIL  city2tabula: container city2tabula-db-1 is not running` | City2TABULA was not started | `make city2tabula`, then `make fixtures` |

@@ -60,10 +60,10 @@ FIXTURE_DIR="$(cd "$FIXTURE_DIR" && pwd)"
 SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 WORKDIR="${WORKDIR:-$SELF_DIR/../.local/heat-stack/$PREFIX}"
 
-C2T="$PREFIX-city2tabula"
-C2T_DB="$PREFIX-city2tabula-db"
-PYLOVO_DB="$PREFIX-pylovo-postgres"
-WEATHER="$PREFIX-weather-serve"
+C2T="$PREFIX-city2tabula-api-1"
+C2T_DB="$PREFIX-city2tabula-db-1"
+PYLOVO_DB="$PREFIX-pylovo-postgres-1"
+WEATHER="$PREFIX-weather-api-1"
 
 # Must match isoByCountry in city2tabula's internal/config/country.go: the
 # server names each country's database <DB_NAME>_<code>.
