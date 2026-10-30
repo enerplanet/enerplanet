@@ -135,23 +135,25 @@ REPO_ROOT="${REPO:-$(cd "$SELF_DIR/.." && pwd)}"
 [ -d "$REPO_ROOT" ] || die "--repo $REPO_ROOT is not a directory"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 
-# The pins: every _REPO, _DIR, _REF, _PORT and image tag, from repos.conf, the
+# Every _REPO, _DIR, _BRANCH, _PORT and image tag, from repos.conf, the
 # single record of what the platform runs.
 REPOS_CONF="$REPO_ROOT/repos.conf"
 [ -f "$REPOS_CONF" ] || die "$REPO_ROOT has no repos.conf — is it an enerplanet checkout? Use --repo DIR"
 while IFS='=' read -r key value; do
   if [[ $key =~ ^[A-Z0-9_]+$ ]] && [ -z "${!key:-}" ]; then export "$key=$value"; fi
 done < "$REPOS_CONF"
-for var in TENTACRON_REPO TENTACRON_DIR TENTACRON_REF TENTACRON_PORT \
-           MEME_REPO MEME_DIR MEME_REF \
-           BUEM_REPO BUEM_DIR BUEM_REF BUEM_GATEWAY_IMAGE_TAG BUEM_MODEL_IMAGE_TAG \
-           IGNIS_REPO IGNIS_DIR IGNIS_REF IGNIS_IMAGE_TAG \
-           CITY2TABULA_REPO CITY2TABULA_DIR CITY2TABULA_REF CITY2TABULA_IMAGE_TAG \
-           WEATHER_REPO WEATHER_DIR WEATHER_REF WEATHER_IMAGE_TAG \
-           PV_SERVICE_REPO PV_SERVICE_DIR PV_SERVICE_REF \
-           PYLOVO_REPO PYLOVO_DIR PYLOVO_REF; do
+for var in TENTACRON_REPO TENTACRON_DIR TENTACRON_BRANCH TENTACRON_PORT \
+           MEME_REPO MEME_DIR MEME_BRANCH \
+           BUEM_REPO BUEM_DIR BUEM_BRANCH BUEM_IMAGE_TAG BUEM_MODEL_IMAGE_TAG \
+           IGNIS_REPO IGNIS_DIR IGNIS_BRANCH IGNIS_IMAGE_TAG \
+           CITY2TABULA_REPO CITY2TABULA_DIR CITY2TABULA_BRANCH CITY2TABULA_IMAGE_TAG \
+           WEATHER_REPO WEATHER_DIR WEATHER_BRANCH WEATHER_IMAGE_TAG \
+           PV_SERVICE_REPO PV_SERVICE_DIR PV_SERVICE_BRANCH \
+           PYLOVO_REPO PYLOVO_DIR PYLOVO_BRANCH; do
   [ -n "${!var:-}" ] || die "$REPOS_CONF sets no $var"
 done
+# buem-gateway's compose file reads the gateway tag under this name.
+BUEM_GATEWAY_IMAGE_TAG="$BUEM_IMAGE_TAG"
 
 DEPS_DIR="$REPO_ROOT/dependencies"  # every service checkout lives here
 LOAD_SH="$REPO_ROOT/fixtures/load.sh"
@@ -252,35 +254,36 @@ resolve_ports() {
 }
 
 # ── Repositories ──────────────────────────────────────────────────────────────
-# checkout DIR REPO REF — clone at REF, or move an existing checkout onto it.
+# checkout DIR REPO BRANCH: clone and detach at the tip of origin/BRANCH, or
+# move an existing detached checkout there. A checkout on a local branch may
+# be someone's work and is left alone. A fresh clone is detached at once, so a
+# failed checkout is retried on the next run rather than taken for local work.
 checkout() {
-  local dir="$1" repo="$2" ref="$3" path="$DEPS_DIR/$1"
-  if [ -d "$path/.git" ]; then
-    if [ "$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)" != "HEAD" ]; then
-      warn "$path is on a branch; leaving it alone (pin: $ref)"
-      return 0
-    fi
-    git -C "$path" fetch -q --tags origin
-    git -C "$path" checkout -q "$ref"
-    ok "updated $dir -> $ref"
-  else
-    log "cloning $dir at $ref"
+  local dir="$1" repo="$2" ref="origin/$3" path="$DEPS_DIR/$1"
+  if [ ! -d "$path/.git" ]; then
+    log "cloning $dir"
     git clone -q "$repo" "$path"
-    git -C "$path" checkout -q "$ref"
-    ok "cloned $dir -> $ref"
+    git -C "$path" checkout -q --detach
+  elif [ "$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)" != "HEAD" ]; then
+    warn "$path is on a local branch; leaving it alone (wanted: $ref)"
+    return 0
+  else
+    git -C "$path" fetch -q --tags origin
   fi
+  git -C "$path" checkout -q "$ref" || die "cannot check out $ref in $path"
+  ok "$dir -> $ref ($(git -C "$path" rev-parse --short HEAD))"
 }
 
 clone_repos() {
   mkdir -p "$DEPS_DIR"
-  checkout "$TENTACRON_DIR"      "$TENTACRON_REPO"      "$TENTACRON_REF"
-  checkout "$MEME_DIR"           "$MEME_REPO"           "$MEME_REF"
-  checkout "$BUEM_DIR"           "$BUEM_REPO"           "$BUEM_REF"
-  checkout "$IGNIS_DIR"          "$IGNIS_REPO"          "$IGNIS_REF"
-  checkout "$CITY2TABULA_DIR"    "$CITY2TABULA_REPO"    "$CITY2TABULA_REF"
-  checkout "$WEATHER_DIR"        "$WEATHER_REPO"        "$WEATHER_REF"
-  checkout "$PV_SERVICE_DIR"     "$PV_SERVICE_REPO"     "$PV_SERVICE_REF"
-  checkout "$PYLOVO_DIR"         "$PYLOVO_REPO"         "$PYLOVO_REF"
+  checkout "$TENTACRON_DIR"      "$TENTACRON_REPO"      "$TENTACRON_BRANCH"
+  checkout "$MEME_DIR"           "$MEME_REPO"           "$MEME_BRANCH"
+  checkout "$BUEM_DIR"           "$BUEM_REPO"           "$BUEM_BRANCH"
+  checkout "$IGNIS_DIR"          "$IGNIS_REPO"          "$IGNIS_BRANCH"
+  checkout "$CITY2TABULA_DIR"    "$CITY2TABULA_REPO"    "$CITY2TABULA_BRANCH"
+  checkout "$WEATHER_DIR"        "$WEATHER_REPO"        "$WEATHER_BRANCH"
+  checkout "$PV_SERVICE_DIR"     "$PV_SERVICE_REPO"     "$PV_SERVICE_BRANCH"
+  checkout "$PYLOVO_DIR"         "$PYLOVO_REPO"         "$PYLOVO_BRANCH"
 }
 
 # The fixtures come from the enerplanet checkout this script runs in; there is

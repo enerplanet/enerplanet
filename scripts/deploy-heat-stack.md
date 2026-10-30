@@ -334,12 +334,13 @@ docker run --rm --network sim2-tentacron-net curlimages/curl \
 
 ## Pins
 
-The script reads every `_REPO`, `_DIR`, `_REF`, `_PORT` and image tag from the
-clone's `repos.conf`, and checks out each service at its `_REF`. A variable
-already set in the environment wins over the file:
+The script reads every `_REPO`, `_DIR`, `_BRANCH`, `_PORT` and image tag from
+the clone's `repos.conf`, checks out each service at the tip of its `_BRANCH`
+for its compose files, and runs the release image named by its `_IMAGE_TAG`. A
+variable already set in the environment wins over the file:
 
 ```bash
-CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
+CITY2TABULA_BRANCH=dev CITY2TABULA_IMAGE_TAG=0.17.0 \
   scripts/deploy-heat-stack.sh --prefix sim2 render
 ```
 
