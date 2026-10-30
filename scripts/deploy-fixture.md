@@ -159,7 +159,7 @@ grids.
 
 | Message | Cause | Fix |
 |---|---|---|
-| `container <prefix>-city2tabula is not running` (or `-weather-serve`, `-pylovo-postgres`) | The stack is not up under that prefix | Deploy the stack first, or check `--prefix` |
+| `container <prefix>-city2tabula-api-1 is not running` (or `-city2tabula-db-1`, `-weather-api-1`, `-pylovo-postgres-1`) | The stack is not up under that prefix | Deploy the stack first, or check `--prefix` |
 | `<country> is not a City2TABULA country` | A folder under `3d/` or `attributes/` has another name | Rename it to a name from the list in the message |
 | `PyLovo: restoring ... failed; pylovo_db was left as it was` | The dump has an error | Fix or re-export the dump and re-run; the stack keeps its previous grids |
 | `holds N dumps; keep exactly one` | More than one `.sql.gz` in `pylovo/` | Keep the current dump only |
