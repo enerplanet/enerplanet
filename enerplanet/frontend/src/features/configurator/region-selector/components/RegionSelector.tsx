@@ -3,6 +3,7 @@ import { ChevronDown, MapPin, Search, Check, Star, ArrowUpDown, Clock, Heart } f
 import { Tooltip, TooltipTrigger, TooltipContent } from '@spatialhub/ui';
 import { useDefaultRegionStore } from '../store/default-region';
 import { useTranslation } from '@spatialhub/i18n';
+import { regionMatch } from '../regionMatch';
 
 export interface AvailableRegion {
     name: string;
@@ -12,6 +13,7 @@ export interface AvailableRegion {
     stateCode?: string;
     has3d?: boolean;
     bbox?: { west: number; south: number; east: number; north: number };
+    postcodes?: string[];
 }
 
 interface RegionSelectorProps {
@@ -164,21 +166,26 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
     }, [sortMode]);
 
     // ── Grouping & filtering ──
-    const { filteredGrouped, totalFiltered, flatList } = useMemo(() => {
-        const q = searchQuery.toLowerCase();
+    const { filteredGrouped, totalFiltered, flatList, matchedPostcodes } = useMemo(() => {
+        const q = searchQuery.trim();
+        const postcodeByRegion = new Map<string, string>();
         const grouped = regions.reduce<Record<string, AvailableRegion[]>>((acc, r) => {
             const key = r.country || 'Other';
             (acc[key] ??= []).push(r);
             return acc;
         }, {});
 
-        const filtered = Object.entries(grouped).reduce<Record<string, AvailableRegion[]>>((acc, [country, regs]) => {
-            const match = regs.filter(r =>
-                r.name.toLowerCase().includes(q) || country.toLowerCase().includes(q)
-            );
-            if (match.length > 0) acc[country] = sortRegions(match);
-            return acc;
-        }, {});
+        const filtered = Object.entries(grouped)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .reduce<Record<string, AvailableRegion[]>>((acc, [country, regs]) => {
+                const match = regs.filter(r => {
+                    const { matches, postcode } = regionMatch(r, country, q);
+                    if (postcode) postcodeByRegion.set(getRegionKey(r), postcode);
+                    return matches;
+                });
+                if (match.length > 0) acc[country] = sortRegions(match);
+                return acc;
+            }, {});
 
         const total = Object.values(filtered).reduce((sum, r) => sum + r.length, 0);
 
@@ -197,7 +204,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
             flat.push(...regs);
         }
 
-        return { filteredGrouped: filtered, totalFiltered: total, flatList: flat };
+        return { filteredGrouped: filtered, totalFiltered: total, flatList: flat, matchedPostcodes: postcodeByRegion };
     }, [regions, searchQuery, sortRegions, favoriteRegions, recentRegions]);
 
     // ── Summary stats ──
@@ -217,7 +224,8 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
     const handleToggleDefault = useCallback((e: React.MouseEvent, region: AvailableRegion) => {
         e.stopPropagation();
         const isCurrentDefault = defaultRegion ? getRegionKey(defaultRegion) === getRegionKey(region) : false;
-        setDefaultRegion(isCurrentDefault ? null : region);
+        // Postcodes are left out: settings would otherwise store a whole state's list.
+        setDefaultRegion(isCurrentDefault ? null : { ...region, postcodes: undefined });
     }, [defaultRegion, setDefaultRegion]);
 
     // ── Keyboard navigation ──
@@ -252,6 +260,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
         const isSelected = selectedRegion ? getRegionKey(selectedRegion) === regionKey : false;
         const isDefault = defaultRegion ? getRegionKey(defaultRegion) === regionKey : false;
         const isHighlighted = highlightIndex === flatIdx;
+        const matchedPostcode = searchQuery ? matchedPostcodes.get(regionKey) : undefined;
 
         return (
             <button
@@ -266,6 +275,9 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                     <span className={`truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
                         {region.name}
                     </span>
+                    {matchedPostcode && (
+                        <span className="flex-shrink-0 text-[10px] text-muted-foreground tabular-nums">{matchedPostcode}</span>
+                    )}
                     {region.has3d && (
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -339,7 +351,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    placeholder={t('regionSelector.searchPlaceholder', 'Search regions...')}
+                                    placeholder={t('regionSelector.searchPlaceholder', 'Search region or postcode...')}
                                     value={searchQuery}
                                     onChange={(e) => { setSearchQuery(e.target.value); setHighlightIndex(-1); }}
                                     onKeyDown={handleKeyDown}
@@ -363,7 +375,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                     {/* Region list */}
                     <div ref={listRef} className="max-h-64 overflow-y-auto p-1.5">
                         {/* ⭐ Favorites section */}
-                        {!searchQuery && favoriteRegions.length > 0 && (
+                        {!searchQuery.trim() && favoriteRegions.length > 0 && (
                             <div>
                                 <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                     <Heart className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -380,7 +392,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                         )}
 
                         {/* 🕐 Recently used section */}
-                        {!searchQuery && recentRegions.length > 0 && (
+                        {!searchQuery.trim() && recentRegions.length > 0 && (
                             <div>
                                 <div className="px-2.5 pt-2 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
@@ -397,7 +409,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                         )}
 
                         {/* Separator between pinned sections and country groups */}
-                        {!searchQuery && (favoriteRegions.length > 0 || recentRegions.length > 0) && totalFiltered > 0 && (
+                        {!searchQuery.trim() && (favoriteRegions.length > 0 || recentRegions.length > 0) && totalFiltered > 0 && (
                             <div className="mx-2 my-1.5 border-t border-border" />
                         )}
 

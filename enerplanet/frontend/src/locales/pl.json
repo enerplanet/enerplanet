@@ -2880,7 +2880,7 @@
   "regionSelector": {
     "goToRegion": "Przejdź do regionu",
     "jumpToRegion": "Przejdź do regionu z dostępnymi danymi siatki",
-    "searchPlaceholder": "Szukaj regionów...",
+    "searchPlaceholder": "Szukaj regionu lub kodu pocztowego...",
     "sortByGridCount": "Sortuj wg liczby siatek",
     "sortByName": "Sortuj wg nazwy",
     "setAsDefault": "Ustaw jako domyślny region",

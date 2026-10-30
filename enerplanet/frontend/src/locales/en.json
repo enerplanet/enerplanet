@@ -2857,7 +2857,7 @@
   "regionSelector": {
     "goToRegion": "Go to region",
     "jumpToRegion": "Jump to a region with available grid data",
-    "searchPlaceholder": "Search regions...",
+    "searchPlaceholder": "Search region or postcode...",
     "sortByGridCount": "Sort by grid count",
     "sortByName": "Sort by name",
     "setAsDefault": "Set as default region",

@@ -173,6 +173,7 @@ export interface ModelStore {
     stateCode?: string;
     has3d?: boolean;
     bbox?: { west: number; south: number; east: number; north: number };
+    postcodes?: string[];
   }>;
   setAvailableRegions: (v: any[]) => void;
   showBoundary: boolean;

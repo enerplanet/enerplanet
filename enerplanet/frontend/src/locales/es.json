@@ -2854,7 +2854,7 @@
   "regionSelector": {
     "goToRegion": "Ir a la región",
     "jumpToRegion": "Ir a una región con datos de cuadrícula disponibles",
-    "searchPlaceholder": "Buscar regiones...",
+    "searchPlaceholder": "Buscar región o código postal...",
     "sortByGridCount": "Ordenar por cantidad de cuadrículas",
     "sortByName": "Ordenar por nombre",
     "setAsDefault": "Establecer como región predeterminada",

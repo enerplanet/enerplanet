@@ -2854,7 +2854,7 @@
   "regionSelector": {
     "goToRegion": "Aller à la région",
     "jumpToRegion": "Accéder à une région avec des données de grille disponibles",
-    "searchPlaceholder": "Rechercher des régions...",
+    "searchPlaceholder": "Rechercher une région ou un code postal...",
     "sortByGridCount": "Trier par nombre de grilles",
     "sortByName": "Trier par nom",
     "setAsDefault": "Définir comme région par défaut",

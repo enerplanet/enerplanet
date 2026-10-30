@@ -577,6 +577,7 @@ export const pylovoService = {
             country_code: string;
             state_code?: string;
             grid_count: number;
+            postcodes?: string[];
             has_3d?: boolean;
             centroid: { lat: number; lon: number };
             bbox: { west: number; south: number; east: number; north: number };
@@ -608,6 +609,7 @@ export const pylovoService = {
                 country_code: string;
                 state_code?: string;
                 grid_count: number;
+                postcodes?: string[];
                 has_3d?: boolean;
                 centroid: { lat: number; lon: number };
                 bbox: { west: number; south: number; east: number; north: number };

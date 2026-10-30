@@ -2880,7 +2880,7 @@
   "regionSelector": {
     "goToRegion": "Přejít na region",
     "jumpToRegion": "Přejít na region s dostupnými daty mřížky",
-    "searchPlaceholder": "Hledat regiony...",
+    "searchPlaceholder": "Hledat region nebo PSČ...",
     "sortByGridCount": "Řadit podle počtu mřížek",
     "sortByName": "Řadit podle názvu",
     "setAsDefault": "Nastavit jako výchozí region",

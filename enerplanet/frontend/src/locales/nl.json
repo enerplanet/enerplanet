@@ -2859,7 +2859,7 @@
   "regionSelector": {
     "goToRegion": "Ga naar regio",
     "jumpToRegion": "Ga naar een regio met beschikbare rastergegevens",
-    "searchPlaceholder": "Regio's zoeken...",
+    "searchPlaceholder": "Regio of postcode zoeken...",
     "sortByGridCount": "Sorteren op rasteraantal",
     "sortByName": "Sorteren op naam",
     "setAsDefault": "Instellen als standaardregio",

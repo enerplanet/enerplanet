@@ -2857,7 +2857,7 @@
   "regionSelector": {
     "goToRegion": "Zur Region gehen",
     "jumpToRegion": "Zu einer Region mit verfügbaren Rasterdaten springen",
-    "searchPlaceholder": "Regionen suchen...",
+    "searchPlaceholder": "Region oder Postleitzahl suchen...",
     "sortByGridCount": "Nach Rasteranzahl sortieren",
     "sortByName": "Nach Name sortieren",
     "setAsDefault": "Als Standardregion festlegen",

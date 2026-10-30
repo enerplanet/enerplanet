@@ -96,6 +96,7 @@ const LocationCreator: FC<LocationCreatorProps> = ({ editMode = false }) => {
           gridCount: r.grid_count,
           country: r.region?.country,
           bbox: r.bbox,
+          postcodes: r.postcodes,
         }))
     );
     const boundaryRegions = regionsResponse.regions

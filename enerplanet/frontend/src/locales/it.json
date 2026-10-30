@@ -2860,7 +2860,7 @@
   "regionSelector": {
     "goToRegion": "Vai alla regione",
     "jumpToRegion": "Vai a una regione con dati griglia disponibili",
-    "searchPlaceholder": "Cerca regioni...",
+    "searchPlaceholder": "Cerca regione o CAP...",
     "sortByGridCount": "Ordina per numero di griglie",
     "sortByName": "Ordina per nome",
     "setAsDefault": "Imposta come regione predefinita",
