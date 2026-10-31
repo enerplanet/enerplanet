@@ -1417,6 +1417,11 @@
   },
   "simulation": {
     "title": "Simulatieconfiguratie",
+    "mode": {
+      "label": "Modus",
+      "simple": "Eenvoudig",
+      "advanced": "Geavanceerd"
+    },
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
     "simulationPeriod": "Simulatieperiode",
