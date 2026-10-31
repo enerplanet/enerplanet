@@ -1159,6 +1159,8 @@
       "countCopies_other": "copies",
       "ofModels_one": "modèle",
       "ofModels_other": "modèles",
+      "collapseAll": "Tout réduire",
+      "expandAll": "Tout développer",
       "link": "Lier à l'original",
       "linkFailed": "Impossible de lier « {{name}} » à l'original : {{reason}}",
       "unlink": "Dissocier de l'original",

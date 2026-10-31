@@ -894,6 +894,8 @@
       "countCopies_other": "copie",
       "ofModels_one": "modello",
       "ofModels_other": "modelli",
+      "collapseAll": "Comprimi tutto",
+      "expandAll": "Espandi tutto",
       "link": "Collega all'originale",
       "linkFailed": "Impossibile collegare \"{{name}}\" all'originale: {{reason}}",
       "unlink": "Scollega dall'originale",

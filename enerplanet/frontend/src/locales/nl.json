@@ -893,6 +893,8 @@
       "countCopies_other": "kopieën",
       "ofModels_one": "model",
       "ofModels_other": "modellen",
+      "collapseAll": "Alles inklappen",
+      "expandAll": "Alles uitklappen",
       "link": "Koppelen aan origineel",
       "linkFailed": "\"{{name}}\" kon niet aan het origineel worden gekoppeld: {{reason}}",
       "unlink": "Loskoppelen van origineel",

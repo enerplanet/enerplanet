@@ -1159,6 +1159,8 @@
       "countCopies_other": "copias",
       "ofModels_one": "modelo",
       "ofModels_other": "modelos",
+      "collapseAll": "Contraer todo",
+      "expandAll": "Expandir todo",
       "link": "Vincular al original",
       "linkFailed": "No se pudo vincular \"{{name}}\" al original: {{reason}}",
       "unlink": "Desvincular del original",

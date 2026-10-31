@@ -912,6 +912,8 @@
       "ofModels_few": "modeli",
       "ofModels_many": "modeli",
       "ofModels_other": "modeli",
+      "collapseAll": "Zwiń wszystkie",
+      "expandAll": "Rozwiń wszystkie",
       "link": "Połącz z oryginałem",
       "linkFailed": "Nie udało się połączyć „{{name}}” z oryginałem: {{reason}}",
       "unlink": "Odłącz od oryginału",

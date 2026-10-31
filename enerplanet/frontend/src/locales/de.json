@@ -1158,6 +1158,8 @@
       "countCopies_other": "Kopien",
       "ofModels_one": "Modell",
       "ofModels_other": "Modellen",
+      "collapseAll": "Alle einklappen",
+      "expandAll": "Alle ausklappen",
       "link": "Mit Original verknüpfen",
       "linkFailed": "\"{{name}}\" konnte nicht mit dem Original verknüpft werden: {{reason}}",
       "unlink": "Vom Original trennen",

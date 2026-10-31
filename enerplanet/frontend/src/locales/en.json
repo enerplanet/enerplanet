@@ -1158,6 +1158,8 @@
       "countCopies_other": "copies",
       "ofModels_one": "model",
       "ofModels_other": "models",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
       "link": "Link to original",
       "linkFailed": "Could not link \"{{name}}\" to the original: {{reason}}",
       "unlink": "Unlink from original",

@@ -912,6 +912,8 @@
       "ofModels_few": "modelů",
       "ofModels_many": "modelů",
       "ofModels_other": "modelů",
+      "collapseAll": "Sbalit vše",
+      "expandAll": "Rozbalit vše",
       "link": "Propojit s originálem",
       "linkFailed": "„{{name}}“ se nepodařilo propojit s originálem: {{reason}}",
       "unlink": "Odpojit od originálu",

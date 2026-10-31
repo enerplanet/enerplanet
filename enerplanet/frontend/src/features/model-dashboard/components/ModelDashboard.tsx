@@ -20,6 +20,8 @@ import {
 	GitCompareArrows,
 	Play,
 	MoreHorizontal,
+	FoldVertical,
+	UnfoldVertical,
 } from "lucide-react";
 
 import { isAxiosError } from "axios";
@@ -477,6 +479,11 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			return next;
 		});
 	}, []);
+	// The header button collapses every family on the page while any is open, else expands them all.
+	const anyFamilyOpen = [...copyCountByFamily.keys()].some((id) => !collapsedFamilies.has(id));
+	const toggleAllFamilies = useCallback(() => {
+		setCollapsedFamilies(anyFamilyOpen ? new Set(copyCountByFamily.keys()) : new Set());
+	}, [anyFamilyOpen, copyCountByFamily]);
 	const copiesOnPage = [...copyCountByFamily.values()].reduce((sum, n) => sum + n, 0);
 	const visibleModels = useMemo(
 		() => paginatedModels.filter((m) => !(m.level > 0 && collapsedFamilies.has(familyId(m)))),
@@ -1095,7 +1102,25 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														</th>
 													) : (
 														<>
-															<th className="px-4 py-2.5 text-left">
+															<th className="pl-2 pr-4 py-2.5 text-left">
+																<div className="flex items-center gap-2">
+																{copyCountByFamily.size > 0 ? (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<button
+																				type="button"
+																				onClick={toggleAllFamilies}
+																				aria-label={t(anyFamilyOpen ? "model.family.collapseAll" : "model.family.expandAll")}
+																				className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+																			>
+																				{anyFamilyOpen ? <FoldVertical className="h-4 w-4" /> : <UnfoldVertical className="h-4 w-4" />}
+																			</button>
+																		</TooltipTrigger>
+																		<TooltipContent>{t(anyFamilyOpen ? "model.family.collapseAll" : "model.family.expandAll")}</TooltipContent>
+																	</Tooltip>
+																) : (
+																	<span className="w-8 flex-shrink-0" aria-hidden="true" />
+																)}
 																<SortHeaderButton
 																	field="title"
 																	label={t('model.name')}
@@ -1103,6 +1128,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	order={order}
 																	onSort={handleSort}
 																/>
+																</div>
 															</th>
 															<th className="px-4 py-2.5 text-left">
 																<SortHeaderButton
