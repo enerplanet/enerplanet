@@ -915,9 +915,9 @@
       "collapseAll": "Zwiń wszystkie",
       "expandAll": "Rozwiń wszystkie",
       "link": "Połącz z oryginałem",
-      "linkFailed": "Nie udało się połączyć „{{name}}” z oryginałem: {{reason}}",
+      "linkFailed": "Nie udało się połączyć „{{name}}”: {{reason}}",
       "unlink": "Odłącz od oryginału",
-      "unlinkFailed": "Nie udało się odłączyć „{{name}}” od oryginału: {{reason}}"
+      "unlinkFailed": "Nie udało się odłączyć „{{name}}”: {{reason}}"
     },
     "workspaceActions": "Działania obszaru roboczego",
     "selectedCount_one": "{{count}} zaznaczony",

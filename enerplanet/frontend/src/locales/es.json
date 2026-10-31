@@ -1162,9 +1162,9 @@
       "collapseAll": "Contraer todo",
       "expandAll": "Expandir todo",
       "link": "Vincular al original",
-      "linkFailed": "No se pudo vincular \"{{name}}\" al original: {{reason}}",
+      "linkFailed": "No se pudo vincular \"{{name}}\": {{reason}}",
       "unlink": "Desvincular del original",
-      "unlinkFailed": "No se pudo desvincular \"{{name}}\" de su original: {{reason}}"
+      "unlinkFailed": "No se pudo desvincular \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Acciones del espacio de trabajo",
     "selectedCount_one": "{{count}} seleccionado",

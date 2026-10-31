@@ -1161,9 +1161,9 @@
       "collapseAll": "Alle einklappen",
       "expandAll": "Alle ausklappen",
       "link": "Mit Original verknüpfen",
-      "linkFailed": "\"{{name}}\" konnte nicht mit dem Original verknüpft werden: {{reason}}",
+      "linkFailed": "\"{{name}}\" konnte nicht verknüpft werden: {{reason}}",
       "unlink": "Vom Original trennen",
-      "unlinkFailed": "\"{{name}}\" konnte nicht vom Original getrennt werden: {{reason}}"
+      "unlinkFailed": "\"{{name}}\" konnte nicht getrennt werden: {{reason}}"
     },
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",

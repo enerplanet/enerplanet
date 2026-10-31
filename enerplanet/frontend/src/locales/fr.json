@@ -1162,9 +1162,9 @@
       "collapseAll": "Tout réduire",
       "expandAll": "Tout développer",
       "link": "Lier à l'original",
-      "linkFailed": "Impossible de lier « {{name}} » à l'original : {{reason}}",
+      "linkFailed": "Impossible de lier « {{name}} » : {{reason}}",
       "unlink": "Dissocier de l'original",
-      "unlinkFailed": "Impossible de dissocier « {{name}} » de son original : {{reason}}"
+      "unlinkFailed": "Impossible de dissocier « {{name}} » : {{reason}}"
     },
     "workspaceActions": "Actions de l'espace de travail",
     "selectedCount_one": "{{count}} sélectionné",

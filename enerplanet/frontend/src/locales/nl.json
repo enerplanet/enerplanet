@@ -896,9 +896,9 @@
       "collapseAll": "Alles inklappen",
       "expandAll": "Alles uitklappen",
       "link": "Koppelen aan origineel",
-      "linkFailed": "\"{{name}}\" kon niet aan het origineel worden gekoppeld: {{reason}}",
+      "linkFailed": "\"{{name}}\" kon niet worden gekoppeld: {{reason}}",
       "unlink": "Loskoppelen van origineel",
-      "unlinkFailed": "\"{{name}}\" kon niet van het origineel worden losgekoppeld: {{reason}}"
+      "unlinkFailed": "\"{{name}}\" kon niet worden losgekoppeld: {{reason}}"
     },
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",

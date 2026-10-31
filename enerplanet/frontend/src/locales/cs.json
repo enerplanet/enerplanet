@@ -915,9 +915,9 @@
       "collapseAll": "Sbalit vše",
       "expandAll": "Rozbalit vše",
       "link": "Propojit s originálem",
-      "linkFailed": "„{{name}}“ se nepodařilo propojit s originálem: {{reason}}",
+      "linkFailed": "„{{name}}“ se nepodařilo propojit: {{reason}}",
       "unlink": "Odpojit od originálu",
-      "unlinkFailed": "„{{name}}“ se nepodařilo odpojit od originálu: {{reason}}"
+      "unlinkFailed": "„{{name}}“ se nepodařilo odpojit: {{reason}}"
     },
     "workspaceActions": "Akce pracovního prostoru",
     "selectedCount_one": "{{count}} vybrán",

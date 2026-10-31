@@ -1161,9 +1161,9 @@
       "collapseAll": "Collapse all",
       "expandAll": "Expand all",
       "link": "Link to original",
-      "linkFailed": "Could not link \"{{name}}\" to the original: {{reason}}",
+      "linkFailed": "Could not link \"{{name}}\": {{reason}}",
       "unlink": "Unlink from original",
-      "unlinkFailed": "Could not unlink \"{{name}}\" from its original: {{reason}}"
+      "unlinkFailed": "Could not unlink \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",

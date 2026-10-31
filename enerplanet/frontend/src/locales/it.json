@@ -897,9 +897,9 @@
       "collapseAll": "Comprimi tutto",
       "expandAll": "Espandi tutto",
       "link": "Collega all'originale",
-      "linkFailed": "Impossibile collegare \"{{name}}\" all'originale: {{reason}}",
+      "linkFailed": "Impossibile collegare \"{{name}}\": {{reason}}",
       "unlink": "Scollega dall'originale",
-      "unlinkFailed": "Impossibile scollegare \"{{name}}\" dal suo originale: {{reason}}"
+      "unlinkFailed": "Impossibile scollegare \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Azioni dell'area di lavoro",
     "selectedCount_one": "{{count}} selezionato",
