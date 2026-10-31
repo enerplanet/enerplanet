@@ -45,7 +45,7 @@ with its repository's http compose file.
 | City2TABULA | `CITY2TABULA_*` | `environment/http/docker-compose.yml`, server only |
 | weather | `WEATHER_*` | `infrastructure/container/docker-compose.serve.yml` |
 | PV service | `PV_SERVICE_*` | `docker-compose.yml` |
-| PyLovo | `PYLOVO_*` | `docker-compose.dev.yml`, plus its own postgres and redis |
+| PyLovo | `PYLOVO_*` | `environment/docker-compose.dev.yml` (or `docker-compose.dev.yml` on older refs), plus its own postgres and redis |
 
 A variable set in the environment wins over `repos.conf`, so one service can
 be built from another branch for a single run:

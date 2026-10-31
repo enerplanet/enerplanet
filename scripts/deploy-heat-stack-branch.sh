@@ -446,6 +446,16 @@ weather_dir="$DEPS_DIR/$WEATHER_DIR"
 pv_dir="$DEPS_DIR/$PV_SERVICE_DIR"
 pylovo_dir="$DEPS_DIR/$PYLOVO_DIR"
 
+# PyLovo keeps its compose file under environment/; older refs have it at the
+# repository root.
+pylovo_compose() {
+  if [ -f "$pylovo_dir/environment/docker-compose.dev.yml" ]; then
+    echo environment/docker-compose.dev.yml
+  else
+    echo docker-compose.dev.yml
+  fi
+}
+
 # PyLovo first: city2tabula's postgres_fdw links out to its database, and the
 # heat network has to exist before the services that join it come up.
 # PyLovo's dev compose reads .env.docker; upstream's `make dev` copies it from
@@ -464,7 +474,7 @@ up_pylovo() {
   (
     cd "$pylovo_dir"
     docker compose -p "$PREFIX-pylovo" \
-      -f docker-compose.dev.yml -f "$OVR_DIR/pylovo.yml" up -d --build
+      -f "$(pylovo_compose)" -f "$OVR_DIR/pylovo.yml" up -d --build
   )
 }
 
@@ -568,7 +578,7 @@ validate_overrides() {
   ( cd "$tentacron_dir/environment" && docker compose -p "$PREFIX-tentacron-env" --env-file .env.dev \
       -f docker-compose.yml -f "$OVR_DIR/tentacron.yml" config -q ) || failed=1
   ( cd "$pylovo_dir" && docker compose -p "$PREFIX-pylovo" \
-      -f docker-compose.dev.yml -f "$OVR_DIR/pylovo.yml" config -q ) || failed=1
+      -f "$(pylovo_compose)" -f "$OVR_DIR/pylovo.yml" config -q ) || failed=1
   [ "$failed" = 0 ] || die "at least one compose file failed to validate"
   ok "all eight compose projects render"
 }
@@ -649,7 +659,7 @@ cmd_down() {
     "$PREFIX-city2tabula" --env-file docker.env
   down_one ignis "$ignis_dir/environment/http" docker-compose.yml ignis.yml \
     "$PREFIX-ignis-http"
-  down_one pylovo "$pylovo_dir" docker-compose.dev.yml pylovo.yml \
+  down_one pylovo "$pylovo_dir" "$(pylovo_compose)" pylovo.yml \
     "$PREFIX-pylovo"
 
   # weather's file requires WEATHER_API_KEYS with ${...:?}, so it needs the
