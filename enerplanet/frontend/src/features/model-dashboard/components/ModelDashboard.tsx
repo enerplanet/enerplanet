@@ -1046,7 +1046,9 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											<ModelColumns />
 											<thead className="sticky top-0 z-10">
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
-													<th className="px-4 py-2.5 text-center">
+													<th className="pl-4 pr-2 py-2.5">
+														{/* Same layout as a row's first cell, with a blank where the row has its star, so the checkboxes line up. */}
+														<div className="flex items-center justify-center gap-1.5">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -1062,6 +1064,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																{selectedModels.length > 0 ? t('model.deselectAll') : t('model.selectAll')}
 															</TooltipContent>
 														</Tooltip>
+														<span className="p-1" aria-hidden="true"><span className="block h-3.5 w-3.5" /></span>
+														</div>
 													</th>
 													{selectedModels.length > 0 ? (
 														<th colSpan={4} className="px-4 py-1 text-left">
