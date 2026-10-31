@@ -889,8 +889,10 @@
       "failed_one": "{{count}} non riuscita",
       "failed_other": "{{count}} non riuscite",
       "pagination": "famiglie",
-      "join": "Aggiungi a una famiglia",
-      "joinFailed": "Impossibile aggiungere \"{{name}}\" alla famiglia: {{reason}}"
+      "link": "Collega all'originale",
+      "linkFailed": "Impossibile collegare \"{{name}}\" all'originale: {{reason}}",
+      "unlink": "Scollega dall'originale",
+      "unlinkFailed": "Impossibile scollegare \"{{name}}\" dal suo originale: {{reason}}"
     },
     "workspaceActions": "Azioni dell'area di lavoro",
     "selectedCount_one": "{{count}} selezionato",

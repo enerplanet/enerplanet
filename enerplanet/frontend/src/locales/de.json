@@ -1153,8 +1153,10 @@
       "failed_one": "{{count}} fehlgeschlagen",
       "failed_other": "{{count}} fehlgeschlagen",
       "pagination": "Modellfamilien",
-      "join": "Zu Familie hinzufügen",
-      "joinFailed": "\"{{name}}\" konnte nicht zur Familie hinzugefügt werden: {{reason}}"
+      "link": "Mit Original verknüpfen",
+      "linkFailed": "\"{{name}}\" konnte nicht mit dem Original verknüpft werden: {{reason}}",
+      "unlink": "Vom Original trennen",
+      "unlinkFailed": "\"{{name}}\" konnte nicht vom Original getrennt werden: {{reason}}"
     },
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",

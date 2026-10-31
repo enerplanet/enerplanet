@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { isAxiosError } from "axios";
-import { Model, ModelStats, modelService } from "@/features/model-dashboard/services/modelService";
+import { Model, ModelStats, modelService, type FamilyOption } from "@/features/model-dashboard/services/modelService";
 import { ModelStatsSummary } from "./ModelStatsSummary";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/Skeletons";
@@ -444,20 +444,26 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		() => new Map(groupFamilies(paginatedModels).map(({ head, members }) => [head.id, [head, ...members]])),
 		[paginatedModels],
 	);
-	// Families a model alone in its own can join, one entry per family on the page.
-	const familyChoices = useMemo(
-		() => groupFamilies(paginatedModels).map(({ head }) => ({ id: familyId(head), headId: head.id, title: head.title.trim() })),
-		[paginatedModels],
-	);
-	const handleJoinFamily = useCallback(async (model: Model, family: number) => {
+	// A null family unlinks the model into a family of its own.
+	const handleLinkFamily = useCallback(async (model: Model, family: number | null) => {
 		try {
-			await modelService.setModelFamily(model.id, family);
+			if (family === null) await modelService.unlinkFromFamily(model.id);
+			else await modelService.linkToFamily(model.id, family);
 			await loadModels();
 		} catch (error) {
 			const reason = isAxiosError(error) ? (error.response?.data?.error ?? error.message) : String(error);
-			showError(t("model.family.joinFailed", { name: model.title, reason }));
+			showError(t(family === null ? "model.family.unlinkFailed" : "model.family.linkFailed", { name: model.title, reason }));
 		}
 	}, [loadModels, showError, t]);
+	const loadFamilyOptions = useCallback(async (model: Model): Promise<FamilyOption[]> => {
+		try {
+			return await modelService.familyOptions(model.id);
+		} catch (error) {
+			const reason = isAxiosError(error) ? (error.response?.data?.error ?? error.message) : String(error);
+			showError(t("model.family.linkFailed", { name: model.title, reason }));
+			return [];
+		}
+	}, [showError, t]);
 	const handleSelectRow = useCallback((model: Model) => {
 		const family = familyByHeadID.get(model.id);
 		if (family && family.length > 1) handleSelectFamily(family);
@@ -800,8 +806,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			failedCopyCount={model.level === 0 ? (failedCopyCountByFamily.get(familyId(model)) ?? 0) : 0}
 			familyCollapsed={collapsedFamilies.has(familyId(model))}
 			onToggleFamily={toggleFamily}
-			familyChoices={familyChoices}
-			onJoinFamily={handleJoinFamily}
+			onLinkFamily={handleLinkFamily}
+			loadFamilyOptions={loadFamilyOptions}
 			currentUserId={user?.id ? String(user.id) : undefined}
 			userAccessLevel={user?.access_level}
 			isSelected={isSelected(model)}

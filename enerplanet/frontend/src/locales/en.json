@@ -1153,8 +1153,10 @@
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
       "pagination": "families",
-      "join": "Add to family",
-      "joinFailed": "Could not add \"{{name}}\" to the family: {{reason}}"
+      "link": "Link to original",
+      "linkFailed": "Could not link \"{{name}}\" to the original: {{reason}}",
+      "unlink": "Unlink from original",
+      "unlinkFailed": "Could not unlink \"{{name}}\" from its original: {{reason}}"
     },
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",

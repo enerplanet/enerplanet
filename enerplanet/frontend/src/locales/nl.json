@@ -888,8 +888,10 @@
       "failed_one": "{{count}} mislukt",
       "failed_other": "{{count}} mislukt",
       "pagination": "families",
-      "join": "Aan familie toevoegen",
-      "joinFailed": "\"{{name}}\" kon niet aan de familie worden toegevoegd: {{reason}}"
+      "link": "Koppelen aan origineel",
+      "linkFailed": "\"{{name}}\" kon niet aan het origineel worden gekoppeld: {{reason}}",
+      "unlink": "Loskoppelen van origineel",
+      "unlinkFailed": "\"{{name}}\" kon niet van het origineel worden losgekoppeld: {{reason}}"
     },
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",

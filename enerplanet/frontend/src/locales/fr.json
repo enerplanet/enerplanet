@@ -1154,8 +1154,10 @@
       "failed_one": "{{count}} en échec",
       "failed_other": "{{count}} en échec",
       "pagination": "familles",
-      "join": "Ajouter à une famille",
-      "joinFailed": "Impossible d'ajouter « {{name}} » à la famille : {{reason}}"
+      "link": "Lier à l'original",
+      "linkFailed": "Impossible de lier « {{name}} » à l'original : {{reason}}",
+      "unlink": "Dissocier de l'original",
+      "unlinkFailed": "Impossible de dissocier « {{name}} » de son original : {{reason}}"
     },
     "workspaceActions": "Actions de l'espace de travail",
     "selectedCount_one": "{{count}} sélectionné",

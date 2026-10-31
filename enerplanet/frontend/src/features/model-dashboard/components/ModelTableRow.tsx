@@ -1,7 +1,8 @@
-import React, { memo } from "react";
-import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2, Combine } from "lucide-react";
+import React, { memo, useState } from "react";
+import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
+import { IconLink, IconUnlink } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
-import { Model } from "@/features/model-dashboard/services/modelService";
+import { Model, type FamilyOption } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
 import CompletedTimer from "@/components/ui/CompletedTimer";
@@ -12,7 +13,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
 import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
-import { familyId } from "@/features/model-dashboard/utils/dashboardHelpers";
+import { familyId, isUnlinkedCopy } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
@@ -48,9 +49,9 @@ interface ModelTableRowProps {
   failedCopyCount: number;
   familyCollapsed: boolean;
   onToggleFamily: (modelId: number) => void;
-  /** Every family on the page; a model alone in its own may join one of the others. */
-  familyChoices: FamilyChoice[];
-  onJoinFamily: (model: Model, familyId: number) => void;
+  /** Links a model into a family of its original, or with null unlinks it into a family of its own. */
+  onLinkFamily: (model: Model, familyId: number | null) => void;
+  loadFamilyOptions: (model: Model) => Promise<FamilyOption[]>;
   currentUserId?: string;
   userAccessLevel?: string;
   isSelected: boolean;
@@ -251,40 +252,69 @@ const FamilyToggle: React.FC<{ modelId: number; title: string; copyCount: number
   );
 };
 
-/** A family on the page: its id and the head that names it. */
-export interface FamilyChoice {
-  id: number;
-  headId: number;
-  title: string;
-}
+const familyButtonClass =
+  "rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100";
 
-/** Joins a model that is alone in its family to another family on the page. */
-const JoinFamilyMenu: React.FC<{ choices: FamilyChoice[]; onJoin: (familyId: number) => void }> = ({ choices, onJoin }) => {
+/** Unlinks a copy from its original, so it stands alone as its own family. */
+const UnlinkFamilyButton: React.FC<{ onUnlink: () => void }> = ({ onUnlink }) => {
   const { t } = useTranslation();
-  if (choices.length === 0) return null;
   return (
-    <DropdownMenu>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("model.family.unlink")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnlink();
+          }}
+          className={familyButtonClass}
+        >
+          <IconUnlink className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t("model.family.unlink")}</TooltipContent>
+    </Tooltip>
+  );
+};
+
+/** Links an unlinked copy to a family of its original: at once when only one exists, else from a menu. */
+const LinkFamilyMenu: React.FC<{ loadOptions: () => Promise<FamilyOption[]>; onLink: (familyId: number) => void }> = ({ loadOptions, onLink }) => {
+  const { t } = useTranslation();
+  const [options, setOptions] = useState<FamilyOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const handleOpenChange = async (next: boolean) => {
+    setOpen(next);
+    if (!next) return;
+    setOptions([]);
+    const loaded = await loadOptions();
+    if (loaded.length > 1) setOptions(loaded);
+    else {
+      setOpen(false);
+      if (loaded.length === 1) onLink(loaded[0].id);
+    }
+  };
+  return (
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t("model.family.join")}
-              className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
-            >
-              <Combine className="h-4 w-4" />
+            <button type="button" aria-label={t("model.family.link")} onClick={(e) => e.stopPropagation()} className={familyButtonClass}>
+              <IconLink className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>{t("model.family.join")}</TooltipContent>
+        <TooltipContent>{t("model.family.link")}</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
-        {choices.map((choice) => (
-          <DropdownMenuItem key={choice.id} className="cursor-pointer" onClick={() => onJoin(choice.id)}>
-            <span className="truncate">{choice.title}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
+      {options.length > 1 && (
+        <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
+          {options.map((option) => (
+            <DropdownMenuItem key={option.id} className="cursor-pointer" onClick={() => onLink(option.id)}>
+              <span className="truncate">{option.title}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      )}
     </DropdownMenu>
   );
 };
@@ -315,8 +345,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   failedCopyCount,
   familyCollapsed,
   onToggleFamily,
-  familyChoices,
-  onJoinFamily,
+  onLinkFamily,
+  loadFamilyOptions,
   currentUserId,
   userAccessLevel,
   isSelected,
@@ -395,26 +425,26 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
           )}
           {/* The family chips sit under the name, so a long name never pushes them into the status column. */}
           <div className="min-w-0 flex-1">
-            <ModelNameCell
-              isEditing={isEditing}
-              editTitle={editTitle}
-              modelTitle={modelTitle}
-              onEditTitleChange={onEditTitleChange}
-              onUpdateTitle={onUpdateTitle}
-              onCancelEdit={onCancelEdit}
-              onStartEdit={() => onStartEdit(model)}
-              level={level}
-              model={model}
-              isNotModelOwner={isNotModelOwner}
-            />
+            <div className="flex items-center gap-1">
+              <ModelNameCell
+                isEditing={isEditing}
+                editTitle={editTitle}
+                modelTitle={modelTitle}
+                onEditTitleChange={onEditTitleChange}
+                onUpdateTitle={onUpdateTitle}
+                onCancelEdit={onCancelEdit}
+                onStartEdit={() => onStartEdit(model)}
+                level={level}
+                model={model}
+                isNotModelOwner={isNotModelOwner}
+              />
+              {canManageModel && level > 0 && <UnlinkFamilyButton onUnlink={() => onLinkFamily(model, null)} />}
+              {canManageModel && level === 0 && copyCount === 0 && isUnlinkedCopy(model) && (
+                <LinkFamilyMenu loadOptions={() => loadFamilyOptions(model)} onLink={(family) => onLinkFamily(model, family)} />
+              )}
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
               <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
-              {level === 0 && copyCount === 0 && canManageModel && (
-                <JoinFamilyMenu
-                  choices={familyChoices.filter((choice) => choice.headId !== model.id)}
-                  onJoin={(family) => onJoinFamily(model, family)}
-                />
-              )}
             </div>
           </div>
         </div>
@@ -554,8 +584,8 @@ const familyPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): b
   prev.failedCopyCount === next.failedCopyCount &&
   prev.familyCollapsed === next.familyCollapsed &&
   prev.onToggleFamily === next.onToggleFamily &&
-  prev.familyChoices === next.familyChoices &&
-  prev.onJoinFamily === next.onJoinFamily;
+  prev.onLinkFamily === next.onLinkFamily &&
+  prev.loadFamilyOptions === next.loadFamilyOptions;
 
 const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): boolean => {
   if (!modelSnapshotEqual(prev.model, next.model)) return false;

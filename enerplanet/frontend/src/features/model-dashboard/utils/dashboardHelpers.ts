@@ -44,6 +44,10 @@ const applyTieBreaker = (a: Model, b: Model, order: "asc" | "desc"): number => {
 export const familyId = (model: Pick<Model, "id" | "group_id" | "parent_model_id">): number =>
 	model.group_id ?? model.parent_model_id ?? model.id;
 
+/** A copy unlinked from its original: it has an original but is its own family. */
+export const isUnlinkedCopy = (model: Pick<Model, "id" | "group_id" | "parent_model_id">): boolean =>
+	model.parent_model_id != null && familyId(model) === model.id;
+
 /** A family's first model: its original, or the oldest member once the original is gone. */
 export const familyHead = <T extends Model>(members: T[], id: number): T =>
 	members.find((m) => m.id === id) ??

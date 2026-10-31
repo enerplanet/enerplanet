@@ -1154,8 +1154,10 @@
       "failed_one": "{{count}} fallida",
       "failed_other": "{{count}} fallidas",
       "pagination": "familias",
-      "join": "Añadir a una familia",
-      "joinFailed": "No se pudo añadir \"{{name}}\" a la familia: {{reason}}"
+      "link": "Vincular al original",
+      "linkFailed": "No se pudo vincular \"{{name}}\" al original: {{reason}}",
+      "unlink": "Desvincular del original",
+      "unlinkFailed": "No se pudo desvincular \"{{name}}\" de su original: {{reason}}"
     },
     "workspaceActions": "Acciones del espacio de trabajo",
     "selectedCount_one": "{{count}} seleccionado",
