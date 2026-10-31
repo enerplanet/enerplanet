@@ -477,6 +477,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			return next;
 		});
 	}, []);
+	const copiesOnPage = [...copyCountByFamily.values()].reduce((sum, n) => sum + n, 0);
 	const visibleModels = useMemo(
 		() => paginatedModels.filter((m) => !(m.level > 0 && collapsedFamilies.has(familyId(m)))),
 		[paginatedModels, collapsedFamilies],
@@ -1147,7 +1148,17 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
-											resultsLabel={t("model.family.pagination")}
+											resultsLabel={t("model.family.ofModels", { count: totalItems })}
+											summary={totalItems <= itemsPerPage ? (
+												<>
+													<span className="font-medium text-foreground">{totalItems}</span> {t("model.family.countModels", { count: totalItems })}
+													{copiesOnPage > 0 && (
+														<>
+															, <span className="font-medium text-foreground">{copiesOnPage}</span> {t("model.family.countCopies", { count: copiesOnPage })}
+														</>
+													)}
+												</>
+											) : undefined}
 											className="shrink-0 bg-muted"
 										/>
 									)}
