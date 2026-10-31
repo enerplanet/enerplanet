@@ -17,11 +17,13 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	commonModels "platform.local/common/pkg/models"
 
+	"spatialhub_backend/internal/contenthash"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
 	modelstore "spatialhub_backend/internal/store/model"
@@ -327,11 +329,16 @@ func (noDemandSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries,
 	return nil, nil
 }
 
-// buildingSeries is a model whose building 268428040 has a stored BuEM series.
+// buildingSeries is a model whose building 268428040 has a BuEM series linked
+// for its config, memeTopologyConfig.
 type buildingSeries struct{}
 
 func (buildingSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) {
-	return []series.LinkedSeries{{BuildingRef: "268428040", Series: "electricity", ResolutionMinutes: 60, Vals: make([]float32, 48)}}, nil
+	revision, err := contenthash.Of(datatypes.JSON(memeTopologyConfig))
+	if err != nil {
+		return nil, err
+	}
+	return []series.LinkedSeries{{BuildingRef: "268428040", Series: "electricity", Revision: revision, ResolutionMinutes: 60, Vals: make([]float32, 48)}}, nil
 }
 
 // noPV is a PV step with nothing to do.

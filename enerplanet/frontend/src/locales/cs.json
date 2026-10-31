@@ -1432,6 +1432,11 @@
   },
   "simulation": {
     "title": "Konfigurace simulace",
+    "mode": {
+      "label": "Režim",
+      "simple": "Jednoduchý",
+      "advanced": "Pokročilý"
+    },
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
     "simulationPeriod": "Období simulace",

@@ -1678,6 +1678,11 @@
   },
   "simulation": {
     "title": "Configuración de simulación",
+    "mode": {
+      "label": "Modo",
+      "simple": "Sencillo",
+      "advanced": "Avanzado"
+    },
     "modelName": "Nombre del modelo",
     "modelNamePlaceholder": "Introduzca un nombre para su simulación energética",
     "simulationPeriod": "Período de simulación",

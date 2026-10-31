@@ -14,10 +14,9 @@ import { useTranslation } from '@spatialhub/i18n';
 import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { config } from '@/configuration/app';
-import { isExpert } from '@/features/admin-dashboard/utils/accessLevelUtils';
+import { useConfiguratorModeStore } from '@/features/configurator/store/configuratorModeStore';
 import { useModelStore } from '@/features/configurator/store/modelStore';
 import { useConfirm } from '@/hooks/useConfirmDialog';
-import { useAuth } from '@/providers/auth-provider';
 
 import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID, type DatasetCredit } from './credits';
 import { configuratorServicesFor } from './heatClient';
@@ -193,7 +192,9 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  // One mode for the simulation panel and the building view: switching either switches both.
+  const mode = useConfiguratorModeStore((s) => s.mode);
+  const setMode = useConfiguratorModeStore((s) => s.setMode);
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
   const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null);
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
@@ -246,7 +247,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         pv={pvMode.pv}
         technologies={technologies}
         defaultTab={forPv ? 'technologies' : undefined}
-        defaultMode={isExpert(user) ? 'expert' : 'basic'}
+        mode={mode}
+        onModeChange={setMode}
         language={i18n.language}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}

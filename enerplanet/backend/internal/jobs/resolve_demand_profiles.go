@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -64,6 +65,10 @@ type DemandResolver struct {
 	BuemVersion     string
 }
 
+// errBuemUnresolved marks a run whose BuEM results could not be resolved at
+// all; every building is then recorded as failed.
+var errBuemUnresolved = errors.New("BuEM results could not be resolved")
+
 // HandleResolveDemandProfiles runs r for the model in t's payload, then gives
 // its PV arrays their stored profiles through pvr.
 //
@@ -85,7 +90,7 @@ func HandleResolveDemandProfiles(ctx context.Context, t *asynq.Task, r DemandRes
 	if err := json.Unmarshal(t.Payload(), &rp); err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
-	if _, err := r.Resolve(ctx, rp.ModelID); err != nil {
+	if _, err := r.Resolve(ctx, rp.ModelID); err != nil && !errors.Is(err, errBuemUnresolved) {
 		return err
 	}
 	return storeModelPV(ctx, r.DB, pvr, rp.ModelID)
@@ -175,7 +180,7 @@ func resolveAndLink(ctx context.Context, log *logrus.Entry, db *gorm.DB, modelID
 	if err != nil {
 		log.Warnf("model %d: resolving series failed, marking every building failed: %v", modelID, err)
 		saveFailures(log, profileStore, modelID, allFailed(run.buildings, fmt.Sprintf("BuEM results could not be resolved: %v", err)))
-		return nil
+		return fmt.Errorf("model %d: %w: %v", modelID, errBuemUnresolved, err)
 	}
 	if err := combineParts(store, run.parts, run.resolved, &outcome); err != nil {
 		return err
