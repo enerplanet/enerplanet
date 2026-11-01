@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/coreos/go-oidc/v3 v3.17.0
-	github.com/enerplanet/T1K v0.1.1-0.20261018052736-95ecd293e210
+	github.com/enerplanet/T1K v0.1.1-0.20261101181533-3a9c0ac1e951
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-jose/go-jose/v4 v4.1.4
