@@ -2,6 +2,7 @@ package technology
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -41,6 +42,61 @@ func (h *Handler) getTechnologyByAccess(id uint, userID, accessLevel string) (*t
 		return h.store.GetByIDUnfiltered(id)
 	}
 	return h.store.GetByID(id, userID)
+}
+
+// productProblem says why a product of techType with the given constraint keys
+// cannot be saved, or "" when it can. required are the constraint keys of the
+// type's system product, which the simulation reads.
+func productProblem(techType string, keys, required []string) string {
+	if techType == "" {
+		return "Choose a technology type"
+	}
+	if !payload.IsSupportedTechnology(techType) {
+		return fmt.Sprintf("Type %q is not a technology the simulation models", techType)
+	}
+	have := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		have[k] = true
+	}
+	var missing []string
+	for _, k := range required {
+		if !have[k] {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Sprintf("Missing parameters for %s: %s", techType, strings.Join(missing, ", "))
+	}
+	return ""
+}
+
+// checkProduct answers 400 and returns false when a product of techType with
+// the given constraint keys cannot be saved. The type's own system product is
+// what the others are checked against, so it is exempt.
+func (h *Handler) checkProduct(c *gin.Context, techType string, isTypeDefault bool, keys []string) bool {
+	var required []string
+	if !isTypeDefault && payload.IsSupportedTechnology(techType) {
+		def, err := h.store.GetSystemByKey(techType)
+		if err != nil && err != gorm.ErrRecordNotFound {
+			httputil.InternalError(c, errFailedFetchTechnology)
+			return false
+		}
+		if def != nil {
+			for _, con := range def.Constraints {
+				required = append(required, con.Key)
+			}
+		}
+	}
+	if problem := productProblem(techType, keys, required); problem != "" {
+		httputil.BadRequest(c, problem)
+		return false
+	}
+	return true
+}
+
+// isTypeDefault reports whether tech is the system product its type is named after.
+func isTypeDefault(tech *techstore.Technology) bool {
+	return tech.UserID == nil && tech.Key == tech.Type
 }
 
 func (h *Handler) getTechWithPermission(c *gin.Context, id uint, userCtx *httputil.UserContext) (*techstore.Technology, bool) {
@@ -255,7 +311,8 @@ func (h *Handler) GetAll(c *gin.Context) {
 	var technologies []techstore.Technology
 	var err error
 
-	if userCtx.AccessLevel == constants.AccessLevelExpert {
+	// scope=own limits an expert to the system and own products, as the product dialog lists them.
+	if userCtx.AccessLevel == constants.AccessLevelExpert && c.Query("scope") != "own" {
 		technologies, err = h.store.GetAllIncludingUserDefined()
 	} else {
 		technologies, err = h.store.GetAll(userCtx.UserID)
@@ -331,6 +388,14 @@ func (h *Handler) Create(c *gin.Context) {
 
 	if h.store.KeyExistsAny(dto.Key, userCtx.UserID) {
 		httputil.BadRequest(c, "Technology with this key already exists")
+		return
+	}
+
+	keys := make([]string, len(dto.Constraints))
+	for i, con := range dto.Constraints {
+		keys[i] = con.Key
+	}
+	if !h.checkProduct(c, dto.Type, false, keys) {
 		return
 	}
 
@@ -478,8 +543,13 @@ func (h *Handler) UpdateConstraints(c *gin.Context) {
 	}
 
 	constraints := make([]techstore.TechnologyConstraint, len(payload.Constraints))
+	keys := make([]string, len(payload.Constraints))
 	for i, dto := range payload.Constraints {
 		constraints[i] = fromConstraintDTO(&dto)
+		keys[i] = dto.Key
+	}
+	if !h.checkProduct(c, tech.Type, isTypeDefault(tech), keys) {
+		return
 	}
 
 	if err := h.store.UpdateConstraints(id, constraints); err != nil {
@@ -554,6 +624,16 @@ func (h *Handler) DeleteConstraint(c *gin.Context) {
 
 	tech, ok := h.getTechWithPermission(c, techID, userCtx)
 	if !ok {
+		return
+	}
+
+	var keys []string
+	for _, con := range tech.Constraints {
+		if con.ID != constraintID {
+			keys = append(keys, con.Key)
+		}
+	}
+	if !h.checkProduct(c, tech.Type, isTypeDefault(tech), keys) {
 		return
 	}
 

@@ -151,6 +151,18 @@ func (s *Store) GetByID(id uint, userID string) (*Technology, error) {
 	return &tech, nil
 }
 
+// GetSystemByKey returns the system technology with key, the default product of the type of that name.
+func (s *Store) GetSystemByKey(key string) (*Technology, error) {
+	var tech Technology
+	err := s.db.Preload("Constraints").
+		Where("key = ? AND user_id IS NULL", key).
+		First(&tech).Error
+	if err != nil {
+		return nil, err
+	}
+	return &tech, nil
+}
+
 // GetByIDUnfiltered returns a technology by ID without user filtering (for experts)
 func (s *Store) GetByIDUnfiltered(id uint) (*Technology, error) {
 	var tech Technology

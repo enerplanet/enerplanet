@@ -1,4 +1,4 @@
-import technologyService, { type Technology } from "@/features/technologies/services/technologyService";
+import technologyService, { type Technology, type TechnologyConstraint } from "@/features/technologies/services/technologyService";
 
 export const ELECTRICITY_TYPES = ["pv_supply", "battery_storage"];
 export const HEAT_SUPPLY_TYPES = ["air_source_heat_pump", "ground_source_heat_pump", "electric_boilers", "gas_boiler"];
@@ -25,6 +25,16 @@ export const asBuildingTechnology = (product: Technology): Technology => ({
   product: product.key,
 });
 
+/**
+ * The parameters of a new product of type: those of the type's default product,
+ * keeping the values already in current for parameters the type also has.
+ */
+export const constraintsForType = (products: Technology[], type: string, current: TechnologyConstraint[]): TechnologyConstraint[] => {
+  const set = new Map(current.map((c) => [c.key, c.default_value]));
+  return (defaultProduct(products, type)?.constraints ?? []).map((c) =>
+    ({ ...c, id: undefined, default_value: set.has(c.key) ? set.get(c.key)! : c.default_value }));
+};
+
 /** A product's constraints with their default values, as a building stores them. */
 export const defaultConstraints = (product: Technology): { key: string; value: number | string }[] =>
   product.constraints.map((c) => ({ key: c.key, value: c.default_value }));
@@ -37,7 +47,7 @@ let pending: Promise<Technology[]> | null = null;
  * a technology added or renamed since shows on the next load.
  */
 export function loadCatalogue(): Promise<Technology[]> {
-  pending ??= technologyService.getAll()
+  pending ??= technologyService.getAll("own")
     .catch(async () => {
       const response = await fetch("/initial-data/techs/default_technologies.json");
       return response.ok ? ((await response.json()).technologies as Technology[]) : [];

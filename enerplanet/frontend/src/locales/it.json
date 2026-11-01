@@ -1933,6 +1933,8 @@
       "totalParameters": "Totale Parametri"
     },
     "form": {
+      "type": "Tipo",
+      "typePlaceholder": "Scegli un tipo",
       "key": "Chiave",
       "keyRequired": "La chiave è obbligatoria",
       "keyPlaceholder": "es., solar_supply",
@@ -1941,8 +1943,11 @@
       "displayNamePlaceholder": "es., Fornitura di Energia Solare",
       "description": "Descrizione",
       "descriptionPlaceholder": "Breve descrizione della tecnologia...",
+      "manufacturer": "Produttore",
+      "model": "Modello",
+      "datasheet": "Link alla scheda tecnica",
       "icon": "Icona",
-      "parametersOptional": "Parametri (Opzionale)",
+      "parameters": "Parametri",
       "parameter": "Parametro",
       "alias": "Alias",
       "defaultValue": "Valore Predefinito",

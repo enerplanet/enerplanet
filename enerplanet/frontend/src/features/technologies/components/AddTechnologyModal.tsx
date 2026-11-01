@@ -2,6 +2,7 @@ import { ComponentType } from "react";
 import { Plus, X } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { TechnologyConstraint } from "@/features/technologies/services/technologyService";
+import { ELECTRICITY_TYPES, HEAT_TYPES } from "@/features/technologies/catalogue";
 import { FormDataConvertible } from "@/hooks/useForm";
 import { TechnologyActionModal } from "./TechnologyActionModal";
 
@@ -12,12 +13,14 @@ type TechnologyForm<FormData> = {
   setData: (key: keyof FormData, value: FormDataConvertible) => void;
 };
 
-interface AddTechnologyModalProps<FormData extends { key: string; alias: string; icon: string; description: string }> {
+interface AddTechnologyModalProps<FormData extends { type: string; key: string; alias: string; icon: string; description: string; manufacturer: string; model: string; datasheet_url: string }> {
   open: boolean;
   onClose: () => void;
   onSubmit: () => void;
   techForm: TechnologyForm<FormData>;
   onFieldChange: (key: keyof FormData, value: FormDataConvertible) => void;
+  /** Sets the type and fills in the parameters of its default product. */
+  onTypeChange: (type: string) => void;
   iconOptions: { value: string; label: string; icon: ComponentType<{ className?: string }> }[];
   newTechConstraints: TechnologyConstraint[];
   addConstraint: () => void;
@@ -25,12 +28,13 @@ interface AddTechnologyModalProps<FormData extends { key: string; alias: string;
   updateConstraint: (index: number, field: keyof TechnologyConstraint, value: string | number | null) => void;
 }
 
-function AddTechnologyModal<FormData extends { key: string; alias: string; icon: string; description: string }>({
+function AddTechnologyModal<FormData extends { type: string; key: string; alias: string; icon: string; description: string; manufacturer: string; model: string; datasheet_url: string }>({
   open,
   onClose,
   onSubmit,
   techForm,
   onFieldChange,
+  onTypeChange,
   iconOptions,
   newTechConstraints,
   addConstraint,
@@ -52,6 +56,24 @@ function AddTechnologyModal<FormData extends { key: string; alias: string; icon:
       maxWidth="sm:max-w-2xl"
     >
       <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor="tech-type-input" className="block text-sm font-medium text-foreground">
+            {t('technologies.form.type')} <span className="text-destructive">*</span>
+          </label>
+          <select
+            id="tech-type-input"
+            value={techForm.data.type}
+            onChange={(e) => onTypeChange(e.target.value)}
+            className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
+          >
+            <option value="" disabled>{t('technologies.form.typePlaceholder')}</option>
+            {[...ELECTRICITY_TYPES, ...HEAT_TYPES].map((type) => (
+              <option key={type} value={type}>{t(`technologies.types.${type}`)}</option>
+            ))}
+          </select>
+          {techForm.errors.type && <p className="text-xs text-destructive">{techForm.errors.type}</p>}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label htmlFor="tech-key-input" className="block text-sm font-medium text-foreground">
@@ -81,6 +103,41 @@ function AddTechnologyModal<FormData extends { key: string; alias: string; icon:
             />
             {techForm.errors.alias && <p className="text-xs text-destructive">{techForm.errors.alias}</p>}
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label htmlFor="tech-manufacturer-input" className="block text-sm font-medium text-foreground">{t('technologies.form.manufacturer')}</label>
+            <input
+              id="tech-manufacturer-input"
+              type="text"
+              value={techForm.data.manufacturer}
+              onChange={(e) => onFieldChange("manufacturer", e.target.value)}
+              className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="tech-model-input" className="block text-sm font-medium text-foreground">{t('technologies.form.model')}</label>
+            <input
+              id="tech-model-input"
+              type="text"
+              value={techForm.data.model}
+              onChange={(e) => onFieldChange("model", e.target.value)}
+              className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="tech-datasheet-input" className="block text-sm font-medium text-foreground">{t('technologies.form.datasheet')}</label>
+          <input
+            id="tech-datasheet-input"
+            type="url"
+            value={techForm.data.datasheet_url}
+            onChange={(e) => onFieldChange("datasheet_url", e.target.value)}
+            placeholder="https://"
+            className="block w-full pl-4 pr-4 py-3 text-sm border rounded-xl placeholder-muted-foreground transition-all duration-200 min-h-[2.875rem] text-foreground bg-background dark:bg-input border-border hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
+          />
         </div>
 
         <div className="space-y-1.5">
@@ -115,7 +172,7 @@ function AddTechnologyModal<FormData extends { key: string; alias: string; icon:
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-foreground">{t('technologies.form.parametersOptional')}</span>
+            <span className="text-sm font-medium text-foreground">{t('technologies.form.parameters')}</span>
             <button type="button" onClick={addConstraint} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
               <Plus className="w-3 h-3" />
               {t('technologies.addParameter')}

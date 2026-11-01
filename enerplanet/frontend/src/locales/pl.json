@@ -1951,6 +1951,8 @@
       "totalParameters": "Łączna Liczba Parametrów"
     },
     "form": {
+      "type": "Typ",
+      "typePlaceholder": "Wybierz typ",
       "key": "Klucz",
       "keyRequired": "Klucz jest wymagany",
       "keyPlaceholder": "np., solar_supply",
@@ -1959,8 +1961,11 @@
       "displayNamePlaceholder": "np., Dostawa Energii Słonecznej",
       "description": "Opis",
       "descriptionPlaceholder": "Krótki opis technologii...",
+      "manufacturer": "Producent",
+      "model": "Model",
+      "datasheet": "Link do karty katalogowej",
       "icon": "Ikona",
-      "parametersOptional": "Parametry (Opcjonalne)",
+      "parameters": "Parametry",
       "parameter": "Parametr",
       "alias": "Alias",
       "defaultValue": "Wartość Domyślna",
