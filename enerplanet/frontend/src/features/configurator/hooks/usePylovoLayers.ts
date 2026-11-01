@@ -278,14 +278,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
+    findBuilding, buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
+    findBuilding, buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

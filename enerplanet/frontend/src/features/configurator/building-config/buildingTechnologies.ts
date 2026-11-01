@@ -4,7 +4,7 @@
  * building's own constraint values, never the catalogue product.
  */
 
-import type { TechCard, TechField } from '@thd-spatial-ai/building-configurator';
+import type { TechCard, TechField, Technologies } from '@thd-spatial-ai/building-configurator';
 
 import type { PvArray } from './usePvMode';
 
@@ -132,3 +132,14 @@ export function removeTech(techs: BuildingTechs, techKey: string): BuildingTechs
   return next;
 }
 
+
+/** The view's Technologies prop; undefined hides the tab, so it is kept while technologies can be added. */
+export function technologiesProp(
+  items: TechCard[],
+  onChange: Technologies['onChange'],
+  onRemove: Technologies['onRemove'],
+  onAdd?: () => void,
+): Technologies | undefined {
+  if (items.length === 0 && !onAdd) return undefined;
+  return { items, onChange, onRemove, onAdd };
+}

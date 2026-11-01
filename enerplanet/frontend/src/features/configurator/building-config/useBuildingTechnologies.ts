@@ -9,18 +9,20 @@ import { useTranslation } from '@spatialhub/i18n';
 
 import { useModelStore } from '@/features/configurator/store/modelStore';
 import {
-  errorKey, removeTech, setTechField, technologyCards,
+  errorKey, removeTech, setTechField, technologiesProp, technologyCards,
   type BuildingTechs, type FieldErrors,
 } from './buildingTechnologies';
 
 /**
  * initial is the building's techs when the view opens; onChange receives every
- * edit as the building's full techs. technologies is undefined while the
- * building has none, so the view shows no empty tab.
+ * edit as the building's full techs. onAdd opens the host's technology list.
+ * technologies is undefined while the building has none and there is no onAdd,
+ * so the view shows no empty tab.
  */
 export function useBuildingTechnologies(
   initial: BuildingTechs | null,
   onChange?: (techs: BuildingTechs) => void,
+  onAdd?: () => void,
 ): { technologies: Technologies | undefined } {
   const { t } = useTranslation();
   const runMode = useModelStore((s) => s.runMode);
@@ -53,11 +55,10 @@ export function useBuildingTechnologies(
 
   const onRemove = useCallback((id: string) => store(removeTech(techsRef.current, id)), [store]);
 
-  const technologies = useMemo<Technologies | undefined>(() => {
-    const items = technologyCards(techs, runMode, errors, t);
-    if (items.length === 0) return undefined;
-    return { items, onChange: onFieldChange, onRemove };
-  }, [techs, runMode, errors, t, onFieldChange, onRemove]);
+  const technologies = useMemo(
+    () => technologiesProp(technologyCards(techs, runMode, errors, t), onFieldChange, onRemove, onAdd),
+    [techs, runMode, errors, t, onFieldChange, onRemove, onAdd],
+  );
 
   return { technologies };
 }

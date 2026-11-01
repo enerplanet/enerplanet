@@ -203,7 +203,8 @@ export const useTechDragDrop = ({
         if (techKey === "pv_supply") layOutPvAndReport(buildings, usableShare);
       }
     } else {
-      const existing = selectedBuildingForTech.get("techs") || {};
+      // A new object, so the open building configurator sees the change.
+      const existing = { ...(selectedBuildingForTech.get("techs") || {}) };
       // Arrays chosen in PV mode outlive a later edit of the parameters.
       const arrays = existing[techKey]?.arrays;
       existing[techKey] = { ...entry, ...(arrays && { arrays }) };
