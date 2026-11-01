@@ -12,7 +12,7 @@ import { auth } from "@/configuration/auth";
 import { useAuthStore } from "@/store/auth-store";
 import { ensureCSRFToken } from "@/utils/csrf";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle, Loader2, Zap } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 
 const SSO_QUERY_PARAMETER = "sso";
 
@@ -50,29 +50,16 @@ const EnerPlanETSidePanel = (
 			className="absolute inset-0 h-full w-full object-cover"
 		/>
 		<div className="absolute inset-0 bg-gradient-to-br from-slate-900/92 via-slate-900/82 to-slate-800/70" />
-		<div className="relative flex h-full flex-col justify-between p-10 xl:p-14 text-white">
-			<img
-				src="/brand/enerplanet-lockup-green-dark-outline.svg"
-				alt="EnerPlanET"
-				className="h-12 w-auto self-start shrink-0"
-			/>
-
-			<div className="max-w-lg">
-				<span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-400/30">
-					<Zap className="h-3.5 w-3.5" /> Energy system planning
-				</span>
-				<h2 className="mt-6 text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight">
-					Plan heat and power for a neighbourhood, building by building
+		<div className="relative flex h-full flex-col p-10 xl:p-14 text-white">
+			<div className="my-auto max-w-lg">
+				<h2 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-balance">
+					Energy Planning for the <span className="text-[#3DD68C]">E</span>nergy{" "}
+					<span className="text-[#3DD68C]">T</span>ransition
 				</h2>
-				<p className="mt-4 text-base text-white/80 leading-relaxed">
-					Draw an area to get its low-voltage grid and 3D buildings, give each building its heat
-					pump, boiler, PV or battery, and optimise the whole system hour by hour.
+				<p className="mt-4 text-base text-white/80 leading-relaxed text-balance">
+					Model and optimise heat and power for local communities.
 				</p>
 			</div>
-
-			<p className="text-[11px] text-white/55">
-				EnerPlanET · Integrated energy planning platform
-			</p>
 		</div>
 	</div>
 );
