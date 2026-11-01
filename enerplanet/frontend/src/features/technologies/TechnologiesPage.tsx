@@ -58,6 +58,7 @@ import ImportTechnologiesModal from "./components/ImportTechnologiesModal";
 import TechnologyDetailsModal from "./components/TechnologyDetailsModal";
 import TechnologiesSection from "./components/TechnologiesSection";
 import technologyService, { Technology, TechnologyConstraint } from "@/features/technologies/services/technologyService";
+import { constraintsForType, defaultProduct } from "@/features/technologies/catalogue";
 
 // Custom WindTurbine icon component using the SVG file
 const WindTurbine = forwardRef<SVGSVGElement, React.SVGProps<SVGSVGElement>>(
@@ -142,14 +143,22 @@ const removeTechByKey = (techs: Technology[], key: string): Technology[] =>
   techs.filter((t) => t.key !== key);
 
 interface TechnologyFormData extends FormDataType {
+  type: string;
   key: string;
   alias: string;
   icon: string;
   description: string;
+  manufacturer: string;
+  model: string;
+  datasheet_url: string;
 }
 
 const validateTechnologyForm = (values: Record<string, unknown>): Record<string, string> => {
   const errors: Record<string, string> = {};
+
+  if (!values.type) {
+    errors.type = "Type is required";
+  }
 
   const key = typeof values.key === "string" ? values.key : "";
   if (!key.trim()) {
@@ -199,10 +208,14 @@ export default function TechnologiesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const techForm = useForm<TechnologyFormData>({
+    type: "",
     key: "",
     alias: "",
     icon: "battery",
     description: "",
+    manufacturer: "",
+    model: "",
+    datasheet_url: "",
   });
 
   const isOwnTechnology = (tech: Technology) => Boolean(tech.user_id && user && tech.user_id === String(user.id));
@@ -333,9 +346,13 @@ export default function TechnologiesPage() {
     try {
       const newTech: Technology = {
         key: techForm.data.key,
+        type: techForm.data.type,
         alias: techForm.data.alias,
         icon: techForm.data.icon,
         description: techForm.data.description,
+        manufacturer: techForm.data.manufacturer.trim() || null,
+        model: techForm.data.model.trim() || null,
+        datasheet_url: techForm.data.datasheet_url.trim() || null,
         constraints: newTechConstraints.filter((c) => c.key && c.alias).map(parseNumericConstraint),
       };
 
@@ -355,6 +372,13 @@ export default function TechnologiesPage() {
       setNewTechConstraints([{ ...emptyConstraint }]);
       setShowAddModal(false);
     }
+  };
+
+  const handleTypeChange = (type: string) => {
+    handleFormChange("type", type);
+    const icon = defaultProduct(technologies, type)?.icon;
+    if (icon) handleFormChange("icon", icon);
+    setNewTechConstraints((prev) => constraintsForType(technologies, type, prev.filter((c) => c.key)));
   };
 
   const handleFormChange = (key: string, value: FormDataConvertible) => {
@@ -866,6 +890,7 @@ export default function TechnologiesPage() {
           onSubmit={handleAddTechnology}
           techForm={techForm}
           onFieldChange={(key, value) => handleFormChange(key as string, value)}
+          onTypeChange={handleTypeChange}
           iconOptions={iconOptions}
           newTechConstraints={newTechConstraints}
           addConstraint={addConstraint}

@@ -57,8 +57,9 @@ class TechnologyService {
     return token ? { headers: { "X-CSRF-Token": token } } : undefined;
   }
 
-  async getAll(): Promise<Technology[]> {
-    const response = await axios.get<TechnologiesResponse>(this.baseUrl);
+  /** scope "own" lists the system products and the user's own, whatever the access level. */
+  async getAll(scope?: "own"): Promise<Technology[]> {
+    const response = await axios.get<TechnologiesResponse>(this.baseUrl, { params: scope && { scope } });
 
     // Handle case where response.data might be a string that needs parsing
     let data = response.data;

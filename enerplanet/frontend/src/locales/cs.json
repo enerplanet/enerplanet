@@ -1951,6 +1951,8 @@
       "totalParameters": "Celkem Parametrů"
     },
     "form": {
+      "type": "Typ",
+      "typePlaceholder": "Vyberte typ",
       "key": "Klíč",
       "keyRequired": "Klíč je povinný",
       "keyPlaceholder": "např., solar_supply",
@@ -1959,8 +1961,11 @@
       "displayNamePlaceholder": "např., Dodávka Solární Energie",
       "description": "Popis",
       "descriptionPlaceholder": "Stručný popis technologie...",
+      "manufacturer": "Výrobce",
+      "model": "Model",
+      "datasheet": "Odkaz na technický list",
       "icon": "Ikona",
-      "parametersOptional": "Parametry (Volitelné)",
+      "parameters": "Parametry",
       "parameter": "Parametr",
       "alias": "Alias",
       "defaultValue": "Výchozí Hodnota",

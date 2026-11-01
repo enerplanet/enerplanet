@@ -36,3 +36,13 @@ func TestConstraintDTOCarriesInfiniteDefaultAsINF(t *testing.T) {
 		assert.True(t, math.IsInf(*back.DefaultValue, 1), "INF must be stored as Infinity again, got %v", *back.DefaultValue)
 	}
 }
+
+func TestProductProblem(t *testing.T) {
+	required := []string{"cost_energy_cap", "tilt", "azimuth"}
+
+	assert.Equal(t, "Choose a technology type", productProblem("", nil, required))
+	assert.Equal(t, `Type "wind_onshore" is not a technology the simulation models`, productProblem("wind_onshore", nil, nil))
+	assert.Equal(t, "Missing parameters for pv_supply: tilt, azimuth",
+		productProblem("pv_supply", []string{"cost_energy_cap", "losses"}, required))
+	assert.Equal(t, "", productProblem("pv_supply", []string{"azimuth", "tilt", "cost_energy_cap", "losses"}, required))
+}

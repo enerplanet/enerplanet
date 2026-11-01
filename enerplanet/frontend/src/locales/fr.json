@@ -2330,6 +2330,8 @@
       "otdbAdditions": "Ajouts OpenTech-DB"
     },
     "form": {
+      "type": "Type",
+      "typePlaceholder": "Choisir un type",
       "key": "Clé",
       "keyRequired": "La clé est obligatoire",
       "keyPlaceholder": "ex., solar_supply",
@@ -2338,8 +2340,11 @@
       "displayNamePlaceholder": "ex., Approvisionnement en Énergie Solaire",
       "description": "Description",
       "descriptionPlaceholder": "Brève description de la technologie...",
+      "manufacturer": "Fabricant",
+      "model": "Modèle",
+      "datasheet": "Lien vers la fiche technique",
       "icon": "Icône",
-      "parametersOptional": "Paramètres (Optionnel)",
+      "parameters": "Paramètres",
       "parameter": "Paramètre",
       "alias": "Alias",
       "defaultValue": "Valeur par Défaut",

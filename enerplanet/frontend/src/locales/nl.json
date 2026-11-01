@@ -1932,6 +1932,8 @@
       "totalParameters": "Totaal Parameters"
     },
     "form": {
+      "type": "Type",
+      "typePlaceholder": "Kies een type",
       "key": "Sleutel",
       "keyRequired": "Sleutel is verplicht",
       "keyPlaceholder": "bijv., solar_supply",
@@ -1940,8 +1942,11 @@
       "displayNamePlaceholder": "bijv., Zonne-energievoorziening",
       "description": "Beschrijving",
       "descriptionPlaceholder": "Korte beschrijving van de technologie...",
+      "manufacturer": "Fabrikant",
+      "model": "Model",
+      "datasheet": "Link naar datasheet",
       "icon": "Pictogram",
-      "parametersOptional": "Parameters (Optioneel)",
+      "parameters": "Parameters",
       "parameter": "Parameter",
       "alias": "Alias",
       "defaultValue": "Standaardwaarde",
