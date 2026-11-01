@@ -347,6 +347,17 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		return nil, fmt.Errorf("map Coati document: %w", err)
 	}
 
+	// The Calliope leg writes long-format CSVs beside the results.nc it was
+	// parsed from; PyPSA-only bundles have no such dir and every read skips.
+	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
+	costs, investment, ok, err := calliopeCosts(csvDir)
+	if err != nil {
+		return nil, fmt.Errorf("read Calliope costs of model %d: %w", modelID, err)
+	}
+	if ok {
+		parsed.Cost, parsed.CostInvestment = costs, investment
+	}
+
 	// Wire loading: one mapping serves both legs, because Coati normalises PyPSA
 	// and Calliope to the same transmission_flow + capacities contract. Prefer
 	// the PyPSA leg (the electricity transport model) and fall back to the
@@ -369,11 +380,8 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		return nil, fmt.Errorf("marshal Coati summary: %w", err)
 	}
 
-	// The Calliope leg writes long-format CSVs (already in the result tables' long format) beside the
-	// results.nc it was parsed from. They carry the per-location × per-tech ×
-	// per-timestep matrix the Coati document lacks, so the time-series result tables
-	// are streamed from them (PyPSA-only bundles have no such dir → skipped).
-	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
+	// The CSVs carry the per-location × per-tech × per-timestep matrix the
+	// Coati document lacks, so the time-series result tables are streamed from them.
 	techParents := make(map[string]string, len(doc.TechMetadata))
 	for tech, meta := range doc.TechMetadata {
 		techParents[tech] = meta.Parent
