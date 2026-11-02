@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Minus, Zap, TrendingUp, DollarSign, Leaf } from 'lu
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@spatialhub/i18n';
 import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface SummaryData {
   total_generation_kwh: number;
@@ -55,7 +56,7 @@ const MetricCard: FC<{
   inverse?: boolean;
   format?: (v: number) => string;
   styleKey: string;
-}> = ({ label, value1, value2, unit, baselineLabel, comparisonLabel, inverse = false, format = (v) => v.toLocaleString(), styleKey }) => {
+}> = ({ label, value1, value2, unit, baselineLabel, comparisonLabel, inverse = false, format = (v) => formatNumber(v, 3, 0), styleKey }) => {
   const safeValue1 = normalizeDisplayValue(value1);
   const safeValue2 = normalizeDisplayValue(value2);
   const diff = normalizeDisplayValue(safeValue2 - safeValue1);
@@ -90,7 +91,7 @@ const MetricCard: FC<{
         </div>
         <div className={cn('flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full', pillClasses)}>
           <ChangeIcon className="w-3 h-3" />
-          {Math.abs(percentChange).toFixed(1)}%
+          {formatNumber(Math.abs(percentChange), 1)}%
         </div>
       </div>
 
@@ -134,7 +135,7 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
       baselineLabel={baselineLabel}
       comparisonLabel={comparisonLabel}
       styleKey="sufficiency"
-      format={(v) => v.toFixed(1)}
+      format={(v) => formatNumber(v, 1)}
     />
   ) : (
     <MetricCard
@@ -147,8 +148,8 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
       inverse
       styleKey="demand"
       format={(v) => {
-        if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
-        return v.toFixed(1);
+        if (v >= 1000) return `${formatNumber(v / 1000, 1)}k`;
+        return formatNumber(v, 1);
       }}
     />
   );
@@ -170,9 +171,9 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
           comparisonLabel={comparisonLabel}
           styleKey="demand"
           format={(v) => {
-            if (v >= 1000000) return `${(v / 1000000).toFixed(2)}M`;
-            if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
-            return v.toFixed(0);
+            if (v >= 1000000) return `${formatNumber(v / 1000000, 2)}M`;
+            if (v >= 1000) return `${formatNumber(v / 1000, 1)}k`;
+            return formatNumber(v, 0);
           }}
         />
         {generationCards}
@@ -186,9 +187,9 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
           inverse
           styleKey="cost"
           format={(v) => {
-            if (v >= 1000000) return `${(v / 1000000).toFixed(2)}M`;
-            if (v >= 1000) return `${(v / 1000).toFixed(0)}k`;
-            return v.toFixed(0);
+            if (v >= 1000000) return `${formatNumber(v / 1000000, 2)}M`;
+            if (v >= 1000) return `${formatNumber(v / 1000, 0)}k`;
+            return formatNumber(v, 0);
           }}
         />
         {generation && (
@@ -201,8 +202,8 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
             comparisonLabel={comparisonLabel}
             styleKey="co2"
             format={(v) => {
-              if (v >= 1000) return `${(v / 1000).toFixed(1)}t`;
-              return v.toFixed(0);
+              if (v >= 1000) return `${formatNumber(v / 1000, 1)}t`;
+              return formatNumber(v, 0);
             }}
           />
         )}

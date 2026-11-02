@@ -35,6 +35,7 @@ import {
 	Wifi,
 	WifiOff,
 } from "lucide-react";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface WebservicesManagementProps {
 	onWebserviceAction?: (action: string, serviceId: number) => void;
@@ -659,7 +660,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 														></div>
 													</div>
 													<span className="text-xs text-muted-foreground w-10">
-														{service.cpu_usage !== null && service.cpu_usage !== undefined ? `${service.cpu_usage.toFixed(0)}%` : 'N/A'}
+														{service.cpu_usage !== null && service.cpu_usage !== undefined ? `${formatNumber(service.cpu_usage, 0)}%` : 'N/A'}
 													</span>
 												</div>
 												<div className="flex items-center gap-2">
@@ -671,7 +672,7 @@ const WebservicesManagement: React.FC<WebservicesManagementProps> = ({ onWebserv
 														></div>
 													</div>
 													<span className="text-xs text-muted-foreground w-10">
-														{service.memory_usage !== null && service.memory_usage !== undefined ? `${service.memory_usage.toFixed(0)}%` : 'N/A'}
+														{service.memory_usage !== null && service.memory_usage !== undefined ? `${formatNumber(service.memory_usage, 0)}%` : 'N/A'}
 													</span>
 												</div>
 											</div>

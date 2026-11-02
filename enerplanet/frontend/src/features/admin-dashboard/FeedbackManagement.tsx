@@ -46,6 +46,7 @@ import {
   useUnseenFeedback,
   useMarkFeedbackSeen,
 } from "@/features/admin-dashboard/hooks/useFeedbackQuery";
+import { formatNumber } from "@/utils/formatNumber";
 
 const COLOR_GRAY_NEUTRAL = "text-gray-500 dark:text-gray-400";
 const COLOR_GRAY_DEFAULT = "text-gray-700";
@@ -411,8 +412,8 @@ export const FeedbackManagement: React.FC<FeedbackManagementProps> = ({ onFeedba
   const formatFileSize = (bytes: number | null | undefined) => {
     if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, 1)} KB`;
+    return `${formatNumber(bytes / (1024 * 1024), 1)} MB`;
   };
 
   const getImageUrl = (feedbackId: number, index?: number) => {

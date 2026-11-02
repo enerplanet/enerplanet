@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 import { Model } from '@/features/model-dashboard/services/modelService';
+import { familyId } from '@/features/model-dashboard/utils/dashboardHelpers';
 
 interface UseDeleteConfirmProps {
 	sortedModels: Model[];
@@ -16,13 +17,12 @@ export const useDeleteConfirm = ({
 	const confirm = useConfirm();
 
 	const handleSingleDelete = useCallback(async (model: Model) => {
-		const children = sortedModels.filter((m: Model) => m.parent_model_id === model.id);
-		const hasChildren = children.length > 0;
+		const family = sortedModels.filter((m: Model) => m.id !== model.id && familyId(m) === familyId(model));
 
 		let customDescription: string | undefined;
-		if (hasChildren) {
-			const childText = children.length > 1 ? "s" : "";
-			customDescription = `Are you sure you want to delete "${model.title}"? This model has ${children.length} child model${childText} that will remain but become independent. This action cannot be undone.`;
+		if (family.length > 0) {
+			const copyText = family.length > 1 ? "copies stay" : "copy stays";
+			customDescription = `Are you sure you want to delete "${model.title}"? Its ${family.length} ${copyText} in the family, which the oldest model then heads. This action cannot be undone.`;
 		}
 
 		await confirm({

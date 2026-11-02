@@ -5,6 +5,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
 import { formatLcoeCtkwh } from '@/features/model-results/lcoeUnits';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface CostItem {
   category: string;
@@ -28,7 +29,7 @@ const formatShare = (value: number, total: number, decimals = 1): string => {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return '0%';
   const pct = (Math.abs(value) / total) * 100;
   if (pct > 0 && pct < 1) return '<1%';
-  return `${pct.toFixed(decimals)}%`;
+  return `${formatNumber(pct, decimals)}%`;
 };
 
 export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
@@ -54,7 +55,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
       variableCost: d.variableCost,
     }));
 
-    const fmtEur = (v: number) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    const fmtEur = (v: number) => formatCurrency(v);
 
     return {
       tooltip: {
@@ -192,7 +193,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
             show: true,
             position: 'center',
             formatter: () => {
-              const totalFmt = total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+              const totalFmt = formatCurrency(total, 0);
               if (isPartialYear && simulationDays) {
                 return `{total|${totalFmt}}\n{period|${simulationDays} ${t('results.chartLabels.days')}}`;
               }

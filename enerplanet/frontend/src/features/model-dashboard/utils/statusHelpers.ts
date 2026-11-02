@@ -6,10 +6,10 @@ import { ModelStatus, StatusColor } from '@/types/models';
 export const getStatusColor = (status: ModelStatus): StatusColor => {
 	const colorMap: Record<ModelStatus, StatusColor> = {
 		draft: "default",
-		queue: "info",
+		queue: "default",
 		calculating: "primary",
 		running: "primary",
-		processing: "primary",
+		processing: "secondary",
 		completed: "success", 
 		published: "success",
 		failed: "error",

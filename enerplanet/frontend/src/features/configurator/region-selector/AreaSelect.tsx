@@ -57,6 +57,7 @@ import {
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
+import { View3dBanner } from "./components/View3dBanner";
 import { GridStatsBadge } from "./components/GridStatsBadge";
 import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
@@ -161,6 +162,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   const [isCreateWsOpen, setIsCreateWsOpen] = useState(false);
   const [simulateEV, setSimulateEV] = useState(false);
   const [currentPointCount, setCurrentPointCount] = useState(0);
+  const [cancelSketch, setCancelSketch] = useState(0);
+  const cancelDrawing = useCallback(() => setCancelSketch((n) => n + 1), []);
   const [pointerTarget, setPointerTarget] = useState<PointerTarget>("outside");
   const [heldKeys, setHeldKeys] = useState<HeldKeys>({ shift: false, alt: false, ctrl: false });
   const cornerUnderPointerRef = useRef(false);
@@ -523,13 +526,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
+  // 3D is for viewing: no drawing or deleting there, so no hints for them.
+  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null && !isMapLibre3D);
 
   // Primitive selectors: they change when another building is hovered, not on every move.
   const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
   const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
   const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null && !isMapLibre3D);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -558,7 +563,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     downloadBlob(blob, name && `${name}.geojson`, "area.geojson");
   };
 
-  const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
 
   const closeTechDialog = () => {
     techOperations.setTechDialogOpen(false);
@@ -622,15 +626,17 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
-            <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
-              <WorkflowBar
-                polygonCount={state.allPolygons.length}
-                isGeneratingGrid={state.isGeneratingGrid}
-                hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                siteMode={siteMode}
-                hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-              />
-            </div>
+            {!isMapLibre3D && (
+              <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
+                <WorkflowBar
+                  polygonCount={state.allPolygons.length}
+                  isGeneratingGrid={state.isGeneratingGrid}
+                  hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                  siteMode={siteMode}
+                  hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                />
+              </div>
+            )}
             {gridResultIds.length > 0 && (
               <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
                 <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
@@ -665,6 +671,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             <MapOverlays
               demandProfiles={demandProfiles}
               drawHintKey={drawHint}
+              isDrawing={state.isDrawing}
+              onCancelDrawing={cancelDrawing}
               deleteHintKey={deleteHint}
               mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
@@ -673,11 +681,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {isMapLibre3D && (
-              <div className="pointer-events-none absolute top-16 z-30 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-xs font-medium text-white shadow-md" style={MAP_TOP_CENTRE}>
-                {t("drawing.view3dOnly", "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.")}
-              </div>
-            )}
+            {isMapLibre3D && <View3dBanner />}
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}
@@ -757,6 +761,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         suspended={activeMode !== null || isMapLibre3D}
         allowMultiple
         clearTrigger={state.clearTrigger}
+        cancelSketchTrigger={cancelSketch}
         initialPolygons={importedPolygons ?? (editMode ? state.loadedCoordinates : undefined)}
         enableEditing={true}
         labels={{

@@ -275,8 +275,8 @@
     "draft": "Wersja Robocza",
     "queue": "W Kolejce",
     "calculating": "Obliczanie",
-    "running": "Uruchomiony",
-    "processing": "Przetwarzanie",
+    "running": "Symulacja",
+    "processing": "Przetwarzanie wyników",
     "completed": "Ukończone",
     "published": "Opublikowane",
     "failed": "Niepowodzenie",
@@ -900,7 +900,24 @@
       "failed_few": "{{count}} nieudane",
       "failed_many": "{{count}} nieudanych",
       "failed_other": "{{count}} nieudanych",
-      "pagination": "rodzin modeli"
+      "countModels_one": "model",
+      "countModels_few": "modele",
+      "countModels_many": "modeli",
+      "countModels_other": "modeli",
+      "countCopies_one": "kopia",
+      "countCopies_few": "kopie",
+      "countCopies_many": "kopii",
+      "countCopies_other": "kopii",
+      "ofModels_one": "modelu",
+      "ofModels_few": "modeli",
+      "ofModels_many": "modeli",
+      "ofModels_other": "modeli",
+      "collapseAll": "Zwiń wszystkie",
+      "expandAll": "Rozwiń wszystkie",
+      "link": "Połącz z oryginałem",
+      "linkFailed": "Nie udało się połączyć „{{name}}”: {{reason}}",
+      "unlink": "Odłącz od oryginału",
+      "unlinkFailed": "Nie udało się odłączyć „{{name}}”: {{reason}}"
     },
     "workspaceActions": "Działania obszaru roboczego",
     "selectedCount_one": "{{count}} zaznaczony",
@@ -1612,17 +1629,17 @@
     "resolutionComingSoon": "Rozdzielczość 30-minutowa pojawi się w przyszłej wersji",
     "runMode": {
       "label": "Tryb obliczeń",
-      "plan": "Planowanie",
-      "operate": "Eksploatacja",
-      "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
-      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę",
-      "unsized": "Budynki wymagające wielkości w trybie eksploatacji: {{count}}. Kliknij wpis, aby ją ustawić.",
+      "plan": "Optymalizacja",
+      "operate": "Symulacja",
+      "planHint": "Proponuje brakujące wartości, np. wielkości, przy najniższym koszcie",
+      "operateHint": "Używa każdej technologii z wpisaną wielkością i wartościami i optymalizuje tylko jej pracę; potrzebne są wszystkie wartości, nie tylko wielkość",
+      "unsized": "Budynki wymagające wielkości do symulacji: {{count}}. Kliknij wpis, aby ją ustawić.",
       "unsizedEntry": "Budynek {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maksymalna wielkość",
         "cont_storage_cap_max": "wielkość magazynu"
       },
-      "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości",
+      "fieldNeeded": "Symulacja wymaga tu skończonej wielkości",
       "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
     "siteMode": {
@@ -1664,7 +1681,7 @@
         "p90": "Rok o wysokim nasłonecznieniu (P90)"
       },
       "hints": {
-        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "scenario": "Rok złożony z historycznych miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia. To nie jest prognoza.",
         "year": "Wybierz rok historyczny w okresie symulacji poniżej; obliczenia używają zarejestrowanej pogody z tego roku."
       },
       "mode": {
@@ -1696,7 +1713,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scenariusza",
-    "periodScenarioHint": "Pogoda scenariuszowa nie należy do żadnego roku kalendarzowego. Wybierz dni i miesiące do symulacji; daty są zapisywane w stałym roku odniesienia."
+    "periodScenarioHint": "Rok scenariuszowy jest składany miesiąc po miesiącu z historycznych danych pogodowych, więc nie ma własnego roku kalendarzowego. Miesiące nadal mają znaczenie: wyznaczają porę roku objętą symulacją, a z nią zapotrzebowanie na ciepło, uzysk energii słonecznej i czas obliczeń. Daty są zapisywane w stałym roku odniesienia.",
+    "periodCheckYear": "Przy pogodzie historycznej okres ustawiono na {{year}}, ostatni rok archiwum. Zachowaj go lub wybierz inny rok.",
+    "periodKeepYear": "Zachowaj {{year}}"
   },
   "mapLayers": {
     "title": "Warstwy mapy",
@@ -2412,7 +2431,12 @@
     "clickToDisableBuilding": "Kliknij, aby wyłączyć ten budynek",
     "clickToEnableBuilding": "Kliknij, aby ponownie włączyć ten budynek",
     "clickToSelectBuilding": "Kliknij, aby zaznaczyć ten budynek",
-    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia"
+    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia",
+    "cancel": "Anuluj rysowanie",
+    "view3dOnly": "Widok 3D służy do oglądania: kliknij budynek, aby zobaczyć szczegóły. Przełącz na mapę, aby rysować lub edytować obszar.",
+    "legendPv": "PV",
+    "legendStorage": "Magazyn",
+    "legendHeat": "Źródło ciepła"
   },
   "forms": {
     "user": {

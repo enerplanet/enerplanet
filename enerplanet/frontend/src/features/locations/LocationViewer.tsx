@@ -6,6 +6,7 @@ import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { PolygonDrawer } from '@/features/polygon-drawer';
 import { customLocationService, type CustomLocation } from '@/features/locations/services/customLocationService';
 import { formatArea, useZoomToCoordinates, useClearOverlays } from '@/features/locations/utils/locationUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 const LocationViewer: FC = () => {
   const navigate = useNavigate();
@@ -111,7 +112,7 @@ const LocationViewer: FC = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Energy Demand</span>
-                <span className="text-sm font-medium text-foreground">{location.demand_energy.toLocaleString()} kWh/yr</span>
+                <span className="text-sm font-medium text-foreground">{formatNumber(location.demand_energy, 3, 0)} kWh/yr</span>
               </div>
             </div>
 

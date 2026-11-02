@@ -17,6 +17,7 @@ import { reprojectGeoJSON } from './maplibre-utils';
 import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
 import { useLod2Surfaces } from './useLod2Surfaces';
 import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
+import { techMarkersOf, type TechMarker } from './techMarkers';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
@@ -82,6 +83,9 @@ export function useMapLibreLayers(
 
   const { surfaces: lod2, loading: lod2Loading, country } = useLod2Surfaces(buildings, mapReady);
   const pvSurfaceIds = usePvSurfaceIds(buildings, techsFor, country);
+  // Keyed by content: techsFor is a new function on every render.
+  const markerKey = JSON.stringify([...techMarkersOf(buildings, techsFor)]);
+  const techMarkers = useMemo(() => new Map<string, TechMarker[]>(JSON.parse(markerKey)), [markerKey]);
   const lod2LayerRef = useRef<Lod2Layer | null>(null);
 
   const loadAll = useCallback((map: maplibregl.Map) => {
@@ -144,11 +148,11 @@ export function useMapLibreLayers(
         lod2LayerRef.current = new Lod2Layer();
         map.addLayer(lod2LayerRef.current);
       }
-      lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds);
+      lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds, techMarkers);
     };
     if (map.isStyleLoaded()) apply();
     else map.once('idle', apply);
-  }, [mapRef, mapReady, lod2, pvSurfaceIds]);
+  }, [mapRef, mapReady, lod2, pvSurfaceIds, techMarkers]);
 
   // Interactions setup
   useEffect(() => {

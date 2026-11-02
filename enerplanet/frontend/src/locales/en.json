@@ -140,7 +140,12 @@
     "clickToDisableBuilding": "Click to disable this building",
     "clickToEnableBuilding": "Click to enable this building again",
     "clickToSelectBuilding": "Click to select this building",
-    "clickToDeselectBuilding": "Click to remove this building from the selection"
+    "clickToDeselectBuilding": "Click to remove this building from the selection",
+    "cancel": "Cancel drawing",
+    "view3dOnly": "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.",
+    "legendPv": "PV",
+    "legendStorage": "Storage",
+    "legendHeat": "Heat supply"
   },
   "gridNotifications": {
     "gridGenerated": "Grid generated: {{count}} buildings found",
@@ -530,8 +535,8 @@
     "draft": "Draft",
     "queue": "Queued",
     "calculating": "Calculating",
-    "running": "Running",
-    "processing": "Processing",
+    "running": "Simulating",
+    "processing": "Processing results",
     "completed": "Completed",
     "published": "Published",
     "failed": "Failed",
@@ -1147,7 +1152,18 @@
       "copies_other": "{{count}} copies",
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
-      "pagination": "families"
+      "countModels_one": "model",
+      "countModels_other": "models",
+      "countCopies_one": "copy",
+      "countCopies_other": "copies",
+      "ofModels_one": "model",
+      "ofModels_other": "models",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "link": "Link to original",
+      "linkFailed": "Could not link \"{{name}}\": {{reason}}",
+      "unlink": "Unlink from original",
+      "unlinkFailed": "Could not unlink \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",
@@ -1856,17 +1872,17 @@
     "resolutionComingSoon": "30-minute resolution coming in a future release",
     "runMode": {
       "label": "Run mode",
-      "plan": "Plan",
-      "operate": "Operate",
-      "planHint": "Choose the size of each technology at least cost",
-      "operateHint": "Keep each technology at its maximum size and optimise only its use",
-      "unsized": "Buildings that need a size for operate mode: {{count}}. Click an entry to set it.",
+      "plan": "Optimisation",
+      "operate": "Simulation",
+      "planHint": "Suggests the values left open, such as sizes, at least cost",
+      "operateHint": "Runs each technology at the size and values entered and optimises only its use; every value must be set, not only the size",
+      "unsized": "Buildings that need a size for simulation: {{count}}. Click an entry to set it.",
       "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximum size",
         "cont_storage_cap_max": "storage size"
       },
-      "fieldNeeded": "Operate mode needs a finite size here",
+      "fieldNeeded": "Simulation needs a finite size here",
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
@@ -1908,7 +1924,7 @@
         "p90": "High solar year (P90)"
       },
       "hints": {
-        "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
+        "scenario": "A year stitched from historical archive months: typical, or the low or high end of solar irradiance. Not a forecast.",
         "year": "Pick the historic year in the simulation period below; the run uses that year's recorded weather."
       },
       "mode": {
@@ -1936,7 +1952,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Scenario year",
-    "periodScenarioHint": "Scenario weather is not tied to a calendar year. Pick the days and months to simulate; the dates are saved in a fixed reference year."
+    "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year.",
+    "periodCheckYear": "Historic weather set the period to {{year}}, the latest year in the archive. Keep it or choose another year.",
+    "periodKeepYear": "Keep {{year}}"
   },
   "mapLayers": {
     "title": "Map Layers",

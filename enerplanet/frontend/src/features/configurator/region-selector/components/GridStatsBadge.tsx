@@ -5,6 +5,7 @@ import { useModelStore } from "@/features/configurator/store/modelStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@spatialhub/i18n";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface GridStatsBadgeProps {
     gridResultIds: number[];
@@ -129,7 +130,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
                     <TooltipTrigger asChild>
                         <div className="flex flex-col items-center py-2 rounded bg-muted/30 cursor-help">
                             <Activity className="w-3.5 h-3.5 mb-1 text-black dark:text-white" />
-                            <span className="text-sm font-bold text-foreground">{(statistics.cables?.total_length_km ?? 0).toFixed(1)}</span>
+                            <span className="text-sm font-bold text-foreground">{formatNumber(statistics.cables?.total_length_km ?? 0, 1)}</span>
                             <span className="text-[9px] text-muted-foreground">km</span>
                         </div>
                     </TooltipTrigger>
@@ -144,7 +145,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
                     {t("gridStats.selectionNote", {
                         buildings: wholeGrid.buildings.count,
                         cables: wholeGrid.cables.count,
-                        km: wholeGrid.cables.total_length_km.toFixed(1),
+                        km: formatNumber(wholeGrid.cables.total_length_km, 1),
                     })}
                 </p>
             )}
@@ -158,7 +159,7 @@ export const GridStatsBadge: FC<GridStatsBadgeProps> = ({ gridResultIds, buildin
                                 <Info className="w-3 h-3 text-muted-foreground/60" />
                             </span>
                             <span className="font-medium text-foreground">
-                                {(statistics.transformers?.total_capacity_kva ?? 0).toFixed(0)} kVA
+                                {formatNumber(statistics.transformers?.total_capacity_kva ?? 0, 0)} kVA
                             </span>
                         </div>
                     </TooltipTrigger>

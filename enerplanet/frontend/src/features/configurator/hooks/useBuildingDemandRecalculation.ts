@@ -4,6 +4,7 @@ import { toFiniteNumber } from "@/features/configurator/utils/parsing";
 import energyService from "@/features/configurator/services/energyService";
 import { estimateYearlyHeatDemand } from "@/features/configurator/utils/heatDemand";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface BuildingDemandOptions {
   pylovoLayers: {
@@ -313,7 +314,7 @@ export const useBuildingDemandRecalculation = ({
             : null
         );
         notification.showSuccess(
-          `Recalculated: ${estimate.yearlyConsumptionKwh.toLocaleString()} kWh/yr (${selectedFClass}), ${estimate.peakLoadKw.toFixed(2)} kW peak`
+          `Recalculated: ${formatNumber(estimate.yearlyConsumptionKwh, 3, 0)} kWh/yr (${selectedFClass}), ${formatNumber(estimate.peakLoadKw, 2)} kW peak`
         );
       } catch (error) {
         console.error("Recalculate demand failed:", error);

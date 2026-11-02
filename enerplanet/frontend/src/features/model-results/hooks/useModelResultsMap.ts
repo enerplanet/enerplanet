@@ -23,6 +23,7 @@ import { getFeatureFClasses, getPrimaryFClass } from '@/features/configurator/ut
 import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from '@/features/configurator/utils/heatDemand';
 import { ModelInfo, ModelResults } from '@/features/model-results/types';
 import { BuildingResultData, BusStatusData } from '@/features/model-results/components/map/ResultsMapTypes';
+import { formatNumber } from '@/utils/formatNumber';
 
 export interface MapTooltipData {
   x: number;
@@ -416,7 +417,7 @@ export const useModelResultsMap = ({
           stroke: new Stroke({ color: '#ffffff', width: isHighlighted ? 4 : 3 }),
         }),
         text: new Text({
-          text: bus.avgVoltage.toFixed(2),
+          text: formatNumber(bus.avgVoltage, 2),
           font: isHighlighted ? 'bold 12px sans-serif' : 'bold 10px sans-serif',
           fill: new Fill({ color: '#ffffff' }),
           offsetY: 1,

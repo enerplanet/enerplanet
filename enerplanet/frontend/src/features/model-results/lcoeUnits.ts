@@ -1,3 +1,6 @@
+import { formatNumber } from "@/utils/formatNumber";
+
+
 /**
  * Levelised cost of energy (LCOE) unit handling for the results UI.
  *
@@ -28,12 +31,12 @@ export function lcoeToEurPerKwh(eurPerMwh: number | null | undefined): number {
 
 /** "30.0 ct/kWh" from a stored EUR/MWh value. */
 export function formatLcoeCtkwh(eurPerMwh: number | null | undefined, digits = 2): string {
-  return `${lcoeToCtkwh(eurPerMwh).toFixed(digits)} ct/kWh`;
+  return `${formatNumber(lcoeToCtkwh(eurPerMwh), digits)} ct/kWh`;
 }
 
 /** "0.300 €/kWh" from a stored EUR/MWh value. */
 export function formatLcoeEurPerKwh(eurPerMwh: number | null | undefined, digits = 3): string {
-  return `€${lcoeToEurPerKwh(eurPerMwh).toFixed(digits)}/kWh`;
+  return `€${formatNumber(lcoeToEurPerKwh(eurPerMwh), digits)}/kWh`;
 }
 
 /**

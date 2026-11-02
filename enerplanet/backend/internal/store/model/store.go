@@ -65,11 +65,15 @@ func (s *Store) HardDelete(model *commonModels.Model) error {
 	return s.db.Unscoped().Delete(model).Error
 }
 
-// UpdateParentModelID sets parent_model_id = NULL for every child of modelID.
+// UpdateParentModelID detaches every child of modelID from it. A child keeps
+// modelID as its group_id, so it stays in one family with its siblings.
 func (s *Store) UpdateParentModelID(modelID uint) error {
 	return s.db.Model(&commonModels.Model{}).
 		Where("parent_model_id = ?", modelID).
-		Update("parent_model_id", nil).Error
+		Updates(map[string]any{
+			"group_id":        gorm.Expr("COALESCE(group_id, ?)", modelID),
+			"parent_model_id": nil,
+		}).Error
 }
 
 // ---------------------------------------------------------------------------

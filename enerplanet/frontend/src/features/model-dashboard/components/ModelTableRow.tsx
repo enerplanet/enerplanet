@@ -1,18 +1,19 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
+import { IconLink, IconUnlink } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
-import { Model } from "@/features/model-dashboard/services/modelService";
+import { Model, type FamilyOption } from "@/features/model-dashboard/services/modelService";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ElapsedTimer from "@/components/ui/ElapsedTimer";
-import { SimulationProgress } from "@/components/ui/SimulationProgress";
 import CompletedTimer from "@/components/ui/CompletedTimer";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@spatialhub/ui";
 import ModelActions from "@/components/ui/ModelActions";
 import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
 import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
+import { familyId, isUnlinkedCopy } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
 const getErrorMessage = (error: unknown): string => {
@@ -48,6 +49,9 @@ interface ModelTableRowProps {
   failedCopyCount: number;
   familyCollapsed: boolean;
   onToggleFamily: (modelId: number) => void;
+  /** Links a model into a family of its original, or with null unlinks it into a family of its own. */
+  onLinkFamily: (model: Model, familyId: number | null) => void;
+  loadFamilyOptions: (model: Model) => Promise<FamilyOption[]>;
   currentUserId?: string;
   userAccessLevel?: string;
   isSelected: boolean;
@@ -145,7 +149,7 @@ const ModelNameCell: React.FC<ModelNameCellProps> = ({
             )}
           </div>
 
-          <span className="font-medium text-sm text-foreground line-clamp-2 break-words">{modelTitle}</span>
+          <span className="font-medium text-sm text-foreground break-words">{modelTitle}</span>
 
           <FileEdit className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0" />
         </button>
@@ -168,15 +172,16 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
   );
 };
 
-/** The run's stage graph, shown in place of the status tag while the run is in progress. */
-const RunStages: React.FC<{ status: Model["status"] }> = ({ status }) => {
+/** The status pill of a run in progress; a queued run explains the wait on hover. */
+const RunStatus: React.FC<{ status: Model["status"] }> = ({ status }) => {
   const { t } = useTranslation();
-  if (status !== "queue") return <SimulationProgress status={status} />;
+  const pill = <StatusBadge status={status} size="small" />;
+  if (status !== "queue") return pill;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div>
-          <SimulationProgress status={status} />
+          {pill}
         </div>
       </TooltipTrigger>
       <TooltipContent>
@@ -247,6 +252,73 @@ const FamilyToggle: React.FC<{ modelId: number; title: string; copyCount: number
   );
 };
 
+const familyButtonClass =
+  "rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100";
+
+/** Unlinks a copy from its original, so it stands alone as its own family. */
+const UnlinkFamilyButton: React.FC<{ onUnlink: () => void }> = ({ onUnlink }) => {
+  const { t } = useTranslation();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("model.family.unlink")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnlink();
+          }}
+          className={familyButtonClass}
+        >
+          <IconUnlink className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t("model.family.unlink")}</TooltipContent>
+    </Tooltip>
+  );
+};
+
+/** Links an unlinked copy to a family of its original: at once when only one exists, else from a menu. */
+const LinkFamilyMenu: React.FC<{ loadOptions: () => Promise<FamilyOption[]>; onLink: (familyId: number) => void }> = ({ loadOptions, onLink }) => {
+  const { t } = useTranslation();
+  const [options, setOptions] = useState<FamilyOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const handleOpenChange = async (next: boolean) => {
+    setOpen(next);
+    if (!next) return;
+    setOptions([]);
+    const loaded = await loadOptions();
+    if (loaded.length > 1) setOptions(loaded);
+    else {
+      setOpen(false);
+      if (loaded.length === 1) onLink(loaded[0].id);
+    }
+  };
+  return (
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label={t("model.family.link")} onClick={(e) => e.stopPropagation()} className={familyButtonClass}>
+              <IconLink className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t("model.family.link")}</TooltipContent>
+      </Tooltip>
+      {options.length > 1 && (
+        <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
+          {options.map((option) => (
+            <DropdownMenuItem key={option.id} className="cursor-pointer" onClick={() => onLink(option.id)}>
+              <span className="truncate">{option.title}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      )}
+    </DropdownMenu>
+  );
+};
+
 /** An original's copy count, and while its copies are hidden, how many of them failed. */
 const FamilyCounts: React.FC<{ copyCount: number; failedCopyCount: number; collapsed: boolean }> = ({ copyCount, failedCopyCount, collapsed }) => {
   const { t } = useTranslation();
@@ -273,6 +345,8 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   failedCopyCount,
   familyCollapsed,
   onToggleFamily,
+  onLinkFamily,
+  loadFamilyOptions,
   currentUserId,
   userAccessLevel,
   isSelected,
@@ -347,28 +421,39 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
       <td className={`pl-2 pr-4 py-2.5 ${nameIndentClass} ${copyDivider}`}>
         <div className="flex items-center gap-2">
           {level === 0 && (
-            <FamilyToggle modelId={model.id} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
+            <FamilyToggle modelId={familyId(model)} title={modelTitle} copyCount={copyCount} collapsed={familyCollapsed} onToggle={onToggleFamily} />
           )}
-          <ModelNameCell
-            isEditing={isEditing}
-            editTitle={editTitle}
-            modelTitle={modelTitle}
-            onEditTitleChange={onEditTitleChange}
-            onUpdateTitle={onUpdateTitle}
-            onCancelEdit={onCancelEdit}
-            onStartEdit={() => onStartEdit(model)}
-            level={level}
-            model={model}
-            isNotModelOwner={isNotModelOwner}
-          />
-          <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
+          {/* The family chips sit under the name, so a long name never pushes them into the status column. */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1">
+              <ModelNameCell
+                isEditing={isEditing}
+                editTitle={editTitle}
+                modelTitle={modelTitle}
+                onEditTitleChange={onEditTitleChange}
+                onUpdateTitle={onUpdateTitle}
+                onCancelEdit={onCancelEdit}
+                onStartEdit={() => onStartEdit(model)}
+                level={level}
+                model={model}
+                isNotModelOwner={isNotModelOwner}
+              />
+              {canManageModel && level > 0 && <UnlinkFamilyButton onUnlink={() => onLinkFamily(model, null)} />}
+              {canManageModel && level === 0 && copyCount === 0 && isUnlinkedCopy(model) && (
+                <LinkFamilyMenu loadOptions={() => loadFamilyOptions(model)} onLink={(family) => onLinkFamily(model, family)} />
+              )}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
+              <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
+            </div>
+          </div>
         </div>
       </td>
 
       <td className={`px-4 py-2.5 ${copyDivider}`}>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isActiveStatus(model.status) ? (
-            <RunStages status={model.status} />
+            <RunStatus status={model.status} />
           ) : model.status === "failed" ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -420,7 +505,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
         </div>
       </td>
 
-      <td className={`hidden px-4 py-2.5 md:table-cell ${copyDivider}`}>
+      <td className={`hidden px-4 py-2.5 xl:table-cell ${copyDivider}`}>
         <span className="text-xs tabular-nums text-muted-foreground">{formatDateTime(model.created_at)}</span>
       </td>
 
@@ -480,6 +565,7 @@ const modelSnapshotEqual = (
   prev.user_id === next.user_id &&
   prev.user_email === next.user_email &&
   prev.is_copy === next.is_copy &&
+  prev.group_id === next.group_id &&
   prev.parent_model_id === next.parent_model_id &&
   prev.level === next.level &&
   modelSharesSnapshot(prev) === modelSharesSnapshot(next) &&
@@ -493,14 +579,19 @@ const modelSharesSnapshot = (model: Model): string =>
     .sort()
     .join("|");
 
+const familyPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): boolean =>
+  prev.copyCount === next.copyCount &&
+  prev.failedCopyCount === next.failedCopyCount &&
+  prev.familyCollapsed === next.familyCollapsed &&
+  prev.onToggleFamily === next.onToggleFamily &&
+  prev.onLinkFamily === next.onLinkFamily &&
+  prev.loadFamilyOptions === next.loadFamilyOptions;
+
 const areRowPropsEqual = (prev: ModelTableRowProps, next: ModelTableRowProps): boolean => {
   if (!modelSnapshotEqual(prev.model, next.model)) return false;
 
   if (prev.modelTitle !== next.modelTitle) return false;
-  if (prev.copyCount !== next.copyCount) return false;
-  if (prev.failedCopyCount !== next.failedCopyCount) return false;
-  if (prev.familyCollapsed !== next.familyCollapsed) return false;
-  if (prev.onToggleFamily !== next.onToggleFamily) return false;
+  if (!familyPropsEqual(prev, next)) return false;
   if (prev.currentUserId !== next.currentUserId) return false;
   if (prev.userAccessLevel !== next.userAccessLevel) return false;
   if (prev.isSelected !== next.isSelected) return false;

@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface InvestmentItem {
   tech: string;
@@ -34,8 +35,8 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
     const sorted = [...data].sort((a, b) => (b.investment + b.variable) - (a.investment + a.variable));
     const labels = sorted.map(d => d.label);
 
-    const formatCurrency = (v: number) =>
-      v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: v >= 100 ? 0 : 2 });
+    const formatEuro = (v: number) =>
+      formatCurrency(v, v >= 100 ? 0 : 2);
 
     return {
       tooltip: {
@@ -63,19 +64,19 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
           // Equipment cost
           html += `<div style="${rowStyle}">
             <span style="color:#3b82f6;font-size:11px;">■ ${t('results.chartLabels.investmentCost')}:</span>
-            <span style="${valueStyle}">${formatCurrency(inv)}</span>
+            <span style="${valueStyle}">${formatEuro(inv)}</span>
           </div>`;
 
           // Running cost
           html += `<div style="${rowStyle}">
             <span style="color:#f59e0b;font-size:11px;">■ ${t('results.chartLabels.operatingCost')}:</span>
-            <span style="${valueStyle}">${formatCurrency(opex)}</span>
+            <span style="${valueStyle}">${formatEuro(opex)}</span>
           </div>`;
 
           // Equipment/Running split percentage
           if (total > 0) {
-            const invPct = ((inv / total) * 100).toFixed(0);
-            const opexPct = ((opex / total) * 100).toFixed(0);
+            const invPct = formatNumber((inv / total) * 100, 0);
+            const opexPct = formatNumber((opex / total) * 100, 0);
             html += `<div style="${rowStyle}">
               <span style="${labelStyle}">${t('results.chartLabels.costSplit')}:</span>
               <span style="${valueStyle}">${invPct}% / ${opexPct}%</span>
@@ -87,12 +88,12 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
           // Total cost
           html += `<div style="${rowStyle}">
             <span style="${labelStyle}">${t('results.chartLabels.totalCost')}${periodLabel}:</span>
-            <span style="font-weight:700;color:${themeColors.text};font-size:12px;">${formatCurrency(total)}</span>
+            <span style="font-weight:700;color:${themeColors.text};font-size:12px;">${formatEuro(total)}</span>
           </div>`;
 
           // Share of system total
           if (systemTotalCost && systemTotalCost > 0) {
-            const sharePct = ((total / systemTotalCost) * 100).toFixed(1);
+            const sharePct = formatNumber((total / systemTotalCost) * 100, 1);
             html += `<div style="${rowStyle}">
               <span style="${labelStyle}">${t('results.chartLabels.share')}:</span>
               <span style="${valueStyle}">${sharePct}%</span>
@@ -135,7 +136,7 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
         axisLabel: {
           fontSize: 10,
           color: themeColors.textMuted,
-          formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k €` : `${v.toFixed(0)} €`,
+          formatter: (v: number) => v >= 1000 ? `${formatNumber(v / 1000, 1)}k €` : `${formatNumber(v, 0)} €`,
         },
         axisLine: { show: false },
         axisTick: { show: false },

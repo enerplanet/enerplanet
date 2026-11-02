@@ -1,3 +1,5 @@
+import { formatNumber } from "@/utils/formatNumber";
+
 /**
  * Display metadata for an energy carrier (electricity / heat / gas …).
  *
@@ -139,7 +141,7 @@ function normalizeValue(value: number, precision = 3): number {
 
 function formatVolume(value: number, unit: string, digits: number): string {
   const formatted = normalizeValue(Math.abs(value) < 1e-9 ? 0 : value, digits);
-  return `${formatted.toLocaleString(undefined, { maximumFractionDigits: digits })} ${unit}`;
+  return `${formatNumber(formatted, digits, 0)} ${unit}`;
 }
 
 /** Time-integrated quantity in the carrier's own unit (kWh / MWh / m³). */
@@ -149,9 +151,9 @@ export function formatCarrierEnergy(value: number, carrier?: string | null): str
 
   if (!Number.isFinite(value)) return `0 ${energyUnit}`;
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} GWh`;
-  if (abs >= 1_000) return `${(value / 1_000).toFixed(2)} MWh`;
-  return `${value.toFixed(1)} ${energyUnit}`;
+  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, 2)} GWh`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, 2)} MWh`;
+  return `${formatNumber(value, 1)} ${energyUnit}`;
 }
 
 /** Instantaneous rate in the carrier's own unit (kW / MW / m³/h). */
@@ -161,11 +163,11 @@ export function formatCarrierPower(value: number, carrier?: string | null): stri
 
   if (!Number.isFinite(value)) return `0 ${powerUnit}`;
   const abs = Math.abs(value);
-  if (abs >= 1_000) return `${(value / 1_000).toFixed(2)} MW`;
-  if (abs >= 1) return `${value.toFixed(2)} ${powerUnit}`;
-  if (abs >= 0.001) return `${(value * 1_000).toFixed(1)} W`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, 2)} MW`;
+  if (abs >= 1) return `${formatNumber(value, 2)} ${powerUnit}`;
+  if (abs >= 0.001) return `${formatNumber(value * 1_000, 1)} W`;
   if (abs === 0) return `0.0 ${powerUnit}`;
-  return `${(value * 1_000_000).toFixed(1)} mW`;
+  return `${formatNumber(value * 1_000_000, 1)} mW`;
 }
 
 /** Axis label for a rate axis, e.g. "Power (kW)" or "Flow (m³/h)". */

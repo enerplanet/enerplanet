@@ -4,6 +4,7 @@ import energyService from '@/features/configurator/services/energyService';
 import { getEnergyLabelColorClasses } from '@/features/configurator/utils/energyLabelUtils';
 import type { BuildingProperties } from './Step3BuildingProperties';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface Step4DemandSaveProps {
   demandEnergy: number;
@@ -21,8 +22,8 @@ interface Step4DemandSaveProps {
 }
 
 const formatArea = (areaValue: number): string => {
-  if (areaValue > 10000) return `${(areaValue / 1_000_000).toFixed(2)} km²`;
-  return `${areaValue.toFixed(0)} m²`;
+  if (areaValue > 10000) return `${formatNumber(areaValue / 1_000_000, 2)} km²`;
+  return `${formatNumber(areaValue, 0)} m²`;
 };
 
 const Step4DemandSave: FC<Step4DemandSaveProps> = ({
@@ -140,7 +141,7 @@ const Step4DemandSave: FC<Step4DemandSaveProps> = ({
           <Row label="Hot Water" value={properties.hotWaterElectric === true ? 'Electric' : properties.hotWaterElectric === false ? 'Non-electric' : 'Not specified'} />
           {tags.length > 0 && <Row label="Tags" value={tags.join(', ')} />}
           <div className="border-t border-border/50 pt-1 mt-1">
-            <Row label="Demand" value={`${demandEnergy.toLocaleString()} kWh/yr`} bold />
+            <Row label="Demand" value={`${formatNumber(demandEnergy, 3, 0)} kWh/yr`} bold />
             {peakLoad > 0 && <Row label="Peak Load" value={`${peakLoad} kW`} bold />}
           </div>
         </div>

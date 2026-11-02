@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
 import { SHOW_RESULT_GAPS } from '@/features/model-results/components/ui/GatedSection';
 import { useThemeColors, connectionKey, isOverloaded } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 const OVERLOAD_COLOR = '#ef4444';
 
@@ -118,11 +119,11 @@ const getShortLabel = (loc: string, maxLen = 8): string => {
 const formatPower = (valueKw: number): string => {
   if (!Number.isFinite(valueKw)) return '0';
   const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(1)} W`;
+  if (abs >= 1000) return `${formatNumber(valueKw / 1000, 2)} MW`;
+  if (abs >= 1) return `${formatNumber(valueKw, 1)} kW`;
+  if (abs >= 0.001) return `${formatNumber(valueKw * 1000, 1)} W`;
   if (abs === 0) return '0.0 kW';
-  return `${(valueKw * 1_000_000).toFixed(1)} mW`;
+  return `${formatNumber(valueKw * 1_000_000, 1)} mW`;
 };
 
 // Layout context interface
@@ -609,7 +610,7 @@ export const NetworkTopology: FC<NetworkTopologyProps> = ({
 
             const voltageRow = voltageAvailable
               ? `<span style="color: ${themeColors.textMuted};">${t('results.grid.voltage')}:</span>
-                <span style="font-weight: 600;">${voltage.toFixed(4)} pu</span>`
+                <span style="font-weight: 600;">${formatNumber(voltage, 4)} pu</span>`
               : '';
             const powerRow = powerAvailable
               ? `<span style="color: ${themeColors.textMuted};">${t('results.grid.power')}:</span>

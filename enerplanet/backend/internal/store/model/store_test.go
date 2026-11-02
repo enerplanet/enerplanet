@@ -198,3 +198,19 @@ func TestCountWorkspaceMember(t *testing.T) {
 
 	assert.Equal(t, int64(1), store.CountWorkspaceMember(10, "user-1"))
 }
+
+// Detaching the copies of a deleted original keeps the original's id as their
+// family, so they stay together on the dashboard.
+func TestUpdateParentModelID_keepsTheFamily(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	store := NewStore(db)
+
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "models" SET "group_id"=COALESCE\(group_id, \$1\),"parent_model_id"=\$2,"updated_at"=\$3 WHERE parent_model_id = \$4`).
+		WithArgs(21, nil, sqlmock.AnyArg(), 21).
+		WillReturnResult(sqlmock.NewResult(0, 3))
+	mock.ExpectCommit()
+
+	require.NoError(t, store.UpdateParentModelID(21))
+	require.NoError(t, mock.ExpectationsWereMet())
+}

@@ -33,9 +33,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@spatialhub/ui';
+import { formatNumber } from '@/utils/formatNumber';
 
 const formatArea = (area: number) =>
-  area > 10000 ? `${(area / 1000000).toFixed(1)} km²` : `${(area / 1000).toFixed(1)} k m²`;
+  area > 10000 ? `${formatNumber(area / 1000000, 1)} km²` : `${formatNumber(area / 1000, 1)} k m²`;
 
 const LocationRow: FC<{
   location: CustomLocation;
@@ -70,7 +71,7 @@ const LocationRow: FC<{
       <div className="hidden shrink-0 items-center gap-2 text-xs text-muted-foreground sm:flex">
         <span className="tabular-nums">{formatArea(location.area)}</span>
         <span aria-hidden="true">•</span>
-        <span className="tabular-nums">{(location.demand_energy / 1000).toFixed(0)} MWh</span>
+        <span className="tabular-nums">{formatNumber(location.demand_energy / 1000, 0)} MWh</span>
       </div>
 
       {/* Action Icons */}
@@ -269,7 +270,7 @@ const LocationsPage: FC = () => {
             items={[
               { label: t('locations.stats.total'), value: locations.length },
               { label: t('locations.stats.totalArea'), value: formatArea(totalArea) },
-              { label: t('locations.stats.totalDemand'), value: `${(totalDemand / 1000).toFixed(0)} MWh` },
+              { label: t('locations.stats.totalDemand'), value: `${formatNumber(totalDemand / 1000, 0)} MWh` },
             ]}
           />
         </div>

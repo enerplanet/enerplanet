@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import type { EnergyFlowData } from '../types';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface EnergyFlowSankeyProps {
   data: EnergyFlowData;
@@ -129,8 +130,8 @@ function getNodeColor(name: string): string {
 function formatEnergyFlowValue(value: number): string {
   const abs = Math.abs(value);
   if (!Number.isFinite(value)) return '0';
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} GWh`;
-  if (abs >= 1_000) return `${(value / 1_000).toFixed(2)} MWh`;
-  if (abs >= 1) return `${value.toFixed(1)} kWh`;
-  return `${(value * 1000).toFixed(1)} Wh`;
+  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, 2)} GWh`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, 2)} MWh`;
+  if (abs >= 1) return `${formatNumber(value, 1)} kWh`;
+  return `${formatNumber(value * 1000, 1)} Wh`;
 }

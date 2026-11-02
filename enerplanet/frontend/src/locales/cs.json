@@ -275,8 +275,8 @@
     "draft": "Koncept",
     "queue": "Ve Frontě",
     "calculating": "Výpočet",
-    "running": "Běží",
-    "processing": "Zpracování",
+    "running": "Simulace",
+    "processing": "Zpracování výsledků",
     "completed": "Dokončeno",
     "published": "Publikováno",
     "failed": "Selhalo",
@@ -900,7 +900,24 @@
       "failed_few": "{{count}} selhaly",
       "failed_many": "{{count}} selhalo",
       "failed_other": "{{count}} selhalo",
-      "pagination": "rodin modelů"
+      "countModels_one": "model",
+      "countModels_few": "modely",
+      "countModels_many": "modelů",
+      "countModels_other": "modelů",
+      "countCopies_one": "kopie",
+      "countCopies_few": "kopie",
+      "countCopies_many": "kopií",
+      "countCopies_other": "kopií",
+      "ofModels_one": "modelu",
+      "ofModels_few": "modelů",
+      "ofModels_many": "modelů",
+      "ofModels_other": "modelů",
+      "collapseAll": "Sbalit vše",
+      "expandAll": "Rozbalit vše",
+      "link": "Propojit s originálem",
+      "linkFailed": "„{{name}}“ se nepodařilo propojit: {{reason}}",
+      "unlink": "Odpojit od originálu",
+      "unlinkFailed": "„{{name}}“ se nepodařilo odpojit: {{reason}}"
     },
     "workspaceActions": "Akce pracovního prostoru",
     "selectedCount_one": "{{count}} vybrán",
@@ -1612,17 +1629,17 @@
     "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi",
     "runMode": {
       "label": "Režim výpočtu",
-      "plan": "Plánování",
-      "operate": "Provoz",
-      "planHint": "Zvolit velikost každé technologie při nejnižších nákladech",
-      "operateHint": "Ponechat každou technologii v maximální velikosti a optimalizovat jen její provoz",
-      "unsized": "Budovy, které pro režim provozu potřebují velikost: {{count}}. Kliknutím na položku ji nastavíte.",
+      "plan": "Optimalizace",
+      "operate": "Simulace",
+      "planHint": "Navrhne chybějící hodnoty, například velikosti, při nejnižších nákladech",
+      "operateHint": "Použije každou technologii se zadanou velikostí a hodnotami a optimalizuje jen její provoz; potřebné jsou všechny hodnoty, nejen velikost",
+      "unsized": "Budovy, které pro simulaci potřebují velikost: {{count}}. Kliknutím na položku ji nastavíte.",
       "unsizedEntry": "Budova {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximální velikost",
         "cont_storage_cap_max": "velikost úložiště"
       },
-      "fieldNeeded": "Režim provozu zde potřebuje konečnou velikost",
+      "fieldNeeded": "Simulace zde potřebuje konečnou velikost",
       "moreFieldsNeeded": "Pole, která potřebují velikost: {{count}}"
     },
     "siteMode": {
@@ -1664,7 +1681,7 @@
         "p90": "Rok s vysokým zářením (P90)"
       },
       "hints": {
-        "scenario": "Rok složený z měsíců archivu: typický, nebo na dolním či horním konci slunečního záření.",
+        "scenario": "Rok složený z historických měsíců archivu: typický, nebo na dolním či horním konci slunečního záření. Nejde o předpověď.",
         "year": "Vyberte historický rok v období simulace níže; výpočet použije zaznamenané počasí toho roku."
       },
       "mode": {
@@ -1696,7 +1713,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scénáře",
-    "periodScenarioHint": "Scénářové počasí nepatří k žádnému kalendářnímu roku. Vyberte dny a měsíce k simulaci; data se ukládají v pevném referenčním roce."
+    "periodScenarioHint": "Scénářový rok se skládá měsíc po měsíci z historického počasí, a proto nemá vlastní kalendářní rok. Na měsících přesto záleží: určují roční období, které simulace pokrývá, a tím potřebu tepla, solární výnos a dobu výpočtu. Data se ukládají v pevném referenčním roce.",
+    "periodCheckYear": "S historickým počasím je období nastaveno na rok {{year}}, poslední rok archivu. Ponechte jej, nebo zvolte jiný rok.",
+    "periodKeepYear": "Ponechat {{year}}"
   },
   "mapLayers": {
     "title": "Mapové vrstvy",
@@ -2412,7 +2431,12 @@
     "clickToDisableBuilding": "Kliknutím budovu vypnete",
     "clickToEnableBuilding": "Kliknutím budovu znovu zapnete",
     "clickToSelectBuilding": "Kliknutím budovu vyberete",
-    "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru"
+    "clickToDeselectBuilding": "Kliknutím budovu odeberete z výběru",
+    "cancel": "Zrušit kreslení",
+    "view3dOnly": "3D slouží k prohlížení: klikněte na budovu pro její podrobnosti. Pro kreslení nebo úpravu oblasti přepněte na mapu.",
+    "legendPv": "FV",
+    "legendStorage": "Úložiště",
+    "legendHeat": "Zdroj tepla"
   },
   "forms": {
     "user": {

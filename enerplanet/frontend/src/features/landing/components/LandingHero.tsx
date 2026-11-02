@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IconArrowRight, IconPlayerPlay } from '@tabler/icons-react'
 import { useTranslation } from '@spatialhub/i18n'
+import { formatNumber } from '@/utils/formatNumber';
 
 function useParallax(speed = 0.3) {
   const [offset, setOffset] = useState(0)
@@ -43,7 +44,7 @@ function AnimatedCounter({ target, suffix = '' }: { target: string; suffix?: str
       const progress = step / steps
       const eased = 1 - Math.pow(1 - progress, 3)
       const current = Math.round(end * eased)
-      setDisplay(current.toLocaleString() + rest + suffix)
+      setDisplay(formatNumber(current, 3, 0) + rest + suffix)
       if (step >= steps) clearInterval(timer)
     }, stepTime)
     return () => clearInterval(timer)

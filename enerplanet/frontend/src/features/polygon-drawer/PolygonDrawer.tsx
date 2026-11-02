@@ -43,6 +43,8 @@ interface PolygonDrawerProps {
   onPointerTargetChange?: (target: PointerTarget) => void;
   allowMultiple?: boolean;
   clearTrigger?: number;
+  /** Abandons the polygon being drawn whenever it changes, as Escape does. */
+  cancelSketchTrigger?: number;
   initialPolygons?: [number, number][][];
   bufferDistanceMeters?: number;
   /** If true, disables drawing after first polygon is created (unless cleared) */
@@ -71,6 +73,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
   suspended = false,
   allowMultiple = false,
   clearTrigger = 0,
+  cancelSketchTrigger = 0,
   initialPolygons,
   bufferDistanceMeters = 0,
   disableAfterDraw = false,
@@ -134,6 +137,10 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       }
     }
   }, [clearTrigger, map]);
+
+  useEffect(() => {
+    if (cancelSketchTrigger > 0) drawInteractionRef.current?.abortDrawing();
+  }, [cancelSketchTrigger]);
 
   useEffect(() => {
     if (

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as maplibregl from 'maplibre-gl';
 
+import type { TechMarker } from './techMarkers';
 import type { Lod2Surface } from './useLod2Surfaces';
 
 export const LOD2_LAYER_ID = 'lod2-buildings';
@@ -8,7 +9,12 @@ export const LOD2_LAYER_ID = 'lod2-buildings';
 const ROOF_COLOR = 0xb4664a;
 const WALL_COLOR = 0xe6e0d6;
 const EDGE_COLOR = 0x4b4b4b;
-const PV_COLOR = 0x1f3a5f;
+export const PV_COLOR = 0x1f3a5f;
+export const MARKER_COLOR: Record<TechMarker, number> = { heat: 0xea580c, storage: 0x7c3aed };
+// Metres: the stem above the roof, the ball on it, and the gap between two balls.
+const MARKER_STEM = 4;
+const MARKER_RADIUS = 2;
+const MARKER_GAP = 5;
 
 /** A point in the layer's frame: metres east, north and up from the origin. */
 type Local = [number, number, number];
@@ -78,8 +84,16 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.map = null;
   }
 
-  /** Replaces the drawn buildings with these, by osm_id; the surfaces in pvByOsmId are drawn as PV panels. */
-  setBuildings(byOsmId: Map<string, Lod2Surface[]>, pvByOsmId: Map<string, Set<string>> = new Map()): void {
+  /**
+   * Replaces the drawn buildings with these, by osm_id; the surfaces in
+   * pvByOsmId are drawn as PV panels, and markersByOsmId puts a marker above
+   * the roof for each kind of technology.
+   */
+  setBuildings(
+    byOsmId: Map<string, Lod2Surface[]>,
+    pvByOsmId: Map<string, Set<string>> = new Map(),
+    markersByOsmId: Map<string, TechMarker[]> = new Map(),
+  ): void {
     this.clear();
     const first = byOsmId.values().next().value?.[0]?.rings[0]?.[0];
     if (!first) {
@@ -94,15 +108,19 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     for (const [osmId, surfaces] of byOsmId) {
       const pv = pvByOsmId.get(osmId);
       const base = Math.min(...surfaces.flatMap((s) => s.rings.flatMap((r) => r.map((p) => p[2] ?? 0))));
+      const points: Local[] = [];
       for (const surface of surfaces) {
         const rings = surface.rings.map((ring) => ring.map((p): Local => {
           const m = maplibregl.MercatorCoordinate.fromLngLat([p[0], p[1]], 0);
           // Mercator y grows southwards; the local frame's y points north.
           return [(m.x - this.origin!.x) / metre, (this.origin!.y - m.y) / metre, (p[2] ?? base) - base];
         }));
+        points.push(...rings.flat());
         const target = pv?.has(surface.id) ? panels : surface.roof ? roofs : walls;
         target.push(...triangulatePlanar(rings).flat());
       }
+      const markers = markersByOsmId.get(osmId);
+      if (markers) this.addMarkers(points, markers);
     }
     this.addMesh(roofs, ROOF_COLOR);
     this.addMesh(walls, WALL_COLOR);
@@ -130,6 +148,24 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     geometry.computeVertexNormals();
     this.buildings.add(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })));
     this.buildings.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 20), new THREE.LineBasicMaterial({ color: EDGE_COLOR })));
+  }
+
+  /** One stem and ball per marker above the highest point of a building, side by side over its centre. */
+  private addMarkers(points: Local[], markers: TechMarker[]): void {
+    const x = points.reduce((sum, p) => sum + p[0], 0) / points.length;
+    const y = points.reduce((sum, p) => sum + p[1], 0) / points.length;
+    const top = Math.max(...points.map((p) => p[2]));
+    markers.forEach((marker, i) => {
+      const material = new THREE.MeshLambertMaterial({ color: MARKER_COLOR[marker] });
+      const offset = (i - (markers.length - 1) / 2) * MARKER_GAP;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, MARKER_STEM), material);
+      // Cylinders stand along y; the local frame's up is z.
+      stem.rotation.x = Math.PI / 2;
+      stem.position.set(x + offset, y, top + MARKER_STEM / 2);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(MARKER_RADIUS, 16, 12), material.clone());
+      ball.position.set(x + offset, y, top + MARKER_STEM + MARKER_RADIUS);
+      this.buildings.add(stem, ball);
+    });
   }
 
   private clear(): void {

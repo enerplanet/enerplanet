@@ -1,15 +1,16 @@
 import { useCallback, useEffect } from 'react';
 import { transformExtent } from 'ol/proj';
 import type OLMap from 'ol/Map';
+import { formatNumber } from '@/utils/formatNumber';
 
 /**
  * Format area value with appropriate units (m² or km²)
  */
 export const formatArea = (areaValue: number): string => {
   if (areaValue > 10000) {
-    return `${(areaValue / 1000000).toFixed(2)} km²`;
+    return `${formatNumber(areaValue / 1000000, 2)} km²`;
   }
-  return `${areaValue.toFixed(0)} m²`;
+  return `${formatNumber(areaValue, 0)} m²`;
 };
 
 /**

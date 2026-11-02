@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { createChartGrid, createSplitLineStyle, useThemeColors } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface VoltageViolationItem {
   name: string;
@@ -47,8 +48,8 @@ export const PyPSAVoltageViolationChart = ({
           const item = displayItems[params[0].dataIndex];
           return [
             `<div style="font-weight:600;margin-bottom:4px;color:${themeColors.text};">${item.name}</div>`,
-            `<div>Hours outside 0.95-1.05 pu: <b>${item.hoursOutside.toFixed(1)} h</b></div>`,
-            `<div>Worst deviation: <b>${item.maxDeviationPu.toFixed(4)} pu</b></div>`,
+            `<div>Hours outside 0.95-1.05 pu: <b>${formatNumber(item.hoursOutside, 1)} h</b></div>`,
+            `<div>Worst deviation: <b>${formatNumber(item.maxDeviationPu, 4)} pu</b></div>`,
           ].join('');
         },
       },
@@ -80,7 +81,7 @@ export const PyPSAVoltageViolationChart = ({
             show: true,
             position: 'right',
             color: themeColors.text,
-            formatter: ({ value }: { value: number }) => `${value.toFixed(1)} h`,
+            formatter: ({ value }: { value: number }) => `${formatNumber(value, 1)} h`,
           },
         },
       ],

@@ -28,6 +28,7 @@ import {
 import { TechTypeList } from "@/features/technologies/components/TechTypeList";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface TechData {
   alias: string;
@@ -449,7 +450,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
 
               {/* Peak Load */}
               {hasFiniteNumber(peakLoad) && peakLoad > 0 && (
-                <ReadOnlyRow label={t("gridStats.peakLoad")} value={peakLoad.toFixed(2)} unit="kW" />
+                <ReadOnlyRow label={t("gridStats.peakLoad")} value={formatNumber(peakLoad, 2)} unit="kW" />
               )}
             </div>
 
@@ -535,21 +536,21 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                   {hasFiniteNumber(selectedBuilding.heightMedian) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightMedian")}
-                      value={selectedBuilding.heightMedian.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightMedian, 1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightMax) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightMax")}
-                      value={selectedBuilding.heightMax.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightMax, 1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightGround) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightGround")}
-                      value={selectedBuilding.heightGround.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightGround, 1)}
                       unit="m"
                     />
                   )}
@@ -588,7 +589,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 {hasFiniteNumber(selectedBuilding.energyIndex) && (
                   <div className="text-xs text-muted-foreground">
                     {t("regionSelector.buildingDialog.energyIndex")}{" "}
-                    <span className="font-medium">{selectedBuilding.energyIndex.toFixed(2)}</span>
+                    <span className="font-medium">{formatNumber(selectedBuilding.energyIndex, 2)}</span>
                   </div>
                 )}
               </div>
@@ -644,7 +645,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {t("regionSelector.buildingDialog.totalFloorArea", {
                       floors: editedFloors,
                       area: editedArea,
-                      total: (editedFloors * editedArea).toLocaleString(),
+                      total: formatNumber(editedFloors * editedArea, 3, 0),
                     })}
                   </span>
                 </div>
@@ -762,19 +763,19 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       {hasFiniteNumber(selectedBuilding.cbsPopulation) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.population")}</span>
-                          <span>{selectedBuilding.cbsPopulation.toLocaleString()}</span>
+                          <span>{formatNumber(selectedBuilding.cbsPopulation, 3, 0)}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsHouseholds) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.households")}</span>
-                          <span>{selectedBuilding.cbsHouseholds.toLocaleString()}</span>
+                          <span>{formatNumber(selectedBuilding.cbsHouseholds, 3, 0)}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsAvgHouseholdSize) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.avgHouseholdSize")}</span>
-                          <span>{selectedBuilding.cbsAvgHouseholdSize.toFixed(2)}</span>
+                          <span>{formatNumber(selectedBuilding.cbsAvgHouseholdSize, 2)}</span>
                         </div>
                       )}
                     </div>

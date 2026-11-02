@@ -271,8 +271,8 @@
     "draft": "Bozza",
     "queue": "In Coda",
     "calculating": "Calcolo in corso",
-    "running": "In esecuzione",
-    "processing": "Elaborazione",
+    "running": "Simulazione in corso",
+    "processing": "Elaborazione dei risultati",
     "completed": "Completato",
     "published": "Pubblicato",
     "failed": "Fallito",
@@ -888,7 +888,18 @@
       "copies_other": "{{count}} copie",
       "failed_one": "{{count}} non riuscita",
       "failed_other": "{{count}} non riuscite",
-      "pagination": "famiglie"
+      "countModels_one": "modello",
+      "countModels_other": "modelli",
+      "countCopies_one": "copia",
+      "countCopies_other": "copie",
+      "ofModels_one": "modello",
+      "ofModels_other": "modelli",
+      "collapseAll": "Comprimi tutto",
+      "expandAll": "Espandi tutto",
+      "link": "Collega all'originale",
+      "linkFailed": "Impossibile collegare \"{{name}}\": {{reason}}",
+      "unlink": "Scollega dall'originale",
+      "unlinkFailed": "Impossibile scollegare \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Azioni dell'area di lavoro",
     "selectedCount_one": "{{count}} selezionato",
@@ -1598,17 +1609,17 @@
     "resolutionComingSoon": "La risoluzione a 30 minuti arriverà in una versione futura",
     "runMode": {
       "label": "Modalità di calcolo",
-      "plan": "Pianificare",
-      "operate": "Esercire",
-      "planHint": "Scegliere la dimensione di ogni tecnologia al minimo costo",
-      "operateHint": "Mantenere ogni tecnologia alla sua dimensione massima e ottimizzarne solo l'uso",
-      "unsized": "Edifici che richiedono una dimensione per la modalità di esercizio: {{count}}. Fare clic su una voce per impostarla.",
+      "plan": "Ottimizzazione",
+      "operate": "Simulazione",
+      "planHint": "Propone al minimo costo i valori mancanti, come le dimensioni",
+      "operateHint": "Usa ogni tecnologia con la dimensione e i valori inseriti e ne ottimizza solo l'uso; servono tutti i valori, non solo la dimensione",
+      "unsized": "Edifici che richiedono una dimensione per la simulazione: {{count}}. Fare clic su una voce per impostarla.",
       "unsizedEntry": "Edificio {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "dimensione massima",
         "cont_storage_cap_max": "dimensione di accumulo"
       },
-      "fieldNeeded": "La modalità di esercizio richiede qui una dimensione finita",
+      "fieldNeeded": "La simulazione richiede qui una dimensione finita",
       "moreFieldsNeeded": "Campi che richiedono una dimensione: {{count}}"
     },
     "siteMode": {
@@ -1650,7 +1661,7 @@
         "p90": "Anno ad alta irradiazione (P90)"
       },
       "hints": {
-        "scenario": "Un anno composto da mesi dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare.",
+        "scenario": "Un anno composto da mesi storici dell'archivio: tipico, oppure all'estremo basso o alto dell'irradiazione solare. Non è una previsione.",
         "year": "Scegli l'anno storico nel periodo di simulazione qui sotto; il calcolo usa il meteo registrato di quell'anno."
       },
       "mode": {
@@ -1678,7 +1689,9 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Anno di scenario",
-    "periodScenarioHint": "Il meteo di scenario non appartiene a un anno solare. Scegli i giorni e i mesi da simulare; le date vengono salvate in un anno di riferimento fisso."
+    "periodScenarioHint": "Un anno di scenario è composto mese per mese da dati meteo storici, quindi non ha un anno solare proprio. I mesi contano comunque: stabiliscono la stagione coperta dalla simulazione e, con essa, il fabbisogno di riscaldamento, la resa solare e il tempo di calcolo. Le date vengono salvate in un anno di riferimento fisso.",
+    "periodCheckYear": "Con il meteo storico il periodo passa al {{year}}, l'ultimo anno dell'archivio. Mantienilo o scegli un altro anno.",
+    "periodKeepYear": "Mantieni il {{year}}"
   },
   "mapLayers": {
     "title": "Livelli mappa",
@@ -2392,7 +2405,12 @@
     "clickToDisableBuilding": "Fai clic per disattivare questo edificio",
     "clickToEnableBuilding": "Fai clic per riattivare questo edificio",
     "clickToSelectBuilding": "Fai clic per selezionare questo edificio",
-    "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione"
+    "clickToDeselectBuilding": "Fai clic per togliere questo edificio dalla selezione",
+    "cancel": "Annulla il disegno",
+    "view3dOnly": "Il 3D serve per la visualizzazione: fai clic su un edificio per i dettagli. Passa alla mappa per disegnare o modificare l'area.",
+    "legendPv": "FV",
+    "legendStorage": "Accumulo",
+    "legendHeat": "Fornitura di calore"
   },
   "forms": {
     "user": {

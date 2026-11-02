@@ -38,6 +38,7 @@ import { ComparisonCharts } from './components/ComparisonCharts';
 import { ComparisonMapPanel } from './components/ComparisonMapPanel';
 import { exportComparisonPDF } from '@/features/model-results/utils/pdfExport';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface SimulationChartsProps {
   modelId?: number;
@@ -59,7 +60,7 @@ const formatPower = (value: number, carrier?: string): string => formatCarrierPo
 
 function formatPercent(value: number, digits: number = 1): string {
   const normalized = normalizeDisplayValue(value, digits + 1);
-  return `${normalized.toFixed(digits)}%`;
+  return `${formatNumber(normalized, digits)}%`;
 }
 
 function isMonetaryCost(costType?: string): boolean {
@@ -532,7 +533,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw, carrier) },
                   {
                     label: t('simulationComparison.metrics.totalCost'),
-                    value: `€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                    value: formatCurrency(summary1.total_cost_eur, 0),
                   },
                 ]}
               />

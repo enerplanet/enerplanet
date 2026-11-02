@@ -270,8 +270,8 @@
     "draft": "Concept",
     "queue": "In Wachtrij",
     "calculating": "Berekenen",
-    "running": "Actief",
-    "processing": "Verwerking",
+    "running": "Simuleren",
+    "processing": "Resultaten verwerken",
     "completed": "Voltooid",
     "published": "Gepubliceerd",
     "failed": "Mislukt",
@@ -887,7 +887,18 @@
       "copies_other": "{{count}} kopieën",
       "failed_one": "{{count}} mislukt",
       "failed_other": "{{count}} mislukt",
-      "pagination": "families"
+      "countModels_one": "model",
+      "countModels_other": "modellen",
+      "countCopies_one": "kopie",
+      "countCopies_other": "kopieën",
+      "ofModels_one": "model",
+      "ofModels_other": "modellen",
+      "collapseAll": "Alles inklappen",
+      "expandAll": "Alles uitklappen",
+      "link": "Koppelen aan origineel",
+      "linkFailed": "\"{{name}}\" kon niet worden gekoppeld: {{reason}}",
+      "unlink": "Loskoppelen van origineel",
+      "unlinkFailed": "\"{{name}}\" kon niet worden losgekoppeld: {{reason}}"
     },
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",
@@ -1597,17 +1608,17 @@
     "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
     "runMode": {
       "label": "Rekenmodus",
-      "plan": "Plannen",
-      "operate": "Bedrijven",
-      "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
-      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren",
-      "unsized": "Gebouwen die een grootte nodig hebben voor de bedrijfsmodus: {{count}}. Klik op een regel om die in te stellen.",
+      "plan": "Optimalisatie",
+      "operate": "Simulatie",
+      "planHint": "Stelt tegen de laagste kosten de ontbrekende waarden voor, zoals groottes",
+      "operateHint": "Gebruikt elke technologie met de ingevoerde grootte en waarden en optimaliseert alleen het gebruik; alle waarden zijn nodig, niet alleen de grootte",
+      "unsized": "Gebouwen die een grootte nodig hebben voor de simulatie: {{count}}. Klik op een regel om die in te stellen.",
       "unsizedEntry": "Gebouw {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximale grootte",
         "cont_storage_cap_max": "opslaggrootte"
       },
-      "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
+      "fieldNeeded": "De simulatie heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "siteMode": {
@@ -1649,7 +1660,7 @@
         "p90": "Jaar met veel zon (P90)"
       },
       "hints": {
-        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "scenario": "Een jaar samengesteld uit historische maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling. Geen voorspelling.",
         "year": "Kies het historische jaar in de simulatieperiode hieronder; de berekening gebruikt het gemeten weer van dat jaar."
       },
       "mode": {
@@ -1677,7 +1688,9 @@
       "q4": "K4"
     },
     "periodScenarioYear": "Scenariojaar",
-    "periodScenarioHint": "Scenarioweer hoort bij geen kalenderjaar. Kies de dagen en maanden om te simuleren; de datums worden opgeslagen in een vast referentiejaar."
+    "periodScenarioHint": "Een scenariojaar wordt maand voor maand samengesteld uit historisch weer en heeft daardoor geen eigen kalenderjaar. De maanden tellen toch: ze bepalen welk seizoen de simulatie dekt, en daarmee de warmtevraag, de zonne-opbrengst en de rekentijd. De datums worden opgeslagen in een vast referentiejaar.",
+    "periodCheckYear": "Met historisch weer ligt de periode nu in {{year}}, het laatste jaar van het archief. Houd het aan of kies een ander jaar.",
+    "periodKeepYear": "{{year}} houden"
   },
   "mapLayers": {
     "title": "Kaartlagen",
@@ -2391,7 +2404,12 @@
     "clickToDisableBuilding": "Klik om dit gebouw uit te schakelen",
     "clickToEnableBuilding": "Klik om dit gebouw weer in te schakelen",
     "clickToSelectBuilding": "Klik om dit gebouw te selecteren",
-    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen"
+    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen",
+    "cancel": "Tekenen annuleren",
+    "view3dOnly": "3D is om te bekijken: klik op een gebouw voor de details. Schakel naar de kaart om het gebied te tekenen of te bewerken.",
+    "legendPv": "PV",
+    "legendStorage": "Opslag",
+    "legendHeat": "Warmtevoorziening"
   },
   "forms": {
     "user": {
