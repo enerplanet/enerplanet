@@ -8,15 +8,19 @@
 
 ## Status header
 
-- **Version:** 1.1 · **Last reviewed:** 2026-11-02
+- **Version:** 1.2 · **Last reviewed:** 2026-11-02
 - **What changed since the last review:**
-  - **v1.1 — C1 + C2 resolved.** Added a headless `run()` to the module contract
-    (`types/module.ts`, `BaseModule`); `NodeEngine.runAutoNodes` now executes `auto`
-    nodes via `run()` instead of marking them done (legacy onEnter/onLeave path kept as
-    fallback). `dependenciesDone` now treats `skipped` as a satisfied dependency, so a
-    skipped producer no longer deadlocks the graph — the `io.required` context gate still
-    prevents garbage runs. `grid-generation` and `power-flow` implement `run()`. Covered by
-    `workflow/NodeEngine.test.ts`. (M3, M4 interactive path, m5–m8 still open.)
+  - **v1.2 — M3 + M4 resolved (m5, m7 folded in).** Invalidation (M3): re-completing a
+    node whose output fingerprint changed resets every transitive downstream node to
+    `pending` and clears its declared outputs; the graph itself is the invalidation map.
+    No-op redos (fingerprint unchanged) leave the pipeline alone. Writer discipline
+    (M4): `validateGraph` now enforces one-writer-per-key; contracts corrected —
+    `region-select` owns area + grid generation, `grid-generation` is a checkpoint node
+    (outputs none), `model-load` is a pre-seeder, not a producer. The node palette bug
+    (m5) fixed so redo is reachable; `validateGraph` satisfiability now matches
+    `deriveEdges` (m7). Tests: `workflow/NodeEngine.test.ts` (14 green).
+  - **v1.1 — C1 + C2 resolved.** Headless `run()`; auto nodes execute; skipped deps
+    satisfied (see detail below).
   - **v1.0 — created the consolidated reference**, corrected doc-vs-code drift
     (only `full-energy-planning` is registered; `ev-hosting-analysis` does not exist).
 - **Branches / state:** feature builds on `sk_node_modelbuilder`; it is gated behind
@@ -124,10 +128,10 @@ proceeds with an empty context.
 
 | module | inputs | outputs | required |
 |--------|--------|---------|----------|
-| `model-load` | — | modelId, modelName, workspaceId, region, polygons, advancedParams, sourceModelId | — |
+| `model-load` | — | advancedParams, sourceModelId (pre-seeder — distributes model into store via onUpdate without claiming graph ownership) | — |
 | `simulation-settings` | — | simulationSettings | — |
-| `region-select` | — | region, polygons | — |
-| `grid-generation` | polygons, advancedParams | gridData, gridResultIds | polygons |
+| `region-select` | — | region, polygons, gridData, gridResultIds (owns area **and** grid generation — fires generateGrid on draw) | — |
+| `grid-generation` | polygons, gridData, gridResultIds, advancedParams | — (checkpoint node — region-select is the writer) | polygons |
 | `area-edit` | gridData, gridResultIds | transformers, transformerAssignments | gridData, gridResultIds |
 | `building-demand` | gridData | buildingEstimates, buildingFilters | gridData |
 | `technology-selection` | gridData, advancedParams | technologies, techParameters | gridData |
@@ -152,15 +156,18 @@ proceeds with an empty context.
    `io.outputs`, marks `done`, then **auto-runs** any newly-ready `auto` nodes
    recursively (`runAutoNodes`, `:247`). **Auto nodes execute via the module's headless
    `run()`** (returned keys are filtered to `io.outputs`); modules without `run()` fall
-   back to onEnter/onLeave + adopt pre-declared context keys. Advance to the next
-   interactive-ready node.
+   back to onEnter/onLeave + adopt pre-declared context keys. **Invalidation (M3):**
+   re-completing a node (re-activated from the palette) whose output fingerprint changed
+   resets every transitive downstream node to `pending` and clears its outputs — the
+   graph itself is the invalidation map. Advance to the next interactive-ready node.
 4. **Persistence / resume** (`workflow/FlowPersistence.ts`): a debounced `flowSnapshot
    { workflowId, workflowVersion, context, nodeStates, savedAt }` is saved to
    `localStorage` (`modular-workflow:flow`) on every context change; `ModelBuilderPage`
    offers a "Resume previous flow?" banner. Cleared on completion.
 5. **Validation** (`graph-validate.test.ts`, `validateGraph`): every registered workflow
-   is checked acyclic, all modules registered, and each `io.required` key satisfiable by a
-   **dependency (explicit `dependsOn` only)** or a seed.
+   is checked acyclic, all modules registered, each `io.required` key satisfiable by
+   another producer or a seed (matching `deriveEdges`), **and one-writer-per-key (M4)** —
+   a context key may be produced by exactly one node in the workflow.
 
 ## 5. Critical known issues — the ledger
 
@@ -171,25 +178,30 @@ proceeds with an empty context.
 |----|-----|-------|----------|---------|--------|
 | C1 | **Critical** | **Auto nodes execute nothing.** Work for every module lives in the React component's `useEffect`; no module defines `onEnter/onLeave`, and `runAutoNodes` never renders the component. It only merges pre-existing context keys and marks `done`. | `NodeEngine.ts:247`, `BaseModule.ts:94-98` (all optional), grep: zero `onEnter/onLeave` across modules | Power flow never actually runs (silent). Grid generation only "works" because region-select's component generated the grid and wrote undeclared `gridData`/`gridResultIds`. | ✅ **Resolved (2026-11-02)** — headless `run()` on the module contract; `runAutoNodes` executes `auto` nodes via `run()`. `grid-generation` + `power-flow` implement `run()`. Legacy path stays as fallback. Tests: `workflow/NodeEngine.test.ts`. |
 | C2 | **Critical** | **Skipped dependencies block the graph forever.** `dependenciesDone` requires `=== "done"` — a `skipped` dep never satisfies. `model-load` outputs `region`/`polygons` (same keys region-select outputs) ⇒ every consumer of those keys also waits on model-load. Skip model-load (or skip `area-edit`, which `power-flow` depends on) ⇒ downstream stuck at `pending` ⇒ `isComplete()` never true. `skipNode` also never applies `defaults` (the field is dead code). | `WorkflowGraph.ts:139`, `deriveEdges:68`, `NodeEngine.ts:224` | Workflow deadlocks after a skip. | ✅ **Resolved (2026-11-02)** — `dependenciesDone` accepts `done || skipped`; the `io.required` context-presence gate still keeps nodes `pending` when a required key's only provider was skipped. Tests: `workflow/NodeEngine.test.ts`. `defaults`-on-skip still open (see §6). |
-| M3 | **Major** | **No invalidation / data causality.** A done node never reruns; re-activating upstream (`region-select`) and completing it does not mark downstream stale. Change the region after grid generation ⇒ `gridData`/`powerFlowResult` stay stale while UI shows `done`. No `invalidates`, rerun-before-continue, loop guard, or fingerprint. | `NodeEngine.ts:195-218` (`completeNode`), shell `:232` re-render after reset | Stale downstream results presented as current. | Open |
-| M4 | **Major** | **Writer discipline is advisory, not enforced — and already leaking.** `ModuleProps.onUpdate` + `engine.updateContext` merge arbitrary partials; nothing validates writes against `io.outputs`. `region-select` writes `gridData`/`gridResultIds` not in its `io.outputs`; `grid-generation` *declares* them but never writes. `region`/`polygons` have two writers (`model-load` + `region-select`) ⇒ phantom ordering edges onto every consumer. | `RegionSelectModule.tsx:112`, `GridGenerationModule.tsx:30`, `NodeEngine.ts:152` | Dual-writer keys; contract drift. | Partially addressed — **auto path** now filtered (`mergeRunOutputs` drops undeclared keys). Interactive `onUpdate` path still unvalidated. |
-| m5 | Minor | **Node palette never renders.** Shell gating `activeNode?.id == "done"` compares a node id to the literal string `"done"` — always false. | `ModelBuilderConfigurator.tsx:480` | Palette is dead UI. | Open |
+| M3 | **Major** | **No invalidation / data causality.** A done node never reruns; re-activating upstream (`region-select`) and completing it does not mark downstream stale. Change the region after grid generation ⇒ `gridData`/`powerFlowResult` stay stale while UI shows `done`. No `invalidates`, rerun-before-continue, loop guard, or fingerprint. | `NodeEngine.ts:195-218` (`completeNode`), shell `:232` re-render after reset | Stale downstream results presented as current. | ✅ **Resolved (2026-11-02)** — `completeNode` detects redo via reactivation tracking + a per-node output fingerprint; on a changed redo it resets every transitive downstream node to `pending` and clears their declared outputs (the graph is the invalidation map), then auto re-runs. No-op redos leave the pipeline intact. m5 (palette) fixed so redo is reachable. Tests: `workflow/NodeEngine.test.ts`. |
+| M4 | **Major** | **Writer discipline is advisory, not enforced — and already leaking.** `ModuleProps.onUpdate` + `engine.updateContext` merge arbitrary partials; nothing validates writes against `io.outputs`. `region-select` writes `gridData`/`gridResultIds` not in its `io.outputs`; `grid-generation` *declares* them but never writes. `region`/`polygons` have two writers (`model-load` + `region-select`) ⇒ phantom ordering edges onto every consumer. | `RegionSelectModule.tsx:112`, `GridGenerationModule.tsx:30`, `NodeEngine.ts:152` | Dual-writer keys; contract drift. | ✅ **Resolved (2026-11-02)** — `validateGraph` enforces one-writer-per-key; contracts corrected (`region-select` owns area+grid; `grid-generation` checkpoint; `model-load` pre-seeder); `run()` outputs filtered to `io.outputs`. Deliberate exception: the interactive `onUpdate` path is not key-filtered (the shell + model-diff own `modelYaml`/edit-mode keys); the validator is the contract gate. |
+| m5 | Minor | **Node palette never renders.** Shell gating `activeNode?.id == "done"` compares a node id to the literal string `"done"` — always false. | `ModelBuilderConfigurator.tsx:480` | Palette is dead UI. | ✅ **Resolved (2026-11-02)** — palette renders unconditionally (also the redo hook for M3). |
 | m6 | Minor | **`activateNode` has no readiness check** — a pending node with unmet deps can be activated and run against an empty context. | `NodeEngine.ts:175` | Skipped/forward activation of incomplete nodes. | Open |
-| m7 | Minor | **`validateGraph` satisfiability only credits explicit `dependsOn`** producers, but `buildGraph` also adds implicit `io.required` edges ⇒ a valid implicit-edge workflow fails validation (conservative inconsistency). | `WorkflowGraph.ts:281-291` | Validator/runtime disagree. | Open |
+| m7 | Minor | **`validateGraph` satisfiability only credits explicit `dependsOn`** producers, but `buildGraph` also adds implicit `io.required` edges ⇒ a valid implicit-edge workflow fails validation (conservative inconsistency). | `WorkflowGraph.ts:281-291` | Validator/runtime disagree. | ✅ **Resolved (2026-11-02)** — satisfiability credits any other producer (matches `deriveEdges`); required by the M4 ownership change. |
 | m8 | Minor | **Fresh runs read dead `advancedParams`.** `grid-generation`/`power-flow`/`technology-selection` read `advancedParams`, which only `model-load` seeds and `simulation-settings` no longer writes (it writes `simulationSettings`). On a no-import run `advancedParams.pypsa_enabled` is `undefined` ⇒ power flow is effectively always off. | `PowerFlowModule.tsx:39`, `SimulationSettingsModule.tsx:245` | Power flow dead on default path. | Open |
 
 ## 6. Design decisions & open questions
 
-- **Keep legacy `WorkflowEngine` + `steps[]`** for backward compatibility; the graph
+- **Legacy `WorkflowEngine` + `steps[]`** kept for backward compatibility; the graph
   engine and node form are the forward path. Decided.
-- **Headless execution** — the thesis module contract separates a `run()` (computation)
-  from the UI `Component`. This feature has no `run()`, which is the root of C1. **To
-  design next.**
-- **Invalidation** is explicitly not implemented; the correct semantics (invalidated ⇒
-  rerun before continue, partial/port-scoped, loop guard, config fingerprint) are
-  specified in the thesis `Module.md` and should be ported (drives M3, and parts of C2/M4).
+- **Headless execution** — `run()` on the module contract, executed by `auto` nodes
+  (C1). Resolved 2026-11-02.
+- **Invalidation** — redo via reactivation + per-node output fingerprint; transitive
+  downstream reset (M3). Resolved 2026-11-02. Remaining refinement: selective/port-scoped
+  invalidation and a loop guard are not yet in (the acyclic graph + fingerprint already
+  prevent infinite recompute).
+- **One writer per key** — enforced at graph-build (M4). Deliberate exception: the
+  interactive `onUpdate` path stays unfiltered because the shell + model-diff own
+  `modelYaml`/edit-mode keys; the validator is the contract gate. Decided.
 - **Which workflows should actually ship** — currently one registered. The dead JSONs
   should either be wired into `workflows/index.ts` or removed (open).
+- **Remaining minors (m6, m8)** — `activateNode` readiness check; `advancedParams`
+  freshness for power-flow on fresh runs. Also `defaults`-on-skip is unimplemented.
 
 ## 7. Corrections to earlier docs (reconciliation)
 

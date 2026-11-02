@@ -35,36 +35,38 @@
 
 ## Major
 
-- [ ] **M3 — no invalidation / data causality.**
+- [x] **M3 — no invalidation / data causality.** ✅ Resolved 2026-11-02.
   - Root cause: a done node never reruns; re-completing upstream does not reset downstream.
     Change region after grid generation ⇒ stale `gridData`/`powerFlowResult` while UI shows
     `done`. `Module.md` §6 semantics (`invalidates`, rerun-before-continue, loop guard,
     fingerprint) are absent.
-  - Fix direction: add `invalidates` to nodes/modules; on upstream re-complete, reset
-    invalidated downstream nodes to `pending`, clear their produced keys, rerun `auto`,
-    loop-guard once-per-pass, fingerprint writes.
+  - Fix: `completeNode` detects redo (reactivation tracking + per-node output
+    fingerprint); a changed redo resets every transitive downstream node to `pending`
+    and clears its outputs (the graph is the invalidation map), then auto re-runs. No-op
+    redos are inert. m5 (palette) fixed so redo is reachable. Verified by
+    `workflow/NodeEngine.test.ts`.
 
-- [ ] **M4 — writer discipline is convention only, and already violated.**
+- [x] **M4 — writer discipline is convention only, and already violated.** ✅ Resolved 2026-11-02.
   - Root cause: `updateContext` merges arbitrary partials; nothing validates writes against
     `io.outputs`. `region-select` writes `gridData`/`gridResultIds`
     (`RegionSelectModule.tsx:112`) not declared; `grid-generation` declares them but never
     writes. `region`/`polygons` have dual writers.
-  - Fix direction: enforce writes against `io.outputs` in the engine; validate
-    one-writer-per-key at graph build. Decide the importer special case: `model-load`
-    seeds the store (region/polygons/advancedParams) — treat it as a pre-seeder, not a
-    producer, so it doesn't violate the rule.
-  - Partial (2026-11-02): the **auto** path now filters `run()` outputs to declared keys
-    (`mergeRunOutputs`). Interactive `onUpdate` path still unvalidated.
+  - Fix: `validateGraph` enforces one-writer-per-key; contracts corrected — `region-select`
+    owns area + grid generation, `grid-generation` is a checkpoint node (outputs none),
+    `model-load` is a pre-seeder (not a producer; drops the phantom/one-writer collisions).
+    `run()` outputs already filtered (C1). Deliberate exception: the interactive `onUpdate`
+    path is not key-filtered (the shell + model-diff own `modelYaml`/edit-mode keys); the
+    validator is the contract gate.
 
 ## Minor
 
-- [ ] **m5 — node palette never renders.** `ModelBuilderConfigurator.tsx:480`
-      `activeNode?.id == "done"` compares a node id to the literal string `"done"`.
+- [x] **m5 — node palette never renders.** ✅ Resolved 2026-11-02. `ModelBuilderConfigurator.tsx:480`
+      `activeNode?.id == "done"` — palette now renders unconditionally (also the redo/undo hook for M3).
 - [ ] **m6 — `activateNode` has no readiness check** (`NodeEngine.ts:175`) — a pending node
       with unmet deps can be activated and run against an empty context.
-- [ ] **m7 — `validateGraph` satisfiability only credits explicit `dependsOn` producers,**
-      but `buildGraph` adds implicit `io.required` edges ⇒ validator/runtime disagree
-      (`WorkflowGraph.ts:281`).
+- [x] **m7 — `validateGraph` satisfiability only credits explicit `dependsOn` producers,** ✅ Resolved 2026-11-02
+      but `buildGraph` adds implicit `io.required` edges ⇒ validator/runtime disagree. Now
+      satisfied by any other producer (`WorkflowGraph.ts:281`) — required by the M4 ownership change.
 - [ ] **m8 — fresh runs read dead `advancedParams`.** `grid-generation`/`power-flow`/
       `technology-selection` read `advancedParams`, which only `model-load` seeds and
       `simulation-settings` no longer writes ⇒ `advancedParams.pypsa_enabled` is undefined

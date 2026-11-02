@@ -93,6 +93,28 @@ into a logical module and replaces the existing module where one exists.
 
 ## Changelog
 
+### 2026-11-02 — Majors resolved (M3 invalidation, M4 writer discipline; m5, m7)
+
+- **M3 — invalidation / data causality.** `completeNode` now detects a redo (node
+  re-activated from the palette) and compares a per-node output fingerprint (JSON of the
+  module's declared output values). On a changed redo it resets every transitive
+  downstream node to `pending` and clears their declared outputs — the graph itself is
+  the invalidation map (no separate `invalidates` field) — then auto-runs the newly-ready
+  auto nodes. A redo that changes nothing (fingerprint equal) leaves the pipeline intact.
+- **M4 — one writer per key.** `validateGraph` now rejects any workflow where a context
+  key is produced by more than one node. Contracts corrected to match reality:
+  `region-select` owns the area **and** grid generation (`outputs` now include
+  `gridData`/`gridResultIds`); `grid-generation` became a checkpoint node (`outputs: []`);
+  `model-load` is a pre-seeder that no longer declares `region`/`polygons`/`modelId`
+  (removing the phantom-edges + `modelId` dual-writer). `run()` outputs were already
+  filtered to `io.outputs` (C1). Interactive `onUpdate` stays unfiltered by design (the
+  shell + model-diff own `modelYaml`/edit-mode keys).
+- **m5** — node palette now renders (was gated on `activeNode?.id == "done"`); this is
+  also the redo hook that makes M3 reachable.
+- **m7** — `validateGraph` satisfiability now credits any other producer (matches
+  `deriveEdges`); the M4 ownership change required it.
+- Verified: `npx tsc --noEmit -p tsconfig.json` exits 0; vitest 14/14 green.
+
 ### 2026-11-02 — Critical execution fixes (C1, C2)
 
 - **C1 — auto nodes now execute.** Added optional headless `run()` to the module
