@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -165,7 +166,7 @@ type buemRun struct {
 // building is in unresolved with the cause.
 func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, weatherProvider string, ignisClient envelopeUValueResolver, model commonModels.Model, p payload.CalculationPayload, refurbishmentLevel ignis.RefurbishmentLevel) buemRun {
 	period := modelWeatherPeriod(model.Config)
-	envelopeByOSMID, further, weatherJSON := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
+	envelopeByOSMID, further, weatherJSON, weatherReason := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
 	parts := partIDs(envelopeByOSMID)
 
 	country := ""
@@ -175,7 +176,10 @@ func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cli
 	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, further, refurbishmentLevel, modelCookingSettings(model.Config))
 	buildings = foldPartFailures(parts, buildings, resolved, unresolved)
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
-		reason := "no weather data for this area"
+		reason := weatherReason
+		if reason == "" {
+			reason = reasonNoWeather
+		}
 		if len(buildings) == 0 {
 			reason = "no building had a resolved 3D envelope"
 		}
@@ -198,23 +202,23 @@ func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cli
 // the further ways among its buildings (see buemRun.further). All degrade to
 // nil (simply omitted, not a job failure) on any resolution problem, so a
 // building without 3D data still runs.
-func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string][]city2tabula.Building, map[string]string, json.RawMessage) {
+func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string][]city2tabula.Building, map[string]string, json.RawMessage, string) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)
-		return nil, nil, nil
+		return nil, nil, nil, ""
 	}
 	country := *model.Country
 
 	xmin, ymin, xmax, ymax, err := geo.BBoxFromGeoJSON(json.RawMessage(model.Coordinates))
 	if err != nil {
 		log.Warnf("model %d: failed to derive bbox from coordinates, skipping envelope/weather: %v", model.ID, err)
-		return nil, nil, nil
+		return nil, nil, nil, ""
 	}
 	bbox := city2tabula.Bbox{Xmin: xmin, Ymin: ymin, Xmax: xmax, Ymax: ymax}
 
 	envelope, further := resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
-	weatherJSON := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), period, bbox)
-	return envelope, further, weatherJSON
+	weatherJSON, weatherReason := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), period, bbox)
+	return envelope, further, weatherJSON, weatherReason
 }
 
 // resolveEnvelope fetches the topology's buildings from City2TABULA. When
@@ -342,21 +346,37 @@ func pollRunStatus(ctx context.Context, c2t *city2tabula.Client, runID string) e
 	return fmt.Errorf("city2tabula run %s did not complete within %s", runID, runPollTimeout)
 }
 
+// Reasons a building gets when the area's weather could not be fetched.
+const (
+	reasonNoWeather          = "no weather data for this area"
+	reasonWeatherUnavailable = "weather service unavailable, run the analysis again"
+)
+
 // resolveWeather fetches one point-weather timeseries for the bbox centroid
-// and model.FromDate's year, shared across every building — not a per
+// and model.FromDate's year, shared across every building, not a per
 // building fetch. Buildings in one model's area of interest are close enough
 // that a single point is a reasonable stand-in; splitting per building is a
-// straightforward upgrade if that stops holding.
-func resolveWeather(ctx context.Context, log *logrus.Entry, wx *weather.Client, provider string, period weather.Period, bbox city2tabula.Bbox) json.RawMessage {
+// straightforward upgrade if that stops holding. Without weather it returns
+// the reason the area's buildings are recorded with.
+func resolveWeather(ctx context.Context, log *logrus.Entry, wx *weather.Client, provider string, period weather.Period, bbox city2tabula.Bbox) (json.RawMessage, string) {
 	lat := (bbox.Ymin + bbox.Ymax) / 2
 	lon := (bbox.Xmin + bbox.Xmax) / 2
 
 	body, err := wx.GetPointWeather(ctx, lat, lon, period, provider)
 	if err != nil {
-		log.Warnf("weather-serve request failed, proceeding without weather data: %v", err)
-		return nil
+		log.Warnf("weather at %.4f,%.4f failed, proceeding without weather data: %v", lat, lon, err)
+		return nil, weatherFailureReason(err)
 	}
-	return body
+	return body, ""
+}
+
+// weatherFailureReason names a weather-serve rejection with its message, and
+// any other failure as the service being unavailable.
+func weatherFailureReason(err error) string {
+	if errors.Is(err, weather.ErrRejected) {
+		return fmt.Sprintf("%s (%v)", reasonNoWeather, err)
+	}
+	return reasonWeatherUnavailable
 }
 
 // buildingOSMIDs collects the distinct osm_id of every BasePOI (building)
