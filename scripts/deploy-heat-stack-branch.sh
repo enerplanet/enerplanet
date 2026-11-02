@@ -82,7 +82,7 @@ Options:
   --workdir DIR          where the generated override files go
                          (default <repo>/.local/heat-stack/NAME)
   --tentacron-port N     host port for TentaCron (default 8400)
-  --pylovo-port N        host port for PyLovo    (default 8186)
+  --pylovo-port N        host port for PyLovo    (default 8187)
   --weather-api-key K    key TentaCron presents to weather-serve
                          (default dev-weather-key, matching TentaCron's .env.dev)
   --volumes              `down` also removes this stack's volumes
@@ -198,31 +198,27 @@ port_in_use() {
   return 1
 }
 
-# pick_port WANTED LABEL: sets PICKED_PORT to WANTED when free, else to the
-# next free port above it. It writes a variable rather than printing, so that
-# the failure path can still abort the whole script from inside the function.
-PICKED_PORT=""
-pick_port() {
-  local wanted="$1" label="$2" p="$1" i=0
-  while port_in_use "$p"; do
-    i=$((i + 1))
-    [ "$i" -le 100 ] || die "no free port found for $label within 100 above $wanted"
-    p=$((p + 1))
-  done
-  if [ "$p" != "$wanted" ]; then
-    warn "$label: host port $wanted is already in use, using $p instead"
-  fi
-  PICKED_PORT="$p"
+# The two ports this stack publishes; every other service is reachable only by
+# name on the stack's networks. Production reserves 8400 and 8187 for them, so
+# a port held by anything but this prefix aborts instead of moving.
+resolve_ports() {
+  TENTACRON_HOST_PORT="${TENTACRON_HOST_PORT:-$TENTACRON_PORT}"
+  PYLOVO_HOST_PORT="${PYLOVO_HOST_PORT:-8187}"
+  require_port "$TENTACRON_HOST_PORT" tentacron --tentacron-port
+  require_port "$PYLOVO_HOST_PORT" pylovo --pylovo-port
 }
 
-# The two ports this stack publishes. Everything else is private, so these are
-# the only host ports it can collide on; both are moved to the next free one
-# when the wanted port is taken.
-resolve_ports() {
-  pick_port "${TENTACRON_HOST_PORT:-$TENTACRON_PORT}" tentacron
-  TENTACRON_HOST_PORT="$PICKED_PORT"
-  pick_port "${PYLOVO_HOST_PORT:-8186}" pylovo
-  PYLOVO_HOST_PORT="$PICKED_PORT"
+# require_port PORT LABEL FLAG: abort when PORT is taken by something that is
+# not a container of this prefix (a redeploy keeps its own ports).
+require_port() {
+  if port_in_use "$1" && ! held_by_prefix "$1"; then
+    die "$2: host port $1 is already in use; stop what holds it, or pass $3 N"
+  fi
+}
+
+# held_by_prefix PORT: true when a container of this prefix publishes PORT.
+held_by_prefix() {
+  docker ps --filter "name=^$PREFIX-" --format '{{.Ports}}' | grep -qE "(^|, )[^ ]*:$1->"
 }
 
 # ── Repositories ──────────────────────────────────────────────────────────────

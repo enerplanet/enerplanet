@@ -97,8 +97,8 @@ data again.
 | `--prefix NAME` | Required. Namespaces every container, network and volume. Lowercase letters, digits and dashes |
 | `--repo DIR` | The enerplanet checkout to use. Default: the one the script lives in |
 | `--workdir DIR` | Where the generated override files go. Default `<repo>/.local/heat-stack/NAME` |
-| `--tentacron-port N` | Host port for TentaCron. Default `8400`, or the next free port |
-| `--pylovo-port N` | Host port for PyLovo. Default `8186`, or the next free port |
+| `--tentacron-port N` | Host port for TentaCron. Default `8400`; the script stops if it is taken |
+| `--pylovo-port N` | Host port for PyLovo. Default `8187`; the script stops if it is taken |
 | `--weather-api-key K` | Key TentaCron presents to weather-serve. Default `dev-weather-key` |
 | `--volumes` | `down` also removes the prefix's volumes |
 | `--dry-run` | Print the plan and change nothing |
@@ -128,4 +128,4 @@ MEME, whose alias comes from the override.
 | A build fails | The branch tip does not build | Fix the branch, or set `<SERVICE>_BRANCH` to one that builds |
 | `render` reports a missing `environment/docker-compose.yml`, or a service with neither an image nor a build context | The branch predates the role-named compose layout | Set `<SERVICE>_BRANCH` to a branch that has it |
 | Two containers answer one service name, such as an old `<prefix>-weather-serve` beside `<prefix>-weather-api-1` | The prefix was deployed before the role-named layout; its old containers are not part of the new projects | Run `down` with the script version that deployed it, or remove the old `<prefix>-` containers, then `up` |
-| Port warning `using 8401 instead` | The default port is taken | Pin it with `--tentacron-port` or `--pylovo-port` |
+| `tentacron: host port 8400 is already in use` (or `pylovo` with 8187) | Something other than this prefix holds the port | Stop what holds it; pass `--tentacron-port` or `--pylovo-port` only for a test stack |

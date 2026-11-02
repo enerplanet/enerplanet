@@ -91,7 +91,7 @@ Docker memory: 16 GB, more for larger models.
 | `--repo DIR` | The enerplanet checkout to use. Defaults to the one this script lives in. |
 | `--workdir DIR` | Where the generated override files go. Defaults to `<repo>/.local/heat-stack/NAME`. |
 | `--tentacron-port N` | Host port for TentaCron. Default `8400`. |
-| `--pylovo-port N` | Host port for PyLovo. Default `8186`. |
+| `--pylovo-port N` | Host port for PyLovo. Default `8187`. |
 | `--no-fixtures` | Do not git-lfs pull or load the fixtures. |
 | `--fixtures-dir DIR` | Read the fixture data from `DIR` instead of `<repo>/fixtures`. |
 | `--weather-api-key K` | Key TentaCron presents to weather-serve. Default `dev-weather-key`, matching TentaCron's `.env.dev`. |
@@ -99,18 +99,19 @@ Docker memory: 16 GB, more for larger models.
 | `--dry-run` | Print the plan and change nothing. |
 | `-h`, `--help` | Full usage text. |
 
-### Ports are chosen for you
+### Published ports
 
-Only two ports are published, so they are the only ones that can collide. If
-`8400` or `8186` is already taken, the script moves to the next free port and
-says so:
+Only TentaCron (`8400`) and PyLovo (`8187`) publish a host port. Every other
+service is reachable only by name on the stack's networks, through TentaCron.
+Production reserves both ports for this stack. If either is already taken, the
+script stops:
 
 ```
-warn tentacron: host port 8400 is already in use, using 8401 instead
+err  tentacron: host port 8400 is already in use; stop what holds it, or pass --tentacron-port N
 ```
 
-Pin them with `--tentacron-port` / `--pylovo-port` when you need a fixed value
-the caller has to know, such as `TENTACRON_SERVICE_URL` in a backend's config.
+Pass `--tentacron-port` / `--pylovo-port` only for a second stack on the same
+host, such as a test prefix.
 
 ---
 
@@ -125,7 +126,7 @@ everything, then loads the fixtures. It ends with:
 ```
 Heat stack up under prefix 'sim2'
   TentaCron   http://localhost:8400     (the stack's only entry point)
-  PyLovo      http://localhost:8186
+  PyLovo      http://localhost:8187
   networks    sim2-tentacron-net, sim2-pylovo-net  (private; no host ports on the other services)
   workdir     /path/to/enerplanet/.local/heat-stack/sim2
 
@@ -171,7 +172,7 @@ NAME   DRIVER
 ==> ports
 PREFIX=sim2
 TENTACRON_HOST_PORT=8400
-PYLOVO_HOST_PORT=8186
+PYLOVO_HOST_PORT=8187
 …
 ```
 
