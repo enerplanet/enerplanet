@@ -3,7 +3,7 @@ import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
 
-type StepStatus = "complete" | "active" | "available" | "pending";
+type StepStatus = "complete" | "active" | "available" | "pending" | "stale";
 
 interface WorkflowBarProps {
 	/** Areas drawn so far; the first step is done once there is one. */
@@ -13,10 +13,18 @@ interface WorkflowBarProps {
 	/** Custom grid mode: transformers can be added and buildings assigned. */
 	siteMode: boolean;
 	hasAddedTransformer: boolean;
+	/** The shown grid is out of date and needs Regenerate grid. */
+	gridStale?: boolean;
 }
 
 /** Centres an overlay on the part of the map the sidebar does not cover. */
 export const MAP_TOP_CENTRE = { left: "calc((100% - var(--sidebar-offset, 0rem)) / 2)" } as const;
+
+const gridStatus = (generating: boolean, hasGrid: boolean, stale: boolean): StepStatus => {
+	if (generating) return "active";
+	if (!hasGrid) return "pending";
+	return stale ? "stale" : "complete";
+};
 
 /** The configurator's workflow as a pill of numbered steps over the map. */
 export const WorkflowBar: FC<WorkflowBarProps> = ({
@@ -25,6 +33,7 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 	hasGridData,
 	siteMode,
 	hasAddedTransformer,
+	gridStale = false,
 }) => {
 	const { t } = useTranslation();
 	const steps: { key: string; label: string; status: StepStatus; optional?: boolean }[] = [
@@ -36,7 +45,7 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 		{
 			key: "grid",
 			label: t("workflow.gridGeneration", "Grid Generation"),
-			status: isGeneratingGrid ? "active" : hasGridData ? "complete" : "pending",
+			status: gridStatus(isGeneratingGrid, hasGridData, gridStale),
 		},
 		...(siteMode
 			? [
@@ -69,7 +78,8 @@ export const WorkflowBar: FC<WorkflowBarProps> = ({
 							step.status === "complete" && "bg-primary text-primary-foreground",
 							step.status === "active" && "border-2 border-primary text-primary",
 							step.status === "available" && "border-2 border-primary/60 text-foreground",
-							step.status === "pending" && "border border-border text-muted-foreground"
+							step.status === "pending" && "border border-border text-muted-foreground",
+							step.status === "stale" && "border-2 border-amber-500 text-amber-600 dark:text-amber-400"
 						)}
 					>
 						{step.status === "complete" ? (

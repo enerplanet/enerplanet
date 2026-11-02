@@ -240,6 +240,107 @@ func (s *SiteHandler) PutSiteTransformers(c *gin.Context) {
 	s.relay(c, http.MethodPut, fmt.Sprintf("/sites/%d/transformers", id), payload)
 }
 
+// buildingExclusion leaves a site building out of the grid or takes it back
+// in; OSMID is the building's osm_id in the site grid, a c2t: key for a 3D
+// building.
+type buildingExclusion struct {
+	OSMID    string `json:"osm_id" binding:"required"`
+	Excluded bool   `json:"excluded"`
+}
+
+// siteBuilding is a building of GET /sites/{id}/buildings with its overrides.
+type siteBuilding struct {
+	BuildingID int            `json:"building_id"`
+	OSMID      *string        `json:"osm_id"`
+	Source     string         `json:"source"`
+	SourceID   *string        `json:"source_id"`
+	Overrides  map[string]any `json:"overrides"`
+}
+
+// key is the building's osm_id as the site grid shows it (see keyBuildings3D).
+func (b siteBuilding) key() string {
+	if b.Source == "city2tabula" && b.SourceID != nil {
+		return city2tabula.ObjectKey(*b.SourceID)
+	}
+	if b.OSMID != nil {
+		return *b.OSMID
+	}
+	return ""
+}
+
+// PatchSiteBuildings sets which of the site's buildings are left out of its
+// grid. pylovo's PATCH replaces a building's overrides as a whole, so each
+// building's other overrides are read first and sent back unchanged. Excluding
+// a building the site does not hold changes nothing; including one is refused.
+// The answer carries the site's revision after the change.
+func (s *SiteHandler) PatchSiteBuildings(c *gin.Context) {
+	var exclusions []buildingExclusion
+	if err := c.ShouldBindJSON(&exclusions); err != nil || len(exclusions) == 0 {
+		httputil.BadRequest(c, fmt.Sprintf("expected a non-empty JSON array of {osm_id, excluded}: %v", err))
+		return
+	}
+	id, site, ok := s.ownedSite(c)
+	if !ok {
+		return
+	}
+	body, _, ok := s.call(c, http.MethodGet, fmt.Sprintf("/sites/%d/buildings", id), nil)
+	if !ok {
+		return
+	}
+	var list struct {
+		Features []struct {
+			Properties siteBuilding `json:"properties"`
+		} `json:"features"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		httputil.BadGateway(c, fmt.Sprintf("Unreadable buildings of site %d from Pylovo: %v", id, err))
+		return
+	}
+	byKey := make(map[string]siteBuilding, len(list.Features))
+	for _, f := range list.Features {
+		byKey[f.Properties.key()] = f.Properties
+	}
+	patches, unknown := exclusionPatches(exclusions, byKey)
+	if len(unknown) > 0 {
+		httputil.BadRequest(c, fmt.Sprintf("site %d holds no building %s to include", id, strings.Join(unknown, ", ")))
+		return
+	}
+	if len(patches) == 0 {
+		httputil.SuccessResponse(c, gin.H{"revision": site["revision"]})
+		return
+	}
+	payload, err := json.Marshal(patches)
+	if err != nil {
+		httputil.InternalError(c, errFailedMarshalPayload)
+		return
+	}
+	s.relay(c, http.MethodPatch, fmt.Sprintf("/sites/%d/buildings", id), payload)
+}
+
+// exclusionPatches turns exclusions into pylovo building patches that keep
+// each building's other overrides. It skips excluding a building no key
+// names, and returns the keys of buildings to include that no building has.
+func exclusionPatches(exclusions []buildingExclusion, byKey map[string]siteBuilding) ([]map[string]any, []string) {
+	patches := make([]map[string]any, 0, len(exclusions))
+	var unknown []string
+	for _, e := range exclusions {
+		b, found := byKey[e.OSMID]
+		if !found {
+			if !e.Excluded {
+				unknown = append(unknown, e.OSMID)
+			}
+			continue
+		}
+		overrides := map[string]any{}
+		for k, v := range b.Overrides {
+			overrides[k] = v
+		}
+		overrides["excluded"] = e.Excluded
+		patches = append(patches, map[string]any{"building_id": b.BuildingID, "overrides": overrides})
+	}
+	return patches, unknown
+}
+
 // ownedSite fetches the site named by the :id parameter and answers 404 unless
 // the caller owns it, so other users' site ids are not revealed.
 func (s *SiteHandler) ownedSite(c *gin.Context) (int, map[string]any, bool) {

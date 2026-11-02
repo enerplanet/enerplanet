@@ -1539,7 +1539,6 @@
       "back": "Terug"
     },
     "mapOverlay": {
-      "analyzingArea": "Gebied wordt geanalyseerd",
       "canHostChargers": "Mogelijke laadpunten: {{count}}",
       "limitedChargers": "Beperkt, laadpunten: {{count}}",
       "connectedBuildings": "Aangesloten gebouwen",

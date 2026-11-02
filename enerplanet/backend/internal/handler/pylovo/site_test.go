@@ -68,6 +68,8 @@ type fakeSitePylovo struct {
 	mu       sync.Mutex
 	osmIDs   []string
 	requests []string
+	// buildings, when set, is the GET /sites/7/buildings answer instead of one built from osmIDs.
+	buildings string
 }
 
 func (f *fakeSitePylovo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +84,10 @@ func (f *fakeSitePylovo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /sites/7":
 		fmt.Fprint(w, `{"site_id":7,"user_id":"owner","revision":1}`)
 	case "GET /sites/7/buildings":
+		if f.buildings != "" {
+			fmt.Fprint(w, f.buildings)
+			return
+		}
 		var features []string
 		for i, id := range f.osmIDs {
 			features = append(features, fmt.Sprintf(`{"properties":{"building_id":%d,"osm_id":%q,"f_class":"house"}}`, i+1, id))
@@ -141,6 +147,7 @@ func serveSiteUsedBy(t *testing.T, fake *fakeSitePylovo, linked buildings3D, mod
 	r.POST("/sites/:id/generate", sites.GenerateSite)
 	r.GET("/sites/:id/grid", sites.GetSiteGrid)
 	r.PUT("/sites/:id/transformers", sites.PutSiteTransformers)
+	r.PATCH("/sites/:id/buildings", sites.PatchSiteBuildings)
 	r.DELETE("/sites/:id", sites.DeleteSite)
 	r.POST("/power-flow", h.RunPowerFlow)
 
@@ -311,5 +318,78 @@ func TestDeleteSite_deletesAnUnusedSite(t *testing.T) {
 	}
 	if got := fake.sent("DELETE /sites/7"); len(got) != 1 {
 		t.Errorf("pylovo delete requests = %q, want one", got)
+	}
+}
+
+// siteBuildingsWithOverrides holds an OSM copy with a class override, a 3D
+// building with none, and an OSM copy the user excluded.
+const siteBuildingsWithOverrides = `{"features":[
+{"properties":{"building_id":1,"osm_id":"100","source":"osm","source_id":null,"overrides":{"measured_peak_kw":null,"measured_yearly_kwh":null,"dwellings":null,"extra_loads":[],"excluded":false,"f_class":"retail"}}},
+{"properties":{"building_id":2,"osm_id":null,"source":"city2tabula","source_id":"DEBW_1","overrides":null}},
+{"properties":{"building_id":3,"osm_id":"300","source":"osm","source_id":null,"overrides":{"measured_peak_kw":null,"measured_yearly_kwh":null,"dwellings":null,"extra_loads":[],"excluded":true,"f_class":null}}}]}`
+
+// Exclusions name buildings as the site grid shows them, and pylovo gets them
+// by building id with every other override kept, since its PATCH replaces a
+// building's overrides as a whole.
+func TestPatchSiteBuildings_setsExcludedKeepingOverrides(t *testing.T) {
+	fake := &fakeSitePylovo{buildings: siteBuildingsWithOverrides}
+	rec := serveSite(t, fake, nil, "owner", http.MethodPatch, "/sites/7/buildings",
+		`[{"osm_id":"100","excluded":true},{"osm_id":"c2t:DEBW_1","excluded":true},{"osm_id":"300","excluded":false}]`)
+
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"revision":2`) {
+		t.Fatalf("status = %d body = %s, want 200 with pylovo's revision", rec.Code, rec.Body)
+	}
+	sent := fake.sent("PATCH /sites/7/buildings ")
+	if len(sent) != 1 {
+		t.Fatalf("pylovo PATCH requests = %v, want one", sent)
+	}
+	var got []struct {
+		BuildingID int            `json:"building_id"`
+		Overrides  map[string]any `json:"overrides"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(sent[0], "PATCH /sites/7/buildings ")), &got); err != nil {
+		t.Fatalf("unreadable PATCH body %q: %v", sent[0], err)
+	}
+	want := []struct {
+		id       int
+		excluded bool
+		fClass   any
+	}{{1, true, "retail"}, {2, true, nil}, {3, false, nil}}
+	if len(got) != len(want) {
+		t.Fatalf("patches = %+v, want %d", got, len(want))
+	}
+	for i, w := range want {
+		if got[i].BuildingID != w.id || got[i].Overrides["excluded"] != w.excluded || got[i].Overrides["f_class"] != w.fClass {
+			t.Errorf("patch %d = %+v, want building %d excluded=%v f_class=%v", i, got[i], w.id, w.excluded, w.fClass)
+		}
+	}
+}
+
+// Taking back in a building the site does not hold is refused, naming it,
+// and nothing is written.
+func TestPatchSiteBuildings_includingUnknownBuildingIsRefused(t *testing.T) {
+	fake := &fakeSitePylovo{buildings: siteBuildingsWithOverrides}
+	rec := serveSite(t, fake, nil, "owner", http.MethodPatch, "/sites/7/buildings",
+		`[{"osm_id":"100","excluded":true},{"osm_id":"999","excluded":false}]`)
+
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "999") {
+		t.Fatalf("status = %d body = %s, want 400 naming 999", rec.Code, rec.Body)
+	}
+	if got := fake.sent("PATCH"); len(got) != 0 {
+		t.Errorf("pylovo received %q, want no PATCH", got)
+	}
+}
+
+// A building the site does not hold is already left out of its grid, so
+// excluding it writes nothing and the site's revision comes back.
+func TestPatchSiteBuildings_excludingUnknownBuildingChangesNothing(t *testing.T) {
+	fake := &fakeSitePylovo{buildings: siteBuildingsWithOverrides}
+	rec := serveSite(t, fake, nil, "owner", http.MethodPatch, "/sites/7/buildings", `[{"osm_id":"999","excluded":true}]`)
+
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"revision":1`) {
+		t.Fatalf("status = %d body = %s, want 200 with the site's revision 1", rec.Code, rec.Body)
+	}
+	if got := fake.sent("PATCH"); len(got) != 0 {
+		t.Errorf("pylovo received %q, want no PATCH", got)
 	}
 }

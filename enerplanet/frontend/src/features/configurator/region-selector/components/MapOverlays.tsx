@@ -1,7 +1,6 @@
 import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets, X } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
-import { MAP_TOP_CENTRE } from "@/components/map-controls/WorkflowBar";
 import { useTranslation } from "@spatialhub/i18n";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
@@ -78,7 +77,6 @@ interface MapOverlaysProps {
     /** The BuEM results stored for the saved model, by osm_id; empty before the first save. */
     demandProfiles?: Map<string, StoredDemandProfile>;
     isDraggingTech?: boolean;
-    isGeneratingGrid?: boolean;
     simulateEV?: boolean;
     gridIdToTrafoCapacity?: Record<number, number>;
     gridIdToPeakLoad?: Record<number, number>;
@@ -207,7 +205,6 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
     mapRef,
     demandProfiles,
     isDraggingTech = false,
-    isGeneratingGrid = false,
     simulateEV = false,
     gridIdToTrafoCapacity = {},
     gridIdToPeakLoad = {}
@@ -280,29 +277,6 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
 
     return (
         <>
-            {/* Grid Generation Loader - minimal floating pill, in the slot below the workflow pill */}
-            {isGeneratingGrid && (
-                <div style={MAP_TOP_CENTRE} className="absolute top-16 -translate-x-1/2 z-40">
-                    <div className="md-rise flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
-                        {/* Spinning icon */}
-                        <div className="relative w-5 h-5">
-                            <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-                            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
-                        </div>
-
-                        {/* Text */}
-                        <span className="text-sm font-medium text-foreground whitespace-nowrap">{t("simulation.mapOverlay.analyzingArea")}</span>
-
-                        {/* Animated dots */}
-                        <span className="flex items-center gap-0.5">
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </span>
-                    </div>
-                </div>
-            )}
-
             {drawHintKey && (
                 <CursorHint mapRef={mapRef} className="z-20">
                     <div className="md-fade-in bg-background dark:bg-gray-800 border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground">

@@ -31,7 +31,7 @@ import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import { useConfiguratorModeStore } from "@/features/configurator/store/configuratorModeStore";
-import { useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
+import { selectGridStale, useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -304,7 +304,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const setConfiguratorMode = useConfiguratorModeStore((s) => s.setMode);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
-  const gridStale = useModelStore((s) => s.gridStale);
+  const gridStale = useModelStore(selectGridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
   const { scenario, periodYear, yearOptions, yearBounds, yearToCheck, keepYear, updateRange, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
