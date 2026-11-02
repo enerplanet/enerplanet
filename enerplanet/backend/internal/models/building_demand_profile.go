@@ -9,12 +9,15 @@ import (
 // Building demand profile status values. A row starts pending when a
 // resolution run begins, then moves to exactly one terminal state. Shared
 // marks an OSM way whose 3D building is resolved under another way, which
-// carries the whole building's demand.
+// carries the whole building's demand. NotHeated marks a building given no
+// heat demand by its use or size (see jobs.resolveBuildingUse), with the
+// reason in ErrorMessage.
 const (
-	DemandProfileStatusPending  = "pending"
-	DemandProfileStatusResolved = "resolved"
-	DemandProfileStatusFailed   = "failed"
-	DemandProfileStatusShared   = "shared"
+	DemandProfileStatusPending   = "pending"
+	DemandProfileStatusResolved  = "resolved"
+	DemandProfileStatusFailed    = "failed"
+	DemandProfileStatusShared    = "shared"
+	DemandProfileStatusNotHeated = "not_heated"
 )
 
 // BuildingDemandProfile is one building's BuEM-resolved annual energy profile,
@@ -44,6 +47,10 @@ type BuildingDemandProfile struct {
 	// KitchenKwhA are then 0 by construction, not measured.
 	BuildingType       *string `gorm:"size:32" json:"building_type,omitempty"`
 	RefurbishmentLevel string  `gorm:"size:16;not null;default:existing" json:"refurbishment_level"`
+	// UseType is the building's use and UseSource where it came from (user,
+	// 3d or osm); both nil when no source names a use (Other buildings).
+	UseType   *string `gorm:"size:64" json:"use_type,omitempty"`
+	UseSource *string `gorm:"size:8" json:"use_source,omitempty"`
 
 	HeatingKwhA     *float64 `json:"heating_kwh_a,omitempty"`
 	CoolingKwhA     *float64 `json:"cooling_kwh_a,omitempty"`

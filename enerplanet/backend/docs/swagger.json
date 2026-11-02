@@ -2058,6 +2058,15 @@
                 "tabula_variant_code": {
                     "type": "string",
                     "example": "DE.N.SFH.05.Gen.ReEx.001.001"
+                },
+                "use_source": {
+                    "type": "string",
+                    "example": "3d"
+                },
+                "use_type": {
+                    "description": "use_type is the building's use: a 3D data use (residential, ancillary,\nagriculture, ...) or an OpenStreetMap class; use_source is user, 3d or\nosm. Both are absent when no source names a use.",
+                    "type": "string",
+                    "example": "residential"
                 }
             }
         },
@@ -2564,6 +2573,10 @@
                 "failed": {
                     "type": "integer",
                     "example": 2
+                },
+                "not_heated": {
+                    "type": "integer",
+                    "example": 9
                 },
                 "pending": {
                     "type": "integer",

@@ -166,6 +166,7 @@
     "techLoadFailed": "Failed to load technology for editing",
     "heatAutoAssigned": "Heat technologies assigned automatically.",
     "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
+    "heatRemovedNotHeated": "Heat technology removed from {{count}} buildings that are not heated, such as garages and sheds.",
     "areaOverLimit": {
       "title": "This area holds {{buildings}} buildings; a model may hold {{limit}}",
       "description": "Reduce the area by about {{excess}} buildings. It stays on the map, and the grid is fetched once it fits."
@@ -1835,11 +1836,27 @@
         "restaurant": "Restaurant",
         "school": "School",
         "supermarket": "Supermarket",
-        "warehouse": "Warehouse"
+        "warehouse": "Warehouse",
+        "residential": "Residential",
+        "ancillary": "Ancillary building",
+        "agriculture": "Agricultural",
+        "industry": "Industrial",
+        "commercial": "Commercial",
+        "education": "Education",
+        "health": "Health care",
+        "hospitality": "Hospitality",
+        "public": "Public",
+        "retail": "Retail"
       },
       "buemFailed": "BuEM failed: {{reason}}",
       "buemShared": "Counted with another building: {{detail}}",
       "buemPending": "BuEM result pending",
+      "buemNotHeated": "Not heated: {{reason}}",
+      "useSource": {
+        "3d": "Use from the 3D data",
+        "osm": "Use from OpenStreetMap",
+        "user": "Use set by the user"
+      },
       "floors": "Floors",
       "height": "Height",
       "heightMedian": "Height (median)",

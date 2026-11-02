@@ -90,7 +90,7 @@ type DispatchMemePayload struct {
 // modelDemandResolver resolves a model's BuEM series; DemandResolver
 // implements it.
 type modelDemandResolver interface {
-	Resolve(ctx context.Context, modelID uint) (further map[string]string, err error)
+	Resolve(ctx context.Context, modelID uint) (resolvedWays, error)
 }
 
 // modelPVResolver is implemented by PVResolver.
@@ -158,7 +158,7 @@ func HandleDispatchMeme(
 	// 1. Build the calculation payload from the stored model, with the BuEM
 	//    series of its current config: a save resolves them in the background,
 	//    and a run started before that finishes would read none.
-	further, err := resolver.Resolve(ctx, model.ID)
+	ways, err := resolver.Resolve(ctx, model.ID)
 	if err != nil {
 		return modelstore.ServiceFailed(modelstore.ServiceBuem, fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err))
 	}
@@ -170,7 +170,10 @@ func HandleDispatchMeme(
 		return err
 	}
 	if calc, ok := built.(payload.CalculationPayload); ok {
-		covered := dropFurtherWayDemand(calc.Topology, further)
+		covered := dropFurtherWayDemand(calc.Topology, ways.further)
+		if n := dropUnheatedHeat(calc.Topology, ways.notHeated); n > 0 {
+			log.Warnf("model %d: removed the heat technology of %d buildings that are not heated", p.ModelID, n)
+		}
 		warning, err := checkDemandCoverage(calc.Topology, covered)
 		if err != nil {
 			return modelstore.ServiceFailed(modelstore.ServiceCity2TABULA, fmt.Errorf("model %d: %w", p.ModelID, err))

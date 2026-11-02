@@ -8,6 +8,9 @@
 // assigned techs resolve its heat demand.
 // ---------------------------------------------------------------------------
 
+import type { Feature } from "ol";
+import type { Geometry } from "ol/geom";
+
 import { normalizeFClass } from "./fClassUtils";
 import { isZeroHeatDemandClass } from "./heatDemand";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -110,4 +113,25 @@ export function hasHeatTech(techs: Record<string, unknown> | undefined): boolean
 export async function resolveHeatTechAssignment(techKey: string): Promise<Technology | undefined> {
   const product = defaultProduct(await loadCatalogue(), techKey);
   return product && asBuildingTechnology(product);
+}
+/**
+ * Applies a completed building analysis: each building in notHeated is marked
+ * heated false and loses its heat technologies and heat link; any other
+ * building loses that mark. Returns how many buildings lost a heat supply.
+ */
+export function applyNotHeated(buildings: Feature<Geometry>[], notHeated: Set<string>): number {
+  let dropped = 0;
+  for (const f of buildings) {
+    if (!notHeated.has(String(f.get("osm_id")))) {
+      f.unset("heated");
+      continue;
+    }
+    f.set("heated", false);
+    const techs = { ...(f.get("techs") || {}) };
+    if (hasHeatTech(techs) || f.get("heat_supplier")) dropped++;
+    for (const key of HEAT_SUPPLY_TYPES) delete techs[key];
+    f.set("techs", techs);
+    f.unset("heat_supplier");
+  }
+  return dropped;
 }

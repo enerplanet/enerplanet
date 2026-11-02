@@ -55,7 +55,8 @@ export type HeatScope = "missing" | "replace";
  * Puts the technology entry on buildings and returns how many got it. A building
  * has one heat supply, so for a heat supply technology scope decides: "missing"
  * skips buildings that have one, "replace" removes their other heat technologies
- * and heat link first. Other technologies go on every building.
+ * and heat link first, and a building the analysis found not heated gets none.
+ * Other technologies go on every building.
  */
 export const applyToBuildings = (
   buildings: Feature<Geometry>[], techKey: string, entry: Record<string, unknown>, scope: HeatScope = "replace",
@@ -63,7 +64,7 @@ export const applyToBuildings = (
   const heat = HEAT_SUPPLY_TYPES.includes(techKey);
   let count = 0;
   for (const f of buildings) {
-    if (heat && scope === "missing" && hasHeatSupply(f)) continue;
+    if (heat && (f.get("heated") === false || (scope === "missing" && hasHeatSupply(f)))) continue;
     const techs = { ...(f.get("techs") || {}) };
     if (heat && scope === "replace") {
       for (const key of HEAT_SUPPLY_TYPES) delete techs[key];
