@@ -8,6 +8,7 @@ import { fromLonLat } from "ol/proj";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { MAP_ZOOM } from '@/features/interactive-map/utils/mapUtils';
 import { useMapLocationStore } from './map-location';
+import type { LonLat } from '@/features/interactive-map/utils/mapFocus';
 
 // Base layer metadata interface
 interface BaseLayerInfo {
@@ -36,6 +37,9 @@ interface MapStore {
 	clearOverlayLayers: () => void;
 	fireRiskOverlay: TileLayer | null;
 	setFireRiskOverlay: (layer: TileLayer | null) => void;
+	/** The model area on the current page, which the centre button fits; empty when there is none. */
+	focusArea: LonLat[];
+	setFocusArea: (area: LonLat[]) => void;
 }
 
 const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -104,6 +108,8 @@ export const useMapStore = create<MapStore>()(
 			},
 			fireRiskOverlay: null,
 			setFireRiskOverlay: (layer) => set({ fireRiskOverlay: layer }),
+			focusArea: [],
+			setFocusArea: (area) => set({ focusArea: area }),
 		}),
 		{
 			name: "map-store",
