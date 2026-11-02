@@ -1044,6 +1044,7 @@ func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
 	sites.GET("/:id/grid", handler.GetSiteGrid)
 	sites.GET("/:id/transformers", handler.GetSiteTransformers)
 	sites.PUT("/:id/transformers", handler.PutSiteTransformers)
+	sites.PATCH("/:id/buildings", handler.PatchSiteBuildings)
 }
 
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.
