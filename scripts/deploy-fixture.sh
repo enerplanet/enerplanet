@@ -61,10 +61,21 @@ FIXTURE_DIR="$(cd "$FIXTURE_DIR" && pwd)"
 SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 WORKDIR="${WORKDIR:-$SELF_DIR/../.local/heat-stack/$PREFIX}"
 
-C2T="$PREFIX-city2tabula"
-C2T_DB="$PREFIX-city2tabula-db"
+command -v docker >/dev/null || die "docker not found"
+
+# container_of PROJECT SERVICE FIXED: the running container of SERVICE in compose
+# project PROJECT, else FIXED, the name a stack from deploy-heat-stack.sh uses.
+container_of() {
+  local id
+  id="$(docker ps -q --filter "label=com.docker.compose.project=$1" \
+    --filter "label=com.docker.compose.service=$2" | head -n 1)"
+  if [ -n "$id" ]; then docker inspect -f '{{.Name}}' "$id" | sed 's|^/||'; else echo "$3"; fi
+}
+
+C2T="$(container_of "$PREFIX-city2tabula" api "$PREFIX-city2tabula")"
+C2T_DB="$(container_of "$PREFIX-city2tabula" db "$PREFIX-city2tabula-db")"
 PYLOVO_DB="$PREFIX-pylovo-postgres"
-WEATHER="$PREFIX-weather-serve"
+WEATHER="$(container_of "$PREFIX-weather" api "$PREFIX-weather-serve")"
 
 # Must match isoByCountry in city2tabula's internal/config/country.go: the
 # server names each country's database <DB_NAME>_<code>.
@@ -235,7 +246,6 @@ shopt -u nullglob
 [ -d "$FIXTURE_DIR/3d" ] || [ -d "$FIXTURE_DIR/attributes" ] || [ -d "$FIXTURE_DIR/weather" ] \
   || [ "${#dumps[@]}" = 1 ] || die "$FIXTURE_DIR has no 3d/, attributes/, weather/ or pylovo/*.sql.gz"
 
-command -v docker >/dev/null || die "docker not found"
 require_running "$C2T"
 require_running "$C2T_DB"
 require_running "$PYLOVO_DB"

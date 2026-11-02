@@ -40,14 +40,13 @@
 #   The upstream compose files are never edited.
 #
 # Why cross-service names need no rewriting
-#   The heat services address each other by fixed names (meme-env-api-1,
-#   ignis-http, buem-gateway-http, weather-serve, city2tabula, pv-service,
-#   pylovo-api-dev). Those resolve on the network, and this stack owns private
-#   networks (<prefix>-tentacron-net, <prefix>-pylovo-net), so they cannot
-#   clash with the same names on any other stack's network. TentaCron's
-#   config.yaml is therefore used byte-for-byte as upstream ships it; the two
-#   names that are container names rather than service names (meme-env-api-1,
-#   pylovo-api-dev) are re-added as network aliases in the overrides.
+#   TentaCron addresses each service by a fixed name (meme, ignis,
+#   buem-gateway, weather, city2tabula, pysam-pv, pylovo), which each service's
+#   compose file declares as a network alias. This stack owns private networks
+#   (<prefix>-tentacron-net, <prefix>-pylovo-net), so those names cannot clash
+#   with the same names on any other stack's network. TentaCron's config.yaml
+#   is therefore used byte-for-byte as upstream ships it; only meme, whose file
+#   declares no alias, gets one in its override.
 #
 set -euo pipefail
 
@@ -146,9 +145,11 @@ done
 # branch build from replacing the release image of the same name that
 # deploy-heat-stack.sh runs.
 for var in BUEM_GATEWAY_IMAGE_TAG BUEM_MODEL_IMAGE_TAG IGNIS_IMAGE_TAG \
-           CITY2TABULA_IMAGE_TAG WEATHER_IMAGE_TAG; do
+           CITY2TABULA_IMAGE_TAG WEATHER_IMAGE_TAG PV_SERVICE_IMAGE_TAG; do
   export "$var=$PREFIX-branch"
 done
+# TentaCron names its whole image in the env file; the shell value wins over it.
+export RELEASE_IMAGE="ghcr.io/enerplanet/tentacron:$PREFIX-branch"
 
 DEPS_DIR="$REPO_ROOT/dependencies"  # every service checkout lives here
 
@@ -264,47 +265,47 @@ clone_repos() {
 write_overrides() {
   mkdir -p "$OVR_DIR"
 
+  # Every service repository names its services by role (api, db, model) and
+  # declares the name callers use as a network alias, so the overrides only
+  # rename networks and containers and drop host ports.
+
   # ignis: the db and the one-shot build-db stay on the project's own network;
-  # only the app joins the heat network, and it keeps its declared alias.
+  # only the api joins the heat network, with its declared aliases.
   cat > "$OVR_DIR/ignis.yml" <<EOF
 services:
-  ignis:
+  api:
     ports: !reset []
 networks:
   tentacron-net:
     name: $NET_HEAT
 EOF
 
-  # buem: the gateway keeps its declared alias; the model container is reached
-  # by service name only and stays private. buem-gateway's compose files only
-  # pull buem-model, so its build is pointed at the enerplanet/buem checkout.
+  # buem: the gateway keeps its declared aliases; the model is reached by
+  # service name only and stays private. buem-gateway's compose file only
+  # pulls buem-model, so its build is pointed at the enerplanet/buem checkout.
   cat > "$OVR_DIR/buem.yml" <<EOF
 services:
-  buem-model:
+  model:
     build:
       context: $buem_model_dir
       dockerfile: infrastructure/container/Dockerfile
-  buem-gateway:
+  api:
     ports: !reset []
 networks:
   tentacron-net:
     name: $NET_HEAT
 EOF
 
-  # city2tabula: all three containers are renamed. The db also joins the PyLovo
-  # network, because postgres_fdw connects out of it, and it must reach THIS
-  # stack's pylovo-postgres and never the host's.
+  # city2tabula: the db also joins the PyLovo network, because postgres_fdw
+  # connects out of it, and it must reach THIS stack's pylovo-postgres and
+  # never the host's.
   cat > "$OVR_DIR/city2tabula.yml" <<EOF
 services:
-  city2tabula-cli:
-    container_name: $PREFIX-city2tabula-cli
-  city2tabula-db:
-    container_name: $PREFIX-city2tabula-db
+  db:
     networks:
       default:
       spatialhub-net:
-  city2tabula:
-    container_name: $PREFIX-city2tabula
+  api:
     ports: !reset []
     environment:
       PYLOVO_FDW_HOST: $PREFIX-pylovo-postgres
@@ -319,13 +320,11 @@ networks:
     name: $NET_PYLOVO
 EOF
 
-  # weather: the serve container is renamed; its declared alias on the heat
-  # network is untouched, so TentaCron's 'weather-serve' and 'weather' both
-  # resolve. WEATHER_DATA_DIR_HOST keeps the fixture tree inside the checkout.
+  # weather: private only, reached by its declared aliases.
+  # WEATHER_DATA_DIR_HOST keeps the fixture tree inside the checkout.
   cat > "$OVR_DIR/weather.yml" <<EOF
 services:
-  weather-serve:
-    container_name: $PREFIX-weather-serve
+  api:
     ports: !reset []
 networks:
   tentacron-net:
@@ -350,11 +349,10 @@ networks:
     name: $NET_HEAT
 EOF
 
-  # pv-service: renamed container, private only.
+  # pv-service: private only, reached by its declared aliases.
   cat > "$OVR_DIR/pv-service.yml" <<EOF
 services:
-  pv-service:
-    container_name: $PREFIX-pv-service
+  api:
     ports: !reset []
 networks:
   tentacron-net:
@@ -366,10 +364,8 @@ EOF
   # have created it), so it is reset here and becomes this stack's own.
   cat > "$OVR_DIR/tentacron.yml" <<EOF
 services:
-  tentacron:
+  api:
     ports: !override ["$TENTACRON_HOST_PORT:8080"]
-  tentacron-release:
-    ports: !reset []
 networks:
   tentacron-net:
     name: $NET_HEAT
@@ -386,7 +382,7 @@ EOF
   # pylovo_db are on a different network and are not reachable from here.
   cat > "$OVR_DIR/pylovo.yml" <<EOF
 services:
-  pylovo-api:
+  api:
     container_name: $PREFIX-pylovo-api-dev
     ports: !override ["$PYLOVO_HOST_PORT:8086"]
     depends_on:
@@ -394,11 +390,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      spatialhub-net:
-        aliases:
-          - pylovo-api-dev
-          - pylovo
   postgres:
     image: pgrouting/pgrouting:17-3.5-3.7.3
     container_name: $PREFIX-pylovo-postgres
@@ -478,15 +469,14 @@ up_pylovo() {
   )
 }
 
-# ignis and buem-gateway each have an http file that pulls the release
-# (docker-compose.prod.yml, docker-compose.yml) and one that builds the
-# checkout (docker-compose.yml, docker-compose.build.yml); these are the latter.
+# Services are named on `up`: each file also holds a profile-gated https proxy
+# or tool container that is not part of this stack.
 up_ignis() {
   log "ignis (built)"
   (
-    cd "$ignis_dir/environment/http"
-    docker compose -p "$PREFIX-ignis-http" \
-      -f docker-compose.yml -f "$OVR_DIR/ignis.yml" up -d --build
+    cd "$ignis_dir/environment"
+    docker compose -p "$PREFIX-ignis" \
+      -f docker-compose.yml -f "$OVR_DIR/ignis.yml" up -d --build api
   )
 }
 
@@ -496,13 +486,10 @@ up_city2tabula() {
   # deploy-fixture.sh then cannot copy into.
   mkdir -p "$c2t_dir/data/lod2" "$c2t_dir/data/lod3" "$c2t_dir/data/attributes"
   (
-    cd "$c2t_dir/environment/http"
+    cd "$c2t_dir/environment"
     export C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG"
-    # Named explicitly: `up` would otherwise also build city2tabula-cli, the
-    # full Go/JDK/citydb toolchain image, for nothing. city2tabula-db comes up
-    # as a depends_on of the service named here.
     docker compose -p "$PREFIX-city2tabula" --env-file docker.env \
-      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" up -d --build city2tabula
+      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" up -d --build api
   )
 }
 
@@ -516,17 +503,16 @@ up_weather() {
     export WEATHER_DATA_DIR_HOST="$weather_dir/data"
     docker compose -p "$PREFIX-weather" \
       -f infrastructure/container/docker-compose.serve.yml -f "$OVR_DIR/weather.yml" \
-      up -d --build
+      up -d --build api
   )
 }
 
 up_buem() {
   log "BuEM (gateway + model, built)"
   (
-    cd "$buem_dir/environment/http"
-    export BUEM_MODEL_IMAGE_TAG
-    docker compose -p "$PREFIX-buem-gateway-http" \
-      -f docker-compose.build.yml -f "$OVR_DIR/buem.yml" up -d --build
+    cd "$buem_dir/environment"
+    docker compose -p "$PREFIX-buem-gateway" \
+      -f docker-compose.yml -f "$OVR_DIR/buem.yml" up -d --build api
   )
 }
 
@@ -542,9 +528,9 @@ up_meme() {
 up_pv() {
   log "PV service (built; no published image)"
   (
-    cd "$pv_dir"
+    cd "$pv_dir/environment"
     docker compose -p "$PREFIX-pv-service" \
-      -f docker-compose.yml -f "$OVR_DIR/pv-service.yml" up -d --build
+      -f docker-compose.yml -f "$OVR_DIR/pv-service.yml" up -d --build api
   )
 }
 
@@ -552,9 +538,8 @@ up_tentacron() {
   log "TentaCron (built; no release carries the EnerPlanET integration)"
   (
     cd "$tentacron_dir/environment"
-    make build ENV=dev
-    docker compose -p "$PREFIX-tentacron-env" --env-file .env.dev \
-      -f docker-compose.yml -f "$OVR_DIR/tentacron.yml" up -d tentacron
+    docker compose -p "$PREFIX-tentacron" --env-file .env.dev \
+      -f docker-compose.yml -f "$OVR_DIR/tentacron.yml" up -d --build api
   )
 }
 
@@ -563,19 +548,19 @@ validate_overrides() {
   log "validating the rendered compose files"
   local failed=0
   pylovo_env
-  ( cd "$ignis_dir/environment/http" && \
-      docker compose -p "$PREFIX-ignis-http" -f docker-compose.yml -f "$OVR_DIR/ignis.yml" config -q ) || failed=1
-  ( cd "$buem_dir/environment/http" && BUEM_MODEL_IMAGE_TAG="$BUEM_MODEL_IMAGE_TAG" \
-      docker compose -p "$PREFIX-buem-gateway-http" -f docker-compose.build.yml -f "$OVR_DIR/buem.yml" config -q ) || failed=1
-  ( cd "$c2t_dir/environment/http" && C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG" \
+  ( cd "$ignis_dir/environment" && \
+      docker compose -p "$PREFIX-ignis" -f docker-compose.yml -f "$OVR_DIR/ignis.yml" config -q ) || failed=1
+  ( cd "$buem_dir/environment" && \
+      docker compose -p "$PREFIX-buem-gateway" -f docker-compose.yml -f "$OVR_DIR/buem.yml" config -q ) || failed=1
+  ( cd "$c2t_dir/environment" && C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG" \
       docker compose -p "$PREFIX-city2tabula" --env-file docker.env -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" config -q ) || failed=1
   ( cd "$weather_dir" && WEATHER_API_KEYS="$WEATHER_API_KEY" WEATHER_IMAGE="ghcr.io/enerplanet/weather:$WEATHER_IMAGE_TAG" \
       docker compose -p "$PREFIX-weather" -f infrastructure/container/docker-compose.serve.yml -f "$OVR_DIR/weather.yml" config -q ) || failed=1
   ( cd "$meme_dir/environment" && docker compose -p "$PREFIX-meme-env" --env-file .env.dev \
       -f docker-compose.yml -f "$OVR_DIR/meme.yml" config -q ) || failed=1
-  ( cd "$pv_dir" && docker compose -p "$PREFIX-pv-service" \
+  ( cd "$pv_dir/environment" && docker compose -p "$PREFIX-pv-service" \
       -f docker-compose.yml -f "$OVR_DIR/pv-service.yml" config -q ) || failed=1
-  ( cd "$tentacron_dir/environment" && docker compose -p "$PREFIX-tentacron-env" --env-file .env.dev \
+  ( cd "$tentacron_dir/environment" && docker compose -p "$PREFIX-tentacron" --env-file .env.dev \
       -f docker-compose.yml -f "$OVR_DIR/tentacron.yml" config -q ) || failed=1
   ( cd "$pylovo_dir" && docker compose -p "$PREFIX-pylovo" \
       -f "$(pylovo_compose)" -f "$OVR_DIR/pylovo.yml" config -q ) || failed=1
@@ -611,8 +596,8 @@ $(printf '%s' "$GREEN")Heat stack up under prefix '$PREFIX'$(printf '%s' "$NC")
   workdir     $WORKDIR
 
 Reach the private services through their containers:
-  docker exec $PREFIX-city2tabula-db psql -U postgres -l
-  docker logs -f $PREFIX-tentacron-env-tentacron-1
+  docker exec $PREFIX-city2tabula-db-1 psql -U postgres -l
+  docker logs -f $PREFIX-tentacron-api-1
 
 Load test data with: scripts/deploy-fixture.sh --prefix $PREFIX /path/to/enerplanet-test-data/vN
 Tear down with:      $0 --prefix $PREFIX down
@@ -648,17 +633,17 @@ cmd_down() {
   log "stopping prefix '$PREFIX'"
 
   down_one tentacron "$tentacron_dir/environment" docker-compose.yml tentacron.yml \
-    "$PREFIX-tentacron-env" --env-file .env.dev
+    "$PREFIX-tentacron" --env-file .env.dev
   down_one meme "$meme_dir/environment" docker-compose.yml meme.yml \
     "$PREFIX-meme-env" --env-file .env.dev
-  down_one pv "$pv_dir" docker-compose.yml pv-service.yml \
+  down_one pv "$pv_dir/environment" docker-compose.yml pv-service.yml \
     "$PREFIX-pv-service"
-  down_one buem "$buem_dir/environment/http" docker-compose.build.yml buem.yml \
-    "$PREFIX-buem-gateway-http"
-  down_one city2tabula "$c2t_dir/environment/http" docker-compose.yml city2tabula.yml \
+  down_one buem "$buem_dir/environment" docker-compose.yml buem.yml \
+    "$PREFIX-buem-gateway"
+  down_one city2tabula "$c2t_dir/environment" docker-compose.yml city2tabula.yml \
     "$PREFIX-city2tabula" --env-file docker.env
-  down_one ignis "$ignis_dir/environment/http" docker-compose.yml ignis.yml \
-    "$PREFIX-ignis-http"
+  down_one ignis "$ignis_dir/environment" docker-compose.yml ignis.yml \
+    "$PREFIX-ignis"
   down_one pylovo "$pylovo_dir" "$(pylovo_compose)" pylovo.yml \
     "$PREFIX-pylovo"
 

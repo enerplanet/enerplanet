@@ -33,18 +33,19 @@ long time and tens of GB of disk. Later runs reuse Docker's build cache.
 ## Branches
 
 Each service is checked out at `origin/<_BRANCH>` from `repos.conf` and built
-with its repository's http compose file.
+from the compose file below. The branch must name its services by role (`api`,
+`db`, `model`); a branch from before that layout fails in `render`.
 
 | Service | `repos.conf` keys | Compose file |
 |---|---|---|
 | TentaCron | `TENTACRON_*` | `environment/docker-compose.yml` |
 | MEME | `MEME_*` | `environment/docker-compose.yml` |
-| buem-gateway | `BUEM_*` | `environment/http/docker-compose.build.yml` |
+| buem-gateway | `BUEM_*` | `environment/docker-compose.yml` |
 | buem-model | `BUEM_MODEL_*` | built from `enerplanet/buem`, `infrastructure/container/Dockerfile` |
-| ignis | `IGNIS_*` | `environment/http/docker-compose.yml` |
-| City2TABULA | `CITY2TABULA_*` | `environment/http/docker-compose.yml`, server only |
+| ignis | `IGNIS_*` | `environment/docker-compose.yml` |
+| City2TABULA | `CITY2TABULA_*` | `environment/docker-compose.yml`, server only |
 | weather | `WEATHER_*` | `infrastructure/container/docker-compose.serve.yml` |
-| PV service | `PV_SERVICE_*` | `docker-compose.yml` |
+| PV service | `PV_SERVICE_*` | `environment/docker-compose.yml` |
 | PyLovo | `PYLOVO_*` | `environment/docker-compose.dev.yml` (or `docker-compose.dev.yml` on older refs), plus its own postgres and redis |
 
 A variable set in the environment wins over `repos.conf`, so one service can
@@ -105,7 +106,10 @@ data again.
 How the prefix renames containers, networks and ports, and how to reach the
 private services, is described in
 [`deploy-heat-stack.md`](deploy-heat-stack.md#how-the-prefix-is-applied); this
-script applies it the same way.
+script applies the same renaming. On the branch tips TentaCron calls `meme`,
+`ignis`, `buem-gateway`, `weather`, `city2tabula`, `pysam-pv` and `pylovo`;
+each service's compose file declares its name as a network alias, except
+MEME, whose alias comes from the override.
 
 ## Requirements
 
@@ -113,7 +117,6 @@ script applies it the same way.
 |---|---|
 | Git and Git LFS | The script stops if `git lfs` is missing |
 | Docker Engine with Compose 2.24 or newer | The override files use `!reset` and `!override` |
-| `make` | TentaCron's image is built with `make build` |
 
 ## Troubleshooting
 
@@ -123,4 +126,6 @@ script applies it the same way.
 | `<path> is on a local branch; leaving it alone` | That checkout holds local work | Build it as it is, or detach it: `git -C <path> checkout --detach` |
 | `git lfs pull failed in <path>` | No LFS access or no network | Fix access and re-run; the build would lack data files |
 | A build fails | The branch tip does not build | Fix the branch, or set `<SERVICE>_BRANCH` to one that builds |
+| `render` reports a missing `environment/docker-compose.yml`, or a service with neither an image nor a build context | The branch predates the role-named compose layout | Set `<SERVICE>_BRANCH` to a branch that has it |
+| Two containers answer one service name, such as an old `<prefix>-weather-serve` beside `<prefix>-weather-api-1` | The prefix was deployed before the role-named layout; its old containers are not part of the new projects | Run `down` with the script version that deployed it, or remove the old `<prefix>-` containers, then `up` |
 | Port warning `using 8401 instead` | The default port is taken | Pin it with `--tentacron-port` or `--pylovo-port` |
