@@ -232,6 +232,7 @@ func (s *Store) GetStructuredResults(modelID uint) map[string]interface{} {
 		{"energy_cap", func(id uint) (interface{}, error) { return s.GetResultsEnergyCap(id) }},
 		{"cost", func(id uint) (interface{}, error) { return s.GetResultsCost(id) }},
 		{"cost_investment", func(id uint) (interface{}, error) { return s.GetResultsCostInvestment(id) }},
+		{"grid_prices", func(id uint) (interface{}, error) { return s.GetUsedGridPrices(id) }},
 		{"pypsa", func(id uint) (interface{}, error) {
 			settings, err := s.GetResultsPyPSASettings(id)
 			if err != nil {
@@ -271,6 +272,17 @@ func (s *Store) GetStructuredResults(modelID uint) map[string]interface{} {
 
 	wg.Wait()
 	return response
+}
+
+// GetUsedGridPrices returns the grid electricity prices, ct/kWh, the model's
+// latest run used, or nil for a run that recorded none.
+func (s *Store) GetUsedGridPrices(modelID uint) (interface{}, error) {
+	var run backendModels.ModelMemeRun
+	err := s.db.Where("model_id = ? AND leg = ?", modelID, backendModels.MemeLegCalliope).First(&run).Error
+	if err != nil || run.GridImportCtPerKWh == nil || run.GridExportCtPerKWh == nil {
+		return nil, err
+	}
+	return map[string]float64{"import_ct_per_kwh": *run.GridImportCtPerKWh, "export_ct_per_kwh": *run.GridExportCtPerKWh}, nil
 }
 
 // ---------------------------------------------------------------------------

@@ -21,7 +21,7 @@ import { useMapClickHandlers } from '@/features/configurator/hooks/useMapClickHa
 import { generateUUID } from '@/utils/uuid';
 import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAreaSelect/helpers/layerConnections';
 import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
-import { hasUnsavedChanges, settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
+import { hasUnsavedChanges, pricesFromConfig, settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
 import { areaBuildingLimit } from '@/features/configurator/utils/areaLimit';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
@@ -113,7 +113,7 @@ export const useAreaSelect = ({
     const handleResetAdvancedParams = useCallback(() => setAdvancedParams(getDefaultAdvancedParameters()), [setAdvancedParams]);
 
     // Detect metadata changes
-    const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode); const weather = useModelStore((s) => s.weather);
+    const cookingCarrier = useModelStore((s) => s.cookingCarrier); const runMode = useModelStore((s) => s.runMode); const weather = useModelStore((s) => s.weather); const electricityPrices = useModelStore((s) => s.electricityPrices);
     const siteMode = useModelStore((s) => s.siteMode);
     const setGridStale = useModelStore((s) => s.setGridStale);
     // Whether the area changed since the shown grid was generated; a site whose
@@ -136,7 +136,7 @@ export const useAreaSelect = ({
         setAreaOverLimit(count > areaLimit ? { count, capped, limit: areaLimit } : null);
         return count <= areaLimit;
     }, [buildingLimit, siteMode]);
-    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, setIsModified]);
+    useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, electricityPrices })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, electricityPrices, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
         setAllPolygons(polygons);
@@ -318,6 +318,7 @@ async function loadExistingModelData(modelId: number, setters: any, originalRef:
             }
             if (m.config?.cookingCarrier === 'gas' || m.config?.cookingCarrier === 'electric') useModelStore.getState().setCookingCarrier(m.config.cookingCarrier);
             useModelStore.getState().setRunMode(m.config?.mode === 'operate' ? 'operate' : 'plan');
+            useModelStore.getState().setElectricityPrices(pricesFromConfig(m.config));
             useModelStore.getState().setWeather(weatherFromConfig(m.config));
             useModelStore.getState().setSiteMode((m.config?.site as { mode?: string } | undefined)?.mode === 'site');
             if (m.config) {
@@ -364,13 +365,14 @@ async function saveAreaData(params: any): Promise<number | undefined> {
         } else if (config) { config.pypsa = false; }
         if (config) config.cookingCarrier = useModelStore.getState().cookingCarrier;
         if (config) config.mode = useModelStore.getState().runMode;
+        if (config) config.electricity_prices = useModelStore.getState().electricityPrices;
         if (config) applyWeatherToConfig(config, useModelStore.getState().weather, Number(fromDate.slice(0, 4)));
         const site = siteScope(pylovoData);
         if (config && site) config.site = { mode: 'site', ...site };
         const modelData = { title: areaData.modelName, from_date: areaData.fromDate, to_date: areaData.toDate, resolution: 60 /* static: only 60-minute steps are supported */, workspace_id: workspaceId, coordinates: coords, config };
         if (editMode && modelId) {
             let hasChanges = !originalModel;
-            if (originalModel) { const { cookingCarrier, runMode, weather } = useModelStore.getState(); hasChanges = settingsChanged(originalModel, { title: areaData.modelName, fromDate: areaData.fromDate, toDate: areaData.toDate, resolution: areaData.resolution, cookingCarrier, runMode, weather }); }
+            if (originalModel) { const { cookingCarrier, runMode, weather, electricityPrices } = useModelStore.getState(); hasChanges = settingsChanged(originalModel, { title: areaData.modelName, fromDate: areaData.fromDate, toDate: areaData.toDate, resolution: areaData.resolution, cookingCarrier, runMode, weather, electricityPrices }); }
             await updateModelMutation.mutateAsync({ id: modelId, data: hasChanges ? { ...modelData, status: 'modified' } : modelData });
             return modelId;
         } else {

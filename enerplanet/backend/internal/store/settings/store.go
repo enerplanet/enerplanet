@@ -5,6 +5,7 @@ import (
 	backendModels "spatialhub_backend/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const sqlWhereAccessLevel = "access_level = ?"
@@ -157,4 +158,21 @@ func (s *Store) CountUserModels(userID string) (int64, error) {
 	var count int64
 	err := s.db.Model(&models.Model{}).Where("user_id = ? AND deleted_at IS NULL", userID).Count(&count).Error
 	return count, err
+}
+
+// --- Grid electricity prices ---
+
+// ListGridPrices returns every country's default grid prices, by country.
+func (s *Store) ListGridPrices() ([]backendModels.GridElectricityPrice, error) {
+	var prices []backendModels.GridElectricityPrice
+	err := s.db.Order("country").Find(&prices).Error
+	return prices, err
+}
+
+// UpsertGridPrice creates or replaces one country's default grid prices.
+func (s *Store) UpsertGridPrice(price *backendModels.GridElectricityPrice) error {
+	return s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "country"}},
+		DoUpdates: clause.AssignmentColumns([]string{"import_ct_per_kwh", "export_ct_per_kwh", "source", "updated_by", "updated_at"}),
+	}).Create(price).Error
 }

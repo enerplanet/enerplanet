@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle, PlugZap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -213,6 +213,16 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
             <p>{t('results.costInfo.simulationPeriodNote', { days: periodInfo.days.toString(), hours: periodInfo.timesteps.toString() })}</p>
           </div>
         </div>
+      )}
+
+      {structuredResults?.grid_prices && (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <PlugZap className="w-3.5 h-3.5" />
+          {t('gridPrices.usedInRun', {
+            import: structuredResults.grid_prices.import_ct_per_kwh,
+            export: structuredResults.grid_prices.export_ct_per_kwh,
+          })}
+        </p>
       )}
 
       {/* Top row: Cost Distribution + System Summary */}

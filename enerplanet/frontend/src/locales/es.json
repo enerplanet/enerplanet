@@ -1260,7 +1260,8 @@
       "simulationEngine": "Motor de Simulación",
       "feedback": "Comentarios",
       "userManagement": "Gestión de Usuarios",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Precios de red"
     },
     "stats": {
       "accessLevel": "Nivel de Acceso",
@@ -3133,6 +3134,37 @@
       "positive": "Debe ser mayor que 0",
       "notNegative": "Debe ser 0 o más",
       "notEditable": "Este valor no se puede editar aquí"
+    }
+  },
+  "gridPrices": {
+    "title": "Precios de la electricidad de red",
+    "description": "Precios predeterminados por país para comprar electricidad de la red y la tarifa de inyección por venderla, en ct/kWh. Los modelos los usan salvo que definan los suyos. La fila de otros países se aplica a cualquier país sin fila propia.",
+    "country": "País",
+    "purchase": "Precio de compra",
+    "feedIn": "Tarifa de inyección",
+    "source": "Fuente",
+    "lastChanged": "Último cambio",
+    "save": "Guardar",
+    "add": "Añadir",
+    "saved": "Precios de red de {{country}} guardados",
+    "saveFailed": "No se pudieron guardar los precios de red de {{country}}: {{reason}}",
+    "countryPlaceholder": "País, p. ej. austria",
+    "otherCountries": "Otros países",
+    "resetToDefault": "Usar el valor predeterminado del país",
+    "modelTitle": "Precios de la electricidad de red",
+    "modelHint": "Lo que este modelo paga por la electricidad de la red y recibe por el excedente inyectado, en ct/kWh. Deje un campo vacío para usar el valor predeterminado del país.",
+    "countryDefault": "Predeterminado para {{country}}: compra {{import}} ct/kWh, venta {{export}} ct/kWh.",
+    "fallbackDefault": "Sin valor predeterminado para {{country}}; se aplica el de otros países: compra {{import}} ct/kWh, venta {{export}} ct/kWh.",
+    "sourceLabel": "Fuente: {{source}}",
+    "defaultUnknown": "El valor predeterminado del país se aplica cuando se conoce la región.",
+    "usedInRun": "Electricidad de red en esta ejecución: comprada a {{import}} ct/kWh, vendida a {{export}} ct/kWh.",
+    "compared": "Precios de la electricidad de red: base {{baseline}}, comparación {{comparison}}.",
+    "pair": "compra {{import}} ct/kWh, venta {{export}} ct/kWh",
+    "notRecorded": "no registrado",
+    "errors": {
+      "importPositive": "El precio de compra debe ser mayor que 0.",
+      "exportNegative": "La tarifa de inyección no puede ser negativa.",
+      "exportAboveImport": "La tarifa de inyección no puede superar el precio de compra."
     }
   }
 }

@@ -278,6 +278,8 @@ export interface StructuredModelResults {
    * ("power", "heat", possibly "thermal") — do not assume the set.
    */
   carrier_summaries?: Record<string, CarrierSummary>;
+  /** Grid electricity prices the latest run used, ct/kWh; absent for older runs. */
+  grid_prices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
   carrier_prod?: CarrierProdRecord[];
   carrier_con?: CarrierConRecord[];
   system_balance?: SystemBalanceRecord[];

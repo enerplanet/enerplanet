@@ -621,6 +621,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                     data1={summary1}
                     data2={summary2}
                     carrier={carrier}
+                    gridPrices={[structuredResults1?.grid_prices, structuredResults2?.grid_prices]}
                   />
                 </div>
 

@@ -994,7 +994,8 @@
       "simulationEngine": "Simulatie-Engine",
       "feedback": "Feedback",
       "userManagement": "Gebruikersbeheer",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Netprijzen"
     },
     "stats": {
       "accessLevel": "Toegangsniveau",
@@ -3138,6 +3139,37 @@
       "positive": "Moet groter dan 0 zijn",
       "notNegative": "Moet 0 of meer zijn",
       "notEditable": "Deze waarde kan hier niet worden bewerkt"
+    }
+  },
+  "gridPrices": {
+    "title": "Netstroomprijzen",
+    "description": "Standaardprijzen per land voor het afnemen van stroom van het net en de terugleververgoeding, in ct/kWh. Modellen gebruiken ze tenzij ze eigen prijzen instellen. De rij voor andere landen geldt voor elk land zonder eigen rij.",
+    "country": "Land",
+    "purchase": "Afnameprijs",
+    "feedIn": "Terugleververgoeding",
+    "source": "Bron",
+    "lastChanged": "Laatst gewijzigd",
+    "save": "Opslaan",
+    "add": "Toevoegen",
+    "saved": "Netprijzen voor {{country}} opgeslagen",
+    "saveFailed": "Netprijzen voor {{country}} konden niet worden opgeslagen: {{reason}}",
+    "countryPlaceholder": "Land, bijv. austria",
+    "otherCountries": "Andere landen",
+    "resetToDefault": "Landstandaard gebruiken",
+    "modelTitle": "Netstroomprijzen",
+    "modelHint": "Wat dit model betaalt voor stroom van het net en ontvangt voor teruggeleverd overschot, in ct/kWh. Laat een veld leeg voor de landstandaard.",
+    "countryDefault": "Standaard voor {{country}}: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
+    "fallbackDefault": "Geen standaard voor {{country}}; de standaard voor andere landen geldt: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
+    "sourceLabel": "Bron: {{source}}",
+    "defaultUnknown": "De landstandaard geldt zodra de regio bekend is.",
+    "usedInRun": "Netstroom in deze run: afgenomen tegen {{import}} ct/kWh, teruggeleverd tegen {{export}} ct/kWh.",
+    "compared": "Netstroomprijzen: basis {{baseline}}, vergelijking {{comparison}}.",
+    "pair": "{{import}} ct/kWh afname, {{export}} ct/kWh teruglevering",
+    "notRecorded": "niet vastgelegd",
+    "errors": {
+      "importPositive": "De afnameprijs moet boven 0 liggen.",
+      "exportNegative": "De terugleververgoeding mag niet negatief zijn.",
+      "exportAboveImport": "De terugleververgoeding mag niet boven de afnameprijs liggen."
     }
   }
 }

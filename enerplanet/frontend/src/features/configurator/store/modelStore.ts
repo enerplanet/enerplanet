@@ -24,6 +24,14 @@ export type CookingCarrier = "electric" | "gas";
 /** "plan" sizes every technology; "operate" keeps each at its maximum and optimises only the dispatch. */
 export type RunMode = "plan" | "operate";
 
+/** A model's own grid electricity prices, ct/kWh; null where the country default applies. */
+export interface ElectricityPrices {
+  import_ct_per_kwh: number | null;
+  export_ct_per_kwh: number | null;
+}
+
+const NO_OWN_PRICES: ElectricityPrices = { import_ct_per_kwh: null, export_ct_per_kwh: null };
+
 export interface ModelStore {
   // ── Active mode (unified) ──
   activeMode: ActiveMode;
@@ -74,6 +82,9 @@ export interface ModelStore {
   /** Saved as config.mode. */
   runMode: RunMode;
   setRunMode: (mode: RunMode) => void;
+  /** Saved as config.electricity_prices. */
+  electricityPrices: ElectricityPrices;
+  setElectricityPrices: (prices: ElectricityPrices) => void;
   /** Saved as config.weatherProvider and config.weatherScenario or config.weatherYear. */
   weather: WeatherSettings;
   setWeather: (weather: WeatherSettings) => void;
@@ -218,6 +229,7 @@ const getInitialState = () => ({
   resolution: 60,
   cookingCarrier: "electric" as CookingCarrier,
   runMode: "plan" as RunMode,
+  electricityPrices: NO_OWN_PRICES,
   weather: DEFAULT_WEATHER,
   siteMode: false,
   isSaving: false,
@@ -307,6 +319,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
   runMode: "plan",
   setRunMode: (mode) => set({ runMode: mode }),
+  electricityPrices: NO_OWN_PRICES,
+  setElectricityPrices: (prices) => set({ electricityPrices: prices }),
   weather: DEFAULT_WEATHER,
   setWeather: (weather) => set({ weather }),
   siteMode: false,
