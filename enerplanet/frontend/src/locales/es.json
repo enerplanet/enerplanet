@@ -251,7 +251,10 @@
       "perPage": "por página",
       "previousPage": "Página anterior",
       "nextPage": "Página siguiente"
-    }
+    },
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "saved": "Guardado"
   },
   "forms": {
     "user": {
@@ -636,7 +639,11 @@
       "energyFlowNote": "El ancho del flujo representa la capacidad energética relativa (kW). Los valores son totales agregados en todas las ubicaciones del modelo.",
       "lcoeComparison": "Comparación LCOE",
       "investmentVsOperating": "Inversión vs. Costes Operativos",
-      "systemCostSummary": "Resumen de Costes del Sistema"
+      "systemCostSummary": "Resumen de Costes del Sistema",
+      "capacityFactor": "Factor de capacidad",
+      "capacityFactorTooltipDesc": "El porcentaje de la capacidad instalada que se utiliza de media durante el año. Por ejemplo, un factor de capacidad del 15 % significa que la tecnología produjo el 15 % de su potencial máximo teórico. Representado por la línea morada del eje derecho.",
+      "installedCapacity": "Capacidad instalada",
+      "installedCapacityDesc": "La potencia máxima posible del hardware, medida en kW o MW. Representada por la altura de las barras del eje izquierdo."
     },
     "energy": {
       "noData": "No hay datos de energía disponibles",
@@ -690,7 +697,10 @@
       "generationDurationCurveDesc": "Ordena la generación renovable horaria de mayor a menor para ver el pico de generación y su evolución a lo largo del año.",
       "demandDurationCurve": "Curva de duración de la demanda",
       "demandDurationCurveDesc": "Ordena la demanda de calor horaria de mayor a menor para ver la punta y su evolución a lo largo del año.",
-      "noDataLoadCurve": "No hay datos disponibles para la curva de carga"
+      "noDataLoadCurve": "No hay datos disponibles para la curva de carga",
+      "hourlyRenewableGeneration": "Generación renovable horaria",
+      "loadingTimeSeries": "Cargando series temporales de energía…",
+      "noRenewableGenerationData": "No hay datos de producción de fotovoltaica, eólica, biomasa ni geotérmica."
     },
     "grid": {
       "noData": "No hay datos de red PyPSA disponibles",
@@ -784,7 +794,13 @@
       "investmentCostsDesc": "Gasto de capital requerido para el despliegue de cada tecnología.",
       "capex": "CAPEX",
       "capexDesc": "Inversión de capital inicial",
-      "totalInvestment": "Inversión Total"
+      "totalInvestment": "Inversión Total",
+      "dailyDemandDesc": "Demanda eléctrica diaria total de todas las cargas.",
+      "dailyGridImportDesc": "Energía importada diariamente desde el transformador o la conexión a la red.",
+      "dailyRenewableDesc": "Energía generada diariamente con tecnologías renovables.",
+      "dailySupplyDemand": "Oferta diaria frente a demanda",
+      "dailySupplyDemandDesc": "Generación renovable e importación de red diarias en comparación con la demanda total.",
+      "loadingTimeSeries": "Cargando datos del sistema…"
     },
     "chartLabels": {
       "amount": "Monto",
@@ -815,7 +831,12 @@
       "cheaperThanAvg": "más barato que la media del sistema",
       "moreExpensiveThanAvg": "más caro que la media",
       "days": "días",
-      "hours": "horas"
+      "hours": "horas",
+      "avgConsumption": "Consumo medio",
+      "avgProduction": "Producción media",
+      "demandFactor": "Factor de demanda",
+      "installedGen": "Generación instalada",
+      "peakDemand": "Demanda punta"
     },
     "costInfo": {
       "simulationPeriodNote": "Los costes mostrados corresponden al periodo simulado de {{days}} días ({{hours}} horas). Para ver los costes anuales completos, ejecute una simulación de 1 año (8760 horas).",
@@ -842,7 +863,20 @@
       "costs": "Costos",
       "noEnergyData": "No hay datos de energía por hora disponibles",
       "noSimulationLinked": "Sin datos de simulación vinculados",
-      "household": "Hogar"
+      "household": "Hogar",
+      "area": "Superficie",
+      "energyLabel": "Etiqueta energética",
+      "energyOverview": "Resumen energético",
+      "floors": "Plantas",
+      "height": "Altura",
+      "households": "Hogares",
+      "installedTechnologies": "Tecnologías instaladas",
+      "loadingTimeSeries": "Cargando series temporales…",
+      "peak": "Pico",
+      "population": "Población",
+      "selfSufficient": "autosuficiente",
+      "totalCost": "Coste total",
+      "yearBuilt": "Construido"
     },
     "gauges": {
       "selfConsumption": "Autoconsumo",
@@ -857,6 +891,15 @@
       "notConvergedTitle": "El flujo de potencia no convergió",
       "convergedDescription": "El cálculo del flujo de potencia eléctrica encontró exitosamente una solución estable. Los valores de voltaje y potencia en toda la red son físicamente válidos.",
       "notConvergedDescription": "El cálculo del flujo de potencia no pudo encontrar una solución estable dentro del límite de iteración. Los resultados pueden ser inexactos o incompletos."
+    },
+    "clickBuildingPrompt": "Haz clic en un edificio para ver los detalles",
+    "techTypes": {
+      "demand": "Demanda",
+      "supply": "Suministro"
+    },
+    "tooltips": {
+      "capacityFactorHint": "Nivel medio de producción durante el año de simulación en relación con el máximo técnico.",
+      "demandFactorHint": "Nivel medio de consumo durante el año de simulación en relación con la demanda punta técnica."
     }
   },
   "auth": {
@@ -1036,7 +1079,15 @@
     "clearSelection": "Quitar selección",
     "starredFilter": "Destacados",
     "starredFilterHint": "Mostrar solo los modelos destacados",
-    "noStarredModels": "Aún no hay modelos destacados. Destaque un modelo con la estrella junto a su nombre para encontrarlo aquí."
+    "noStarredModels": "Aún no hay modelos destacados. Destaque un modelo con la estrella junto a su nombre para encontrarlo aquí.",
+    "canEdit": "Puede editar",
+    "canView": "Puede ver",
+    "noDirectShares": "Este modelo aún no se ha compartido con nadie.",
+    "peopleWithAccess": "Personas con acceso directo",
+    "peopleWithAccessDescription": "Los usuarios de esta lista pueden abrir este modelo y sus resultados.",
+    "revokeAccess": "Revocar acceso",
+    "revokeAccessFor": "Revocar el acceso de {{email}}",
+    "revokingAccess": "Revocando acceso…"
   },
   "polygon": {
     "escToCancel": "para cancelar el dibujo",
@@ -1069,7 +1120,8 @@
     "assignBuildings": "Asignar edificios",
     "addTransformerAction": "Añadir trafo",
     "assignBuildingsAction": "Asignar edificios",
-    "resolveHeatAction": "Resolver calefacción"
+    "resolveHeatAction": "Resolver calefacción",
+    "drawArea": "Dibujar área"
   },
   "time": {
     "justNow": "Ahora mismo"
@@ -1371,7 +1423,8 @@
       "failedToPing": "Error al hacer ping al webservice"
     },
     "noWebservicesAvailable": "No hay motores de simulación configurados actualmente. Contacta a un administrador.",
-    "healthCheck": "Motor de simulación"
+    "healthCheck": "Motor de simulación",
+    "loading": "Cargando webservices"
   },
   "feedbackManagement": {
     "title": "Gestión de Comentarios de Usuario",
@@ -1384,7 +1437,8 @@
       "label": "Filtros:",
       "allStatus": "Todos los Estados",
       "allCategories": "Todas las Categorías",
-      "allPriorities": "Todas las Prioridades"
+      "allPriorities": "Todas las Prioridades",
+      "searchPlaceholder": "Buscar comentarios…"
     },
     "statuses": {
       "pending": "Pendiente",
@@ -1512,7 +1566,10 @@
         "outOfRange": "Una coordenada ({{detail}}) está fuera del rango de longitud y latitud. Si el archivo usa metros, debe indicar su sistema de coordenadas (crs)."
       },
       "importAreaHint": "Carga el área del modelo desde un archivo GeoJSON (.geojson o .json) con entidades Polygon o MultiPolygon. Coordenadas en WGS 84 (EPSG:4326) o en una cuadrícula nacional como ETRS89 / UTM, tal como las exporta QGIS. Hasta 100 polígonos, 10 000 puntos y 5 MB. El archivo sustituye al área dibujada.",
-      "exportAreaHint": "Descarga el área dibujada como archivo GeoJSON (WGS 84, EPSG:4326). Se puede importar en otro modelo o abrir en QGIS."
+      "exportAreaHint": "Descarga el área dibujada como archivo GeoJSON (WGS 84, EPSG:4326). Se puede importar en otro modelo o abrir en QGIS.",
+      "resetArea": "Restablecer área",
+      "resetAreaConfirmDescription": "Esto elimina todos los polígonos dibujados, los transformadores colocados y las asignaciones de edificios.",
+      "resetAreaConfirmTitle": "¿Restablecer el área?"
     },
     "powerFlow": {
       "calculating": "Calculando análisis de flujo de potencia..."
@@ -1852,7 +1909,8 @@
       "loginRequired": "Por favor inicie sesión para enviar comentarios",
       "submitFailed": "No se pudieron enviar los comentarios. Por favor intente más tarde.",
       "alreadyReported": "Este modelo ya tiene un informe abierto. Recibirá un aviso cuando se resuelva.",
-      "invalidImageType": "Por favor seleccione un archivo de imagen válido (PNG, JPG, GIF)"
+      "invalidImageType": "Por favor seleccione un archivo de imagen válido (PNG, JPG, GIF)",
+      "payloadTooLarge": "El archivo adjunto es demasiado grande. Usa imágenes más pequeñas."
     },
     "myFeedback": {
       "adminResponse": "Respuesta del administrador",
@@ -1870,7 +1928,13 @@
     },
     "runReport": {
       "attached": "La ejecución fallida, el servicio que falló y los detalles técnicos se adjuntan automáticamente a este informe."
-    }
+    },
+    "chars": "caracteres",
+    "markdownSupported": "Markdown compatible",
+    "preview": "Vista previa",
+    "previewEmpty": "Nada que previsualizar",
+    "words": "palabras",
+    "write": "Escribir"
   },
   "tooltips": {
     "privateBuildings": {
@@ -2120,7 +2184,8 @@
     },
     "confirm": {
       "deleteParamTitle": "Eliminar Parámetro",
-      "deleteParamMessage": "¿Está seguro de que desea eliminar el parámetro \"{{name}}\"?"
+      "deleteParamMessage": "¿Está seguro de que desea eliminar el parámetro \"{{name}}\"?",
+      "reseedMessage": "Esto restablecerá todas las tecnologías del sistema a sus valores predeterminados. Las tecnologías definidas por el usuario no se verán afectadas. ¿Seguro?"
     },
     "success": {
       "added": "Tecnología \"{{name}}\" creada exitosamente",
@@ -2360,7 +2425,29 @@
       "selfSufficiencyComparison": "Autosuficiencia\n(Comparación)",
       "totalCostBreakdown": "Desglose del costo total",
       "total": "Total",
-      "difference": "Diferencia"
+      "difference": "Diferencia",
+      "capacityFactor": "Comparación del factor de capacidad",
+      "capexByTechnology": "CAPEX por tecnología",
+      "costAnalysisSection": "Análisis de costes",
+      "deficit": "Déficit",
+      "energyBalanceByScenario": "Renovables + suministro de red frente a demanda por escenario",
+      "energyCapacityAnalysis": "Análisis de energía y capacidad",
+      "energyFlowSankey": "Comparación de flujos de energía",
+      "energyFlowSection": "Flujo de energía",
+      "energySupplyDemandCoverage": "Oferta de energía frente a demanda",
+      "installedCapacityByTechnology": "Capacidad instalada por tecnología",
+      "investmentCostComparison": "Comparación de costes de inversión",
+      "lcoeBaseline": "LCOE de referencia",
+      "lcoeByTechnology": "LCOE por tecnología",
+      "lcoeComparison": "LCOE de comparación",
+      "levelisedCost": "Coste nivelado de la electricidad",
+      "monetaryCostsOnly": "Solo costes monetarios",
+      "performanceIndicators": "Indicadores de rendimiento",
+      "renewableGridDemand": "Renovables + suministro de red comparados con la demanda",
+      "surplus": "Excedente",
+      "techEconomicsSection": "Economía de las tecnologías",
+      "totalSupply": "Suministro total",
+      "utilizationByTech": "Utilización por tecnología"
     },
     "technologies": {
       "solar": "Solar",
@@ -2498,7 +2585,8 @@
       "failedToCreate": "Error al registrar la instancia",
       "failedToUpdate": "Error al actualizar la instancia",
       "failedToPing": "Error al hacer ping a la instancia"
-    }
+    },
+    "loading": "Cargando instancias de Pylovo"
   },
   "regionSelector": {
     "goToRegion": "Ir a la región",
@@ -2792,5 +2880,43 @@
       "notNegative": "Debe ser 0 o más",
       "notEditable": "Este valor no se puede editar aquí"
     }
+  },
+  "apiTokens": {
+    "create": "Crear nuevo token",
+    "createdOnce": "Copia este token ahora: no volverá a mostrarse.",
+    "errors": {
+      "create": "No se pudo crear el token",
+      "load": "No se pudieron cargar los tokens",
+      "revoke": "No se pudo revocar el token"
+    },
+    "existing": "Tokens existentes",
+    "expires": "caduca",
+    "expiry": "Caducidad",
+    "expiry30": "Caduca en 30 días",
+    "expiry365": "Caduca en 1 año",
+    "expiry90": "Caduca en 90 días",
+    "expiryNever": "Nunca caduca",
+    "generate": "Generar token",
+    "lastUsed": "último uso",
+    "manage": "Gestionar tokens de API",
+    "manageOwn": "Gestionar mis tokens de API",
+    "namePlaceholder": "Nombre del token (p. ej. script de análisis)",
+    "none": "Aún no hay tokens.",
+    "profileDescription": "Crea y revoca tus tokens de API para acceder a tus modelos y resultados desde scripts u otras aplicaciones.",
+    "readOnlyAccount": "Puedes crear tokens de solo lectura. Contacta con un experto o tu responsable si necesitas acceso de escritura.",
+    "revoke": "Revocar",
+    "scope": "Ámbito",
+    "scopeFull": "Lectura y escritura",
+    "scopeFullShort": "lectura y escritura",
+    "scopeRead": "Acceso de solo lectura",
+    "scopeReadShort": "solo lectura",
+    "status": {
+      "active": "Activo",
+      "expired": "Caducado",
+      "revoked": "Revocado"
+    },
+    "subtitle": "Gestionar tokens de acceso de API para",
+    "title": "Tokens de API",
+    "usageHint": "Usa el token desde cualquier aplicación: Authorization: Bearer <token>. Los tokens de solo lectura pueden listar modelos y descargar resultados con los permisos de este usuario."
   }
 }

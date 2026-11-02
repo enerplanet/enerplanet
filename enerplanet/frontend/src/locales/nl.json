@@ -185,7 +185,10 @@
       "perPage": "per pagina",
       "previousPage": "Vorige pagina",
       "nextPage": "Volgende pagina"
-    }
+    },
+    "copied": "Gekopieerd",
+    "copy": "Kopiëren",
+    "saved": "Opgeslagen"
   },
   "dashboard": {
     "stats": {
@@ -376,7 +379,11 @@
       "energyFlowNote": "Stroombreedte vertegenwoordigt relatieve energiecapaciteit (kW). Waarden zijn geaggregeerde totalen over alle locaties in het model.",
       "lcoeComparison": "LCOE Vergelijking",
       "investmentVsOperating": "Investering vs. Exploitatiekosten",
-      "systemCostSummary": "Systeemkostenoverzicht"
+      "systemCostSummary": "Systeemkostenoverzicht",
+      "capacityFactor": "Capaciteitsfactor",
+      "capacityFactorTooltipDesc": "Het percentage van de geïnstalleerde capaciteit dat gemiddeld over het jaar wordt benut. Een capaciteitsfactor van 15 % betekent bijvoorbeeld dat de technologie 15 % van het theoretische maximum heeft geproduceerd. Weergegeven door de paarse lijn op de rechteras.",
+      "installedCapacity": "Geïnstalleerde capaciteit",
+      "installedCapacityDesc": "Het maximaal mogelijke vermogen van de hardware, gemeten in kW of MW. Weergegeven door de hoogte van de balken op de linker as."
     },
     "energy": {
       "noData": "Geen energiegegevens beschikbaar",
@@ -430,7 +437,10 @@
       "generationDurationCurveDesc": "Sorteert de hernieuwbare productie per uur van hoog naar laag, zodat de piekproductie en het verloop over het jaar zichtbaar worden.",
       "demandDurationCurve": "Vraagduurcurve",
       "demandDurationCurveDesc": "Sorteert de warmtevraag per uur van hoog naar laag, zodat de piekvraag en het verloop over het jaar zichtbaar worden.",
-      "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve"
+      "noDataLoadCurve": "Geen gegevens beschikbaar voor belastingcurve",
+      "hourlyRenewableGeneration": "Uurlijkse hernieuwbare opwek",
+      "loadingTimeSeries": "Energietijdreeksen laden…",
+      "noRenewableGenerationData": "Geen productiegegevens voor PV, wind, biomassa of geothermie beschikbaar."
     },
     "grid": {
       "noData": "Geen PyPSA-netwerkgegevens beschikbaar",
@@ -524,7 +534,13 @@
       "investmentCostsDesc": "Kapitaaluitgaven vereist voor de inzet van elke technologie.",
       "capex": "CAPEX",
       "capexDesc": "Initiële kapitaalinvestering",
-      "totalInvestment": "Totale Investering"
+      "totalInvestment": "Totale Investering",
+      "dailyDemandDesc": "Totale dagelijkse elektriciteitsvraag over alle belastingen.",
+      "dailyGridImportDesc": "Per dag geïmporteerde energie uit de transformator of de netaansluiting.",
+      "dailyRenewableDesc": "Per dag opgewekte energie uit hernieuwbare technologieën.",
+      "dailySupplyDemand": "Dagelijkse opwek versus vraag",
+      "dailySupplyDemandDesc": "Dagelijkse hernieuwbare opwek en netimport vergeleken met de totale vraag.",
+      "loadingTimeSeries": "Systeemgegevens laden…"
     },
     "chartLabels": {
       "amount": "Bedrag",
@@ -555,7 +571,12 @@
       "cheaperThanAvg": "goedkoper dan het systeemgemiddelde",
       "moreExpensiveThanAvg": "duurder dan gemiddeld",
       "days": "dagen",
-      "hours": "uur"
+      "hours": "uur",
+      "avgConsumption": "Gem. verbruik",
+      "avgProduction": "Gem. productie",
+      "demandFactor": "Vraagfactor",
+      "installedGen": "Geïnstalleerde opwek",
+      "peakDemand": "Piekvraag"
     },
     "costInfo": {
       "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
@@ -582,7 +603,20 @@
       "costs": "Kosten",
       "noEnergyData": "Geen uurlijkse energiegegevens beschikbaar",
       "noSimulationLinked": "Geen simulatiegegevens gekoppeld",
-      "household": "Huishouden"
+      "household": "Huishouden",
+      "area": "Oppervlakte",
+      "energyLabel": "Energielabel",
+      "energyOverview": "Energieoverzicht",
+      "floors": "Verdiepingen",
+      "height": "Hoogte",
+      "households": "Huishoudens",
+      "installedTechnologies": "Geïnstalleerde technologieën",
+      "loadingTimeSeries": "Tijdreeksen laden…",
+      "peak": "Piek",
+      "population": "Bevolking",
+      "selfSufficient": "zelfvoorzienend",
+      "totalCost": "Totale kosten",
+      "yearBuilt": "Gebouwd"
     },
     "gauges": {
       "selfConsumption": "Eigen Verbruik",
@@ -597,6 +631,15 @@
       "notConvergedTitle": "Vermogensstroom niet geconvergeerd",
       "convergedDescription": "De berekening van de elektrische vermogensstroom heeft succesvol een stabiele oplossing gevonden. Spanning- en vermogenswaarden over het netwerk zijn fysiek geldig.",
       "notConvergedDescription": "De vermogensstroomberekening kon geen stabiele oplossing vinden binnen de iteratielimiet. Resultaten kunnen onnauwkeurig of onvolledig zijn."
+    },
+    "clickBuildingPrompt": "Klik op een gebouw om details te bekijken",
+    "techTypes": {
+      "demand": "Vraag",
+      "supply": "Opwek"
+    },
+    "tooltips": {
+      "capacityFactorHint": "Gemiddeld productieniveau gedurende het simulatiejaar ten opzichte van het technisch maximum.",
+      "demandFactorHint": "Gemiddeld verbruiksniveau gedurende het simulatiejaar ten opzichte van de technische piekvraag."
     }
   },
   "auth": {
@@ -776,7 +819,15 @@
     "clearSelection": "Selectie wissen",
     "starredFilter": "Met ster",
     "starredFilterHint": "Alleen modellen met ster tonen",
-    "noStarredModels": "Nog geen modellen met ster. Geef een model een ster naast de naam om het hier te vinden."
+    "noStarredModels": "Nog geen modellen met ster. Geef een model een ster naast de naam om het hier te vinden.",
+    "canEdit": "Kan bewerken",
+    "canView": "Kan bekijken",
+    "noDirectShares": "Dit model is nog met niemand gedeeld.",
+    "peopleWithAccess": "Mensen met directe toegang",
+    "peopleWithAccessDescription": "Gebruikers op deze lijst kunnen dit model en de resultaten openen.",
+    "revokeAccess": "Toegang intrekken",
+    "revokeAccessFor": "Toegang intrekken voor {{email}}",
+    "revokingAccess": "Toegang intrekken…"
   },
   "polygon": {
     "escToCancel": "om tekenen te annuleren",
@@ -809,7 +860,8 @@
     "assignBuildings": "Gebouwen toewijzen",
     "addTransformerAction": "Trafo toevoegen",
     "assignBuildingsAction": "Gebouwen toewijzen",
-    "resolveHeatAction": "Warmte toewijzen"
+    "resolveHeatAction": "Warmte toewijzen",
+    "drawArea": "Gebied tekenen"
   },
   "time": {
     "justNow": "Zojuist"
@@ -1111,7 +1163,8 @@
       "failedToPing": "Webservice pingen mislukt"
     },
     "noWebservicesAvailable": "Geen simulatie-engines momenteel geconfigureerd. Neem contact op met een beheerder.",
-    "healthCheck": "Simulatie-engine"
+    "healthCheck": "Simulatie-engine",
+    "loading": "Webservices laden"
   },
   "feedbackManagement": {
     "title": "Gebruikersfeedback Beheer",
@@ -1124,7 +1177,8 @@
       "label": "Filters:",
       "allStatus": "Alle Statussen",
       "allCategories": "Alle Categorieën",
-      "allPriorities": "Alle Prioriteiten"
+      "allPriorities": "Alle Prioriteiten",
+      "searchPlaceholder": "Feedback zoeken…"
     },
     "statuses": {
       "pending": "In Afwachting",
@@ -1252,7 +1306,10 @@
         "outOfRange": "Een coördinaat ({{detail}}) valt buiten het bereik van lengte- en breedtegraad. Gebruikt het bestand meters, dan moet het zijn coördinatenstelsel (crs) noemen."
       },
       "importAreaHint": "Laadt een modelgebied uit een GeoJSON-bestand (.geojson of .json) met Polygon- of MultiPolygon-features. Coördinaten in WGS 84 (EPSG:4326) of een nationaal raster zoals ETRS89 / UTM, zoals QGIS ze exporteert. Maximaal 100 polygonen, 10.000 punten en 5 MB. Het bestand vervangt het getekende gebied.",
-      "exportAreaHint": "Downloadt het getekende gebied als GeoJSON-bestand (WGS 84, EPSG:4326). Het kan in een ander model worden geïmporteerd of in QGIS worden geopend."
+      "exportAreaHint": "Downloadt het getekende gebied als GeoJSON-bestand (WGS 84, EPSG:4326). Het kan in een ander model worden geïmporteerd of in QGIS worden geopend.",
+      "resetArea": "Gebied herstellen",
+      "resetAreaConfirmDescription": "Hiermee worden alle getekende polygonen, geplaatste transformatoren en gebouwtoewijzingen verwijderd.",
+      "resetAreaConfirmTitle": "Gebied herstellen?"
     },
     "powerFlow": {
       "calculating": "Vermogensstroomanalyse berekenen..."
@@ -1592,7 +1649,8 @@
       "loginRequired": "Log in om feedback te verzenden",
       "submitFailed": "Feedback verzenden mislukt. Probeer het later opnieuw.",
       "alreadyReported": "Voor dit model staat al een melding open. U krijgt een melding zodra deze is opgelost.",
-      "invalidImageType": "Selecteer een geldig afbeeldingsbestand (PNG, JPG, GIF)"
+      "invalidImageType": "Selecteer een geldig afbeeldingsbestand (PNG, JPG, GIF)",
+      "payloadTooLarge": "De bijlage is te groot. Gebruik kleinere afbeeldingen."
     },
     "myFeedback": {
       "adminResponse": "Beheerderreactie",
@@ -1610,7 +1668,13 @@
     },
     "runReport": {
       "attached": "De mislukte run, de dienst die faalde en de technische details worden automatisch aan deze melding toegevoegd."
-    }
+    },
+    "chars": "tekens",
+    "markdownSupported": "Markdown ondersteund",
+    "preview": "Voorbeeld",
+    "previewEmpty": "Niets om voor te vertonen",
+    "words": "woorden",
+    "write": "Schrijven"
   },
   "technologies": {
     "types": {
@@ -1728,7 +1792,8 @@
     },
     "confirm": {
       "deleteParamTitle": "Parameter Verwijderen",
-      "deleteParamMessage": "Weet u zeker dat u de parameter \"{{name}}\" wilt verwijderen?"
+      "deleteParamMessage": "Weet u zeker dat u de parameter \"{{name}}\" wilt verwijderen?",
+      "reseedMessage": "Hiermee worden alle systeemtechnologieën teruggezet naar hun standaardwaarden. Door de gebruiker gedefinieerde technologieën worden niet beïnvloed. Weet u het zeker?"
     },
     "success": {
       "added": "Technologie \"{{name}}\" succesvol aangemaakt",
@@ -1983,7 +2048,29 @@
       "selfSufficiencyComparison": "Zelfvoorziening\n(Vergelijking)",
       "totalCostBreakdown": "Totale kostenopsplitsing",
       "total": "Totaal",
-      "difference": "Verschil"
+      "difference": "Verschil",
+      "capacityFactor": "Capaciteitsfactorvergelijking",
+      "capexByTechnology": "CAPEX per technologie",
+      "costAnalysisSection": "Kostenanalyse",
+      "deficit": "Tekort",
+      "energyBalanceByScenario": "Hernieuwbare + netopwek versus vraag per scenario",
+      "energyCapacityAnalysis": "Energie- en capaciteitsanalyse",
+      "energyFlowSankey": "Energiestroomvergelijking",
+      "energyFlowSection": "Energiestroom",
+      "energySupplyDemandCoverage": "Energieaanbod versus vraag",
+      "installedCapacityByTechnology": "Geïnstalleerde capaciteit per technologie",
+      "investmentCostComparison": "Investeringskostenvergelijking",
+      "lcoeBaseline": "Baseline-LCOE",
+      "lcoeByTechnology": "LCOE per technologie",
+      "lcoeComparison": "Vergelijking LCOE",
+      "levelisedCost": "Gelijkgestroomlijnde elektriciteitskosten",
+      "monetaryCostsOnly": "Alleen monetaire kosten",
+      "performanceIndicators": "Prestatie-indicatoren",
+      "renewableGridDemand": "Hernieuwbare + netopwek vergeleken met de vraag",
+      "surplus": "Overschot",
+      "techEconomicsSection": "Technologie-economie",
+      "totalSupply": "Totale opwek",
+      "utilizationByTech": "Benutting per technologie"
     },
     "technologies": {
       "solar": "Zon",
@@ -2497,7 +2584,8 @@
       "failedToCreate": "Registratie van instantie mislukt",
       "failedToUpdate": "Bijwerken van instantie mislukt",
       "failedToPing": "Ping van instantie mislukt"
-    }
+    },
+    "loading": "Pylovo-instanties laden"
   },
   "regionSelector": {
     "goToRegion": "Ga naar regio",
@@ -2791,5 +2879,43 @@
       "notNegative": "Moet 0 of meer zijn",
       "notEditable": "Deze waarde kan hier niet worden bewerkt"
     }
+  },
+  "apiTokens": {
+    "create": "Nieuw token aanmaken",
+    "createdOnce": "Kopieer dit token nu: het wordt nooit meer getoond.",
+    "errors": {
+      "create": "Token aanmaken mislukt",
+      "load": "Tokens laden mislukt",
+      "revoke": "Token intrekken mislukt"
+    },
+    "existing": "Bestaande tokens",
+    "expires": "verloopt",
+    "expiry": "Vervaldatum",
+    "expiry30": "Verloopt over 30 dagen",
+    "expiry365": "Verloopt over 1 jaar",
+    "expiry90": "Verloopt over 90 dagen",
+    "expiryNever": "Verloopt nooit",
+    "generate": "Token genereren",
+    "lastUsed": "laatst gebruikt",
+    "manage": "API-tokens beheren",
+    "manageOwn": "Mijn API-tokens beheren",
+    "namePlaceholder": "Tokennaam (bijv. analysescript)",
+    "none": "Nog geen tokens.",
+    "profileDescription": "Maak API-tokens aan en trek ze in om via scripts of andere apps toegang te krijgen tot je modellen en resultaten.",
+    "readOnlyAccount": "Je kunt alleen-lezen tokens aanmaken. Neem contact op met een expert of je manager als je schrijftoegang nodig hebt.",
+    "revoke": "Intrekken",
+    "scope": "Reikwijdte",
+    "scopeFull": "Lezen en schrijven",
+    "scopeFullShort": "lezen en schrijven",
+    "scopeRead": "Alleen-lezen toegang",
+    "scopeReadShort": "alleen-lezen",
+    "status": {
+      "active": "Actief",
+      "expired": "Verlopen",
+      "revoked": "Ingetrokken"
+    },
+    "subtitle": "API-toegangstokens beheren voor",
+    "title": "API-tokens",
+    "usageHint": "Gebruik het token vanuit elke app: Authorization: Bearer <token>. Alleen-lezen tokens kunnen modellen weergeven en resultaten downloaden met de rechten van deze gebruiker."
   }
 }

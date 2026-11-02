@@ -254,7 +254,7 @@
     },
     "copied": "Copied",
     "copy": "Copy",
-    "saved": ""
+    "saved": "Saved"
   },
   "forms": {
     "user": {
@@ -649,7 +649,7 @@
       "systemCostSummary": "System Cost Summary",
       "capacityFactor": "Capacity Factor",
       "capacityFactorTooltipDesc": "The percentage of the installed capacity that is actually utilized on average over the year. For example, a 15% capacity factor means the technology produced 15% of its theoretical maximum potential output. Represented by the purple line on the right axis.",
-      "installedCapacity": "",
+      "installedCapacity": "Installed Capacity",
       "installedCapacityDesc": "The maximum potential power output of the hardware, measured in kW or MW. Represented by the height of the bars on the left axis."
     },
     "energy": {
@@ -1085,7 +1085,7 @@
     "peopleWithAccess": "People with direct access",
     "peopleWithAccessDescription": "Users listed here can open this model and its results.",
     "revokeAccess": "Revoke",
-    "revokeAccessFor": "",
+    "revokeAccessFor": "Revoke access for {{email}}",
     "revokingAccess": "Revoking…"
   },
   "polygon": {
@@ -1437,7 +1437,7 @@
       "allStatus": "All Status",
       "allCategories": "All Categories",
       "allPriorities": "All Priorities",
-      "searchPlaceholder": ""
+      "searchPlaceholder": "Search feedback…"
     },
     "statuses": {
       "pending": "Pending",
@@ -2184,7 +2184,7 @@
     "confirm": {
       "deleteParamTitle": "Delete Parameter",
       "deleteParamMessage": "Are you sure you want to delete the parameter \"{{name}}\"?",
-      "reseedMessage": ""
+      "reseedMessage": "This will reset all system technologies to their default values. User-defined technologies will not be affected. Are you sure?"
     },
     "success": {
       "added": "Technology \"{{name}}\" created successfully",
@@ -2440,14 +2440,14 @@
       "lcoeBaseline": "Baseline LCOE",
       "lcoeByTechnology": "LCOE by Technology",
       "lcoeComparison": "Comparison LCOE",
-      "levelisedCost": "",
+      "levelisedCost": "Levelised Cost of Electricity",
       "monetaryCostsOnly": "Monetary costs only",
       "performanceIndicators": "Performance Indicators",
       "renewableGridDemand": "Renewable + Grid supply compared to demand",
       "surplus": "Surplus",
       "techEconomicsSection": "Technology Economics",
       "totalSupply": "Total Supply",
-      "utilizationByTech": ""
+      "utilizationByTech": "Utilization by Technology"
     },
     "technologies": {
       "solar": "Solar",
@@ -2899,7 +2899,7 @@
     "lastUsed": "last used",
     "manage": "Manage API tokens",
     "manageOwn": "Manage my API tokens",
-    "namePlaceholder": "",
+    "namePlaceholder": "Token name (e.g. analysis script)",
     "none": "No tokens yet.",
     "profileDescription": "Create and revoke your API tokens to access your models and results from scripts or other apps.",
     "readOnlyAccount": "You can create read-only tokens. Contact an expert or your manager if you need write access.",
@@ -2907,7 +2907,7 @@
     "scope": "Scope",
     "scopeFull": "Read & write",
     "scopeFullShort": "read & write",
-    "scopeRead": "",
+    "scopeRead": "Read access",
     "scopeReadShort": "read-only",
     "status": {
       "active": "Active",

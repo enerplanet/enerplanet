@@ -251,7 +251,10 @@
       "perPage": "pro Seite",
       "previousPage": "Vorherige Seite",
       "nextPage": "Nächste Seite"
-    }
+    },
+    "copied": "Kopiert",
+    "copy": "Kopieren",
+    "saved": "Gespeichert"
   },
   "forms": {
     "user": {
@@ -643,7 +646,11 @@
       "energyFlowNote": "Die Flussbreite repräsentiert die relative Energiekapazität (kW). Werte sind aggregierte Summen über alle Standorte im Modell.",
       "lcoeComparison": "Energiekosten pro Technologie",
       "investmentVsOperating": "Anschaffung vs. Laufende Kosten",
-      "systemCostSummary": "Systemkostenübersicht"
+      "systemCostSummary": "Systemkostenübersicht",
+      "capacityFactor": "Kapazitätsfaktor",
+      "capacityFactorTooltipDesc": "Der Prozentsatz der installierten Kapazität, der im Jahresdurchschnitt tatsächlich genutzt wird. Ein Kapazitätsfaktor von 15 % bedeutet z. B., dass die Technologie 15 % ihrer theoretischen maximalen Leistung erzeugt hat. Dargestellt durch die violette Linie auf der rechten Achse.",
+      "installedCapacity": "Installierte Kapazität",
+      "installedCapacityDesc": "Die maximal mögliche Leistung der Hardware, gemessen in kW oder MW. Dargestellt durch die Höhe der Balken auf der linken Achse."
     },
     "energy": {
       "noData": "Keine Energiedaten verfügbar",
@@ -697,7 +704,10 @@
       "generationDurationCurveDesc": "Sortiert die stündliche regenerative Erzeugung vom höchsten zum niedrigsten Wert, sodass Spitzenerzeugung und Jahresverlauf sichtbar werden.",
       "demandDurationCurve": "Bedarf-Dauerlinie",
       "demandDurationCurveDesc": "Sortiert den stündlichen Wärmebedarf vom höchsten zum niedrigsten Wert, sodass Spitzenbedarf und Jahresverlauf sichtbar werden.",
-      "noDataLoadCurve": "Keine Daten für Lastkurve verfügbar"
+      "noDataLoadCurve": "Keine Daten für Lastkurve verfügbar",
+      "hourlyRenewableGeneration": "Stündliche erneuerbare Erzeugung",
+      "loadingTimeSeries": "Energie-Zeitreihen werden geladen…",
+      "noRenewableGenerationData": "Keine Erzeugungsdaten für PV, Wind, Biomasse oder Geothermie verfügbar."
     },
     "grid": {
       "noData": "Keine PyPSA-Netzdaten verfügbar",
@@ -791,7 +801,13 @@
       "investmentCostsDesc": "Erforderliche Kapitalausgaben für jeden Technologieeinsatz.",
       "capex": "CAPEX",
       "capexDesc": "Anfängliche Kapitalinvestition",
-      "totalInvestment": "Gesamtinvestition"
+      "totalInvestment": "Gesamtinvestition",
+      "dailyDemandDesc": "Täglicher Strombedarf über alle Lasten.",
+      "dailyGridImportDesc": "Täglich importierte Energie aus dem Transformator oder der Netzanbindung.",
+      "dailyRenewableDesc": "Täglich erzeugte Energie aus erneuerbaren Technologien.",
+      "dailySupplyDemand": "Tägliche Erzeugung vs. Bedarf",
+      "dailySupplyDemandDesc": "Tägliche erneuerbare Erzeugung und Netzimportertrag im Vergleich zum Gesamtbedarf.",
+      "loadingTimeSeries": "Systemdaten werden geladen…"
     },
     "chartLabels": {
       "amount": "Betrag",
@@ -822,7 +838,12 @@
       "cheaperThanAvg": "günstiger als Systemdurchschnitt",
       "moreExpensiveThanAvg": "teurer als Durchschnitt",
       "days": "Tage",
-      "hours": "Stunden"
+      "hours": "Stunden",
+      "avgConsumption": "Ø Verbrauch",
+      "avgProduction": "Ø Erzeugung",
+      "demandFactor": "Auslastungsfaktor",
+      "installedGen": "Installierte Erzeugung",
+      "peakDemand": "Spitzenlast"
     },
     "costInfo": {
       "simulationPeriodNote": "Die angezeigten Kosten gelten für den simulierten Zeitraum von {{days}} Tagen ({{hours}} Stunden). Für vollständige Jahreskosten führen Sie eine 1-Jahres-Simulation (8.760 Stunden) durch.",
@@ -849,13 +870,35 @@
       "costs": "Kosten",
       "noEnergyData": "Keine stündlichen Energiedaten verfügbar",
       "noSimulationLinked": "Keine Simulationsdaten verknüpft",
-      "household": "Haushalt"
+      "household": "Haushalt",
+      "area": "Fläche",
+      "energyLabel": "Energielabel",
+      "energyOverview": "Energieübersicht",
+      "floors": "Stockwerke",
+      "height": "Höhe",
+      "households": "Haushalte",
+      "installedTechnologies": "Installierte Technologien",
+      "loadingTimeSeries": "Zeitreihen werden geladen…",
+      "peak": "Spitze",
+      "population": "Bevölkerung",
+      "selfSufficient": "selbstversorgend",
+      "totalCost": "Gesamtkosten",
+      "yearBuilt": "Erbaut"
     },
     "gauges": {
       "selfConsumption": "Eigenverbrauch",
       "gridIndependence": "Netzunabhängigkeit",
       "capacityFactor": "Kapazitätsfaktor",
       "co2Reduction": "CO₂-Reduktion"
+    },
+    "clickBuildingPrompt": "Klicken Sie auf ein Gebäude, um Details anzusehen",
+    "techTypes": {
+      "demand": "Bedarf",
+      "supply": "Erzeugung"
+    },
+    "tooltips": {
+      "capacityFactorHint": "Durchschnittliche Produktion während des Simulationsjahres relativ zum technischen Maximum.",
+      "demandFactorHint": "Durchschnittlicher Verbrauch während des Simulationsjahres relativ zur technischen Spitzenlast."
     }
   },
   "auth": {
@@ -1035,7 +1078,15 @@
     "clearSelection": "Auswahl aufheben",
     "starredFilter": "Markiert",
     "starredFilterHint": "Nur markierte Modelle anzeigen",
-    "noStarredModels": "Noch keine markierten Modelle. Markieren Sie ein Modell mit dem Stern neben seinem Namen, um es hier zu finden."
+    "noStarredModels": "Noch keine markierten Modelle. Markieren Sie ein Modell mit dem Stern neben seinem Namen, um es hier zu finden.",
+    "canEdit": "Kann bearbeiten",
+    "canView": "Kann ansehen",
+    "noDirectShares": "Dieses Modell wurde noch mit niemandem geteilt.",
+    "peopleWithAccess": "Personen mit direktem Zugriff",
+    "peopleWithAccessDescription": "Benutzer auf dieser Liste können dieses Modell und seine Ergebnisse öffnen.",
+    "revokeAccess": "Zugriff entziehen",
+    "revokeAccessFor": "Zugriff für {{email}} entziehen",
+    "revokingAccess": "Zugriff wird entzogen…"
   },
   "polygon": {
     "escToCancel": "um das Zeichnen abzubrechen",
@@ -1068,7 +1119,8 @@
     "assignBuildings": "Gebäude zuweisen",
     "addTransformerAction": "Trafo hinzufügen",
     "assignBuildingsAction": "Gebäude zuweisen",
-    "resolveHeatAction": "Wärme zuweisen"
+    "resolveHeatAction": "Wärme zuweisen",
+    "drawArea": "Bereich zeichnen"
   },
   "time": {
     "justNow": "Gerade eben"
@@ -1370,7 +1422,8 @@
       "failedToCreate": "Webservice konnte nicht registriert werden",
       "failedToUpdate": "Webservice konnte nicht aktualisiert werden",
       "failedToPing": "Webservice konnte nicht angepingt werden"
-    }
+    },
+    "loading": "Webservices werden geladen"
   },
   "feedbackManagement": {
     "title": "Benutzer-Feedback-Verwaltung",
@@ -1383,7 +1436,8 @@
       "label": "Filter:",
       "allStatus": "Alle Status",
       "allCategories": "Alle Kategorien",
-      "allPriorities": "Alle Prioritäten"
+      "allPriorities": "Alle Prioritäten",
+      "searchPlaceholder": "Feedback durchsuchen…"
     },
     "statuses": {
       "pending": "Ausstehend",
@@ -1854,7 +1908,8 @@
       "loginRequired": "Bitte melden Sie sich an, um Feedback zu senden",
       "submitFailed": "Feedback konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
       "alreadyReported": "Für dieses Modell gibt es bereits eine offene Meldung. Sie erhalten eine Benachrichtigung, sobald sie gelöst ist.",
-      "invalidImageType": "Bitte wählen Sie eine gültige Bilddatei (PNG, JPG, GIF)"
+      "invalidImageType": "Bitte wählen Sie eine gültige Bilddatei (PNG, JPG, GIF)",
+      "payloadTooLarge": "Der Anhang ist zu groß. Bitte verwenden Sie kleinere Bilder."
     },
     "myFeedback": {
       "adminResponse": "Admin-Antwort",
@@ -1872,7 +1927,13 @@
     },
     "runReport": {
       "attached": "Der fehlgeschlagene Lauf, der betroffene Dienst und die technischen Details werden dieser Meldung automatisch angehängt."
-    }
+    },
+    "chars": "Zeichen",
+    "markdownSupported": "Markdown unterstützt",
+    "preview": "Vorschau",
+    "previewEmpty": "Nichts vorzuzeigen",
+    "words": "Wörter",
+    "write": "Schreiben"
   },
   "tooltips": {
     "privateBuildings": {
@@ -2122,7 +2183,8 @@
     },
     "confirm": {
       "deleteParamTitle": "Parameter löschen",
-      "deleteParamMessage": "Sind Sie sicher, dass Sie den Parameter \"{{name}}\" löschen möchten?"
+      "deleteParamMessage": "Sind Sie sicher, dass Sie den Parameter \"{{name}}\" löschen möchten?",
+      "reseedMessage": "Dadurch werden alle Systemtechnologien auf ihre Standardwerte zurückgesetzt. Benutzerdefinierte Technologien sind nicht betroffen. Fortfahren?"
     },
     "success": {
       "added": "Technologie \"{{name}}\" erfolgreich erstellt",
@@ -2362,7 +2424,29 @@
       "selfSufficiencyComparison": "Autarkie\n(Vergleich)",
       "totalCostBreakdown": "Gesamtkostenaufschlüsselung",
       "total": "Gesamt",
-      "difference": "Differenz"
+      "difference": "Differenz",
+      "capacityFactor": "Kapazitätsfaktor-Vergleich",
+      "capexByTechnology": "CAPEX nach Technologie",
+      "costAnalysisSection": "Kostenanalyse",
+      "deficit": "Defizit",
+      "energyBalanceByScenario": "Erneuerbare Energie + Netzversorgung zum Bedarf nach Szenario",
+      "energyCapacityAnalysis": "Energie- & Kapazitätsanalyse",
+      "energyFlowSankey": "Energiefluss-Vergleich",
+      "energyFlowSection": "Energiefluss",
+      "energySupplyDemandCoverage": "Energieangebot vs. Bedarf",
+      "installedCapacityByTechnology": "Installierte Kapazität nach Technologie",
+      "investmentCostComparison": "Investitionskosten-Vergleich",
+      "lcoeBaseline": "Basis-LCOE",
+      "lcoeByTechnology": "LCOE nach Technologie",
+      "lcoeComparison": "Vergleichs-LCOE",
+      "levelisedCost": "Stromgestehungskosten",
+      "monetaryCostsOnly": "Nur monetäre Kosten",
+      "performanceIndicators": "Leistungsindikatoren",
+      "renewableGridDemand": "Erneuerbare Energie + Netzversorgung im Vergleich zum Bedarf",
+      "surplus": "Überschuss",
+      "techEconomicsSection": "Technologieökonomie",
+      "totalSupply": "Gesamtversorgung",
+      "utilizationByTech": "Auslastung nach Technologie"
     },
     "technologies": {
       "solar": "Solar",
@@ -2500,7 +2584,8 @@
       "failedToCreate": "Registrierung der Instanz fehlgeschlagen",
       "failedToUpdate": "Aktualisierung der Instanz fehlgeschlagen",
       "failedToPing": "Ping der Instanz fehlgeschlagen"
-    }
+    },
+    "loading": "Pylovo-Instanzen werden geladen"
   },
   "regionSelector": {
     "goToRegion": "Zur Region gehen",
@@ -2794,5 +2879,43 @@
       "notNegative": "Muss 0 oder größer sein",
       "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
     }
+  },
+  "apiTokens": {
+    "create": "Neues Token erstellen",
+    "createdOnce": "Kopieren Sie dieses Token jetzt – es wird nie wieder angezeigt.",
+    "errors": {
+      "create": "Token konnte nicht erstellt werden",
+      "load": "Tokens konnten nicht geladen werden",
+      "revoke": "Token konnte nicht widerrufen werden"
+    },
+    "existing": "Vorhandene Tokens",
+    "expires": "läuft ab",
+    "expiry": "Ablauf",
+    "expiry30": "Läuft in 30 Tagen ab",
+    "expiry365": "Läuft in 1 Jahr ab",
+    "expiry90": "Läuft in 90 Tagen ab",
+    "expiryNever": "Läuft nie ab",
+    "generate": "Token generieren",
+    "lastUsed": "zuletzt verwendet",
+    "manage": "API-Tokens verwalten",
+    "manageOwn": "Meine API-Tokens verwalten",
+    "namePlaceholder": "Token-Name (z. B. Analyse-Skript)",
+    "none": "Noch keine Tokens.",
+    "profileDescription": "Erstellen und widerrufen Sie Ihre API-Tokens, um über Skripte oder andere Apps auf Ihre Modelle und Ergebnisse zuzugreifen.",
+    "readOnlyAccount": "Sie können schreibgeschützte Tokens erstellen. Kontaktieren Sie einen Experten oder Ihren Vorgesetzten, wenn Sie Schreibzugriff benötigen.",
+    "revoke": "Widerrufen",
+    "scope": "Berechtigung",
+    "scopeFull": "Lesen & Schreiben",
+    "scopeFullShort": "lesen & schreiben",
+    "scopeRead": "Nur Lesen",
+    "scopeReadShort": "nur lesen",
+    "status": {
+      "active": "Aktiv",
+      "expired": "Abgelaufen",
+      "revoked": "Widerrufen"
+    },
+    "subtitle": "API-Zugriffstokens verwalten für",
+    "title": "API-Tokens",
+    "usageHint": "Verwenden Sie das Token aus jeder App: Authorization: Bearer <token>. Schreibgeschützte Tokens können Modelle auflisten und Ergebnisse mit den Berechtigungen dieses Benutzers herunterladen."
   }
 }
