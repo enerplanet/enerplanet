@@ -39,14 +39,18 @@ can coexist.
 
 | Service | Containers (`<prefix>-…`) | Image | Host port |
 |---|---|---|---|
-| TentaCron | `tentacron-env-tentacron-1` | **built** from the pinned commit | **yes** — the stack's only entry point |
-| PyLovo | `pylovo-api-dev`, `pylovo-postgres`, `pylovo-redis` | **built**, plus pulled `pgrouting` / `redis` | **yes** |
-| MEME | `meme-env-api-1` | **built** — no published image | no |
-| ignis | `ignis-http-ignis-1`, `ignis-http-db-1`, `ignis-http-build-db-1` | pulled, pinned | no |
-| BuEM | `buem-gateway-http-buem-gateway-1`, `buem-gateway-http-buem-model-1` | pulled, pinned | no |
-| City2TABULA | `city2tabula`, `city2tabula-db` | pulled, pinned | no |
-| weather | `weather-serve` | pulled, pinned | no |
-| PV service | `pv-service` | **built** — no published image | no |
+| TentaCron | `tentacron-api-1` | **built** from the `_BRANCH` tip | **yes**, the stack's only entry point |
+| PyLovo | `pylovo-api-1`, `pylovo-postgres-1`, `pylovo-redis-1` | **built**, plus pulled `pgrouting` / `redis` | **yes** |
+| MEME | `meme-api-1` | **built**, no published image | no |
+| ignis | `ignis-api-1`, `ignis-db-1`, `ignis-build-db-1` | pulled, `IGNIS_IMAGE_TAG` | no |
+| BuEM | `buem-gateway-api-1`, `buem-gateway-model-1` | pulled, `BUEM_IMAGE_TAG` and `BUEM_MODEL_IMAGE_TAG` | no |
+| City2TABULA | `city2tabula-api-1`, `city2tabula-db-1` | pulled, `CITY2TABULA_IMAGE_TAG` | no |
+| weather | `weather-api-1` | pulled, `WEATHER_IMAGE_TAG` | no |
+| PV service | `pysam-pv-api-1` | **built**, no published image | no |
+
+A pulled tag that is not published stops the deploy; there is no fallback to a
+build. Built images are tagged `<prefix>-build`, so they never replace a
+pulled release image of the same name.
 
 A first `up` on an empty Docker is the long one — the published images, plus the
 locally built PyLovo image (roughly 21 GB) — budget tens of GB. Re-runs skip
@@ -58,8 +62,8 @@ Everything except TentaCron and PyLovo is reachable only on the stack's private
 networks — there are no debugging ports to collide on and none to remember.
 TentaCron routes to the others, which is how the real callers reach them.
 
-Only `city2tabula-cli` is left down: it has no published image, and `up` would
-otherwise build its full Go/JDK/citydb toolchain for no gain.
+City2TABULA's `cli` service sits behind its own compose profile and is not
+started.
 
 ---
 
@@ -131,8 +135,8 @@ Heat stack up under prefix 'sim2'
   workdir     /path/to/enerplanet/.local/heat-stack/sim2
 
 Reach the private services through their containers:
-  docker exec sim2-city2tabula-db psql -U postgres -l
-  docker logs -f sim2-tentacron-env-tentacron-1
+  docker exec sim2-city2tabula-db-1 psql -U postgres -l
+  docker logs -f sim2-tentacron-api-1
 
 Tear down with: scripts/deploy-heat-stack.sh --prefix sim2 down
 ```
@@ -192,7 +196,7 @@ SKIP  weather: …/COSMO_REA6_2018_annual_all_attrs.nc already present …
 ```
 
 Same thing `up` does at the end — this is the way to re-run only that step. The
-target DB containers (`<prefix>-city2tabula-db`, `<prefix>-pylovo-postgres`)
+target DB containers (`<prefix>-city2tabula-db-1`, `<prefix>-pylovo-postgres-1`)
 are taken from the environment, so the data always lands in this prefix's
 containers. The command exits non-zero if any fixture fails to load, which is
 how you'd find out that a set was never loaded (`load.sh` reports it missing
@@ -216,16 +220,14 @@ and the host's are out of reach.
 
 ## How the prefix is applied
 
-The dependency repositories hardcode container names, network names and compose
-project names, and a compose project name alone cannot reach a hardcoded
-`container_name`. So the script writes **one generated override file per
-service** into the workdir and passes it with `-f`. The upstream compose files
-are never edited.
+Each service runs from the compose file and env file `repos.conf` names for it
+(`_COMPOSE`, `_ENV_FILE`), plus **one generated override file** written into
+the workdir and passed with `-f`. The upstream compose files are never edited.
 
 | What | Becomes |
 |---|---|
-| `container_name` | `<prefix>-<original>` |
-| Compose project name | `<prefix>-<original>` (via `-p`) |
+| Compose project name | `<prefix>-<repository>` (via `-p`) |
+| Container names | `<prefix>-<repository>-<service>-1` |
 | Shared network `tentacron-net` | `<prefix>-tentacron-net` |
 | The platform's `spatialhub-net` | `<prefix>-pylovo-net` (`external: !reset`) |
 | Every published port | removed (`ports: !reset []`) |
@@ -233,31 +235,23 @@ are never edited.
 
 `spatialhub-net` is declared `external: true` upstream because it expects the
 platform to have created it. It is reset here into this stack's own network, so
-the stack comes up on a machine where no platform exists — and TentaCron's
+the stack comes up on a machine where no platform exists, and TentaCron's
 PyLovo targets point at this stack's PyLovo, never the host's.
 
-### Why cross-service names need no rewriting
-
-The heat services address each other by fixed names — `meme-env-api-1`,
-`ignis-http`, `buem-gateway-http`, `weather-serve`, `city2tabula`,
-`pv-service`, `pylovo-api-dev`. Those resolve **on the network**, and this stack
-owns its networks, so they cannot clash with the same names on any other stack.
-
-That means **TentaCron's `config.yaml` is used byte-for-byte as upstream ships
-it**, with no divergence to maintain. The two names that are container names
-rather than service names (`meme-env-api-1`, `pylovo-api-dev`) are re-added as
-network aliases in the overrides, so both sides of each address still agree.
+The heat services address each other by the network aliases each repository
+declares (`ignis`, `buem-gateway`, `weather`, `city2tabula`, `pysam-pv`,
+`pylovo`). This stack owns its networks, so those names cannot clash with
+another stack's. MEME declares no alias, so its override adds `meme`.
 
 ### PyLovo
 
 Upstream's dev compose runs a single API and borrows the platform's postgres and
-redis. Neither exists here, so this stack starts its own — same private network
-as the API, so `HOST=postgres` and `REDIS_HOST=redis` resolve to them.
+redis. Neither exists here, so this stack starts its own, on the same private
+network as the API, so `HOST=postgres` and `REDIS_HOST=redis` resolve to them.
 
-`city2tabula-db` joins that same network, because its `postgres_fdw` link
-connects out of it; `PYLOVO_FDW_HOST` is pointed at `<prefix>-pylovo-postgres`.
-The host's `pylovo-postgres` and its `pylovo_db` are on a different network and
-are **not reachable** from this stack.
+City2TABULA's `db` joins that same network, because its `postgres_fdw` link
+connects out of it; `PYLOVO_FDW_HOST` is `postgres`. The host's PyLovo database
+is on a different network and is **not reachable** from this stack.
 
 ---
 
@@ -318,9 +312,9 @@ Nothing is written outside those, and both directories are already in
 They publish no host ports. Go through the containers:
 
 ```bash
-docker logs -f sim2-tentacron-env-tentacron-1
-docker exec sim2-city2tabula-db psql -U postgres -l
-docker exec sim2-pylovo-postgres psql -U postgres -d pylovo_db -c '\dt'
+docker logs -f sim2-tentacron-api-1
+docker exec sim2-city2tabula-db-1 psql -U postgres -l
+docker exec sim2-pylovo-postgres-1 psql -U postgres -d pylovo_db -c '\dt'
 ```
 
 To call a service from the host, either publish it (add a `ports:` line to that
@@ -328,19 +322,20 @@ service's override file and re-run) or run the client on the network:
 
 ```bash
 docker run --rm --network sim2-tentacron-net curlimages/curl \
-  http://ignis-http:8080/ignis/health
+  http://ignis:8080/ignis/health
 ```
 
 ---
 
 ## Pins
 
-The script reads every `_REPO`, `_DIR`, `_REF`, `_PORT` and image tag from the
-clone's `repos.conf`, and checks out each service at its `_REF`. A variable
-already set in the environment wins over the file:
+The script reads every `_REPO`, `_DIR`, `_BRANCH`, `_PORT` and image tag from
+the clone's `repos.conf`, checks out each service at the tip of its `_BRANCH`
+for its compose files, and runs the release image named by its `_IMAGE_TAG`. A
+variable already set in the environment wins over the file:
 
 ```bash
-CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
+CITY2TABULA_BRANCH=dev CITY2TABULA_IMAGE_TAG=0.17.0 \
   scripts/deploy-heat-stack.sh --prefix sim2 render
 ```
 
@@ -355,6 +350,7 @@ CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
 | `<repo>/repos.conf sets no <VAR>` | The clone's `repos.conf` lacks a pin the script needs | Pull the current `dev`, or set `<VAR>` in the environment |
 | `network <prefix>-pylovo-net … was not created for project` | Expected. A later service joins a network an earlier one created | Nothing — it attaches rather than recreating |
 | A checkout you expect at a pin is on a branch | The "left alone" rule above | Move that checkout to the pinned ref yourself |
+| A redeploy leaves old containers such as `<prefix>-ignis-http-ignis-1` running | The prefix was deployed before the services moved to their `environment/` compose files, under other project names | Before updating the checkout, run the previous version's `down` for that prefix, then `up` with this one |
 | `city2tabula` on-request runs fail | The country's database fixture was not loaded | Re-run without `--no-fixtures`, or `make fixtures` |
 | A simulation fails with `coati binary not found` | Unrelated to this stack — that is the backend's own dependency | See [Installation](../docs/enerplanet/installation.md) |
 
@@ -364,13 +360,9 @@ CITY2TABULA_REF=v0.17.0 CITY2TABULA_IMAGE_TAG=0.17.0 \
 
 Checked against Docker Compose 5.6.1:
 
-- All eight compose projects render, with prefixed container names, no published
-  ports except TentaCron and PyLovo, and the two private networks.
-- Checkouts clone at the pinned refs; the fixture LFS pull lands real data.
-- A held port moves the assignment and warns.
-- Cross-project alias resolution works, and the stack genuinely cannot resolve
-  the host's `pylovo-postgres`.
-- `down` interpolates every file cleanly; `shellcheck -S warning` is clean.
+- All eight compose projects render against the `repos.conf` branch tips, with
+  no published ports except TentaCron and PyLovo, the two private networks, and
+  every alias TentaCron calls.
 
 **Not verified:** a full `up` on a clean Docker. It builds the PyLovo, MEME,
 TentaCron and PV images and pulls several GB — the long first run described

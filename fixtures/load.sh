@@ -68,10 +68,10 @@ load_weather() {
 }
 
 # The City2TABULA server derives its database name per request as
-# <DB_NAME>_<country>. Its database is the city2tabula-db container, which
+# <DB_NAME>_<country>. Its database is the city2tabula-db-1 container, which
 # publishes no host port, so psql runs inside it rather than from the host.
 #
-# environment/http/docker.env is deliberately NOT the source here: that file
+# environment/docker.env is not the source here: that file
 # configures the interactive pipeline service, which points at a host Postgres
 # (host.docker.internal) under a different name. Following it restores the
 # fixture into a database the server never reads.
@@ -79,7 +79,7 @@ load_weather() {
 # One full City2TABULA database per country (the CityDB import, the tabula
 # lookup and the city2tabula tables), because the server refuses an on-request
 # run on a database that holds only the city2tabula schema.
-C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db}"
+C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db-1}"
 
 c2t_settings() {
   command -v docker >/dev/null || { fail "city2tabula: docker is required to reach $C2T_DB_CONTAINER"; return 1; }

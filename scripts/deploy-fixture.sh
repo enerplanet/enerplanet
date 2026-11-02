@@ -64,7 +64,8 @@ WORKDIR="${WORKDIR:-$SELF_DIR/../.local/heat-stack/$PREFIX}"
 command -v docker >/dev/null || die "docker not found"
 
 # container_of PROJECT SERVICE FIXED: the running container of SERVICE in compose
-# project PROJECT, else FIXED, the name a stack from deploy-heat-stack.sh uses.
+# project PROJECT, else FIXED, the name a stack from an earlier
+# deploy-heat-stack.sh uses.
 container_of() {
   local id
   id="$(docker ps -q --filter "label=com.docker.compose.project=$1" \
@@ -74,7 +75,7 @@ container_of() {
 
 C2T="$(container_of "$PREFIX-city2tabula" api "$PREFIX-city2tabula")"
 C2T_DB="$(container_of "$PREFIX-city2tabula" db "$PREFIX-city2tabula-db")"
-PYLOVO_DB="$PREFIX-pylovo-postgres"
+PYLOVO_DB="$(container_of "$PREFIX-pylovo" postgres "$PREFIX-pylovo-postgres")"
 WEATHER="$(container_of "$PREFIX-weather" api "$PREFIX-weather-serve")"
 
 # Must match isoByCountry in city2tabula's internal/config/country.go: the

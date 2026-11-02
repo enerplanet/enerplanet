@@ -235,16 +235,16 @@ different pylovo data points at buildings the pylovo fixture may not contain.
 
 | Variable | Value |
 |---|---|
-| `PYLOVO_FDW_HOST` / `PYLOVO_FDW_PORT` | the pylovo Postgres, as reached from inside `city2tabula-db` |
+| `PYLOVO_FDW_HOST` / `PYLOVO_FDW_PORT` | the pylovo Postgres, as reached from inside `city2tabula-db-1` |
 | `PYLOVO_FDW_DBNAME` | the populated pylovo database |
 | `PYLOVO_FDW_USER` / `PYLOVO_FDW_PASSWORD` | a role with `SELECT` on `public.res` and `public.oth` only |
 
 !!! warning "The host is resolved by the database server, not by `c2t`"
-    `postgres_fdw` connects from the `city2tabula-db` container, which is on
+    `postgres_fdw` connects from the `city2tabula-db-1` container, which is on
     `city2tabula_default` while the platform Postgres is on `spatialhub-net`.
     `localhost` and `postgres` do not resolve there. The gateway of
     `city2tabula_default` on the published port 5433 reaches it; so does
-    attaching `city2tabula-db` to `spatialhub-net` and using `postgres:5432`,
+    attaching `city2tabula-db-1` to `spatialhub-net` and using `postgres:5432`,
     which does not depend on the port being published. `make city2tabula`
     takes the second route.
 
@@ -383,7 +383,7 @@ envelope.
 
 ## Connection settings
 
-The City2TABULA restore runs `psql` inside the `city2tabula-db` container,
+The City2TABULA restore runs `psql` inside the `city2tabula-db-1` container,
 because that database publishes no host port and is the one
 `city2tabula` reads. The defaults mirror the compose file's own, so the
 loader and the server derive the same database from the same inputs. Override
@@ -391,13 +391,13 @@ any of these to restore elsewhere:
 
 | Variable | Default |
 |---|---|
-| `C2T_DB_CONTAINER` | `city2tabula-db` |
+| `C2T_DB_CONTAINER` | `city2tabula-db-1` |
 | `C2T_DB_NAME` | `city2tabula`, with `_nl`, `_de`, `_at` or `_cz` appended |
 | `C2T_DB_USER` / `C2T_DB_PASSWORD` | `postgres` |
 
 The City2TABULA server links buildings from an on-request run to PyLovo over
 `postgres_fdw`. `make city2tabula` passes these to its compose file and attaches
-`city2tabula-db` to `spatialhub-net`, where the platform Postgres holding
+`city2tabula-db-1` to `spatialhub-net`, where the platform Postgres holding
 `pylovo_db` is reachable by name. Override them with `make city2tabula
 PYLOVO_FDW_USER=...` and so on, for example to use a read-only role on a
 server:
@@ -408,7 +408,7 @@ server:
 | `PYLOVO_FDW_DBNAME` | `pylovo_db` |
 | `PYLOVO_FDW_USER` / `PYLOVO_FDW_PASSWORD` | `postgres` |
 
-!!! warning "`environment/http/docker.env` is not the source"
+!!! warning "`environment/docker.env` is not the source"
     That file configures the interactive pipeline service, which points at a
     host Postgres under a different database name. A loader following it
     restores the fixture where the server never reads, leaving a stray
