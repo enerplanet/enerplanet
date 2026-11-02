@@ -1263,7 +1263,8 @@
       "simulationEngine": "Simulation-Engine",
       "feedback": "Feedback",
       "userManagement": "User Management",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Grid Prices"
     },
     "stats": {
       "accessLevel": "Access Level",
@@ -3167,6 +3168,37 @@
       "positive": "Must be above 0",
       "notNegative": "Must be 0 or more",
       "notEditable": "This value cannot be edited here"
+    }
+  },
+  "gridPrices": {
+    "title": "Grid electricity prices",
+    "description": "Default prices per country for buying electricity from the grid and the feed-in tariff for selling it back, in ct/kWh. Models use them unless they set their own. The row for other countries applies to any country without its own row.",
+    "country": "Country",
+    "purchase": "Purchase price",
+    "feedIn": "Feed-in tariff",
+    "source": "Source",
+    "lastChanged": "Last changed",
+    "save": "Save",
+    "add": "Add",
+    "saved": "Grid prices for {{country}} saved",
+    "saveFailed": "Could not save grid prices for {{country}}: {{reason}}",
+    "countryPlaceholder": "Country, e.g. austria",
+    "otherCountries": "Other countries",
+    "resetToDefault": "Use the country default",
+    "modelTitle": "Grid electricity prices",
+    "modelHint": "What this model pays for electricity from the grid and earns for feeding surplus back, in ct/kWh. Leave a field empty to use the country default.",
+    "countryDefault": "Default for {{country}}: {{import}} ct/kWh to buy, {{export}} ct/kWh to sell.",
+    "fallbackDefault": "No default for {{country}}; the default for other countries applies: {{import}} ct/kWh to buy, {{export}} ct/kWh to sell.",
+    "sourceLabel": "Source: {{source}}",
+    "defaultUnknown": "The country default applies once the region is known.",
+    "usedInRun": "Grid electricity in this run: bought at {{import}} ct/kWh, sold at {{export}} ct/kWh.",
+    "compared": "Grid electricity prices: baseline {{baseline}}, comparison {{comparison}}.",
+    "pair": "{{import}} ct/kWh to buy, {{export}} ct/kWh to sell",
+    "notRecorded": "not recorded",
+    "errors": {
+      "importPositive": "The purchase price must be above 0.",
+      "exportNegative": "The feed-in tariff must not be negative.",
+      "exportAboveImport": "The feed-in tariff must not be above the purchase price."
     }
   }
 }

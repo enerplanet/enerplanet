@@ -123,6 +123,7 @@ func HandleDispatchMeme(
 	resolver modelDemandResolver,
 	seriesReader demandSeriesReader,
 	pvResolver modelPVResolver,
+	priceStore gridPriceStore,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
 	maxMemoryMB int,
@@ -169,6 +170,7 @@ func HandleDispatchMeme(
 	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
 		return err
 	}
+	var prices *gridPrices
 	if calc, ok := built.(payload.CalculationPayload); ok {
 		covered := dropFurtherWayDemand(calc.Topology, further)
 		warning, err := checkDemandCoverage(calc.Topology, covered)
@@ -185,6 +187,16 @@ func HandleDispatchMeme(
 		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
 			return modelstore.ServiceFailed(modelstore.ServicePV, err)
 		}
+		def, err := priceStore.Default(calc.Country)
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		resolved, err := mergeGridPrices(def, json.RawMessage(model.Config))
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		applyGridPrices(calc.Topology, resolved)
+		prices = &resolved
 		if calc.Mode == "operate" {
 			if err := checkOperateSizes(calc.Topology); err != nil {
 				return fmt.Errorf("model %d: %w", p.ModelID, err)
@@ -239,6 +251,11 @@ func HandleDispatchMeme(
 		}
 		if err := runs.Save(p.ModelID, jobID, "running"); err != nil {
 			log.Errorf("model %d: failed to persist MEME TentaCron job %s: %v", p.ModelID, jobID, err)
+		}
+		if prices != nil {
+			if err := priceStore.RecordUsed(p.ModelID, *prices); err != nil {
+				log.Errorf("model %d: failed to record grid prices %+v: %v", p.ModelID, *prices, err)
+			}
 		}
 		submittedNow = true
 		markModelRunning(db, p.ModelID)

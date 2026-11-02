@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Brain, FileText, Info, Layers, Shield, Users, Zap, Activity } from 'lucide-react';
+import { Brain, FileText, Info, Layers, Shield, Users, Zap, Activity, Euro } from 'lucide-react';
 import type { User as AuthUser } from '@/types/user';
 
 const BG_GRAY_100 = 'bg-gray-100';
@@ -7,7 +7,7 @@ const BG_GRAY_100 = 'bg-gray-100';
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 interface DashboardTab {
-  key: 'models' | 'webservices' | 'pylovo' | 'feedback' | 'users';
+  key: 'models' | 'webservices' | 'pylovo' | 'feedback' | 'users' | 'prices';
   label: string;
   show: boolean;
 }
@@ -28,6 +28,7 @@ export const dashboardTabIcons: Record<DashboardTab['key'], ReactNode> = {
   pylovo: <Activity className="w-4 h-4" />,
   feedback: <FileText className="w-4 h-4" />,
   users: <Users className="w-4 h-4" />,
+  prices: <Euro className="w-4 h-4" />,
 };
 
 export function getDashboardTabs(t: TranslateFn, canManageUsers: boolean, isExpert: boolean): DashboardTab[] {
@@ -37,6 +38,7 @@ export function getDashboardTabs(t: TranslateFn, canManageUsers: boolean, isExpe
     { label: t('adminDashboard.tabs.gridEngine'), show: isExpert, key: 'pylovo' },
     { label: t('adminDashboard.tabs.feedback'), show: isExpert, key: 'feedback' },
     { label: t('adminDashboard.tabs.userManagement'), show: canManageUsers, key: 'users' },
+    { label: t('adminDashboard.tabs.gridPrices'), show: canManageUsers, key: 'prices' },
   ];
 }
 

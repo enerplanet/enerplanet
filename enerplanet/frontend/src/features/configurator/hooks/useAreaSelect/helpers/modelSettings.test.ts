@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { hasUnsavedChanges, settingsChanged, type LoadedModelSettings, type ModelSettings } from "./modelSettings";
+import { hasUnsavedChanges, pricesFromConfig, settingsChanged, type LoadedModelSettings, type ModelSettings } from "./modelSettings";
 
 const loaded: LoadedModelSettings = { title: "Loenen", from_date: "2018-01-01", to_date: "2018-12-31", resolution: 60, config: {} };
-const current: ModelSettings = { title: "Loenen", fromDate: "2018-01-01", toDate: "2018-12-31", resolution: 60, cookingCarrier: "electric", runMode: "plan", weather: { provider: null, choice: "p50" } };
+const current: ModelSettings = { title: "Loenen", fromDate: "2018-01-01", toDate: "2018-12-31", resolution: 60, cookingCarrier: "electric", runMode: "plan", weather: { provider: null, choice: "p50" }, electricityPrices: { import_ct_per_kwh: null, export_ct_per_kwh: null } };
 
 describe("settingsChanged", () => {
   it("reads a model saved without cooking or mode as electric and plan", () => {
@@ -23,10 +23,25 @@ describe("settingsChanged", () => {
     expect(settingsChanged({ ...loaded, config: { weatherScenario: "p90" } }, { ...current, weather: { provider: null, choice: "p90" } })).toBe(false);
   });
 
+  it("counts a changed grid price, but not a model without own prices", () => {
+    const own = { import_ct_per_kwh: 34, export_ct_per_kwh: null };
+    expect(settingsChanged(loaded, { ...current, electricityPrices: own })).toBe(true);
+    expect(settingsChanged({ ...loaded, config: { electricity_prices: own } }, { ...current, electricityPrices: own })).toBe(false);
+    expect(settingsChanged({ ...loaded, config: { electricity_prices: own } }, current)).toBe(true);
+  });
+
   it("counts a changed name, period or resolution", () => {
     expect(settingsChanged(loaded, { ...current, title: "Loenen 2" })).toBe(true);
     expect(settingsChanged(loaded, { ...current, toDate: "2018-06-30" })).toBe(true);
     expect(settingsChanged(loaded, { ...current, resolution: 15 })).toBe(true);
+  });
+});
+
+describe("pricesFromConfig", () => {
+  it("reads the model's own prices and leaves the rest to the country default", () => {
+    expect(pricesFromConfig(null)).toEqual({ import_ct_per_kwh: null, export_ct_per_kwh: null });
+    expect(pricesFromConfig({ electricity_prices: { import_ct_per_kwh: 34 } })).toEqual({ import_ct_per_kwh: 34, export_ct_per_kwh: null });
+    expect(pricesFromConfig({ electricity_prices: { import_ct_per_kwh: "34" } })).toEqual({ import_ct_per_kwh: null, export_ct_per_kwh: null });
   });
 });
 

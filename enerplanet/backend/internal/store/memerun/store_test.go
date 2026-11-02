@@ -44,7 +44,7 @@ func TestStore_SaveLegIsolatesLeg(t *testing.T) {
 	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
 		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
 	mock.ExpectExec(upsert).
-		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 

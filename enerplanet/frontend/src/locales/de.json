@@ -1263,7 +1263,8 @@
       "simulationEngine": "Simulations-Engine",
       "feedback": "Feedback",
       "userManagement": "Benutzerverwaltung",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Netzpreise"
     },
     "stats": {
       "accessLevel": "Zugriffsstufe",
@@ -3167,6 +3168,37 @@
       "positive": "Muss größer als 0 sein",
       "notNegative": "Muss 0 oder größer sein",
       "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
+    }
+  },
+  "gridPrices": {
+    "title": "Netzstrompreise",
+    "description": "Standardpreise je Land für den Strombezug aus dem Netz und die Einspeisevergütung, in ct/kWh. Modelle verwenden sie, sofern sie keine eigenen setzen. Die Zeile für andere Länder gilt für jedes Land ohne eigene Zeile.",
+    "country": "Land",
+    "purchase": "Bezugspreis",
+    "feedIn": "Einspeisevergütung",
+    "source": "Quelle",
+    "lastChanged": "Zuletzt geändert",
+    "save": "Speichern",
+    "add": "Hinzufügen",
+    "saved": "Netzpreise für {{country}} gespeichert",
+    "saveFailed": "Netzpreise für {{country}} konnten nicht gespeichert werden: {{reason}}",
+    "countryPlaceholder": "Land, z. B. austria",
+    "otherCountries": "Andere Länder",
+    "resetToDefault": "Landesstandard verwenden",
+    "modelTitle": "Netzstrompreise",
+    "modelHint": "Was dieses Modell für Netzstrom zahlt und für eingespeisten Überschuss erhält, in ct/kWh. Ein leeres Feld verwendet den Landesstandard.",
+    "countryDefault": "Standard für {{country}}: {{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung.",
+    "fallbackDefault": "Kein Standard für {{country}}; es gilt der Standard für andere Länder: {{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung.",
+    "sourceLabel": "Quelle: {{source}}",
+    "defaultUnknown": "Der Landesstandard gilt, sobald die Region bekannt ist.",
+    "usedInRun": "Netzstrom in diesem Lauf: Bezug zu {{import}} ct/kWh, Einspeisung zu {{export}} ct/kWh.",
+    "compared": "Netzstrompreise: Basis {{baseline}}, Vergleich {{comparison}}.",
+    "pair": "{{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung",
+    "notRecorded": "nicht erfasst",
+    "errors": {
+      "importPositive": "Der Bezugspreis muss über 0 liegen.",
+      "exportNegative": "Die Einspeisevergütung darf nicht negativ sein.",
+      "exportAboveImport": "Die Einspeisevergütung darf nicht über dem Bezugspreis liegen."
     }
   }
 }

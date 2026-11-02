@@ -18,13 +18,16 @@ const (
 // is the durable queue; the backend must never resubmit a job it already
 // queued). Status is the run's lifecycle: pending, running, completed, failed.
 type ModelMemeRun struct {
-	ModelID   uint   `gorm:"primaryKey" json:"model_id"`
-	Leg       string `gorm:"primaryKey;size:32;default:calliope" json:"leg"`
-	RunID     string `gorm:"size:255;not null" json:"run_id"`
-	Status    string `gorm:"size:32;not null" json:"status"`
-	Error     *string `json:"error,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ModelID uint    `gorm:"primaryKey" json:"model_id"`
+	Leg     string  `gorm:"primaryKey;size:32;default:calliope" json:"leg"`
+	RunID   string  `gorm:"size:255;not null" json:"run_id"`
+	Status  string  `gorm:"size:32;not null" json:"status"`
+	Error   *string `json:"error,omitempty"`
+	// Grid electricity prices the run used, ct/kWh; nil for a run that recorded none.
+	GridImportCtPerKWh *float64  `gorm:"column:grid_import_ct_per_kwh" json:"grid_import_ct_per_kwh,omitempty"`
+	GridExportCtPerKWh *float64  `gorm:"column:grid_export_ct_per_kwh" json:"grid_export_ct_per_kwh,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 func (ModelMemeRun) TableName() string {

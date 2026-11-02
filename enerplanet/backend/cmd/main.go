@@ -788,6 +788,9 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 	api.GET(routeSettings+"/model-limits/me", handler.GetMyModelLimit)
 	api.PUT(routeSettings+"/model-limits", handler.UpdateModelLimits)
 	api.PUT(routeSettings+"/model-limit", handler.UpdateModelLimit)
+	// Grid electricity prices per country
+	api.GET(routeSettings+"/grid-prices", handler.GetGridPrices)
+	api.PUT(routeSettings+"/grid-prices", handler.UpdateGridPrice)
 }
 
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {

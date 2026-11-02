@@ -25,7 +25,11 @@ interface ComparisonSummaryProps {
   data2: SummaryData;
   /** Carrier both sides were fetched for — drives units and the metric set. */
   carrier?: string;
+  /** Grid electricity prices each run used, ct/kWh; absent for older runs. */
+  gridPrices?: [GridPrices | undefined, GridPrices | undefined];
 }
+
+type GridPrices = { import_ct_per_kwh: number; export_ct_per_kwh: number };
 
 const FLOATING_POINT_EPSILON = 1e-6;
 
@@ -116,7 +120,7 @@ const MetricCard: FC<{
   );
 };
 
-export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, carrier }) => {
+export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, carrier, gridPrices }) => {
   const { t } = useTranslation();
 
   const baselineLabel = t('simulationComparison.summary.baseline');
@@ -208,6 +212,14 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
           />
         )}
       </div>
+      {gridPrices && (gridPrices[0] || gridPrices[1]) && (
+        <p className="text-xs text-muted-foreground">
+          {t('gridPrices.compared', {
+            baseline: gridPrices[0] ? t('gridPrices.pair', { import: gridPrices[0].import_ct_per_kwh, export: gridPrices[0].export_ct_per_kwh }) : t('gridPrices.notRecorded'),
+            comparison: gridPrices[1] ? t('gridPrices.pair', { import: gridPrices[1].import_ct_per_kwh, export: gridPrices[1].export_ct_per_kwh }) : t('gridPrices.notRecorded'),
+          })}
+        </p>
+      )}
     </div>
   );
 };

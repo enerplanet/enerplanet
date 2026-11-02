@@ -42,6 +42,7 @@ import { useSearchParams } from "react-router-dom";
 import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
 import { useAuthStore } from "@/store/auth-store";
 import { WeatherSettings } from "./WeatherSettings";
+import { GridPriceFields } from "@/features/grid-prices/GridPriceFields";
 import { SCENARIO_DATE_YEAR, isScenario } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -493,6 +494,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             )}
           </div>
           )}
+          {configuratorMode === "advanced" && <GridPriceFields />}
         </PanelSection>
 
         <PanelSection title={t("simulation.sections.energySystem")}>
