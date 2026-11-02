@@ -8,8 +8,7 @@ import (
 )
 
 // A building of unknown, agricultural or industrial use that is both lower and
-// smaller than these counts as unheated. Measured on the v4 test data
-// (docs/scenarios/sc-15-building-use-from-3d-data.md).
+// smaller than these counts as unheated. Measured on the v4 test data.
 const (
 	unheatedMaxHeightM     = 5.0
 	unheatedMaxFootprintM2 = 50.0
