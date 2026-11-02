@@ -1,5 +1,12 @@
 # Modular Workflow — Status
 
+> ⚠️ **Companion to [`ARCHITECTURE.md`](ARCHITECTURE.md) — the canonical living doc.** The
+> issues ledger, data contract, and the actual workflow node-graph live there. This file
+> keeps the rebuild step history. **Corrections since this history was written:**
+> `grid-generation`/`power-flow` are NOT "✅ done / auto-runs" — their auto execution is a
+> no-op (ARCHITECTURE §5, C1); `ev-hosting-analysis` does not exist and only
+> `full-energy-planning` is registered (ARCHITECTURE §3, §7).
+
 > Living document tracking the rebuild of the ModelBuilder, module by module,
 > following the steps performed in the legacy model builder. Modules are grouped
 > into logical units and replace existing ones where required.
@@ -85,6 +92,20 @@ into a logical module and replaces the existing module where one exists.
   need re-checking against the legacy flow.
 
 ## Changelog
+
+### 2026-11-02 — Critical execution fixes (C1, C2)
+
+- **C1 — auto nodes now execute.** Added optional headless `run()` to the module
+  contract (`ModuleDefinition` / `BaseModule`). `NodeEngine.runAutoNodes` executes
+  `auto` nodes via `run()` (returned keys filtered to `io.outputs`), falling back to the
+  legacy onEnter/onLeave path when absent. `grid-generation` and `power-flow` implement
+  `run()` (idempotent grid gen; pypsa-gated power flow). New test
+  `workflow/NodeEngine.test.ts` covers run-merge, undeclared-output filtering, legacy
+  fallback, and skip semantics.
+- **C2 — skipped dependencies no longer deadlock.** `dependenciesDone`
+  (`WorkflowGraph.ts`) accepts `done || skipped`; the `io.required` context-presence
+  gate still blocks consumers whose required key was never produced (no garbage runs).
+- Verified: `npx tsc --noEmit -p tsconfig.json` exits 0; vitest 10/10 green.
 
 ### 2026-08-11 — Flow-state persistence (Phase 6)
 

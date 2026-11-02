@@ -1,5 +1,11 @@
 # Modular Workflow — Flow Document
 
+> ⚠️ **Companion to [`ARCHITECTURE.md`](ARCHITECTURE.md) — the canonical living doc.**
+> The node-graphs, data contract, and the critical-issues ledger live there. This file is
+> kept for module-level flow details + the legacy save-pipeline reference. Corrections:
+> the only **registered** workflow is `full-energy-planning` (see ARCHITECTURE §3); the
+> flow description below predates the `model-load` entry node.
+
 > Living document capturing the flow of the model builder, rebuilt as a
 > **node network** of composable modules in the new modular-workflow system.
 

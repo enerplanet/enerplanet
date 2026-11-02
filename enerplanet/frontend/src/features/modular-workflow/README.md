@@ -12,9 +12,12 @@ legacy linear **WorkflowEngine** is kept for backward compatibility).
 
 > **Companion docs**
 >
+> - [`ARCHITECTURE.md`](ARCHITECTURE.md) — **canonical**: data contract, the actual
+>   registered workflow node-graph, execution model, and the critical-issues ledger.
+>   Read this first.
 > - [`FLOW.md`](FLOW.md) — the node-network flow of the model builder, with the API
->   contract for each module. Read this first to understand _what_ each module should do.
-> - [`STATUS.md`](STATUS.md) — current state of each module (done / stub / broken).
+>   contract for each module.
+> - [`STATUS.md`](STATUS.md) — rebuild step history and per-module status.
 
 ---
 
@@ -241,6 +244,14 @@ export class MyModule extends BaseModule {
     return { valid: true };
   }
 
+  // Optional: headless computation for `auto` nodes.
+  // A module mounted as an `auto` node MUST provide this — without it the node
+  // is marked done without doing any work (see ARCHITECTURE.md §5 C1).
+  override async run(context: ConfiguratorContext) {
+    // ... compute (API calls etc.) ...
+    return { myResult: /* ... */ };
+  }
+
   // Optional: lifecycle hooks
   override async onEnter(context: ConfiguratorContext): Promise<void> {
     // fetch data, initialise
@@ -332,7 +343,8 @@ Node flags:
 
 - `dependsOn` — node ids that must complete before this node can run
 - `skippable` — user can skip this node (uses defaults)
-- `auto` — runs automatically without user interaction (e.g. grid generation, power flow)
+- `auto` — runs automatically without user interaction (e.g. grid generation, power flow);
+  the module **must** provide a headless `run()` or the node completes without doing work
 
 Register the workflow in [`workflows/index.ts`](workflows/index.ts) so it's available in
 the `defaultWorkflowRegistry`.
@@ -448,10 +460,9 @@ src/features/modular-workflow/
     ├── index.ts                    ← registers all workflows
     ├── defaultWorkflow.ts
     ├── graph-validate.test.ts      ← validates each workflow's nodes/dependsOn
-    ├── quick-grid-analysis.json
-    ├── full-energy-planning.json
-    ├── ev-hosting-analysis.json
-    └── cost-optimization.json
+    ├── quick-grid-analysis.json   <- on disk, NOT imported (dead)
+    ├── full-energy-planning.json  <- the only registered workflow
+    └── cost-optimization.json     <- on disk, NOT imported (dead)
 ```
 
 ---
