@@ -285,15 +285,27 @@ export function validateGraph(
       outputIndex.set(out, list);
     }
   }
+
+  // 4. One writer per key (M4): a context key must be produced by exactly one
+  // node, or ordering dependencies become ambiguous / await multiple producers.
+  for (const [key, producers] of outputIndex) {
+    if (producers.length > 1) {
+      errors.push(
+        `Context key "${key}" is written by more than one node [${producers.join(", ")}] — violates the one-writer-per-key rule`,
+      );
+    }
+  }
+
   for (const node of nodes) {
     const def = resolveModule(node, inventory);
     if (!def) continue;
     for (const req of def.io.required) {
+      // Satisfied when the key is seeded OR any OTHER node produces it —
+      // `deriveEdges` adds an ordering edge from every producer automatically,
+      // so explicit `dependsOn` is not required (m7: validator == runtime).
       const producers = outputIndex.get(req) ?? [];
-      const producedByDependency = producers.some((producer) =>
-        (node.dependsOn ?? []).includes(producer),
-      );
-      if (!available.has(req) && !producedByDependency) {
+      const producedByAnother = producers.some((producer) => producer !== node.id);
+      if (!available.has(req) && !producedByAnother) {
         errors.push(
           `Node "${node.label}" requires "${req}" but it is not produced by a dependency or seeded`,
         );

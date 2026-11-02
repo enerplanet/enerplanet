@@ -28,15 +28,12 @@ export class ModelLoadModule extends BaseModule {
 
   readonly io = {
     inputs: [],
-    outputs: [
-      "modelId",
-      "modelName",
-      "workspaceId",
-      "region",
-      "polygons",
-      "advancedParams",
-      "sourceModelId",
-    ],
+    // Pre-seeder, not a graph producer. On "import", model-load distributes the
+    // loaded model into the store (region/polygons/modelId/... via onUpdate),
+    // but it does NOT declare those as outputs: consumers derive edges only
+    // from their true producers (e.g. region-select), and the one-writer-per-key
+    // rule is preserved (see M4). Only keys nothing else produces are declared.
+    outputs: ["advancedParams", "sourceModelId"],
     required: [],
   };
 

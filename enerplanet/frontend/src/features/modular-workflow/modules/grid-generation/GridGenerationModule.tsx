@@ -27,46 +27,16 @@ export class GridGenerationModule extends BaseModule {
   };
 
   readonly io = {
-    inputs: ["polygons", "advancedParams"],
-    outputs: ["gridData", "gridResultIds"],
+    inputs: ["polygons", "gridData", "gridResultIds", "advancedParams"],
+    outputs: [],
     required: ["polygons"],
   };
 
   readonly component = GridGenerationComponent;
-
-  /**
-   * Headless grid generation for the `auto` node path.
-   *
-   * Idempotent: if the grid already exists in context (region-select triggers
-   * generation on polygon draw), returns nothing and lets the node complete.
-   * Otherwise calls `pylovoService.generateGrid` and returns the declared
-   * outputs (`gridData`, `gridResultIds`). Map rendering stays in the
-   * component — `run()` is pure computation.
-   */
-  override async run(
-    context: ConfiguratorContext,
-  ): Promise<Partial<ConfiguratorContext>> {
-    const polygons = context.polygons;
-    if (!polygons?.length || context.gridData) return {};
-
-    const user = useAuthStore.getState().user;
-    const result = await pylovoService.generateGrid({
-      polygons,
-      user_id: user?.id ? String(user.id) : undefined,
-      model_id: context.modelId,
-      draft_id: context.draftId,
-      include_private_buildings: true,
-    });
-
-    const gridResultIds = (result.grids ?? []).map(
-      (g: { grid_result_id: number }) => g.grid_result_id,
-    );
-
-    return {
-      gridData: result as unknown as ConfiguratorContext["gridData"],
-      gridResultIds,
-    };
-  }
+  // Grid generation is owned by region-select (fires on polygon draw and
+  // writes gridData/gridResultIds). This node is a checkpoint: it gates on the
+  // area being drawn and is where the grid is displayed/validated, but it does
+  // not itself produce data (one writer per key — see M4).
 }
 
 function GridGenerationComponent({ context, onUpdate }: ModuleProps) {

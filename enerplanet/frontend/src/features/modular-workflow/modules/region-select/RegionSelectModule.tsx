@@ -35,9 +35,13 @@ export class RegionSelectModule extends BaseModule {
 
   readonly io = {
     inputs: [],
-    outputs: ["region", "polygons"],
+    outputs: ["region", "polygons", "gridData", "gridResultIds"],
     required: [],
   };
+  // NOTE: region-select owns BOTH the area (region/polygons) and grid
+  // generation (gridData/gridResultIds) — it fires generateGrid on polygon
+  // draw and renders the result on the map. grid-generation is therefore a
+  // checkpoint node, not a data producer (one writer per key, see M4).
 
   readonly component = RegionSelectWrapper;
 
