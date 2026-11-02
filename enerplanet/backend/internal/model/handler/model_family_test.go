@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -48,10 +49,11 @@ func TestCheckFamilyLink_linksToAFamilyOfItsOriginal(t *testing.T) {
 	mock.ExpectQuery(countHeadsSQL).WithArgs(30, 30).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	mock.ExpectQuery(familyOptionsQuery).WithArgs(4, 21, 21, 30).WillReturnRows(lineageFamilies())
 
-	status, err := checkFamilyLink(db, unlinkedCopy(), 25)
+	status, reason, err := checkFamilyLink(db, unlinkedCopy(), 25)
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, status)
+	assert.Empty(t, reason)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -60,11 +62,11 @@ func TestCheckFamilyLink_refusesAFamilyOutsideItsOriginal(t *testing.T) {
 	mock.ExpectQuery(countHeadsSQL).WithArgs(30, 30).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	mock.ExpectQuery(familyOptionsQuery).WithArgs(4, 21, 21, 30).WillReturnRows(lineageFamilies())
 
-	status, err := checkFamilyLink(db, unlinkedCopy(), 40)
+	status, reason, err := checkFamilyLink(db, unlinkedCopy(), 40)
 
-	require.Error(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, status)
-	assert.Contains(t, err.Error(), "family 40 does not share the original of model 30")
+	assert.Equal(t, "it can only be linked to models copied from the same original", reason)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -72,10 +74,34 @@ func TestCheckFamilyLink_refusesAModelWithCopies(t *testing.T) {
 	db, mock := testutil.NewMockDB(t)
 	mock.ExpectQuery(countHeadsSQL).WithArgs(30, 30).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
 
-	status, err := checkFamilyLink(db, unlinkedCopy(), 21)
+	status, reason, err := checkFamilyLink(db, unlinkedCopy(), 21)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusConflict, status)
+	assert.Equal(t, "it already has 2 copies, so it can't be linked to another model", reason)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCheckFamilyLink_namesOneCopyInTheSingular(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	mock.ExpectQuery(countHeadsSQL).WithArgs(30, 30).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	_, reason, err := checkFamilyLink(db, unlinkedCopy(), 21)
+
+	require.NoError(t, err)
+	assert.Equal(t, "it already has 1 copy, so it can't be linked to another model", reason)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCheckFamilyLink_hidesADatabaseFailureBehindAPlainReason(t *testing.T) {
+	db, mock := testutil.NewMockDB(t)
+	mock.ExpectQuery(countHeadsSQL).WithArgs(30, 30).WillReturnError(errors.New("connection reset"))
+
+	status, reason, err := checkFamilyLink(db, unlinkedCopy(), 21)
 
 	require.Error(t, err)
-	assert.Equal(t, http.StatusConflict, status)
-	assert.Contains(t, err.Error(), "model 30 heads a family of 2 other models")
+	assert.Contains(t, err.Error(), "model 30")
+	assert.Equal(t, http.StatusInternalServerError, status)
+	assert.Equal(t, "its copies could not be checked", reason)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
