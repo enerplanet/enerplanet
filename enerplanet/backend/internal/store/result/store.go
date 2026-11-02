@@ -332,8 +332,8 @@ func (s *Store) GetCarrierConPeakDemand(modelID uint, carrier ...string) float64
 		Table("(?) as sub",
 			s.db.Model(&backendModels.ResultsCarrierCon{}).
 				Select("timestep, SUM(ABS(value)) as ts_total").
-				Where("model_id = ? AND carrier = ? AND timestep > ? AND LOWER(SPLIT_PART(techs, ':', 1)) LIKE ?",
-					modelID, carrierVal, zeroTime, "%\\_demand").
+				Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
+				Where(endUseSQL).
 				Group("timestep"),
 		).
 		Row().Scan(&peak)
@@ -643,8 +643,7 @@ func (s *Store) GetCarrierSummary(modelID uint, carrier ...string) CarrierSummar
 	conAgg := s.GetCarrierConAggregates(modelID, carrierVal)
 	var sumConsumption float64
 	for _, ca := range conAgg {
-		tech := strings.SplitN(ca.Techs, ":", 2)[0]
-		if strings.HasSuffix(strings.ToLower(tech), "_demand") {
+		if isEndUse(ca.Techs) {
 			sumConsumption += ca.Total
 		}
 	}
@@ -720,6 +719,21 @@ func applyDateRange(q *gorm.DB, dr DateRange) *gorm.DB {
 	}
 	return q
 }
+
+// isEndUse reports whether a consuming technology uses the carrier on site:
+// demand and conversion technologies (a heat pump drawing power, a boiler
+// burning gas). Storage charging, export links and transmission only move the
+// carrier, so they are not demand. endUseSQL is the same rule in SQL.
+func isEndUse(techs string) bool {
+	tech := strings.ToLower(strings.SplitN(techs, ":", 2)[0])
+	return !strings.Contains(tech, "transmission") &&
+		!strings.Contains(tech, "storage") &&
+		!strings.HasSuffix(tech, "_export")
+}
+
+const endUseSQL = `LOWER(SPLIT_PART(techs, ':', 1)) NOT LIKE '%transmission%'
+	AND LOWER(SPLIT_PART(techs, ':', 1)) NOT LIKE '%storage%'
+	AND LOWER(SPLIT_PART(techs, ':', 1)) NOT LIKE '%\_export'`
 
 func isRenewableTech(tech string) bool {
 	renewables := []string{"pv_supply", "wind_onshore", "wind_offshore", "biomass_supply", "geothermal_supply", "hydro_supply"}
