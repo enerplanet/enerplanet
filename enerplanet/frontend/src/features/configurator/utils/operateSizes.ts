@@ -1,12 +1,8 @@
 /** Constraints operate mode needs finite, per technology. PV arrays are sized from their
- * surfaces and supply markets need no limit. Must match operateSizeFields in the backend's
- * internal/jobs/operate_sizes.go. */
+ * surfaces, heat technologies from peak heat demand at dispatch (SC-16) and supply markets
+ * need no limit. Must match operateSizeFields in the backend's internal/jobs/operate_sizes.go. */
 export const OPERATE_SIZE_FIELDS: Record<string, string[]> = {
   battery_storage: ["cont_energy_cap_max", "cont_storage_cap_max"],
-  air_source_heat_pump: ["cont_energy_cap_max"],
-  ground_source_heat_pump: ["cont_energy_cap_max"],
-  electric_boilers: ["cont_energy_cap_max"],
-  gas_boiler: ["cont_energy_cap_max"],
   air_conditioner: ["cont_energy_cap_max"],
 };
 
