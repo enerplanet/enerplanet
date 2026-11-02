@@ -645,6 +645,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                   hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
                   siteMode={siteMode}
                   hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                  gridStale={gridStale}
                 />
               </div>
             )}

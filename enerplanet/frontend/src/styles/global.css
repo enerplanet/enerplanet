@@ -316,6 +316,22 @@
   animation: md-fade-in 0.35s ease-out backwards;
 }
 
+@keyframes md-attention {
+  from {
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0.7);
+  }
+  to {
+    box-shadow: 0 0 0 10px rgb(245 158 11 / 0);
+  }
+}
+
+/* Fades in, then rings twice to draw the eye to an action that just became needed. */
+.md-attention {
+  animation:
+    md-fade-in 0.35s ease-out backwards,
+    md-attention 0.9s ease-out 0.35s 2;
+}
+
 @keyframes md-drop-in {
   from {
     opacity: 0;
@@ -369,6 +385,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .md-attention,
   .md-fade-in,
   .md-rise,
   .md-row-in,
