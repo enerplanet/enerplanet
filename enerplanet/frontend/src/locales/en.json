@@ -251,7 +251,10 @@
       "perPage": "per page",
       "previousPage": "Previous page",
       "nextPage": "Next page"
-    }
+    },
+    "copied": "Copied",
+    "copy": "Copy",
+    "saved": ""
   },
   "forms": {
     "user": {
@@ -643,7 +646,11 @@
       "energyFlowNote": "Flow width represents relative energy capacity (kW). Values are aggregated totals across all locations in the model.",
       "lcoeComparison": "Energy Cost per Technology",
       "investmentVsOperating": "Equipment vs. Running Costs",
-      "systemCostSummary": "System Cost Summary"
+      "systemCostSummary": "System Cost Summary",
+      "capacityFactor": "Capacity Factor",
+      "capacityFactorTooltipDesc": "The percentage of the installed capacity that is actually utilized on average over the year. For example, a 15% capacity factor means the technology produced 15% of its theoretical maximum potential output. Represented by the purple line on the right axis.",
+      "installedCapacity": "",
+      "installedCapacityDesc": "The maximum potential power output of the hardware, measured in kW or MW. Represented by the height of the bars on the left axis."
     },
     "energy": {
       "noData": "No energy data available",
@@ -697,7 +704,10 @@
       "generationDurationCurveDesc": "Ranks hourly renewable output from highest to lowest so you can see peak generation and how output falls off across the year.",
       "demandDurationCurve": "Demand duration curve",
       "demandDurationCurveDesc": "Ranks hourly heat demand from highest to lowest so you can see peak demand and how it falls off across the year.",
-      "noDataLoadCurve": "No data available for load curve"
+      "noDataLoadCurve": "No data available for load curve",
+      "hourlyRenewableGeneration": "Hourly renewable generation",
+      "loadingTimeSeries": "Loading energy time series...",
+      "noRenewableGenerationData": "No PV, wind, biomass, or geothermal production data available."
     },
     "grid": {
       "noData": "No PyPSA grid data available",
@@ -791,7 +801,13 @@
       "investmentCostsDesc": "Capital expenditure required for each technology deployment.",
       "capex": "CAPEX",
       "capexDesc": "Initial capital investment",
-      "totalInvestment": "Total Investment"
+      "totalInvestment": "Total Investment",
+      "dailyDemandDesc": "Total daily electricity demand across all loads.",
+      "dailyGridImportDesc": "Energy imported from the transformer or grid connection per day.",
+      "dailyRenewableDesc": "Energy generated from renewable technologies per day.",
+      "dailySupplyDemand": "Daily Supply vs Demand",
+      "dailySupplyDemandDesc": "Daily renewable generation and grid import compared to total demand.",
+      "loadingTimeSeries": "Loading system data..."
     },
     "chartLabels": {
       "amount": "Amount",
@@ -822,7 +838,12 @@
       "cheaperThanAvg": "cheaper than system average",
       "moreExpensiveThanAvg": "more expensive than average",
       "days": "days",
-      "hours": "hours"
+      "hours": "hours",
+      "avgConsumption": "Avg. Consumption",
+      "avgProduction": "Avg. Production",
+      "demandFactor": "Demand Factor",
+      "installedGen": "Installed Generation",
+      "peakDemand": "Peak Demand"
     },
     "costInfo": {
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
@@ -849,13 +870,35 @@
       "costs": "Costs",
       "noEnergyData": "No hourly energy data available",
       "noSimulationLinked": "No simulation data linked",
-      "household": "Household"
+      "household": "Household",
+      "area": "Area",
+      "energyLabel": "Energy Label",
+      "energyOverview": "Energy Overview",
+      "floors": "Floors",
+      "height": "Height",
+      "households": "Households",
+      "installedTechnologies": "Installed Technologies",
+      "loadingTimeSeries": "Loading time series...",
+      "peak": "Peak",
+      "population": "Population",
+      "selfSufficient": "self-sufficient",
+      "totalCost": "Total Cost",
+      "yearBuilt": "Built"
     },
     "gauges": {
       "selfConsumption": "Self-Consumption",
       "gridIndependence": "Grid Independence",
       "capacityFactor": "Capacity Factor",
       "co2Reduction": "CO₂ Reduction"
+    },
+    "clickBuildingPrompt": "Click on a building to view details",
+    "techTypes": {
+      "demand": "Demand",
+      "supply": "Supply"
+    },
+    "tooltips": {
+      "capacityFactorHint": "Average production level throughout the simulation year relative to technical maximum.",
+      "demandFactorHint": "Average consumption level throughout the simulation year relative to technical peak demand."
     }
   },
   "auth": {
@@ -1035,7 +1078,15 @@
     "clearSelection": "Clear selection",
     "starredFilter": "Starred",
     "starredFilterHint": "Show only starred models",
-    "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here."
+    "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here.",
+    "canEdit": "Can edit",
+    "canView": "Can view",
+    "noDirectShares": "This model has not been shared with anyone yet.",
+    "peopleWithAccess": "People with direct access",
+    "peopleWithAccessDescription": "Users listed here can open this model and its results.",
+    "revokeAccess": "Revoke",
+    "revokeAccessFor": "",
+    "revokingAccess": "Revoking…"
   },
   "polygon": {
     "escToCancel": "to cancel drawing",
@@ -1068,7 +1119,8 @@
     "assignBuildings": "Assign Buildings",
     "addTransformerAction": "Add Transformer",
     "assignBuildingsAction": "Assign Buildings",
-    "resolveHeatAction": "Resolve heat"
+    "resolveHeatAction": "Resolve heat",
+    "drawArea": "Draw area"
   },
   "time": {
     "justNow": "Just now"
@@ -1370,7 +1422,8 @@
       "failedToCreate": "Failed to register webservice",
       "failedToUpdate": "Failed to update webservice",
       "failedToPing": "Failed to ping webservice"
-    }
+    },
+    "loading": "Loading webservices"
   },
   "feedbackManagement": {
     "title": "User Feedback Management",
@@ -1383,7 +1436,8 @@
       "label": "Filters:",
       "allStatus": "All Status",
       "allCategories": "All Categories",
-      "allPriorities": "All Priorities"
+      "allPriorities": "All Priorities",
+      "searchPlaceholder": ""
     },
     "statuses": {
       "pending": "Pending",
@@ -1854,7 +1908,8 @@
       "loginRequired": "Please log in to submit feedback",
       "submitFailed": "Failed to submit feedback. Please try again later.",
       "alreadyReported": "This model already has an open report. You get a notification when it is resolved.",
-      "invalidImageType": "Please select a valid image file (PNG, JPG, GIF)"
+      "invalidImageType": "Please select a valid image file (PNG, JPG, GIF)",
+      "payloadTooLarge": "The attachment is too large. Please use smaller images."
     },
     "myFeedback": {
       "adminResponse": "Admin Response",
@@ -1872,7 +1927,13 @@
     },
     "runReport": {
       "attached": "The failed run, the service that failed and the technical details are attached to this report automatically."
-    }
+    },
+    "chars": "chars",
+    "markdownSupported": "Markdown supported",
+    "preview": "Preview",
+    "previewEmpty": "Nothing to preview",
+    "words": "words",
+    "write": "Write"
   },
   "tooltips": {
     "privateBuildings": {
@@ -2122,7 +2183,8 @@
     },
     "confirm": {
       "deleteParamTitle": "Delete Parameter",
-      "deleteParamMessage": "Are you sure you want to delete the parameter \"{{name}}\"?"
+      "deleteParamMessage": "Are you sure you want to delete the parameter \"{{name}}\"?",
+      "reseedMessage": ""
     },
     "success": {
       "added": "Technology \"{{name}}\" created successfully",
@@ -2363,7 +2425,29 @@
       "selfSufficiencyComparison": "Self-Sufficiency\n(Comparison)",
       "totalCostBreakdown": "Total Cost Breakdown",
       "total": "Total",
-      "difference": "Difference"
+      "difference": "Difference",
+      "capacityFactor": "Capacity Factor Comparison",
+      "capexByTechnology": "CAPEX by technology",
+      "costAnalysisSection": "Cost Analysis",
+      "deficit": "Deficit",
+      "energyBalanceByScenario": "Renewable + Grid supply to demand by scenario",
+      "energyCapacityAnalysis": "Energy & Capacity Analysis",
+      "energyFlowSankey": "Energy Flow Comparison",
+      "energyFlowSection": "Energy Flow",
+      "energySupplyDemandCoverage": "Energy Supply vs Demand",
+      "installedCapacityByTechnology": "Installed Capacity by Technology",
+      "investmentCostComparison": "Investment Cost Comparison",
+      "lcoeBaseline": "Baseline LCOE",
+      "lcoeByTechnology": "LCOE by Technology",
+      "lcoeComparison": "Comparison LCOE",
+      "levelisedCost": "",
+      "monetaryCostsOnly": "Monetary costs only",
+      "performanceIndicators": "Performance Indicators",
+      "renewableGridDemand": "Renewable + Grid supply compared to demand",
+      "surplus": "Surplus",
+      "techEconomicsSection": "Technology Economics",
+      "totalSupply": "Total Supply",
+      "utilizationByTech": ""
     },
     "technologies": {
       "solar": "Solar",
@@ -2500,7 +2584,8 @@
       "failedToCreate": "Failed to register instance",
       "failedToUpdate": "Failed to update instance",
       "failedToPing": "Failed to ping instance"
-    }
+    },
+    "loading": "Loading Pylovo instances"
   },
   "regionSelector": {
     "goToRegion": "Go to region",
@@ -2794,5 +2879,43 @@
       "notNegative": "Must be 0 or more",
       "notEditable": "This value cannot be edited here"
     }
+  },
+  "apiTokens": {
+    "create": "Create new token",
+    "createdOnce": "Copy this token now — it will never be shown again.",
+    "errors": {
+      "create": "Failed to create token",
+      "load": "Failed to load tokens",
+      "revoke": "Failed to revoke token"
+    },
+    "existing": "Existing tokens",
+    "expires": "expires",
+    "expiry": "Expiry",
+    "expiry30": "Expires in 30 days",
+    "expiry365": "Expires in 1 year",
+    "expiry90": "Expires in 90 days",
+    "expiryNever": "Never expires",
+    "generate": "Generate token",
+    "lastUsed": "last used",
+    "manage": "Manage API tokens",
+    "manageOwn": "Manage my API tokens",
+    "namePlaceholder": "",
+    "none": "No tokens yet.",
+    "profileDescription": "Create and revoke your API tokens to access your models and results from scripts or other apps.",
+    "readOnlyAccount": "You can create read-only tokens. Contact an expert or your manager if you need write access.",
+    "revoke": "Revoke",
+    "scope": "Scope",
+    "scopeFull": "Read & write",
+    "scopeFullShort": "read & write",
+    "scopeRead": "",
+    "scopeReadShort": "read-only",
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "subtitle": "Manage API access tokens for",
+    "title": "API Tokens",
+    "usageHint": "Use the token from any app: Authorization: Bearer <token>. Read-only tokens can list models and download results with this user\\'s permissions."
   }
 }
