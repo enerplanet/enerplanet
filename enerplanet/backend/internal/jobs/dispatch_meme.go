@@ -143,7 +143,7 @@ func HandleDispatchMeme(
 	}
 
 	// Any dispatch failure must leave the model in a terminal 'failed' state, or
-	// it sits in 'queue' forever (the ingest handler is the only other writer,
+	// it sits in a run status forever (the ingest handler is the only other writer,
 	// and it never runs when dispatch fails early).
 	defer func() {
 		if retErr != nil {
@@ -155,6 +155,7 @@ func HandleDispatchMeme(
 	if err := db.First(&model, p.ModelID).Error; err != nil {
 		return fmt.Errorf("failed to fetch model %d: %w", p.ModelID, err)
 	}
+	markModelBuildings(db, p.ModelID)
 
 	// 1. Build the calculation payload from the stored model, with the BuEM
 	//    series of its current config: a save resolves them in the background,
@@ -264,7 +265,6 @@ func HandleDispatchMeme(
 			}
 		}
 		submittedNow = true
-		markModelRunning(db, p.ModelID)
 		log.Infof("model %d: submitted MEME job to TentaCron id=%s", p.ModelID, jobID)
 	default:
 		// A run is recorded and still alive (non-terminal, i.e. running):
@@ -273,6 +273,7 @@ func HandleDispatchMeme(
 		jobID = rec.RunID
 		log.Infof("model %d: resuming existing MEME TentaCron job id=%s (no resubmit)", p.ModelID, jobID)
 	}
+	markModelRunning(db, p.ModelID)
 
 	// 4. Long-poll by id on the meme budget, then read the raw zip via /result.
 	//    A MEME solve failure must take the run to the TERMINAL 'failed' state

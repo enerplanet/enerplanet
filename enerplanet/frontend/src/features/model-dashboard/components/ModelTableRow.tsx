@@ -12,7 +12,7 @@ import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
-import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
+import { isActiveStatus, runningLabelKey } from "@/features/model-dashboard/utils/statusHelpers";
 import { familyId, isUnlinkedCopy } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { RUN_REPORT_STATE_KEY, useOpenRunReports, type RunReportTarget } from "@/features/user-feedback/runReport";
 
@@ -173,10 +173,11 @@ const FailureTooltip: React.FC<{ results: Model["results"] }> = ({ results }) =>
 };
 
 /** The status pill of a run in progress; a queued run explains the wait on hover. */
-const RunStatus: React.FC<{ status: Model["status"] }> = ({ status }) => {
+const RunStatus: React.FC<{ model: Model }> = ({ model }) => {
   const { t } = useTranslation();
-  const pill = <StatusBadge status={status} size="small" />;
-  if (status !== "queue") return pill;
+  const label = model.status === "running" ? t(runningLabelKey(model.config)) : undefined;
+  const pill = <StatusBadge status={model.status} label={label} size="small" />;
+  if (model.status !== "queue") return pill;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -453,7 +454,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
       <td className={`px-4 py-2.5 ${copyDivider}`}>
         <div className="flex flex-wrap items-center gap-2">
           {isActiveStatus(model.status) ? (
-            <RunStatus status={model.status} />
+            <RunStatus model={model} />
           ) : model.status === "failed" ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -482,7 +483,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             </Tooltip>
           )}
 
-          {model.status === "running" && calculationStartTimes[model.id] && (
+          {isActiveStatus(model.status) && calculationStartTimes[model.id] && (
             <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md">
               <ElapsedTimer
                 startTime={calculationStartTimes[model.id]}

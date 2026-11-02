@@ -460,3 +460,41 @@ func TestHandleDispatchMeme_refusesAModelOverTheMemoryLimit(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, fake.submitted.Load(), "a model within the limit is submitted")
 }
+
+// errStopAfterResolve ends a dispatch once its building profiles were reached.
+var errStopAfterResolve = errors.New("stop after resolve")
+
+// statusAtResolve records whether every expected statement, the buildings mark
+// included, had run when the building profiles started to resolve.
+type statusAtResolve struct {
+	mock      sqlmock.Sqlmock
+	markedYet bool
+}
+
+func (s *statusAtResolve) Resolve(context.Context, uint) (resolvedWays, error) {
+	s.markedYet = s.mock.ExpectationsWereMet() == nil
+	return resolvedWays{}, errStopAfterResolve
+}
+
+// The badge reads Simulating buildings while the building profiles resolve,
+// not Queued.
+func TestHandleDispatchMeme_marksTheModelBuildingsBeforeResolvingThem(t *testing.T) {
+	const modelID = uint(42)
+	dbConn, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { dbConn.Close() })
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: dbConn}), &gorm.Config{})
+	require.NoError(t, err)
+	mock.ExpectQuery(`SELECT .* FROM "models"`).WillReturnRows(sqlmock.NewRows([]string{"id", "title"}).AddRow(int64(modelID), "Test model"))
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "models" SET "status"=\$1`).
+		WithArgs(commonModels.ModelStatusBuildings, sqlmock.AnyArg(), modelID, commonModels.ModelStatusQueue, commonModels.ModelStatusBuildings, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	resolver := &statusAtResolve{mock: mock}
+
+	err = HandleDispatchMeme(context.Background(), dispatchPost(t, modelID), db, tentacronclient.New("http://unused", "k"), &fakeMemeRuns{t: t}, resolver, noDemandSeries{}, noPV{}, fixedGridPrices{}, NewFilesystemResultZipStore(t.TempDir()), &fakeIngestMemeEnqueuer{}, 0)
+
+	require.ErrorIs(t, err, errStopAfterResolve)
+	assert.True(t, resolver.markedYet, "the model is in buildings before its building profiles resolve")
+}

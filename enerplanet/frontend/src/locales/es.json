@@ -535,6 +535,8 @@
     "queue": "En Cola",
     "calculating": "Calculando",
     "running": "Simulando",
+    "buildings": "Simulando edificios",
+    "optimising": "Optimizando",
     "processing": "Procesando resultados",
     "completed": "Completado",
     "published": "Publicado",
@@ -543,6 +545,7 @@
     "modified": "Modificado",
     "failedAt": {
       "queue": "Falló la preparación",
+      "buildings": "Falló la simulación de edificios",
       "running": "Falló la simulación",
       "processing": "Falló el procesamiento"
     }

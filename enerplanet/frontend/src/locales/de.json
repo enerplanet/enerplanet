@@ -534,6 +534,8 @@
     "queue": "Warteschlange",
     "calculating": "Berechnung",
     "running": "Simuliert",
+    "buildings": "Gebäude werden simuliert",
+    "optimising": "Optimiert",
     "processing": "Ergebnisse werden verarbeitet",
     "completed": "Abgeschlossen",
     "published": "Veröffentlicht",
@@ -542,6 +544,7 @@
     "modified": "Bearbeitet",
     "failedAt": {
       "queue": "Vorbereitung fehlgeschlagen",
+      "buildings": "Gebäudesimulation fehlgeschlagen",
       "running": "Simulation fehlgeschlagen",
       "processing": "Auswertung fehlgeschlagen"
     }

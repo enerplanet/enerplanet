@@ -534,6 +534,8 @@
     "queue": "Queued",
     "calculating": "Calculating",
     "running": "Simulating",
+    "buildings": "Simulating buildings",
+    "optimising": "Optimising",
     "processing": "Processing results",
     "completed": "Completed",
     "published": "Published",
@@ -542,6 +544,7 @@
     "modified": "Modified",
     "failedAt": {
       "queue": "Preparation failed",
+      "buildings": "Building simulation failed",
       "running": "Simulation failed",
       "processing": "Processing failed"
     }
