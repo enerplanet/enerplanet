@@ -7,10 +7,11 @@
 #   scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v2
 #
 # The folder holds any of 3d/<country>/<provider>/, attributes/<country>/<provider>/,
-# weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. Files are added
-# to what is there; the PyLovo dump replaces the stack's PyLovo database as a
-# whole. 3D files are only copied: City2TABULA imports the tiles under a drawn
-# area when a model is first run there.
+# weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. 3D and
+# attribute files are added to what is there; each weather <provider>/<country>
+# folder and the PyLovo database are replaced as a whole. 3D files are only
+# copied: City2TABULA imports the tiles under a drawn area when a model is
+# first run there.
 # scripts/deploy-fixture.md describes the layout and how to add a region.
 #
 set -euo pipefail
@@ -100,14 +101,19 @@ mount_source() {
   echo "$src"
 }
 
+# require_writable DIR: Docker creates a missing bind-mount source owned by root.
+require_writable() {
+  local denied
+  denied="$(find "$1" -type d ! -writable -print -quit)"
+  [ -z "$denied" ] || die "$denied is not writable by $(id -un) (owner $(stat -c %U "$denied")); run: sudo chown -R $(id -un): $1"
+}
+
 # copy_new SRC DEST: copies each file under SRC that DEST lacks. A file that
 # exists with different content is reported and kept, because City2TABULA
 # skips files it has already imported and would not pick up the change.
 copy_new() {
-  local src="$1" dest="$2" rel copied=0 denied
-  # Docker creates a missing bind-mount source owned by root.
-  denied="$(find "$dest" -type d ! -writable -print -quit)"
-  [ -z "$denied" ] || die "$denied is not writable by $(id -un) (owner $(stat -c %U "$denied")); run: sudo chown -R $(id -un): $dest"
+  local src="$1" dest="$2" rel copied=0
+  require_writable "$dest"
   while IFS= read -r rel; do
     if [ ! -e "$dest/$rel" ]; then
       mkdir -p "$(dirname "$dest/$rel")"
@@ -147,11 +153,44 @@ load_3d() {
   if [ -d "$FIXTURE_DIR/attributes" ]; then copy_new "$FIXTURE_DIR/attributes" "$attrs"; fi
 }
 
-# weather-serve looks up <provider>/<country>/output under /data on every
-# request, so files copied in are served without a restart.
+# replace_dir SRC DEST: makes DEST a copy of SRC unless it already is one.
+# The copy is built beside DEST and swapped in once complete. Returns 1 when
+# DEST was left as it was.
+replace_dir() {
+  local src="$1" dest="$2"
+  if [ -d "$dest" ] && diff -rq "$src" "$dest" >/dev/null; then return 1; fi
+  rm -rf "$dest.new" "$dest.old"
+  mkdir -p "$(dirname "$dest")"
+  cp -a "$src" "$dest.new"
+  if [ -d "$dest" ]; then mv "$dest" "$dest.old"; fi
+  mv "$dest.new" "$dest"
+  rm -rf "$dest.old"
+}
+
+# Each <provider>/<country> folder replaces the stack's folder as a whole:
+# weather-serve reads an annual file before monthly ones, so an older cut left
+# beside new files would answer instead of them. weather-serve caches answers,
+# so it is restarted when a folder changed.
 load_weather() {
+  local data dir rel changed=0
   require_running "$WEATHER"
-  copy_new "$FIXTURE_DIR/weather" "$(mount_source "$WEATHER" /data)"
+  data="$(mount_source "$WEATHER" /data)"
+  require_writable "$data"
+  for dir in "$FIXTURE_DIR"/weather/*/*/; do
+    [ -d "$dir" ] || continue
+    rel="${dir#"$FIXTURE_DIR"/weather/}"
+    rel="${rel%/}"
+    if replace_dir "${dir%/}" "$data/$rel"; then
+      ok "weather/$rel: replaced in $data"
+      changed=1
+    else
+      ok "weather/$rel: unchanged"
+    fi
+  done
+  if [ "$changed" = 1 ]; then
+    log "restarting $WEATHER to clear its cached answers"
+    docker restart "$WEATHER" >/dev/null
+  fi
 }
 
 # load_pylovo DUMP: restores DUMP into a fresh database and swaps it in for

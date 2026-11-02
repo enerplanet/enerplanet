@@ -37,7 +37,7 @@ sent to the server separately (see [Weather](#weather)).
 |---|---|---|
 | `3d/<country>/<provider>/` | 3D building files with their `attribution.json` | City2TABULA `data/lod2/<country>/<provider>/` |
 | `attributes/<country>/<provider>/` | building attributes, such as BAG building use | City2TABULA `data/attributes/<country>/<provider>/` |
-| `weather/<provider>/<country>/output/` | per-country weather archives in weather-serve's own layout, sent separately | weather-serve `/data/`, served from the next request on |
+| `weather/<provider>/<country>/output/` | per-country weather archives in weather-serve's own layout, sent separately | replaces weather-serve `/data/<provider>/<country>/` |
 | `pylovo/<name>.sql.gz` | one PyLovo dump holding every region's grids | replaces the stack's PyLovo database |
 | `README.md` | what this version holds | not loaded |
 
@@ -74,9 +74,10 @@ from the neighbouring country. Leave out the provider-wide archives
    with different content is kept, with a warning. Nothing is imported here:
    when a model first runs in an area, City2TABULA imports the tiles under it,
    then extracts and links those buildings.
-2. **Weather.** Copies every weather file the stack does not have yet into
-   weather-serve's data directory. weather-serve looks files up on each
-   request, so no restart is needed.
+2. **Weather.** Replaces each `<provider>/<country>/` folder in weather-serve's
+   data directory with the version's folder, so no older cut is left beside
+   the new files. Folders the version does not hold stay as they are. If any
+   folder changed, weather-serve is restarted to clear its cached answers.
 3. **PyLovo.** Restores the dump into a temporary database, then drops the
    stack's PyLovo database and renames the new one into its place. If the
    restore fails, the old database stays untouched.
@@ -86,8 +87,8 @@ from the neighbouring country. Leave out the provider-wide archives
 5. **Record.** Writes the version name to `.local/heat-stack/<prefix>/fixture.env`,
    which `status` prints.
 
-Running the same version again is safe: no files are copied, and PyLovo is
-restored again from the same dump.
+Running the same version again is safe: no 3D or weather files are copied,
+and PyLovo is restored again from the same dump.
 
 ## Deploying a new version
 
@@ -150,10 +151,8 @@ grids.
 - **Removing a region.** A version that drops a region removes its PyLovo
   grids, but its 3D files and imported buildings stay. To clear them, run
   `down --volumes`, deploy again and load the version.
-- **Changed files.** A 3D or weather file whose name already exists on the
-  server is not replaced, and a 3D file is not re-imported. Publish a
-  correction under a new file name. weather-serve also caches answers until it
-  restarts.
+- **Changed files.** A 3D file whose name already exists on the server is
+  not replaced or re-imported. Publish a correction under a new file name.
 
 ## Errors
 
