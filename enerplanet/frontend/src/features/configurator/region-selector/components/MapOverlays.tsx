@@ -148,6 +148,9 @@ const TooltipDemand: FC<{ profile?: StoredDemandProfile }> = ({ profile }) => {
             {profile?.status === "shared" && (
                 <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemShared", { detail: profile.error_message ?? "" })}</div>
             )}
+            {profile?.status === "not_heated" && (
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemNotHeated", { reason: profile.error_message ?? "" })}</div>
+            )}
             {profile?.status === "pending" && (
                 <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemPending")}</div>
             )}
@@ -216,6 +219,10 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
     const techEntries = buildingTooltip?.techs ? Object.entries(buildingTooltip.techs) : [];
     const buildingProfile = buildingTooltip?.osmId ? demandProfiles?.get(buildingTooltip.osmId) : undefined;
     const modelledType = buildingProfile?.status === "resolved" ? buildingProfile.building_type : undefined;
+    const useType = buildingProfile?.use_type;
+    const useTypeLabel = !useType ? "" : buildingProfile?.use_source === "3d"
+        ? t(`simulation.mapOverlay.useType.${useType}`, { defaultValue: useType })
+        : formatFClassLabel(useType);
     const hasFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
     const getEvHostingCapacity = () => {
@@ -356,9 +363,14 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         </div>
                         <div className="text-muted-foreground mt-1">
                             <span className="font-medium text-foreground">
-                                {modelledType ? t(`simulation.mapOverlay.useType.${modelledType}`, { defaultValue: modelledType }) : formatFClassLabel(buildingTooltip.type)}
+                                {modelledType ? t(`simulation.mapOverlay.useType.${modelledType}`, { defaultValue: modelledType }) : useType ? useTypeLabel : formatFClassLabel(buildingTooltip.type)}
                             </span>
                         </div>
+                        {useType && buildingProfile?.use_source && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {t(`simulation.mapOverlay.useSource.${buildingProfile.use_source}`)}{modelledType ? `: ${useTypeLabel}` : ""}
+                            </div>
+                        )}
                         {(buildingTooltip.fClasses?.length || buildingTooltip.fClass) && (
                             <div className="text-muted-foreground mt-0.5">
                                 {t("simulation.mapOverlay.class")}:{' '}

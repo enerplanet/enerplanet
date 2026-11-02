@@ -16,7 +16,12 @@ type BuildingDemandProfile struct {
 	// MFH, AB) or a BuEM service id (bakery, clinic, hotel, office,
 	// restaurant, school, supermarket, warehouse). For a service id
 	// hot_water_kwh_a and kitchen_kwh_a are not modelled and read 0.
-	BuildingType       *string  `json:"building_type,omitempty" example:"SFH"`
+	BuildingType *string `json:"building_type,omitempty" example:"SFH"`
+	// use_type is the building's use: a 3D data use (residential, ancillary,
+	// agriculture, ...) or an OpenStreetMap class; use_source is user, 3d or
+	// osm. Both are absent when no source names a use.
+	UseType            *string  `json:"use_type,omitempty" example:"residential"`
+	UseSource          *string  `json:"use_source,omitempty" example:"3d"`
 	RefurbishmentLevel string   `json:"refurbishment_level" example:"existing"`
 	HeatingKwhA        *float64 `json:"heating_kwh_a,omitempty" example:"4823.5"`
 	CoolingKwhA        *float64 `json:"cooling_kwh_a,omitempty" example:"312.4"`
@@ -44,9 +49,10 @@ type ModelAnalysisResponse struct {
 // status is one of:
 //   - idle: no resolution run has been started for this model yet
 //   - resolving: a run is in progress (some buildings still pending)
-//   - completed: every building has a terminal outcome (resolved, failed or
-//     shared; a shared building's 3D building is resolved under another OSM
-//     way, named in its error_message)
+//   - completed: every building has a terminal outcome (resolved, failed,
+//     shared or not_heated; a shared building's 3D building is resolved
+//     under another OSM way, and a not_heated building has no heat demand,
+//     both explained in its error_message)
 type ModelDemandProfilesResponse struct {
 	Status    string                  `json:"status" example:"resolving"`
 	Total     int64                   `json:"total" example:"42"`
@@ -54,5 +60,6 @@ type ModelDemandProfilesResponse struct {
 	Pending   int64                   `json:"pending" example:"10"`
 	Failed    int64                   `json:"failed" example:"2"`
 	Shared    int64                   `json:"shared" example:"1"`
+	NotHeated int64                   `json:"not_heated" example:"9"`
 	Buildings []BuildingDemandProfile `json:"buildings"`
 }

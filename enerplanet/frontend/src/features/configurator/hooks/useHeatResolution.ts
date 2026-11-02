@@ -57,6 +57,7 @@ export const useHeatResolution = ({
    */
   const resolveBuildingHeat = async (feature: Feature<Geometry>): Promise<boolean> => {
     if (heatResolutionMode !== "expected") return false;
+    if (feature.get("heated") === false) return false; // set by applyNotHeated
 
     const props = feature.getProperties() as Record<string, unknown>;
     const resolution = resolveHeatTechForBuilding(getPrimaryFClass(props), readYearlyHeatDemand(props));

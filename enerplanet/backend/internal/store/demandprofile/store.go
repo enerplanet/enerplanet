@@ -129,6 +129,37 @@ func (s *Store) SaveShared(modelID uint, osmID, standing string) error {
 	}).Create(&row).Error
 }
 
+// Use is a building's use as resolveBuildingUse decides it. Type and Source
+// are "" when no source names a use; NotHeatedReason is "" for a heated
+// building.
+type Use struct {
+	Type            string
+	Source          string
+	NotHeatedReason string
+}
+
+// SaveUse records a building's use. A building that is not heated also gets
+// its terminal status here, with the reason; a heated one keeps its status.
+func (s *Store) SaveUse(modelID uint, osmID string, u Use) error {
+	row := models.BuildingDemandProfile{
+		ModelID:   modelID,
+		OSMID:     osmID,
+		Status:    models.DemandProfileStatusPending,
+		UseType:   nilIfEmpty(u.Type),
+		UseSource: nilIfEmpty(u.Source),
+	}
+	columns := []string{"use_type", "use_source", "updated_at"}
+	if u.NotHeatedReason != "" {
+		row.Status = models.DemandProfileStatusNotHeated
+		row.ErrorMessage = &u.NotHeatedReason
+		columns = append(columns, "status", "error_message")
+	}
+	return s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "model_id"}, {Name: "osm_id"}},
+		DoUpdates: clause.AssignmentColumns(columns),
+	}).Create(&row).Error
+}
+
 // Summary is one building's stored outcome without its hourly profile, plus
 // the BuEM inputs the map shows, read from the stored profile's building block.
 type Summary struct {
@@ -136,6 +167,8 @@ type Summary struct {
 	Status             string   `gorm:"column:status"`
 	TabulaVariantCode  *string  `gorm:"column:tabula_variant_code"`
 	BuildingType       *string  `gorm:"column:building_type"`
+	UseType            *string  `gorm:"column:use_type"`
+	UseSource          *string  `gorm:"column:use_source"`
 	RefurbishmentLevel string   `gorm:"column:refurbishment_level"`
 	HeatingKwhA        *float64 `gorm:"column:heating_kwh_a"`
 	CoolingKwhA        *float64 `gorm:"column:cooling_kwh_a"`
@@ -154,7 +187,7 @@ type Summary struct {
 func (s *Store) GetSummariesByModel(modelID uint) ([]Summary, error) {
 	var rows []Summary
 	err := s.db.Model(&models.BuildingDemandProfile{}).
-		Select(`osm_id, status, tabula_variant_code, building_type, refurbishment_level,
+		Select(`osm_id, status, tabula_variant_code, building_type, use_type, use_source, refurbishment_level,
 			heating_kwh_a, cooling_kwh_a, electricity_kwh_a, hot_water_kwh_a, kitchen_kwh_a, error_message,
 			round((profile -> 'building' ->> 'n_storeys')::numeric)::int AS n_storeys,
 			(profile -> 'building' -> 'A_ref' ->> 'value')::float8 AS a_ref_m2,
@@ -170,15 +203,16 @@ func (s *Store) GetSummariesByModel(modelID uint) ([]Summary, error) {
 
 // StatusCounts summarizes a model's resolution progress by status.
 type StatusCounts struct {
-	Pending  int64
-	Resolved int64
-	Failed   int64
-	Shared   int64
+	Pending   int64
+	Resolved  int64
+	Failed    int64
+	Shared    int64
+	NotHeated int64
 }
 
 // Total is the number of buildings tracked for this model's current run.
 func (c StatusCounts) Total() int64 {
-	return c.Pending + c.Resolved + c.Failed + c.Shared
+	return c.Pending + c.Resolved + c.Failed + c.Shared + c.NotHeated
 }
 
 // GetStatusCounts returns the row-status breakdown for a model, for the poll
@@ -206,6 +240,8 @@ func (s *Store) GetStatusCounts(modelID uint) (StatusCounts, error) {
 			counts.Failed = r.Count
 		case models.DemandProfileStatusShared:
 			counts.Shared = r.Count
+		case models.DemandProfileStatusNotHeated:
+			counts.NotHeated = r.Count
 		}
 	}
 	return counts, nil

@@ -79,6 +79,7 @@ import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
 import { AreaLimitWarning } from "./components/AreaLimitWarning";
 import { useModelDemandProfiles } from "@/features/configurator/building-config/modelDemandProfiles";
+import { applyNotHeated } from "@/features/configurator/utils/heatResolution";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
@@ -530,6 +531,24 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     existingModelId,
     `${state.isSaving}|${openBuildingId ?? ""}|${analysisKey}`
   );
+  // A completed analysis gives each building its use, and takes the heat
+  // supply off the ones it found not heated.
+  useEffect(() => {
+    if (analysisProgress?.status !== "completed") return;
+    const buildings = collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current);
+    const notHeated = new Set<string>();
+    for (const f of buildings) {
+      const profile = demandProfiles.get(String(f.get("osm_id")));
+      if (profile?.use_type && f.get("use_type") !== profile.use_type) f.set("use_type", profile.use_type);
+      if (profile?.status === "not_heated") notHeated.add(profile.osm_id);
+    }
+    const dropped = applyNotHeated(buildings, notHeated);
+    if (dropped > 0) {
+      setIsModified(true);
+      notification.showSuccess(t("gridNotifications.heatRemovedNotHeated", { count: dropped }));
+    }
+  }, [analysisProgress?.status, demandProfiles, pylovoLayers.pylovoLayersRef, setIsModified, notification, t]);
+
   const handleAnalyseBuildings = useCallback(async () => {
     setIsStartingAnalysis(true);
     try {

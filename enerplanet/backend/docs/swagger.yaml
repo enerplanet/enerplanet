@@ -257,6 +257,16 @@ definitions:
       tabula_variant_code:
         example: DE.N.SFH.05.Gen.ReEx.001.001
         type: string
+      use_source:
+        example: 3d
+        type: string
+      use_type:
+        description: |-
+          use_type is the building's use: a 3D data use (residential, ancillary,
+          agriculture, ...) or an OpenStreetMap class; use_source is user, 3d or
+          osm. Both are absent when no source names a use.
+        example: residential
+        type: string
     type: object
   spatialhub_backend_internal_api_contracts.BuildingDemandProfileResponse:
     properties:
@@ -633,6 +643,9 @@ definitions:
         type: array
       failed:
         example: 2
+        type: integer
+      not_heated:
+        example: 9
         type: integer
       pending:
         example: 10

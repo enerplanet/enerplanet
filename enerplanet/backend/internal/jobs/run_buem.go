@@ -156,7 +156,10 @@ type buemRun struct {
 	// parts maps an OSM way covering several 3D buildings to the BuEM ids of
 	// those buildings, largest first (see partID); their results are summed
 	// into the way's (see combineParts and combinePartResults).
-	parts      map[string][]string
+	parts map[string][]string
+	// uses is each building way's use (see resolveBuildingUse); a way that is
+	// not heated is in neither buildings nor unresolved.
+	uses       map[string]buildingUse
 	weather    json.RawMessage
 	start, end string
 }
@@ -166,14 +169,15 @@ type buemRun struct {
 // building is in unresolved with the cause.
 func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, weatherProvider string, ignisClient envelopeUValueResolver, model commonModels.Model, p payload.CalculationPayload, refurbishmentLevel ignis.RefurbishmentLevel) buemRun {
 	period := modelWeatherPeriod(model.Config)
-	envelopeByOSMID, further, weatherJSON, weatherReason := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
+	envelopeByOSMID, further, lookupDone, weatherJSON, weatherReason := resolveBuemInputs(ctx, log, c2t, c2tRuns, wx, weatherProvider, period, model, p)
 	parts := partIDs(envelopeByOSMID)
+	uses := buildingUses(p.Topology, envelopeByOSMID, further, lookupDone)
 
 	country := ""
 	if model.Country != nil {
 		country = *model.Country
 	}
-	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, further, refurbishmentLevel, modelCookingSettings(model.Config))
+	buildings, resolved, unresolved := buildingsForBuem(ctx, ignisClient, country, p.Topology, envelopeByOSMID, further, uses, refurbishmentLevel, modelCookingSettings(model.Config))
 	buildings = foldPartFailures(parts, buildings, resolved, unresolved)
 	if len(buildings) == 0 || len(weatherJSON) == 0 {
 		reason := weatherReason
@@ -190,35 +194,36 @@ func prepareBuemRun(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cli
 		for osmID := range resolved {
 			unresolved[osmID] = reason
 		}
-		return buemRun{unresolved: unresolved, further: further, parts: parts}
+		return buemRun{unresolved: unresolved, further: further, parts: parts, uses: uses}
 	}
 	// The BuEM period follows the weather, not the model's dates: a scenario
 	// series is stamped 1900, and BuEM indexes the weather by start_date's year.
 	start, end := period.Range()
-	return buemRun{buildings: buildings, resolved: resolved, unresolved: unresolved, further: further, parts: parts, weather: weatherJSON, start: start, end: end}
+	return buemRun{buildings: buildings, resolved: resolved, unresolved: unresolved, further: further, parts: parts, uses: uses, weather: weatherJSON, start: start, end: end}
 }
 
 // resolveBuemInputs fetches envelope and weather data for model's area, and
 // the further ways among its buildings (see buemRun.further). All degrade to
 // nil (simply omitted, not a job failure) on any resolution problem, so a
-// building without 3D data still runs.
-func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (map[string][]city2tabula.Building, map[string]string, json.RawMessage, string) {
+// building without 3D data still runs. lookupDone reports whether the 3D
+// lookup completed (see resolveEnvelope); weatherReason names a weather failure.
+func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, wx *weather.Client, provider string, period weather.Period, model commonModels.Model, p payload.CalculationPayload) (envelope map[string][]city2tabula.Building, further map[string]string, lookupDone bool, weatherJSON json.RawMessage, weatherReason string) {
 	if model.Country == nil || len(model.Coordinates) == 0 {
 		log.Warnf("model %d missing country or coordinates, skipping envelope/weather", model.ID)
-		return nil, nil, nil, ""
+		return nil, nil, false, nil, ""
 	}
 	country := *model.Country
 
 	xmin, ymin, xmax, ymax, err := geo.BBoxFromGeoJSON(json.RawMessage(model.Coordinates))
 	if err != nil {
 		log.Warnf("model %d: failed to derive bbox from coordinates, skipping envelope/weather: %v", model.ID, err)
-		return nil, nil, nil, ""
+		return nil, nil, false, nil, ""
 	}
 	bbox := city2tabula.Bbox{Xmin: xmin, Ymin: ymin, Xmax: xmax, Ymax: ymax}
 
-	envelope, further := resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
-	weatherJSON, weatherReason := resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), period, bbox)
-	return envelope, further, weatherJSON, weatherReason
+	envelope, further, lookupDone = resolveEnvelope(ctx, log, c2t, c2tRuns, model, country, bbox, p.Topology)
+	weatherJSON, weatherReason = resolveWeather(ctx, log, wx, modelWeatherProvider(model.Config, provider), period, bbox)
+	return envelope, further, lookupDone, weatherJSON, weatherReason
 }
 
 // resolveEnvelope fetches the topology's buildings from City2TABULA. When
@@ -226,16 +231,20 @@ func resolveBuemInputs(ctx context.Context, log *logrus.Entry, c2t *city2tabula.
 // (started when the polygon was created, see HandleTriggerCity2TabulaRun)
 // and, only when no run was recorded, triggers and records one itself, so
 // a model created before runs were recorded still gets its data.
-func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox, topology []interface{}) (map[string][]city2tabula.Building, map[string]string) {
+//
+// complete is true when a building missing from the result has no 3D data:
+// every building was linked, or the run finished (with no data for some).
+// It is false when City2TABULA failed or timed out.
+func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Client, c2tRuns city2tabulaRunStore, model commonModels.Model, country string, bbox city2tabula.Bbox, topology []interface{}) (byOSMID map[string][]city2tabula.Building, further map[string]string, complete bool) {
 	osmIDs := buildingOSMIDs(topology)
 	if len(osmIDs) == 0 {
-		return nil, nil
+		return nil, nil, true
 	}
 
 	byOSMID, further, err := fetchLinkedBuildings(ctx, c2t, country, osmIDs)
 	if err != nil {
 		log.Warnf("city2tabula building fetch failed, proceeding without envelope data: %v", err)
-		return nil, nil
+		return nil, nil, false
 	}
 
 	// A bbox-level coverage count can't distinguish "some of this area was
@@ -246,17 +255,17 @@ func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cl
 	// building this calculation actually needs is still unlinked.
 	missing := missingOSMIDs(osmIDs, byOSMID, further)
 	if len(missing) == 0 {
-		return byOSMID, further
+		return byOSMID, further, true
 	}
 
 	runID, err := recordedOrNewRun(ctx, log, c2t, c2tRuns, model, country, bbox)
 	if err != nil {
 		log.Warnf("city2tabula run trigger failed, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
-		return byOSMID, further
+		return byOSMID, further, false
 	}
 	if err := pollRunStatus(ctx, c2t, runID); err != nil {
 		log.Warnf("city2tabula run did not complete, proceeding with %d/%d buildings resolved: %v", len(byOSMID), len(osmIDs), err)
-		return byOSMID, further
+		return byOSMID, further, errors.Is(err, errRunNoData)
 	}
 	if c2tRuns != nil {
 		if run, serr := c2t.GetRunStatus(ctx, runID); serr == nil {
@@ -269,9 +278,9 @@ func resolveEnvelope(ctx context.Context, log *logrus.Entry, c2t *city2tabula.Cl
 	byOSMID, further, err = fetchLinkedBuildings(ctx, c2t, country, osmIDs)
 	if err != nil {
 		log.Warnf("city2tabula building re-fetch after run failed, proceeding without envelope data: %v", err)
-		return nil, nil
+		return nil, nil, false
 	}
-	return byOSMID, further
+	return byOSMID, further, true
 }
 
 // recordedOrNewRun returns the run id to wait for: the model's recorded run
@@ -324,6 +333,9 @@ func missingOSMIDs(want []string, got map[string][]city2tabula.Building, further
 	return missing
 }
 
+// errRunNoData marks a City2TABULA run that finished finding no 3D data.
+var errRunNoData = errors.New("no 3D data")
+
 func pollRunStatus(ctx context.Context, c2t *city2tabula.Client, runID string) error {
 	deadline := time.Now().Add(runPollTimeout)
 	for time.Now().Before(deadline) {
@@ -334,7 +346,9 @@ func pollRunStatus(ctx context.Context, c2t *city2tabula.Client, runID string) e
 		switch run.Status {
 		case "completed":
 			return nil
-		case "no_data", "failed":
+		case "no_data":
+			return fmt.Errorf("city2tabula run %s: %w", runID, errRunNoData)
+		case "failed":
 			return fmt.Errorf("city2tabula run %s ended with status %s: %s", runID, run.Status, run.Error)
 		}
 		select {
@@ -433,7 +447,7 @@ func buildingProperties(feature interface{}) (props map[string]interface{}, osmI
 // Both exist for callers that persist per-building outcomes (see
 // HandleResolveDemandProfiles); HandleRunBuem's calculation-dispatch path
 // ignores them, same behaviour as before this was split out.
-func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string][]city2tabula.Building, further map[string]string, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
+func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, country string, topology []interface{}, envelopeByOSMID map[string][]city2tabula.Building, further map[string]string, uses map[string]buildingUse, defaultLevel ignis.RefurbishmentLevel, defaultCooking cookingSettings) (buildings []buem.Building, resolved map[string]BuemResolutionMeta, unresolved map[string]string) {
 	resolved = make(map[string]BuemResolutionMeta)
 	unresolved = make(map[string]string)
 	seen := make(map[string]bool)
@@ -451,6 +465,9 @@ func buildingsForBuem(ctx context.Context, ignisClient envelopeUValueResolver, c
 			seen[osmID] = true
 			if _, ok := further[osmID]; ok {
 				continue // its building runs under the standing way; recorded as shared, see DemandResolver.Resolve
+			}
+			if use, ok := uses[osmID]; ok && !use.heated {
+				continue // recorded as not heated, see DemandResolver.Resolve
 			}
 
 			node, _ := feature.(map[string]interface{})

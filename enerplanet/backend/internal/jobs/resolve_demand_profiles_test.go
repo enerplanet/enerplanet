@@ -71,6 +71,13 @@ func (f *fakeProfileStore) SaveShared(modelID uint, osmID, standing string) erro
 	return nil
 }
 
+func (f *fakeProfileStore) SaveUse(modelID uint, osmID string, u demandprofile.Use) error {
+	if u.NotHeatedReason != "" {
+		f.saved[osmID] = savedProfile{Status: "not_heated", Reason: u.NotHeatedReason}
+	}
+	return nil
+}
+
 func TestExtractEnergySummary(t *testing.T) {
 	buemJSON := json.RawMessage(`{
 		"thermal_load_profile": {

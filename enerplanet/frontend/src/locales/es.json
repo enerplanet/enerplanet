@@ -166,6 +166,7 @@
     "techLoadFailed": "Error al cargar tecnología para edición",
     "heatAutoAssigned": "Las tecnologías de calor se han asignado automáticamente.",
     "heatResolved": "Tecnologías de calor asignadas. Edificios actualizados: {{count}}",
+    "heatRemovedNotHeated": "Tecnología de calor eliminada de {{count}} edificios sin calefacción, como garajes y cobertizos.",
     "areaOverLimit": {
       "title": "Esta zona contiene {{buildings}} edificios; un modelo puede contener {{limit}}",
       "description": "Reduzca la zona en unos {{excess}} edificios. Se queda en el mapa y la red se carga cuando quepa en el límite."
@@ -1832,11 +1833,27 @@
         "restaurant": "Restaurante",
         "school": "Escuela",
         "supermarket": "Supermercado",
-        "warehouse": "Almacén"
+        "warehouse": "Almacén",
+        "residential": "Residencial",
+        "ancillary": "Edificio auxiliar",
+        "agriculture": "Agrícola",
+        "industry": "Industrial",
+        "commercial": "Comercial",
+        "education": "Educación",
+        "health": "Sanidad",
+        "hospitality": "Hostelería",
+        "public": "Público",
+        "retail": "Comercio minorista"
       },
       "buemFailed": "BuEM falló: {{reason}}",
       "buemShared": "Contado con otro edificio: {{detail}}",
       "buemPending": "Resultado de BuEM pendiente",
+      "buemNotHeated": "Sin calefacción: {{reason}}",
+      "useSource": {
+        "3d": "Uso según los datos 3D",
+        "osm": "Uso según OpenStreetMap",
+        "user": "Uso definido por el usuario"
+      },
       "floors": "Plantas",
       "height": "Altura",
       "heightMedian": "Altura (mediana)",

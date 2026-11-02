@@ -166,6 +166,7 @@
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
     "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
     "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}",
+    "heatRemovedNotHeated": "Wärmetechnologie von {{count}} nicht beheizten Gebäuden entfernt, z. B. Garagen und Schuppen.",
     "areaOverLimit": {
       "title": "Dieses Gebiet enthält {{buildings}} Gebäude; ein Modell darf {{limit}} enthalten",
       "description": "Verkleinern Sie das Gebiet um etwa {{excess}} Gebäude. Es bleibt auf der Karte, und das Netz wird geladen, sobald es passt."
@@ -1830,11 +1831,27 @@
         "restaurant": "Restaurant",
         "school": "Schule",
         "supermarket": "Supermarkt",
-        "warehouse": "Lagerhalle"
+        "warehouse": "Lagerhalle",
+        "residential": "Wohngebäude",
+        "ancillary": "Nebengebäude",
+        "agriculture": "Landwirtschaft",
+        "industry": "Industrie",
+        "commercial": "Gewerbe",
+        "education": "Bildung",
+        "health": "Gesundheitswesen",
+        "hospitality": "Gastgewerbe",
+        "public": "Öffentlich",
+        "retail": "Einzelhandel"
       },
       "buemFailed": "BuEM fehlgeschlagen: {{reason}}",
       "buemShared": "Mit einem anderen Gebäude gezählt: {{detail}}",
       "buemPending": "BuEM-Ergebnis ausstehend",
+      "buemNotHeated": "Nicht beheizt: {{reason}}",
+      "useSource": {
+        "3d": "Nutzung aus den 3D-Daten",
+        "osm": "Nutzung aus OpenStreetMap",
+        "user": "Nutzung vom Benutzer festgelegt"
+      },
       "floors": "Geschosse",
       "height": "Höhe",
       "heightMedian": "Höhe (Median)",
