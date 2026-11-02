@@ -321,14 +321,14 @@ EOF
   # stack's pylovo-postgres and never the host's.
   cat > "$OVR_DIR/city2tabula.yml" <<EOF
 services:
-  city2tabula-cli:
+  cli:
     container_name: $PREFIX-city2tabula-cli
-  city2tabula-db:
+  db:
     container_name: $PREFIX-city2tabula-db
     networks:
       default:
       spatialhub-net:
-  city2tabula:
+  api:
     container_name: $PREFIX-city2tabula
     ports: !reset []
     environment:
@@ -517,15 +517,15 @@ up_ignis() {
 up_city2tabula() {
   log "City2TABULA"
   (
-    cd "$c2t_dir/environment/http"
+    cd "$c2t_dir/environment"
     export C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG"
     docker compose -p "$PREFIX-city2tabula" --env-file docker.env \
-      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" pull city2tabula
-    # Named explicitly: city2tabula-cli has no published image and `up` would
-    # build its full Go/JDK/citydb toolchain for nothing. city2tabula-db comes
-    # up as a depends_on of the service named here.
+      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" pull api
+    # Named explicitly: cli has no published image and `up` would build its
+    # full Go/JDK/citydb toolchain for nothing. db comes up as a depends_on of
+    # the service named here.
     docker compose -p "$PREFIX-city2tabula" --env-file docker.env \
-      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" up -d city2tabula
+      -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" up -d api
   )
 }
 
@@ -603,7 +603,7 @@ validate_overrides() {
       docker compose -p "$PREFIX-ignis-http" -f docker-compose.prod.yml -f "$OVR_DIR/ignis.yml" config -q ) || failed=1
   ( cd "$buem_dir/environment/http" && BUEM_GATEWAY_IMAGE_TAG="$BUEM_GATEWAY_IMAGE_TAG" BUEM_MODEL_IMAGE_TAG="$BUEM_MODEL_IMAGE_TAG" \
       docker compose -p "$PREFIX-buem-gateway-http" -f docker-compose.yml -f "$OVR_DIR/buem.yml" config -q ) || failed=1
-  ( cd "$c2t_dir/environment/http" && C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG" \
+  ( cd "$c2t_dir/environment" && C2T_IMAGE_TAG="$CITY2TABULA_IMAGE_TAG" \
       docker compose -p "$PREFIX-city2tabula" --env-file docker.env -f docker-compose.yml -f "$OVR_DIR/city2tabula.yml" config -q ) || failed=1
   ( cd "$weather_dir" && WEATHER_API_KEYS="$WEATHER_API_KEY" WEATHER_IMAGE="ghcr.io/enerplanet/weather:$WEATHER_IMAGE_TAG" \
       docker compose -p "$PREFIX-weather" -f infrastructure/container/docker-compose.serve.yml -f "$OVR_DIR/weather.yml" config -q ) || failed=1
@@ -704,7 +704,7 @@ cmd_down() {
     "$PREFIX-pv-service"
   down_one buem "$buem_dir/environment/http" docker-compose.yml buem.yml \
     "$PREFIX-buem-gateway-http"
-  down_one city2tabula "$c2t_dir/environment/http" docker-compose.yml city2tabula.yml \
+  down_one city2tabula "$c2t_dir/environment" docker-compose.yml city2tabula.yml \
     "$PREFIX-city2tabula" --env-file docker.env
   down_one ignis "$ignis_dir/environment/http" docker-compose.prod.yml ignis.yml \
     "$PREFIX-ignis-http"
