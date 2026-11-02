@@ -459,10 +459,8 @@ src/features/modular-workflow/
 └── workflows/
     ├── index.ts                    ← registers all workflows
     ├── defaultWorkflow.ts
-    ├── graph-validate.test.ts      ← validates each workflow's nodes/dependsOn
-    ├── quick-grid-analysis.json   <- on disk, NOT imported (dead)
-    ├── full-energy-planning.json  <- the only registered workflow
-    └── cost-optimization.json     <- on disk, NOT imported (dead)
+    ├── graph-validate.test.ts      ← validates full-energy-planning + defaultWorkflow
+    └── full-energy-planning.json   ← the only registered workflow
 ```
 
 ---

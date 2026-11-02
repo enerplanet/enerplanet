@@ -93,6 +93,24 @@ into a logical module and replaces the existing module where one exists.
 
 ## Changelog
 
+### 2026-11-02 — Remaining minors resolved (m6, m8, defaults-on-skip; dead workflows deleted)
+
+- **m6 — activation readiness gate.** `NodeEngine.activateNode` now throws when a node is
+  neither ready (`getReadyNodes`: deps done + `io.required` present) nor an already
+  completed node being re-activated for redo (M3). No more running a step against an
+  empty context.
+- **m8 — pypsa source.** `power-flow` reads `simulationSettings?.pypsa_enabled`
+  (canonical, typed) with legacy `advancedParams` fallback in both `run()` and the
+  component; power flow now works on fresh runs. Unused `advancedParams` inputs dropped
+  from `grid-generation` and `technology-selection` (contract hygiene).
+- **defaults-on-skip.** `NodeEngine.skipNode` applies the module's declared `defaults`
+  to output keys that are still absent (never clobbering existing values; undeclared
+  keys filtered) — the `defaults` field is no longer dead code.
+- **Dead workflows removed.** `quick-grid-analysis.json` + `cost-optimization.json`
+  deleted (written but never registered). `workflows/graph-validate.test.ts` now
+  validates `full-energy-planning` + `defaultWorkflow` only.
+- Verified: `npx tsc --noEmit -p tsconfig.json` exits 0; vitest 16/16 green.
+
 ### 2026-11-02 — Majors resolved (M3 invalidation, M4 writer discipline; m5, m7)
 
 - **M3 — invalidation / data causality.** `completeNode` now detects a redo (node

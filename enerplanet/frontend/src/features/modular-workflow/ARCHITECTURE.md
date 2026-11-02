@@ -8,17 +8,18 @@
 
 ## Status header
 
-- **Version:** 1.2 · **Last reviewed:** 2026-11-02
+- **Version:** 1.3 · **Last reviewed:** 2026-11-02
 - **What changed since the last review:**
-  - **v1.2 — M3 + M4 resolved (m5, m7 folded in).** Invalidation (M3): re-completing a
-    node whose output fingerprint changed resets every transitive downstream node to
-    `pending` and clears its declared outputs; the graph itself is the invalidation map.
-    No-op redos (fingerprint unchanged) leave the pipeline alone. Writer discipline
-    (M4): `validateGraph` now enforces one-writer-per-key; contracts corrected —
-    `region-select` owns area + grid generation, `grid-generation` is a checkpoint node
-    (outputs none), `model-load` is a pre-seeder, not a producer. The node palette bug
-    (m5) fixed so redo is reachable; `validateGraph` satisfiability now matches
-    `deriveEdges` (m7). Tests: `workflow/NodeEngine.test.ts` (14 green).
+  - **v1.3 — remaining minors resolved (m6, m8, defaults-on-skip; dead workflows deleted).**
+    m6: `activateNode` now gates on readiness (done/skipped re-activation still allowed for
+    M3 redo). m8: power-flow reads `simulationSettings?.pypsa_enabled` (canonical) with
+    legacy `advancedParams` fallback in both `run()` and component; unused `advancedParams`
+    inputs dropped from `grid-generation` + `technology-selection` (contract hygiene).
+    `skipNode` now applies a module's declared `defaults` to absent output keys.
+    `quick-grid-analysis.json` + `cost-optimization.json` deleted (were never registered);
+    `graph-validate.test.ts` now validates `full-energy-planning` + `defaultWorkflow`.
+    Tests: 16 green.
+  - **v1.2 — M3 + M4 resolved (m5, m7 folded in).** … (see below)
   - **v1.1 — C1 + C2 resolved.** Headless `run()`; auto nodes execute; skipped deps
     satisfied (see detail below).
   - **v1.0 — created the consolidated reference**, corrected doc-vs-code drift
@@ -101,8 +102,10 @@ draftId`, `originalModel`.
 ### Registered & runnable: `full-energy-planning`
 
 `workflows/index.ts` registers **only** `fullEnergyPlanning`. It is the only workflow the
-landing page offers. `quick-grid-analysis.json` and `cost-optimization.json` exist on
-disk but are **never imported**; `ev-hosting-analysis` **does not exist**.
+landing page offers. `quick-grid-analysis.json` and `cost-optimization.json` were dead
+files (written, never imported) and were **deleted 2026-11-02**; `ev-hosting-analysis`
+never existed. `defaultWorkflow.ts` (inline definition, id `quick-grid-analysis`) stays
+exported for standalone route mounting.
 
 **`full-energy-planning` node-graph** (from `workflows/full-energy-planning.json`):
 
@@ -131,11 +134,11 @@ proceeds with an empty context.
 | `model-load` | — | advancedParams, sourceModelId (pre-seeder — distributes model into store via onUpdate without claiming graph ownership) | — |
 | `simulation-settings` | — | simulationSettings | — |
 | `region-select` | — | region, polygons, gridData, gridResultIds (owns area **and** grid generation — fires generateGrid on draw) | — |
-| `grid-generation` | polygons, gridData, gridResultIds, advancedParams | — (checkpoint node — region-select is the writer) | polygons |
+| `grid-generation` | polygons, gridData, gridResultIds | — (checkpoint node — region-select is the writer) | polygons |
 | `area-edit` | gridData, gridResultIds | transformers, transformerAssignments | gridData, gridResultIds |
 | `building-demand` | gridData | buildingEstimates, buildingFilters | gridData |
-| `technology-selection` | gridData, advancedParams | technologies, techParameters | gridData |
-| `power-flow` | gridResultIds, advancedParams | powerFlowResult | gridResultIds |
+| `technology-selection` | gridData | technologies, techParameters | gridData |
+| `power-flow` | gridResultIds, advancedParams, simulationSettings | powerFlowResult | gridResultIds |
 | `grid-statistics` | gridResultIds | gridStatistics | gridResultIds |
 | `cost-breakdown` | gridStatistics, technologies | costBreakdown | gridStatistics |
 | `model-save` | region, polygons, gridData, simulationSettings, modelName, workspaceId | modelId | polygons, simulationSettings |
@@ -181,9 +184,9 @@ proceeds with an empty context.
 | M3 | **Major** | **No invalidation / data causality.** A done node never reruns; re-activating upstream (`region-select`) and completing it does not mark downstream stale. Change the region after grid generation ⇒ `gridData`/`powerFlowResult` stay stale while UI shows `done`. No `invalidates`, rerun-before-continue, loop guard, or fingerprint. | `NodeEngine.ts:195-218` (`completeNode`), shell `:232` re-render after reset | Stale downstream results presented as current. | ✅ **Resolved (2026-11-02)** — `completeNode` detects redo via reactivation tracking + a per-node output fingerprint; on a changed redo it resets every transitive downstream node to `pending` and clears their declared outputs (the graph is the invalidation map), then auto re-runs. No-op redos leave the pipeline intact. m5 (palette) fixed so redo is reachable. Tests: `workflow/NodeEngine.test.ts`. |
 | M4 | **Major** | **Writer discipline is advisory, not enforced — and already leaking.** `ModuleProps.onUpdate` + `engine.updateContext` merge arbitrary partials; nothing validates writes against `io.outputs`. `region-select` writes `gridData`/`gridResultIds` not in its `io.outputs`; `grid-generation` *declares* them but never writes. `region`/`polygons` have two writers (`model-load` + `region-select`) ⇒ phantom ordering edges onto every consumer. | `RegionSelectModule.tsx:112`, `GridGenerationModule.tsx:30`, `NodeEngine.ts:152` | Dual-writer keys; contract drift. | ✅ **Resolved (2026-11-02)** — `validateGraph` enforces one-writer-per-key; contracts corrected (`region-select` owns area+grid; `grid-generation` checkpoint; `model-load` pre-seeder); `run()` outputs filtered to `io.outputs`. Deliberate exception: the interactive `onUpdate` path is not key-filtered (the shell + model-diff own `modelYaml`/edit-mode keys); the validator is the contract gate. |
 | m5 | Minor | **Node palette never renders.** Shell gating `activeNode?.id == "done"` compares a node id to the literal string `"done"` — always false. | `ModelBuilderConfigurator.tsx:480` | Palette is dead UI. | ✅ **Resolved (2026-11-02)** — palette renders unconditionally (also the redo hook for M3). |
-| m6 | Minor | **`activateNode` has no readiness check** — a pending node with unmet deps can be activated and run against an empty context. | `NodeEngine.ts:175` | Skipped/forward activation of incomplete nodes. | Open |
+| m6 | Minor | **`activateNode` has no readiness check** — a pending node with unmet deps can be activated and run against an empty context. | `NodeEngine.ts:175` | Skipped/forward activation of incomplete nodes. | ✅ **Resolved (2026-11-02)** — activation gates on `getReadyNodes` (or reactivation of done/skipped); throws a clear error otherwise. |
 | m7 | Minor | **`validateGraph` satisfiability only credits explicit `dependsOn`** producers, but `buildGraph` also adds implicit `io.required` edges ⇒ a valid implicit-edge workflow fails validation (conservative inconsistency). | `WorkflowGraph.ts:281-291` | Validator/runtime disagree. | ✅ **Resolved (2026-11-02)** — satisfiability credits any other producer (matches `deriveEdges`); required by the M4 ownership change. |
-| m8 | Minor | **Fresh runs read dead `advancedParams`.** `grid-generation`/`power-flow`/`technology-selection` read `advancedParams`, which only `model-load` seeds and `simulation-settings` no longer writes (it writes `simulationSettings`). On a no-import run `advancedParams.pypsa_enabled` is `undefined` ⇒ power flow is effectively always off. | `PowerFlowModule.tsx:39`, `SimulationSettingsModule.tsx:245` | Power flow dead on default path. | Open |
+| m8 | Minor | **Fresh runs read dead `advancedParams`.** `grid-generation`/`power-flow`/`technology-selection` read `advancedParams`, which only `model-load` seeds and `simulation-settings` no longer writes (it writes `simulationSettings`). On a no-import run `advancedParams.pypsa_enabled` is `undefined` ⇒ power flow is effectively always off. | `PowerFlowModule.tsx:39`, `SimulationSettingsModule.tsx:245` | Power flow dead on default path. | ✅ **Resolved (2026-11-02)** — power-flow reads `simulationSettings?.pypsa_enabled` first (typed, canonical) with `advancedParams` fallback; unused `advancedParams` inputs dropped from `grid-generation`/`technology-selection`. |
 
 ## 6. Design decisions & open questions
 
@@ -198,10 +201,12 @@ proceeds with an empty context.
 - **One writer per key** — enforced at graph-build (M4). Deliberate exception: the
   interactive `onUpdate` path stays unfiltered because the shell + model-diff own
   `modelYaml`/edit-mode keys; the validator is the contract gate. Decided.
-- **Which workflows should actually ship** — currently one registered. The dead JSONs
-  should either be wired into `workflows/index.ts` or removed (open).
-- **Remaining minors (m6, m8)** — `activateNode` readiness check; `advancedParams`
-  freshness for power-flow on fresh runs. Also `defaults`-on-skip is unimplemented.
+- **Workflows that ship** — `full-energy-planning` only; the two dead JSONs were deleted
+  2026-11-02 (register new workflows when their modules are real, not as stubs).
+- **All ledger issues are resolved as of 2026-11-02.** Future work is not defects:
+  module stubs (`grid-statistics`, `cost-breakdown`, `hosting-capacity`, `pipeline`,
+  `building-demand`), selective/port-scoped invalidation, and optional key-level write
+  filtering on the interactive path (see M4 exception).
 
 ## 7. Corrections to earlier docs (reconciliation)
 
@@ -209,8 +214,8 @@ proceeds with an empty context.
 authoritatively here and are being corrected in the siblings:
 
 1. **Only `full-energy-planning` is registered/runnable** — not "four workflows".
-   `quick-grid-analysis.json` + `cost-optimization.json` are unimported; `ev-hosting-analysis`
-   doesn't exist (STATUS referenced it).
+   `quick-grid-analysis.json` + `cost-optimization.json` were unimported dead files and
+   were deleted 2026-11-02; `ev-hosting-analysis` never existed (STATUS referenced it).
 2. **Entry node is `model-load`** in every workflow — older flow diagrams showed
    `simulation-settings`/`region-select` as the entry and omitted `model-load`.
 3. **`grid-generation` and `power-flow` are NOT "✅ done / auto-runs"** — see C1: their auto

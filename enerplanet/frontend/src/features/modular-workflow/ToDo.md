@@ -30,8 +30,9 @@
   - Fix: `dependenciesDone` accepts `done || skipped`; the `io.required` context-presence
     check in `getReadyNodes` stays the real gate (no garbage runs). Verified by
     `workflow/NodeEngine.test.ts`.
-  - Open (not part of criticals): `skipNode` never applies `defaults` — decide for a
-    sole-optional-provider skippable module.
+  - Open: resolved 2026-11-02 — `skipNode` now applies a skip-defaults path: the module's
+    `defaults` are merged for declared output keys that are still absent (never
+    clobbering existing values, undeclared keys filtered).
 
 ## Major
 
@@ -62,17 +63,19 @@
 
 - [x] **m5 — node palette never renders.** ✅ Resolved 2026-11-02. `ModelBuilderConfigurator.tsx:480`
       `activeNode?.id == "done"` — palette now renders unconditionally (also the redo/undo hook for M3).
-- [ ] **m6 — `activateNode` has no readiness check** (`NodeEngine.ts:175`) — a pending node
-      with unmet deps can be activated and run against an empty context.
+- [x] **m6 — `activateNode` has no readiness check** — ✅ Resolved 2026-11-02. Activation
+      now gates on `getReadyNodes` (deps done + required present) or reactivation of a
+      done/skipped node; throws a clear error otherwise.
 - [x] **m7 — `validateGraph` satisfiability only credits explicit `dependsOn` producers,** ✅ Resolved 2026-11-02
       but `buildGraph` adds implicit `io.required` edges ⇒ validator/runtime disagree. Now
       satisfied by any other producer (`WorkflowGraph.ts:281`) — required by the M4 ownership change.
-- [ ] **m8 — fresh runs read dead `advancedParams`.** `grid-generation`/`power-flow`/
-      `technology-selection` read `advancedParams`, which only `model-load` seeds and
-      `simulation-settings` no longer writes ⇒ `advancedParams.pypsa_enabled` is undefined
-      on a no-import run ⇒ power flow effectively off by default (`PowerFlowModule.tsx:39`).
+- [x] **m8 — fresh runs read dead `advancedParams`.** ✅ Resolved 2026-11-02. power-flow
+      reads `simulationSettings?.pypsa_enabled` first (typed, canonical) with
+      `advancedParams` fallback in `run()` and component; unused `advancedParams` inputs
+      dropped from `grid-generation`/`technology-selection`.
 
 ## Also worth deciding (from ARCHITECTURE.md §6)
 
-- [ ] Which workflows actually ship — wire `quick-grid-analysis.json`/`cost-optimization.json`
-      into `workflows/index.ts` or remove them. (`ev-hosting-analysis` doesn't exist.)
+- [x] Which workflows actually ship — ✅ Resolved 2026-11-02: `full-energy-planning` only.
+      `quick-grid-analysis.json`/`cost-optimization.json` were unimported dead files and
+      were deleted. Register new workflows when their modules are real, not as stubs.
