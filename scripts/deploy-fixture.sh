@@ -7,10 +7,11 @@
 #   scripts/deploy-fixture.sh --prefix sim2 /path/to/enerplanet-test-data/v2
 #
 # The folder holds any of 3d/<country>/<provider>/, attributes/<country>/<provider>/,
-# weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. Files are added
-# to what is there; the PyLovo dump replaces the stack's PyLovo database as a
-# whole. 3D files are only copied: City2TABULA imports the tiles under a drawn
-# area when a model is first run there.
+# weather/<provider>/<country>/output/ and pylovo/<name>.sql.gz. 3D and
+# attribute files are added to what is there; each weather <provider>/<country>
+# folder and the PyLovo database are replaced as a whole. 3D files are only
+# copied: City2TABULA imports the tiles under a drawn area when a model is
+# first run there.
 # scripts/deploy-fixture.md describes the layout and how to add a region.
 #
 set -euo pipefail
@@ -60,10 +61,21 @@ FIXTURE_DIR="$(cd "$FIXTURE_DIR" && pwd)"
 SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 WORKDIR="${WORKDIR:-$SELF_DIR/../.local/heat-stack/$PREFIX}"
 
-C2T="$PREFIX-city2tabula-api-1"
-C2T_DB="$PREFIX-city2tabula-db-1"
-PYLOVO_DB="$PREFIX-pylovo-postgres-1"
-WEATHER="$PREFIX-weather-api-1"
+command -v docker >/dev/null || die "docker not found"
+
+# container_of PROJECT SERVICE FIXED: the running container of SERVICE in compose
+# project PROJECT, else FIXED, the name a stack from deploy-heat-stack.sh uses.
+container_of() {
+  local id
+  id="$(docker ps -q --filter "label=com.docker.compose.project=$1" \
+    --filter "label=com.docker.compose.service=$2" | head -n 1)"
+  if [ -n "$id" ]; then docker inspect -f '{{.Name}}' "$id" | sed 's|^/||'; else echo "$3"; fi
+}
+
+C2T="$(container_of "$PREFIX-city2tabula" api "$PREFIX-city2tabula")"
+C2T_DB="$(container_of "$PREFIX-city2tabula" db "$PREFIX-city2tabula-db")"
+PYLOVO_DB="$(container_of "$PREFIX-pylovo" postgres "$PREFIX-pylovo-postgres")"
+WEATHER="$(container_of "$PREFIX-weather" api "$PREFIX-weather-serve")"
 
 # Must match isoByCountry in city2tabula's internal/config/country.go: the
 # server names each country's database <DB_NAME>_<code>.
@@ -100,14 +112,19 @@ mount_source() {
   echo "$src"
 }
 
+# require_writable DIR: Docker creates a missing bind-mount source owned by root.
+require_writable() {
+  local denied
+  denied="$(find "$1" -type d ! -writable -print -quit)"
+  [ -z "$denied" ] || die "$denied is not writable by $(id -un) (owner $(stat -c %U "$denied")); run: sudo chown -R $(id -un): $1"
+}
+
 # copy_new SRC DEST: copies each file under SRC that DEST lacks. A file that
 # exists with different content is reported and kept, because City2TABULA
 # skips files it has already imported and would not pick up the change.
 copy_new() {
-  local src="$1" dest="$2" rel copied=0 denied
-  # Docker creates a missing bind-mount source owned by root.
-  denied="$(find "$dest" -type d ! -writable -print -quit)"
-  [ -z "$denied" ] || die "$denied is not writable by $(id -un) (owner $(stat -c %U "$denied")); run: sudo chown -R $(id -un): $dest"
+  local src="$1" dest="$2" rel copied=0
+  require_writable "$dest"
   while IFS= read -r rel; do
     if [ ! -e "$dest/$rel" ]; then
       mkdir -p "$(dirname "$dest/$rel")"
@@ -147,11 +164,44 @@ load_3d() {
   if [ -d "$FIXTURE_DIR/attributes" ]; then copy_new "$FIXTURE_DIR/attributes" "$attrs"; fi
 }
 
-# weather-serve looks up <provider>/<country>/output under /data on every
-# request, so files copied in are served without a restart.
+# replace_dir SRC DEST: makes DEST a copy of SRC unless it already is one.
+# The copy is built beside DEST and swapped in once complete. Returns 1 when
+# DEST was left as it was.
+replace_dir() {
+  local src="$1" dest="$2"
+  if [ -d "$dest" ] && diff -rq "$src" "$dest" >/dev/null; then return 1; fi
+  rm -rf "$dest.new" "$dest.old"
+  mkdir -p "$(dirname "$dest")"
+  cp -a "$src" "$dest.new"
+  if [ -d "$dest" ]; then mv "$dest" "$dest.old"; fi
+  mv "$dest.new" "$dest"
+  rm -rf "$dest.old"
+}
+
+# Each <provider>/<country> folder replaces the stack's folder as a whole:
+# weather-serve reads an annual file before monthly ones, so an older cut left
+# beside new files would answer instead of them. weather-serve caches answers,
+# so it is restarted when a folder changed.
 load_weather() {
+  local data dir rel changed=0
   require_running "$WEATHER"
-  copy_new "$FIXTURE_DIR/weather" "$(mount_source "$WEATHER" /data)"
+  data="$(mount_source "$WEATHER" /data)"
+  require_writable "$data"
+  for dir in "$FIXTURE_DIR"/weather/*/*/; do
+    [ -d "$dir" ] || continue
+    rel="${dir#"$FIXTURE_DIR"/weather/}"
+    rel="${rel%/}"
+    if replace_dir "${dir%/}" "$data/$rel"; then
+      ok "weather/$rel: replaced in $data"
+      changed=1
+    else
+      ok "weather/$rel: unchanged"
+    fi
+  done
+  if [ "$changed" = 1 ]; then
+    log "restarting $WEATHER to clear its cached answers"
+    docker restart "$WEATHER" >/dev/null
+  fi
 }
 
 # load_pylovo DUMP: restores DUMP into a fresh database and swaps it in for
@@ -196,7 +246,6 @@ shopt -u nullglob
 [ -d "$FIXTURE_DIR/3d" ] || [ -d "$FIXTURE_DIR/attributes" ] || [ -d "$FIXTURE_DIR/weather" ] \
   || [ "${#dumps[@]}" = 1 ] || die "$FIXTURE_DIR has no 3d/, attributes/, weather/ or pylovo/*.sql.gz"
 
-command -v docker >/dev/null || die "docker not found"
 require_running "$C2T"
 require_running "$C2T_DB"
 require_running "$PYLOVO_DB"

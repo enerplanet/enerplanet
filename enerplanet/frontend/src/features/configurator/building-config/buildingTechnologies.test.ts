@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { removeTech, setTechField, technologyCards, type BuildingTechs } from './buildingTechnologies';
+import { removeTech, setTechField, technologiesProp, technologyCards, type BuildingTechs } from './buildingTechnologies';
 
 const t = (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string | undefined) ?? key;
 
@@ -70,5 +70,19 @@ describe('removeTech', () => {
   it('removes one technology without changing the input', () => {
     expect(Object.keys(removeTech(techs, 'battery_storage'))).toEqual(['pv_supply', 'air_source_heat_pump']);
     expect(Object.keys(techs)).toHaveLength(3);
+  });
+});
+
+describe('technologiesProp', () => {
+  const noop = () => {};
+
+  it('keeps the tab for a building with no technologies when they can be added', () => {
+    const prop = technologiesProp([], noop, noop, noop);
+    expect(prop?.items).toEqual([]);
+    expect(prop?.onAdd).toBe(noop);
+  });
+
+  it('hides the tab for a building with no technologies when nothing can be added', () => {
+    expect(technologiesProp([], noop, noop)).toBeUndefined();
   });
 });

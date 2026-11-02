@@ -90,7 +90,7 @@ Options:
   --workdir DIR          where the generated override files go
                          (default <repo>/.local/heat-stack/NAME)
   --tentacron-port N     host port for TentaCron (default 8400)
-  --pylovo-port N        host port for PyLovo    (default 8186)
+  --pylovo-port N        host port for PyLovo    (default 8187)
   --no-fixtures          do not git-lfs pull or load the fixtures
   --fixtures-dir DIR     read the fixture data from DIR instead of <repo>/fixtures
   --weather-api-key K    key TentaCron presents to weather-serve
@@ -210,9 +210,9 @@ port_in_use() {
 }
 
 # stop_published_containers — a redeploy of a prefix that is still running
-# would see its own containers holding the wanted host ports and drift one
-# port up on every `up`. Stop the two containers that publish to the host, so
-# the scan that follows re-selects the original ports instead. Only the two
+# would see its own containers holding the reserved host ports and stop. Stop
+# the two containers that publish to the host, so the port check that follows
+# finds them free. Only the two
 # published services matter: every other service of the stack is private.
 stop_published_containers() {
   local name
@@ -224,33 +224,22 @@ stop_published_containers() {
   done
 }
 
-# pick_port WANTED LABEL — sets PICKED_PORT to WANTED when free, else to the
-# next free port above it. It writes a variable rather than printing, so that
-# the failure path can still abort the whole script from inside the function.
-PICKED_PORT=""
-pick_port() {
-  local wanted="$1" label="$2" p="$1" i=0
-  while port_in_use "$p"; do
-    i=$((i + 1))
-    [ "$i" -le 100 ] || die "no free port found for $label within 100 above $wanted"
-    p=$((p + 1))
-  done
-  if [ "$p" != "$wanted" ]; then
-    warn "$label: host port $wanted is already in use, using $p instead"
-  fi
-  PICKED_PORT="$p"
+# The two ports this stack publishes; every other service is reachable only by
+# name on the stack's networks. Production reserves 8400 and 8187 for them, so
+# a taken port aborts instead of moving (a redeploy stops its own containers
+# first, so it gets its ports back).
+resolve_ports() {
+  TENTACRON_HOST_PORT="${TENTACRON_HOST_PORT:-$TENTACRON_PORT}"
+  PYLOVO_HOST_PORT="${PYLOVO_HOST_PORT:-8187}"
+  require_port "$TENTACRON_HOST_PORT" tentacron --tentacron-port
+  require_port "$PYLOVO_HOST_PORT" pylovo --pylovo-port
 }
 
-# The two ports this stack publishes. Everything else is private, so these are
-# the only host ports it can collide on; both are moved to the next free one
-# when the wanted port is taken by something that is not this stack (a
-# redeploy of this prefix has its own containers stopped beforehand, so its
-# original ports re-select instead of drifting).
-resolve_ports() {
-  pick_port "${TENTACRON_HOST_PORT:-$TENTACRON_PORT}" tentacron
-  TENTACRON_HOST_PORT="$PICKED_PORT"
-  pick_port "${PYLOVO_HOST_PORT:-8186}" pylovo
-  PYLOVO_HOST_PORT="$PICKED_PORT"
+# require_port PORT LABEL FLAG: abort when PORT is already taken.
+require_port() {
+  if port_in_use "$1"; then
+    die "$2: host port $1 is already in use; stop what holds it, or pass $3 N"
+  fi
 }
 
 # ── Repositories ──────────────────────────────────────────────────────────────

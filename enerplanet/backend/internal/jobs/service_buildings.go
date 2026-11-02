@@ -6,6 +6,7 @@ import "spatialhub_backend/internal/heatdemand"
 // payload.createBuildingFeature emits it) to the BuEM service building_type
 // it should be modelled as. BuEM's occupancy model has profiles for exactly
 // these eight service ids; a class not listed here is not a service building.
+// The building configurator keeps the same table (city2tabulaAdapter.ts).
 var serviceBuildingTypes = map[string]string{
 	"bakery":       "bakery",
 	"supermarket":  "supermarket",
@@ -19,6 +20,7 @@ var serviceBuildingTypes = map[string]string{
 	"hotel":        "hotel",
 	"clinic":       "clinic",
 	"hospital":     "clinic",
+	"doctors":      "clinic",
 	"restaurant":   "restaurant",
 	"cafe":         "restaurant",
 	"warehouse":    "warehouse",

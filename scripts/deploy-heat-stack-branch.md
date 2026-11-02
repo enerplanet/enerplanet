@@ -45,9 +45,8 @@ docker compose -f <_COMPOSE> [--env-file <_ENV_FILE>] -f <prefix override> up -d
 | `<SERVICE>_SERVICES` | The one compose service to start, when not all of them. Optional |
 
 buem-model has no compose key: it is built from the `BUEM_MODEL_*` checkout
-through buem-gateway's compose file. TentaCron's image is built with
-`make build ENV=dev` in its `environment/` before compose starts it. PyLovo
-gets its own postgres and redis from the prefix override.
+through buem-gateway's compose file. PyLovo gets its own postgres and redis
+from the prefix override.
 
 A variable set in the environment wins over `repos.conf`, so one service can
 be built from another branch for a single run:
@@ -96,8 +95,8 @@ data again.
 | Option | Meaning |
 |---|---|
 | `--prefix NAME` | Required. Namespaces every container, network and volume. Lowercase letters, digits and dashes |
-| `--tentacron-port N` | Host port for TentaCron. Default `8400`, or the next free port |
-| `--pylovo-port N` | Host port for PyLovo. Default `8186`, or the next free port |
+| `--tentacron-port N` | Host port for TentaCron. Default `8400`; the script stops if it is taken |
+| `--pylovo-port N` | Host port for PyLovo. Default `8187`; the script stops if it is taken |
 | `--weather-api-key K` | Key TentaCron presents to weather-serve. Default `dev-weather-key` |
 | `--volumes` | `down` also removes the prefix's volumes |
 
@@ -106,7 +105,10 @@ The generated override files go in `.local/heat-stack/<prefix>/overrides`.
 How the prefix renames containers, networks and ports, and how to reach the
 private services, is described in
 [`deploy-heat-stack.md`](deploy-heat-stack.md#how-the-prefix-is-applied); this
-script applies it the same way.
+script applies the same renaming. On the branch tips TentaCron calls `meme`,
+`ignis`, `buem-gateway`, `weather`, `city2tabula`, `pysam-pv` and `pylovo`;
+each service's compose file declares its name as a network alias, except
+MEME, whose alias comes from the override.
 
 ## Requirements
 
@@ -114,7 +116,6 @@ script applies it the same way.
 |---|---|
 | Git and Git LFS | The script stops if `git lfs` is missing |
 | Docker Engine with Compose 2.24 or newer | The override files use `!reset` and `!override` |
-| `make` | TentaCron's image is built with `make build` |
 
 ## Troubleshooting
 
@@ -124,4 +125,5 @@ script applies it the same way.
 | `<path> is on a local branch; leaving it alone` | That checkout holds local work | Build it as it is, or detach it: `git -C <path> checkout --detach` |
 | `git lfs pull failed in <path>` | No LFS access or no network | Fix access and re-run; the build would lack data files |
 | A build fails | The branch tip does not build | Fix the branch, or set `<SERVICE>_BRANCH` to one that builds |
-| Port warning `host port 8400 is in use, using 8401` | The default port is taken | Pin it with `--tentacron-port` or `--pylovo-port` |
+| Two containers answer one service name, such as an old `<prefix>-weather-serve` beside `<prefix>-weather-api-1` | The prefix was deployed before the role-named layout; its old containers are not part of the new projects | Run `down` with the script version that deployed it, or remove the old `<prefix>-` containers, then `up` |
+| `tentacron: host port 8400 is already in use` (or `pylovo` with 8187) | Something other than this prefix holds the port | Stop what holds it; pass `--tentacron-port` or `--pylovo-port` only for a test stack |

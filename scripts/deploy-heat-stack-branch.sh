@@ -17,8 +17,8 @@
 #
 # Options:
 #   --prefix NAME          name every container, network and volume (required)
-#   --tentacron-port N     host port for TentaCron (default 8400, or next free)
-#   --pylovo-port N        host port for PyLovo    (default 8186, or next free)
+#   --tentacron-port N     host port for TentaCron (default 8400)
+#   --pylovo-port N        host port for PyLovo    (default 8187)
 #   --weather-api-key K    key TentaCron presents to weather-serve
 #   --volumes              `down` also removes this stack's volumes
 #
@@ -103,15 +103,18 @@ port_free() {
     && ! docker ps --format '{{.Ports}}' | grep -qE "(^|,| )[^ ]*:$1->"
 }
 
-# pick_port WANTED LABEL: prints WANTED, or the next free port above it.
-pick_port() {
-  local p="$1"
-  until port_free "$p"; do
-    p=$((p + 1))
-    [ "$p" -le $(($1 + 100)) ] || die "no free port for $2 within 100 above $1"
-  done
-  [ "$p" = "$1" ] || warn "$2: host port $1 is in use, using $p"
-  echo "$p"
+# held_by_prefix PORT: a container of this prefix publishes PORT.
+held_by_prefix() {
+  docker ps --filter "name=^$PREFIX-" --format '{{.Ports}}' | grep -qE "(^|, )[^ ]*:$1->"
+}
+
+# require_port PORT LABEL FLAG: abort when PORT is taken by something that is
+# not a container of this prefix (a redeploy keeps its own ports). Production
+# reserves 8400 and 8187 for this stack, so a taken port never moves.
+require_port() {
+  if ! port_free "$1" && ! held_by_prefix "$1"; then
+    die "$2: host port $1 is already in use; stop what holds it, or pass $3 N"
+  fi
 }
 
 # checkout DIR REPO BRANCH: clone, or move a detached checkout, to the tip of
@@ -278,8 +281,10 @@ EOF
 }
 
 cmd_up() {
-  TENTACRON_HOST_PORT="$(pick_port "${TENTACRON_HOST_PORT:-$TENTACRON_PORT}" tentacron)"
-  PYLOVO_HOST_PORT="$(pick_port "${PYLOVO_HOST_PORT:-8186}" pylovo)"
+  TENTACRON_HOST_PORT="${TENTACRON_HOST_PORT:-$TENTACRON_PORT}"
+  PYLOVO_HOST_PORT="${PYLOVO_HOST_PORT:-8187}"
+  require_port "$TENTACRON_HOST_PORT" tentacron --tentacron-port
+  require_port "$PYLOVO_HOST_PORT" pylovo --pylovo-port
   write_overrides
 
   mkdir -p "$DEPS_DIR"

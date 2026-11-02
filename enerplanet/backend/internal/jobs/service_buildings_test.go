@@ -14,7 +14,7 @@ func TestServiceBuildingType_everyMappedClass(t *testing.T) {
 		"office": "office",
 		"school": "school", "kindergarten": "school", "university": "school",
 		"hotel":  "hotel",
-		"clinic": "clinic", "hospital": "clinic",
+		"clinic": "clinic", "hospital": "clinic", "doctors": "clinic",
 		"restaurant": "restaurant", "cafe": "restaurant",
 		"warehouse": "warehouse", "industrial": "warehouse", "workshop": "warehouse",
 	}

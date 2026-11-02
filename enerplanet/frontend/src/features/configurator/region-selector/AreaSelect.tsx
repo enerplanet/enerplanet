@@ -852,6 +852,10 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         techsFor={pylovoLayers.buildingTechs}
         locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
+        onAddTech={(osmId, tech) => {
+          const building = pylovoLayers.findBuilding(osmId);
+          if (building) techDialogFlow.addTechToBuilding(building, tech);
+        }}
       />
 
       <HeatScopeDialog request={techOperations.heatScopeRequest} onChoose={techOperations.resolveHeatScope} />
