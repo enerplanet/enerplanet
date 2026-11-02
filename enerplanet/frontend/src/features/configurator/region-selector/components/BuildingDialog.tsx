@@ -11,12 +11,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
 } from "@spatialhub/ui";
-import { Building, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import {
@@ -94,8 +90,6 @@ interface BuildingDialogProps {
     hotWaterElectric?: boolean
   ) => Promise<void>;
   onAddTech?: (tech: Technology) => void;
-  isExcluded?: boolean;
-  onToggleExclude?: (buildingId: number) => void;
   onSave?: () => void;
 }
 
@@ -144,8 +138,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   onRecalculateDemand,
   onAddTech,
   onSave,
-  isExcluded = false,
-  onToggleExclude,
 }) => {
   const { t } = useTranslation();
   const techs = selectedBuilding?.techs || {};
@@ -310,20 +302,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
     hotWaterElectric,
     onSave,
   ]);
-
-  // Custom building detection
-  const isCustomBuilding = useMemo(() => {
-    if (!selectedBuilding?.osmId) return false;
-    const osmId = selectedBuilding.osmId;
-    return typeof osmId === "number" ? osmId < 0 : String(osmId).startsWith("-");
-  }, [selectedBuilding?.osmId]);
-
-  const customBuildingId = useMemo(() => {
-    if (!isCustomBuilding || !selectedBuilding?.osmId) return null;
-    const osmId = selectedBuilding.osmId;
-    const numId = typeof osmId === "number" ? osmId : Number.parseInt(String(osmId), 10);
-    return Math.abs(numId);
-  }, [isCustomBuilding, selectedBuilding?.osmId]);
 
   // Technology picker
   const techPickerRef = useRef<HTMLDivElement>(null);
@@ -888,37 +866,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
         )}
 
         <AlertDialogFooter className="flex-row gap-2">
-          {isCustomBuilding && onToggleExclude && customBuildingId && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isExcluded ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onToggleExclude(customBuildingId)}
-                    className={isExcluded ? "bg-amber-600 hover:bg-amber-700" : ""}
-                  >
-                    {isExcluded ? (
-                      <>
-                        <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        {t("regionSelector.buildingDialog.include")}
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5 mr-1.5" />
-                        {t("regionSelector.buildingDialog.exclude")}
-                      </>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isExcluded
-                    ? t("regionSelector.buildingDialog.includeTooltip")
-                    : t("regionSelector.buildingDialog.excludeTooltip")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
           <Button variant="outline" size="sm" onClick={onClose}>
             {t("common.close")}
           </Button>

@@ -727,8 +727,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             normalizedWorkspaceId={normalizedWorkspaceId}
             onWorkspaceChange={handleWorkspaceChange}
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
-            includePrivateBuildings={state.includePrivateBuildings}
-            onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
             siteMode={siteMode}
             onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
@@ -840,13 +838,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
         onRecalculateDemand={buildingDemand.handleRecalculateDemand}
         onAddTech={techDialogFlow.handleAddTechFromDialog}
-        isExcluded={(() => {
-          const osmId = mapInteractions.selectedBuilding?.osmId;
-          if (!osmId) return false;
-          const numId = typeof osmId === "number" ? osmId : Number.parseInt(String(osmId), 10);
-          return numId < 0 && state.excludedBuildingIds.has(Math.abs(numId));
-        })()}
-        onToggleExclude={actions.toggleBuildingExclusion}
         onSave={() => setIsModified(true)}
       />
 

@@ -159,10 +159,7 @@
     "current": "Huidig",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Bekijk op Kaart",
-      "editLocation": "Locatie Bewerken",
       "editName": "Naam bewerken",
-      "duplicate": "Dupliceren",
       "view": "Bekijken",
       "share": "Delen",
       "moveToWorkspace": "Verplaatsen naar Werkruimte",
@@ -1467,9 +1464,7 @@
       "saveShortcut": "Opslaan (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
-      "toggleMyBuildings": "Mijn gebouwen aan/uit",
       "disableSelected": "Geselecteerde gebouwen uitschakelen",
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
@@ -1740,10 +1735,6 @@
       "map": {
         "title": "Interactieve Kaart",
         "description": "Uw belangrijkste werkruimte voor geografische analyse. Bekijk kaartlagen, selecteer gebieden voor beoordeling en visualiseer energierisicogegevens."
-      },
-      "locations": {
-        "title": "Opgeslagen Locaties",
-        "description": "Beheer uw opgeslagen locaties en interessegebieden. Snelle toegang tot vaak geanalyseerde regio's."
       },
       "reports": {
         "title": "Simulatierapporten",
@@ -2127,24 +2118,6 @@
       "description": "Een gebouw heeft één warmtevoorziening. {{withHeat}} gebouwen hebben er al een, {{without}} hebben er geen.",
       "missing": "Alleen gebouwen zonder warmtevoorziening ({{count}})",
       "replace": "Op alle gebouwen vervangen ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Aangepaste Locaties",
-    "subtitle": "Maak en beheer locaties met gebouwclassificaties",
-    "refresh": "Locaties vernieuwen",
-    "newLocation": "Nieuwe Locatie",
-    "newLocationTooltip": "Maak een nieuwe aangepaste locatie",
-    "searchPlaceholder": "Zoek locaties...",
-    "stats": {
-      "total": "Totaal",
-      "totalArea": "Totale Oppervlakte",
-      "totalDemand": "Totale Vraag",
-      "private": "Privé"
-    },
-    "empty": {
-      "title": "Geen locaties gevonden",
-      "description": "Maak uw eerste aangepaste locatie om te beginnen"
     }
   },
   "weather": {
@@ -2653,11 +2626,6 @@
     "sourceNote": "Geschat door de PyLoVo-netberekening."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Mijn Aangepaste Gebouwen",
-      "description": "Neem uw privé aangepaste gebouwen op in de netwerkberekening. Dit zijn gebouwen die u hebt gemaakt en opgeslagen in uw account.",
-      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
-    },
     "simulateEV": {
       "title": "Simuleer EV Hosting Capaciteit",
       "description": "Bereken de hostingcapaciteit voor elektrische voertuigen voor elke transformator in het geselecteerde gebied. Dit bepaalt hoeveel EV-laders (11 kW Niveau 2) kunnen worden aangesloten voordat netwerkbeperkingen worden bereikt.",
@@ -2938,11 +2906,7 @@
       "demographicsFrom": "Demografische gegevens uit",
       "cuzkName": "Tsjechisch Bureau voor Landmeetkunde, Kartografie en Kadaster",
       "enrichedWith": "Gebouwgegevens aangevuld met",
-      "licensedUnder": "Gelicentieerd onder",
-      "include": "Opnemen",
-      "exclude": "Uitsluiten",
-      "includeTooltip": "Dit aangepaste gebouw opnemen in het net (vereist opnieuw genereren)",
-      "excludeTooltip": "Dit aangepaste gebouw uitsluiten van het net (vereist opnieuw genereren)"
+      "licensedUnder": "Gelicentieerd onder"
     }
   },
   "landing": {

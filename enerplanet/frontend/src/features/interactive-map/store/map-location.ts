@@ -6,7 +6,7 @@ import {
   isAuthenticated, 
   addLocationToList, 
   removeLocationFromList 
-} from '@/features/locations/store/location-store-factory';
+} from '@/features/interactive-map/store/location-store-factory';
 
 // Map location extends base with zoom
 interface MapLocation extends BaseLocation {

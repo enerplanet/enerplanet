@@ -17,7 +17,6 @@ import {
   GraduationCap,
   MessageSquareText,
   LayoutDashboard,
-  MapPinHouse,
   GitCompareArrows,
   LayoutGrid,
   LucideIcon,
@@ -133,14 +132,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         color: "#8b5cf6",
         bgColor: "#ede9fe",
         dataTour: "simulations",
-      },
-      {
-        path: "/app/locations",
-        icon: MapPinHouse,
-        title: t("locations.title"),
-        color: "#ef4444",
-        bgColor: "#fee2e2",
-        dataTour: "locations",
       },
       {
         path: "/app/simulation-reports",

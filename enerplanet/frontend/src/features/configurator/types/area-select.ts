@@ -131,8 +131,6 @@ export interface AreaSelectState {
 	pointerOnMap: boolean;
 	isGeneratingGrid: boolean;
 	// Custom building filters
-	includePrivateBuildings: boolean;
-	excludedBuildingIds: Set<number>;
 	// Unsaved changes tracking
 	isModified: boolean;
 	showUnsavedDialog: boolean;
@@ -160,9 +158,6 @@ export interface AreaSelectActions {
 	handleClearAllPolygons: () => void;
 	setIsDrawing: (isDrawing: boolean) => void;
 	// Custom building filter actions
-	setIncludePrivateBuildings: (include: boolean) => void;
-	toggleBuildingExclusion: (buildingId: number) => void;
-	clearExcludedBuildings: () => void;
 	handleQuickSave: () => Promise<void>;
 	/** Saves a new or changed model, then starts the analysis of its buildings; resolves to whether it started. */
 	handleAnalyse: () => Promise<boolean>;

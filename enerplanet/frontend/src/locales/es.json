@@ -225,10 +225,7 @@
     "current": "Actual",
     "max": "Máx",
     "tooltips": {
-      "viewOnMap": "Ver en Mapa",
-      "editLocation": "Editar Ubicación",
       "editName": "Editar nombre",
-      "duplicate": "Duplicar",
       "view": "Ver",
       "share": "Compartir",
       "moveToWorkspace": "Mover a Espacio de Trabajo",
@@ -1733,9 +1730,7 @@
       "saveShortcut": "Guardar (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Mis edificios",
       "clearAll": "Eliminar todos los polígonos",
-      "toggleMyBuildings": "Alternar mis edificios",
       "disableSelected": "Desactivar los edificios seleccionados",
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
@@ -2007,10 +2002,6 @@
         "title": "Mapa Interactivo",
         "description": "Tu espacio de trabajo principal para análisis geográfico. Visualiza capas del mapa, selecciona áreas para evaluación y visualiza datos de riesgo energético."
       },
-      "locations": {
-        "title": "Ubicaciones Guardadas",
-        "description": "Gestiona tus ubicaciones guardadas y áreas de interés. Acceso rápido a regiones frecuentemente analizadas."
-      },
       "reports": {
         "title": "Informes de Simulación",
         "description": "Visualiza informes detallados de simulación, exporta datos y analiza tendencias y patrones históricos."
@@ -2155,11 +2146,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Mis Edificios Personalizados",
-      "description": "Incluya sus edificios personalizados privados en el cálculo de la red. Estos son edificios que ha creado y guardado en su cuenta.",
-      "example": "También puede excluir edificios individuales haciendo clic en ellos en el mapa."
-    },
     "simulateEV": {
       "title": "Simular Capacidad de Alojamiento de VE",
       "description": "Calcule la capacidad de alojamiento de vehículos eléctricos para cada transformador en el área seleccionada. Esto determina cuántos cargadores de VE (11 kW Nivel 2) pueden conectarse antes de alcanzar las restricciones de la red.",
@@ -2510,24 +2496,6 @@
       "description": "Un edificio tiene un único suministro de calor. {{withHeat}} edificios ya tienen uno, {{without}} no tienen ninguno.",
       "missing": "Solo edificios sin suministro de calor ({{count}})",
       "replace": "Sustituir en todos los edificios ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Ubicaciones Personalizadas",
-    "subtitle": "Crear y gestionar ubicaciones con clasificaciones de edificios",
-    "refresh": "Actualizar ubicaciones",
-    "newLocation": "Nueva Ubicación",
-    "newLocationTooltip": "Crear una nueva ubicación personalizada",
-    "searchPlaceholder": "Buscar ubicaciones...",
-    "stats": {
-      "total": "Total",
-      "totalArea": "Área Total",
-      "totalDemand": "Demanda Total",
-      "private": "Privado"
-    },
-    "empty": {
-      "title": "No se encontraron ubicaciones",
-      "description": "Crea tu primera ubicación personalizada para comenzar"
     }
   },
   "weather": {
@@ -2933,11 +2901,7 @@
       "demographicsFrom": "Datos demográficos de",
       "cuzkName": "Oficina Checa de Topografía, Cartografía y Catastro",
       "enrichedWith": "Datos del edificio enriquecidos con",
-      "licensedUnder": "Con licencia",
-      "include": "Incluir",
-      "exclude": "Excluir",
-      "includeTooltip": "Incluir este edificio personalizado en la red (requiere regenerarla)",
-      "excludeTooltip": "Excluir este edificio personalizado de la red (requiere regenerarla)"
+      "licensedUnder": "Con licencia"
     }
   },
   "landing": {

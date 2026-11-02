@@ -159,10 +159,7 @@
     "current": "Aktuální",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Zobrazit na Mapě",
-      "editLocation": "Upravit Polohu",
       "editName": "Upravit název",
-      "duplicate": "Duplikovat",
       "view": "Zobrazit",
       "share": "Sdílet",
       "moveToWorkspace": "Přesunout do Pracovního Prostoru",
@@ -1488,9 +1485,7 @@
       "saveShortcut": "Uložit (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Moje budovy",
       "clearAll": "Odstranit všechny polygony",
-      "toggleMyBuildings": "Přepnout moje budovy",
       "disableSelected": "Vypnout vybrané budovy",
       "importArea": "Importovat oblast",
       "exportArea": "Exportovat oblast",
@@ -1765,10 +1760,6 @@
       "map": {
         "title": "Interaktivní Mapa",
         "description": "Váš hlavní pracovní prostor pro geografickou analýzu. Prohlížejte vrstvy mapy, vybírejte oblasti pro hodnocení a vizualizujte data o energetickém riziku."
-      },
-      "locations": {
-        "title": "Uložené Lokace",
-        "description": "Spravujte uložené lokace a oblasti zájmu. Rychlý přístup k často analyzovaným regionům."
       },
       "reports": {
         "title": "Zprávy o Simulaci",
@@ -2152,24 +2143,6 @@
       "description": "Budova má jeden zdroj tepla. {{withHeat}} budov už jeden má, {{without}} nemá žádný.",
       "missing": "Jen budovy bez zdroje tepla ({{count}})",
       "replace": "Nahradit u všech budov ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Vlastní Polohy",
-    "subtitle": "Vytvářejte a spravujte polohy s klasifikacemi budov",
-    "refresh": "Obnovit polohy",
-    "newLocation": "Nová Poloha",
-    "newLocationTooltip": "Vytvořit novou vlastní polohu",
-    "searchPlaceholder": "Hledat polohy...",
-    "stats": {
-      "total": "Celkem",
-      "totalArea": "Celková Plocha",
-      "totalDemand": "Celková Poptávka",
-      "private": "Soukromé"
-    },
-    "empty": {
-      "title": "Nebyly nalezeny žádné polohy",
-      "description": "Vytvořte svou první vlastní polohu pro začátek"
     }
   },
   "weather": {
@@ -2680,11 +2653,6 @@
     "sourceNote": "Odhad nástroje PyLoVo."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Moje Vlastní Budovy",
-      "description": "Zahrňte své soukromé vlastní budovy do výpočtu sítě. Jedná se o budovy, které jste vytvořili a uložili do svého účtu.",
-      "example": "Jednotlivé budovy můžete také vyloučit kliknutím na ně na mapě."
-    },
     "simulateEV": {
       "title": "Simulovat Kapacitu Hostingu EV",
       "description": "Vypočítejte kapacitu hostingu elektrických vozidel pro každý transformátor ve vybrané oblasti. Tím se určí, kolik nabíječek EV (11 kW Úroveň 2) může být připojeno před dosažením omezení sítě.",
@@ -2965,11 +2933,7 @@
       "demographicsFrom": "Demografické údaje z",
       "cuzkName": "Český úřad zeměměřický a katastrální",
       "enrichedWith": "Údaje o budovách doplněny z",
-      "licensedUnder": "Licencováno pod",
-      "include": "Zahrnout",
-      "exclude": "Vyloučit",
-      "includeTooltip": "Zahrnout tuto vlastní budovu do sítě (vyžaduje nové vygenerování)",
-      "excludeTooltip": "Vyloučit tuto vlastní budovu ze sítě (vyžaduje nové vygenerování)"
+      "licensedUnder": "Licencováno pod"
     }
   },
   "landing": {

@@ -225,10 +225,7 @@
     "current": "Current",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "View on Map",
-      "editLocation": "Edit Location",
       "editName": "Edit name",
-      "duplicate": "Duplicate",
       "view": "View",
       "share": "Share",
       "moveToWorkspace": "Move to Workspace",
@@ -1783,12 +1780,10 @@
       "saveShortcut": "Save (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "My Buildings",
       "resetArea": "Reset Area",
       "resetAreaConfirmTitle": "Reset the area?",
       "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
       "clearAll": "Remove all polygons",
-      "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings",
       "importArea": "Import area",
       "exportArea": "Export area",
@@ -2005,10 +2000,6 @@
         "title": "Interactive Map",
         "description": "Your main workspace for geographical analysis. View map layers, select areas for assessment, and visualize energy risk data."
       },
-      "locations": {
-        "title": "Saved Locations",
-        "description": "Manage your saved locations and areas of interest. Quick access to frequently analyzed regions."
-      },
       "reports": {
         "title": "Simulation Reports",
         "description": "View detailed simulation reports, export data, and analyze historical trends and patterns."
@@ -2153,11 +2144,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "My Custom Buildings",
-      "description": "Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.",
-      "example": "You can also exclude individual buildings by clicking on them on the map."
-    },
     "simulateEV": {
       "title": "Simulate EV Hosting Capacity",
       "description": "Calculate the Electric Vehicle hosting capacity for each transformer in the selected area. This determines how many EV chargers (11 kW Level 2) can be connected before reaching grid constraints.",
@@ -2508,24 +2494,6 @@
       "description": "A building has one heat supply. {{withHeat}} buildings already have one, {{without}} have none.",
       "missing": "Only buildings without heat supply ({{count}})",
       "replace": "Replace on all buildings ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Custom Locations",
-    "subtitle": "Create and manage locations with building classifications",
-    "refresh": "Refresh locations",
-    "newLocation": "New Location",
-    "newLocationTooltip": "Create a new custom location",
-    "searchPlaceholder": "Search locations...",
-    "stats": {
-      "total": "Total",
-      "totalArea": "Total Area",
-      "totalDemand": "Total Demand",
-      "private": "Private"
-    },
-    "empty": {
-      "title": "No locations found",
-      "description": "Create your first custom location to get started"
     }
   },
   "weather": {
@@ -2931,11 +2899,7 @@
       "demographicsFrom": "Demographics from",
       "cuzkName": "Czech Office for Surveying, Mapping and Cadastre",
       "enrichedWith": "Building data enriched with",
-      "licensedUnder": "Licensed under",
-      "include": "Include",
-      "exclude": "Exclude",
-      "includeTooltip": "Include this custom building in the grid (requires regeneration)",
-      "excludeTooltip": "Exclude this custom building from the grid (requires regeneration)"
+      "licensedUnder": "Licensed under"
     }
   },
   "landing": {
