@@ -92,6 +92,9 @@ export interface ModelStore {
   /** The area or the stations changed since the shown grid was generated; Regenerate grid brings it up to date. */
   gridStale: boolean;
   setGridStale: (v: boolean) => void;
+  /** Buildings were disabled or enabled since the shown site grid was generated without the disabled ones. */
+  exclusionsChanged: boolean;
+  setExclusionsChanged: (v: boolean) => void;
 
   // ── Unsaved changes ──
   isModified: boolean;
@@ -236,6 +239,7 @@ const getInitialState = () => ({
   isLoadingModel: false,
   isGeneratingGrid: false,
   gridStale: false,
+  exclusionsChanged: false,
   isModified: false,
   showUnsavedDialog: false,
   showAreaSelectTour: false,
@@ -337,6 +341,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsGeneratingGrid: (v) => set({ isGeneratingGrid: v }),
   gridStale: false,
   setGridStale: (v) => set({ gridStale: v }),
+  exclusionsChanged: false,
+  setExclusionsChanged: (v) => set({ exclusionsChanged: v }),
 
   // ── Unsaved changes ──
   isModified: false,
@@ -465,3 +471,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   // ── Reset ──
   reset: () => set(() => getInitialState()),
 }));
+
+/** Whether the shown grid is out of date, so Regenerate grid is offered and saving waits for it. */
+export const selectGridStale = (s: ModelStore): boolean => s.gridStale || s.exclusionsChanged;

@@ -24,6 +24,9 @@ import { collectBuildingsFromLayers } from '@/features/configurator/hooks/useAre
 import { carryOverBuildingEdits } from '@/features/configurator/hooks/useAreaSelect/helpers/buildingEdits';
 import { hasUnsavedChanges, settingsChanged } from '@/features/configurator/hooks/useAreaSelect/helpers/modelSettings';
 import { areaBuildingLimit } from '@/features/configurator/utils/areaLimit';
+import { disabledOsmIds, insideArea, keepDisabledBuildings } from '@/features/configurator/utils/siteExclusions';
+import { sendSiteExclusions } from '@/features/configurator/utils/siteStations';
+import { getDataProjection } from '@/features/configurator/utils/gridLayerUtils';
 
 export { type AreaData } from '@/features/configurator/types/area-select';
 
@@ -141,6 +144,18 @@ export const useAreaSelect = ({
         setAreaOverLimit(count > areaLimit ? { count, capped, limit: areaLimit } : null);
         return count <= areaLimit;
     }, [buildingLimit, siteMode]);
+    // Carries the user's building edits onto a regenerated grid. A site grid
+    // leaves disabled buildings out, so they are kept from the shown grid, within
+    // area when the area changed, and can be enabled again.
+    const withMapEdits = useCallback((response: PylovoGridData, area?: [number, number][][]): PylovoGridData => {
+        const shown = collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current);
+        const next = carryOverBuildingEdits(shown, response);
+        const previous = useModelStore.getState().pylovoGridData;
+        const projection = getDataProjection(next.buildings);
+        if (!siteScope(next) || getDataProjection(previous?.buildings) !== projection) return next;
+        return keepDisabledBuildings(previous, next, disabledOsmIds(shown), area && insideArea(area, projection));
+    }, [pylovoLayersData.pylovoLayersRef]);
+    const shownDisabled = useCallback(() => [...disabledOsmIds(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current))], [pylovoLayersData.pylovoLayersRef]);
     useEffect(() => { if (!editMode || !editModeInitializedRef.current) return; const o = originalModelRef.current; if (!o) return; if (settingsChanged(o, { title: modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather })) setIsModified(true); }, [editMode, modelName, fromDate, toDate, resolution, cookingCarrier, runMode, weather, setIsModified]);
 
     const handlePolygonDrawn = useCallback(async (coords: [number, number][], polygons: [number, number][][]) => {
@@ -152,7 +167,7 @@ export const useAreaSelect = ({
             if (genId !== gridGenIdRef.current) return;
             if (!fits) { setGridStale(true); setIsModified(true); return; }
             const user = useAuthStore.getState().user;
-            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', polygons) : await pylovoService.generateGrid({
+            const response = siteMode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', polygons, shownDisabled()) : await pylovoService.generateGrid({
                 polygon: coords, polygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
@@ -161,12 +176,12 @@ export const useAreaSelect = ({
             const count = response.buildings?.features?.length || 0;
             if (buildingLimit > 0 && count > buildingLimit) { showError(t("gridNotifications.buildingLimitExceeded", { count, limit: buildingLimit })); setAllPolygons([]); incrementClearTrigger(); pylovoLayersData.processPylovoData({}); return; }
             if (count > 0) showSuccess(t("gridNotifications.gridGenerated", { count })); else showSuccess(t("gridNotifications.gridCompleteNoBuildings"));
-            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
+            pylovoLayersData.processPylovoData(withMapEdits(response as PylovoGridData, polygons));
             areaChangedRef.current = false; setGridStale(false);
             setIsModified(true);
         } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, siteMode, t("gridNotifications.gridGenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger, siteMode, modelName, setGridStale, areaFits]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, buildingLimit, t, modelId, draftId, setAllPolygons, setIsGeneratingGrid, setIsModified, incrementClearTrigger, siteMode, modelName, setGridStale, areaFits, withMapEdits, shownDisabled]);
 
     const handleClearAllPolygons = useCallback(() => {
         gridGenIdRef.current++; countIdRef.current++;
@@ -188,19 +203,19 @@ export const useAreaSelect = ({
             if (genId !== gridGenIdRef.current) return;
             if (!fits) { setGridStale(true); return; }
             const user = useAuthStore.getState().user;
-            const response = mode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons) : await pylovoService.generateGrid({
+            const response = mode ? await pylovoService.generateSiteGrid(modelName.trim() || 'Site', updatedPolygons, shownDisabled()) : await pylovoService.generateGrid({
                 polygons: updatedPolygons, user_id: user?.id ? String(user.id) : undefined,
                 model_id: modelId, draft_id: draftId,
                 include_private_buildings: includePrivateBuildings, excluded_building_ids: Array.from(excludedBuildingIds),
             });
             if (genId !== gridGenIdRef.current) return;
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
-            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
+            pylovoLayersData.processPylovoData(withMapEdits(response as PylovoGridData, updatedPolygons));
             areaChangedRef.current = false; setGridStale(false);
         } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, mode, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
         setIsModified(true);
-    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale, areaFits]);
+    }, [pylovoLayersData, showSuccess, showError, includePrivateBuildings, excludedBuildingIds, t, modelId, draftId, setIsGeneratingGrid, setIsModified, siteMode, modelName, setGridStale, areaFits, withMapEdits, shownDisabled]);
 
     // Default mode reads pylovo's precomputed postcode grids, so an edited area
     // is fetched at once. A site is generated from its edits, so in site mode an
@@ -220,15 +235,17 @@ export const useAreaSelect = ({
         setIsGeneratingGrid(true);
         const genId = ++gridGenIdRef.current;
         try {
+            const shownGrid = useModelStore.getState().pylovoGridData;
+            if (shownGrid) await sendSiteExclusions(siteId, shownGrid, collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current));
             const response = await pylovoService.regenerateSiteGrid(siteId);
             if (genId !== gridGenIdRef.current) return;
             showSuccess(t("gridNotifications.gridUpdated", { count: response.buildings?.features?.length || 0 }));
-            pylovoLayersData.processPylovoData(carryOverBuildingEdits(collectBuildingsFromLayers(pylovoLayersData.pylovoLayersRef.current), response as PylovoGridData));
+            pylovoLayersData.processPylovoData(withMapEdits(response as PylovoGridData));
             setGridStale(false);
             setIsModified(true);
         } catch (err) { if (genId === gridGenIdRef.current) showError(gridErrorMessage(err, true, t("gridNotifications.gridRegenerationFailed"))); }
         finally { if (genId === gridGenIdRef.current) setIsGeneratingGrid(false); }
-    }, [pylovoLayersData, showSuccess, showError, t, setIsGeneratingGrid, setIsModified, setGridStale]);
+    }, [pylovoLayersData, showSuccess, showError, t, setIsGeneratingGrid, setIsModified, setGridStale, withMapEdits]);
 
     // A site whose area is unchanged is regenerated in place, so pylovo re-clusters
     // its buildings around the edited stations; a changed area gets a new grid.

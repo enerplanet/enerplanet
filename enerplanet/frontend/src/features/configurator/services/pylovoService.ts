@@ -1,6 +1,7 @@
 import axios from "@/lib/axios";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import type { SiteStation } from "@/features/configurator/utils/siteStations";
+import type { BuildingExclusion } from "@/features/configurator/utils/siteExclusions";
 
 /** The pylovo site and generated revision a site grid's statistics and power flow must name. */
 export interface SiteScope {
@@ -389,12 +390,15 @@ export const pylovoService = {
 
     /**
      * Creates a pylovo site for the area, generates its grid and returns it in the
-     * /generate-grid shape with meta.mode "site". Rejects with the backend's message
-     * when the area is refused (no 3D-linked buildings, over the limit) or generation fails.
+     * /generate-grid shape with meta.mode "site", leaving out the buildings named by
+     * excludedOsmIds. Rejects with the backend's message when the area is refused
+     * (no 3D-linked buildings, over the limit) or generation fails.
      */
-    generateSiteGrid: async (name: string, polygons: number[][][]): Promise<PylovoGridResponse> => {
+    generateSiteGrid: async (name: string, polygons: number[][][], excludedOsmIds: string[] = []): Promise<PylovoGridResponse> => {
         const created = await axios.post<{ data: { site_id: number } }>("/v1/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
-        return pylovoService.regenerateSiteGrid(created.data.data.site_id);
+        const siteId = created.data.data.site_id;
+        if (excludedOsmIds.length > 0) await pylovoService.patchSiteBuildings(siteId, excludedOsmIds.map(osm_id => ({ osm_id, excluded: true })));
+        return pylovoService.regenerateSiteGrid(siteId);
     },
 
     /** Generates the site's current revision and returns its grid; rejects with the job's error when generation fails. */
@@ -425,6 +429,11 @@ export const pylovoService = {
     /** Replaces the site's stations and fixed assignments; the grid is stale until the site is regenerated. */
     putSiteTransformers: async (siteId: number, stations: SiteStation[]): Promise<void> => {
         await axios.put(`/v1/pylovo/sites/${siteId}/transformers`, stations);
+    },
+
+    /** Leaves site buildings out of the grid or takes them back in; the grid is stale until the site is regenerated. */
+    patchSiteBuildings: async (siteId: number, exclusions: BuildingExclusion[]): Promise<void> => {
+        await axios.patch(`/v1/pylovo/sites/${siteId}/buildings`, exclusions);
     },
 
     getEquipmentCosts: async (): Promise<EquipmentCosts> => {

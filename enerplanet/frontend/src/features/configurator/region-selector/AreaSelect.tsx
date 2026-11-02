@@ -41,7 +41,9 @@ import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hoo
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
-import { useModelStore } from "@/features/configurator/store/modelStore";
+import { selectGridStale, useModelStore } from "@/features/configurator/store/modelStore";
+import { exclusionChanges } from "@/features/configurator/utils/siteExclusions";
+import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { AreaImportError, areaToGeoJSON, readAreaFile } from "@/features/configurator/utils/areaGeoJSON";
 import { downloadBlob } from "@/utils/fileDownload";
 import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
@@ -232,8 +234,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   useAreaPreparation();
 
   const runMode = useModelStore((s) => s.runMode);
-  const gridStale = useModelStore((s) => s.gridStale);
+  const gridStale = useModelStore(selectGridStale);
   const setGridStale = useModelStore((s) => s.setGridStale);
+  const setExclusionsChanged = useModelStore((s) => s.setExclusionsChanged);
   const operateIssues = useOperateSizes(pylovoLayers.pylovoLayersRef, runMode, pylovoLayers.pylovoGridData);
   const fixOperateIssue = useCallback((issue: OperateIssue, techKey: string) => {
     const extent = issue.feature.getGeometry()?.getExtent();
@@ -361,13 +364,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     });
   };
 
-  const markModified = useCallback(() => setIsModified(true), [setIsModified]);
+  // A site grid is generated without its disabled buildings, so disabling or
+  // enabling one leaves the grid out of date until Regenerate grid.
+  const checkExclusions = useCallback(() => {
+    const grid = pylovoLayers.pylovoGridData;
+    const changes = siteScope(grid) ? exclusionChanges(grid?.buildings?.features ?? [], collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current)) : [];
+    setExclusionsChanged(changes.length > 0);
+  }, [pylovoLayers.pylovoGridData, pylovoLayers.pylovoLayersRef, setExclusionsChanged]);
+  useEffect(checkExclusions, [checkExclusions]);
+  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); }, [setIsModified, checkExclusions]);
   const buildingSelection = useBuildingSelection({
     map,
     pylovoLayersRef: pylovoLayers.pylovoLayersRef,
     isDrawing: state.isDrawing,
     cornerUnderPointerRef,
-    onBuildingsChanged: markModified,
+    onBuildingsChanged,
   });
   const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
 
