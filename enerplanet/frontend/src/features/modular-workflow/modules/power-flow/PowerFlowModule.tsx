@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BaseModule } from "../base/BaseModule";
 import type { ModuleProps } from "../../types/module";
+import type { ConfiguratorContext } from "../../types/context";
 import { pylovoService } from "../../../configurator/services/pylovoService";
 
 /**
@@ -28,6 +29,28 @@ export class PowerFlowModule extends BaseModule {
   };
 
   readonly component = PowerFlowComponent;
+
+  /**
+   * Headless power flow for the `auto` node path.
+   *
+   * Mirrors the component's logic: only runs when `advancedParams.pypsa_enabled`
+   * is set, against the first grid result. Returns `powerFlowResult` or nothing
+   * (pypsa off / no result ids).
+   */
+  override async run(
+    context: ConfiguratorContext,
+  ): Promise<Partial<ConfiguratorContext>> {
+    const pypsaEnabled = (
+      context.advancedParams as { pypsa_enabled?: boolean } | undefined
+    )?.pypsa_enabled;
+    if (!pypsaEnabled) return {};
+
+    const gridResultIds = context.gridResultIds ?? [];
+    if (!gridResultIds.length) return {};
+
+    const result = await pylovoService.runPowerFlow(gridResultIds[0]);
+    return { powerFlowResult: result };
+  }
 }
 
 function PowerFlowComponent({ context, onUpdate }: ModuleProps) {

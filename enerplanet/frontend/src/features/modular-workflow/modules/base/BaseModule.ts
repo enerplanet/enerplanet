@@ -94,6 +94,12 @@ export abstract class BaseModule {
   /** Called when entering this module — e.g. fetch data, initialise state. */
   onEnter?(context: ConfiguratorContext): Promise<void>;
 
+  /**
+   * Optional — headless computation for `auto` nodes. Executed by the engine
+   * without rendering the component. Must return only keys from `io.outputs`.
+   */
+  run?(context: ConfiguratorContext): Promise<Partial<ConfiguratorContext>>;
+
   /** Called when leaving this module — e.g. validate, transform, persist. */
   onLeave?(context: ConfiguratorContext): Promise<ConfiguratorContext>;
 
@@ -113,6 +119,7 @@ export abstract class BaseModule {
       defaults: this.defaults,
       validate: (ctx) => this.validate(ctx),
       onEnter: this.onEnter?.bind(this),
+      run: this.run?.bind(this),
       onLeave: this.onLeave?.bind(this),
     };
   }

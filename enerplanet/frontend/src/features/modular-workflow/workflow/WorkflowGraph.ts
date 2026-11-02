@@ -127,7 +127,15 @@ export function buildGraph(workflow: WorkflowDefinition): WorkflowGraph {
   return { nodes, edges };
 }
 
-/** True when a node's explicit + derived dependencies are all `done`. */
+/**
+ * True when a node's explicit + derived dependencies are all satisfied.
+ *
+ * A dependency is satisfied when it is `done` **or** `skipped` — a skipped
+ * producer must not hold the graph hostage. The real safety gate is the
+ * context-validity check in `getReadyNodes`: if a skipped node was the *only*
+ * provider of a key a consumer requires, the consumer's `io.required`
+ * presence check still keeps it `pending` (no garbage runs).
+ */
 function dependenciesDone(
   node: WorkflowNode,
   graph: WorkflowGraph,
@@ -136,7 +144,10 @@ function dependenciesDone(
   const deps = graph.edges
     .filter((e) => e.to === node.id)
     .map((e) => e.from);
-  return deps.every((dep) => nodeStates[dep] === "done");
+  return deps.every(
+    (dep) =>
+      nodeStates[dep] === "done" || nodeStates[dep] === "skipped",
+  );
 }
 
 /**

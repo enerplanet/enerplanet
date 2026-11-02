@@ -56,6 +56,15 @@ export interface ModuleDefinition {
   defaults?: Record<string, unknown>;
   /** Validation function — returns true if module has sufficient data */
   validate: (context: ConfiguratorContext) => ModuleValidationResult;
+  /**
+   * Optional — headless computation. Called by the engine for `auto` nodes so
+   * they can execute WITHOUT rendering the React component. Receives the
+   * context and must return only keys listed in `io.outputs`. If absent, the
+   * engine falls back to `onEnter`/`onLeave`/component-driven execution (and an
+   * `auto` node with no `run()` is marked done without doing work — so every
+   * `auto` module should provide one).
+   */
+  run?: (context: ConfiguratorContext) => Promise<Partial<ConfiguratorContext>>;
   /** Optional — called when entering this module */
   onEnter?: (context: ConfiguratorContext) => Promise<void>;
   /** Optional — called when leaving this module */

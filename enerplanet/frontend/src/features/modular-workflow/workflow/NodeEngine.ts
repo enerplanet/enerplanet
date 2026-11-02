@@ -241,8 +241,13 @@ export class NodeEngine {
   /**
    * Run all currently-ready `auto` nodes in dependency order.
    *
-   * Each auto node is activated, completed, and its outputs merged before the
+   * Each auto node is activated, executed, and its outputs merged before the
    * next is considered, so newly-ready auto nodes cascade recursively.
+   *
+   * Execution prefers the module's headless `run()` (so an auto node actually
+   * does its work without being rendered). When a module has no `run()`, it
+   * falls back to the legacy path: `onEnter`/`onLeave`, then merges whatever
+   * declared outputs already exist in context.
    */
   async runAutoNodes(): Promise<void> {
     // Guard against re-entrancy while auto nodes are being processed.
@@ -261,14 +266,21 @@ export class NodeEngine {
         this.activeNodeId = autoNode.id;
         this.nodeStates = { ...this.nodeStates, [autoNode.id]: "active" };
 
-        if (module.onEnter) {
-          await module.onEnter(this.context);
+        if (module.run) {
+          // Headless execution — this is the primary path for auto nodes.
+          const outputs = await module.run(this.context);
+          if (outputs) this.mergeRunOutputs(module, outputs);
+        } else {
+          // Legacy fallback: lifecycle hooks + adopt pre-declared outputs.
+          if (module.onEnter) {
+            await module.onEnter(this.context);
+          }
+          if (module.onLeave) {
+            const left = await module.onLeave(this.context);
+            if (left) this.context = left;
+          }
+          this.mergeOutputs(module);
         }
-        if (module.onLeave) {
-          const left = await module.onLeave(this.context);
-          if (left) this.context = left;
-        }
-        this.mergeOutputs(module);
 
         this.nodeStates = { ...this.nodeStates, [autoNode.id]: "done" };
 
@@ -334,6 +346,35 @@ export class NodeEngine {
     const merged: ConfiguratorContext = { ...this.context };
     for (const key of module.io.outputs) {
       const value = (this.context as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        (merged as Record<string, unknown>)[key] = value;
+      }
+    }
+    this.context = merged;
+  }
+
+  /**
+   * Merge the partial returned by a module's headless `run()` into the context.
+   *
+   * Only keys declared in `module.io.outputs` are applied; an undeclared key is
+   * dropped with a warning (the writer-discipline guard for the auto path).
+   * `undefined` values are skipped, matching `mergeOutputs`.
+   */
+  private mergeRunOutputs(
+    module: ModuleDefinition,
+    outputs: Partial<ConfiguratorContext>,
+  ): void {
+    const allowed = new Set(module.io.outputs);
+    const merged: ConfiguratorContext = { ...this.context };
+    for (const [key, value] of Object.entries(
+      outputs as Record<string, unknown>,
+    )) {
+      if (!allowed.has(key)) {
+        console.warn(
+          `[NodeEngine] Module "${module.meta.id}" run() wrote undeclared output "${key}" — ignored`,
+        );
+        continue;
+      }
       if (value !== undefined) {
         (merged as Record<string, unknown>)[key] = value;
       }
