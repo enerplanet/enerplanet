@@ -14,7 +14,9 @@
     "check:unused:deep": "npx knip",
     "check:deps": "npx depcheck",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "i18n:check": "vitest run src/tests/i18nKeys.test.ts --reporter=verbose",
+    "i18n:prune": "node scripts/i18n-prune.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

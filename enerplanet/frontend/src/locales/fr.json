@@ -175,38 +175,17 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",
-    "edit": "Modifier",
     "create": "Créer",
     "close": "Fermer",
     "confirm": "Confirmer",
     "loading": "Chargement...",
-    "error": "Erreur",
-    "success": "Succès",
-    "warning": "Avertissement",
-    "info": "Info",
     "yes": "Oui",
     "no": "Non",
-    "ok": "OK",
     "back": "Retour",
-    "next": "Suivant",
-    "submit": "Soumettre",
-    "search": "Rechercher",
-    "filter": "Filtrer",
-    "reset": "Réinitialiser",
     "clear": "Effacer",
-    "clearAll": "Tout effacer",
-    "selectAll": "Tout sélectionner",
-    "noResults": "Aucun résultat trouvé",
-    "actions": "Actions",
-    "settings": "Paramètres",
-    "logout": "Déconnexion",
-    "login": "Connexion",
-    "register": "S'inscrire",
     "unknown": "Inconnu",
     "more": "plus",
     "add": "Ajouter",
-    "refresh": "Actualiser",
-    "healthCheck": "Vérification de l'état",
     "na": "N/D",
     "from": "De",
     "to": "À",
@@ -235,12 +214,10 @@
       "profile": "Profil",
       "documentation": "Documentation",
       "restartTour": "Product Tour",
-      "feedback": "Commentaires",
-      "theme": "Thème"
+      "feedback": "Commentaires"
     },
     "sidebar": {
       "energySimulations": "Simulations d'Énergie",
-      "map": "Carte",
       "simulationReports": "Comparaison de Modèles",
       "technologies": "Technologies"
     },
@@ -289,9 +266,6 @@
       "fields": {
         "fullName": "Nom Complet",
         "email": "Adresse E-mail",
-        "organization": "Organisation",
-        "position": "Poste",
-        "phone": "Numéro de Téléphone",
         "accessLevel": "Niveau d'Accès",
         "emailVerified": "E-mail Vérifié",
         "password": "Mot de Passe",
@@ -301,8 +275,6 @@
       "placeholders": {
         "fullName": "Entrez le nom complet",
         "email": "Entrez l'adresse e-mail",
-        "organization": "Entrez le nom de l'organisation",
-        "position": "Entrez le poste",
         "password": "Entrez le mot de passe",
         "confirmPassword": "Confirmez le mot de passe",
         "modelLimit": "Laisser vide pour la valeur par défaut"
@@ -318,7 +290,6 @@
         "expert": "Expert (Accès Complet)"
       },
       "validation": {
-        "phoneInvalid": "Le numéro de téléphone ne peut contenir que des chiffres, espaces, tirets, signes plus et parenthèses",
         "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
         "nameRequired": "Le nom est requis",
         "emailRequired": "L'e-mail est requis",
@@ -511,7 +482,6 @@
     "confirmClearTitle": "Effacer toutes les notifications ?",
     "confirmClearDescription": "Êtes-vous sûr de vouloir effacer toutes les notifications ? Cette action est irréversible.",
     "confirmClearButton": "Tout effacer",
-    "dismiss": "Ignorer",
     "types": {
       "success": "Succès",
       "error": "Erreur",
@@ -590,18 +560,8 @@
     "opacity": "Opacité",
     "layerHidden": "Couche masquée",
     "showLayer": "Afficher la couche",
-    "hideLayer": "Masquer la couche",
-    "noModelIdProvided": "Aucun ID de modèle fourni",
-    "failedToLoadResults": "Échec du chargement des résultats d'évaluation",
-    "failedToLoadTiles": "Échec du chargement des tuiles depuis GeoServer",
-    "failedToGetLayerInfo": "Échec de la récupération des informations de couche depuis le backend",
-    "layerConfigIncomplete": "Configuration de la couche incomplète",
-    "failedToLoadLayerConfig": "Échec du chargement de la configuration de la couche",
     "transformer": "Transformateur",
     "building": "Bâtiment",
-    "connectedBuilding": "bâtiment connecté",
-    "connectedBuildings": "bâtiments connectés",
-    "clickForDetails": "Cliquer pour détails",
     "tabs": {
       "overview": "Aperçu",
       "energy": "Énergie",
@@ -633,13 +593,6 @@
       "hydroPower": "Hydroélectrique",
       "gridImport": "Import Réseau",
       "powerTransmission": "Transmission d'Énergie",
-      "householdH1": "Ménage H1",
-      "householdH2": "Ménage H2",
-      "industryG0": "Industrie G0",
-      "industryG1": "Industrie G1",
-      "industryG2": "Industrie G2",
-      "g3Demand": "Demande G3",
-      "gridConnection": "Connexion Réseau",
       "gridElectricity": "Achat d'électricité au réseau",
       "householdSupply": "Approvisionnement des ménages",
       "nonHouseholdSupply": "Approvisionnement hors ménages",
@@ -665,10 +618,6 @@
       "capacityUtilizationDesc": "Facteur de capacité moyen des actifs installés",
       "technologyCapacity": "Capacité Technologique",
       "technologyCapacityDesc": "Capacité installée de chaque technologie dans le système énergétique optimisé, mesurée en kW ou kWh pour le stockage.",
-      "generation": "Génération",
-      "generationDesc": "Solaire PV, éoliennes et autres générateurs",
-      "storage": "Stockage",
-      "storageDesc": "Systèmes de batteries et autres technologies de stockage",
       "costDistribution": "Répartition des Coûts",
       "costDistributionDesc": "Ventilation des coûts totaux du système par technologies et catégories.",
       "capitalCosts": "Coûts d'Investissement",
@@ -705,9 +654,7 @@
       "totalDemand": "Demande Totale",
       "selfSufficiency": "Autosuffisance",
       "netBalance": "Bilan Net",
-      "energyKwh": "Énergie (kWh)",
       "energy": "Énergie",
-      "netKwh": "Net (kWh)",
       "noEnergyBalanceData": "Aucune donnée de bilan énergétique disponible",
       "dailyLoadProfile": "Profil de Charge Quotidien",
       "dailyLoadProfileDesc": "Montre les modèles de consommation électrique sur une période de 24 heures avec détection automatique des périodes de pointe.",
@@ -718,8 +665,6 @@
       "offPeakDesc": "Périodes de faible demande idéales pour la recharge VE ou le stockage batterie",
       "averageLine": "Ligne Moyenne",
       "averageLineDesc": "Ligne pointillée montrant la consommation moyenne quotidienne",
-      "hourlyGenerationProfile": "Profil de Génération Horaire",
-      "hourlyGenerationProfileDesc": "Affiche les modèles de génération d'énergie horaires et comment la production varie au cours de la journée et des saisons.",
       "peakHours": "Heures de Pointe",
       "peakHoursDesc": "Génération maximale typiquement à midi pour le solaire",
       "loadDuration": "Durée de Charge",
@@ -769,11 +714,6 @@
       "criticalVoltageDesc": "Hors limites, renforcement du réseau nécessaire",
       "example": "Exemple",
       "belowThreshold": "en dessous du seuil de 0,95",
-      "busLoadingStatus": "État de Charge du Bus",
-      "busLoadingDesc": "Montre le pourcentage de charge de chaque transformateur/bus basé sur l'écart de tension par rapport au nominal (1.0 p.u.).",
-      "normalOperation": "Fonctionnement normal, capacité suffisante",
-      "highUtilization": "Utilisation élevée, planifier des mises à niveau",
-      "nearCapacity": "Proche de la capacité, renforcement nécessaire",
       "busDetails": "Détails du Bus",
       "busDetailsDesc": "Caractéristiques électriques du bus/transformateur sélectionné dans le réseau électrique.",
       "totalBuses": "Total Bus",
@@ -797,11 +737,8 @@
       "reactivePowerDesc": "Puissance en kVAR pour les champs magnétiques des moteurs/transformateurs",
       "noVoltageData": "Pas de données de tension",
       "noPowerData": "Pas de données de puissance",
-      "min": "Min",
-      "max": "Max",
       "avg": "Moy",
       "loading": "Charge",
-      "noLoadingData": "Aucune donnée de charge disponible",
       "notInResult": "Absent de ce résultat",
       "transmissionUtilization": "Utilisation du transport",
       "overloadedConnection": "Ligne surchargée",
@@ -811,13 +748,6 @@
       "noData": "Aucune donnée système disponible",
       "noAnalysisData": "Aucune donnée d'analyse système disponible pour ce modèle",
       "noAnalysisDataDesc": "Balance système, demande non satisfaite et données de flux apparaîtront ici quand disponibles.",
-      "dailySystemBalance": "Balance Système Quotidienne",
-      "systemBalance": "Balance Système",
-      "systemBalanceDesc": "Montre la balance entre offre et demande d'énergie. Valeurs positives (bleu) indiquent surplus, négatives (rouge) indiquent déficit.",
-      "surplus": "Surplus",
-      "surplusDesc": "La génération dépasse la demande",
-      "deficit": "Déficit",
-      "deficitDesc": "La demande dépasse la génération",
       "balance": "Balance",
       "balanceKw": "Balance (kW)",
       "dailyUnmetDemand": "Demande Quotidienne Non Satisfaite",
@@ -827,7 +757,6 @@
       "unmetEnergyDesc": "Demande dépassant l'offre disponible",
       "energy": "Énergie",
       "unmet": "Non couvert",
-      "unmetKwh": "Non Satisfaite (kWh)",
       "powerFlowAnalysis": "Analyse du Flux de Puissance",
       "powerFlow": "Flux de Puissance",
       "powerFlowDesc": "Puissance transitant par les lignes de transmission et transformateurs. Comparez puissance d'envoi et de réception pour identifier les pertes.",
@@ -842,7 +771,6 @@
       "transmissionLines": "Lignes de Transmission",
       "transformers": "Transformateurs",
       "lines": "Lignes",
-      "powerW": "Puissance (W)",
       "selectLinePrompt": "Sélectionnez une ligne ou un transformateur",
       "selectLinePromptDesc": "pour voir les données de flux de puissance",
       "resourceConsumption": "Consommation de Ressources par Technologie",
@@ -864,26 +792,18 @@
       "totalCost": "Coût Total",
       "noCostData": "Aucune donnée de coût disponible",
       "installed": "Installé",
-      "avgUtilized": "Moy. Utilisé",
       "capacityFactor": "Facteur de Capacité",
       "capacityKw": "Capacité (kW)",
       "installedCapacity": "Capacité Installée",
-      "utilizedCapacity": "Capacité Utilisée",
       "noCapacityData": "Aucune donnée de capacité disponible",
       "value": "Valeur",
       "noEnergyFlowData": "Aucune donnée de flux d'énergie disponible",
-      "gridImport": "Import Réseau",
-      "gridExport": "Export Réseau",
       "energySystem": "Système Énergétique",
-      "household": "Ménage",
-      "industry": "Industrie",
-      "transmission": "Transmission",
       "investmentCost": "Investissement (CAPEX)",
       "operatingCost": "Exploitation (OPEX)",
       "systemLCOE": "LCOE Système",
       "simulationPeriod": "Période de simulation",
       "simulationPeriodCost": "Coût pour la période de simulation",
-      "annualizedCost": "Coût annuel (projeté)",
       "perLocation": "par emplacement",
       "locations": "Emplacements",
       "capex": "Équipements et installation",
@@ -901,7 +821,6 @@
       "simulationPeriodNote": "Les coûts affichés portent sur la période simulée de {{days}} jours ({{hours}} heures). Pour les coûts annuels complets, lancez une simulation sur 1 an (8 760 heures).",
       "simulationPeriodShort": "Période de simulation de {{days}} jours",
       "costBreakdownTooltip": "Les coûts affichés couvrent uniquement la période simulée, pas une année entière. Les coûts d'équipement sont répartis sur leur durée de vie, tandis que les coûts d'exploitation (p. ex. l'achat d'électricité au réseau) reflètent l'usage réel sur la période. Dans les simulations courtes, les technologies à coûts d'exploitation élevés paraissent donc proportionnellement plus importantes.",
-      "annualProjection": "Estimation annuelle : {{value}}",
       "equipmentCostNote": "Le coût d'équipement est réparti sur sa durée de vie ; seule la part de cette période de simulation est affichée.",
       "equipmentCostDesc": "Panneaux solaires, batteries et autres équipements. Le coût d'achat est réparti sur la durée de vie de l'équipement (p. ex. 25 ans pour le solaire).",
       "runningCostDesc": "Électricité achetée au réseau, maintenance et autres dépenses courantes qui dépendent de l'usage.",
@@ -923,21 +842,7 @@
       "costs": "Coûts",
       "noEnergyData": "Aucune donnée énergétique horaire disponible",
       "noSimulationLinked": "Aucune donnée de simulation liée",
-      "household": "Ménage",
-      "householdLow": "Ménage (Bas)",
-      "householdHigh": "Ménage (Haut)",
-      "commercial": "Commercial",
-      "commercialWeekday": "Commercial (Jour Ouvré)",
-      "commercialEvening": "Commercial (Soir)",
-      "commercial247": "Commercial (24/7)",
-      "warehouse": "Entrepôt",
-      "industrial": "Industriel",
-      "retail": "Commerce de Détail",
-      "office": "Bureau",
-      "residential": "Résidentiel",
-      "h1Demand": "Demande H1",
-      "powerTransmission": "Transmission d'Énergie",
-      "sources": "Sources"
+      "household": "Ménage"
     },
     "gauges": {
       "selfConsumption": "Autoconsommation",
@@ -957,7 +862,6 @@
   "auth": {
     "signIn": "Se Connecter",
     "signUp": "S'inscrire",
-    "signOut": "Se Déconnecter",
     "signingIn": "Connexion en cours...",
     "email": "E-mail",
     "password": "Mot de passe",
@@ -988,33 +892,13 @@
     "security": "Sécurité",
     "confirmYourPassword": "Confirmez votre mot de passe",
     "passwordRequirements": {
-      "title": "Exigences du Mot de Passe",
-      "minChars": "Au moins 8 caractères",
-      "uppercase": "Une lettre majuscule",
-      "lowercase": "Une lettre minuscule",
-      "number": "Un chiffre",
-      "specialChar": "Un caractère spécial",
-      "hasSpaces": "Le mot de passe contient des espaces au début ou à la fin"
+      "minChars": "Au moins 8 caractères"
     },
-    "organizationDetails": "Détails de l'Organisation",
-    "organization": "Organisation",
-    "enterOrganization": "Entrez votre organisation",
-    "position": "Poste",
-    "enterPosition": "Entrez votre poste",
-    "phoneNumber": "Numéro de Téléphone",
-    "enterPhoneNumber": "Entrez votre numéro de téléphone",
-    "accessLevel": "Niveau d'Accès",
-    "veryLow": "Très Bas",
-    "low": "Bas",
-    "intermediate": "Intermédiaire",
-    "manager": "Manager",
-    "expert": "Expert",
     "forgotPasswordTitle": "Mot de Passe Oublié",
     "forgotPasswordDescription": "Entrez votre adresse e-mail et nous vous enverrons les instructions pour réinitialiser votre mot de passe.",
     "secureResetProcess": "Processus sécurisé de réinitialisation",
     "sendResetInstructions": "Envoyer les Instructions",
     "backToLogin": "Retour à la Connexion",
-    "cancel": "Annuler",
     "checkSpamFolder": "Si vous ne voyez pas l'e-mail, veuillez vérifier votre dossier spam ou courrier indésirable.",
     "checkYourEmail": "Vérifiez votre e-mail",
     "note": "Remarque",
@@ -1025,8 +909,6 @@
     "agreeToTerms": "En créant un compte, vous acceptez nos conditions d'utilisation"
   },
   "workspace": {
-    "workspace": "Espace de travail",
-    "workspaces": "Espaces de travail",
     "selectWorkspace": "Sélectionner un espace de travail",
     "defaultWorkspace": "Espace de travail par défaut",
     "default": "Par défaut",
@@ -1056,9 +938,6 @@
     "title": "Modèle",
     "models": "Modèles",
     "newModel": "Nouveau modèle",
-    "editModel": "Modifier le modèle",
-    "deleteModel": "Supprimer le modèle",
-    "modelName": "Nom du modèle",
     "description": "Description",
     "status": "Statut",
     "created": "Créé",
@@ -1084,14 +963,7 @@
       "reported": "Signalé",
       "reportedHint": "Signalé à l'équipe EnerPlanET. Vous recevrez une notification une fois le problème résolu."
     },
-    "pending": "En attente",
     "queued": "En file d'attente",
-    "cancelled": "Annulé",
-    "modified": "Modifié",
-    "runSimulation": "Lancer la simulation",
-    "viewResults": "Voir les résultats",
-    "duplicate": "Dupliquer",
-    "export": "Exporter",
     "compare": "Comparer",
     "dashboard": "Tableau de bord des modèles",
     "manageConfigurations": "Gérez vos configurations d'évaluation énergétique",
@@ -1110,14 +982,11 @@
     "rename": "Renommer",
     "delete": "Supprimer",
     "move": "Déplacer",
-    "moveToWorkspace": "Déplacer vers l'espace de travail",
     "noModelsFound": "Aucun modèle trouvé",
     "noModelsMatch": "Aucun modèle ne correspond à \"{{search}}\". Essayez d'ajuster votre recherche.",
     "noModelsYet": "Vous n'avez pas encore créé de modèles d'évaluation énergétique. Commencez par créer votre premier modèle !",
     "createFirstModel": "Créer votre premier modèle",
     "selected": "sélectionnés",
-    "deleteSelected": "Supprimer la sélection",
-    "moveSelected": "Déplacer la sélection",
     "cannotDelete": "Impossible de supprimer - les modèles sont désactivés ou ne vous appartiennent pas",
     "cannotMove": "Impossible de déplacer - les modèles ne vous appartiennent pas",
     "sharedCannotDelete": "Les modèles partagés ne peuvent pas être supprimés. Copiez-le d'abord",
@@ -1128,17 +997,12 @@
     "deselectAll": "Tout désélectionner",
     "actions": "Actions",
     "name": "Nom du modèle",
-    "owner": "Propriétaire",
     "workspace": "Espace de travail",
-    "draft": "Brouillon",
-    "published": "Publié",
-    "total": "Total",
     "queue": "File d'attente",
     "ownedBy": "Propriété de",
     "parent": "Parent",
     "demandFallbackTitle": "Certains bâtiments utilisent une demande constante",
     "demandFallbackWarning": "{{fallback}} bâtiments sur {{total}} n'avaient pas de profil de demande horaire (pas de données 3D) et utilisent leur demande annuelle répartie uniformément sur l'année.",
-    "waiting": "En attente",
     "queuedTooltip": "Votre modèle est en file d'attente - le moteur de simulation traite d'autres calculs",
     "compareRequires2Completed": "Sélectionnez exactement 2 modèles terminés pour comparer",
     "bulkCopy": "Copier les modèles",
@@ -1175,22 +1039,9 @@
     "noStarredModels": "Aucun modèle favori pour l'instant. Marquez un modèle avec l'étoile à côté de son nom pour le retrouver ici."
   },
   "polygon": {
-    "drawRegion": "Dessinez votre région",
-    "clickToStart": "Cliquez pour commencer",
-    "clickAnywhere": "Cliquez n'importe où sur la carte pour placer votre premier point",
-    "addMorePoints": "Ajouter plus de points",
-    "continueClicking": "Continuez à cliquer pour délimiter votre zone",
-    "closePolygon": "Fermer le polygone",
-    "doubleClickOrClick": "Double-cliquez ou cliquez sur le point de départ pour terminer",
-    "startEnd": "Début/Fin",
-    "clickHereToClose": "Cliquez ici pour fermer",
     "escToCancel": "pour annuler le dessin",
-    "pointsAdded": "{{count}} ajoutés",
-    "editPolygon": "Modifier le polygone",
     "moveVertex": "Faites glisser un coin pour le déplacer",
-    "moveVertexHint": "Faites glisser un sommet pour ajuster",
     "addVertex": "Faites glisser un côté pour ajouter un coin",
-    "addVertexHint": "Cliquez sur une arête",
     "removeVertex": "Supprimer un point",
     "removeVertexHint": "cliquer sur un coin pour le supprimer",
     "removePolygonHint": "cliquer sur un polygone pour le supprimer",
@@ -1203,7 +1054,6 @@
     "rightClickCloseHint": "pour fermer le polygone",
     "keyRightClick": "Clic droit",
     "keySpace": "Espace",
-    "dismissGuide": "Masquer le guide",
     "groupBuildings": "Bâtiments",
     "disableBuildingHint": "cliquer sur un bâtiment pour le désactiver ou le réactiver",
     "selectBuildingHint": "cliquer sur des bâtiments pour les sélectionner",
@@ -1215,50 +1065,17 @@
     "optional": "facultatif",
     "title": "Flux de travail",
     "gridGeneration": "Génération du réseau",
-    "gridGenerationHint": "Analyse des bâtiments & création du réseau",
     "addTransformer": "Ajouter un transformateur",
-    "addTransformerHint": "Placer des transformateurs sur la carte",
-    "addTransformerInstruction": "Activer le bouton dans la barre d'outils, puis cliquer sur la carte",
     "assignBuildings": "Affecter des bâtiments",
-    "assignBuildingsHint": "Relier les bâtiments aux transformateurs",
-    "assignBuildingsInstruction": "Sélectionner les bâtiments → cliquer sur le transformateur cible",
-    "powerFlow": "Calcul de flux de charge",
-    "powerFlowHint": "Analyser la charge & l'utilisation du réseau",
-    "illustrationStep": "Étape {{step}}",
-    "clickToSelect": "cliquer pour sélectionner",
-    "clickTransformer": "cliquer sur le transformateur",
-    "then": "puis",
-    "toCancel": "pour annuler",
     "addTransformerAction": "Ajouter transfo",
     "assignBuildingsAction": "Affecter bâtiments",
-    "runPowerFlowAction": "Flux de puissance",
-    "rerunPowerFlowAction": "Relancer flux",
-    "resolveHeatAction": "Résoudre la chaleur",
-    "auto": "auto",
-    "clickAddTransformer": "Cliquez sur le bouton de la barre du bas",
-    "clickOnMapInPolygon": "Cliquez sur la carte à l'intérieur du polygone",
-    "clickToSelectBuilding": "Cliquez pour sélectionner un bâtiment"
+    "resolveHeatAction": "Résoudre la chaleur"
   },
   "time": {
-    "justNow": "À l'instant",
-    "minutesAgo": "Il y a {{count}} minute",
-    "minutesAgo_plural": "Il y a {{count}} minutes",
-    "hoursAgo": "Il y a {{count}} heure",
-    "hoursAgo_plural": "Il y a {{count}} heures",
-    "daysAgo": "Il y a {{count}} jour",
-    "daysAgo_plural": "Il y a {{count}} jours",
-    "weeksAgo": "Il y a {{count}} semaine",
-    "weeksAgo_plural": "Il y a {{count}} semaines"
+    "justNow": "À l'instant"
   },
   "adminDashboard": {
-    "welcome": "Bienvenue",
-    "subtitle": "Votre centre de commande d'évaluation des risques",
-    "navigation": "Navigation",
-    "overview": "Aperçu",
-    "settings": "Paramètres",
-    "logout": "Déconnexion",
     "tabs": {
-      "overview": "Aperçu",
       "allSimulationModels": "Tous les Modèles de Simulation",
       "simulationEngine": "Moteur de Simulation",
       "feedback": "Retours",
@@ -1293,14 +1110,6 @@
       "upgradable": "Évolutif",
       "basic": "Basique"
     },
-    "userProfile": {
-      "title": "Profil Utilisateur",
-      "subtitle": "Informations de votre compte",
-      "email": "E-mail",
-      "organization": "Organisation",
-      "position": "Poste",
-      "phone": "Téléphone"
-    },
     "accessPermissions": {
       "title": "Accès et Permissions",
       "subtitle": "Capacités du système",
@@ -1325,18 +1134,8 @@
       "topographyRisk": "Risque de Topographie",
       "upgradeMessage": "Débloquez plus de fonctionnalités en demandant une mise à niveau à votre administrateur."
     },
-    "quickActions": {
-      "title": "Actions Rapides",
-      "subtitle": "Naviguer vers les fonctions clés",
-      "riskModels": "Modèles de Risque",
-      "manageRiskModels": "Gérer les modèles de risque",
-      "settings": "Paramètres",
-      "configurePreferences": "Configurer les préférences"
-    },
     "title": "Tableau de bord administrateur",
-    "welcomeBack": "Bienvenue, {{name}} !",
     "managePlatform": "Gérer votre plateforme de simulation énergétique",
-    "administrator": "Administrateur",
     "loadingContent": "Chargement du contenu..."
   },
   "userManagement": {
@@ -1346,15 +1145,10 @@
     "refresh": "Actualiser",
     "addNewUser": "Ajouter un nouvel utilisateur",
     "add": "Ajouter",
-    "editUser": "Modifier l'utilisateur",
-    "createUser": "Créer un utilisateur",
-    "updateUser": "Mettre à jour l'utilisateur",
     "loadingUsers": "Chargement des utilisateurs...",
     "noUsersFound": "Aucun utilisateur trouvé",
     "noUsersInGroup": "Aucun utilisateur trouvé dans votre groupe. Contactez un administrateur pour assigner des utilisateurs à votre groupe.",
     "noUsersMatch": "Aucun utilisateur ne correspond à \"{{search}}\"",
-    "noUsersMatchSearch": "Aucun utilisateur ne correspond à \"{{search}}\"",
-    "addFirstUser": "Ajoutez le premier utilisateur pour commencer.",
     "dialog": {
       "editTitle": "Modifier l'utilisateur",
       "addTitle": "Ajouter un nouvel utilisateur",
@@ -1363,12 +1157,9 @@
     },
     "table": {
       "user": "Utilisateur",
-      "organization": "Organisation",
-      "position": "Poste",
       "accessLevel": "Niveau d'accès",
       "group": "Groupe",
       "emailVerified": "E-mail vérifié",
-      "phone": "Téléphone",
       "actions": "Actions"
     },
     "emailStatus": {
@@ -1436,17 +1227,13 @@
       "groupEnabled": "Groupe \"{{name}}\" activé",
       "groupDeleted": "Groupe \"{{name}}\" supprimé",
       "groupRenamed": "Groupe renommé en \"{{name}}\" avec succès",
-      "userMovedToGroup": "Utilisateur déplacé vers un nouveau groupe et déconnecté. Il doit se reconnecter pour accéder à son nouvel espace de travail.",
       "failedToCreate": "Échec de la création de l'utilisateur",
       "failedToUpdate": "Échec de la mise à jour de l'utilisateur",
       "failedToDelete": "Échec de la suppression de l'utilisateur",
       "failedToDisable": "Échec de la désactivation de l'utilisateur",
       "failedToEnable": "Échec de l'activation de l'utilisateur",
-      "failedToFetch": "Échec de la récupération des utilisateurs",
-      "failedToUpdateGroup": "Échec de la mise à jour du groupe de l'utilisateur",
       "failedToRenameGroup": "Échec du renommage du groupe",
       "failedToCopyEmail": "Échec de la copie de l'e-mail",
-      "pleaseLogIn": "Veuillez vous connecter pour voir les utilisateurs",
       "passwordMismatch": "Le mot de passe et la confirmation doivent correspondre",
       "bulkDeletePartial": "{{succeeded}} utilisateurs supprimés sur {{total}}. {{failed}} échecs.",
       "bulkDeleted": "{{count}} utilisateurs supprimés avec succès",
@@ -1498,26 +1285,13 @@
   },
   "profile": {
     "loadingProfile": "Chargement de votre profil...",
-    "accessLevel": "Niveau d'accès",
-    "notSpecified": "Non spécifié",
     "readOnly": "lecture seule",
     "fields": {
       "fullName": "Nom complet",
-      "email": "Adresse e-mail",
-      "organization": "Organisation",
-      "position": "Poste",
-      "phone": "Téléphone"
+      "email": "Adresse e-mail"
     },
     "placeholders": {
-      "fullName": "Entrez votre nom complet",
-      "organization": "Votre entreprise ou organisation",
-      "position": "Votre titre de poste",
-      "phone": "+33 6 00 00 00 00"
-    },
-    "accessLevels": {
-      "basicDescription": "Accès standard aux fonctionnalités de base",
-      "intermediateDescription": "Accès étendu avec fonctionnalités avancées",
-      "expertDescription": "Accès complet à toutes les fonctionnalités"
+      "fullName": "Entrez votre nom complet"
     },
     "notifications": {
       "updated": "Profil mis à jour avec succès !",
@@ -1531,7 +1305,6 @@
     "searchPlaceholder": "Rechercher par nom, IP...",
     "refresh": "Actualiser",
     "registerNew": "Enregistrer un nouveau webservice",
-    "loadingWebservices": "Chargement des webservices...",
     "noWebservicesFound": "Aucun webservice trouvé",
     "noWebservicesDescription": "Commencez par enregistrer votre première instance de webservice.",
     "summary": {
@@ -1562,8 +1335,6 @@
       "jobs": "Tâches",
       "performance": "Performance",
       "user": "Utilisateur",
-      "ip": "Adresse IP",
-      "port": "Port",
       "lastCheck": "Dernière vérification",
       "actions": "Actions",
       "never": "Jamais"
@@ -1594,11 +1365,9 @@
     "notifications": {
       "created": "Webservice enregistré avec succès !",
       "updated": "Webservice mis à jour avec succès !",
-      "deleted": "Webservice supprimé avec succès !",
       "statusChanged": "Statut du webservice changé en {{status}}",
       "failedToCreate": "Échec de l'enregistrement du webservice",
       "failedToUpdate": "Échec de la mise à jour du webservice",
-      "failedToDelete": "Échec de la suppression du webservice",
       "failedToPing": "Échec du ping du webservice"
     },
     "noWebservicesAvailable": "Aucun moteur de simulation n'est actuellement configuré. Contactez un administrateur.",
@@ -1652,7 +1421,6 @@
     },
     "viewDialog": {
       "title": "Détails du Retour",
-      "subtitle": "Voir les informations complètes du retour",
       "message": "Message :",
       "submitted": "Soumis",
       "adminResponse": "Réponse de l'Administrateur :",
@@ -1705,12 +1473,8 @@
     "duration": "Durée",
     "days": "jours",
     "resolution": "Résolution (minutes)",
-    "resolutionPlaceholder": "Sélectionner la résolution",
     "resolutionHint": "Intervalle de temps pour la résolution du calcul",
-    "minutes": "minutes",
     "technologies": "Technologies",
-    "parameters": "Paramètres",
-    "pypsaSimulation": "Simulation PyPSA",
     "prepare3d": {
       "pending": "En attente de la préparation des données 3D des bâtiments de cette zone...",
       "running": "Préparation des données 3D des bâtiments de cette zone...",
@@ -1723,8 +1487,6 @@
     },
     "actions": {
       "saveAndExit": "Enregistrer & Quitter",
-      "create": "Créer une simulation énergétique",
-      "update": "Mettre à jour la simulation énergétique",
       "creating": "Création de la simulation...",
       "updating": "Mise à jour de la simulation...",
       "cancel": "Annuler",
@@ -1734,7 +1496,6 @@
     },
     "mapHeader": {
       "myBuildings": "Mes bâtiments",
-      "clearAll": "Supprimer tous les polygones",
       "toggleMyBuildings": "Basculer mes bâtiments",
       "disableSelected": "Désactiver les bâtiments sélectionnés",
       "importArea": "Importer une zone",
@@ -1754,13 +1515,7 @@
       "exportAreaHint": "Télécharge la zone dessinée sous forme de fichier GeoJSON (WGS 84, EPSG:4326). Il peut être importé dans un autre modèle ou ouvert dans QGIS."
     },
     "powerFlow": {
-      "run": "Lancer l'analyse du flux de puissance",
-      "rerun": "Relancer l'analyse du flux",
-      "running": "Analyse en cours...",
-      "calculating": "Calcul de l'analyse du flux de puissance...",
-      "success": "Analyse du flux de puissance terminée. Les couleurs des lignes indiquent maintenant l'utilisation de la charge.",
-      "noData": "Aucune donnée de réseau disponible pour l'analyse du flux de puissance.",
-      "error": "L'analyse du flux de puissance a échoué. Vérifiez la console pour les détails."
+      "calculating": "Calcul de l'analyse du flux de puissance..."
     },
     "transformer": {
       "add": "Ajouter un transformateur",
@@ -1773,11 +1528,7 @@
       "donePlacing": "Terminé",
       "clickToPlace": "Cliquez sur la carte pour placer le transformateur",
       "clickToPlaceCursor": "Cliquez pour placer",
-      "clickToAdd": "Cliquez pour ajouter un transformateur à la carte",
-      "clickToCancel": "Cliquez pour annuler l'ajout du transformateur",
       "clickToMove": "Cliquez pour déplacer",
-      "movingSuccess": "Transformateur déplacé avec succès",
-      "movingFailed": "Échec du déplacement du transformateur",
       "userPlaced": "Placé par l'utilisateur",
       "dialogDescription": "Afficher et modifier les paramètres du transformateur. Les modifications concernent les bâtiments raccordés.",
       "gridId": "ID du réseau",
@@ -1793,10 +1544,7 @@
       "selectKva": "Choisir les kVA"
     },
     "building": {
-      "assignSuccess": "Bâtiment assigné au transformateur",
       "assignFailed": "Échec de l'assignation du bâtiment",
-      "assignToTransformer": "Assigner les bâtiments",
-      "assignDescription": "Sélectionnez les bâtiments et assignez-les à un transformateur",
       "selectBuildings": "Cliquez sur les bâtiments pour les sélectionner",
       "selectTransformer": "Maintenant, cliquez sur un transformateur pour assigner",
       "selectedCount": "{{count}} bâtiment(s) sélectionné(s)",
@@ -1805,7 +1553,6 @@
       "assignPartialSuccess": "{{success}} sur {{total}} bâtiments assignés",
       "cancelAssign": "Annuler",
       "nextStep": "Suivant",
-      "finish": "Terminer",
       "back": "Retour"
     },
     "mapOverlay": {
@@ -1871,7 +1618,6 @@
       "continueEditing": "Continuer la modification",
       "discard": "Abandonner les modifications"
     },
-    "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version",
     "runMode": {
       "label": "Mode de calcul",
       "plan": "Optimisation",
@@ -1889,8 +1635,6 @@
     },
     "siteMode": {
       "label": "Réseau personnalisé",
-      "hint": "Placez vos propres transformateurs et construisez le réseau de cette zone à partir d'eux, au lieu du réseau précalculé. Seuls les bâtiments avec données 3D sont inclus, 150 au maximum.",
-      "switchHint": "Changer de mode régénère le réseau pour la zone dessinée.",
       "leaveTitle": "Quitter le réseau personnalisé ?",
       "leaveDescription": "Le réseau de la zone dessinée est régénéré à partir du réseau précalculé. Les transformateurs que vous avez placés sont perdus.",
       "leaveConfirm": "Changer"
@@ -1900,7 +1644,6 @@
       "description": "Les modèles de plus de {{limit}} bâtiments demandent nettement plus de temps de calcul : chaque bâtiment passe par BuEM et Calliope résout la demande horaire de chaque bâtiment. Une année complète peut prendre des dizaines de minutes. Vous pouvez quand même l'enregistrer et le lancer."
     },
     "sections": {
-      "grid": "Réseau",
       "model": "Modèle",
       "energySystem": "Système énergétique"
     },
@@ -1957,27 +1700,6 @@
     "periodScenarioHint": "Une année de scénario est assemblée mois par mois à partir de la météo historique ; elle n'a donc pas d'année civile propre. Les mois comptent quand même : ils fixent la saison couverte par la simulation, et donc la demande de chauffage, la production solaire et le temps de calcul. Les dates sont enregistrées dans une année de référence fixe.",
     "periodCheckYear": "Avec la météo historique, la période passe à {{year}}, la dernière année de l'archive. Gardez-la ou choisissez une autre année.",
     "periodKeepYear": "Garder {{year}}"
-  },
-  "mapLayers": {
-    "title": "Couches de carte",
-    "description": "Configurer l'apparence de la carte et les couches de données",
-    "baseLayers": {
-      "title": "Couches de base",
-      "description": "Choisir le style de carte d'arrière-plan",
-      "osmStandard": "Couche OpenStreetMap standard",
-      "osmHumanitarian": "Style humanitaire OpenStreetMap",
-      "cartoPositron": "Carte de base claire par CartoDB",
-      "cartoVoyager": "Carte de base détaillée par CartoDB",
-      "openTopoMap": "Carte de style topographique",
-      "maplibreDark": "Fond de carte vectoriel sombre",
-      "maplibreVoyager": "Fond de carte vectoriel détaillé (Voyager)",
-      "cartoDark": "Fond de carte raster sombre de CartoDB",
-      "maplibre3d": "Bâtiments 3D sur imagerie satellite"
-    },
-    "dataLayers": {
-      "title": "Couches de données",
-      "energySimulation": "Couche de simulation énergétique finale"
-    }
   },
   "tour": {
     "product": {
@@ -2130,13 +1852,9 @@
       "loginRequired": "Veuillez vous connecter pour envoyer des commentaires",
       "submitFailed": "Échec de l'envoi des commentaires. Veuillez réessayer plus tard.",
       "alreadyReported": "Ce modèle a déjà un signalement ouvert. Vous recevrez une notification une fois le problème résolu.",
-      "invalidImageType": "Veuillez sélectionner un fichier image valide (PNG, JPG, GIF)",
-      "imageTooLarge": "La taille de l'image doit être inférieure à 15Mo"
+      "invalidImageType": "Veuillez sélectionner un fichier image valide (PNG, JPG, GIF)"
     },
     "myFeedback": {
-      "title": "Mes retours",
-      "subtitle": "Suivez le statut de vos retours soumis",
-      "empty": "Vous n'avez pas encore soumis de retour",
       "adminResponse": "Réponse de l'administrateur",
       "submittedOn": "Soumis le",
       "autoDeleteNotice": "Cet élément sera automatiquement supprimé dans {days} jours",
@@ -2334,25 +2052,19 @@
       "electricity": "Électricité",
       "heat": "Chaleur"
     },
-    "heatSourceHint": "Les technologies de chaleur proviennent d'OpenTech-DB et sont optimisées par Calliope.",
     "noHeatTechnologies": "Aucune technologie de chaleur disponible",
     "searchPlaceholder": "Rechercher des technologies…",
     "noSearchResults": "Aucune technologie ne correspond à la recherche",
-    "otdbElectricityHint": "Ajouts OpenTech-DB : Calliope optimise leur capacité.",
     "categories": {
       "supply": "Approvisionnement",
       "storage": "Stockage",
-      "other": "Autres",
-      "conversion": "Conversion",
-      "networks": "Réseaux",
-      "otdbAdditions": "Ajouts OpenTech-DB"
+      "conversion": "Conversion"
     },
     "form": {
       "key": "Clé",
       "keyRequired": "La clé est obligatoire",
       "keyPlaceholder": "ex., solar_supply",
       "displayName": "Nom d'Affichage",
-      "displayNameRequired": "Le nom d'affichage est obligatoire",
       "displayNamePlaceholder": "ex., Approvisionnement en Énergie Solaire",
       "description": "Description",
       "descriptionPlaceholder": "Brève description de la technologie...",
@@ -2407,8 +2119,6 @@
       "saveChanges": "Enregistrer les Modifications"
     },
     "confirm": {
-      "deleteTitle": "Supprimer la Technologie",
-      "deleteMessage": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action ne peut pas être annulée.",
       "deleteParamTitle": "Supprimer le Paramètre",
       "deleteParamMessage": "Êtes-vous sûr de vouloir supprimer le paramètre \"{{name}}\" ?"
     },
@@ -2423,7 +2133,6 @@
       "reseeded": "Technologies système rechargées avec succès"
     },
     "error": {
-      "loadFailed": "Échec du chargement des technologies",
       "addFailed": "Échec de l'ajout de la technologie",
       "copyFailed": "Échec de la copie de la technologie",
       "deleteFailed": "Échec de la suppression de la technologie",
@@ -2482,7 +2191,6 @@
     "removeAll": "Retirer toutes les technologies",
     "removeAllConfirmTitle": "Retirer toutes les technologies ?",
     "removeAllConfirmDescription": "Retire chaque technologie et chaque liaison de chaleur de {{count}} bâtiments de ce modèle, y compris celles attribuées automatiquement. Enregistrez le modèle pour conserver la modification.",
-    "paramCount": "Paramètres : {{count}}",
     "paramDialog": {
       "description": "Configurez les paramètres de la technologie pour ce bâtiment",
       "turbineSummary": "{{power}} kW · rotor de {{diameter}} m",
@@ -2522,45 +2230,12 @@
     "stats": {
       "total": "Total",
       "totalArea": "Surface Totale",
-      "totalDemand": "Demande Totale",
-      "private": "Privé"
+      "totalDemand": "Demande Totale"
     },
     "empty": {
       "title": "Aucun emplacement trouvé",
       "description": "Créez votre premier emplacement personnalisé pour commencer"
     }
-  },
-  "weather": {
-    "temperature": "Temp.",
-    "windSpeed": "Vent",
-    "humidity": "Humidité",
-    "uvIndex": "UV",
-    "clickToRefresh": "Cliquez pour actualiser",
-    "clickToRetry": "Cliquez pour réessayer",
-    "retry": "Réessayer",
-    "loadWeather": "Charger la météo",
-    "clickToLoad": "Cliquez pour charger la météo de {{location}}",
-    "current": "Actuel",
-    "searchLocation": "Rechercher un emplacement...",
-    "yourLocations": "Vos Emplacements",
-    "syncing": "Synchronisation...",
-    "temperatureTooltip": "Température actuelle en Celsius et Fahrenheit",
-    "humidityTooltip": "Pourcentage d'humidité relative",
-    "uvLevels": {
-      "low": "Faible",
-      "moderate": "Modéré",
-      "high": "Élevé",
-      "veryHigh": "Très Élevé",
-      "extreme": "Extrême"
-    },
-    "uvDescriptions": {
-      "low": "Aucune protection nécessaire",
-      "moderate": "Porter de la crème solaire",
-      "high": "Protection essentielle",
-      "veryHigh": "Protection supplémentaire nécessaire",
-      "extreme": "Éviter l'exposition au soleil"
-    },
-    "dataBy": "Données météo par"
   },
   "settings": {
     "title": "Paramètres",
@@ -2568,16 +2243,11 @@
     "tabs": {
       "profile": "Profil",
       "general": "Général",
-      "notifications": "Notifications",
-      "advanced": "Avancé"
+      "notifications": "Notifications"
     },
     "language": {
       "title": "Langue",
       "subtitle": "Langue de l'interface"
-    },
-    "weatherLocation": {
-      "title": "Emplacement Météo",
-      "subtitle": "Météo par défaut"
     },
     "mapLocation": {
       "title": "Emplacement Carte",
@@ -2624,29 +2294,6 @@
       "sent": "Notification envoyée !",
       "failedToSend": "Échec de l'envoi"
     },
-    "pylovo": {
-      "title": "Pipeline Pylovo",
-      "subtitle": "Génération de données et réseau",
-      "dataPipeline": "Pipeline de Données",
-      "dataPipelineDesc": "Télécharger et traiter les données OSM",
-      "databaseConstructor": "Constructeur de Base de Données",
-      "databaseConstructorDesc": "Créer les tables de base de données compute engine",
-      "gridGeneration": "Génération de Réseau",
-      "gridGenerationDesc": "Générer un réseau électrique synthétique",
-      "fullPipeline": "Pipeline Complet",
-      "fullPipelineDesc": "Exécuter toutes les étapes séquentiellement",
-      "selectCountry": "Sélectionner pays",
-      "selectState": "Sélectionner état",
-      "run": "Exécuter",
-      "running": "En cours",
-      "viewLogs": "Voir les journaux",
-      "hideLogs": "Masquer les journaux",
-      "pending": "En attente",
-      "completed": "Terminé",
-      "failed": "Échoué",
-      "recentJobs": "Travaux Récents",
-      "noRecentJobs": "Aucun travail récent"
-    },
     "polygonLimits": {
       "title": "Limites de Polygone",
       "subtitle": "Sélection de bâtiments",
@@ -2672,8 +2319,6 @@
     "subtitle": "Comparer les résultats de plusieurs exécutions de simulation",
     "baseline": "Référence",
     "comparison": "Comparaison",
-    "workspace": "Espace de travail",
-    "model": "Modèle",
     "selectBaselineModel": "Sélectionner le modèle de référence",
     "selectComparisonModel": "Sélectionner le modèle de comparaison",
     "noCompletedModels": "Aucun modèle terminé trouvé",
@@ -2707,26 +2352,15 @@
       "baseline": "Référence"
     },
     "charts": {
-      "generationByTechnology": "Génération par technologie",
       "sideBySideComparison": "Comparaison côte à côte (kWh)",
       "costDifferenceByCategory": "Différence de coût par catégorie",
       "comparisonVsBaseline": "Comparaison vs Référence (EUR)",
       "keyPerformanceIndicators": "Indicateurs clés de performance",
       "selfSufficiencyBaseline": "Autosuffisance\n(Référence)",
       "selfSufficiencyComparison": "Autosuffisance\n(Comparaison)",
-      "avgLcoe": "LCOE Moy.",
-      "installedCapacityComparison": "Comparaison de la capacité installée",
-      "technologyCapacity": "Capacité technologique (kW)",
-      "overallPerformance": "Performance globale",
-      "multiDimensionalComparison": "Comparaison multidimensionnelle",
       "totalCostBreakdown": "Répartition du coût total",
-      "stackedByTechnology": "Empilé par technologie (EUR)",
       "total": "Total",
-      "difference": "Différence",
-      "renewableProduction": "Production\nrenouvelable",
-      "gridIndependence": "Indépendance\ndu réseau",
-      "costEfficiency": "Efficacité\ndes coûts",
-      "demandCoverage": "Couverture de\nla demande"
+      "difference": "Différence"
     },
     "technologies": {
       "solar": "Solaire",
@@ -2785,10 +2419,6 @@
       "title": "Préférence de langue",
       "description": "Sélectionnez votre langue préférée pour l'application"
     },
-    "weather": {
-      "title": "Préférences météo",
-      "description": "Définissez votre emplacement préféré pour les informations météo"
-    },
     "map": {
       "title": "Préférences de carte",
       "description": "Configurez votre emplacement de carte par défaut"
@@ -2801,8 +2431,7 @@
       "previous": "Précédent",
       "next": "Suivant",
       "complete": "Terminer",
-      "completing": "Finalisation...",
-      "skip": "Passer"
+      "completing": "Finalisation..."
     }
   },
   "pylovoManagement": {
@@ -2811,7 +2440,6 @@
     "searchPlaceholder": "Rechercher par nom, IP...",
     "refresh": "Actualiser",
     "registerNew": "Enregistrer une nouvelle instance",
-    "loadingInstances": "Chargement des instances...",
     "noInstancesFound": "Aucune instance de compute engine trouvée",
     "noInstancesDescription": "Commencez par enregistrer votre première instance Compute Engine.",
     "noInstancesAvailable": "Aucune instance de compute engine n'est actuellement configurée. Contactez un administrateur.",
@@ -2865,12 +2493,10 @@
     "notifications": {
       "created": "Instance de compute engine enregistrée avec succès !",
       "updated": "Instance de compute engine mise à jour avec succès !",
-      "deleted": "Instance de compute engine supprimée avec succès !",
       "primarySet": "Instance primaire mise à jour avec succès !",
       "statusChanged": "Statut de l'instance changé en {{status}}",
       "failedToCreate": "Échec de l'enregistrement de l'instance",
       "failedToUpdate": "Échec de la mise à jour de l'instance",
-      "failedToDelete": "Échec de la suppression de l'instance",
       "failedToPing": "Échec du ping de l'instance"
     }
   },
@@ -2885,10 +2511,6 @@
     "favorite": "Favoris",
     "recent": "Récent",
     "noRegionsFound": "Aucune région trouvée",
-    "coverageHigh": "Couverture de données élevée",
-    "coverageMedium": "Couverture de données moyenne",
-    "coverageLow": "Couverture de données faible",
-    "summaryFooter": "{{countries}} pays · {{regions}} régions · {{grids}} grilles",
     "3dBuildingData": "Hauteurs 3D des bâtiments par LiDAR disponibles",
     "buildingDialog": {
       "title": "Détails du bâtiment",

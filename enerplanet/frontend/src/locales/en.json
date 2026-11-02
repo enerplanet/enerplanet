@@ -175,38 +175,17 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "edit": "Edit",
     "create": "Create",
     "close": "Close",
     "confirm": "Confirm",
     "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "warning": "Warning",
-    "info": "Info",
     "yes": "Yes",
     "no": "No",
-    "ok": "OK",
     "back": "Back",
-    "next": "Next",
-    "submit": "Submit",
-    "search": "Search",
-    "filter": "Filter",
-    "reset": "Reset",
     "clear": "Clear",
-    "clearAll": "Clear All",
-    "selectAll": "Select All",
-    "noResults": "No results found",
-    "actions": "Actions",
-    "settings": "Settings",
-    "logout": "Logout",
-    "login": "Login",
-    "register": "Register",
     "unknown": "Unknown",
     "more": "more",
     "add": "Add",
-    "refresh": "Refresh",
-    "healthCheck": "Health check",
     "na": "N/A",
     "from": "From",
     "to": "To",
@@ -235,12 +214,10 @@
       "profile": "Profile",
       "documentation": "Documentation",
       "restartTour": "Product Tour",
-      "feedback": "Feedback",
-      "theme": "Theme"
+      "feedback": "Feedback"
     },
     "sidebar": {
       "energySimulations": "Energy Simulations",
-      "map": "Map",
       "simulationReports": "Model Comparison",
       "technologies": "Technologies"
     },
@@ -289,9 +266,6 @@
       "fields": {
         "fullName": "Full Name",
         "email": "Email Address",
-        "organization": "Organization",
-        "position": "Position",
-        "phone": "Phone Number",
         "accessLevel": "Access Level",
         "emailVerified": "Email Verified",
         "password": "Password",
@@ -301,8 +275,6 @@
       "placeholders": {
         "fullName": "Enter full name",
         "email": "Enter email address",
-        "organization": "Enter organization name",
-        "position": "Enter job position",
         "password": "Enter password",
         "confirmPassword": "Confirm password",
         "modelLimit": "Leave empty for default"
@@ -318,7 +290,6 @@
         "expert": "Expert (Full Access)"
       },
       "validation": {
-        "phoneInvalid": "Phone number can only contain digits, spaces, dashes, plus signs, and parentheses",
         "passwordLength": "Password must be at least 8 characters long",
         "nameRequired": "Name is required",
         "emailRequired": "Email is required",
@@ -510,7 +481,6 @@
     "confirmClearTitle": "Clear all notifications?",
     "confirmClearDescription": "Are you sure you want to clear all notifications? This action cannot be undone.",
     "confirmClearButton": "Clear All",
-    "dismiss": "Dismiss",
     "types": {
       "success": "Success",
       "error": "Error",
@@ -589,18 +559,8 @@
     "opacity": "Opacity",
     "layerHidden": "Layer Hidden",
     "showLayer": "Show Layer",
-    "hideLayer": "Hide Layer",
-    "noModelIdProvided": "No model ID provided",
-    "failedToLoadResults": "Failed to load assessment results",
-    "failedToLoadTiles": "Failed to load tiles from GeoServer",
-    "failedToGetLayerInfo": "Failed to get layer information from backend",
-    "layerConfigIncomplete": "Layer configuration incomplete",
-    "failedToLoadLayerConfig": "Failed to load layer configuration",
     "transformer": "Transformer",
     "building": "Building",
-    "connectedBuilding": "connected building",
-    "connectedBuildings": "connected buildings",
-    "clickForDetails": "Click for details",
     "tabs": {
       "overview": "Overview",
       "energy": "Energy",
@@ -640,13 +600,6 @@
       "hydroPower": "Hydro Power",
       "gridImport": "Grid Import",
       "powerTransmission": "Power Transmission",
-      "householdH1": "Household H1",
-      "householdH2": "Household H2",
-      "industryG0": "Industry G0",
-      "industryG1": "Industry G1",
-      "industryG2": "Industry G2",
-      "g3Demand": "G3 Demand",
-      "gridConnection": "Grid Connection",
       "gridElectricity": "Grid Electricity Purchase",
       "householdSupply": "Household Supply",
       "nonHouseholdSupply": "Non-Household Supply",
@@ -672,10 +625,6 @@
       "capacityUtilizationDesc": "Average capacity factor of installed assets",
       "technologyCapacity": "Technology Capacity",
       "technologyCapacityDesc": "Installed capacity of each technology in the optimized energy system, measured in kW or kWh for storage.",
-      "generation": "Generation",
-      "generationDesc": "Solar PV, wind turbines, and other generators",
-      "storage": "Storage",
-      "storageDesc": "Battery systems and other storage technologies",
       "costDistribution": "Cost Distribution",
       "costDistributionDesc": "Breakdown of total system costs across different technologies and cost categories.",
       "capitalCosts": "Capital Costs",
@@ -712,9 +661,7 @@
       "totalDemand": "Total Demand",
       "selfSufficiency": "Self-Sufficiency",
       "netBalance": "Net Balance",
-      "energyKwh": "Energy (kWh)",
       "energy": "Energy",
-      "netKwh": "Net (kWh)",
       "noEnergyBalanceData": "No energy balance data available",
       "dailyLoadProfile": "Daily Load Profile",
       "dailyLoadProfileDesc": "Shows electricity consumption patterns over a 24-hour period with automatic detection of peak demand periods.",
@@ -726,8 +673,6 @@
       "peakPeriod": "Peak Period",
       "averageLine": "Average Line",
       "averageLineDesc": "Dashed line showing daily average power consumption",
-      "hourlyGenerationProfile": "Hourly Generation Profile",
-      "hourlyGenerationProfileDesc": "Displays hourly energy generation patterns, showing how production varies throughout the day and across seasons.",
       "peakHours": "Peak Hours",
       "peakHoursDesc": "Maximum generation typically during midday for solar",
       "loadDuration": "Load Duration",
@@ -776,11 +721,6 @@
       "criticalVoltageDesc": "Outside limits, grid reinforcement needed",
       "example": "Example",
       "belowThreshold": "below 0.95 threshold",
-      "busLoadingStatus": "Bus Loading Status",
-      "busLoadingDesc": "Shows the loading percentage of each transformer/bus based on voltage deviation from nominal (1.0 p.u.).",
-      "normalOperation": "Normal operation, sufficient capacity",
-      "highUtilization": "High utilization, plan for upgrades",
-      "nearCapacity": "Near capacity, reinforcement needed",
       "busDetails": "Bus Details",
       "busDetailsDesc": "Electrical characteristics of the selected bus/transformer in the power grid.",
       "totalBuses": "Total Buses",
@@ -804,11 +744,8 @@
       "reactivePowerDesc": "Power in kVAR for magnetic fields in motors/transformers",
       "noVoltageData": "No voltage data",
       "noPowerData": "No power data",
-      "min": "Min",
-      "max": "Max",
       "avg": "Avg",
       "loading": "Loading",
-      "noLoadingData": "No loading data available",
       "notInResult": "Not in this result",
       "transmissionUtilization": "Transmission Utilization",
       "overloadedConnection": "Overloaded wire",
@@ -818,13 +755,6 @@
       "noData": "No system data available",
       "noAnalysisData": "No system analysis data available for this model",
       "noAnalysisDataDesc": "System balance, unmet demand, and power flow data will appear here when available.",
-      "dailySystemBalance": "Daily System Balance",
-      "systemBalance": "System Balance",
-      "systemBalanceDesc": "Shows the balance between energy supply and demand. Positive values (blue) indicate surplus energy, negative values (red) indicate deficit.",
-      "surplus": "Surplus",
-      "surplusDesc": "Generation exceeds demand",
-      "deficit": "Deficit",
-      "deficitDesc": "Demand exceeds generation",
       "balance": "Balance",
       "balanceKw": "Balance (kW)",
       "dailyUnmetDemand": "Daily Unmet Demand",
@@ -834,7 +764,6 @@
       "unmetEnergyDesc": "Demand exceeding available supply",
       "energy": "Energy",
       "unmet": "Unmet",
-      "unmetKwh": "Unmet (kWh)",
       "powerFlowAnalysis": "Power Flow Analysis",
       "powerFlow": "Power Flow",
       "powerFlowDesc": "Power flowing through transmission lines and transformers. Compare sending and receiving power to identify transmission losses.",
@@ -849,7 +778,6 @@
       "transmissionLines": "Transmission Lines",
       "transformers": "Transformers",
       "lines": "Lines",
-      "powerW": "Power (W)",
       "selectLinePrompt": "Select a line or transformer",
       "selectLinePromptDesc": "to view power flow data",
       "resourceConsumption": "Resource Consumption by Technology",
@@ -871,26 +799,18 @@
       "totalCost": "Total Cost",
       "noCostData": "No cost data available",
       "installed": "Installed",
-      "avgUtilized": "Avg. Utilized",
       "capacityFactor": "Capacity Factor",
       "capacityKw": "Capacity (kW)",
       "installedCapacity": "Installed Capacity",
-      "utilizedCapacity": "Utilized Capacity",
       "noCapacityData": "No capacity data available",
       "value": "Value",
       "noEnergyFlowData": "No energy flow data available",
-      "gridImport": "Grid Import",
-      "gridExport": "Grid Export",
       "energySystem": "Energy System",
-      "household": "Household",
-      "industry": "Industry",
-      "transmission": "Transmission",
       "investmentCost": "Equipment & Installation",
       "operatingCost": "Running Costs",
       "systemLCOE": "Avg. Energy Cost",
       "simulationPeriod": "Simulation Period",
       "simulationPeriodCost": "Cost for Simulation Period",
-      "annualizedCost": "Annualized Cost (projected)",
       "perLocation": "per location",
       "locations": "Locations",
       "capex": "Equipment & Installation",
@@ -908,7 +828,6 @@
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
       "simulationPeriodShort": "{{days}}-day simulation period",
       "costBreakdownTooltip": "Costs shown cover only the simulated time window, not a full year. Equipment costs are spread over the equipment lifetime, while running costs (e.g., grid electricity purchases) reflect actual usage during the period. In short simulations, technologies with high running costs appear proportionally larger.",
-      "annualProjection": "Estimated annual: {{value}}",
       "equipmentCostNote": "Equipment cost is spread over its lifetime, showing only the share for this simulation period.",
       "equipmentCostDesc": "Solar panels, batteries, and other hardware. The purchase cost is spread over the equipment's lifetime (e.g. 25 years for solar).",
       "runningCostDesc": "Electricity purchased from the grid, maintenance, and other ongoing expenses that depend on usage.",
@@ -930,21 +849,7 @@
       "costs": "Costs",
       "noEnergyData": "No hourly energy data available",
       "noSimulationLinked": "No simulation data linked",
-      "household": "Household",
-      "householdLow": "Household (Low)",
-      "householdHigh": "Household (High)",
-      "commercial": "Commercial",
-      "commercialWeekday": "Commercial (Weekday)",
-      "commercialEvening": "Commercial (Evening)",
-      "commercial247": "Commercial (24/7)",
-      "warehouse": "Warehouse",
-      "industrial": "Industrial",
-      "retail": "Retail",
-      "office": "Office",
-      "residential": "Residential",
-      "h1Demand": "H1 Demand",
-      "powerTransmission": "Power Transmission",
-      "sources": "Sources"
+      "household": "Household"
     },
     "gauges": {
       "selfConsumption": "Self-Consumption",
@@ -956,7 +861,6 @@
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
-    "signOut": "Sign Out",
     "signingIn": "Signing in...",
     "email": "Email",
     "password": "Password",
@@ -987,33 +891,13 @@
     "security": "Security",
     "confirmYourPassword": "Confirm your password",
     "passwordRequirements": {
-      "title": "Password Requirements",
-      "minChars": "At least 8 characters",
-      "uppercase": "One uppercase letter",
-      "lowercase": "One lowercase letter",
-      "number": "One number",
-      "specialChar": "One special character",
-      "hasSpaces": "Password contains leading or trailing spaces"
+      "minChars": "At least 8 characters"
     },
-    "organizationDetails": "Organization Details",
-    "organization": "Organization",
-    "enterOrganization": "Enter your organization",
-    "position": "Position",
-    "enterPosition": "Enter your position",
-    "phoneNumber": "Phone Number",
-    "enterPhoneNumber": "Enter your phone number",
-    "accessLevel": "Access Level",
-    "veryLow": "Very Low",
-    "low": "Low",
-    "intermediate": "Intermediate",
-    "manager": "Manager",
-    "expert": "Expert",
     "forgotPasswordTitle": "Forgot Password",
     "forgotPasswordDescription": "Enter your email address and we'll send you instructions to reset your password.",
     "secureResetProcess": "Secure password reset process",
     "sendResetInstructions": "Send Reset Instructions",
     "backToLogin": "Back to Login",
-    "cancel": "Cancel",
     "checkYourEmail": "Check Your Email",
     "sentResetInstructions": "We've sent password reset instructions to your email address.",
     "note": "Note",
@@ -1024,8 +908,6 @@
     "agreeToTerms": "By creating an account, you agree to our Terms of Service"
   },
   "workspace": {
-    "workspace": "Workspace",
-    "workspaces": "Workspaces",
     "selectWorkspace": "Select Workspace",
     "defaultWorkspace": "Default Workspace",
     "default": "Default",
@@ -1055,9 +937,6 @@
     "title": "Model",
     "models": "Models",
     "newModel": "New Model",
-    "editModel": "Edit Model",
-    "deleteModel": "Delete Model",
-    "modelName": "Model Name",
     "description": "Description",
     "status": "Status",
     "created": "Created",
@@ -1083,14 +962,7 @@
       "reported": "Reported",
       "reportedHint": "Reported to the EnerPlanET team. You get a notification when it is resolved."
     },
-    "pending": "Pending",
     "queued": "Queued",
-    "cancelled": "Cancelled",
-    "modified": "Modified",
-    "runSimulation": "Run Simulation",
-    "viewResults": "View Results",
-    "duplicate": "Duplicate",
-    "export": "Export",
     "compare": "Compare",
     "dashboard": "Model Dashboard",
     "manageConfigurations": "Manage your Energy assessment configurations",
@@ -1109,14 +981,11 @@
     "rename": "Rename",
     "delete": "Delete",
     "move": "Move",
-    "moveToWorkspace": "Move to workspace",
     "noModelsFound": "No models found",
     "noModelsMatch": "No models match \"{{search}}\". Try adjusting your search.",
     "noModelsYet": "You haven't created any Energy assessment models yet. Get started by creating your first model!",
     "createFirstModel": "Create Your First Model",
     "selected": "selected",
-    "deleteSelected": "Delete selected",
-    "moveSelected": "Move selected",
     "cannotDelete": "Cannot delete - models are disabled or don't belong to you",
     "cannotMove": "Cannot move - models don't belong to you",
     "cannotCalculate": "Cannot calculate - no eligible models selected",
@@ -1132,17 +1001,12 @@
     "deselectAll": "Deselect all",
     "actions": "Actions",
     "name": "Model Name",
-    "owner": "Owner",
     "workspace": "Workspace",
-    "draft": "Draft",
-    "published": "Published",
-    "total": "Total",
     "queue": "Queue",
     "ownedBy": "Owned by",
     "parent": "Parent",
     "demandFallbackTitle": "Some buildings use constant demand",
     "demandFallbackWarning": "{{fallback}} of {{total}} buildings had no hourly demand profile (no 3D data) and use their yearly demand spread evenly over the year.",
-    "waiting": "Waiting",
     "queuedTooltip": "Your model is in the queue - the simulation engine is processing other calculations",
     "compareRequires2Completed": "Select exactly 2 completed models to compare",
     "family": {
@@ -1174,22 +1038,9 @@
     "noStarredModels": "No starred models yet. Star a model with the star next to its name to find it here."
   },
   "polygon": {
-    "drawRegion": "Draw Your Region",
-    "clickToStart": "Click to start",
-    "clickAnywhere": "Click anywhere on the map to place your first point",
-    "addMorePoints": "Add more points",
-    "continueClicking": "Continue clicking to outline your area",
-    "closePolygon": "Close the polygon",
-    "doubleClickOrClick": "Double-click or click the starting point to complete",
-    "startEnd": "Start/End",
-    "clickHereToClose": "Click here to close",
     "escToCancel": "to cancel drawing",
-    "pointsAdded": "{{count}} added",
-    "editPolygon": "Edit Polygon",
     "moveVertex": "Drag a corner to move it",
-    "moveVertexHint": "Drag any vertex to adjust",
     "addVertex": "Drag an edge to add a corner",
-    "addVertexHint": "Click on any edge",
     "removeVertex": "Remove point",
     "removeVertexHint": "click on a corner to delete it",
     "removePolygonHint": "click on polygon to delete it",
@@ -1202,7 +1053,6 @@
     "rightClickCloseHint": "to close the polygon",
     "keyRightClick": "Right-click",
     "keySpace": "Space",
-    "dismissGuide": "Dismiss guide",
     "groupBuildings": "Buildings",
     "disableBuildingHint": "click a building to disable or enable it",
     "selectBuildingHint": "click buildings to select them",
@@ -1214,51 +1064,20 @@
     "optional": "optional",
     "title": "Workflow",
     "gridGeneration": "Grid Generation",
-    "gridGenerationHint": "Analyzing buildings & creating grid",
     "addTransformer": "Add Transformer",
-    "addTransformerHint": "Place transformers on the map",
-    "addTransformerInstruction": "Enable toggle in toolbar, then click map",
     "assignBuildings": "Assign Buildings",
-    "assignBuildingsHint": "Link buildings to transformers",
-    "assignBuildingsInstruction": "Select buildings → click target transformer",
-    "powerFlow": "Run Power Flow",
-    "powerFlowHint": "Analyze grid load & utilization",
-    "illustrationStep": "Step {{step}}",
-    "clickToSelect": "click to select",
-    "clickTransformer": "click transformer",
-    "then": "then",
-    "toCancel": "to cancel",
     "addTransformerAction": "Add Transformer",
     "assignBuildingsAction": "Assign Buildings",
-    "runPowerFlowAction": "Power Flow",
-    "rerunPowerFlowAction": "Re-run Flow",
-    "resolveHeatAction": "Resolve heat",
-    "auto": "auto",
-    "clickAddTransformer": "Click the button in the bottom bar",
-    "clickOnMapInPolygon": "Click on the map inside the polygon",
-    "clickToSelectBuilding": "Click to select a building"
+    "resolveHeatAction": "Resolve heat"
   },
   "time": {
-    "justNow": "Just now",
-    "minutesAgo": "{{count}} minute ago",
-    "minutesAgo_plural": "{{count}} minutes ago",
-    "hoursAgo": "{{count}} hour ago",
-    "hoursAgo_plural": "{{count}} hours ago",
-    "daysAgo": "{{count}} day ago",
-    "daysAgo_plural": "{{count}} days ago",
-    "weeksAgo": "{{count}} week ago",
-    "weeksAgo_plural": "{{count}} weeks ago"
+    "justNow": "Just now"
   },
   "adminDashboard": {
     "title": "Admin Dashboard",
-    "welcomeBack": "Welcome back, {{name}}!",
     "managePlatform": "Manage your Energy Simulation Platform",
-    "administrator": "Administrator",
     "loadingContent": "Loading content...",
-    "settings": "Settings",
-    "logout": "Logout",
     "tabs": {
-      "overview": "Overview",
       "allSimulationModels": "All Simulation Models",
       "simulationEngine": "Simulation-Engine",
       "feedback": "Feedback",
@@ -1293,14 +1112,6 @@
       "upgradable": "Upgradable",
       "basic": "Basic"
     },
-    "userProfile": {
-      "title": "User Profile",
-      "subtitle": "Your account information",
-      "email": "Email",
-      "organization": "Organization",
-      "position": "Position",
-      "phone": "Phone"
-    },
     "accessPermissions": {
       "title": "Access & Permissions",
       "subtitle": "System capabilities",
@@ -1324,14 +1135,6 @@
       "vegetationRisk": "Vegetation Risk",
       "topographyRisk": "Topography Risk",
       "upgradeMessage": "Unlock more features by requesting an upgrade from your admin."
-    },
-    "quickActions": {
-      "title": "Quick Actions",
-      "subtitle": "Navigate to key features",
-      "riskModels": "Risk Models",
-      "manageRiskModels": "Manage risk models",
-      "settings": "Settings",
-      "configurePreferences": "Configure preferences"
     }
   },
   "userManagement": {
@@ -1341,15 +1144,10 @@
     "refresh": "Refresh",
     "addNewUser": "Add New User",
     "add": "Add",
-    "editUser": "Edit User",
-    "createUser": "Create User",
-    "updateUser": "Update User",
     "loadingUsers": "Loading users...",
     "noUsersFound": "No users found",
     "noUsersInGroup": "No users found in your group. Please contact an administrator to assign users to your group.",
     "noUsersMatch": "No users match \"{{search}}\"",
-    "noUsersMatchSearch": "No users match \"{{search}}\"",
-    "addFirstUser": "Add the first user to get started.",
     "dialog": {
       "editTitle": "Edit User",
       "addTitle": "Add New User",
@@ -1358,12 +1156,9 @@
     },
     "table": {
       "user": "User",
-      "organization": "Organization",
-      "position": "Position",
       "accessLevel": "Access Level",
       "group": "Group",
       "emailVerified": "Email Verified",
-      "phone": "Phone",
       "actions": "Actions"
     },
     "emailStatus": {
@@ -1431,21 +1226,17 @@
       "groupEnabled": "Group \"{{name}}\" enabled",
       "groupDeleted": "Group \"{{name}}\" deleted",
       "groupRenamed": "Group renamed to \"{{name}}\" successfully",
-      "userMovedToGroup": "User moved to new group and logged out. They must re-login to access their new workspace.",
       "failedToCreate": "Failed to create user",
       "failedToUpdate": "Failed to update user",
       "failedToDelete": "Failed to delete user",
       "failedToDisable": "Failed to disable user",
       "failedToEnable": "Failed to enable user",
-      "failedToFetch": "Failed to fetch users",
-      "failedToUpdateGroup": "Failed to update user group",
       "failedToRenameGroup": "Failed to rename group",
       "failedToCopyEmail": "Failed to copy email",
       "bulkGroupChanged": "{{count}} users moved to new group successfully",
       "bulkGroupChangeFailed": "Failed to move users to group",
       "bulkDeleted": "{{count}} users deleted successfully",
       "bulkDeletePartial": "{{succeeded}} of {{total}} users deleted. {{failed}} failed.",
-      "pleaseLogIn": "Please log in to view users",
       "passwordMismatch": "Password and confirmation must match"
     },
     "confirmations": {
@@ -1493,26 +1284,13 @@
   },
   "profile": {
     "loadingProfile": "Loading your profile...",
-    "accessLevel": "Access Level",
-    "notSpecified": "Not specified",
     "readOnly": "read-only",
     "fields": {
       "fullName": "Full Name",
-      "email": "Email Address",
-      "organization": "Organization",
-      "position": "Position",
-      "phone": "Phone Number"
+      "email": "Email Address"
     },
     "placeholders": {
-      "fullName": "Enter your full name",
-      "organization": "Your company or organization",
-      "position": "Your job title",
-      "phone": "+1 (555) 000-0000"
-    },
-    "accessLevels": {
-      "basicDescription": "Standard access to basic features",
-      "intermediateDescription": "Extended access with advanced features",
-      "expertDescription": "Full access to all features"
+      "fullName": "Enter your full name"
     },
     "notifications": {
       "updated": "Profile updated successfully!",
@@ -1526,7 +1304,6 @@
     "searchPlaceholder": "Search by name, IP...",
     "refresh": "Refresh",
     "registerNew": "Register New Webservice",
-    "loadingWebservices": "Loading webservices...",
     "noWebservicesFound": "No webservices found",
     "noWebservicesDescription": "Get started by registering your first webservice instance.",
     "noWebservicesAvailable": "No simulation engines are currently configured. Contact an administrator.",
@@ -1559,8 +1336,6 @@
       "jobs": "Jobs",
       "performance": "Performance",
       "user": "User",
-      "ip": "IP Address",
-      "port": "Port",
       "lastCheck": "Last Check",
       "actions": "Actions",
       "never": "Never"
@@ -1591,11 +1366,9 @@
     "notifications": {
       "created": "Webservice registered successfully!",
       "updated": "Webservice updated successfully!",
-      "deleted": "Webservice deleted successfully!",
       "statusChanged": "Webservice status changed to {{status}}",
       "failedToCreate": "Failed to register webservice",
       "failedToUpdate": "Failed to update webservice",
-      "failedToDelete": "Failed to delete webservice",
       "failedToPing": "Failed to ping webservice"
     }
   },
@@ -1648,7 +1421,6 @@
     "hasAttachment": "Has attached image",
     "viewDialog": {
       "title": "Feedback Details",
-      "subtitle": "View complete feedback information",
       "message": "Message:",
       "submitted": "Submitted",
       "adminResponse": "Admin Response:",
@@ -1700,12 +1472,8 @@
     "duration": "Duration",
     "days": "days",
     "resolution": "Resolution (minutes)",
-    "resolutionPlaceholder": "Select resolution",
     "resolutionHint": "Time interval for calculation resolution",
-    "minutes": "minutes",
     "technologies": "Technologies",
-    "parameters": "Parameters",
-    "pypsaSimulation": "PyPSA Simulation",
     "prepare3d": {
       "pending": "Waiting to prepare 3D building data for this area...",
       "running": "Preparing 3D building data for this area...",
@@ -1717,13 +1485,7 @@
       }
     },
     "powerFlow": {
-      "run": "Run Power Flow Analysis",
-      "rerun": "Re-run Power Flow",
-      "running": "Analyzing...",
-      "calculating": "Calculating Power Flow Analysis...",
-      "success": "Power flow analysis completed. Line colors now show load utilization.",
-      "noData": "No grid data available for power flow analysis.",
-      "error": "Power flow analysis failed. Check console for details."
+      "calculating": "Calculating Power Flow Analysis..."
     },
     "transformer": {
       "add": "Add Transformer",
@@ -1736,11 +1498,7 @@
       "donePlacing": "Done",
       "clickToPlace": "Click on the map to place the transformer",
       "clickToPlaceCursor": "Click to place",
-      "clickToAdd": "Click to add transformer to the map",
-      "clickToCancel": "Click to cancel adding transformer",
       "clickToMove": "Click to move",
-      "movingSuccess": "Transformer moved successfully",
-      "movingFailed": "Failed to move transformer",
       "userPlaced": "User Placed",
       "dialogDescription": "View and modify transformer settings. Changes affect connected buildings.",
       "gridId": "Grid ID",
@@ -1756,10 +1514,7 @@
       "selectKva": "Select kVA"
     },
     "building": {
-      "assignSuccess": "Building assigned to transformer",
       "assignFailed": "Failed to assign building",
-      "assignToTransformer": "Assign Buildings",
-      "assignDescription": "Select buildings and assign them to a transformer",
       "selectBuildings": "Click on buildings to select them",
       "selectTransformer": "Now click on a transformer to assign",
       "selectedCount": "{{count}} building(s) selected",
@@ -1768,13 +1523,10 @@
       "assignPartialSuccess": "{{success}} of {{total}} buildings assigned",
       "cancelAssign": "Cancel",
       "nextStep": "Next",
-      "finish": "Finish",
       "back": "Back"
     },
     "actions": {
       "saveAndExit": "Save & Exit",
-      "create": "Create Energy Simulation",
-      "update": "Update Energy Simulation",
       "creating": "Creating Simulation...",
       "updating": "Updating Simulation...",
       "cancel": "Cancel",
@@ -1787,7 +1539,6 @@
       "resetArea": "Reset Area",
       "resetAreaConfirmTitle": "Reset the area?",
       "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
-      "clearAll": "Remove all polygons",
       "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings",
       "importArea": "Import area",
@@ -1869,7 +1620,6 @@
       "continueEditing": "Continue editing",
       "discard": "Discard changes"
     },
-    "resolutionComingSoon": "30-minute resolution coming in a future release",
     "runMode": {
       "label": "Run mode",
       "plan": "Optimisation",
@@ -1887,8 +1637,6 @@
     },
     "siteMode": {
       "label": "Custom Grid",
-      "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
-      "switchHint": "Switching regenerates the grid for the drawn area.",
       "leaveTitle": "Leave the custom grid?",
       "leaveDescription": "The grid for the drawn area is regenerated from the pre-generated grid. Transformers you placed are lost.",
       "leaveConfirm": "Switch"
@@ -1898,7 +1646,6 @@
       "description": "Models with more than {{limit}} buildings take considerably longer to compute: every building runs through BuEM, and Calliope solves each building's hourly demand. A full year can take tens of minutes. You can still save and run it."
     },
     "sections": {
-      "grid": "Grid",
       "model": "Model",
       "energySystem": "Energy system"
     },
@@ -1955,27 +1702,6 @@
     "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year.",
     "periodCheckYear": "Historic weather set the period to {{year}}, the latest year in the archive. Keep it or choose another year.",
     "periodKeepYear": "Keep {{year}}"
-  },
-  "mapLayers": {
-    "title": "Map Layers",
-    "description": "Configure map appearance and data layers",
-    "baseLayers": {
-      "title": "Base Layers",
-      "description": "Choose the background map style",
-      "osmStandard": "Standard OpenStreetMap layer",
-      "osmHumanitarian": "Humanitarian style OpenStreetMap",
-      "cartoPositron": "Light theme base map by CartoDB",
-      "cartoVoyager": "Detailed raster base map by CartoDB",
-      "openTopoMap": "Topographic style map",
-      "maplibreDark": "Dark vector basemap",
-      "maplibreVoyager": "Detailed vector basemap (Voyager)",
-      "cartoDark": "Dark raster base map by CartoDB",
-      "maplibre3d": "3D buildings on satellite imagery"
-    },
-    "dataLayers": {
-      "title": "Data Layers",
-      "energySimulation": "Final Energy Simulation layer"
-    }
   },
   "tour": {
     "product": {
@@ -2128,13 +1854,9 @@
       "loginRequired": "Please log in to submit feedback",
       "submitFailed": "Failed to submit feedback. Please try again later.",
       "alreadyReported": "This model already has an open report. You get a notification when it is resolved.",
-      "invalidImageType": "Please select a valid image file (PNG, JPG, GIF)",
-      "imageTooLarge": "Image size must be less than 15MB"
+      "invalidImageType": "Please select a valid image file (PNG, JPG, GIF)"
     },
     "myFeedback": {
-      "title": "My Feedback",
-      "subtitle": "Track the status of your submitted feedback",
-      "empty": "You haven't submitted any feedback yet",
       "adminResponse": "Admin Response",
       "submittedOn": "Submitted on",
       "autoDeleteNotice": "This item will be automatically removed in {days} days",
@@ -2332,25 +2054,19 @@
       "electricity": "Electricity",
       "heat": "Heat"
     },
-    "heatSourceHint": "Heat technologies come from OpenTech-DB and are optimized by Calliope.",
     "noHeatTechnologies": "No heat technologies available",
     "searchPlaceholder": "Search technologies…",
     "noSearchResults": "No technologies match your search",
-    "otdbElectricityHint": "OpenTech-DB additions — Calliope optimizes their capacity.",
     "categories": {
       "supply": "Supply",
       "storage": "Storage",
-      "other": "Other",
-      "conversion": "Conversion",
-      "networks": "Networks",
-      "otdbAdditions": "OpenTech-DB Additions"
+      "conversion": "Conversion"
     },
     "form": {
       "key": "Key",
       "keyRequired": "Key is required",
       "keyPlaceholder": "e.g., solar_supply",
       "displayName": "Display Name",
-      "displayNameRequired": "Display name is required",
       "displayNamePlaceholder": "e.g., Solar Energy Supply",
       "description": "Description",
       "descriptionPlaceholder": "Brief description of the technology...",
@@ -2405,8 +2121,6 @@
       "saveChanges": "Save Changes"
     },
     "confirm": {
-      "deleteTitle": "Delete Technology",
-      "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
       "deleteParamTitle": "Delete Parameter",
       "deleteParamMessage": "Are you sure you want to delete the parameter \"{{name}}\"?"
     },
@@ -2421,7 +2135,6 @@
       "reseeded": "System technologies reseeded successfully"
     },
     "error": {
-      "loadFailed": "Failed to load technologies",
       "addFailed": "Failed to add technology",
       "copyFailed": "Failed to copy technology",
       "deleteFailed": "Failed to delete technology",
@@ -2480,7 +2193,6 @@
     "removeAll": "Remove all technologies",
     "removeAllConfirmTitle": "Remove all technologies?",
     "removeAllConfirmDescription": "Removes every technology and heat link from {{count}} buildings in this model, including those assigned automatically. Save the model to keep the change.",
-    "paramCount": "Parameters: {{count}}",
     "paramDialog": {
       "description": "Configure technology parameters for this building",
       "turbineSummary": "{{power}} kW · {{diameter}}m rotor",
@@ -2520,45 +2232,12 @@
     "stats": {
       "total": "Total",
       "totalArea": "Total Area",
-      "totalDemand": "Total Demand",
-      "private": "Private"
+      "totalDemand": "Total Demand"
     },
     "empty": {
       "title": "No locations found",
       "description": "Create your first custom location to get started"
     }
-  },
-  "weather": {
-    "temperature": "Temp.",
-    "windSpeed": "Wind",
-    "humidity": "Humidity",
-    "uvIndex": "UV",
-    "clickToRefresh": "Click weather to refresh",
-    "clickToRetry": "Click to retry",
-    "retry": "Retry",
-    "loadWeather": "Load weather",
-    "clickToLoad": "Click to load weather for {{location}}",
-    "current": "Current",
-    "searchLocation": "Search location...",
-    "yourLocations": "Your Locations",
-    "syncing": "Syncing...",
-    "temperatureTooltip": "Current temperature in Celsius and Fahrenheit",
-    "humidityTooltip": "Relative humidity percentage",
-    "uvLevels": {
-      "low": "Low",
-      "moderate": "Moderate",
-      "high": "High",
-      "veryHigh": "Very High",
-      "extreme": "Extreme"
-    },
-    "uvDescriptions": {
-      "low": "No protection needed",
-      "moderate": "Wear sunscreen",
-      "high": "Protection essential",
-      "veryHigh": "Extra protection needed",
-      "extreme": "Avoid sun exposure"
-    },
-    "dataBy": "Weather data by"
   },
   "settings": {
     "title": "Settings",
@@ -2566,16 +2245,11 @@
     "tabs": {
       "profile": "Profile",
       "general": "General",
-      "notifications": "Notifications",
-      "advanced": "Advanced"
+      "notifications": "Notifications"
     },
     "language": {
       "title": "Language",
       "subtitle": "Interface language"
-    },
-    "weatherLocation": {
-      "title": "Weather Location",
-      "subtitle": "Default weather"
     },
     "mapLocation": {
       "title": "Map Location",
@@ -2622,29 +2296,6 @@
       "sent": "Notification sent!",
       "failedToSend": "Failed to send"
     },
-    "pylovo": {
-      "title": "Pylovo Pipeline",
-      "subtitle": "Data & grid generation",
-      "dataPipeline": "Data Pipeline",
-      "dataPipelineDesc": "Download and process OSM data",
-      "databaseConstructor": "Database Constructor",
-      "databaseConstructorDesc": "Build compute engine database tables",
-      "gridGeneration": "Grid Generation",
-      "gridGenerationDesc": "Generate synthetic electrical grid",
-      "fullPipeline": "Full Pipeline",
-      "fullPipelineDesc": "Run all steps sequentially",
-      "selectCountry": "Select country",
-      "selectState": "Select state",
-      "run": "Run",
-      "running": "Running",
-      "viewLogs": "View logs",
-      "hideLogs": "Hide logs",
-      "pending": "Pending",
-      "completed": "Completed",
-      "failed": "Failed",
-      "recentJobs": "Recent Jobs",
-      "noRecentJobs": "No recent jobs"
-    },
     "polygonLimits": {
       "title": "Polygon Limits",
       "subtitle": "Building selection",
@@ -2671,8 +2322,6 @@
     "pdfTitle": "Simulation Comparison Report",
     "baseline": "Baseline",
     "comparison": "Comparison",
-    "workspace": "Workspace",
-    "model": "Model",
     "selectBaselineModel": "Select baseline model",
     "selectComparisonModel": "Select comparison model",
     "noCompletedModels": "No completed models found",
@@ -2706,26 +2355,15 @@
       "baseline": "Baseline"
     },
     "charts": {
-      "generationByTechnology": "Generation by Technology",
       "sideBySideComparison": "Side-by-side comparison (kWh)",
       "costDifferenceByCategory": "Cost Difference by Category",
       "comparisonVsBaseline": "Comparison vs Baseline (EUR)",
       "keyPerformanceIndicators": "Key Performance Indicators",
       "selfSufficiencyBaseline": "Self-Sufficiency\n(Baseline)",
       "selfSufficiencyComparison": "Self-Sufficiency\n(Comparison)",
-      "avgLcoe": "Avg. LCOE",
-      "installedCapacityComparison": "Installed Capacity Comparison",
-      "technologyCapacity": "Technology capacity (kW)",
-      "overallPerformance": "Overall Performance",
-      "multiDimensionalComparison": "Multi-dimensional comparison",
       "totalCostBreakdown": "Total Cost Breakdown",
-      "stackedByTechnology": "Stacked by technology (EUR)",
       "total": "Total",
-      "difference": "Difference",
-      "renewableProduction": "Renewable\nProduction",
-      "gridIndependence": "Grid\nIndependence",
-      "costEfficiency": "Cost\nEfficiency",
-      "demandCoverage": "Demand\nCoverage"
+      "difference": "Difference"
     },
     "technologies": {
       "solar": "Solar",
@@ -2783,10 +2421,6 @@
       "title": "Language Preference",
       "description": "Select your preferred language for the application"
     },
-    "weather": {
-      "title": "Weather Preferences",
-      "description": "Set your preferred location for weather information"
-    },
     "map": {
       "title": "Map Preferences",
       "description": "Configure your default map location"
@@ -2799,8 +2433,7 @@
       "previous": "Previous",
       "next": "Next",
       "complete": "Complete",
-      "completing": "Completing...",
-      "skip": "Skip"
+      "completing": "Completing..."
     }
   },
   "pylovoManagement": {
@@ -2809,7 +2442,6 @@
     "searchPlaceholder": "Search by name, IP...",
     "refresh": "Refresh",
     "registerNew": "Register New Instance",
-    "loadingInstances": "Loading instances...",
     "noInstancesFound": "No compute engine instances found",
     "noInstancesDescription": "Get started by registering your first Compute Engine instance.",
     "noInstancesAvailable": "No compute engine instances are currently configured. Contact an administrator.",
@@ -2863,12 +2495,10 @@
     "notifications": {
       "created": "Grid engine instance registered successfully!",
       "updated": "Grid engine instance updated successfully!",
-      "deleted": "Grid engine instance deleted successfully!",
       "primarySet": "Primary instance updated successfully!",
       "statusChanged": "Instance status changed to {{status}}",
       "failedToCreate": "Failed to register instance",
       "failedToUpdate": "Failed to update instance",
-      "failedToDelete": "Failed to delete instance",
       "failedToPing": "Failed to ping instance"
     }
   },
@@ -2883,10 +2513,6 @@
     "favorite": "Favorite",
     "recent": "Recent",
     "noRegionsFound": "No regions found",
-    "coverageHigh": "High data coverage",
-    "coverageMedium": "Medium data coverage",
-    "coverageLow": "Low data coverage",
-    "summaryFooter": "{{countries}} countries · {{regions}} regions · {{grids}} grids",
     "3dBuildingData": "LiDAR 3D building heights available",
     "buildingDialog": {
       "title": "Building Details",

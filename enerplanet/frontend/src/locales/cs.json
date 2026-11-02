@@ -109,38 +109,17 @@
     "save": "Uložit",
     "cancel": "Zrušit",
     "delete": "Smazat",
-    "edit": "Upravit",
     "create": "Vytvořit",
     "close": "Zavřít",
     "confirm": "Potvrdit",
     "loading": "Načítání...",
-    "error": "Chyba",
-    "success": "Úspěch",
-    "warning": "Varování",
-    "info": "Informace",
     "yes": "Ano",
     "no": "Ne",
-    "ok": "OK",
     "back": "Zpět",
-    "next": "Další",
-    "submit": "Odeslat",
-    "search": "Hledat",
-    "filter": "Filtrovat",
-    "reset": "Obnovit",
     "clear": "Vymazat",
-    "clearAll": "Vymazat vše",
-    "selectAll": "Vybrat vše",
-    "noResults": "Žádné výsledky",
-    "actions": "Akce",
-    "settings": "Nastavení",
-    "logout": "Odhlásit",
-    "login": "Přihlásit",
-    "register": "Registrovat",
     "unknown": "Neznámý",
     "more": "více",
     "add": "Přidat",
-    "refresh": "Obnovit",
-    "healthCheck": "Kontrola stavu",
     "na": "N/A",
     "from": "Od",
     "to": "Do",
@@ -169,12 +148,10 @@
       "profile": "Profil",
       "documentation": "Dokumentace",
       "restartTour": "Product Tour",
-      "feedback": "Zpětná vazba",
-      "theme": "Motiv"
+      "feedback": "Zpětná vazba"
     },
     "sidebar": {
       "energySimulations": "Energetické Simulace",
-      "map": "Mapa",
       "simulationReports": "Porovnání Modelů",
       "technologies": "Technologie"
     },
@@ -250,7 +227,6 @@
     "confirmClearTitle": "Vymazat všechna oznámení?",
     "confirmClearDescription": "Opravdu chcete vymazat všechna oznámení? Tuto akci nelze vrátit zpět.",
     "confirmClearButton": "Vymazat vše",
-    "dismiss": "Zavřít",
     "types": {
       "success": "Úspěch",
       "error": "Chyba",
@@ -333,18 +309,8 @@
     "opacity": "Průhlednost",
     "layerHidden": "Vrstva skryta",
     "showLayer": "Zobrazit vrstvu",
-    "hideLayer": "Skrýt vrstvu",
-    "noModelIdProvided": "Nebylo zadáno ID modelu",
-    "failedToLoadResults": "Nepodařilo se načíst výsledky hodnocení",
-    "failedToLoadTiles": "Nepodařilo se načíst dlaždice z GeoServeru",
-    "failedToGetLayerInfo": "Nepodařilo se získat informace o vrstvě z backendu",
-    "layerConfigIncomplete": "Konfigurace vrstvy neúplná",
-    "failedToLoadLayerConfig": "Nepodařilo se načíst konfiguraci vrstvy",
     "transformer": "Transformátor",
     "building": "Budova",
-    "connectedBuilding": "připojená budova",
-    "connectedBuildings": "připojené budovy",
-    "clickForDetails": "Klikněte pro detaily",
     "tabs": {
       "overview": "Přehled",
       "energy": "Energie",
@@ -376,13 +342,6 @@
       "hydroPower": "Vodní Energie",
       "gridImport": "Import ze Sítě",
       "powerTransmission": "Přenos Energie",
-      "householdH1": "Domácnost H1",
-      "householdH2": "Domácnost H2",
-      "industryG0": "Průmysl G0",
-      "industryG1": "Průmysl G1",
-      "industryG2": "Průmysl G2",
-      "g3Demand": "Poptávka G3",
-      "gridConnection": "Připojení k Síti",
       "gridElectricity": "Nákup elektřiny ze sítě",
       "householdSupply": "Dodávka pro domácnosti",
       "nonHouseholdSupply": "Dodávka mimo domácnosti",
@@ -408,10 +367,6 @@
       "capacityUtilizationDesc": "Průměrný faktor kapacity instalovaných aktiv",
       "technologyCapacity": "Kapacita Technologie",
       "technologyCapacityDesc": "Instalovaná kapacita každé technologie v optimalizovaném energetickém systému, měřená v kW nebo kWh pro úložiště.",
-      "generation": "Výroba",
-      "generationDesc": "Solární FV, větrné turbíny a další generátory",
-      "storage": "Úložiště",
-      "storageDesc": "Bateriové systémy a další technologie úložiště",
       "costDistribution": "Rozložení Nákladů",
       "costDistributionDesc": "Rozpis celkových nákladů systému podle technologií a kategorií.",
       "capitalCosts": "Kapitálové Náklady",
@@ -448,9 +403,7 @@
       "totalDemand": "Celková Poptávka",
       "selfSufficiency": "Soběstačnost",
       "netBalance": "Čistá Bilance",
-      "energyKwh": "Energie (kWh)",
       "energy": "Energie",
-      "netKwh": "Netto (kWh)",
       "noEnergyBalanceData": "Nejsou k dispozici žádná data energetické bilance",
       "dailyLoadProfile": "Denní Profil Zatížení",
       "dailyLoadProfileDesc": "Zobrazuje vzorce spotřeby elektřiny za 24hodinové období s automatickou detekcí špičkových období.",
@@ -461,8 +414,6 @@
       "offPeakDesc": "Období nižší poptávky ideální pro nabíjení EV nebo ukládání do baterií",
       "averageLine": "Průměrná Linie",
       "averageLineDesc": "Přerušovaná čára zobrazuje průměrnou denní spotřebu energie",
-      "hourlyGenerationProfile": "Hodinový Profil Výroby",
-      "hourlyGenerationProfileDesc": "Zobrazuje hodinové vzorce výroby energie a jak se produkce mění během dne a ročních období.",
       "peakHours": "Špičkové Hodiny",
       "peakHoursDesc": "Maximální výroba typicky v poledne pro solární energii",
       "loadDuration": "Doba Zatížení",
@@ -512,11 +463,6 @@
       "criticalVoltageDesc": "Mimo limity, nutné posílení sítě",
       "example": "Příklad",
       "belowThreshold": "pod prahem 0,95",
-      "busLoadingStatus": "Stav Zatížení Přípojnice",
-      "busLoadingDesc": "Zobrazuje procento zatížení každého transformátoru/přípojnice na základě odchylky napětí od jmenovité hodnoty (1.0 p.u.).",
-      "normalOperation": "Normální provoz, dostatečná kapacita",
-      "highUtilization": "Vysoké využití, plánujte upgrady",
-      "nearCapacity": "Blízko kapacity, nutné posílení",
       "busDetails": "Detaily Přípojnice",
       "busDetailsDesc": "Elektrické charakteristiky vybrané přípojnice/transformátoru v elektrické síti.",
       "totalBuses": "Celkem Přípojnic",
@@ -540,11 +486,8 @@
       "reactivePowerDesc": "Výkon v kVAR pro magnetická pole v motorech/transformátorech",
       "noVoltageData": "Žádná data napětí",
       "noPowerData": "Žádná data výkonu",
-      "min": "Min",
-      "max": "Max",
       "avg": "Prům",
       "loading": "Zatížení",
-      "noLoadingData": "Žádná data o zatížení",
       "notInResult": "Není v tomto výsledku",
       "transmissionUtilization": "Využití přenosu",
       "overloadedConnection": "Přetížené vedení",
@@ -554,13 +497,6 @@
       "noData": "Nejsou k dispozici žádná systémová data",
       "noAnalysisData": "Nejsou k dispozici žádná data analýzy systému pro tento model",
       "noAnalysisDataDesc": "Systémová bilance, neuspokojená poptávka a data toku výkonu se zde zobrazí, až budou k dispozici.",
-      "dailySystemBalance": "Denní Systémová Bilance",
-      "systemBalance": "Systémová Bilance",
-      "systemBalanceDesc": "Zobrazuje bilanci mezi nabídkou a poptávkou energie. Kladné hodnoty (modré) značí přebytek, záporné (červené) deficit.",
-      "surplus": "Přebytek",
-      "surplusDesc": "Výroba převyšuje poptávku",
-      "deficit": "Deficit",
-      "deficitDesc": "Poptávka převyšuje výrobu",
       "balance": "Bilance",
       "balanceKw": "Bilance (kW)",
       "dailyUnmetDemand": "Denní Neuspokojená Poptávka",
@@ -570,7 +506,6 @@
       "unmetEnergyDesc": "Poptávka přesahující dostupnou nabídku",
       "energy": "Energie",
       "unmet": "Nepokryté",
-      "unmetKwh": "Neuspokojeno (kWh)",
       "powerFlowAnalysis": "Analýza Toku Výkonu",
       "powerFlow": "Tok Výkonu",
       "powerFlowDesc": "Výkon protékající přenosovými linkami a transformátory. Porovnejte vysílaný a přijímaný výkon pro identifikaci ztrát.",
@@ -585,7 +520,6 @@
       "transmissionLines": "Přenosové Linky",
       "transformers": "Transformátory",
       "lines": "Linky",
-      "powerW": "Výkon (W)",
       "selectLinePrompt": "Vyberte linku nebo transformátor",
       "selectLinePromptDesc": "pro zobrazení dat toku výkonu",
       "resourceConsumption": "Spotřeba Zdrojů podle Technologie",
@@ -607,26 +541,18 @@
       "totalCost": "Celkové Náklady",
       "noCostData": "Nejsou k dispozici žádná nákladová data",
       "installed": "Instalováno",
-      "avgUtilized": "Prům. Využito",
       "capacityFactor": "Faktor Využití",
       "capacityKw": "Kapacita (kW)",
       "installedCapacity": "Instalovaná Kapacita",
-      "utilizedCapacity": "Využitá Kapacita",
       "noCapacityData": "Nejsou k dispozici žádná data kapacity",
       "value": "Hodnota",
       "noEnergyFlowData": "Nejsou k dispozici žádná data toku energie",
-      "gridImport": "Import ze Sítě",
-      "gridExport": "Export do Sítě",
       "energySystem": "Energetický Systém",
-      "household": "Domácnost",
-      "industry": "Průmysl",
-      "transmission": "Přenos",
       "investmentCost": "Investice (CAPEX)",
       "operatingCost": "Provoz (OPEX)",
       "systemLCOE": "LCOE Systému",
       "simulationPeriod": "Období simulace",
       "simulationPeriodCost": "Náklady za období simulace",
-      "annualizedCost": "Roční náklady (odhad)",
       "perLocation": "na lokalitu",
       "locations": "Lokality",
       "capex": "Zařízení a instalace",
@@ -644,7 +570,6 @@
       "simulationPeriodNote": "Zobrazené náklady platí pro simulované období {{days}} dní ({{hours}} hodin). Pro celoroční náklady spusťte roční simulaci (8 760 hodin).",
       "simulationPeriodShort": "Období simulace {{days}} dní",
       "costBreakdownTooltip": "Zobrazené náklady pokrývají jen simulované období, ne celý rok. Náklady na zařízení jsou rozloženy na jeho životnost, provozní náklady (např. nákup elektřiny ze sítě) odpovídají skutečné spotřebě v daném období. V krátkých simulacích proto technologie s vysokými provozními náklady vypadají poměrně větší.",
-      "annualProjection": "Odhad za rok: {{value}}",
       "equipmentCostNote": "Náklady na zařízení jsou rozloženy na jeho životnost; zobrazen je jen podíl za toto období simulace.",
       "equipmentCostDesc": "Solární panely, baterie a další zařízení. Pořizovací cena je rozložena na životnost zařízení (např. 25 let u fotovoltaiky).",
       "runningCostDesc": "Elektřina nakoupená ze sítě, údržba a další průběžné výdaje závislé na spotřebě.",
@@ -666,21 +591,7 @@
       "costs": "Náklady",
       "noEnergyData": "Nejsou k dispozici žádná hodinová energetická data",
       "noSimulationLinked": "Žádná propojená simulační data",
-      "household": "Domácnost",
-      "householdLow": "Domácnost (Nízká)",
-      "householdHigh": "Domácnost (Vysoká)",
-      "commercial": "Komerční",
-      "commercialWeekday": "Komerční (Pracovní Den)",
-      "commercialEvening": "Komerční (Večer)",
-      "commercial247": "Komerční (24/7)",
-      "warehouse": "Sklad",
-      "industrial": "Průmyslový",
-      "retail": "Maloobchod",
-      "office": "Kancelář",
-      "residential": "Rezidenční",
-      "h1Demand": "Poptávka H1",
-      "powerTransmission": "Přenos Energie",
-      "sources": "Zdroje"
+      "household": "Domácnost"
     },
     "gauges": {
       "selfConsumption": "Vlastní Spotřeba",
@@ -700,7 +611,6 @@
   "auth": {
     "signIn": "Přihlásit se",
     "signUp": "Registrovat se",
-    "signOut": "Odhlásit se",
     "signingIn": "Přihlašování...",
     "email": "E-mail",
     "password": "Heslo",
@@ -731,33 +641,13 @@
     "security": "Zabezpečení",
     "confirmYourPassword": "Potvrďte své heslo",
     "passwordRequirements": {
-      "title": "Požadavky na Heslo",
-      "minChars": "Alespoň 8 znaků",
-      "uppercase": "Jedno velké písmeno",
-      "lowercase": "Jedno malé písmeno",
-      "number": "Jedna číslice",
-      "specialChar": "Jeden speciální znak",
-      "hasSpaces": "Heslo obsahuje mezery na začátku nebo na konci"
+      "minChars": "Alespoň 8 znaků"
     },
-    "organizationDetails": "Údaje o Organizaci",
-    "organization": "Organizace",
-    "enterOrganization": "Zadejte svou organizaci",
-    "position": "Pozice",
-    "enterPosition": "Zadejte svou pozici",
-    "phoneNumber": "Telefonní Číslo",
-    "enterPhoneNumber": "Zadejte své telefonní číslo",
-    "accessLevel": "Úroveň Přístupu",
-    "veryLow": "Velmi Nízká",
-    "low": "Nízká",
-    "intermediate": "Střední",
-    "manager": "Manažer",
-    "expert": "Expert",
     "forgotPasswordTitle": "Zapomenuté Heslo",
     "forgotPasswordDescription": "Zadejte svou e-mailovou adresu a pošleme vám instrukce pro reset hesla.",
     "secureResetProcess": "Bezpečný proces resetování",
     "sendResetInstructions": "Odeslat Instrukce",
     "backToLogin": "Zpět na Přihlášení",
-    "cancel": "Zrušit",
     "checkSpamFolder": "Pokud e-mail nevidíte, zkontrolujte prosím složku spamu nebo nevyžádané pošty.",
     "checkYourEmail": "Zkontrolujte svůj e-mail",
     "note": "Poznámka",
@@ -768,8 +658,6 @@
     "agreeToTerms": "Vytvořením účtu souhlasíte s našimi Podmínkami služby"
   },
   "workspace": {
-    "workspace": "Pracovní prostor",
-    "workspaces": "Pracovní prostory",
     "selectWorkspace": "Vybrat pracovní prostor",
     "defaultWorkspace": "Výchozí pracovní prostor",
     "default": "Výchozí",
@@ -799,9 +687,6 @@
     "title": "Model",
     "models": "Modely",
     "newModel": "Nový model",
-    "editModel": "Upravit model",
-    "deleteModel": "Smazat model",
-    "modelName": "Název modelu",
     "description": "Popis",
     "status": "Stav",
     "created": "Vytvořeno",
@@ -827,12 +712,7 @@
       "reported": "Nahlášeno",
       "reportedHint": "Nahlášeno týmu EnerPlanET. Po vyřešení dostanete oznámení."
     },
-    "pending": "Čeká",
     "queued": "Ve frontě",
-    "runSimulation": "Spustit simulaci",
-    "viewResults": "Zobrazit výsledky",
-    "duplicate": "Duplikovat",
-    "export": "Exportovat",
     "compare": "Porovnat",
     "dashboard": "Panel modelů",
     "manageConfigurations": "Spravujte konfigurace energetického hodnocení",
@@ -851,14 +731,11 @@
     "rename": "Přejmenovat",
     "delete": "Smazat",
     "move": "Přesunout",
-    "moveToWorkspace": "Přesunout do pracovního prostoru",
     "noModelsFound": "Žádné modely nenalezeny",
     "noModelsMatch": "Žádný model neodpovídá \"{{search}}\". Zkuste upravit vyhledávání.",
     "noModelsYet": "Zatím jste nevytvořili žádné modely energetického hodnocení. Začněte vytvořením prvního modelu!",
     "createFirstModel": "Vytvořte svůj první model",
     "selected": "vybráno",
-    "deleteSelected": "Smazat vybrané",
-    "moveSelected": "Přesunout vybrané",
     "cannotDelete": "Nelze smazat - modely jsou zakázány nebo vám nepatří",
     "cannotMove": "Nelze přesunout - modely vám nepatří",
     "sharedCannotDelete": "Sdílené modely nelze smazat. Nejprve je zkopírujte",
@@ -869,17 +746,12 @@
     "deselectAll": "Zrušit výběr",
     "actions": "Akce",
     "name": "Název modelu",
-    "owner": "Vlastník",
     "workspace": "Pracovní prostor",
-    "draft": "Koncept",
-    "published": "Publikováno",
-    "total": "Celkem",
     "queue": "Fronta",
     "ownedBy": "Vlastník",
     "parent": "Nadřazený",
     "demandFallbackTitle": "Některé budovy mají konstantní spotřebu",
     "demandFallbackWarning": "{{fallback}} z {{total}} budov nemělo hodinový profil spotřeby (chybí 3D data) a používá roční spotřebu rovnoměrně rozloženou do celého roku.",
-    "waiting": "Čekání",
     "queuedTooltip": "Váš model je ve frontě - simulační engine zpracovává jiné výpočty",
     "compareRequires2Completed": "Vyberte přesně 2 dokončené modely k porovnání",
     "bulkCopy": "Kopírovat modely",
@@ -887,8 +759,6 @@
     "bulkCopyFailed": "Některé modely se nepodařilo zkopírovat. Zkuste to znovu.",
     "bulkCopySubmit": "Vytvořit kopie",
     "cannotCalculate": "Nelze vypočítat – nejsou vybrány žádné vhodné modely",
-    "cancelled": "Zrušeno",
-    "modified": "Upraveno",
     "family": {
       "show": "Zobrazit kopie modelu {{name}}",
       "hide": "Skrýt kopie modelu {{name}}",
@@ -930,22 +800,9 @@
     "noStarredModels": "Zatím žádné označené modely. Označte model hvězdičkou vedle jeho názvu a najdete ho zde."
   },
   "polygon": {
-    "drawRegion": "Nakreslete svůj region",
-    "clickToStart": "Klikněte pro začátek",
-    "clickAnywhere": "Klikněte kamkoli na mapě pro umístění prvního bodu",
-    "addMorePoints": "Přidejte další body",
-    "continueClicking": "Pokračujte v klikání pro ohraničení oblasti",
-    "closePolygon": "Uzavřít polygon",
-    "doubleClickOrClick": "Dvojklik nebo klik na počáteční bod pro dokončení",
-    "startEnd": "Start/Konec",
-    "clickHereToClose": "Klikněte zde pro uzavření",
     "escToCancel": "pro zrušení kreslení",
-    "pointsAdded": "Přidáno {{count}}",
-    "editPolygon": "Upravit polygon",
     "moveVertex": "Tažením rohu jej přesunete",
-    "moveVertexHint": "Přetáhněte libovolný vrchol pro úpravu",
     "addVertex": "Tažením hrany přidáte roh",
-    "addVertexHint": "Klikněte na libovolnou hranu",
     "removeVertex": "Odstranit bod",
     "removeVertexHint": "kliknutím na roh jej smažete",
     "removePolygonHint": "kliknutím na polygon jej smažete",
@@ -958,7 +815,6 @@
     "rightClickCloseHint": "uzavře polygon",
     "keyRightClick": "Pravé tlačítko",
     "keySpace": "Mezerník",
-    "dismissGuide": "Zavřít průvodce",
     "groupBuildings": "Budovy",
     "disableBuildingHint": "kliknutím budovu vypnete nebo zapnete",
     "selectBuildingHint": "kliknutím budovy vyberete",
@@ -970,50 +826,17 @@
     "optional": "volitelné",
     "title": "Pracovní postup",
     "gridGeneration": "Generování sítě",
-    "gridGenerationHint": "Analýza budov a tvorba sítě",
     "addTransformer": "Přidat transformátor",
-    "addTransformerHint": "Umístěte transformátory na mapu",
-    "addTransformerInstruction": "Zapněte přepínač v panelu nástrojů, poté klikněte na mapu",
     "assignBuildings": "Přiřadit budovy",
-    "assignBuildingsHint": "Propojit budovy s transformátory",
-    "assignBuildingsInstruction": "Vyberte budovy → klikněte na cílový transformátor",
-    "powerFlow": "Spustit tok výkonu",
-    "powerFlowHint": "Analýza zatížení a využití sítě",
-    "illustrationStep": "Krok {{step}}",
-    "clickToSelect": "klikněte pro výběr",
-    "clickTransformer": "klikněte na transformátor",
-    "then": "poté",
-    "toCancel": "pro zrušení",
     "addTransformerAction": "Přidat transformátor",
     "assignBuildingsAction": "Přiřadit budovy",
-    "runPowerFlowAction": "Analýza výkonu",
-    "rerunPowerFlowAction": "Přepočítat",
-    "resolveHeatAction": "Vyřešit teplo",
-    "auto": "auto",
-    "clickAddTransformer": "Klikněte na tlačítko ve spodní liště",
-    "clickOnMapInPolygon": "Klikněte do mapy uvnitř polygonu",
-    "clickToSelectBuilding": "Kliknutím vyberete budovu"
+    "resolveHeatAction": "Vyřešit teplo"
   },
   "time": {
-    "justNow": "Právě teď",
-    "minutesAgo": "Před {{count}} minutou",
-    "minutesAgo_plural": "Před {{count}} minutami",
-    "hoursAgo": "Před {{count}} hodinou",
-    "hoursAgo_plural": "Před {{count}} hodinami",
-    "daysAgo": "Před {{count}} dnem",
-    "daysAgo_plural": "Před {{count}} dny",
-    "weeksAgo": "Před {{count}} týdnem",
-    "weeksAgo_plural": "Před {{count}} týdny"
+    "justNow": "Právě teď"
   },
   "adminDashboard": {
-    "welcome": "Vítejte zpět",
-    "subtitle": "Vaše velitelské centrum pro hodnocení rizik",
-    "navigation": "Navigace",
-    "overview": "Přehled",
-    "settings": "Nastavení",
-    "logout": "Odhlásit",
     "tabs": {
-      "overview": "Přehled",
       "allSimulationModels": "Všechny Simulační Modely",
       "simulationEngine": "Simulační Engine",
       "feedback": "Zpětná Vazba",
@@ -1048,14 +871,6 @@
       "upgradable": "Upgradovatelný",
       "basic": "Základní"
     },
-    "userProfile": {
-      "title": "Uživatelský Profil",
-      "subtitle": "Informace o vašem účtu",
-      "email": "E-mail",
-      "organization": "Organizace",
-      "position": "Pozice",
-      "phone": "Telefon"
-    },
     "accessPermissions": {
       "title": "Přístup a Oprávnění",
       "subtitle": "Možnosti systému",
@@ -1080,18 +895,8 @@
       "topographyRisk": "Riziko Topografie",
       "upgradeMessage": "Odemkněte více funkcí požádáním administrátora o upgrade."
     },
-    "quickActions": {
-      "title": "Rychlé Akce",
-      "subtitle": "Přejít na klíčové funkce",
-      "riskModels": "Modely Rizik",
-      "manageRiskModels": "Spravovat modely rizik",
-      "settings": "Nastavení",
-      "configurePreferences": "Konfigurovat preference"
-    },
     "title": "Panel správce",
-    "welcomeBack": "Vítejte zpět, {{name}}!",
     "managePlatform": "Spravujte svou platformu pro simulaci energie",
-    "administrator": "Administrátor",
     "loadingContent": "Načítání obsahu..."
   },
   "userManagement": {
@@ -1101,15 +906,10 @@
     "refresh": "Obnovit",
     "addNewUser": "Přidat nového uživatele",
     "add": "Přidat",
-    "editUser": "Upravit uživatele",
-    "createUser": "Vytvořit uživatele",
-    "updateUser": "Aktualizovat uživatele",
     "loadingUsers": "Načítání uživatelů...",
     "noUsersFound": "Nebyli nalezeni žádní uživatelé",
     "noUsersInGroup": "Ve vaší skupině nebyli nalezeni žádní uživatelé. Kontaktujte administrátora pro přiřazení uživatelů do vaší skupiny.",
     "noUsersMatch": "Žádný uživatel neodpovídá \"{{search}}\"",
-    "noUsersMatchSearch": "Žádný uživatel neodpovídá \"{{search}}\"",
-    "addFirstUser": "Přidejte svého prvního uživatele a začněte.",
     "dialog": {
       "editTitle": "Upravit uživatele",
       "addTitle": "Přidat nového uživatele",
@@ -1118,12 +918,9 @@
     },
     "table": {
       "user": "Uživatel",
-      "organization": "Organizace",
-      "position": "Pozice",
       "accessLevel": "Úroveň přístupu",
       "group": "Skupina",
       "emailVerified": "E-mail ověřen",
-      "phone": "Telefon",
       "actions": "Akce"
     },
     "emailStatus": {
@@ -1191,17 +988,13 @@
       "groupEnabled": "Skupina \"{{name}}\" aktivována",
       "groupDeleted": "Skupina \"{{name}}\" smazána",
       "groupRenamed": "Skupina úspěšně přejmenována na \"{{name}}\"",
-      "userMovedToGroup": "Uživatel přesunut do nové skupiny a odhlášen. Musí se znovu přihlásit pro přístup k novému pracovnímu prostoru.",
       "failedToCreate": "Nepodařilo se vytvořit uživatele",
       "failedToUpdate": "Nepodařilo se aktualizovat uživatele",
       "failedToDelete": "Nepodařilo se smazat uživatele",
       "failedToDisable": "Nepodařilo se deaktivovat uživatele",
       "failedToEnable": "Nepodařilo se aktivovat uživatele",
-      "failedToFetch": "Nepodařilo se načíst uživatele",
-      "failedToUpdateGroup": "Nepodařilo se aktualizovat skupinu uživatele",
       "failedToRenameGroup": "Nepodařilo se přejmenovat skupinu",
       "failedToCopyEmail": "Nepodařilo se zkopírovat e-mail",
-      "pleaseLogIn": "Přihlaste se pro zobrazení uživatelů",
       "passwordMismatch": "Heslo a potvrzení se musí shodovat",
       "bulkDeletePartial": "{{succeeded}} z {{total}} uživatelů bylo odstraněno. {{failed}} selhalo.",
       "bulkDeleted": "{{count}} uživatelů bylo úspěšně odstraněno",
@@ -1253,26 +1046,13 @@
   },
   "profile": {
     "loadingProfile": "Načítání vašeho profilu...",
-    "accessLevel": "Úroveň přístupu",
-    "notSpecified": "Nespecifikováno",
     "readOnly": "pouze pro čtení",
     "fields": {
       "fullName": "Celé jméno",
-      "email": "E-mailová adresa",
-      "organization": "Organizace",
-      "position": "Pozice",
-      "phone": "Telefon"
+      "email": "E-mailová adresa"
     },
     "placeholders": {
-      "fullName": "Zadejte své celé jméno",
-      "organization": "Vaše společnost nebo organizace",
-      "position": "Vaše pracovní pozice",
-      "phone": "+420 123 456 789"
-    },
-    "accessLevels": {
-      "basicDescription": "Standardní přístup k základním funkcím",
-      "intermediateDescription": "Rozšířený přístup s pokročilými funkcemi",
-      "expertDescription": "Plný přístup ke všem funkcím"
+      "fullName": "Zadejte své celé jméno"
     },
     "notifications": {
       "updated": "Profil úspěšně aktualizován!",
@@ -1286,7 +1066,6 @@
     "searchPlaceholder": "Hledat podle názvu, IP...",
     "refresh": "Obnovit",
     "registerNew": "Registrovat nový webservice",
-    "loadingWebservices": "Načítání webservices...",
     "noWebservicesFound": "Nebyly nalezeny žádné webservices",
     "noWebservicesDescription": "Začněte registrací první instance webservice.",
     "summary": {
@@ -1317,8 +1096,6 @@
       "jobs": "Úlohy",
       "performance": "Výkon",
       "user": "Uživatel",
-      "ip": "IP adresa",
-      "port": "Port",
       "lastCheck": "Poslední kontrola",
       "actions": "Akce",
       "never": "Nikdy"
@@ -1349,11 +1126,9 @@
     "notifications": {
       "created": "Webservice úspěšně registrován!",
       "updated": "Webservice úspěšně aktualizován!",
-      "deleted": "Webservice úspěšně smazán!",
       "statusChanged": "Stav webservice změněn na {{status}}",
       "failedToCreate": "Nepodařilo se registrovat webservice",
       "failedToUpdate": "Nepodařilo se aktualizovat webservice",
-      "failedToDelete": "Nepodařilo se smazat webservice",
       "failedToPing": "Nepodařilo se pingnout webservice"
     },
     "noWebservicesAvailable": "Žádné simulační motory nejsou aktuálně nakonfigurovány. Kontaktujte správce.",
@@ -1407,7 +1182,6 @@
     },
     "viewDialog": {
       "title": "Detaily Zpětné Vazby",
-      "subtitle": "Zobrazit kompletní informace o zpětné vazbě",
       "message": "Zpráva:",
       "submitted": "Odesláno",
       "adminResponse": "Odpověď Administrátora:",
@@ -1460,12 +1234,8 @@
     "duration": "Trvání",
     "days": "dní",
     "resolution": "Rozlišení (minuty)",
-    "resolutionPlaceholder": "Vybrat rozlišení",
     "resolutionHint": "Časový interval pro rozlišení výpočtu",
-    "minutes": "minut",
     "technologies": "Technologie",
-    "parameters": "Parametry",
-    "pypsaSimulation": "Simulace PyPSA",
     "prepare3d": {
       "pending": "Čeká se na přípravu 3D dat budov pro tuto oblast...",
       "running": "Připravují se 3D data budov pro tuto oblast...",
@@ -1478,8 +1248,6 @@
     },
     "actions": {
       "saveAndExit": "Uložit & Odejít",
-      "create": "Vytvořit energetickou simulaci",
-      "update": "Aktualizovat energetickou simulaci",
       "creating": "Vytváření simulace...",
       "updating": "Aktualizace simulace...",
       "cancel": "Zrušit",
@@ -1489,7 +1257,6 @@
     },
     "mapHeader": {
       "myBuildings": "Moje budovy",
-      "clearAll": "Odstranit všechny polygony",
       "toggleMyBuildings": "Přepnout moje budovy",
       "disableSelected": "Vypnout vybrané budovy",
       "importArea": "Importovat oblast",
@@ -1509,13 +1276,7 @@
       "exportAreaHint": "Stáhne nakreslenou oblast jako soubor GeoJSON (WGS 84, EPSG:4326). Lze ho importovat do jiného modelu nebo otevřít v QGIS."
     },
     "powerFlow": {
-      "run": "Spustit analýzu toku výkonu",
-      "rerun": "Znovu spustit tok výkonu",
-      "running": "Analyzování...",
-      "calculating": "Výpočet analýzy toku výkonu...",
-      "success": "Analýza toku výkonu dokončena. Barvy čar nyní ukazují využití zátěže.",
-      "noData": "Žádná síťová data nejsou k dispozici pro analýzu toku výkonu.",
-      "error": "Analýza toku výkonu selhala. Zkontrolujte konzoli pro podrobnosti."
+      "calculating": "Výpočet analýzy toku výkonu..."
     },
     "transformer": {
       "add": "Přidat transformátor",
@@ -1528,11 +1289,7 @@
       "donePlacing": "Hotovo",
       "clickToPlace": "Klikněte na mapu pro umístění transformátoru",
       "clickToPlaceCursor": "Kliknutím umístěte",
-      "clickToAdd": "Klikněte pro přidání transformátoru na mapu",
-      "clickToCancel": "Klikněte pro zrušení přidání transformátoru",
       "clickToMove": "Klikněte pro přesun",
-      "movingSuccess": "Transformátor úspěšně přesunut",
-      "movingFailed": "Přesun transformátoru selhal",
       "userPlaced": "Umístěno uživatelem",
       "dialogDescription": "Zobrazte a upravte nastavení transformátoru. Změny ovlivní připojené budovy.",
       "gridId": "ID sítě",
@@ -1548,10 +1305,7 @@
       "selectKva": "Vyberte kVA"
     },
     "building": {
-      "assignSuccess": "Budova přiřazena k transformátoru",
       "assignFailed": "Přiřazení budovy selhalo",
-      "assignToTransformer": "Přiřadit budovy",
-      "assignDescription": "Vyberte budovy a přiřaďte je k transformátoru",
       "selectBuildings": "Klikněte na budovy pro jejich výběr",
       "selectTransformer": "Nyní klikněte na transformátor pro přiřazení",
       "selectedCount": "{{count}} budova/y vybrána/y",
@@ -1560,7 +1314,6 @@
       "assignPartialSuccess": "{{success}} z {{total}} budov přiřazeno",
       "cancelAssign": "Zrušit",
       "nextStep": "Další",
-      "finish": "Dokončit",
       "back": "Zpět"
     },
     "mapOverlay": {
@@ -1626,7 +1379,6 @@
       "continueEditing": "Pokračovat v úpravách",
       "discard": "Zahodit změny"
     },
-    "resolutionComingSoon": "30minutové rozlišení bude k dispozici v budoucí verzi",
     "runMode": {
       "label": "Režim výpočtu",
       "plan": "Optimalizace",
@@ -1644,8 +1396,6 @@
     },
     "siteMode": {
       "label": "Vlastní síť",
-      "hint": "Umístěte vlastní transformátory a sestavte z nich síť pro tuto oblast místo předem vytvořené sítě. Pouze budovy s 3D daty, nejvýše 150.",
-      "switchHint": "Přepnutí znovu vygeneruje síť pro nakreslenou oblast.",
       "leaveTitle": "Opustit vlastní síť?",
       "leaveDescription": "Síť pro nakreslenou oblast se znovu vytvoří z předem vypočtené sítě. Umístěné transformátory budou ztraceny.",
       "leaveConfirm": "Přepnout"
@@ -1655,7 +1405,6 @@
       "description": "Modely s více než {{limit}} budovami se počítají výrazně déle: každá budova prochází BuEM a Calliope řeší hodinovou spotřebu každé budovy. Celý rok může trvat desítky minut. Model přesto můžete uložit a spustit."
     },
     "sections": {
-      "grid": "Síť",
       "model": "Model",
       "energySystem": "Energetický systém"
     },
@@ -1716,27 +1465,6 @@
     "periodScenarioHint": "Scénářový rok se skládá měsíc po měsíci z historického počasí, a proto nemá vlastní kalendářní rok. Na měsících přesto záleží: určují roční období, které simulace pokrývá, a tím potřebu tepla, solární výnos a dobu výpočtu. Data se ukládají v pevném referenčním roce.",
     "periodCheckYear": "S historickým počasím je období nastaveno na rok {{year}}, poslední rok archivu. Ponechte jej, nebo zvolte jiný rok.",
     "periodKeepYear": "Ponechat {{year}}"
-  },
-  "mapLayers": {
-    "title": "Mapové vrstvy",
-    "description": "Nakonfigurovat vzhled mapy a datové vrstvy",
-    "baseLayers": {
-      "title": "Základní vrstvy",
-      "description": "Vyberte styl podkladové mapy",
-      "osmStandard": "Standardní vrstva OpenStreetMap",
-      "osmHumanitarian": "Humanitární styl OpenStreetMap",
-      "cartoPositron": "Světlá základní mapa od CartoDB",
-      "cartoVoyager": "Podrobná základní mapa od CartoDB",
-      "openTopoMap": "Topografická stylová mapa",
-      "maplibreDark": "Tmavá vektorová podkladová mapa",
-      "maplibreVoyager": "Podrobná vektorová podkladová mapa (Voyager)",
-      "cartoDark": "Tmavá rastrová podkladová mapa od CartoDB",
-      "maplibre3d": "3D budovy na satelitních snímcích"
-    },
-    "dataLayers": {
-      "title": "Datové vrstvy",
-      "energySimulation": "Konečná vrstva energetické simulace"
-    }
   },
   "tour": {
     "product": {
@@ -1889,13 +1617,9 @@
       "loginRequired": "Pro odeslání zpětné vazby se prosím přihlaste",
       "submitFailed": "Odeslání zpětné vazby se nezdařilo. Zkuste to prosím později.",
       "alreadyReported": "Tento model již má otevřené hlášení. Po vyřešení dostanete oznámení.",
-      "invalidImageType": "Vyberte prosím platný obrazový soubor (PNG, JPG, GIF)",
-      "imageTooLarge": "Velikost obrázku musí být menší než 15MB"
+      "invalidImageType": "Vyberte prosím platný obrazový soubor (PNG, JPG, GIF)"
     },
     "myFeedback": {
-      "title": "Moje zpětná vazba",
-      "subtitle": "Sledujte stav vašich odeslaných zpětných vazeb",
-      "empty": "Zatím jste neodeslali žádnou zpětnou vazbu",
       "adminResponse": "Odpověď administrátora",
       "submittedOn": "Odesláno dne",
       "autoDeleteNotice": "Tato položka bude automaticky odstraněna za {days} dní",
@@ -1974,7 +1698,6 @@
       "keyRequired": "Klíč je povinný",
       "keyPlaceholder": "např., solar_supply",
       "displayName": "Zobrazovaný Název",
-      "displayNameRequired": "Zobrazovaný název je povinný",
       "displayNamePlaceholder": "např., Dodávka Solární Energie",
       "description": "Popis",
       "descriptionPlaceholder": "Stručný popis technologie...",
@@ -2029,8 +1752,6 @@
       "saveChanges": "Uložit Změny"
     },
     "confirm": {
-      "deleteTitle": "Smazat Technologii",
-      "deleteMessage": "Opravdu chcete smazat \"{{name}}\"? Tuto akci nelze vrátit zpět.",
       "deleteParamTitle": "Smazat Parametr",
       "deleteParamMessage": "Opravdu chcete smazat parametr \"{{name}}\"?"
     },
@@ -2045,7 +1766,6 @@
       "reseeded": "Systémové technologie úspěšně znovu načteny"
     },
     "error": {
-      "loadFailed": "Nepodařilo se načíst technologie",
       "addFailed": "Nepodařilo se přidat technologii",
       "copyFailed": "Nepodařilo se zkopírovat technologii",
       "deleteFailed": "Nepodařilo se smazat technologii",
@@ -2097,18 +1817,13 @@
       "electricity": "Elektřina",
       "heat": "Teplo"
     },
-    "heatSourceHint": "Tepelné technologie pocházejí z OpenTech-DB a optimalizuje je Calliope.",
     "noHeatTechnologies": "Nejsou k dispozici žádné tepelné technologie",
     "searchPlaceholder": "Hledat technologie…",
     "noSearchResults": "Hledání neodpovídá žádná technologie",
-    "otdbElectricityHint": "Doplňky z OpenTech-DB: jejich výkon optimalizuje Calliope.",
     "categories": {
       "supply": "Výroba",
       "storage": "Úložiště",
-      "other": "Ostatní",
-      "conversion": "Přeměna",
-      "networks": "Sítě",
-      "otdbAdditions": "Doplňky z OpenTech-DB"
+      "conversion": "Přeměna"
     },
     "heatBootstrap": {
       "title": "Tepelné technologie",
@@ -2124,7 +1839,6 @@
     "removeAll": "Odebrat všechny technologie",
     "removeAllConfirmTitle": "Odebrat všechny technologie?",
     "removeAllConfirmDescription": "Odebere každou technologii a tepelné propojení z {{count}} budov tohoto modelu, včetně automaticky přiřazených. Uložte model, aby se změna zachovala.",
-    "paramCount": "Parametry: {{count}}",
     "paramDialog": {
       "description": "Nastavte parametry technologie pro tuto budovu",
       "turbineSummary": "{{power}} kW · rotor {{diameter}} m",
@@ -2164,45 +1878,12 @@
     "stats": {
       "total": "Celkem",
       "totalArea": "Celková Plocha",
-      "totalDemand": "Celková Poptávka",
-      "private": "Soukromé"
+      "totalDemand": "Celková Poptávka"
     },
     "empty": {
       "title": "Nebyly nalezeny žádné polohy",
       "description": "Vytvořte svou první vlastní polohu pro začátek"
     }
-  },
-  "weather": {
-    "temperature": "Tep.",
-    "windSpeed": "Vítr",
-    "humidity": "Vlhk.",
-    "uvIndex": "UV",
-    "clickToRefresh": "Klikněte pro obnovení",
-    "clickToRetry": "Klikněte pro opakování",
-    "retry": "Opakovat",
-    "loadWeather": "Načíst počasí",
-    "clickToLoad": "Klikněte pro načtení počasí pro {{location}}",
-    "current": "Aktuální",
-    "searchLocation": "Vyhledat polohu...",
-    "yourLocations": "Vaše Polohy",
-    "syncing": "Synchronizace...",
-    "temperatureTooltip": "Aktuální teplota v Celsius a Fahrenheit",
-    "humidityTooltip": "Relativní vlhkost v procentech",
-    "uvLevels": {
-      "low": "Nízký",
-      "moderate": "Střední",
-      "high": "Vysoký",
-      "veryHigh": "Velmi Vysoký",
-      "extreme": "Extrémní"
-    },
-    "uvDescriptions": {
-      "low": "Ochrana není potřeba",
-      "moderate": "Používejte opalovací krém",
-      "high": "Ochrana nezbytná",
-      "veryHigh": "Potřeba extra ochrana",
-      "extreme": "Vyhněte se slunečnímu záření"
-    },
-    "dataBy": "Meteorologická data od"
   },
   "settings": {
     "title": "Nastavení",
@@ -2210,16 +1891,11 @@
     "tabs": {
       "profile": "Profil",
       "general": "Obecné",
-      "notifications": "Oznámení",
-      "advanced": "Pokročilé"
+      "notifications": "Oznámení"
     },
     "language": {
       "title": "Jazyk",
       "subtitle": "Jazyk rozhraní"
-    },
-    "weatherLocation": {
-      "title": "Poloha Počasí",
-      "subtitle": "Výchozí počasí"
     },
     "mapLocation": {
       "title": "Poloha Mapy",
@@ -2266,29 +1942,6 @@
       "sent": "Oznámení odesláno!",
       "failedToSend": "Odeslání selhalo"
     },
-    "pylovo": {
-      "title": "Pipeline Pylovo",
-      "subtitle": "Generování dat a sítě",
-      "dataPipeline": "Datový Pipeline",
-      "dataPipelineDesc": "Stáhnout a zpracovat OSM data",
-      "databaseConstructor": "Konstruktor Databáze",
-      "databaseConstructorDesc": "Vytvořit tabulky databáze compute engine",
-      "gridGeneration": "Generování Sítě",
-      "gridGenerationDesc": "Vygenerovat syntetickou elektrickou síť",
-      "fullPipeline": "Úplný Pipeline",
-      "fullPipelineDesc": "Spustit všechny kroky postupně",
-      "selectCountry": "Vybrat zemi",
-      "selectState": "Vybrat kraj",
-      "run": "Spustit",
-      "running": "Běží",
-      "viewLogs": "Zobrazit logy",
-      "hideLogs": "Skrýt logy",
-      "pending": "Čekající",
-      "completed": "Dokončeno",
-      "failed": "Selhalo",
-      "recentJobs": "Nedávné Úlohy",
-      "noRecentJobs": "Žádné nedávné úlohy"
-    },
     "polygonLimits": {
       "title": "Limity Polygonů",
       "subtitle": "Výběr budov",
@@ -2314,8 +1967,6 @@
     "subtitle": "Porovnejte výsledky více simulačních běhů",
     "baseline": "Základní linie",
     "comparison": "Porovnání",
-    "workspace": "Pracovní prostor",
-    "model": "Model",
     "selectBaselineModel": "Vyberte základní model",
     "selectComparisonModel": "Vyberte model pro porovnání",
     "noCompletedModels": "Nebyly nalezeny žádné dokončené modely",
@@ -2349,26 +2000,15 @@
       "baseline": "Základní"
     },
     "charts": {
-      "generationByTechnology": "Výroba podle technologie",
       "sideBySideComparison": "Srovnání vedle sebe (kWh)",
       "costDifferenceByCategory": "Rozdíl nákladů podle kategorie",
       "comparisonVsBaseline": "Porovnání vs Základní (EUR)",
       "keyPerformanceIndicators": "Klíčové ukazatele výkonu",
       "selfSufficiencyBaseline": "Soběstačnost\n(Základní)",
       "selfSufficiencyComparison": "Soběstačnost\n(Porovnání)",
-      "avgLcoe": "Prům. LCOE",
-      "installedCapacityComparison": "Porovnání instalovaného výkonu",
-      "technologyCapacity": "Kapacita technologie (kW)",
-      "overallPerformance": "Celkový výkon",
-      "multiDimensionalComparison": "Vícedimenzionální porovnání",
       "totalCostBreakdown": "Rozklad celkových nákladů",
-      "stackedByTechnology": "Skládané podle technologie (EUR)",
       "total": "Celkem",
-      "difference": "Rozdíl",
-      "renewableProduction": "Obnovitelná\nvýroba",
-      "gridIndependence": "Nezávislost\nna síti",
-      "costEfficiency": "Nákladová\nefektivita",
-      "demandCoverage": "Pokrytí\npoptávky"
+      "difference": "Rozdíl"
     },
     "technologies": {
       "solar": "Solární",
@@ -2451,9 +2091,6 @@
       "fields": {
         "fullName": "Celé Jméno",
         "email": "E-mailová Adresa",
-        "organization": "Organizace",
-        "position": "Pozice",
-        "phone": "Telefonní Číslo",
         "accessLevel": "Úroveň Přístupu",
         "emailVerified": "E-mail Ověřen",
         "password": "Heslo",
@@ -2463,8 +2100,6 @@
       "placeholders": {
         "fullName": "Zadejte celé jméno",
         "email": "Zadejte e-mailovou adresu",
-        "organization": "Zadejte název organizace",
-        "position": "Zadejte pracovní pozici",
         "password": "Zadejte heslo",
         "confirmPassword": "Potvrďte heslo",
         "modelLimit": "Ponechte prázdné pro výchozí hodnotu"
@@ -2480,7 +2115,6 @@
         "expert": "Expert (Plný Přístup)"
       },
       "validation": {
-        "phoneInvalid": "Telefonní číslo může obsahovat pouze číslice, mezery, pomlčky, znaménka plus a závorky",
         "passwordLength": "Heslo musí mít alespoň 8 znaků",
         "nameRequired": "Jméno je povinné",
         "emailRequired": "E-mail je povinný",
@@ -2811,10 +2445,6 @@
       "title": "Jazyková preference",
       "description": "Vyberte svůj preferovaný jazyk pro aplikaci"
     },
-    "weather": {
-      "title": "Preference počasí",
-      "description": "Nastavte preferované umístění pro informace o počasí"
-    },
     "map": {
       "title": "Preference mapy",
       "description": "Nakonfigurujte výchozí umístění mapy"
@@ -2827,15 +2457,8 @@
       "previous": "Předchozí",
       "next": "Další",
       "complete": "Dokončit",
-      "completing": "Dokončování...",
-      "skip": "Přeskočit"
+      "completing": "Dokončování..."
     }
-  },
-  "newsFeed": {
-    "title": "Zprávy",
-    "readMore": "Číst více",
-    "noNews": "Žádné zprávy k dispozici",
-    "loading": "Načítání zpráv..."
   },
   "pylovoManagement": {
     "title": "Správa Compute Engine",
@@ -2843,7 +2466,6 @@
     "searchPlaceholder": "Hledat podle názvu, IP...",
     "refresh": "Obnovit",
     "registerNew": "Registrovat novou instanci",
-    "loadingInstances": "Načítání instancí...",
     "noInstancesFound": "Nebyly nalezeny žádné instance compute engine",
     "noInstancesDescription": "Začněte registrací své první instance Compute Engine.",
     "noInstancesAvailable": "V současné době nejsou nakonfigurovány žádné instance compute engine. Kontaktujte administrátora.",
@@ -2897,12 +2519,10 @@
     "notifications": {
       "created": "Instance compute engine úspěšně zaregistrována!",
       "updated": "Instance compute engine úspěšně aktualizována!",
-      "deleted": "Instance compute engine úspěšně smazána!",
       "primarySet": "Primární instance úspěšně aktualizována!",
       "statusChanged": "Stav instance změněn na {{status}}",
       "failedToCreate": "Nepodařilo se zaregistrovat instanci",
       "failedToUpdate": "Nepodařilo se aktualizovat instanci",
-      "failedToDelete": "Nepodařilo se smazat instanci",
       "failedToPing": "Nepodařilo se pingnout instanci"
     }
   },
@@ -2917,10 +2537,6 @@
     "favorite": "Oblíbené",
     "recent": "Nedávné",
     "noRegionsFound": "Žádné regiony nenalezeny",
-    "coverageHigh": "Vysoké pokrytí dat",
-    "coverageMedium": "Střední pokrytí dat",
-    "coverageLow": "Nízké pokrytí dat",
-    "summaryFooter": "{{countries}} zemí · {{regions}} regionů · {{grids}} mřížek",
     "3dBuildingData": "K dispozici jsou výšky budov z 3D LiDARu",
     "buildingDialog": {
       "title": "Podrobnosti o budově",
