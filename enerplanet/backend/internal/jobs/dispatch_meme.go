@@ -45,10 +45,10 @@ func MemeTargetFor(frameworks string) string {
 }
 
 // memePollBudget is how long a MEME dispatch may stay alive waiting for the
-// job. It matches TentaCron's own meme target poll timeout (30m), NOT the
-// backend's generic 60s opTimeout: a MEME solve takes minutes, and a too-short
-// deadline would error, trigger a asynq retry, and enqueue a duplicate.
-const memePollBudget = 30 * time.Minute
+// job. It exceeds TentaCron's meme target poll timeout (40m), so TentaCron
+// reports a timeout before this side gives up, and stays below the asynq task
+// timeout (60m, model_service_calculation.go).
+const memePollBudget = 45 * time.Minute
 
 // memeIdempotencyKey is the Idempotency-Key sent with a fresh MEME submit so a
 // resubmit (e.g. a retry racing the persist) returns the stored TentaCron job

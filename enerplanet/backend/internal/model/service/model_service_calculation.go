@@ -157,7 +157,7 @@ func (s *ModelService) StartCalculation(ctx context.Context, userID string, acce
 //     as a user re-solve and re-submits — i.e. an automatic re-solve, which is
 //     exactly what the "parse once, no autoheal" rule forbids. A real re-run is
 //     the user pressing Run again.
-//   - Timeout must exceed the handler's own 30m poll budget (memePollBudget) so
+//   - Timeout must exceed the handler's own 45m poll budget (memePollBudget) so
 //     asynq does not kill the task mid-poll.
 func (s *ModelService) StartMemeCalculation(ctx context.Context, userID string, accessLevel string, modelIDParam string, frameworks string, asynqClient *asynq.Client) (*models.Model, error) {
 	log := platformlogger.ForComponent("model")
