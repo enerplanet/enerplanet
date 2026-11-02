@@ -9,6 +9,7 @@ import (
 
 	"platform.local/common/pkg/httputil"
 	"platform.local/common/pkg/models"
+	"platform.local/platform/logger"
 )
 
 // FamilyOption is a family a model may link to, named by its head.
@@ -31,7 +32,8 @@ func (h *ModelHandler) ListFamilyOptions(c *gin.Context) {
 	}
 	options, err := familyOptions(h.store.DB(), model)
 	if err != nil {
-		httputil.InternalError(c, err.Error())
+		logger.ForComponent("model").Errorf("%v", err)
+		httputil.InternalError(c, reasonOptionsFailed)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"families": options})
@@ -53,9 +55,12 @@ func (h *ModelHandler) LinkModelFamily(c *gin.Context) {
 	if !bindJSONOrBadRequest(c, &req) {
 		return
 	}
-	status, err := checkFamilyLink(h.store.DB(), model, req.FamilyID)
+	status, reason, err := checkFamilyLink(h.store.DB(), model, req.FamilyID)
 	if err != nil {
-		httputil.ErrorResponse(c, status, err.Error())
+		logger.ForComponent("model").Errorf("%v", err)
+	}
+	if reason != "" {
+		httputil.ErrorResponse(c, status, reason)
 		return
 	}
 	h.setModelFamily(c, id, model, req.FamilyID)
@@ -77,7 +82,8 @@ func (h *ModelHandler) UnlinkModelFamily(c *gin.Context) {
 
 func (h *ModelHandler) setModelFamily(c *gin.Context, id string, model *models.Model, familyID uint) {
 	if err := h.store.Update(model, map[string]any{"group_id": familyID}); err != nil {
-		httputil.InternalError(c, "Failed to set the model's family")
+		logger.ForComponent("model").Errorf("set the family of model %d to %d: %v", model.ID, familyID, err)
+		httputil.InternalError(c, "the change could not be saved")
 		return
 	}
 	model.GroupID = &familyID
@@ -108,27 +114,35 @@ func familyOptions(db *gorm.DB, model *models.Model) ([]FamilyOption, error) {
 	return options, nil
 }
 
+// The frontend shows these after the model's name, so they never repeat it.
+const reasonOptionsFailed = "the models it can be linked to could not be looked up"
+
 // checkFamilyLink refuses a model that heads other models, since they would
 // stay behind as a family without it, and a family outside its original's line.
-func checkFamilyLink(db *gorm.DB, model *models.Model, familyID uint) (int, error) {
+// reason is what the user sees when refused; err carries a database failure for the log.
+func checkFamilyLink(db *gorm.DB, model *models.Model, familyID uint) (status int, reason string, err error) {
 	var heads int64
 	if err := db.Model(&models.Model{}).
 		Where(familyIDExpr+" = ? AND id <> ?", model.ID, model.ID).
 		Count(&heads).Error; err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("count the family of model %d: %w", model.ID, err)
+		return http.StatusInternalServerError, "its copies could not be checked", fmt.Errorf("count the copies of model %d: %w", model.ID, err)
 	}
 	if heads > 0 {
-		return http.StatusConflict, fmt.Errorf("model %d heads a family of %d other models", model.ID, heads)
+		copies := "copies"
+		if heads == 1 {
+			copies = "copy"
+		}
+		return http.StatusConflict, fmt.Sprintf("it already has %d %s, so it can't be linked to another model", heads, copies), nil
 	}
 
 	options, err := familyOptions(db, model)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return http.StatusInternalServerError, reasonOptionsFailed, err
 	}
 	for _, option := range options {
 		if option.ID == familyID {
-			return http.StatusOK, nil
+			return http.StatusOK, "", nil
 		}
 	}
-	return http.StatusNotFound, fmt.Errorf("family %d does not share the original of model %d in its workspace", familyID, model.ID)
+	return http.StatusNotFound, "it can only be linked to models copied from the same original", nil
 }
