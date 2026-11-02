@@ -205,10 +205,14 @@ networks:
     name: $NET_HEAT
 EOF
 
+  # TentaCron calls meme:8080; meme's own compose declares no such alias.
   cat > "$OVR_DIR/meme.yml" <<EOF
 services:
   api:
     ports: !reset []
+    networks:
+      tentacron-net:
+        aliases: [meme]
 networks:
   tentacron-net:
     name: $NET_HEAT
