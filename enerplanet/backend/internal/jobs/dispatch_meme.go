@@ -186,6 +186,9 @@ func HandleDispatchMeme(
 			return modelstore.ServiceFailed(modelstore.ServicePV, err)
 		}
 		if calc.Mode == "operate" {
+			if err := sizeHeatTechs(calc.Topology); err != nil {
+				return fmt.Errorf("model %d: %w", p.ModelID, err)
+			}
 			if err := checkOperateSizes(calc.Topology); err != nil {
 				return fmt.Errorf("model %d: %w", p.ModelID, err)
 			}
