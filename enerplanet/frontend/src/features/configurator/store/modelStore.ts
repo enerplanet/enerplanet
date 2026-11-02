@@ -3,7 +3,6 @@ import { DEFAULT_WEATHER, type WeatherSettings } from "@/features/configurator/h
 import type { PylovoGridData, AdvancedParametersState } from "@/features/configurator/types/area-select";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import type { CustomLocation } from "@/features/locations/services/customLocationService";
 
 // ──────────────────────────────────────────────
 // Types
@@ -109,11 +108,6 @@ export interface ModelStore {
   resetAdvancedParams: () => void;
 
   // ── Building filters ──
-  includePrivateBuildings: boolean;
-  setIncludePrivateBuildings: (v: boolean) => void;
-  excludedBuildingIds: Set<number>;
-  toggleBuildingExclusion: (id: number) => void;
-  clearExcludedBuildings: () => void;
   /** osm_ids picked with Ctrl+click, for acting on several buildings at once. */
   selectedBuildingIds: Set<string>;
   toggleBuildingSelection: (osmId: string) => void;
@@ -155,12 +149,6 @@ export interface ModelStore {
   setIsAddingTechToAll: (v: boolean) => void;
   appliedTechKeys: string[];
   setAppliedTechKeys: (v: string[] | ((prev: string[]) => string[])) => void;
-
-  // ── Custom locations ──
-  customLocations: CustomLocation[];
-  setCustomLocations: (v: CustomLocation[]) => void;
-  customLocationsInPolygon: CustomLocation[];
-  setCustomLocationsInPolygon: (v: CustomLocation[]) => void;
 
   // ── Region / boundary ──
   regionBoundary: { name: string; boundary: GeoJSON.Feature } | null;
@@ -241,8 +229,6 @@ const getInitialState = () => ({
   showAreaSelectTour: false,
   showAdvancedParams: false,
   advancedParams: getDefaultAdvancedParameters(),
-  includePrivateBuildings: true,
-  excludedBuildingIds: new Set<number>(),
   selectedBuildingIds: new Set<string>(),
   transformerDialogOpen: false,
   selectedTransformer: null,
@@ -260,8 +246,6 @@ const getInitialState = () => ({
   selectedBuildingForTech: null,
   isAddingTechToAll: false,
   appliedTechKeys: [] as string[],
-  customLocations: [],
-  customLocationsInPolygon: [],
   regionBoundary: null as { name: string; boundary: GeoJSON.Feature } | null,
   availableRegions: [],
   showBoundary: true,
@@ -354,17 +338,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   resetAdvancedParams: () => set({ advancedParams: getDefaultAdvancedParameters() }),
 
   // ── Building filters ──
-  includePrivateBuildings: true,
-  setIncludePrivateBuildings: (v) => set({ includePrivateBuildings: v }),
-  excludedBuildingIds: new Set(),
-  toggleBuildingExclusion: (id) =>
-    set((s) => {
-      const next = new Set(s.excludedBuildingIds);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return { excludedBuildingIds: next };
-    }),
-  clearExcludedBuildings: () => set({ excludedBuildingIds: new Set() }),
   selectedBuildingIds: new Set(),
   toggleBuildingSelection: (osmId) =>
     set((s) => {
@@ -421,12 +394,6 @@ export const useModelStore = create<ModelStore>((set) => ({
     set((s) => ({
       appliedTechKeys: typeof v === "function" ? v(s.appliedTechKeys) : v,
     })),
-
-  // ── Custom locations ──
-  customLocations: [],
-  setCustomLocations: (v) => set({ customLocations: v }),
-  customLocationsInPolygon: [],
-  setCustomLocationsInPolygon: (v) => set({ customLocationsInPolygon: v }),
 
   // ── Region / boundary ──
   regionBoundary: null,

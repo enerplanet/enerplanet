@@ -225,10 +225,7 @@
     "current": "Actuel",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Voir sur la Carte",
-      "editLocation": "Modifier l'Emplacement",
       "editName": "Modifier le nom",
-      "duplicate": "Dupliquer",
       "view": "Voir",
       "share": "Partager",
       "moveToWorkspace": "Déplacer vers l'Espace de Travail",
@@ -1733,9 +1730,7 @@
       "saveShortcut": "Enregistrer (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Mes bâtiments",
       "clearAll": "Supprimer tous les polygones",
-      "toggleMyBuildings": "Basculer mes bâtiments",
       "disableSelected": "Désactiver les bâtiments sélectionnés",
       "importArea": "Importer une zone",
       "exportArea": "Exporter la zone",
@@ -2007,10 +2002,6 @@
         "title": "Carte Interactive",
         "description": "Votre espace de travail principal pour l'analyse géographique. Visualisez les couches de carte, sélectionnez des zones pour l'évaluation et visualisez les données de risque énergétique."
       },
-      "locations": {
-        "title": "Emplacements Enregistrés",
-        "description": "Gérez vos emplacements enregistrés et zones d'intérêt. Accès rapide aux régions fréquemment analysées."
-      },
       "reports": {
         "title": "Rapports de Simulation",
         "description": "Consultez les rapports de simulation détaillés, exportez les données et analysez les tendances et modèles historiques."
@@ -2155,11 +2146,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Mes Bâtiments Personnalisés",
-      "description": "Incluez vos bâtiments personnalisés privés dans le calcul du réseau. Ce sont des bâtiments que vous avez créés et enregistrés dans votre compte.",
-      "example": "Vous pouvez également exclure des bâtiments individuels en cliquant dessus sur la carte."
-    },
     "simulateEV": {
       "title": "Simuler la Capacité d'Accueil VE",
       "description": "Calculez la capacité d'accueil des véhicules électriques pour chaque transformateur dans la zone sélectionnée. Cela détermine combien de chargeurs VE (11 kW Niveau 2) peuvent être connectés avant d'atteindre les contraintes du réseau.",
@@ -2510,24 +2496,6 @@
       "description": "Un bâtiment a une seule source de chaleur. {{withHeat}} bâtiments en ont déjà une, {{without}} n'en ont pas.",
       "missing": "Seulement les bâtiments sans source de chaleur ({{count}})",
       "replace": "Remplacer sur tous les bâtiments ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Emplacements Personnalisés",
-    "subtitle": "Créer et gérer des emplacements avec des classifications de bâtiments",
-    "refresh": "Actualiser les emplacements",
-    "newLocation": "Nouvel Emplacement",
-    "newLocationTooltip": "Créer un nouvel emplacement personnalisé",
-    "searchPlaceholder": "Rechercher des emplacements...",
-    "stats": {
-      "total": "Total",
-      "totalArea": "Surface Totale",
-      "totalDemand": "Demande Totale",
-      "private": "Privé"
-    },
-    "empty": {
-      "title": "Aucun emplacement trouvé",
-      "description": "Créez votre premier emplacement personnalisé pour commencer"
     }
   },
   "weather": {
@@ -2933,11 +2901,7 @@
       "demographicsFrom": "Données démographiques issues de",
       "cuzkName": "Office tchèque de topographie, de cartographie et du cadastre",
       "enrichedWith": "Données du bâtiment enrichies avec",
-      "licensedUnder": "Sous licence",
-      "include": "Inclure",
-      "exclude": "Exclure",
-      "includeTooltip": "Inclure ce bâtiment personnalisé dans le réseau (nécessite une régénération)",
-      "excludeTooltip": "Exclure ce bâtiment personnalisé du réseau (nécessite une régénération)"
+      "licensedUnder": "Sous licence"
     }
   },
   "landing": {

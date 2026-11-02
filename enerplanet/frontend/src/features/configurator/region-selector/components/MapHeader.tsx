@@ -4,7 +4,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { Check, FileDown, FileUp, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
-import { InfoIcon } from "@/components/ui/InfoTooltip";
 import { cn } from "@/lib/utils";
 import type { FC } from "react";
 
@@ -59,8 +58,6 @@ interface MapHeaderProps {
   // Custom building filters
   siteMode?: boolean;
   onToggleSiteMode?: (value: boolean) => void;
-  includePrivateBuildings?: boolean;
-  onTogglePrivateBuildings?: (value: boolean) => void;
   simulateEV?: boolean;
   onToggleSimulateEV?: (value: boolean) => void;
   availableRegions?: AvailableRegion[];
@@ -86,8 +83,6 @@ export const MapHeader: FC<MapHeaderProps> = ({
   onOpenCreateWorkspace,
   siteMode = false,
   onToggleSiteMode,
-  includePrivateBuildings = true,
-  onTogglePrivateBuildings,
   // EV simulation temporarily disabled
   // simulateEV = false,
   // onToggleSimulateEV,
@@ -222,19 +217,6 @@ export const MapHeader: FC<MapHeaderProps> = ({
             disabled={isGeneratingGrid}
             ariaLabel={t("simulation.siteMode.label")}
           />
-        )}
-
-        {/* Custom Building Filters */}
-        {onTogglePrivateBuildings && (
-          <div className="flex items-center gap-1">
-            <ToggleButton
-              label={t("simulation.mapHeader.myBuildings")}
-              checked={includePrivateBuildings}
-              onChange={onTogglePrivateBuildings}
-              ariaLabel={t("simulation.mapHeader.toggleMyBuildings")}
-            />
-            <InfoIcon tooltipKey="privateBuildings" position="bottom" />
-          </div>
         )}
 
         {/* EV Simulation — Coming Soon (hidden until feature is ready)

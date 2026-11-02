@@ -50,7 +50,6 @@ All hooks are re-exported from `hooks/index.ts` and wired into `AreaSelect.tsx`:
 | `useMapClickHandlers` | Click-to-select buildings, transformers, MV lines on map |
 | `useMapDisplay` | Map resize, reassignment line, MapLibre 3D handlers |
 | `usePylovoLayers` | OpenLayers layer management for grid, buildings, transformers |
-| `useCustomLocationLayers` | User-defined custom building layers |
 | `useRegion` | Reverse-geocode polygon centroid → region name, handle region selection |
 | `useMapResize` | Respond to sidebar/collapse layout changes |
 

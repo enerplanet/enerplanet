@@ -249,8 +249,6 @@ export const pylovoService = {
         user_id?: string;
         model_id?: number;  // Model ID for filtering user-placed transformers (existing models)
         draft_id?: string;  // Draft ID for new models before saving
-        include_private_buildings?: boolean;
-        excluded_building_ids?: number[];
     }): Promise<PylovoGridResponse> => {
         // Support both new format (geom) and old format (polygon/polygons)
         let requestPayload: {
@@ -258,8 +256,7 @@ export const pylovoService = {
             user_id?: string;
             model_id?: number;
             draft_id?: string;
-            include_private_buildings?: boolean;
-            excluded_building_ids?: number[];
+            include_private_buildings?: false;
         };
 
         // Filter out null/empty polygons
@@ -297,7 +294,10 @@ export const pylovoService = {
             throw new Error("Invalid payload: must provide either geom or polygon/polygons with valid coordinates");
         }
 
-        // Include user_id for custom buildings filtering
+        // PyLovo reads a missing value as true and adds the user's custom buildings to the grid.
+        requestPayload.include_private_buildings = false;
+
+        // Scopes the user-placed transformers together with model_id or draft_id.
         if (payload.user_id) {
             requestPayload.user_id = payload.user_id;
         }
@@ -310,14 +310,6 @@ export const pylovoService = {
         // Include draft_id for user-placed transformers (new models before saving)
         if (payload.draft_id) {
             requestPayload.draft_id = payload.draft_id;
-        }
-
-        // Include custom building filter options
-        if (payload.include_private_buildings !== undefined) {
-            requestPayload.include_private_buildings = payload.include_private_buildings;
-        }
-        if (payload.excluded_building_ids && payload.excluded_building_ids.length > 0) {
-            requestPayload.excluded_building_ids = payload.excluded_building_ids;
         }
 
         const response = await axios.post<{ success: boolean; data: PylovoGridResponse }>("/v1/pylovo/generate-grid", requestPayload, {
@@ -435,35 +427,6 @@ export const pylovoService = {
     getVoltageSettings: async (): Promise<VoltageSettings> => {
         const response = await axios.get<{ data: { settings: VoltageSettings } }>("/v1/pylovo/voltage-settings");
         return response.data?.data?.settings || {} as VoltageSettings;
-    },
-
-    addCustomBuilding: async (payload: {
-        title: string;
-        f_class: string;
-        area: number;
-        demand_energy: number;
-        geometry: GeoJSON.Point;
-        geometry_area: GeoJSON.Polygon;
-        icon?: string;
-    }): Promise<{ building_id: number; message: string }> => {
-        const response = await axios.post<{ data: { building: { id: number }; status: string } }>(
-            "/v1/pylovo/custom-buildings",
-            payload
-        );
-        // The API returns { status: "success", building: { id: ... } }
-        const buildingId = response.data?.data?.building?.id;
-        return { building_id: buildingId || 0, message: response.data?.data?.status || '' };
-    },
-
-    getCustomBuildings: async (): Promise<CustomBuilding[]> => {
-        const response = await axios.get<{ data: { buildings: CustomBuilding[]; count: number } }>(
-            "/v1/pylovo/custom-buildings"
-        );
-        return response.data?.data?.buildings || [];
-    },
-
-    deleteCustomBuilding: async (buildingId: number): Promise<void> => {
-        await axios.delete(`/v1/pylovo/custom-buildings/${buildingId}`);
     },
 
     runPipeline: async (payload: {
@@ -851,22 +814,6 @@ export const pylovoService = {
         return response.data?.data || response.data;
     },
 };
-
-export interface CustomBuilding {
-    id: number;  // PyLovo API returns "id" not "custom_building_id"
-    user_id: string;
-    title: string;
-    f_class: string;
-    building_type: string;
-    area: number;
-    peak_load_kw: number;
-    demand_energy: number;
-    geometry: GeoJSON.Point;
-    geometry_area: GeoJSON.Polygon;
-    is_owner: boolean;
-    icon: string;
-    created_at: string;
-}
 
 export type { GridStatistics };
 

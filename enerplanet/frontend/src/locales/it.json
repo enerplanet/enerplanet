@@ -159,10 +159,7 @@
     "current": "Attuale",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Vedi sulla Mappa",
-      "editLocation": "Modifica Posizione",
       "editName": "Modifica nome",
-      "duplicate": "Duplica",
       "view": "Vedi",
       "share": "Condividi",
       "moveToWorkspace": "Sposta nello Spazio di Lavoro",
@@ -1468,9 +1465,7 @@
       "saveShortcut": "Salva (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "I miei edifici",
       "clearAll": "Rimuovi tutti i poligoni",
-      "toggleMyBuildings": "Attiva/disattiva i miei edifici",
       "disableSelected": "Disattiva gli edifici selezionati",
       "importArea": "Importa area",
       "exportArea": "Esporta area",
@@ -1741,10 +1736,6 @@
       "map": {
         "title": "Mappa Interattiva",
         "description": "Il tuo spazio di lavoro principale per l'analisi geografica. Visualizza livelli mappa, seleziona aree per la valutazione e visualizza dati di rischio energetico."
-      },
-      "locations": {
-        "title": "Posizioni Salvate",
-        "description": "Gestisci le tue posizioni salvate e aree di interesse. Accesso rapido alle regioni frequentemente analizzate."
       },
       "reports": {
         "title": "Report di Simulazione",
@@ -2128,24 +2119,6 @@
       "description": "Un edificio ha una sola fornitura di calore. {{withHeat}} edifici ne hanno già una, {{without}} non ne hanno.",
       "missing": "Solo edifici senza fornitura di calore ({{count}})",
       "replace": "Sostituisci su tutti gli edifici ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Posizioni Personalizzate",
-    "subtitle": "Crea e gestisci posizioni con classificazioni degli edifici",
-    "refresh": "Aggiorna posizioni",
-    "newLocation": "Nuova Posizione",
-    "newLocationTooltip": "Crea una nuova posizione personalizzata",
-    "searchPlaceholder": "Cerca posizioni...",
-    "stats": {
-      "total": "Totale",
-      "totalArea": "Area Totale",
-      "totalDemand": "Domanda Totale",
-      "private": "Privato"
-    },
-    "empty": {
-      "title": "Nessuna posizione trovata",
-      "description": "Crea la tua prima posizione personalizzata per iniziare"
     }
   },
   "weather": {
@@ -2654,11 +2627,6 @@
     "sourceNote": "Stimato dal motore di rete PyLoVo."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "I Miei Edifici Personalizzati",
-      "description": "Includi i tuoi edifici personalizzati privati nel calcolo della rete. Questi sono edifici che hai creato e salvato nel tuo account.",
-      "example": "Puoi anche escludere singoli edifici cliccandoli sulla mappa."
-    },
     "simulateEV": {
       "title": "Simula Capacità di Hosting EV",
       "description": "Calcola la capacità di hosting dei veicoli elettrici per ogni trasformatore nell'area selezionata. Questo determina quanti caricabatterie EV (11 kW Livello 2) possono essere collegati prima di raggiungere i vincoli di rete.",
@@ -2939,11 +2907,7 @@
       "demographicsFrom": "Dati demografici da",
       "cuzkName": "Ufficio ceco di topografia, cartografia e catasto",
       "enrichedWith": "Dati dell'edificio arricchiti con",
-      "licensedUnder": "Concesso in licenza con",
-      "include": "Includi",
-      "exclude": "Escludi",
-      "includeTooltip": "Includi questo edificio personalizzato nella rete (richiede la rigenerazione)",
-      "excludeTooltip": "Escludi questo edificio personalizzato dalla rete (richiede la rigenerazione)"
+      "licensedUnder": "Concesso in licenza con"
     }
   },
   "landing": {

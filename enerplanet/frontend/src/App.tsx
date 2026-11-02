@@ -18,9 +18,6 @@ const AreaSelect = lazy(() => import("@/features/configurator/region-selector/Ar
 const AssessmentViewer = lazy(() => import("@/features/assessment-viewer").then(module => ({ default: module.AssessmentViewer })));
 const ModelResultsViewer = lazy(() => import("@/features/model-results").then(module => ({ default: module.ModelResultsViewer })));
 const TechnologiesPage = lazy(() => import("@/features/technologies/TechnologiesPage"));
-const LocationsPage = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationsPage })));
-const LocationCreator = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationCreator })));
-const LocationViewer = lazy(() => import("@/features/locations").then(module => ({ default: module.LocationViewer })));
 const SimulationCharts = lazy(() => import("@/features/simulation-charts").then(module => ({ default: module.SimulationCharts })));
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
 const LandingPage = lazy(() => import("./features/landing"));
@@ -91,10 +88,6 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/simulation-reports/:modelId" element={
                       <SimulationCharts />
                   } />
-                  <Route path="/app/locations" element={<LocationsPage />} />
-                  <Route path="/app/locations/create" element={<LocationCreator />} />
-                  <Route path="/app/locations/view/:id" element={<LocationViewer />} />
-                  <Route path="/app/locations/edit/:id" element={<LocationCreator editMode={true} />} />
                   <Route path="/app/profile" element={<Navigate to="/app/settings" replace />} />
                   <Route path="/app/admin-dashboard" element={
                       <Authorized access={["manager", "expert"]} fallback={<Navigate to="/app/model-dashboard" replace />}>

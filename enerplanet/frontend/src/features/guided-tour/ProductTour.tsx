@@ -101,16 +101,6 @@ const useTourSteps = (): Step[] => {
       placement: "right",
     },
     {
-      target: '[data-tour="locations"]',
-      content: (
-        <TourStepContent>
-          <TourStepHeader icon={TourIcons.location("w-4 h-4 text-background")} title={t('tour.product.locations.title')} />
-          <TourDescription>{t('tour.product.locations.description')}</TourDescription>
-        </TourStepContent>
-      ),
-      placement: "right",
-    },
-    {
       target: '[data-tour="reports"]',
       content: (
         <TourStepContent>

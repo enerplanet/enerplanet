@@ -159,10 +159,7 @@
     "current": "Bieżący",
     "max": "Maks",
     "tooltips": {
-      "viewOnMap": "Zobacz na Mapie",
-      "editLocation": "Edytuj Lokalizację",
       "editName": "Edytuj nazwę",
-      "duplicate": "Duplikuj",
       "view": "Zobacz",
       "share": "Udostępnij",
       "moveToWorkspace": "Przenieś do Przestrzeni Roboczej",
@@ -1488,9 +1485,7 @@
       "saveShortcut": "Zapisz (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Moje budynki",
       "clearAll": "Usuń wszystkie wielokąty",
-      "toggleMyBuildings": "Przełącz moje budynki",
       "disableSelected": "Wyłącz zaznaczone budynki",
       "importArea": "Importuj obszar",
       "exportArea": "Eksportuj obszar",
@@ -1765,10 +1760,6 @@
       "map": {
         "title": "Interaktywna Mapa",
         "description": "Twoja główna przestrzeń robocza do analizy geograficznej. Przeglądaj warstwy mapy, wybieraj obszary do oceny i wizualizuj dane o ryzyku energetycznym."
-      },
-      "locations": {
-        "title": "Zapisane Lokalizacje",
-        "description": "Zarządzaj zapisanymi lokalizacjami i obszarami zainteresowania. Szybki dostęp do często analizowanych regionów."
       },
       "reports": {
         "title": "Raporty Symulacji",
@@ -2152,24 +2143,6 @@
       "description": "Budynek ma jedno źródło ciepła. {{withHeat}} budynków już je ma, {{without}} nie ma żadnego.",
       "missing": "Tylko budynki bez źródła ciepła ({{count}})",
       "replace": "Zastąp we wszystkich budynkach ({{count}})"
-    }
-  },
-  "locations": {
-    "title": "Niestandardowe Lokalizacje",
-    "subtitle": "Twórz i zarządzaj lokalizacjami z klasyfikacjami budynków",
-    "refresh": "Odśwież lokalizacje",
-    "newLocation": "Nowa Lokalizacja",
-    "newLocationTooltip": "Utwórz nową niestandardową lokalizację",
-    "searchPlaceholder": "Szukaj lokalizacji...",
-    "stats": {
-      "total": "Łącznie",
-      "totalArea": "Całkowita Powierzchnia",
-      "totalDemand": "Całkowite Zapotrzebowanie",
-      "private": "Prywatne"
-    },
-    "empty": {
-      "title": "Nie znaleziono lokalizacji",
-      "description": "Utwórz swoją pierwszą niestandardową lokalizację, aby rozpocząć"
     }
   },
   "weather": {
@@ -2680,11 +2653,6 @@
     "sourceNote": "Szacunek silnika sieci PyLoVo."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Moje Budynki Niestandardowe",
-      "description": "Uwzględnij Twoje prywatne budynki niestandardowe w obliczeniach sieci. Są to budynki, które utworzyłeś i zapisałeś na swoim koncie.",
-      "example": "Możesz także wykluczyć poszczególne budynki, klikając na nie na mapie."
-    },
     "simulateEV": {
       "title": "Symuluj Pojemność Hostingu EV",
       "description": "Oblicz pojemność hostingu pojazdów elektrycznych dla każdego transformatora w wybranym obszarze. Określa to, ile ładowarek EV (11 kW Poziom 2) można podłączyć przed osiągnięciem ograniczeń sieci.",
@@ -2965,11 +2933,7 @@
       "demographicsFrom": "Dane demograficzne z",
       "cuzkName": "Czeski Urząd Geodezji, Kartografii i Katastru",
       "enrichedWith": "Dane budynku uzupełnione o",
-      "licensedUnder": "Licencja",
-      "include": "Uwzględnij",
-      "exclude": "Wyklucz",
-      "includeTooltip": "Uwzględnij ten własny budynek w sieci (wymaga ponownego wygenerowania)",
-      "excludeTooltip": "Wyklucz ten własny budynek z sieci (wymaga ponownego wygenerowania)"
+      "licensedUnder": "Licencja"
     }
   },
   "landing": {
