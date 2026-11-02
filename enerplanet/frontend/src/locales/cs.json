@@ -1564,7 +1564,6 @@
       "back": "Zpět"
     },
     "mapOverlay": {
-      "analyzingArea": "Analýza oblasti",
       "canHostChargers": "Možný počet nabíječek: {{count}}",
       "limitedChargers": "Omezeno, nabíječky: {{count}}",
       "connectedBuildings": "Připojené budovy",

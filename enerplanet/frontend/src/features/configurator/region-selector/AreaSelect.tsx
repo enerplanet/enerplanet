@@ -688,7 +688,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               deleteHintKey={deleteHint}
               mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
-              isGeneratingGrid={state.isGeneratingGrid}
               simulateEV={simulateEV}
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}

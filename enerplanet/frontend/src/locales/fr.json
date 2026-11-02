@@ -1809,7 +1809,6 @@
       "back": "Retour"
     },
     "mapOverlay": {
-      "analyzingArea": "Analyse de la zone",
       "canHostChargers": "Bornes possibles : {{count}}",
       "limitedChargers": "Limité, bornes : {{count}}",
       "connectedBuildings": "Bâtiments raccordés",

@@ -181,7 +181,7 @@ export const MapHeader: FC<MapHeaderProps> = ({
             title={t("simulation.mapHeader.regenerateGridHint")}
             className="md-attention bg-amber-500 border border-amber-600 rounded px-2 py-1 flex items-center gap-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingGrid ? "animate-spin" : ""}`} />
+            <RefreshCw className="w-3.5 h-3.5" />
             {t("simulation.mapHeader.regenerateGrid")}
           </button>
         )}

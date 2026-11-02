@@ -1544,7 +1544,6 @@
       "back": "Indietro"
     },
     "mapOverlay": {
-      "analyzingArea": "Analisi dell'area",
       "canHostChargers": "Colonnine possibili: {{count}}",
       "limitedChargers": "Limitato, colonnine: {{count}}",
       "connectedBuildings": "Edifici collegati",

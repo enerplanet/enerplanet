@@ -1807,7 +1807,6 @@
       "exportAreaHint": "Lädt das gezeichnete Gebiet als GeoJSON-Datei herunter (WGS 84, EPSG:4326). Sie lässt sich in ein anderes Modell importieren oder in QGIS öffnen."
     },
     "mapOverlay": {
-      "analyzingArea": "Gebiet wird analysiert",
       "canHostChargers": "Mögliche Ladepunkte: {{count}}",
       "limitedChargers": "Begrenzt, Ladepunkte: {{count}}",
       "connectedBuildings": "Angeschlossene Gebäude",

@@ -1807,7 +1807,6 @@
       "exportAreaHint": "Download the drawn area as a GeoJSON file (WGS 84, EPSG:4326). Import it into another model or open it in QGIS."
     },
     "mapOverlay": {
-      "analyzingArea": "Analyzing area",
       "canHostChargers": "Chargers it can host: {{count}}",
       "limitedChargers": "Limited, chargers: {{count}}",
       "connectedBuildings": "Connected buildings",

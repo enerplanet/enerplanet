@@ -1809,7 +1809,6 @@
       "back": "Atrás"
     },
     "mapOverlay": {
-      "analyzingArea": "Analizando el área",
       "canHostChargers": "Cargadores posibles: {{count}}",
       "limitedChargers": "Limitado, cargadores: {{count}}",
       "connectedBuildings": "Edificios conectados",
