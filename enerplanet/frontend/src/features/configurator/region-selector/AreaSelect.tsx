@@ -81,6 +81,7 @@ import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay"
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 import { hasUnsavedChanges } from "@/features/configurator/hooks/useAreaSelect/helpers/modelSettings";
+import { useMapFocusArea } from "@/features/interactive-map/hooks/useMapFocusArea";
 
 
 interface AreaSelectProps {
@@ -258,6 +259,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       maxZoom: 14,
     });
   }, [map, defaultRegion, editMode]);
+
+  useMapFocusArea(state.allPolygons);
 
   // Unsaved changes guard, skipped when navigating due to session expiry.
   const isDirty = hasUnsavedChanges(editMode, state.isModified, state.allPolygons.length);

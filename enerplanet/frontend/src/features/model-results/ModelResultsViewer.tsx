@@ -69,6 +69,7 @@ import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
 import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
+import { useMapFocusArea } from '@/features/interactive-map/hooks/useMapFocusArea';
 
 type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
 
@@ -432,6 +433,7 @@ export const ModelResultsViewer = () => {
     setCarrier,
     availableCarriers,
   } = useModelData(modelId);
+  useMapFocusArea(model?.coordinates?.coordinates);
 
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingResultData | null>(null);
   const [rightPanelView, setRightPanelView] = useState<RightPanelView>('overview');
