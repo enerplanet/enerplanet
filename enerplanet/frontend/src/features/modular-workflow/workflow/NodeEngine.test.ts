@@ -17,11 +17,12 @@ interface MakeModuleOpts {
   required?: string[];
   skippableIsIrrelevant?: never;
   run?: (ctx: ConfiguratorContext) => Promise<Partial<ConfiguratorContext>>;
+  defaults?: Record<string, unknown>;
 }
 
 /** Build a test module with a unique id so the shared singleton stays clean. */
 function makeModule(opts: MakeModuleOpts) {
-  const { id, outputs = [], required = [], run } = opts;
+  const { id, outputs = [], required = [], run, defaults } = opts;
   const M = class extends BaseModule {
     readonly meta = {
       id,
@@ -34,6 +35,7 @@ function makeModule(opts: MakeModuleOpts) {
     readonly io = { inputs: required, outputs, required };
     readonly component = NoopComponent;
     readonly run = run;
+    readonly defaults = defaults;
   };
   const instance = new M();
   defaultModuleInventory.register(instance);
@@ -372,5 +374,87 @@ describe("M4 — one-writer-per-key validation", () => {
     );
 
     expect(result.valid).toBe(true);
+  });
+});
+
+describe("m6 — activation readiness gate", () => {
+  it("rejects activating a node whose required inputs are missing", async () => {
+    const { id: cons } = makeModule({
+      id: "m6-cons",
+      outputs: [],
+      required: ["gridData"],
+    });
+
+    const engine = new NodeEngine(
+      workflow({
+        id: "m6-wf",
+        nodes: [{ id: "c", moduleId: cons }],
+      }),
+      {},
+    );
+
+    await expect(engine.activateNode("c")).rejects.toThrow(/not ready/);
+  });
+
+  it("still allows re-activating a done node (M3 redo path)", async () => {
+    const { id: prod } = makeModule({ id: "m6-redo", outputs: ["modelName"] });
+
+    const engine = new NodeEngine(
+      workflow({
+        id: "m6-redo-wf",
+        nodes: [{ id: "p", moduleId: prod }],
+      }),
+      {},
+    );
+
+    await engine.activateNode("p");
+    await engine.completeNode("p");
+    await expect(engine.activateNode("p")).resolves.toBeUndefined();
+  });
+});
+
+describe("defaults-on-skip", () => {
+  it("seeds declared output defaults on skip and filters undeclared keys", async () => {
+    const { id } = makeModule({
+      id: "skip-defaults",
+      outputs: ["modelName"],
+      defaults: { modelName: "Default Model", leaked: 123 },
+    });
+
+    const engine = new NodeEngine(
+      workflow({
+        id: "skip-defaults-wf",
+        nodes: [{ id: "n", moduleId: id, skippable: true }],
+      }),
+      {},
+    );
+
+    await engine.activateNode("n");
+    await engine.skipNode("n");
+
+    expect(engine.getNodeStates().n).toBe("skipped");
+    expect(engine.getContext().modelName).toBe("Default Model");
+    expect((engine.getContext() as Record<string, unknown>).leaked).toBeUndefined();
+  });
+
+  it("does not clobber an existing output value on skip", async () => {
+    const { id } = makeModule({
+      id: "skip-defaults-keep",
+      outputs: ["modelName"],
+      defaults: { modelName: "Default Model" },
+    });
+
+    const engine = new NodeEngine(
+      workflow({
+        id: "skip-defaults-keep-wf",
+        nodes: [{ id: "n", moduleId: id, skippable: true }],
+      }),
+      { modelName: "Already Set" },
+    );
+
+    await engine.activateNode("n");
+    await engine.skipNode("n");
+
+    expect(engine.getContext().modelName).toBe("Already Set");
   });
 });

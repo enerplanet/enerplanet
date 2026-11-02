@@ -23,7 +23,7 @@ export class PowerFlowModule extends BaseModule {
   };
 
   readonly io = {
-    inputs: ["gridResultIds", "advancedParams"],
+    inputs: ["gridResultIds", "advancedParams", "simulationSettings"],
     outputs: ["powerFlowResult"],
     required: ["gridResultIds"],
   };
@@ -33,16 +33,18 @@ export class PowerFlowModule extends BaseModule {
   /**
    * Headless power flow for the `auto` node path.
    *
-   * Mirrors the component's logic: only runs when `advancedParams.pypsa_enabled`
-   * is set, against the first grid result. Returns `powerFlowResult` or nothing
-   * (pypsa off / no result ids).
+   * Mirrors the component's logic: only runs when pypsa is enabled (typed
+   * `simulationSettings.pypsa_enabled` is canonical, legacy
+   * `advancedParams.pypsa_enabled` as fallback — m8), against the first grid
+   * result. Returns `powerFlowResult` or nothing (pypsa off / no result ids).
    */
   override async run(
     context: ConfiguratorContext,
   ): Promise<Partial<ConfiguratorContext>> {
-    const pypsaEnabled = (
-      context.advancedParams as { pypsa_enabled?: boolean } | undefined
-    )?.pypsa_enabled;
+    const pypsaEnabled =
+      context.simulationSettings?.pypsa_enabled ??
+      (context.advancedParams as { pypsa_enabled?: boolean } | undefined)
+        ?.pypsa_enabled;
     if (!pypsaEnabled) return {};
 
     const gridResultIds = context.gridResultIds ?? [];
@@ -59,8 +61,10 @@ function PowerFlowComponent({ context, onUpdate }: ModuleProps) {
   const [converged, setConverged] = useState<boolean | null>(null);
   const runIdRef = useRef(0);
 
-  const pypsaEnabled = (context.advancedParams as { pypsa_enabled?: boolean } | undefined)
-    ?.pypsa_enabled;
+  const pypsaEnabled =
+    context.simulationSettings?.pypsa_enabled ??
+    (context.advancedParams as { pypsa_enabled?: boolean } | undefined)
+      ?.pypsa_enabled;
 
   const run = useCallback(async () => {
     const gridResultIds = context.gridResultIds ?? [];

@@ -176,11 +176,28 @@ export class NodeEngine {
     const node = this.getNodeOrThrow(nodeId);
     const module = this.inventory.getModuleOrThrow(node.moduleId).getDefinition();
 
+    // Readiness gate (m6): a node may only be activated when it is genuinely
+    // loadable — deps done + io.required keys present (getReadyNodes), or it is
+    // an already-completed node being re-activated for a redo (M3).
+    const status = this.nodeStates[nodeId];
+    const reactivatible = status === "done" || status === "skipped";
+    if (!reactivatible) {
+      const isReady = getReadyNodes(
+        this.graph,
+        this.context,
+        this.nodeStates,
+      ).some((n) => n.id === nodeId);
+      if (!isReady) {
+        throw new Error(
+          `[NodeEngine] Node "${node.label}" (${nodeId}) is not ready — its dependencies are not done or its required inputs are missing`,
+        );
+      }
+    }
+
     // Remember re-activation of an already-completed node. `activateNode` sets
     // the status to `active`, which would otherwise erase the "was done" signal
     // by the time `completeNode` runs (M3 invalidation needs it).
-    const prior = this.nodeStates[nodeId];
-    if (prior === "done" || prior === "skipped") {
+    if (reactivatible) {
       this.reactivated.add(nodeId);
     }
 
@@ -256,6 +273,24 @@ export class NodeEngine {
     }
 
     this.nodeStates = { ...this.nodeStates, [nodeId]: "skipped" };
+    this.reactivated.delete(nodeId);
+
+    // Apply the module's declared defaults for its output keys that are still
+    // absent — a skipped step must not leave downstream requirements dangling
+    // when defaults were declared for exactly that case.
+    const module = this.inventory.getModuleOrThrow(node.moduleId).getDefinition();
+    if (module.defaults) {
+      const allowed = new Set(module.io.outputs);
+      const merged = {
+        ...this.context,
+      } as Record<string, unknown>;
+      for (const [key, value] of Object.entries(module.defaults)) {
+        if (allowed.has(key) && value !== undefined && merged[key] === undefined) {
+          merged[key] = value;
+        }
+      }
+      this.context = merged as ConfiguratorContext;
+    }
 
     await this.runAutoNodes();
 

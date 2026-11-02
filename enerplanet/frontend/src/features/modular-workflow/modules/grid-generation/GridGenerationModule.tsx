@@ -27,7 +27,7 @@ export class GridGenerationModule extends BaseModule {
   };
 
   readonly io = {
-    inputs: ["polygons", "gridData", "gridResultIds", "advancedParams"],
+    inputs: ["polygons", "gridData", "gridResultIds"],
     outputs: [],
     required: ["polygons"],
   };

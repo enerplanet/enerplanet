@@ -10,7 +10,7 @@ import type { Technology } from "../../../technologies/services/technologyServic
  * Technology Selection module.
  *
  * Wraps the configurator's `TechnologyDrawer` + `TechParameterDialog`.
- * Reads `gridData` + `advancedParams`, writes `technologies` and
+ * Reads `gridData`, writes `technologies` and
  * `techParameters` to context.
  */
 export class TechnologySelectionModule extends BaseModule {
@@ -24,7 +24,7 @@ export class TechnologySelectionModule extends BaseModule {
   };
 
   readonly io = {
-    inputs: ["gridData", "advancedParams"],
+    inputs: ["gridData"],
     outputs: ["technologies", "techParameters"],
     required: ["gridData"],
   };
