@@ -64,7 +64,8 @@ WORKDIR="${WORKDIR:-$SELF_DIR/../.local/heat-stack/$PREFIX}"
 command -v docker >/dev/null || die "docker not found"
 
 # container_of PROJECT SERVICE FIXED: the running container of SERVICE in compose
-# project PROJECT, else FIXED, the name a stack from deploy-heat-stack.sh uses.
+# project PROJECT, else FIXED, the name a stack from an earlier
+# deploy-heat-stack.sh uses.
 container_of() {
   local id
   id="$(docker ps -q --filter "label=com.docker.compose.project=$1" \
