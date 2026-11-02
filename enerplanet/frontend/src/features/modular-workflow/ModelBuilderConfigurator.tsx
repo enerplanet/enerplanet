@@ -476,9 +476,10 @@ function ModelBuilderConfiguratorInner({
 
       <Separator className="my-4" />
 
-      {/* Node palette: all nodes + their status */}
-      {activeNode?.id == "done" && (
-        <div className="mb-4">
+      {/* Node palette: all nodes + their status. A done/skipped node can be
+          re-activated (jump back) — this is what makes redo + invalidation
+          reachable (M3). */}
+      <div className="mb-4">
           <h2 className="mb-2 text-sm font-semibold">Node palette</h2>
           <div className="flex flex-wrap gap-2">
             {graph.nodes.map((node) => {
@@ -502,8 +503,7 @@ function ModelBuilderConfiguratorInner({
               );
             })}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Available next: interactive ready nodes the user may choose */}
       <div className="mb-4">

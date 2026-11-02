@@ -176,6 +176,14 @@ export class NodeEngine {
     const node = this.getNodeOrThrow(nodeId);
     const module = this.inventory.getModuleOrThrow(node.moduleId).getDefinition();
 
+    // Remember re-activation of an already-completed node. `activateNode` sets
+    // the status to `active`, which would otherwise erase the "was done" signal
+    // by the time `completeNode` runs (M3 invalidation needs it).
+    const prior = this.nodeStates[nodeId];
+    if (prior === "done" || prior === "skipped") {
+      this.reactivated.add(nodeId);
+    }
+
     this.activeNodeId = nodeId;
     this.nodeStates = { ...this.nodeStates, [nodeId]: "active" };
 
@@ -191,10 +199,20 @@ export class NodeEngine {
    * into the context, mark it `done`, recompute ready nodes, auto-run any
    * newly-ready `auto` nodes (recursively), and set the active node to the
    * next ready interactive node.
+   *
+   * **Invalidation (M3):** re-completing a node whose outputs actually changed
+   * (fingerprint mismatch vs. its last completion) resets every transitive
+   * downstream node to `pending` and clears their declared outputs, so stale
+   * downstream results are never presented as current. A redo that changes
+   * nothing is a no-op for the pipeline.
    */
   async completeNode(nodeId: string): Promise<void> {
     const node = this.getNodeOrThrow(nodeId);
     const module = this.inventory.getModuleOrThrow(node.moduleId).getDefinition();
+
+    const wasDone =
+      this.reactivated.has(nodeId) || this.nodeStates[nodeId] === "done";
+    const previousFingerprint = this.fingerprints[nodeId];
 
     // 1. onLeave — may validate/transform and return an updated context.
     if (module.onLeave) {
@@ -208,10 +226,18 @@ export class NodeEngine {
     // 3. Mark done.
     this.nodeStates = { ...this.nodeStates, [nodeId]: "done" };
 
-    // 4. Recompute ready nodes and auto-run any newly-ready auto nodes.
+    // 4. Invalidate downstream on a redo that actually changed something.
+    const fingerprint = this.computeFingerprint(module);
+    this.fingerprints[nodeId] = fingerprint;
+    if (wasDone && fingerprint !== previousFingerprint) {
+      await this.invalidateDownstream(nodeId);
+    }
+    this.reactivated.delete(nodeId);
+
+    // 5. Recompute ready nodes and auto-run any newly-ready auto nodes.
     await this.runAutoNodes();
 
-    // 5. Set the active node to the next ready interactive node.
+    // 6. Set the active node to the next ready interactive node.
     this.activeNodeId = this.pickNextInteractiveNode();
 
     this.notifyContextChange();
@@ -298,6 +324,74 @@ export class NodeEngine {
   private isRunningAuto = false;
 
   private activeNodeId: string | null = null;
+
+  /** Last-completed fingerprint (JSON of declared output values) per node id. */
+  private fingerprints: Record<string, string> = {};
+
+  /** Nodes re-activated from `done`/`skipped` and awaiting re-completion (M3). */
+  private reactivated = new Set<string>();
+
+  /**
+   * Stable fingerprint of a module's declared output values in the context.
+   * Used to detect whether a re-completion actually changed anything (M3).
+   */
+  private computeFingerprint(module: ModuleDefinition): string {
+    const picked: Record<string, unknown> = {};
+    for (const key of module.io.outputs) {
+      const value = (this.context as Record<string, unknown>)[key];
+      if (value !== undefined) picked[key] = value;
+    }
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(picked).sort()) {
+      (sorted as Record<string, unknown>)[key] = picked[key];
+    }
+    return JSON.stringify(sorted);
+  }
+
+  /**
+   * Reset every transitive downstream node of `fromNodeId` to `pending` and
+   * clear their declared outputs from the context. Auto nodes re-run on the
+   * next `runAutoNodes()`; interactive nodes become available again. The graph
+   * itself is the invalidation map — no separate `invalidates` list needed.
+   */
+  private async invalidateDownstream(fromNodeId: string): Promise<void> {
+    const outgoing = new Map<string, string[]>();
+    for (const edge of this.graph.edges) {
+      const list = outgoing.get(edge.from) ?? [];
+      list.push(edge.to);
+      outgoing.set(edge.from, list);
+    }
+
+    const stack = [fromNodeId];
+    const reachable = new Set<string>();
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      for (const next of outgoing.get(current) ?? []) {
+        if (!reachable.has(next)) {
+          reachable.add(next);
+          stack.push(next);
+        }
+      }
+    }
+
+    const nextContext: ConfiguratorContext = { ...this.context };
+    for (const id of reachable) {
+      // Only already-completed nodes carry data that can go stale.
+      const status = this.nodeStates[id];
+      if (status !== "done" && status !== "skipped") continue;
+
+      const node = this.getNodeOrThrow(id);
+      const module = this.inventory
+        .getModuleOrThrow(node.moduleId)
+        .getDefinition();
+      for (const key of module.io.outputs) {
+        delete (nextContext as Record<string, unknown>)[key];
+      }
+      this.nodeStates = { ...this.nodeStates, [id]: "pending" };
+      delete this.fingerprints[id];
+    }
+    this.context = nextContext;
+  }
 
   /** Initialise every node in the graph to `pending`. */
   private initialiseNodeStates(): Record<string, NodeStatus> {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ComponentType } from "react";
 import { NodeEngine } from "./NodeEngine";
+import { validateGraph } from "./WorkflowGraph";
 import { BaseModule } from "../modules/base/BaseModule";
 import type { ModuleProps } from "../types/module";
 import type { ConfiguratorContext } from "../types/context";
@@ -238,5 +239,138 @@ describe("C2 — skipping a dependency does not deadlock", () => {
     await engine.skipNode("dep-node");
 
     expect(engine.getReadyNodes().map((n) => n.id)).toContain("after-node");
+  });
+});
+
+describe("M3 — invalidation on redo", () => {
+  /** Test modules write ad-hoc keys; the engine contract is typed to
+      ConfiguratorContext, so tests cast their partial patches. */
+  const patch = (d: Record<string, unknown>) =>
+    d as unknown as Partial<ConfiguratorContext>;
+  const get = (engine: NodeEngine) =>
+    engine.getContext() as Record<string, unknown>;
+
+  function buildChain() {
+    const runSpy = vi.fn(
+      headless(async (ctx: ConfiguratorContext) => ({
+        midOut: `m-${(ctx as Record<string, unknown>).wg as string}`,
+      })),
+    );
+    const { id: pid } = makeModule({ id: "m3-prod", outputs: ["wg"] });
+    const { id: mid } = makeModule({
+      id: "m3-mid",
+      outputs: ["midOut"],
+      required: ["wg"],
+      run: runSpy,
+    });
+    const { id: cid } = makeModule({
+      id: "m3-cons",
+      outputs: [],
+      required: ["midOut"],
+    });
+
+    const engine = new NodeEngine(
+      workflow({
+        id: "m3-wf",
+        nodes: [
+          { id: "p", moduleId: pid },
+          { id: "m", moduleId: mid, auto: true },
+          { id: "c", moduleId: cid },
+        ],
+      }),
+      {},
+    );
+    return { engine, runSpy };
+  }
+
+  it("redoing a node with changed output resets and re-runs downstream", async () => {
+    const { engine, runSpy } = buildChain();
+
+    // First pass: p -> auto m -> c.
+    await engine.activateNode("p");
+    await engine.updateContext(patch({ wg: "v1" }));
+    await engine.completeNode("p");
+    expect(engine.getNodeStates().m).toBe("done");
+    expect(get(engine).midOut).toBe("m-v1");
+    await engine.activateNode("c");
+    await engine.completeNode("c");
+    expect(engine.getNodeStates().c).toBe("done");
+    expect(runSpy).toHaveBeenCalledTimes(1);
+
+    // Redo p with a real change (e.g. the user redrew the region).
+    await engine.activateNode("p");
+    await engine.updateContext(patch({ wg: "v2" }));
+    await engine.completeNode("p");
+
+    // Auto m re-ran with the new input; interactive consumer c was reset.
+    expect(runSpy).toHaveBeenCalledTimes(2);
+    expect(engine.getNodeStates().m).toBe("done");
+    expect(get(engine).midOut).toBe("m-v2");
+    expect(engine.getNodeStates().c).toBe("pending");
+    // c is available again (its required key was reproduced).
+    expect(engine.getReadyNodes().map((n) => n.id)).toContain("c");
+  });
+
+  it("a redo that changes nothing does not invalidate downstream", async () => {
+    const { engine, runSpy } = buildChain();
+
+    await engine.activateNode("p");
+    await engine.updateContext(patch({ wg: "v9" }));
+    await engine.completeNode("p");
+    await engine.activateNode("c");
+    await engine.completeNode("c");
+    expect(runSpy).toHaveBeenCalledTimes(1);
+
+    // Redo p with the SAME value — fingerprint unchanged, pipeline must stay.
+    await engine.activateNode("p");
+    await engine.updateContext(patch({ wg: "v9" }));
+    await engine.completeNode("p");
+
+    expect(runSpy).toHaveBeenCalledTimes(1);
+    expect(engine.getNodeStates().m).toBe("done");
+    expect(engine.getNodeStates().c).toBe("done");
+    expect(get(engine).midOut).toBe("m-v9");
+  });
+});
+
+describe("M4 — one-writer-per-key validation", () => {
+  it("rejects a workflow with two producers of the same key", async () => {
+    const { id: a } = makeModule({ id: "m4-a", outputs: ["shared"] });
+    const { id: b } = makeModule({ id: "m4-b", outputs: ["shared"] });
+
+    const result = validateGraph(
+      workflow({
+        id: "m4-wf",
+        nodes: [
+          { id: "a-node", moduleId: a },
+          { id: "b-node", moduleId: b },
+        ],
+      }),
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('"shared"'))).toBe(true);
+  });
+
+  it("accepts a single-producer workflow and implicit io.required edges", async () => {
+    const { id: prod } = makeModule({ id: "m4-prod", outputs: ["shared"] });
+    const { id: cons } = makeModule({
+      id: "m4-cons",
+      outputs: [],
+      required: ["shared"],
+    });
+
+    const result = validateGraph(
+      workflow({
+        id: "m4-ok",
+        nodes: [
+          { id: "prod-node", moduleId: prod },
+          // No explicit dependsOn — the consumer's io.required edge is enough.
+          { id: "cons-node", moduleId: cons },
+        ],
+      }),
+    );
+
+    expect(result.valid).toBe(true);
   });
 });
