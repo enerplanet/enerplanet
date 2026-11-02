@@ -1571,11 +1571,27 @@
         "restaurant": "Restaurant",
         "school": "School",
         "supermarket": "Supermarkt",
-        "warehouse": "Magazijn"
+        "warehouse": "Magazijn",
+        "residential": "Woongebouw",
+        "ancillary": "Bijgebouw",
+        "agriculture": "Landbouw",
+        "industry": "Industrie",
+        "commercial": "Bedrijfsgebouw",
+        "education": "Onderwijs",
+        "health": "Zorg",
+        "hospitality": "Horeca",
+        "public": "Openbaar",
+        "retail": "Detailhandel"
       },
       "buemFailed": "BuEM mislukt: {{reason}}",
       "buemShared": "Meegeteld bij een ander gebouw: {{detail}}",
       "buemPending": "BuEM-resultaat in behandeling",
+      "buemNotHeated": "Niet verwarmd: {{reason}}",
+      "useSource": {
+        "3d": "Gebruik uit de 3D-gegevens",
+        "osm": "Gebruik uit OpenStreetMap",
+        "user": "Gebruik ingesteld door de gebruiker"
+      },
       "floors": "Verdiepingen",
       "height": "Hoogte",
       "heightMedian": "Hoogte (mediaan)",
@@ -2629,6 +2645,7 @@
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
     "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
     "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
+    "heatRemovedNotHeated": "Warmtetechnologie verwijderd van {{count}} onverwarmde gebouwen, zoals garages en schuren.",
     "areaOverLimit": {
       "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
       "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
