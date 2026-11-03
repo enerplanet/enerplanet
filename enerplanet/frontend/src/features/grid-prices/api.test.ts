@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultFor, gridPriceError, type GridPrice } from './api';
+import { defaultFor, gridPriceError, countryPrices, type GridPrice } from './api';
 
 const row = (country: string, imp: number, exp: number): GridPrice => ({ country, import_ct_per_kwh: imp, export_ct_per_kwh: exp, source: '' });
 
@@ -7,6 +7,11 @@ describe('defaultFor', () => {
   const prices = [row('germany', 38.35, 7.7), row('other', 30, 0)];
   it('uses the country row', () => expect(defaultFor(prices, 'Germany')?.country).toBe('germany'));
   it('falls back to other', () => expect(defaultFor(prices, 'austria')?.country).toBe('other'));
+});
+
+describe('countryPrices', () => {
+  const prices = [row('other', 30, 0), row('netherlands', 40, 9), row('austria', 25, 6), row('germany', 38.35, 7.7)];
+  it('lists countries alphabetically without other', () => expect(countryPrices(prices).map(p => p.country)).toEqual(['austria', 'germany', 'netherlands']));
 });
 
 describe('gridPriceError', () => {

@@ -5,7 +5,7 @@ import { useTranslation } from '@spatialhub/i18n';
 
 interface TooltipContent {
 	title: string;
-	description: string;
+	description: ReactNode;
 	example?: string;
 	image?: string;
 }
@@ -285,7 +285,7 @@ const INFO_GLYPH = (
 );
 
 /** An info icon whose tooltip shows the given, already translated, title and description. */
-export const TextInfoIcon: FC<{ title: string; description: string; position?: TooltipPosition }> = ({ title, description, position = 'top' }) => (
+export const TextInfoIcon: FC<{ title: string; description: ReactNode; position?: TooltipPosition }> = ({ title, description, position = 'top' }) => (
 	<InfoTooltip content={{ title, description }} position={position}>
 		{INFO_GLYPH}
 	</InfoTooltip>
