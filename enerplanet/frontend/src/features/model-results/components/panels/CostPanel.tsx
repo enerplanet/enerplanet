@@ -10,7 +10,7 @@ import {
 } from '@/features/simulation-charts/model-results';
 import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
-import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
 import { energyKwhFromCost } from '../../lcoeUnits';
 
@@ -156,7 +156,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
     structuredResults.cost.forEach(c => {
       const tech = normalizeTechKey(c.techs);
-      totalByTech[tech] = (totalByTech[tech] || 0) + Math.abs(c.value);
+      totalByTech[tech] = (totalByTech[tech] || 0) + c.value;
     });
     structuredResults.cost_investment?.forEach(c => {
       const tech = normalizeTechKey(c.techs);
@@ -176,9 +176,8 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
   // System cost summary
   const systemCostSummary = useMemo(() => {
     if (!structuredResults?.cost?.length) return null;
-    let totalCost = 0;
+    const totalCost = netCost(structuredResults.cost);
     let investmentCost = 0;
-    structuredResults.cost.forEach(c => { totalCost += Math.abs(c.value); });
     structuredResults.cost_investment?.forEach(c => { investmentCost += Math.abs(c.value); });
     return {
       totalCost,
@@ -251,6 +250,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
                 lcoe={summary?.lcoe_eur_mwh}
+                income={structuredResults ? feedInIncome(structuredResults) : undefined}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}

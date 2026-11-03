@@ -41,23 +41,40 @@ export interface CostBreakdownItem {
 }
 
 /**
+ * Net cost of a set of cost rows. Feed-in revenue is stored as a negative
+ * cost, so it lowers the total.
+ */
+export function netCost(rows: { value: number }[] | undefined): number {
+  return rows?.reduce((sum, row) => sum + row.value, 0) ?? 0;
+}
+
+/** Signed cost per normalized technology. */
+function costByTech(structured: StructuredModelResults): Record<string, number> {
+  const totals: Record<string, number> = {};
+  structured.cost?.forEach((c: any) => {
+    const tech = normalizeTechKey(c.techs || 'Other');
+    totals[tech] = (totals[tech] || 0) + c.value;
+  });
+  return totals;
+}
+
+/** Revenue from technologies whose net cost is negative, such as grid export. */
+export function feedInIncome(structured: StructuredModelResults): number {
+  return Object.values(costByTech(structured)).reduce((sum, value) => sum + Math.max(0, -value), 0);
+}
+
+/**
  * Transform structured cost data into detailed breakdown by technology.
  * Aggregates location-specific variants (e.g. power_transmission:Trafo_300)
  * into a single entry per base technology.
  */
 export function transformStructuredCostBreakdown(structured: StructuredModelResults): CostBreakdownItem[] {
-  const costByTech: Record<string, number> = {};
   const locationsByTech: Record<string, Set<string>> = {};
   const investByTech: Record<string, number> = {};
 
-  // Group costs by normalized technology and track unique locations
   structured.cost?.forEach((c: any) => {
     const tech = normalizeTechKey(c.techs || 'Other');
-    if (!costByTech[tech]) {
-      costByTech[tech] = 0;
-      locationsByTech[tech] = new Set();
-    }
-    costByTech[tech] += Math.abs(c.value);
+    locationsByTech[tech] ??= new Set();
     if (c.from_location) {
       locationsByTech[tech].add(c.from_location);
     }
@@ -74,7 +91,8 @@ export function transformStructuredCostBreakdown(structured: StructuredModelResu
 
   let colorIdx = 0;
 
-  return Object.entries(costByTech)
+  // Revenue (negative net cost) is not a share of cost; see feedInIncome.
+  return Object.entries(costByTech(structured))
     .filter(([_, value]) => value > 0.01)
     .map(([tech, value]) => {
       const i18nKey = COST_TECH_I18N_KEYS[tech];

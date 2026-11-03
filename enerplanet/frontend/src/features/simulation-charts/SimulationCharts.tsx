@@ -39,6 +39,7 @@ import { ComparisonMapPanel } from './components/ComparisonMapPanel';
 import { exportComparisonPDF } from '@/features/model-results/utils/pdfExport';
 import { useTranslation } from '@spatialhub/i18n';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
+import { netCost } from '@/features/configurator/utils/costUtils';
 
 interface SimulationChartsProps {
   modelId?: number;
@@ -85,10 +86,7 @@ function calculateSummary(structured: StructuredModelResults) {
   const peakDemandRaw = Math.abs(structured.peak_demand || 0);
   const timesteps = structured.timestep_count || 8760;
 
-  const totalCost = structured.cost?.reduce((sum, c) => {
-    if (!isMonetaryCost(c.costs)) return sum;
-    return sum + Math.abs(c.value);
-  }, 0) || 0;
+  const totalCost = netCost(structured.cost?.filter((c) => isMonetaryCost(c.costs)));
 
   const structuredLcoe = (structured.model_total_levelised_cost || []).find((row) => {
     return (row.carrier || '').toLowerCase() === 'power' && isMonetaryCost(row.costs);

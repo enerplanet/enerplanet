@@ -9,7 +9,7 @@ import {
   transformToCostBreakdown,
   transformToEnergyFlow,
 } from '@/features/configurator/utils/transformUtils';
-import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { Model } from '@/features/model-dashboard/services/modelService';
 import type { ModelMenuRow } from '@/features/model-results/utils/modelMenu';
 import { Workspace } from '@/components/workspace/services/workspaceService';
@@ -251,10 +251,7 @@ function calculateSummaryFromStructured(structured: StructuredModelResults) {
   const peakDemand = Math.abs(structured.peak_demand || 0);
   const timesteps = structured.timestep_count || 8760;
 
-  const totalCost = structured.cost?.reduce((sum, c) => {
-    if (!isMonetaryCost(c.costs)) return sum;
-    return sum + Math.abs(c.value);
-  }, 0) || 0;
+  const totalCost = netCost(structured.cost?.filter((c) => isMonetaryCost(c.costs)));
 
   const structuredLcoe = (structured.model_total_levelised_cost || []).find((row) => {
     return (row.carrier || '').toLowerCase() === 'power' && isMonetaryCost(row.costs);
@@ -667,6 +664,7 @@ export const ModelResultsViewer = () => {
             costBreakdown={costBreakdown}
             energyFlow={energyFlow}
             avgCapacityFactor={avgCapacityFactor}
+            feedInIncome={structuredResults ? feedInIncome(structuredResults) : undefined}
             simulationPeriod={model ? {
               from_date: model.from_date,
               to_date: model.to_date,

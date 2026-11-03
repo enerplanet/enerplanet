@@ -906,6 +906,7 @@
       "hours": "hours"
     },
     "costInfo": {
+      "feedInIncome": "Net of {{amount}} income from electricity sold to the grid.",
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
       "simulationPeriodShort": "{{days}}-day simulation period",
       "costBreakdownTooltip": "Costs shown cover only the simulated time window, not a full year. Equipment costs are spread over the equipment lifetime, while running costs (e.g., grid electricity purchases) reflect actual usage during the period. In short simulations, technologies with high running costs appear proportionally larger.",

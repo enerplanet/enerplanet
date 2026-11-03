@@ -899,6 +899,7 @@
       "hours": "horas"
     },
     "costInfo": {
+      "feedInIncome": "Descontados {{amount}} de ingresos por electricidad vendida a la red.",
       "simulationPeriodNote": "Los costes mostrados corresponden al periodo simulado de {{days}} días ({{hours}} horas). Para ver los costes anuales completos, ejecute una simulación de 1 año (8760 horas).",
       "simulationPeriodShort": "Periodo de simulación de {{days}} días",
       "costBreakdownTooltip": "Los costes mostrados cubren solo el periodo simulado, no un año completo. Los costes de equipos se reparten a lo largo de su vida útil, mientras que los de funcionamiento (p. ej., compra de electricidad a la red) reflejan el uso real en el periodo. En simulaciones cortas, las tecnologías con altos costes de funcionamiento parecen proporcionalmente mayores.",
