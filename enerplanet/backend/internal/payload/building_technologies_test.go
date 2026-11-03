@@ -30,6 +30,19 @@ func TestExtractAndTransformTechs_fillsMissingTechnologyParameters(t *testing.T)
 	assert.Equal(t, map[string]interface{}{"cont_energy_cap_max": 8.0}, techs["pv_supply"], "a technology without defaults is unchanged")
 }
 
+// The catalogue stores an unbounded capacity as null, and a product placed from
+// it keeps that null; T1K needs a number or "inf".
+func TestExtractAndTransformTechs_nullCapacityIsUnbounded(t *testing.T) {
+	props := map[string]interface{}{"techs": map[string]interface{}{
+		"air_source_heat_pump": map[string]interface{}{"constraints": []interface{}{
+			map[string]interface{}{"key": "cont_energy_cap_max", "value": nil},
+		}},
+	}}
+
+	techs := extractAndTransformTechs(props).(map[string]interface{})
+	assert.Equal(t, "inf", techs["air_source_heat_pump"].(map[string]interface{})["cont_energy_cap_max"])
+}
+
 func TestDefaultTechnology_isACopy(t *testing.T) {
 	gas := DefaultTechnology("gas_supply")
 	assert.Equal(t, 0.04, gas["cost_om_con"])

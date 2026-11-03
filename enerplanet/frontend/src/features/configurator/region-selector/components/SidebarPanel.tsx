@@ -110,7 +110,7 @@ const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, child
 );
 
 /** One setting on a single line: its name with the hint behind an info icon, and its control. */
-const SettingRow: FC<{ label: string; hint: string; icon?: LucideIcon; dataTour?: string; children: ReactNode }> = ({ label, hint, icon: Icon, dataTour, children }) => (
+const SettingRow: FC<{ label: string; hint: ReactNode; icon?: LucideIcon; dataTour?: string; children: ReactNode }> = ({ label, hint, icon: Icon, dataTour, children }) => (
   <div className="flex items-center justify-between gap-2" data-tour={dataTour}>
     <div className="flex min-w-0 items-center gap-1.5">
       {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
@@ -120,6 +120,26 @@ const SettingRow: FC<{ label: string; hint: string; icon?: LucideIcon; dataTour?
     {children}
   </div>
 );
+
+/** Each run mode with what it does and the questions it answers. */
+const RunModeHint: FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-2">
+      {(["plan", "operate"] as const).map((mode) => (
+        <div key={mode}>
+          <p className="font-medium text-gray-900 dark:text-gray-100">{t(`simulation.runMode.${mode}`)}</p>
+          <p>{t(`simulation.runMode.${mode}Hint`)}.</p>
+          <p className="mt-1">{t("simulation.runMode.examples")}</p>
+          <ul className="list-disc pl-4">
+            <li>{t(`simulation.runMode.${mode}Question1`)}</li>
+            <li>{t(`simulation.runMode.${mode}Question2`)}</li>
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // The period lies in one year. With historic weather the year is chosen from the
 // archive's years, and a saved model keeps its year listed even when the archive
@@ -457,7 +477,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
           </SettingRow>
           {configuratorMode === "advanced" && (
             <div>
-            <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
+            <SettingRow label={t("simulation.runMode.label")} hint={<RunModeHint />}>
               <SegmentedControl
                 aria-label={t("simulation.runMode.label")}
                 value={runMode}

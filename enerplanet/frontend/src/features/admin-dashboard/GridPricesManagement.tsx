@@ -42,7 +42,7 @@ const PriceRow: React.FC<PriceRowProps> = ({ initial, isNew, updated, onSaved })
 	const exportCt = draft.exportCt === "" ? 0 : Number(draft.exportCt);
 	const errorKey = Number.isNaN(importCt) ? "gridPrices.errors.importPositive" : gridPriceError(importCt, exportCt);
 	const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
-	const set = (key: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, [key]: e.target.value });
+	const set = (key: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft({ ...draft, [key]: e.target.value });
 	const label = draft.country === FALLBACK_COUNTRY ? t("gridPrices.otherCountries") : draft.country;
 
 	const save = async () => {
@@ -70,7 +70,7 @@ const PriceRow: React.FC<PriceRowProps> = ({ initial, isNew, updated, onSaved })
 			<td className="py-2 pr-2 w-28"><input type="number" min={0} step="0.01" className={INPUT_CLASS} value={draft.importCt} onChange={set("importCt")} aria-label={t("gridPrices.purchase")} /></td>
 			<td className="py-2 pr-2 w-28"><input type="number" min={0} step="0.01" className={INPUT_CLASS} value={draft.exportCt} onChange={set("exportCt")} aria-label={t("gridPrices.feedIn")} /></td>
 			<td className="py-2 pr-2">
-				<input className={INPUT_CLASS} value={draft.source} onChange={set("source")} aria-label={t("gridPrices.source")} />
+				<textarea rows={2} className={INPUT_CLASS} value={draft.source} onChange={set("source")} aria-label={t("gridPrices.source")} />
 				{dirty && errorKey && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{t(errorKey)}</p>}
 			</td>
 			<td className="py-2 pr-2 text-[11px] text-muted-foreground whitespace-nowrap">{updated ?? ""}</td>

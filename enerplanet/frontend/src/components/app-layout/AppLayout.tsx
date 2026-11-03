@@ -210,7 +210,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Widens over the page, not beside it, so the content and the map keep their size. */}
         <aside
           data-expanded={railMenuOpen}
-          className="group/rail fixed left-0 bottom-0 z-[51] w-[var(--sidebar-width)] overflow-hidden border-r border-border bg-card shadow-lg transition-[width] duration-200 top-[var(--topbar-height)] hover:w-60 hover:delay-150 has-[[data-rail-expand]:focus-visible]:w-60 data-[expanded=true]:w-60 motion-reduce:transition-none"
+          className="group/rail fixed left-0 bottom-0 z-[51] w-[var(--sidebar-width)] overflow-hidden border-r border-border bg-card shadow-lg transition-[width] duration-200 top-[var(--topbar-height)] hover:w-56 hover:delay-150 has-[[data-rail-expand]:focus-visible]:w-56 data-[expanded=true]:w-56 motion-reduce:transition-none"
         >
           <div className="flex flex-col gap-2 px-[0.875rem] py-4">
             <a
@@ -306,7 +306,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       <span className={`ml-2 ${RAIL_LABEL} text-foreground`}>{user?.name || user?.email}</span>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={24}>
+                  {/* The bell menu's 24 px offset, plus the theme button slot (3rem, 54 px at the 18 px root) beside the trigger. */}
+                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={78}>
                     <DropdownMenuItem className="cursor-pointer" onClick={handleSmartRestartTour}>
                       <GraduationCap className="w-4 h-4" />
                       {t("common.tooltips.restartTour")}

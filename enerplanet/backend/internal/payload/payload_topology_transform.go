@@ -49,6 +49,13 @@ func indexTransformersByGrid(transformers []interface{}) map[int]map[string]inte
 	return result
 }
 
+// isDisabledBuilding reports whether the user disabled the building; the
+// configurator marks it with activated: false.
+func isDisabledBuilding(props map[string]interface{}) bool {
+	activated, ok := props["activated"].(bool)
+	return ok && !activated
+}
+
 // indexBuildingsByGrid indexes buildings by their grid_result_id, leaving out
 // buildings the user disabled.
 func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interface{} {
@@ -71,8 +78,7 @@ func indexBuildingsByGrid(buildings []interface{}) map[int][]map[string]interfac
 			skippedCount++
 			continue
 		}
-		// The configurator marks a building the user disabled with activated: false.
-		if activated, ok := props["activated"].(bool); ok && !activated {
+		if isDisabledBuilding(props) {
 			disabledCount++
 			continue
 		}
@@ -383,6 +389,9 @@ func buildTopologyFromPylovoData(configMap map[string]interface{}, sessionID int
 			continue
 		}
 		bProps, _ := bMap["properties"].(map[string]interface{})
+		if isDisabledBuilding(bProps) {
+			continue
+		}
 		if gridID, ok := getIntValue(bProps["grid_result_id"]); ok {
 			if _, hasTransformer := transformerMap[gridID]; hasTransformer {
 				continue
@@ -563,6 +572,7 @@ func normalizeInfinityValueWithDefault(value interface{}) interface{} {
 
 // infinityFields is a set of constraint keys that should default to "inf" when null
 var infinityFields = map[string]bool{
+	"cont_energy_cap_max":            true,
 	"cont_energy_cap_max_systemwide": true,
 	"cont_export_cap":                true,
 	"cont_resource_area_max":         true,

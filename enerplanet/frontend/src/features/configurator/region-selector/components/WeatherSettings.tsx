@@ -18,7 +18,7 @@ const ARCHIVE_NAMES: Record<string, string> = {
 const SCENARIOS: WeatherChoice[] = ["p10", "p50", "p90"];
 
 interface WeatherSettingsProps {
-  /** Shows the archive picker; everyone else runs on the default archive. */
+  /** Shows the weather archive, and a picker when more than one is listed; everyone else runs on the default archive. */
   isExpert: boolean;
   /** Switches between scenario and historic weather; the caller moves the period to fit. */
   onModeChange: (scenario: boolean) => void;
@@ -27,7 +27,7 @@ interface WeatherSettingsProps {
 /**
  * The weather a model's runs use: a scenario year (typical, low or high solar) or
  * the recorded weather of a historic year, chosen first because it decides how the
- * period's year is set. Experts also pick the archive.
+ * period's year is set. Experts also see the archive and pick it when there is more than one.
  */
 export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChange }) => {
   const { t } = useTranslation();
@@ -95,7 +95,7 @@ const ChoiceToggle: FC<{ label: string; value: string; options: ChoiceOption[]; 
   </div>
 );
 
-/** The weather archive by name; its coverage is behind the info icon. */
+/** The weather archive by name, a choice when there are several; its coverage is behind the info icon. */
 const ArchiveSelect: FC = () => {
   const { t } = useTranslation();
   const weather = useModelStore((s) => s.weather);
@@ -103,6 +103,7 @@ const ArchiveSelect: FC = () => {
   const { defaultProvider, archives, scenarioYears } = useWeatherArchives();
   const archive = weather.provider ?? defaultProvider ?? "";
   const names = Object.keys(archives);
+  if (names.length === 0) return null;
 
   return (
     <div>
@@ -128,12 +129,16 @@ const ArchiveSelect: FC = () => {
           </TooltipContent>
         </Tooltip>
       </div>
-      <ChoiceToggle
-        label={t("simulation.weather.archive")}
-        value={archive}
-        options={names.map((name) => ({ value: name, label: ARCHIVE_NAMES[name] ?? name }))}
-        onChange={(value) => setWeather({ ...weather, provider: value === defaultProvider ? null : value })}
-      />
+      {names.length === 1 ? (
+        <p className="text-xs font-medium text-foreground">{ARCHIVE_NAMES[names[0]] ?? names[0]}</p>
+      ) : (
+        <ChoiceToggle
+          label={t("simulation.weather.archive")}
+          value={archive}
+          options={names.map((name) => ({ value: name, label: ARCHIVE_NAMES[name] ?? name }))}
+          onChange={(value) => setWeather({ ...weather, provider: value === defaultProvider ? null : value })}
+        />
+      )}
     </div>
   );
 };
