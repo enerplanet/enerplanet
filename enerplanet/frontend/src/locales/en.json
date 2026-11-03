@@ -1891,6 +1891,11 @@
       "operate": "Simulation",
       "planHint": "Suggests the values left open, such as sizes, at least cost",
       "operateHint": "Runs each technology at the size and values entered and optimises only its use; every value must be set, not only the size",
+      "examples": "Answers questions such as:",
+      "planQuestion1": "How large should the solar panels and batteries I placed be for the lowest total cost?",
+      "planQuestion2": "Where a building has more than one heating option, how much heat should each supply?",
+      "operateQuestion1": "What does a year cost with the systems as entered?",
+      "operateQuestion2": "How much electricity do the buildings still buy from the grid with these systems?",
       "unsized": "Buildings that need a size for simulation: {{count}}. Click an entry to set it.",
       "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
       "fields": {
