@@ -7,6 +7,7 @@ describe('defaultFor', () => {
   const prices = [row('germany', 38.35, 7.7), row('other', 30, 0)];
   it('uses the country row', () => expect(defaultFor(prices, 'Germany')?.country).toBe('germany'));
   it('falls back to other', () => expect(defaultFor(prices, 'austria')?.country).toBe('other'));
+  it('finds czechia by the name regions carry', () => expect(defaultFor([...prices, row('czechia', 31.79, 2)], 'Czech Republic')?.country).toBe('czechia'));
 });
 
 describe('countryPrices', () => {

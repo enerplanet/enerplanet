@@ -25,8 +25,14 @@ export async function saveGridPrice(price: Pick<GridPrice, 'country' | 'import_c
   return response.data.data;
 }
 
+// Region names that differ from the price table's key, as geo.NormalizeCountry maps them.
+const COUNTRY_ALIASES: Record<string, string> = { czech_republic: 'czechia' };
+
 /** A country name as the price table keys it. */
-const countryKey = (country: string | undefined): string => (country ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+const countryKey = (country: string | undefined): string => {
+  const key = (country ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+  return COUNTRY_ALIASES[key] ?? key;
+};
 
 /** The default that applies to a model's country: its own row, else the fallback row. */
 export function defaultFor(prices: GridPrice[], country: string | undefined): GridPrice | undefined {
