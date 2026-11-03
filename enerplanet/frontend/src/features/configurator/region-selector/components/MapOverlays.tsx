@@ -1,13 +1,13 @@
-import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets } from "lucide-react";
+import { Building, CircuitBoard, Zap, Cable, Layers, Ruler, Calendar, Tag, Users, Home, Flame, Snowflake, Droplets, X } from "lucide-react";
 import { useEffect, useState, type FC, type ReactNode, type RefObject } from "react";
 import { InfoIcon } from "@/components/ui/InfoTooltip";
-import { MAP_TOP_CENTRE } from "@/components/map-controls/WorkflowBar";
 import { useTranslation } from "@spatialhub/i18n";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { formatFClassLabel } from "@/features/configurator/utils/fClassUtils";
 import { getEnergyLabelColorClasses, normalizeEnergyLabel } from "@/features/configurator/utils/energyLabelUtils";
 import { buemTotals, type StoredDemandProfile } from "@/features/configurator/building-config/modelDemandProfiles";
 import { formatEnergy } from "@/utils/formatEnergy";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface TooltipTransformer {
     x: number;
@@ -66,6 +66,10 @@ interface TooltipMvLine {
 interface MapOverlaysProps {
     /** Translation key of the drawing hint beside the cursor, or null for none. */
     drawHintKey?: string | null;
+    /** Whether a polygon is being drawn; shows the Cancel button. */
+    isDrawing?: boolean;
+    /** Abandons the polygon being drawn. */
+    onCancelDrawing?: () => void;
     /** Translation key of the warning shown beside the pointer when a modifier turns the click into a delete. */
     deleteHintKey?: string | null;
     /** The map element; the hints follow the pointer over it. */
@@ -73,7 +77,6 @@ interface MapOverlaysProps {
     /** The BuEM results stored for the saved model, by osm_id; empty before the first save. */
     demandProfiles?: Map<string, StoredDemandProfile>;
     isDraggingTech?: boolean;
-    isGeneratingGrid?: boolean;
     simulateEV?: boolean;
     gridIdToTrafoCapacity?: Record<number, number>;
     gridIdToPeakLoad?: Record<number, number>;
@@ -118,7 +121,7 @@ const TooltipDemand: FC<{ profile?: StoredDemandProfile }> = ({ profile }) => {
             { icon: <Flame className="w-3 h-3 text-orange-500" />, value: totals.heating },
             { icon: <Zap className="w-3 h-3 text-sky-500" />, value: totals.electricity },
             { icon: <Snowflake className="w-3 h-3 text-cyan-500" />, value: totals.cooling },
-            { icon: <Droplets className="w-3 h-3 text-blue-500" />, value: totals.hotWater },
+            { icon: <Droplets className="w-3 h-3 text-red-500" />, value: totals.hotWater },
         ];
         return (
             <div className="mt-1 space-y-0.5 text-muted-foreground">
@@ -145,6 +148,9 @@ const TooltipDemand: FC<{ profile?: StoredDemandProfile }> = ({ profile }) => {
             {profile?.status === "shared" && (
                 <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemShared", { detail: profile.error_message ?? "" })}</div>
             )}
+            {profile?.status === "not_heated" && (
+                <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemNotHeated", { reason: profile.error_message ?? "" })}</div>
+            )}
             {profile?.status === "pending" && (
                 <div className="mt-0.5 text-[10px] text-muted-foreground">{t("simulation.mapOverlay.buemPending")}</div>
             )}
@@ -157,8 +163,8 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
     const { t } = useTranslation();
     const facts: [string, string | undefined][] = [
         [t("simulation.mapOverlay.storeys"), profile.n_storeys?.toString()],
-        [t("simulation.mapOverlay.floorArea"), profile.a_ref_m2 == null ? undefined : `${Math.round(profile.a_ref_m2).toLocaleString()} m²`],
-        [t("simulation.mapOverlay.roomHeight"), profile.h_room_m == null ? undefined : `${profile.h_room_m.toFixed(1)} m`],
+        [t("simulation.mapOverlay.floorArea"), profile.a_ref_m2 == null ? undefined : `${formatNumber(profile.a_ref_m2)} m²`],
+        [t("simulation.mapOverlay.roomHeight"), profile.h_room_m == null ? undefined : `${formatNumber(profile.h_room_m, 1)} m`],
         [t("simulation.mapOverlay.envelope"), profile.tabula_variant_code],
     ];
     return (
@@ -175,13 +181,33 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
     );
 };
 
+/** A fixed button that abandons the polygon being drawn, beside the Escape shortcut. */
+const CancelDrawingButton: FC<{ visible: boolean; onCancel?: () => void }> = ({ visible, onCancel }) => {
+    const { t } = useTranslation();
+    if (!visible || !onCancel) return null;
+    return (
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-40 -translate-x-1/2">
+            <button
+                type="button"
+                onClick={onCancel}
+                className="md-fade-in pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-md hover:bg-muted"
+            >
+                <X className="h-3.5 w-3.5" />
+                {t("drawing.cancel")}
+                <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">Esc</kbd>
+            </button>
+        </div>
+    );
+};
+
 export const MapOverlays: FC<MapOverlaysProps> = ({
     drawHintKey = null,
+    isDrawing = false,
+    onCancelDrawing,
     deleteHintKey = null,
     mapRef,
     demandProfiles,
     isDraggingTech = false,
-    isGeneratingGrid = false,
     simulateEV = false,
     gridIdToTrafoCapacity = {},
     gridIdToPeakLoad = {}
@@ -193,6 +219,10 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
     const techEntries = buildingTooltip?.techs ? Object.entries(buildingTooltip.techs) : [];
     const buildingProfile = buildingTooltip?.osmId ? demandProfiles?.get(buildingTooltip.osmId) : undefined;
     const modelledType = buildingProfile?.status === "resolved" ? buildingProfile.building_type : undefined;
+    const useType = buildingProfile?.use_type;
+    const useTypeLabel = !useType ? "" : buildingProfile?.use_source === "3d"
+        ? t(`simulation.mapOverlay.useType.${useType}`, { defaultValue: useType })
+        : formatFClassLabel(useType);
     const hasFiniteNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
     const getEvHostingCapacity = () => {
@@ -254,29 +284,6 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
 
     return (
         <>
-            {/* Grid Generation Loader - minimal floating pill, in the slot below the workflow pill */}
-            {isGeneratingGrid && (
-                <div style={MAP_TOP_CENTRE} className="absolute top-16 -translate-x-1/2 z-40">
-                    <div className="md-rise flex items-center gap-3 bg-card border border-border/50 rounded-full px-5 py-2.5 shadow-lg">
-                        {/* Spinning icon */}
-                        <div className="relative w-5 h-5">
-                            <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-                            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
-                        </div>
-
-                        {/* Text */}
-                        <span className="text-sm font-medium text-foreground whitespace-nowrap">{t("simulation.mapOverlay.analyzingArea")}</span>
-
-                        {/* Animated dots */}
-                        <span className="flex items-center gap-0.5">
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1 h-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </span>
-                    </div>
-                </div>
-            )}
-
             {drawHintKey && (
                 <CursorHint mapRef={mapRef} className="z-20">
                     <div className="md-fade-in bg-background dark:bg-gray-800 border border-border rounded px-2 py-1 shadow-sm text-xs text-foreground">
@@ -284,6 +291,8 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                     </div>
                 </CursorHint>
             )}
+
+            <CancelDrawingButton visible={isDrawing} onCancel={onCancelDrawing} />
 
             {/* Above the pointer, clear of the feature tooltips, which are hidden meanwhile. */}
             {deleteHintKey && (
@@ -354,9 +363,14 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                         </div>
                         <div className="text-muted-foreground mt-1">
                             <span className="font-medium text-foreground">
-                                {modelledType ? t(`simulation.mapOverlay.useType.${modelledType}`, { defaultValue: modelledType }) : formatFClassLabel(buildingTooltip.type)}
+                                {modelledType ? t(`simulation.mapOverlay.useType.${modelledType}`, { defaultValue: modelledType }) : useType ? useTypeLabel : formatFClassLabel(buildingTooltip.type)}
                             </span>
                         </div>
+                        {useType && buildingProfile?.use_source && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {t(`simulation.mapOverlay.useSource.${buildingProfile.use_source}`)}{modelledType ? `: ${useTypeLabel}` : ""}
+                            </div>
+                        )}
                         {(buildingTooltip.fClasses?.length || buildingTooltip.fClass) && (
                             <div className="text-muted-foreground mt-0.5">
                                 {t("simulation.mapOverlay.class")}:{' '}
@@ -390,14 +404,14 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.height")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.heightMax.toFixed(1)} m</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.heightMax, 1)} m</span>
                                     </div>
                                 )}
                                 {!hasFiniteNumber(buildingTooltip.heightMax) && hasFiniteNumber(buildingTooltip.heightMedian) && (
                                     <div className="flex items-center gap-1.5">
                                         <Ruler className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.heightMedian")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.heightMedian.toFixed(1)} m</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.heightMedian, 1)} m</span>
                                     </div>
                                 )}
                                 {buildingTooltip.constructionYear && (
@@ -420,7 +434,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                             {buildingTooltip.energyLabel ? normalizeEnergyLabel(buildingTooltip.energyLabel) : t("common.na")}
                                         </span>
                                         {hasFiniteNumber(buildingTooltip.energyIndex) && (
-                                            <span className="text-muted-foreground">(EI {buildingTooltip.energyIndex.toFixed(2)})</span>
+                                            <span className="text-muted-foreground">(EI {formatNumber(buildingTooltip.energyIndex, 2)})</span>
                                         )}
                                     </div>
                                 )}
@@ -428,7 +442,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Tag className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.energyIndex")}:</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.energyIndex.toFixed(2)}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.energyIndex, 2)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && buildingTooltip.labelDate && (
@@ -442,20 +456,20 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                                     <div className="flex items-center gap-1.5">
                                         <Users className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.population")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsPopulation.toLocaleString()}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsPopulation, 3, 0)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsHouseholds) && (
                                     <div className="flex items-center gap-1.5">
                                         <Home className="w-3 h-3" />
                                         <span>{t("simulation.mapOverlay.households")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsHouseholds.toLocaleString()}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsHouseholds, 3, 0)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && hasFiniteNumber(buildingTooltip.cbsAvgHouseholdSize) && (
                                     <div className="flex items-center gap-1.5">
                                         <span>{t("simulation.mapOverlay.avgHouseholdSize")} (PC6/PC4):</span>
-                                        <span className="font-medium text-foreground">{buildingTooltip.cbsAvgHouseholdSize.toFixed(2)}</span>
+                                        <span className="font-medium text-foreground">{formatNumber(buildingTooltip.cbsAvgHouseholdSize, 2)}</span>
                                     </div>
                                 )}
                                 {buildingTooltip.countryCode === 'NL' && buildingTooltip.bagId && (
@@ -553,7 +567,7 @@ export const MapOverlays: FC<MapOverlaysProps> = ({
                             </div>
                             {mvLineTooltip.lengthM !== undefined && mvLineTooltip.lengthM > 0 && (
                                 <div>
-                                    {t("simulation.mapOverlay.length")}: <span className="font-medium text-foreground">{mvLineTooltip.lengthM.toFixed(1)} m</span>
+                                    {t("simulation.mapOverlay.length")}: <span className="font-medium text-foreground">{formatNumber(mvLineTooltip.lengthM, 1)} m</span>
                                 </div>
                             )}
                             {mvLineTooltip.cableType && (

@@ -129,7 +129,7 @@ cmd_up() {
   tmux new-session -d -s "$SESSION" -n dev -c "$ROOT/enerplanet/backend"
   # Stored BuEM and PV results are keyed on BUEM_VERSION and PV_VERSION, so they
   # follow the pinned buem-model and PV service.
-  tmux send-keys -t "$SESSION:dev.0" "BUEM_VERSION='$BUEM_MODEL_IMAGE_TAG' PV_VERSION='$PV_SERVICE_REF' COATI_BIN='$coati' go run cmd/main.go" C-m
+  tmux send-keys -t "$SESSION:dev.0" "BUEM_VERSION='$BUEM_MODEL_IMAGE_TAG' PV_VERSION='$PV_SERVICE_IMAGE_TAG' COATI_BIN='$coati' go run cmd/main.go" C-m
   tmux split-window -h -t "$SESSION:dev.0" -c "$ROOT/enerplanet/frontend"
   tmux send-keys -t "$SESSION:dev.1" "npm run dev" C-m
   tmux split-window -v -t "$SESSION:dev.1" -c "$ROOT"

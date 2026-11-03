@@ -31,13 +31,14 @@ func newStatusMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 
 // The MEME path owns the model's lifecycle; a status update MUST be issued
 // against models and MUST be guarded so it only fires while the model is still
-// in the MEME lifecycle (queue|running) — a late failure must not clobber a
+// in the MEME lifecycle, a late failure must not clobber a
 // model another path already completed.
 func TestMarkModelStatus_transitionsAreGuarded(t *testing.T) {
 	cases := []struct {
 		name string
 		call func(db *gorm.DB)
 	}{
+		{"buildings", func(db *gorm.DB) { markModelBuildings(db, 18) }},
 		{"running", func(db *gorm.DB) { markModelRunning(db, 18) }},
 		{"completed", func(db *gorm.DB) { markModelCompleted(db, 18) }},
 		{"failed", func(db *gorm.DB) { markModelFailed(db, 18, errors.New("target meme: HTTP 422")) }},
@@ -93,7 +94,7 @@ func TestMarkModelProcessing_setsProcessing(t *testing.T) {
 	db, mock := newStatusMockDB(t)
 	mock.ExpectExec(`UPDATE "models" SET .*WHERE id = .* AND status IN .*`).
 		WithArgs(commonModels.ModelStatusProcessing, sqlmock.AnyArg(), 18,
-			commonModels.ModelStatusQueue, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+			commonModels.ModelStatusQueue, commonModels.ModelStatusBuildings, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	markModelProcessing(db, 18)
@@ -106,7 +107,7 @@ func TestMarkModelCompleted_fromProcessing(t *testing.T) {
 	db, mock := newStatusMockDB(t)
 	mock.ExpectExec(`UPDATE "models" SET .*WHERE id = .* AND status IN .*`).
 		WithArgs(sqlmock.AnyArg(), commonModels.ModelStatusCompleted, sqlmock.AnyArg(), 18,
-			commonModels.ModelStatusQueue, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+			commonModels.ModelStatusQueue, commonModels.ModelStatusBuildings, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	markModelCompleted(db, 18)
@@ -135,11 +136,25 @@ func TestMarkModelFailed_recordsService(t *testing.T) {
 	db, mock := newStatusMockDB(t)
 	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
 		WithArgs(sqlmock.AnyArg(), "meme job 1 via TentaCron for model 18: target_job_failed", modelstore.ServiceMeme,
-			"failed", sqlmock.AnyArg(), 18, "queue", "running", "processing").
+			"failed", sqlmock.AnyArg(), 18, "queue", "buildings", "running", "processing").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	cause := errors.New("target_job_failed")
 	markModelFailed(db, 18, modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme job 1 via TentaCron for model 18: %w", cause)))
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// A run that fails while its building profiles resolve is still in the MEME
+// lifecycle, so the failure must reach it.
+func TestMarkModelFailed_reachesARunResolvingBuildings(t *testing.T) {
+	db, mock := newStatusMockDB(t)
+	mock.ExpectExec(`UPDATE "models" SET .*WHERE id = .* AND status IN .*`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), 18,
+			commonModels.ModelStatusQueue, commonModels.ModelStatusBuildings, commonModels.ModelStatusRunning, commonModels.ModelStatusProcessing).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	markModelFailed(db, 18, errors.New("resolve BuEM series of model 18: connection refused"))
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }

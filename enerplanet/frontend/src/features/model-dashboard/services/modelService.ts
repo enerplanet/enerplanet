@@ -187,6 +187,12 @@ export interface ModelListResponse {
   server_time?: string;
 }
 
+/** A family a model may link to, named by its head. */
+export interface FamilyOption {
+  id: number;
+  title: string;
+}
+
 export interface ModelResponse {
   success: boolean;
   data: Model;
@@ -372,6 +378,24 @@ class ModelService {
     const response = await axios.patch(`${this.baseURL}/${id}/move`, {
       workspace_id: workspaceId,
     });
+    return response.data;
+  }
+
+  /** Families a model may link to: those of models copied from the same original. */
+  async familyOptions(id: number): Promise<FamilyOption[]> {
+    const response = await axios.get(`${this.baseURL}/${id}/family`);
+    return response.data.families;
+  }
+
+  /** Puts a model into one of the families from familyOptions. */
+  async linkToFamily(id: number, familyId: number): Promise<ModelResponse> {
+    const response = await axios.post(`${this.baseURL}/${id}/family`, { family_id: familyId });
+    return response.data;
+  }
+
+  /** Makes a model its own family. */
+  async unlinkFromFamily(id: number): Promise<ModelResponse> {
+    const response = await axios.delete(`${this.baseURL}/${id}/family`);
     return response.data;
   }
 

@@ -33,12 +33,13 @@ func (s *Store) Save(modelID uint, runID, status string) error {
 }
 
 // SaveLeg records runID as the model's leg MEME TentaCron job, replacing an
-// earlier one for that leg.
+// earlier one for that leg. It clears the grid prices of the earlier run; the
+// dispatch records the new run's prices after this.
 func (s *Store) SaveLeg(modelID uint, leg, runID, status string) error {
 	row := models.ModelMemeRun{ModelID: modelID, Leg: leg, RunID: runID, Status: status}
 	return s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "model_id"}, {Name: "leg"}},
-		DoUpdates: clause.AssignmentColumns([]string{"run_id", "status", "error", "updated_at"}),
+		DoUpdates: clause.AssignmentColumns([]string{"run_id", "status", "error", "grid_import_ct_per_kwh", "grid_export_ct_per_kwh", "updated_at"}),
 	}).Create(&row).Error
 }
 

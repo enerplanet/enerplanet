@@ -5,7 +5,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 
+	commonModels "platform.local/common/pkg/models"
+
+	"spatialhub_backend/internal/contenthash"
+	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/store/series"
 )
 
@@ -84,4 +90,28 @@ func TestAttachDemandSeries_keepsAUsersGasSupply(t *testing.T) {
 	attachDemandSeries([]interface{}{map[string]interface{}{"from": f}},
 		[]series.LinkedSeries{link("1", "heating", 1, 1)}, seriesWindow{offset: 0, steps: 2, resolution: 60})
 	assert.Equal(t, own, f["techs"].(map[string]interface{})["gas_supply"])
+}
+
+// fixedSeries answers every read with the same links.
+type fixedSeries []series.LinkedSeries
+
+func (f fixedSeries) LinkedSeries(series.Owner, string) ([]series.LinkedSeries, error) { return f, nil }
+
+func TestAttachModelDemandSeries_takesOnlyLinksOfTheCurrentConfig(t *testing.T) {
+	day := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
+	model := &commonModels.Model{ID: 7, Config: datatypes.JSON(`{"name":"current"}`), FromDate: day, ToDate: day}
+	current, err := contenthash.Of(model.Config)
+	require.NoError(t, err)
+	fresh, stale := link("1", "heating", 1, 2), link("2", "heating", 3, 4)
+	fresh.Revision, stale.Revision = current, "an earlier config"
+	heatPump := map[string]interface{}{"air_source_heat_pump": map[string]interface{}{}}
+	resolved, failed := seriesFeature("1", heatPump), seriesFeature("2", heatPump)
+	calc := payload.CalculationPayload{Resolution: 60, Topology: []interface{}{
+		map[string]interface{}{"from": resolved}, map[string]interface{}{"from": failed},
+	}}
+
+	require.NoError(t, attachModelDemandSeries(fixedSeries{fresh, stale}, model, calc))
+
+	assert.Contains(t, demandSeriesOf(resolved), "heat")
+	assert.Nil(t, demandSeriesOf(failed), "a series linked for an earlier config is not this run's")
 }

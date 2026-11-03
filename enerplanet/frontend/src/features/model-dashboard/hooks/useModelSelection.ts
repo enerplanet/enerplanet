@@ -18,6 +18,15 @@ export const useModelSelection = () => {
 		);
 	}, []);
 
+	// Selects every member when the head (members[0]) is not selected, else clears them all.
+	const handleSelectFamily = useCallback((members: Model[]): void => {
+		const ids = new Set(members.map((m) => m.id));
+		setSelectedModels((prev) => {
+			const rest = prev.filter((selected) => !ids.has(selected.id));
+			return prev.some((selected) => selected.id === members[0].id) ? rest : [...rest, ...members];
+		});
+	}, []);
+
 	const handleSelectAll = useCallback((filteredModels: Model[]): void => {
 		setSelectedModels((prev) =>
 			prev.length === filteredModels.length ? [] : [...filteredModels]
@@ -44,6 +53,7 @@ export const useModelSelection = () => {
 		editTitle,
 		isSelected,
 		handleSelectModel,
+		handleSelectFamily,
 		handleSelectAll,
 		startTitleEdit,
 		cancelTitleEdit,

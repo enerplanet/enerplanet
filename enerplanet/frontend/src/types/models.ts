@@ -2,6 +2,7 @@
 export type ModelStatus = 
 	| 'draft' 
 	| 'queue' 
+	| 'buildings'
 	| 'calculating' 
 	| 'running' 
 	| 'processing'

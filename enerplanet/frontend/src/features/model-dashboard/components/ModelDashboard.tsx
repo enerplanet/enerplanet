@@ -20,9 +20,12 @@ import {
 	GitCompareArrows,
 	Play,
 	MoreHorizontal,
+	FoldVertical,
+	UnfoldVertical,
 } from "lucide-react";
 
-import { Model, ModelStats } from "@/features/model-dashboard/services/modelService";
+import { isAxiosError } from "axios";
+import { Model, ModelStats, modelService, type FamilyOption } from "@/features/model-dashboard/services/modelService";
 import { ModelStatsSummary } from "./ModelStatsSummary";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ListSkeleton } from "@/components/ui/Skeletons";
@@ -63,7 +66,7 @@ import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorit
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
 import { ModelTableRow } from "./ModelTableRow";
 import { processModelTimingUpdates, type TimingUpdate } from "@/features/model-dashboard/utils/modelTimingUtils";
-import { organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
+import { familyId, groupFamilies, organizeModelsHierarchically } from "@/features/model-dashboard/utils/dashboardHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 
 interface Group {
@@ -134,11 +137,11 @@ function SortHeaderButton({ field, label, orderBy, order, onSort }: SortHeaderBu
 function ModelColumns() {
 	return (
 		<colgroup>
-			<col style={{ width: "5rem" }} />
+			<col style={{ width: "4rem" }} />
 			<col />
-			<col style={{ width: "24rem" }} />
-			<col className="hidden md:table-column" style={{ width: "10rem" }} />
-			<col style={{ width: "22rem" }} />
+			<col className="w-[12rem] xl:w-[18rem]" />
+			<col className="hidden xl:table-column" style={{ width: "10rem" }} />
+			<col style={{ width: "21.5rem" }} />
 		</colgroup>
 	);
 }
@@ -319,6 +322,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		editTitle,
 		isSelected,
 		handleSelectModel,
+		handleSelectFamily,
 		handleSelectAll,
 		startTitleEdit,
 		cancelTitleEdit,
@@ -421,22 +425,52 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		}
 		return titles;
 	}, [paginatedModels]);
-	const childCountByParentID = useMemo(() => {
-		const children = new Map<number, number>();
+	const copyCountByFamily = useMemo(() => {
+		const copies = new Map<number, number>();
 		for (const model of paginatedModels) {
-			if (!model.parent_model_id) continue;
-			children.set(model.parent_model_id, (children.get(model.parent_model_id) ?? 0) + 1);
+			if (model.level === 0) continue;
+			copies.set(familyId(model), (copies.get(familyId(model)) ?? 0) + 1);
 		}
-		return children;
+		return copies;
 	}, [paginatedModels]);
-	const failedChildCountByParentID = useMemo(() => {
+	const failedCopyCountByFamily = useMemo(() => {
 		const failed = new Map<number, number>();
 		for (const model of paginatedModels) {
-			if (!model.parent_model_id || model.status !== "failed") continue;
-			failed.set(model.parent_model_id, (failed.get(model.parent_model_id) ?? 0) + 1);
+			if (model.level === 0 || model.status !== "failed") continue;
+			failed.set(familyId(model), (failed.get(familyId(model)) ?? 0) + 1);
 		}
 		return failed;
 	}, [paginatedModels]);
+	// A family's head selects or clears its whole family.
+	const familyByHeadID = useMemo(
+		() => new Map(groupFamilies(paginatedModels).map(({ head, members }) => [head.id, [head, ...members]])),
+		[paginatedModels],
+	);
+	// A null family unlinks the model into a family of its own.
+	const handleLinkFamily = useCallback(async (model: Model, family: number | null) => {
+		try {
+			if (family === null) await modelService.unlinkFromFamily(model.id);
+			else await modelService.linkToFamily(model.id, family);
+			await loadModels();
+		} catch (error) {
+			const reason = isAxiosError(error) ? (error.response?.data?.error ?? error.message) : String(error);
+			showError(t(family === null ? "model.family.unlinkFailed" : "model.family.linkFailed", { name: model.title, reason }));
+		}
+	}, [loadModels, showError, t]);
+	const loadFamilyOptions = useCallback(async (model: Model): Promise<FamilyOption[]> => {
+		try {
+			return await modelService.familyOptions(model.id);
+		} catch (error) {
+			const reason = isAxiosError(error) ? (error.response?.data?.error ?? error.message) : String(error);
+			showError(t("model.family.linkFailed", { name: model.title, reason }));
+			return [];
+		}
+	}, [showError, t]);
+	const handleSelectRow = useCallback((model: Model) => {
+		const family = familyByHeadID.get(model.id);
+		if (family && family.length > 1) handleSelectFamily(family);
+		else handleSelectModel(model);
+	}, [familyByHeadID, handleSelectFamily, handleSelectModel]);
 	const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<number>>(new Set());
 	const toggleFamily = useCallback((modelId: number) => {
 		setCollapsedFamilies((prev) => {
@@ -445,18 +479,23 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			return next;
 		});
 	}, []);
+	// The header button collapses every family on the page while any is open, else expands them all.
+	const anyFamilyOpen = [...copyCountByFamily.keys()].some((id) => !collapsedFamilies.has(id));
+	const toggleAllFamilies = useCallback(() => {
+		setCollapsedFamilies(anyFamilyOpen ? new Set(copyCountByFamily.keys()) : new Set());
+	}, [anyFamilyOpen, copyCountByFamily]);
+	const copiesOnPage = [...copyCountByFamily.values()].reduce((sum, n) => sum + n, 0);
 	const visibleModels = useMemo(
-		() => paginatedModels.filter((m) => !(m.level > 0 && m.parent_model_id && collapsedFamilies.has(m.parent_model_id))),
+		() => paginatedModels.filter((m) => !(m.level > 0 && collapsedFamilies.has(familyId(m)))),
 		[paginatedModels, collapsedFamilies],
 	);
 
-	// Each original with the copies shown below it; a copy whose original is
-	// not on the page is its own family.
+	// Each family's head with the rest of its family shown below it.
 	const families = useMemo(() => {
 		const list: { original: (typeof visibleModels)[number]; copies: (typeof visibleModels)[number][] }[] = [];
 		for (const model of visibleModels) {
 			const last = list.at(-1);
-			if (model.level > 0 && last && last.original.id === model.parent_model_id) last.copies.push(model);
+			if (model.level > 0 && last && familyId(last.original) === familyId(model)) last.copies.push(model);
 			else list.push({ original: model, copies: [] });
 		}
 		return list;
@@ -771,10 +810,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			model={model}
 			index={rowIndex(model)}
 			modelTitle={modelTitlesByID.get(model.id) ?? model.title.trim()}
-			copyCount={model.level === 0 ? (childCountByParentID.get(model.id) ?? 0) : 0}
-			failedCopyCount={failedChildCountByParentID.get(model.id) ?? 0}
-			familyCollapsed={collapsedFamilies.has(model.id)}
+			copyCount={model.level === 0 ? (copyCountByFamily.get(familyId(model)) ?? 0) : 0}
+			failedCopyCount={model.level === 0 ? (failedCopyCountByFamily.get(familyId(model)) ?? 0) : 0}
+			familyCollapsed={collapsedFamilies.has(familyId(model))}
 			onToggleFamily={toggleFamily}
+			onLinkFamily={handleLinkFamily}
+			loadFamilyOptions={loadFamilyOptions}
 			currentUserId={user?.id ? String(user.id) : undefined}
 			userAccessLevel={user?.access_level}
 			isSelected={isSelected(model)}
@@ -783,7 +824,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			calculationStartTimes={calculationStartTimes}
 			calculationCompletionInfo={calculationCompletionInfo}
 			canUserDeleteModel={canUserDeleteModel}
-			onSelect={handleSelectModel}
+			onSelect={handleSelectRow}
 			onStartEdit={startTitleEdit}
 			onEditTitleChange={setEditTitle}
 			onUpdateTitle={updateTitle}
@@ -801,7 +842,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 
 	return (
 		<Fragment>
-				<div className={`${PAGE_SHELL_CLASS} overflow-y-scroll`}>
+				<div className={`${PAGE_SHELL_CLASS} flex h-full flex-col overflow-hidden`}>
 				{/* Page header */}
 				<PageHeader
 					icon={LayoutDashboard}
@@ -839,7 +880,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					}
 				/>
 
-				<div className="w-full space-y-5">
+				<div className="flex min-h-0 w-full flex-1 flex-col space-y-5">
 					{/* Groups Section */}
 					{groups.length > 0 && (
 						<div className="md-rise rounded-xl border border-border bg-card px-4 py-3.5 shadow-sm">
@@ -870,7 +911,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					)}
 
 					{/* Toolbar and table, each in its own card */}
-					<div className="md-rise space-y-4" style={{ animationDelay: "60ms" }}>
+					<div className="md-rise flex min-h-0 flex-1 flex-col space-y-4" style={{ animationDelay: "60ms" }}>
 						{/* Filter toolbar */}
 						<div className={`flex flex-wrap items-center gap-2 p-4 sm:flex-nowrap sm:px-5 ${CARD_CLASS}`}>
 							{/* Search */}
@@ -986,8 +1027,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								)}
 							</div>
 
-							{/* Table */}
-							<div>
+							{/* Table: only the rows scroll; header, toolbar and pagination stay */}
+							<div className="flex min-h-0 flex-1 flex-col">
 							{/* Table Section */}
 							{(isLoading || isLoadingWorkspace) ? (
 								<div className="space-y-3">
@@ -1007,13 +1048,15 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className={`md-fade-in overflow-hidden ${CARD_CLASS}`}>
-									<div className="w-full overflow-auto">
-										<table className="w-full min-w-[75rem] table-fixed">
+										<div className={`md-fade-in flex min-h-0 flex-col overflow-hidden ${CARD_CLASS}`}>
+									<div className="min-h-0 w-full flex-1 overflow-auto">
+										<table className="w-full min-w-[47rem] table-fixed xl:min-w-[63.5rem]">
 											<ModelColumns />
-											<thead>
+											<thead className="sticky top-0 z-10">
 												<tr className={`h-11 border-b border-border ${selectedModels.length > 0 ? "bg-primary/5" : "bg-muted"}`}>
-													<th className="px-4 py-2.5 text-center">
+													<th className="pl-4 pr-2 py-2.5">
+														{/* Same layout as a row's first cell, with a blank where the row has its star, so the checkboxes line up. */}
+														<div className="flex items-center justify-center gap-1.5">
 														<Tooltip>
 															<TooltipTrigger asChild>
 																<input
@@ -1029,6 +1072,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																{selectedModels.length > 0 ? t('model.deselectAll') : t('model.selectAll')}
 															</TooltipContent>
 														</Tooltip>
+														<span className="p-1" aria-hidden="true"><span className="block h-3.5 w-3.5" /></span>
+														</div>
 													</th>
 													{selectedModels.length > 0 ? (
 														<th colSpan={4} className="px-4 py-1 text-left">
@@ -1057,7 +1102,25 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 														</th>
 													) : (
 														<>
-															<th className="px-4 py-2.5 text-left">
+															<th className="pl-2 pr-4 py-2.5 text-left">
+																<div className="flex items-center gap-2">
+																{copyCountByFamily.size > 0 ? (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<button
+																				type="button"
+																				onClick={toggleAllFamilies}
+																				aria-label={t(anyFamilyOpen ? "model.family.collapseAll" : "model.family.expandAll")}
+																				className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+																			>
+																				{anyFamilyOpen ? <FoldVertical className="h-4 w-4" /> : <UnfoldVertical className="h-4 w-4" />}
+																			</button>
+																		</TooltipTrigger>
+																		<TooltipContent>{t(anyFamilyOpen ? "model.family.collapseAll" : "model.family.expandAll")}</TooltipContent>
+																	</Tooltip>
+																) : (
+																	<span className="w-8 flex-shrink-0" aria-hidden="true" />
+																)}
 																<SortHeaderButton
 																	field="title"
 																	label={t('model.name')}
@@ -1065,6 +1128,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	order={order}
 																	onSort={handleSort}
 																/>
+																</div>
 															</th>
 															<th className="px-4 py-2.5 text-left">
 																<SortHeaderButton
@@ -1075,7 +1139,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 																	onSort={handleSort}
 																/>
 															</th>
-															<th className="hidden px-4 py-2.5 text-left md:table-cell">
+															<th className="hidden px-4 py-2.5 text-left xl:table-cell">
 																<SortHeaderButton
 																	field="created_at"
 																	label={t('model.created')}
@@ -1110,8 +1174,18 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 											onItemsPerPageChange={handleItemsPerPageChange}
 											pageSizeOptions={[5, 10, 25, 50]}
 											isLoading={isLoading}
-											resultsLabel={t("model.family.pagination")}
-											className="bg-muted"
+											resultsLabel={t("model.family.ofModels", { count: totalItems })}
+											summary={totalItems <= itemsPerPage ? (
+												<>
+													<span className="font-medium text-foreground">{totalItems}</span> {t("model.family.countModels", { count: totalItems })}
+													{copiesOnPage > 0 && (
+														<>
+															, <span className="font-medium text-foreground">{copiesOnPage}</span> {t("model.family.countCopies", { count: copiesOnPage })}
+														</>
+													)}
+												</>
+											) : undefined}
+											className="shrink-0 bg-muted"
 										/>
 									)}
 								</div>

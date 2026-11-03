@@ -140,7 +140,12 @@
     "clickToDisableBuilding": "Cliquez pour désactiver ce bâtiment",
     "clickToEnableBuilding": "Cliquez pour réactiver ce bâtiment",
     "clickToSelectBuilding": "Cliquez pour sélectionner ce bâtiment",
-    "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection"
+    "clickToDeselectBuilding": "Cliquez pour retirer ce bâtiment de la sélection",
+    "cancel": "Annuler le tracé",
+    "view3dOnly": "La 3D sert à visualiser : cliquez sur un bâtiment pour ses détails. Passez à la carte pour dessiner ou modifier la zone.",
+    "legendPv": "PV",
+    "legendStorage": "Stockage",
+    "legendHeat": "Production de chaleur"
   },
   "gridNotifications": {
     "gridGenerated": "Réseau généré : {{count}} bâtiments trouvés",
@@ -220,10 +225,7 @@
     "current": "Actuel",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Voir sur la Carte",
-      "editLocation": "Modifier l'Emplacement",
       "editName": "Modifier le nom",
-      "duplicate": "Dupliquer",
       "view": "Voir",
       "share": "Partager",
       "moveToWorkspace": "Déplacer vers l'Espace de Travail",
@@ -531,8 +533,8 @@
     "draft": "Brouillon",
     "queue": "En Attente",
     "calculating": "Calcul en cours",
-    "running": "En cours",
-    "processing": "Traitement",
+    "running": "Simulation en cours",
+    "processing": "Traitement des résultats",
     "completed": "Terminé",
     "published": "Publié",
     "failed": "Échoué",
@@ -1148,7 +1150,18 @@
       "copies_other": "{{count}} copies",
       "failed_one": "{{count}} en échec",
       "failed_other": "{{count}} en échec",
-      "pagination": "familles"
+      "countModels_one": "modèle",
+      "countModels_other": "modèles",
+      "countCopies_one": "copie",
+      "countCopies_other": "copies",
+      "ofModels_one": "modèle",
+      "ofModels_other": "modèles",
+      "collapseAll": "Tout réduire",
+      "expandAll": "Tout développer",
+      "link": "Lier à l'original",
+      "linkFailed": "Impossible de lier « {{name}} » : {{reason}}",
+      "unlink": "Dissocier de l'original",
+      "unlinkFailed": "Impossible de dissocier « {{name}} » : {{reason}}"
     },
     "workspaceActions": "Actions de l'espace de travail",
     "selectedCount_one": "{{count}} sélectionné",
@@ -1678,6 +1691,11 @@
   },
   "simulation": {
     "title": "Configuration de simulation",
+    "mode": {
+      "label": "Mode",
+      "simple": "Simple",
+      "advanced": "Avancé"
+    },
     "modelName": "Nom du modèle",
     "modelNamePlaceholder": "Entrez un nom pour votre simulation énergétique",
     "simulationPeriod": "Période de simulation",
@@ -1712,9 +1730,7 @@
       "saveShortcut": "Enregistrer (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Mes bâtiments",
       "clearAll": "Supprimer tous les polygones",
-      "toggleMyBuildings": "Basculer mes bâtiments",
       "disableSelected": "Désactiver les bâtiments sélectionnés",
       "importArea": "Importer une zone",
       "exportArea": "Exporter la zone",
@@ -1788,7 +1804,6 @@
       "back": "Retour"
     },
     "mapOverlay": {
-      "analyzingArea": "Analyse de la zone",
       "canHostChargers": "Bornes possibles : {{count}}",
       "limitedChargers": "Limité, bornes : {{count}}",
       "connectedBuildings": "Bâtiments raccordés",
@@ -1853,17 +1868,17 @@
     "resolutionComingSoon": "La résolution de 30 minutes arrivera dans une prochaine version",
     "runMode": {
       "label": "Mode de calcul",
-      "plan": "Planifier",
-      "operate": "Exploiter",
-      "planHint": "Choisir la taille de chaque technologie au moindre coût",
-      "operateHint": "Garder chaque technologie à sa taille maximale et optimiser uniquement son utilisation",
-      "unsized": "Bâtiments qui ont besoin d'une taille pour le mode exploitation : {{count}}. Cliquez sur une entrée pour la définir.",
+      "plan": "Optimisation",
+      "operate": "Simulation",
+      "planHint": "Propose au moindre coût les valeurs manquantes, comme les tailles",
+      "operateHint": "Utilise chaque technologie avec la taille et les valeurs saisies et optimise uniquement son utilisation ; toutes les valeurs sont nécessaires, pas seulement la taille",
+      "unsized": "Bâtiments qui ont besoin d'une taille pour la simulation : {{count}}. Cliquez sur une entrée pour la définir.",
       "unsizedEntry": "Bâtiment {{building}} : {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "taille maximale",
         "cont_storage_cap_max": "taille de stockage"
       },
-      "fieldNeeded": "Le mode exploitation exige ici une taille finie",
+      "fieldNeeded": "La simulation exige ici une taille finie",
       "moreFieldsNeeded": "Champs qui ont besoin d'une taille : {{count}}"
     },
     "siteMode": {
@@ -1905,7 +1920,7 @@
         "p90": "Année très ensoleillée (P90)"
       },
       "hints": {
-        "scenario": "Une année composée de mois de l'archive : typique, ou au bas ou au haut de l'ensoleillement.",
+        "scenario": "Une année composée de mois historiques de l'archive : typique, ou au bas ou au haut de l'ensoleillement. Ce n'est pas une prévision.",
         "year": "Choisissez l'année historique dans la période de simulation ci-dessous ; le calcul utilise la météo enregistrée de cette année."
       },
       "mode": {
@@ -1933,7 +1948,9 @@
       "q4": "T4"
     },
     "periodScenarioYear": "Année de scénario",
-    "periodScenarioHint": "La météo de scénario n'est liée à aucune année civile. Choisissez les jours et mois à simuler ; les dates sont enregistrées dans une année de référence fixe."
+    "periodScenarioHint": "Une année de scénario est assemblée mois par mois à partir de la météo historique ; elle n'a donc pas d'année civile propre. Les mois comptent quand même : ils fixent la saison couverte par la simulation, et donc la demande de chauffage, la production solaire et le temps de calcul. Les dates sont enregistrées dans une année de référence fixe.",
+    "periodCheckYear": "Avec la météo historique, la période passe à {{year}}, la dernière année de l'archive. Gardez-la ou choisissez une autre année.",
+    "periodKeepYear": "Garder {{year}}"
   },
   "mapLayers": {
     "title": "Couches de carte",
@@ -1983,10 +2000,6 @@
       "map": {
         "title": "Carte Interactive",
         "description": "Votre espace de travail principal pour l'analyse géographique. Visualisez les couches de carte, sélectionnez des zones pour l'évaluation et visualisez les données de risque énergétique."
-      },
-      "locations": {
-        "title": "Emplacements Enregistrés",
-        "description": "Gérez vos emplacements enregistrés et zones d'intérêt. Accès rapide aux régions fréquemment analysées."
       },
       "reports": {
         "title": "Rapports de Simulation",
@@ -2132,11 +2145,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Mes Bâtiments Personnalisés",
-      "description": "Incluez vos bâtiments personnalisés privés dans le calcul du réseau. Ce sont des bâtiments que vous avez créés et enregistrés dans votre compte.",
-      "example": "Vous pouvez également exclure des bâtiments individuels en cliquant dessus sur la carte."
-    },
     "simulateEV": {
       "title": "Simuler la Capacité d'Accueil VE",
       "description": "Calculez la capacité d'accueil des véhicules électriques pour chaque transformateur dans la zone sélectionnée. Cela détermine combien de chargeurs VE (11 kW Niveau 2) peuvent être connectés avant d'atteindre les contraintes du réseau.",
@@ -2489,24 +2497,6 @@
       "replace": "Remplacer sur tous les bâtiments ({{count}})"
     }
   },
-  "locations": {
-    "title": "Emplacements Personnalisés",
-    "subtitle": "Créer et gérer des emplacements avec des classifications de bâtiments",
-    "refresh": "Actualiser les emplacements",
-    "newLocation": "Nouvel Emplacement",
-    "newLocationTooltip": "Créer un nouvel emplacement personnalisé",
-    "searchPlaceholder": "Rechercher des emplacements...",
-    "stats": {
-      "total": "Total",
-      "totalArea": "Surface Totale",
-      "totalDemand": "Demande Totale",
-      "private": "Privé"
-    },
-    "empty": {
-      "title": "Aucun emplacement trouvé",
-      "description": "Créez votre premier emplacement personnalisé pour commencer"
-    }
-  },
   "weather": {
     "temperature": "Temp.",
     "windSpeed": "Vent",
@@ -2854,7 +2844,7 @@
   "regionSelector": {
     "goToRegion": "Aller à la région",
     "jumpToRegion": "Accéder à une région avec des données de grille disponibles",
-    "searchPlaceholder": "Rechercher des régions...",
+    "searchPlaceholder": "Rechercher une région ou un code postal...",
     "sortByGridCount": "Trier par nombre de grilles",
     "sortByName": "Trier par nom",
     "setAsDefault": "Définir comme région par défaut",
@@ -2910,11 +2900,7 @@
       "demographicsFrom": "Données démographiques issues de",
       "cuzkName": "Office tchèque de topographie, de cartographie et du cadastre",
       "enrichedWith": "Données du bâtiment enrichies avec",
-      "licensedUnder": "Sous licence",
-      "include": "Inclure",
-      "exclude": "Exclure",
-      "includeTooltip": "Inclure ce bâtiment personnalisé dans le réseau (nécessite une régénération)",
-      "excludeTooltip": "Exclure ce bâtiment personnalisé du réseau (nécessite une régénération)"
+      "licensedUnder": "Sous licence"
     }
   },
   "landing": {

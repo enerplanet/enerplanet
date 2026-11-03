@@ -11,12 +11,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
 } from "@spatialhub/ui";
-import { Building, Eye, EyeOff, Flame, Loader2, Pencil, Plus, Search, Trash2, Zap } from "lucide-react";
+import { Building, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import {
@@ -25,9 +21,10 @@ import {
   isResidentialFClass,
   normalizeFClass,
 } from "@/features/configurator/utils/fClassUtils";
-import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
+import { TechTypeList } from "@/features/technologies/components/TechTypeList";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { useClickOutside } from "@/hooks/useClickOutside";
+import { formatNumber } from "@/utils/formatNumber";
 
 interface TechData {
   alias: string;
@@ -93,8 +90,6 @@ interface BuildingDialogProps {
     hotWaterElectric?: boolean
   ) => Promise<void>;
   onAddTech?: (tech: Technology) => void;
-  isExcluded?: boolean;
-  onToggleExclude?: (buildingId: number) => void;
   onSave?: () => void;
 }
 
@@ -143,8 +138,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
   onRecalculateDemand,
   onAddTech,
   onSave,
-  isExcluded = false,
-  onToggleExclude,
 }) => {
   const { t } = useTranslation();
   const techs = selectedBuilding?.techs || {};
@@ -310,49 +303,11 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
     onSave,
   ]);
 
-  // Custom building detection
-  const isCustomBuilding = useMemo(() => {
-    if (!selectedBuilding?.osmId) return false;
-    const osmId = selectedBuilding.osmId;
-    return typeof osmId === "number" ? osmId < 0 : String(osmId).startsWith("-");
-  }, [selectedBuilding?.osmId]);
-
-  const customBuildingId = useMemo(() => {
-    if (!isCustomBuilding || !selectedBuilding?.osmId) return null;
-    const osmId = selectedBuilding.osmId;
-    const numId = typeof osmId === "number" ? osmId : Number.parseInt(String(osmId), 10);
-    return Math.abs(numId);
-  }, [isCustomBuilding, selectedBuilding?.osmId]);
-
   // Technology picker
   const techPickerRef = useRef<HTMLDivElement>(null);
   const [showTechPicker, setShowTechPicker] = useState(false);
-  const [availableTechs, setAvailableTechs] = useState<Technology[]>([]);
-  const [availableHeatTechs, setAvailableHeatTechs] = useState<Technology[]>([]);
-  const [isLoadingTechs, setIsLoadingTechs] = useState(false);
-  const [pickerCarrier, setPickerCarrier] = useState<"electricity" | "heat">("electricity");
-  const [pickerSearch, setPickerSearch] = useState("");
   const closePicker = useCallback(() => setShowTechPicker(false), []);
   useClickOutside(techPickerRef, showTechPicker, closePicker);
-
-  const fetchTechs = useCallback(async () => {
-    if (availableTechs.length > 0 && availableHeatTechs.length > 0) return;
-    setIsLoadingTechs(true);
-    try {
-      const catalogue = await loadCatalogue();
-      const typeCards = (types: string[]) =>
-        types.flatMap((type) => {
-          const product = defaultProduct(catalogue, type);
-          return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
-        });
-      setAvailableTechs(typeCards(ELECTRICITY_TYPES));
-      setAvailableHeatTechs(typeCards(HEAT_TYPES));
-    } catch (err) {
-      console.error("Failed to load technologies:", err);
-    } finally {
-      setIsLoadingTechs(false);
-    }
-  }, [availableTechs.length, availableHeatTechs.length, t]);
 
   // Country-specific metadata
   const isNL = selectedBuilding?.countryCode === "NL";
@@ -473,7 +428,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
 
               {/* Peak Load */}
               {hasFiniteNumber(peakLoad) && peakLoad > 0 && (
-                <ReadOnlyRow label={t("gridStats.peakLoad")} value={peakLoad.toFixed(2)} unit="kW" />
+                <ReadOnlyRow label={t("gridStats.peakLoad")} value={formatNumber(peakLoad, 2)} unit="kW" />
               )}
             </div>
 
@@ -559,21 +514,21 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                   {hasFiniteNumber(selectedBuilding.heightMedian) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightMedian")}
-                      value={selectedBuilding.heightMedian.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightMedian, 1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightMax) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightMax")}
-                      value={selectedBuilding.heightMax.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightMax, 1)}
                       unit="m"
                     />
                   )}
                   {hasFiniteNumber(selectedBuilding.heightGround) && (
                     <ReadOnlyRow
                       label={t("regionSelector.buildingDialog.heightGround")}
-                      value={selectedBuilding.heightGround.toFixed(1)}
+                      value={formatNumber(selectedBuilding.heightGround, 1)}
                       unit="m"
                     />
                   )}
@@ -612,7 +567,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                 {hasFiniteNumber(selectedBuilding.energyIndex) && (
                   <div className="text-xs text-muted-foreground">
                     {t("regionSelector.buildingDialog.energyIndex")}{" "}
-                    <span className="font-medium">{selectedBuilding.energyIndex.toFixed(2)}</span>
+                    <span className="font-medium">{formatNumber(selectedBuilding.energyIndex, 2)}</span>
                   </div>
                 )}
               </div>
@@ -668,7 +623,7 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {t("regionSelector.buildingDialog.totalFloorArea", {
                       floors: editedFloors,
                       area: editedArea,
-                      total: (editedFloors * editedArea).toLocaleString(),
+                      total: formatNumber(editedFloors * editedArea, 3, 0),
                     })}
                   </span>
                 </div>
@@ -686,7 +641,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     type="button"
                     onClick={() => {
                       setShowTechPicker((prev) => !prev);
-                      void fetchTechs();
                     }}
                     className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
                     title={t("technologies.addTechnology")}
@@ -758,87 +712,13 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                     {t("regionSelector.buildingDialog.availableTechnologies")}
                   </div>
                   <div className="max-h-48 overflow-y-auto">
-                    {/* Search */}
-                    <div className="sticky top-0 z-10 bg-background px-2 pt-1 pb-1 border-b border-border">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-                        <input
-                          type="text"
-                          value={pickerSearch}
-                          onChange={(e) => setPickerSearch(e.target.value)}
-                          placeholder={t("technologies.searchPlaceholder")}
-                          className="w-full rounded border border-border bg-background pl-6 pr-2 py-1 text-[11px] text-foreground outline-none focus:border-primary"
-                        />
-                      </div>
-                    </div>
-                    {/* Carrier toggle: electricity / heat */}
-                    <div className="sticky top-0 z-10 flex items-center gap-0.5 bg-background px-2 pt-1 pb-1 border-b border-border">
-                      {([
-                        ["electricity", "technologies.carriers.electricity", Zap],
-                        ["heat", "technologies.carriers.heat", Flame],
-                      ] as const).map(([view, label, Icon]) => (
-                        <button
-                          key={view}
-                          type="button"
-                          onClick={() => setPickerCarrier(view)}
-                          className={`flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-                            pickerCarrier === view
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted/50"
-                          }`}
-                        >
-                          <Icon className={`h-3 w-3 ${view === "heat" ? "text-orange-500" : "text-primary"}`} />
-                          {t(label)}
-                        </button>
-                      ))}
-                    </div>
-                    {isLoadingTechs ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (pickerCarrier === "heat" ? availableHeatTechs : availableTechs).length === 0 ? (
-                      <div className="px-3 py-3 text-sm text-muted-foreground">
-                        {pickerCarrier === "heat" ? t("technologies.noHeatTechnologies") : t("technologies.noTechnologies")}
-                      </div>
-                    ) : (
-                      (() => {
-                        const pool = pickerCarrier === "heat" ? availableHeatTechs : availableTechs;
-                        const q = pickerSearch.trim().toLowerCase();
-                        const filtered = q === "" ? pool : pool.filter((tech) =>
-                          tech.alias.toLowerCase().includes(q) || tech.key.toLowerCase().includes(q)
-                        );
-                        if (filtered.length === 0) {
-                          return (
-                            <div className="px-3 py-3 text-sm text-muted-foreground">
-                              {t("technologies.noSearchResults")}
-                            </div>
-                          );
-                        }
-                        return filtered.map((tech) => {
-                        const alreadyAdded = techs[tech.key] !== undefined;
-                        return (
-                          <button
-                            key={tech.key}
-                            type="button"
-                            disabled={alreadyAdded}
-                            onClick={() => {
-                              setShowTechPicker(false);
-                              onAddTech?.(tech);
-                            }}
-                            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${alreadyAdded ? "cursor-default opacity-40" : "hover:bg-muted"}`}
-                          >
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[10px] font-bold text-background">
-                              {(tech.alias || tech.key).charAt(0).toUpperCase()}
-                            </span>
-                            <span className="flex-1 truncate">{tech.alias}</span>
-                            {alreadyAdded && (
-                              <span className="text-[10px] text-muted-foreground">{t("regionSelector.buildingDialog.added")}</span>
-                            )}
-                          </button>
-                        );
-                        })
-                      })()
-                    )}
+                    <TechTypeList
+                      added={techs}
+                      onPick={(tech) => {
+                        setShowTechPicker(false);
+                        onAddTech?.(tech);
+                      }}
+                    />
                   </div>
                 </div>
               )}
@@ -861,19 +741,19 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
                       {hasFiniteNumber(selectedBuilding.cbsPopulation) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.population")}</span>
-                          <span>{selectedBuilding.cbsPopulation.toLocaleString()}</span>
+                          <span>{formatNumber(selectedBuilding.cbsPopulation, 3, 0)}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsHouseholds) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.households")}</span>
-                          <span>{selectedBuilding.cbsHouseholds.toLocaleString()}</span>
+                          <span>{formatNumber(selectedBuilding.cbsHouseholds, 3, 0)}</span>
                         </div>
                       )}
                       {hasFiniteNumber(selectedBuilding.cbsAvgHouseholdSize) && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t("regionSelector.buildingDialog.avgHouseholdSize")}</span>
-                          <span>{selectedBuilding.cbsAvgHouseholdSize.toFixed(2)}</span>
+                          <span>{formatNumber(selectedBuilding.cbsAvgHouseholdSize, 2)}</span>
                         </div>
                       )}
                     </div>
@@ -986,37 +866,6 @@ export const BuildingDialog: FC<BuildingDialogProps> = ({
         )}
 
         <AlertDialogFooter className="flex-row gap-2">
-          {isCustomBuilding && onToggleExclude && customBuildingId && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isExcluded ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onToggleExclude(customBuildingId)}
-                    className={isExcluded ? "bg-amber-600 hover:bg-amber-700" : ""}
-                  >
-                    {isExcluded ? (
-                      <>
-                        <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        {t("regionSelector.buildingDialog.include")}
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5 mr-1.5" />
-                        {t("regionSelector.buildingDialog.exclude")}
-                      </>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isExcluded
-                    ? t("regionSelector.buildingDialog.includeTooltip")
-                    : t("regionSelector.buildingDialog.excludeTooltip")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
           <Button variant="outline" size="sm" onClick={onClose}>
             {t("common.close")}
           </Button>

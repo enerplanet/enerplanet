@@ -725,7 +725,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	ignisHandler := ignis.NewIgnisHandler(deps.TentacronClient)
 	registerIgnisRoutes(protectedAPI, ignisHandler)
 
-	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore)
+	pylovoMgmtHandler := pylovo.NewManagementHandler(pylovoInstanceStore, region.NewStore(deps.DB))
 	registerPylovoManagementRoutes(protectedAPI, pylovoMgmtHandler)
 
 	city2tabulaHandler := city2tabulahandler.NewHandler(deps.City2TabulaClient, deps.TentacronClient, region.NewStore(deps.DB), geo.NewNominatimResolver(deps.DB))
@@ -788,6 +788,9 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 	api.GET(routeSettings+"/model-limits/me", handler.GetMyModelLimit)
 	api.PUT(routeSettings+"/model-limits", handler.UpdateModelLimits)
 	api.PUT(routeSettings+"/model-limit", handler.UpdateModelLimit)
+	// Grid electricity prices per country
+	api.GET(routeSettings+"/grid-prices", handler.GetGridPrices)
+	api.PUT(routeSettings+"/grid-prices", handler.UpdateGridPrice)
 }
 
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {
@@ -901,6 +904,9 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.DELETE(routeModelByID, modelHandler.DeleteModel)
 	api.PUT(routeModelByID+"/activation", modelHandler.UpdateModelActivation)
 	api.PATCH(routeModelByID+"/move", modelHandler.MoveModel)
+	api.GET(routeModelByID+"/family", modelHandler.ListFamilyOptions)
+	api.POST(routeModelByID+"/family", modelHandler.LinkModelFamily)
+	api.DELETE(routeModelByID+"/family", modelHandler.UnlinkModelFamily)
 	api.POST(routeModelByID+"/share", modelHandler.ShareModel)
 	api.DELETE(routeModelByID+"/shares/:shareId", modelHandler.RevokeModelShare)
 	api.POST(routeModelByID+"/analyse", modelHandler.AnalyseModel)
@@ -1041,6 +1047,7 @@ func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
 	sites.GET("/:id/grid", handler.GetSiteGrid)
 	sites.GET("/:id/transformers", handler.GetSiteTransformers)
 	sites.PUT("/:id/transformers", handler.PutSiteTransformers)
+	sites.PATCH("/:id/buildings", handler.PatchSiteBuildings)
 }
 
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.

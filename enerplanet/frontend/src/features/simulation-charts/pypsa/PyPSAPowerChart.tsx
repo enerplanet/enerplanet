@@ -1,6 +1,7 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo } from 'react';
 import { createTimeXAxis, createDataZoom, createSplitLineStyle } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface PowerFlowChartProps {
   timestamps: string[];
@@ -19,10 +20,10 @@ const formatPower = (value: number, unit: 'kW' | 'kVAr' = 'kW'): string => {
   const subUnit = unit === 'kW' ? 'W' : 'VAr';
   const milliSubUnit = unit === 'kW' ? 'mW' : 'mVAr';
 
-  if (abs >= 1000) return `${(value / 1000).toFixed(2)} ${megaUnit}`;
-  if (abs >= 1) return `${value.toFixed(2)} ${baseUnit}`;
-  if (abs >= 0.001) return `${(value * 1000).toFixed(1)} ${subUnit}`;
-  return `${(value * 1_000_000).toFixed(1)} ${milliSubUnit}`;
+  if (abs >= 1000) return `${formatNumber(value / 1000, 2)} ${megaUnit}`;
+  if (abs >= 1) return `${formatNumber(value, 2)} ${baseUnit}`;
+  if (abs >= 0.001) return `${formatNumber(value * 1000, 1)} ${subUnit}`;
+  return `${formatNumber(value * 1_000_000, 1)} ${milliSubUnit}`;
 };
 
 export const PyPSAPowerChart = ({ 

@@ -7,6 +7,7 @@
 #   fixtures/load.sh          # load what is missing, leave what is present
 #   fixtures/load.sh pylovo   # only the named sets: weather, city2tabula, pylovo
 #   FORCE=1 fixtures/load.sh  # overwrite targets that already exist
+#   FIXTURES_DIR=/other fixtures/load.sh  # read the fixture data from elsewhere
 #
 # Never overwrites by default: a developer who has built the real archives
 # locally would otherwise lose hundreds of megabytes to a small test cut.
@@ -17,6 +18,10 @@ set -u -o pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
+# Where the source fixture data is read from. Defaults to this file's own
+# directory (the repo's fixtures/); FIXTURES_DIR points it at another tree.
+# ROOT is NOT affected — service checkouts always come from <repo>/dependencies.
+FIXTURES_DIR="${FIXTURES_DIR:-$HERE}"
 FORCE="${FORCE:-0}"
 LOADED=0
 SKIPPED=0
@@ -53,7 +58,7 @@ copy_tree() {
 # COSMO_REA6_2018_annual_all_attrs.nc because point_query looks that exact
 # name up before falling back to per-month files.
 load_weather() {
-  local src="$HERE/weather" dest="$ROOT/dependencies/$WEATHER_DIR/data"
+  local src="$FIXTURES_DIR/weather" dest="$ROOT/dependencies/$WEATHER_DIR/data"
   [ -d "$src" ] || return 0
   if [ ! -d "$ROOT/dependencies/$WEATHER_DIR" ]; then
     fail "weather: dependencies/$WEATHER_DIR not found, run 'make setup-repos' first"
@@ -63,10 +68,10 @@ load_weather() {
 }
 
 # The City2TABULA server derives its database name per request as
-# <DB_NAME>_<country>. Its database is the city2tabula-db container, which
+# <DB_NAME>_<country>. Its database is the city2tabula-db-1 container, which
 # publishes no host port, so psql runs inside it rather than from the host.
 #
-# environment/http/docker.env is deliberately NOT the source here: that file
+# environment/docker.env is not the source here: that file
 # configures the interactive pipeline service, which points at a host Postgres
 # (host.docker.internal) under a different name. Following it restores the
 # fixture into a database the server never reads.
@@ -74,7 +79,7 @@ load_weather() {
 # One full City2TABULA database per country (the CityDB import, the tabula
 # lookup and the city2tabula tables), because the server refuses an on-request
 # run on a database that holds only the city2tabula schema.
-C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db}"
+C2T_DB_CONTAINER="${C2T_DB_CONTAINER:-city2tabula-db-1}"
 
 c2t_settings() {
   command -v docker >/dev/null || { fail "city2tabula: docker is required to reach $C2T_DB_CONTAINER"; return 1; }
@@ -94,7 +99,7 @@ c2t_psql() { docker exec -i -e PGPASSWORD="$PGPASSWORD" "$C2T_DB_CONTAINER" psql
 
 # restore_c2t COUNTRY FIXTURE
 restore_c2t() {
-  local country="$1" src="$HERE/city2tabula/$2"
+  local country="$1" src="$FIXTURES_DIR/city2tabula/$2"
   [ -f "$src" ] || return 0
   local target="${C2T_TARGET_NAME}_${country}"
 
@@ -120,7 +125,7 @@ restore_c2t() {
 # which its compose file mounts into the server at /app/data/lod2. An
 # on-request run imports the unprocessed part of a box from there.
 load_c2t_sources() {
-  local src="$HERE/city2tabula/lod2" checkout="$ROOT/dependencies/$CITY2TABULA_DIR"
+  local src="$FIXTURES_DIR/city2tabula/lod2" checkout="$ROOT/dependencies/$CITY2TABULA_DIR"
   [ -d "$src" ] || return 0
   if [ ! -d "$checkout" ]; then
     fail "city2tabula: dependencies/$CITY2TABULA_DIR not found, run 'make setup-repos' first"
@@ -145,7 +150,7 @@ load_city2tabula() {
 PYLOVO_DB_CONTAINER="${PYLOVO_DB_CONTAINER:-postgres}"
 
 load_pylovo() {
-  local src="$HERE/pylovo/pylovo_fixture.sql.gz"
+  local src="$FIXTURES_DIR/pylovo/pylovo_fixture.sql.gz"
   [ -f "$src" ] || return 0
   # PYLOVO_DIR comes from repos.conf when run through make; the Makefile still
   # clones pylovo to that same fixed path.
@@ -195,7 +200,7 @@ load_pylovo() {
   fi
 }
 
-echo "== loading fixtures from $HERE =="
+echo "== loading fixtures from $FIXTURES_DIR =="
 for set in ${@:-weather city2tabula pylovo}; do
   case "$set" in
     weather|city2tabula|pylovo) "load_$set" ;;

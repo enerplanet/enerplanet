@@ -65,6 +65,7 @@ func (h *ModelHandler) GetModelDemandProfiles(c *gin.Context) {
 		Pending:   counts.Pending,
 		Failed:    counts.Failed,
 		Shared:    counts.Shared,
+		NotHeated: counts.NotHeated,
 		Buildings: mapDemandProfiles(rows),
 	})
 }
@@ -91,6 +92,8 @@ func mapDemandProfiles(rows []demandprofile.Summary) []contracts.BuildingDemandP
 			Status:             r.Status,
 			TabulaVariantCode:  r.TabulaVariantCode,
 			BuildingType:       r.BuildingType,
+			UseType:            r.UseType,
+			UseSource:          r.UseSource,
 			RefurbishmentLevel: r.RefurbishmentLevel,
 			HeatingKwhA:        r.HeatingKwhA,
 			CoolingKwhA:        r.CoolingKwhA,

@@ -1,11 +1,40 @@
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { RegionSelector, type AvailableRegion } from "./RegionSelector";
-import { Switch, Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
-import { FileDown, FileUp, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import { Check, FileDown, FileUp, Loader2, MapPin, RefreshCw } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Workspace } from "@/components/workspace/services/workspaceService";
-import { InfoIcon } from "@/components/ui/InfoTooltip";
+import { cn } from "@/lib/utils";
 import type { FC } from "react";
+
+/** A button that toggles on/off, matching the top bar's button height. */
+const ToggleButton: FC<{
+  id?: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  ariaLabel?: string;
+}> = ({ id, label, checked, onChange, disabled, ariaLabel }) => (
+  <button
+    id={id}
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={ariaLabel ?? label}
+    disabled={disabled}
+    onClick={() => onChange(!checked)}
+    className={cn(
+      "flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium transition-colors border whitespace-nowrap cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+      checked
+        ? "bg-primary text-primary-foreground border-primary"
+        : "bg-muted text-foreground border-border hover:bg-muted/70"
+    )}
+  >
+    {checked && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+    {label}
+  </button>
+);
 
 interface MapHeaderProps {
   allPolygonsCount: number;
@@ -27,8 +56,8 @@ interface MapHeaderProps {
   onWorkspaceChange: (workspace: Workspace | null) => void;
   onOpenCreateWorkspace: () => void;
   // Custom building filters
-  includePrivateBuildings?: boolean;
-  onTogglePrivateBuildings?: (value: boolean) => void;
+  siteMode?: boolean;
+  onToggleSiteMode?: (value: boolean) => void;
   simulateEV?: boolean;
   onToggleSimulateEV?: (value: boolean) => void;
   availableRegions?: AvailableRegion[];
@@ -52,8 +81,8 @@ export const MapHeader: FC<MapHeaderProps> = ({
   normalizedWorkspaceId,
   onWorkspaceChange,
   onOpenCreateWorkspace,
-  includePrivateBuildings = true,
-  onTogglePrivateBuildings,
+  siteMode = false,
+  onToggleSiteMode,
   // EV simulation temporarily disabled
   // simulateEV = false,
   // onToggleSimulateEV,
@@ -145,9 +174,9 @@ export const MapHeader: FC<MapHeaderProps> = ({
             onClick={onRegenerateGrid}
             disabled={isGeneratingGrid}
             title={t("simulation.mapHeader.regenerateGridHint")}
-            className="md-fade-in bg-amber-500 border border-amber-600 rounded px-2 py-1 flex items-center gap-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
+            className="md-attention bg-amber-500 border border-amber-600 rounded px-2 py-1 flex items-center gap-1 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60 transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingGrid ? "animate-spin" : ""}`} />
+            <RefreshCw className="w-3.5 h-3.5" />
             {t("simulation.mapHeader.regenerateGrid")}
           </button>
         )}
@@ -173,24 +202,21 @@ export const MapHeader: FC<MapHeaderProps> = ({
               onClick={onClearAllPolygons}
               className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors whitespace-nowrap"
             >
-              {t("simulation.mapHeader.clearAll")} ({allPolygonsCount})
+              {t("simulation.mapHeader.resetArea")}
             </button>
           </div>
         )}
 
-        {/* Custom Building Filters */}
-        {onTogglePrivateBuildings && (
-          <div className="bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1 whitespace-nowrap">
-              {t("simulation.mapHeader.myBuildings")}
-              <InfoIcon tooltipKey="privateBuildings" position="bottom" />
-            </span>
-            <Switch
-              checked={includePrivateBuildings}
-              onCheckedChange={onTogglePrivateBuildings}
-              aria-label={t("simulation.mapHeader.toggleMyBuildings")}
-            />
-          </div>
+        {/* Site mode: build the grid from your own transformers instead of a pre-generated one. */}
+        {onToggleSiteMode && (
+          <ToggleButton
+            id="site-mode-toggle"
+            label={t("simulation.siteMode.label")}
+            checked={siteMode}
+            onChange={onToggleSiteMode}
+            disabled={isGeneratingGrid}
+            ariaLabel={t("simulation.siteMode.label")}
+          />
         )}
 
         {/* EV Simulation — Coming Soon (hidden until feature is ready)

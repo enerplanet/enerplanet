@@ -14,7 +14,6 @@ import { parseDate } from "@internationalized/date";
 import { cn } from "@/lib/utils";
 import {
   Button,
-  Switch,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -25,27 +24,25 @@ import {
   Loader2,
   ChevronRight,
   CircuitBoard,
-  Activity,
-  MapPinned,
   Building2,
   Info,
 } from "lucide-react";
 import { AdvancedParametersDrawer } from "../AdvancedParametersDrawer";
-import { useConfirm } from "@/hooks/useConfirmDialog";
 import { TechnologyDrawer } from "./TechnologyDrawer";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
-import { useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
+import { useConfiguratorModeStore } from "@/features/configurator/store/configuratorModeStore";
+import { selectGridStale, useModelStore, type RunMode } from "@/features/configurator/store/modelStore";
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
-import { TOOLTIP_CONTENTS } from "@/components/shared/tooltip-contents";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useTranslation } from "@spatialhub/i18n";
-import { useEffect, useRef, type FC, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FC, type ChangeEvent, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useWeatherYears } from "@/features/configurator/hooks/useWeatherYears";
 import { useAuthStore } from "@/store/auth-store";
 import { WeatherSettings } from "./WeatherSettings";
+import { GridPriceFields } from "@/features/grid-prices/GridPriceFields";
 import { SCENARIO_DATE_YEAR, isScenario } from "@/features/configurator/hooks/useAreaSelect/helpers/weatherSettings";
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
@@ -90,6 +87,20 @@ const saveBlocker = (complete: boolean, gridStale: boolean): string | null => {
   return null;
 };
 
+/** Asks the user to keep the year the app chose for historic weather, or to change it. */
+const YearCheckNote: FC<{ year: number; onKeep: () => void }> = ({ year, onKeep }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-foreground">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+      <p className="flex-1">{t("simulation.periodCheckYear", { year })}</p>
+      <button type="button" onClick={onKeep} className="shrink-0 rounded border border-border bg-background px-2 py-0.5 font-medium hover:bg-muted">
+        {t("simulation.periodKeepYear", { year })}
+      </button>
+    </div>
+  );
+};
+
 /** A titled group of settings, set off from the group above by a line. */
 const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
   <section className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-0">
@@ -99,7 +110,7 @@ const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, child
 );
 
 /** One setting on a single line: its name with the hint behind an info icon, and its control. */
-const SettingRow: FC<{ label: string; hint: string; icon?: LucideIcon; dataTour?: string; children: ReactNode }> = ({ label, hint, icon: Icon, dataTour, children }) => (
+const SettingRow: FC<{ label: string; hint: ReactNode; icon?: LucideIcon; dataTour?: string; children: ReactNode }> = ({ label, hint, icon: Icon, dataTour, children }) => (
   <div className="flex items-center justify-between gap-2" data-tour={dataTour}>
     <div className="flex min-w-0 items-center gap-1.5">
       {Icon && <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
@@ -109,6 +120,26 @@ const SettingRow: FC<{ label: string; hint: string; icon?: LucideIcon; dataTour?
     {children}
   </div>
 );
+
+/** Each run mode with what it does and the questions it answers. */
+const RunModeHint: FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-2">
+      {(["plan", "operate"] as const).map((mode) => (
+        <div key={mode}>
+          <p className="font-medium text-gray-900 dark:text-gray-100">{t(`simulation.runMode.${mode}`)}</p>
+          <p>{t(`simulation.runMode.${mode}Hint`)}.</p>
+          <p className="mt-1">{t("simulation.runMode.examples")}</p>
+          <ul className="list-disc pl-4">
+            <li>{t(`simulation.runMode.${mode}Question1`)}</li>
+            <li>{t(`simulation.runMode.${mode}Question2`)}</li>
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // The period lies in one year. With historic weather the year is chosen from the
 // archive's years, and a saved model keeps its year listed even when the archive
@@ -126,9 +157,19 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   if (scenario) yearOptions = [periodYear ?? SCENARIO_DATE_YEAR];
   else if (periodYear && !weatherYears.includes(periodYear)) yearOptions = [...weatherYears, periodYear].sort((a, b) => a - b);
   const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
-  const choosePeriodYear = (year: number) => {
+  // A year the app chose for the user, shown until they keep or change the period.
+  const [yearToCheck, setYearToCheck] = useState<number | null>(null);
+  const movePeriodToYear = (year: number) => {
     if (!state.fromDate || !state.toDate) return actions.handleUpdateRange(fullYear(year));
     actions.handleUpdateRange({ start: parseDate(state.fromDate).set({ year }), end: parseDate(state.toDate).set({ year }) });
+  };
+  const choosePeriodYear = (year: number) => {
+    setYearToCheck(null);
+    movePeriodToYear(year);
+  };
+  const updateRange = (range: Parameters<AreaSelectActions["handleUpdateRange"]>[0]) => {
+    setYearToCheck(null);
+    actions.handleUpdateRange(range);
   };
   const latestYear = weatherYears.at(-1);
   const defaultYear = scenario ? SCENARIO_DATE_YEAR : latestYear;
@@ -143,7 +184,10 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   useEffect(() => {
     if (lastProvider.current === provider) return;
     lastProvider.current = provider;
-    if (!scenario && latestYear && periodYear && !weatherYears.includes(periodYear)) choosePeriodYear(latestYear);
+    if (!scenario && latestYear && periodYear && !weatherYears.includes(periodYear)) {
+      movePeriodToYear(latestYear);
+      setYearToCheck(latestYear);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
   // The calendar's first and last selectable days.
@@ -154,16 +198,18 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   const choosePeriodPart = (part: PeriodPart) => {
     const year = periodYear ?? latestYear;
     if (!year) return;
-    actions.handleUpdateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
+    updateRange({ start: parseDate(`${year}-${part.start}`), end: parseDate(`${year}-${part.end}`) });
   };
   // Switching the weather mode moves the period into a year that mode allows,
   // keeping day and month: the scenario year, or the archive's latest year.
   const chooseWeatherMode = (toScenario: boolean) => {
     setWeather({ ...weather, choice: toScenario ? "p50" : "year" });
     const year = toScenario ? SCENARIO_DATE_YEAR : latestYear;
-    if (year) choosePeriodYear(year);
+    if (year) movePeriodToYear(year);
+    setYearToCheck(toScenario ? null : year ?? null);
   };
-  return { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode };
+  const keepYear = () => setYearToCheck(null);
+  return { scenario, periodYear, yearOptions, yearBounds, yearToCheck, keepYear, updateRange, choosePeriodYear, choosePeriodPart, chooseWeatherMode };
 }
 
 /** Stands in for the year select while the period uses scenario weather, which has no calendar year. */
@@ -274,28 +320,15 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const appLang = i18n.language?.split("-")[0] || "en";
+  const configuratorMode = useConfiguratorModeStore((s) => s.mode);
+  const setConfiguratorMode = useConfiguratorModeStore((s) => s.setMode);
   const runMode = useModelStore((s) => s.runMode);
   const setRunMode = useModelStore((s) => s.setRunMode);
-  const siteMode = useModelStore((s) => s.siteMode);
-  const gridStale = useModelStore((s) => s.gridStale);
+  const gridStale = useModelStore(selectGridStale);
   const missingInputs = !state.fromDate || !state.toDate || !state.modelName.trim();
 
-  const { scenario, periodYear, yearOptions, yearBounds, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
+  const { scenario, periodYear, yearOptions, yearBounds, yearToCheck, keepYear, updateRange, choosePeriodYear, choosePeriodPart, chooseWeatherMode } = usePeriodYear(state, actions, editMode);
   const isExpert = useAuthStore((s) => s.user?.access_level === "expert");
-  const confirm = useConfirm();
-  const hasArea = state.allPolygons.length > 0;
-  // Leaving a custom grid drops its placed transformers, so that switch asks first.
-  const switchGridMode = (on: boolean) => {
-    if (on || !hasArea) return void actions.handleSwitchGridMode(on);
-    void confirm({
-      type: "warning",
-      title: t("simulation.siteMode.leaveTitle"),
-      description: t("simulation.siteMode.leaveDescription"),
-      confirmLabel: t("simulation.siteMode.leaveConfirm"),
-      cancelLabel: t("common.cancel"),
-      onConfirm: async () => void actions.handleSwitchGridMode(false),
-    });
-  };
   // A model is saved only with a name, a period and an area, and never with a grid older than its edits.
   const complete = Boolean(state.fromDate && state.toDate && state.modelName.trim()) && allPolygonsCount > 0;
   const canSave = complete && !state.isSaving && !gridStale;
@@ -318,27 +351,20 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
-      <div className="flex items-center px-3 pt-4">
-        <h3 className="text-base font-semibold text-foreground mb-4">{t("simulation.title")}</h3>
+      <div className="flex items-center justify-between px-3 pt-4">
+        <h3 className="text-base font-semibold text-foreground">{t("simulation.title")}</h3>
+        <SegmentedControl
+          aria-label={t("simulation.mode.label")}
+          value={configuratorMode}
+          onChange={setConfiguratorMode}
+          options={[
+            { value: "simple", label: t("simulation.mode.simple") },
+            { value: "advanced", label: t("simulation.mode.advanced") },
+          ]}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4 px-3">
-        <PanelSection title={t("simulation.sections.grid")}>
-          <SettingRow
-            label={t("simulation.siteMode.label")}
-            hint={hasArea ? `${t("simulation.siteMode.hint")} ${t("simulation.siteMode.switchHint")}` : t("simulation.siteMode.hint")}
-            icon={MapPinned}
-          >
-            <Switch
-              id="site-mode-toggle"
-              aria-label={t("simulation.siteMode.label")}
-              disabled={state.isGeneratingGrid}
-              checked={siteMode}
-              onCheckedChange={switchGridMode}
-            />
-          </SettingRow>
-        </PanelSection>
-
         <PanelSection title={t("simulation.sections.model")}>
           <div className="relative" data-tour="model-name">
             <label
@@ -356,7 +382,10 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-background dark:bg-gray-700 text-foreground text-sm transition-colors duration-150 hover:border-muted-foreground/40"
             />
           </div>
-          <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
+          {configuratorMode === "advanced" && (
+            <WeatherSettings isExpert={isExpert} onModeChange={chooseWeatherMode} />
+          )}
+          {yearToCheck !== null && <YearCheckNote year={yearToCheck} onKeep={keepYear} />}
           <div className="relative" data-tour="date-range">
             <DateRangePicker
               value={
@@ -369,7 +398,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               }
               onChange={(range) => {
                 if (!range) return;
-                actions.handleUpdateRange({ start: range.start, end: range.end });
+                updateRange({ start: range.start, end: range.end });
               }}
               className="*:not-first:mt-2"
             >
@@ -404,9 +433,7 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               >
                 <Dialog className="max-h-[inherit] overflow-auto p-2">
                   <RangeCalendar
-                    onChange={(range) =>
-                      actions.handleUpdateRange({ start: range.start, end: range.end })
-                    }
+                    onChange={(range) => updateRange({ start: range.start, end: range.end })}
                     minValue={yearBounds?.start}
                     maxValue={yearBounds?.end}
                     years={yearOptions}
@@ -433,19 +460,24 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </div>
             <PeriodParts onPick={choosePeriodPart} />
           </div>
+                    {/* Only 60-minute steps are offered: a 30-minute resolution made no
+              measurable difference for EnerPlanET models, so the option was removed.
+              To offer it again, add it to the options array below (e.g.
+              { value: "30", label: "30 min" }) and drop the disabled/Coming Soon
+              styling once it actually runs. */}
           <SettingRow label={t("simulation.resolution")} hint={t("simulation.resolutionHint")} dataTour="resolution">
             <SegmentedControl
               aria-label={t("simulation.resolution")}
               value={String(state.resolution)}
               onChange={(value) => actions.setResolution(Number(value))}
               options={[
-                { value: "30", label: "30 min", disabled: true, title: t("simulation.resolutionComingSoon") },
                 { value: "60", label: "60 min" },
               ]}
             />
           </SettingRow>
-          <div>
-            <SettingRow label={t("simulation.runMode.label")} hint={`${t("simulation.runMode.plan")}: ${t("simulation.runMode.planHint")}. ${t("simulation.runMode.operate")}: ${t("simulation.runMode.operateHint")}.`}>
+          {configuratorMode === "advanced" && (
+            <div>
+            <SettingRow label={t("simulation.runMode.label")} hint={<RunModeHint />}>
               <SegmentedControl
                 aria-label={t("simulation.runMode.label")}
                 value={runMode}
@@ -481,6 +513,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               </div>
             )}
           </div>
+          )}
+          {configuratorMode === "advanced" && <GridPriceFields />}
         </PanelSection>
 
         <PanelSection title={t("simulation.sections.energySystem")}>
@@ -498,21 +532,6 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             </Button>
           </div>
-          <SettingRow
-            label={t("simulation.pypsaSimulation")}
-            hint={t("tooltips.pypsaSimulation.description", { defaultValue: TOOLTIP_CONTENTS.pypsaSimulation.description })}
-            icon={Activity}
-          >
-            <Switch
-              id="pypsa-toggle"
-              aria-label={t("simulation.pypsaSimulation")}
-              disabled
-              checked={advancedParams.pypsa_enabled}
-              onCheckedChange={(checked) =>
-                onAdvancedParamsChange({ ...advancedParams, pypsa_enabled: checked })
-              }
-            />
-          </SettingRow>
         </PanelSection>
       </div>
 

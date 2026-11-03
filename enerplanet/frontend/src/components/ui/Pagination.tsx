@@ -11,8 +11,10 @@ interface PaginationProps {
 	readonly pageSizeOptions?: number[];
 	readonly className?: string;
 	readonly isLoading?: boolean;
-	/** The word after the total, for example "families"; "results" when unset. */
+	/** The word after the total, for example "models"; "results" when unset. */
 	readonly resultsLabel?: string;
+	/** Replaces the "Showing X to Y of Z" text when set. */
+	readonly summary?: React.ReactNode;
 }
 
 const Pagination: React.FC<PaginationProps> = ({
@@ -25,6 +27,7 @@ const Pagination: React.FC<PaginationProps> = ({
 	className = "bg-card",
 	isLoading = false,
 	resultsLabel,
+	summary,
 }) => {
 	const { t } = useTranslation();
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -99,7 +102,7 @@ const Pagination: React.FC<PaginationProps> = ({
 							<>
 								{totalItems === 0 ? (
 									<span className="text-muted-foreground">{t("common.pagination.noResults")}</span>
-								) : (
+								) : summary ?? (
 									<>
 										{t("common.pagination.showing")} <span className="font-medium text-foreground">{startItem}</span> {t("common.pagination.to")}{" "}
 										<span className="font-medium text-foreground">{endItem}</span> {t("common.pagination.of")}{" "}

@@ -540,7 +540,7 @@ func (h *ModelHandler) GetModelStats(c *gin.Context) {
 	stats.Total = total
 	stats.Draft = byStatus[models.ModelStatusDraft]
 	stats.Queue = byStatus[models.ModelStatusQueue]
-	stats.Running = byStatus[models.ModelStatusRunning]
+	stats.Running = byStatus[models.ModelStatusBuildings] + byStatus[models.ModelStatusRunning]
 	stats.Completed = byStatus[models.ModelStatusCompleted]
 	stats.Published = byStatus[models.ModelStatusPublished]
 	stats.Failed = byStatus[models.ModelStatusFailed]

@@ -2,6 +2,9 @@ import { fromLonLat } from "ol/proj";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { pylovoService } from "@/features/configurator/services/pylovoService";
 import { getDataProjection } from "@/features/configurator/utils/gridLayerUtils";
+import { exclusionChanges, withoutAssignments } from "@/features/configurator/utils/siteExclusions";
+import type { Feature } from "ol";
+import type { Geometry } from "ol/geom";
 
 /** One station of a pylovo site, as GET and PUT /sites/{id}/transformers carry it. */
 export interface SiteStation {
@@ -118,6 +121,22 @@ export const removeSiteStation = async (siteId: number, grid: PylovoGridData, gr
     stationShownAs(stations, gridId);
     stations.delete(String(gridId));
     await pylovoService.putSiteTransformers(siteId, [...stations.values()]);
+};
+
+/**
+ * Sends the site which of the map's buildings were disabled or enabled since
+ * grid was generated. pylovo refuses to exclude a building fixed to a station,
+ * so such a building is taken off its station first.
+ */
+export const sendSiteExclusions = async (siteId: number, grid: PylovoGridData, current: Feature<Geometry>[]): Promise<void> => {
+    const changes = exclusionChanges(grid.buildings?.features ?? [], current);
+    if (changes.length === 0) return;
+    const excluded = siteBuildingIds(grid, changes.filter(c => c.excluded).map(c => c.osm_id));
+    if (excluded.length > 0) {
+        const freed = withoutAssignments(await pylovoService.getSiteTransformers(siteId), excluded);
+        if (freed) await pylovoService.putSiteTransformers(siteId, freed);
+    }
+    await pylovoService.patchSiteBuildings(siteId, changes);
 };
 
 /**

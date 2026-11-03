@@ -159,10 +159,7 @@
     "current": "Huidig",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Bekijk op Kaart",
-      "editLocation": "Locatie Bewerken",
       "editName": "Naam bewerken",
-      "duplicate": "Dupliceren",
       "view": "Bekijken",
       "share": "Delen",
       "moveToWorkspace": "Verplaatsen naar Werkruimte",
@@ -270,8 +267,10 @@
     "draft": "Concept",
     "queue": "In Wachtrij",
     "calculating": "Berekenen",
-    "running": "Actief",
-    "processing": "Verwerking",
+    "running": "Simuleren",
+    "buildings": "Gebouwen simuleren",
+    "optimising": "Optimaliseren",
+    "processing": "Resultaten verwerken",
     "completed": "Voltooid",
     "published": "Gepubliceerd",
     "failed": "Mislukt",
@@ -279,6 +278,7 @@
     "modified": "Gewijzigd",
     "failedAt": {
       "queue": "Voorbereiding mislukt",
+      "buildings": "Gebouwsimulatie mislukt",
       "running": "Simulatie mislukt",
       "processing": "Verwerking mislukt"
     }
@@ -632,6 +632,7 @@
       "hours": "uur"
     },
     "costInfo": {
+      "feedInIncome": "Na aftrek van {{amount}} opbrengst uit aan het net verkochte stroom.",
       "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
       "simulationPeriodShort": "Simulatieperiode van {{days}} dagen",
       "costBreakdownTooltip": "De getoonde kosten gelden alleen voor de gesimuleerde periode, niet voor een heel jaar. Apparatuurkosten worden over de levensduur verdeeld, terwijl gebruikskosten (bijv. stroom uit het net) het werkelijke gebruik in de periode weergeven. In korte simulaties lijken technologieën met hoge gebruikskosten daardoor naar verhouding groter.",
@@ -887,7 +888,18 @@
       "copies_other": "{{count}} kopieën",
       "failed_one": "{{count}} mislukt",
       "failed_other": "{{count}} mislukt",
-      "pagination": "families"
+      "countModels_one": "model",
+      "countModels_other": "modellen",
+      "countCopies_one": "kopie",
+      "countCopies_other": "kopieën",
+      "ofModels_one": "model",
+      "ofModels_other": "modellen",
+      "collapseAll": "Alles inklappen",
+      "expandAll": "Alles uitklappen",
+      "link": "Koppelen aan origineel",
+      "linkFailed": "\"{{name}}\" kon niet worden gekoppeld: {{reason}}",
+      "unlink": "Loskoppelen van origineel",
+      "unlinkFailed": "\"{{name}}\" kon niet worden losgekoppeld: {{reason}}"
     },
     "workspaceActions": "Werkruimte-acties",
     "selectedCount_one": "{{count}} geselecteerd",
@@ -986,7 +998,8 @@
       "simulationEngine": "Simulatie-Engine",
       "feedback": "Feedback",
       "userManagement": "Gebruikersbeheer",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Netprijzen"
     },
     "stats": {
       "accessLevel": "Toegangsniveau",
@@ -1417,6 +1430,11 @@
   },
   "simulation": {
     "title": "Simulatieconfiguratie",
+    "mode": {
+      "label": "Modus",
+      "simple": "Eenvoudig",
+      "advanced": "Geavanceerd"
+    },
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
     "simulationPeriod": "Simulatieperiode",
@@ -1451,9 +1469,7 @@
       "saveShortcut": "Opslaan (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Mijn gebouwen",
       "clearAll": "Alle polygonen verwijderen",
-      "toggleMyBuildings": "Mijn gebouwen aan/uit",
       "disableSelected": "Geselecteerde gebouwen uitschakelen",
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
@@ -1527,7 +1543,6 @@
       "back": "Terug"
     },
     "mapOverlay": {
-      "analyzingArea": "Gebied wordt geanalyseerd",
       "canHostChargers": "Mogelijke laadpunten: {{count}}",
       "limitedChargers": "Beperkt, laadpunten: {{count}}",
       "connectedBuildings": "Aangesloten gebouwen",
@@ -1555,11 +1570,27 @@
         "restaurant": "Restaurant",
         "school": "School",
         "supermarket": "Supermarkt",
-        "warehouse": "Magazijn"
+        "warehouse": "Magazijn",
+        "residential": "Woongebouw",
+        "ancillary": "Bijgebouw",
+        "agriculture": "Landbouw",
+        "industry": "Industrie",
+        "commercial": "Bedrijfsgebouw",
+        "education": "Onderwijs",
+        "health": "Zorg",
+        "hospitality": "Horeca",
+        "public": "Openbaar",
+        "retail": "Detailhandel"
       },
       "buemFailed": "BuEM mislukt: {{reason}}",
       "buemShared": "Meegeteld bij een ander gebouw: {{detail}}",
       "buemPending": "BuEM-resultaat in behandeling",
+      "buemNotHeated": "Niet verwarmd: {{reason}}",
+      "useSource": {
+        "3d": "Gebruik uit de 3D-gegevens",
+        "osm": "Gebruik uit OpenStreetMap",
+        "user": "Gebruik ingesteld door de gebruiker"
+      },
       "floors": "Verdiepingen",
       "height": "Hoogte",
       "heightMedian": "Hoogte (mediaan)",
@@ -1592,17 +1623,17 @@
     "resolutionComingSoon": "Resolutie van 30 minuten komt in een toekomstige versie",
     "runMode": {
       "label": "Rekenmodus",
-      "plan": "Plannen",
-      "operate": "Bedrijven",
-      "planHint": "De grootte van elke technologie tegen de laagste kosten kiezen",
-      "operateHint": "Elke technologie op haar maximale grootte houden en alleen het gebruik optimaliseren",
-      "unsized": "Gebouwen die een grootte nodig hebben voor de bedrijfsmodus: {{count}}. Klik op een regel om die in te stellen.",
+      "plan": "Optimalisatie",
+      "operate": "Simulatie",
+      "planHint": "Stelt tegen de laagste kosten de ontbrekende waarden voor, zoals groottes",
+      "operateHint": "Gebruikt elke technologie met de ingevoerde grootte en waarden en optimaliseert alleen het gebruik; alle waarden zijn nodig, niet alleen de grootte",
+      "unsized": "Gebouwen die een grootte nodig hebben voor de simulatie: {{count}}. Klik op een regel om die in te stellen.",
       "unsizedEntry": "Gebouw {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximale grootte",
         "cont_storage_cap_max": "opslaggrootte"
       },
-      "fieldNeeded": "De bedrijfsmodus heeft hier een eindige grootte nodig",
+      "fieldNeeded": "De simulatie heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}"
     },
     "siteMode": {
@@ -1644,7 +1675,7 @@
         "p90": "Jaar met veel zon (P90)"
       },
       "hints": {
-        "scenario": "Een jaar samengesteld uit maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling.",
+        "scenario": "Een jaar samengesteld uit historische maanden van het archief: typisch, of aan de lage of hoge kant van de zoninstraling. Geen voorspelling.",
         "year": "Kies het historische jaar in de simulatieperiode hieronder; de berekening gebruikt het gemeten weer van dat jaar."
       },
       "mode": {
@@ -1672,7 +1703,9 @@
       "q4": "K4"
     },
     "periodScenarioYear": "Scenariojaar",
-    "periodScenarioHint": "Scenarioweer hoort bij geen kalenderjaar. Kies de dagen en maanden om te simuleren; de datums worden opgeslagen in een vast referentiejaar."
+    "periodScenarioHint": "Een scenariojaar wordt maand voor maand samengesteld uit historisch weer en heeft daardoor geen eigen kalenderjaar. De maanden tellen toch: ze bepalen welk seizoen de simulatie dekt, en daarmee de warmtevraag, de zonne-opbrengst en de rekentijd. De datums worden opgeslagen in een vast referentiejaar.",
+    "periodCheckYear": "Met historisch weer ligt de periode nu in {{year}}, het laatste jaar van het archief. Houd het aan of kies een ander jaar.",
+    "periodKeepYear": "{{year}} houden"
   },
   "mapLayers": {
     "title": "Kaartlagen",
@@ -1722,10 +1755,6 @@
       "map": {
         "title": "Interactieve Kaart",
         "description": "Uw belangrijkste werkruimte voor geografische analyse. Bekijk kaartlagen, selecteer gebieden voor beoordeling en visualiseer energierisicogegevens."
-      },
-      "locations": {
-        "title": "Opgeslagen Locaties",
-        "description": "Beheer uw opgeslagen locaties en interessegebieden. Snelle toegang tot vaak geanalyseerde regio's."
       },
       "reports": {
         "title": "Simulatierapporten",
@@ -2111,24 +2140,6 @@
       "replace": "Op alle gebouwen vervangen ({{count}})"
     }
   },
-  "locations": {
-    "title": "Aangepaste Locaties",
-    "subtitle": "Maak en beheer locaties met gebouwclassificaties",
-    "refresh": "Locaties vernieuwen",
-    "newLocation": "Nieuwe Locatie",
-    "newLocationTooltip": "Maak een nieuwe aangepaste locatie",
-    "searchPlaceholder": "Zoek locaties...",
-    "stats": {
-      "total": "Totaal",
-      "totalArea": "Totale Oppervlakte",
-      "totalDemand": "Totale Vraag",
-      "private": "Privé"
-    },
-    "empty": {
-      "title": "Geen locaties gevonden",
-      "description": "Maak uw eerste aangepaste locatie om te beginnen"
-    }
-  },
   "weather": {
     "temperature": "Temp.",
     "windSpeed": "Wind",
@@ -2386,7 +2397,12 @@
     "clickToDisableBuilding": "Klik om dit gebouw uit te schakelen",
     "clickToEnableBuilding": "Klik om dit gebouw weer in te schakelen",
     "clickToSelectBuilding": "Klik om dit gebouw te selecteren",
-    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen"
+    "clickToDeselectBuilding": "Klik om dit gebouw uit de selectie te halen",
+    "cancel": "Tekenen annuleren",
+    "view3dOnly": "3D is om te bekijken: klik op een gebouw voor de details. Schakel naar de kaart om het gebied te tekenen of te bewerken.",
+    "legendPv": "PV",
+    "legendStorage": "Opslag",
+    "legendHeat": "Warmtevoorziening"
   },
   "forms": {
     "user": {
@@ -2606,6 +2622,7 @@
     "techLoadFailed": "Technologie laden voor bewerking mislukt",
     "heatAutoAssigned": "Warmtetechnologieën zijn automatisch toegewezen.",
     "heatResolved": "Warmtetechnologieën toegewezen. Bijgewerkte gebouwen: {{count}}",
+    "heatRemovedNotHeated": "Warmtetechnologie verwijderd van {{count}} onverwarmde gebouwen, zoals garages en schuren.",
     "areaOverLimit": {
       "title": "Dit gebied bevat {{buildings}} gebouwen; een model mag er {{limit}} bevatten",
       "description": "Verklein het gebied met ongeveer {{excess}} gebouwen. Het blijft op de kaart en het net wordt geladen zodra het past."
@@ -2630,11 +2647,6 @@
     "sourceNote": "Geschat door de PyLoVo-netberekening."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Mijn Aangepaste Gebouwen",
-      "description": "Neem uw privé aangepaste gebouwen op in de netwerkberekening. Dit zijn gebouwen die u hebt gemaakt en opgeslagen in uw account.",
-      "example": "U kunt ook individuele gebouwen uitsluiten door erop te klikken op de kaart."
-    },
     "simulateEV": {
       "title": "Simuleer EV Hosting Capaciteit",
       "description": "Bereken de hostingcapaciteit voor elektrische voertuigen voor elke transformator in het geselecteerde gebied. Dit bepaalt hoeveel EV-laders (11 kW Niveau 2) kunnen worden aangesloten voordat netwerkbeperkingen worden bereikt.",
@@ -2859,7 +2871,7 @@
   "regionSelector": {
     "goToRegion": "Ga naar regio",
     "jumpToRegion": "Ga naar een regio met beschikbare rastergegevens",
-    "searchPlaceholder": "Regio's zoeken...",
+    "searchPlaceholder": "Regio of postcode zoeken...",
     "sortByGridCount": "Sorteren op rasteraantal",
     "sortByName": "Sorteren op naam",
     "setAsDefault": "Instellen als standaardregio",
@@ -2915,11 +2927,7 @@
       "demographicsFrom": "Demografische gegevens uit",
       "cuzkName": "Tsjechisch Bureau voor Landmeetkunde, Kartografie en Kadaster",
       "enrichedWith": "Gebouwgegevens aangevuld met",
-      "licensedUnder": "Gelicentieerd onder",
-      "include": "Opnemen",
-      "exclude": "Uitsluiten",
-      "includeTooltip": "Dit aangepaste gebouw opnemen in het net (vereist opnieuw genereren)",
-      "excludeTooltip": "Dit aangepaste gebouw uitsluiten van het net (vereist opnieuw genereren)"
+      "licensedUnder": "Gelicentieerd onder"
     }
   },
   "landing": {
@@ -3151,6 +3159,37 @@
       "positive": "Moet groter dan 0 zijn",
       "notNegative": "Moet 0 of meer zijn",
       "notEditable": "Deze waarde kan hier niet worden bewerkt"
+    }
+  },
+  "gridPrices": {
+    "title": "Netstroomprijzen",
+    "description": "Standaardprijzen per land voor het afnemen van stroom van het net en de terugleververgoeding, in ct/kWh. Modellen gebruiken ze tenzij ze eigen prijzen instellen. De rij voor andere landen geldt voor elk land zonder eigen rij.",
+    "country": "Land",
+    "purchase": "Afnameprijs",
+    "feedIn": "Terugleververgoeding",
+    "source": "Bron",
+    "lastChanged": "Laatst gewijzigd",
+    "save": "Opslaan",
+    "add": "Toevoegen",
+    "saved": "Netprijzen voor {{country}} opgeslagen",
+    "saveFailed": "Netprijzen voor {{country}} konden niet worden opgeslagen: {{reason}}",
+    "countryPlaceholder": "Land, bijv. austria",
+    "otherCountries": "Andere landen",
+    "resetToDefault": "Landstandaard gebruiken",
+    "modelTitle": "Netstroomprijzen",
+    "modelHint": "Wat dit model betaalt voor stroom van het net en ontvangt voor teruggeleverd overschot, in ct/kWh. Laat een veld leeg voor de landstandaard.",
+    "countryDefault": "Standaard voor {{country}}: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
+    "fallbackDefault": "Geen standaard voor {{country}}; de standaard voor andere landen geldt: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
+    "sourceLabel": "Bron: {{source}}",
+    "defaultUnknown": "De landstandaard geldt zodra de regio bekend is.",
+    "usedInRun": "Netstroom in deze run: afgenomen tegen {{import}} ct/kWh, teruggeleverd tegen {{export}} ct/kWh.",
+    "compared": "Netstroomprijzen: basis {{baseline}}, vergelijking {{comparison}}.",
+    "pair": "{{import}} ct/kWh afname, {{export}} ct/kWh teruglevering",
+    "notRecorded": "niet vastgelegd",
+    "errors": {
+      "importPositive": "De afnameprijs moet boven 0 liggen.",
+      "exportNegative": "De terugleververgoeding mag niet negatief zijn.",
+      "exportAboveImport": "De terugleververgoeding mag niet boven de afnameprijs liggen."
     }
   }
 }

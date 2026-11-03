@@ -1,4 +1,5 @@
 import { useEffect, useState, type FC } from "react";
+import { Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +11,7 @@ import {
 } from "@spatialhub/ui";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import { loadCatalogue, productsOfType } from "@/features/technologies/catalogue";
+import { findProducts, loadCatalogue, productsOfType } from "@/features/technologies/catalogue";
 import { DEFAULT_USABLE_SHARE } from "@/features/configurator/building-config/usePvMode";
 
 interface ProductPickerDialogProps {
@@ -41,10 +42,12 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
   const [products, setProducts] = useState<Technology[] | null>(null);
   const [selected, setSelected] = useState<string | undefined>(current);
   const [sharePercent, setSharePercent] = useState(DEFAULT_USABLE_SHARE * 100);
+  const [query, setQuery] = useState("");
   const asksShare = applyToAll && type === "pv_supply";
 
   useEffect(() => {
     setProducts(null);
+    setQuery("");
     if (!open || !type) return;
     let cancelled = false;
     loadCatalogue().then((all) => {
@@ -64,14 +67,16 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onPick is a new function every render
   }, [open, type, current, asksShare]);
 
-  const chosen = products?.find((p) => p.key === selected);
+  // A product the search hides cannot be applied.
+  const shown = findProducts(products ?? [], query);
+  const chosen = shown.find((p) => p.key === selected);
   const shareValid = sharePercent > 0 && sharePercent <= 100;
   const pick = () => chosen && onPick(chosen, asksShare ? sharePercent / 100 : undefined);
   if (!products) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent className="max-w-2xl">
+      <AlertDialogContent className="sm:max-w-lg">
         <AlertDialogHeader>
           <AlertDialogTitle>{t("technologies.products.title", { type: type ? t(`technologies.types.${type}`, { defaultValue: type }) : "" })}</AlertDialogTitle>
           <AlertDialogDescription>
@@ -79,8 +84,21 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("common.search")}
+            aria-label={t("common.search")}
+            className="w-full rounded-md border border-border bg-background pl-8 pr-2 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+          />
+        </div>
+
         <div className="max-h-[55dvh] overflow-auto border-y border-border py-2">
-          {products.map((product) => {
+          {shown.length === 0 && <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("technologies.noSearchResults")}</p>}
+          {shown.map((product) => {
             // A PV product's yield comes from its module type, not cont_energy_eff.
             const efficiency = type === "pv_supply" ? undefined : constraintValue(product, "cont_energy_eff");
             const cost = constraintValue(product, "cost_energy_cap");

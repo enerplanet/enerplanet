@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle, PlugZap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/features/simulation-charts/model-results';
 import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
-import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
 import { energyKwhFromCost } from '../../lcoeUnits';
 
@@ -156,7 +156,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
     structuredResults.cost.forEach(c => {
       const tech = normalizeTechKey(c.techs);
-      totalByTech[tech] = (totalByTech[tech] || 0) + Math.abs(c.value);
+      totalByTech[tech] = (totalByTech[tech] || 0) + c.value;
     });
     structuredResults.cost_investment?.forEach(c => {
       const tech = normalizeTechKey(c.techs);
@@ -176,9 +176,8 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
   // System cost summary
   const systemCostSummary = useMemo(() => {
     if (!structuredResults?.cost?.length) return null;
-    let totalCost = 0;
+    const totalCost = netCost(structuredResults.cost);
     let investmentCost = 0;
-    structuredResults.cost.forEach(c => { totalCost += Math.abs(c.value); });
     structuredResults.cost_investment?.forEach(c => { investmentCost += Math.abs(c.value); });
     return {
       totalCost,
@@ -215,6 +214,16 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         </div>
       )}
 
+      {structuredResults?.grid_prices && (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <PlugZap className="w-3.5 h-3.5" />
+          {t('gridPrices.usedInRun', {
+            import: structuredResults.grid_prices.import_ct_per_kwh,
+            export: structuredResults.grid_prices.export_ct_per_kwh,
+          })}
+        </p>
+      )}
+
       {/* Top row: Cost Distribution + System Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {costBreakdown.length > 0 && (
@@ -241,6 +250,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
                 lcoe={summary?.lcoe_eur_mwh}
+                income={structuredResults ? feedInIncome(structuredResults) : undefined}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}

@@ -92,7 +92,7 @@ func TestFurtherWayIsLinkedButNotSentToBuem(t *testing.T) {
 	}
 
 	topology := []interface{}{map[string]interface{}{"from": building("1265475272"), "to": building("1265475272")}}
-	buildings, _, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, nil, mainkofenFurther, "", cookingSettings{})
+	buildings, _, unresolved := buildingsForBuem(context.Background(), nil, "germany", topology, nil, mainkofenFurther, nil, "", cookingSettings{})
 	if _, failed := unresolved["1265475272"]; len(buildings) != 0 || failed {
 		t.Errorf("buildings %d, unresolved %v; want the further way neither sent nor failed", len(buildings), unresolved)
 	}

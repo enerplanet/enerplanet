@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { createChartGrid, createSplitLineStyle, useThemeColors } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface TransformerLoadingItem {
   name: string;
@@ -18,8 +19,8 @@ interface PyPSATransformerLoadingChartProps {
 const formatKva = (value: number): string => {
   if (!Number.isFinite(value)) return '0 kVA';
   const abs = Math.abs(value);
-  if (abs >= 1000) return `${(value / 1000).toFixed(2)} MVA`;
-  return `${value.toFixed(1)} kVA`;
+  if (abs >= 1000) return `${formatNumber(value / 1000, 2)} MVA`;
+  return `${formatNumber(value, 1)} kVA`;
 };
 
 export const PyPSATransformerLoadingChart = ({
@@ -67,7 +68,7 @@ export const PyPSATransformerLoadingChart = ({
             lines.push(`<div>Rated capacity: <b>${formatKva(item.ratingKva)}</b></div>`);
           }
           if (item.peakLoadingPercent !== undefined) {
-            lines.push(`<div>Peak loading: <b>${item.peakLoadingPercent.toFixed(1)}%</b></div>`);
+            lines.push(`<div>Peak loading: <b>${formatNumber(item.peakLoadingPercent, 1)}%</b></div>`);
           }
           return lines.join('');
         },
@@ -80,7 +81,7 @@ export const PyPSATransformerLoadingChart = ({
         axisLabel: {
           color: themeColors.textMuted,
           formatter: hasPercent
-            ? (value: number) => `${value.toFixed(0)}%`
+            ? (value: number) => `${formatNumber(value, 0)}%`
             : (value: number) => formatKva(value),
         },
         splitLine: createSplitLineStyle(),
@@ -107,7 +108,7 @@ export const PyPSATransformerLoadingChart = ({
             position: 'right',
             color: themeColors.text,
             formatter: ({ value }: { value: number }) =>
-              hasPercent ? `${value.toFixed(1)}%` : formatKva(value),
+              hasPercent ? `${formatNumber(value, 1)}%` : formatKva(value),
           },
         },
       ],

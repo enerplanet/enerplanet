@@ -1,4 +1,5 @@
 import type { Model } from '@/features/model-dashboard/services/modelService';
+import { familyHead } from '@/features/model-dashboard/utils/dashboardHelpers';
 
 /** One row of the results page's model menu. */
 export interface ModelMenuRow {
@@ -23,9 +24,9 @@ export interface ModelMenu {
 const newestFirst = (a: Model, b: Model) => b.created_at.localeCompare(a.created_at);
 
 /**
- * Groups the completed models of a workspace under their top-level parent, as
- * the dashboard does. A parent that has not completed still heads its family so
- * its copies stay together; a copy whose parent is not in models heads its own.
+ * Groups the completed models of a workspace into families, as the dashboard
+ * does. A head that has not completed still heads its family so its copies stay
+ * together; a family whose original is gone is headed by its oldest model.
  */
 export function buildModelMenu(models: Model[]): ModelMenu {
   const byId = new Map(models.map((m) => [m.id, m]));
@@ -40,12 +41,17 @@ export function buildModelMenu(models: Model[]): ModelMenu {
   };
 
   const completed = models.filter((m) => m.status === 'completed');
+  // A family is its group_id, else its top-level parent; the dashboard uses the same rule.
+  const members = new Map<number, Model[]>();
+  for (const model of models) {
+    const id = model.group_id ?? rootOf(model).id;
+    members.set(id, [...(members.get(id) ?? []), model]);
+  }
   const families = new Map<number, { root: Model; copies: Model[] }>();
-  for (const model of completed) {
-    const root = rootOf(model);
-    const family = families.get(root.id) ?? { root, copies: [] };
-    if (model.id !== root.id) family.copies.push(model);
-    families.set(root.id, family);
+  for (const [id, family] of members) {
+    if (!family.some((m) => m.status === 'completed')) continue;
+    const root = familyHead(family, id);
+    families.set(id, { root, copies: family.filter((m) => m !== root && m.status === 'completed') });
   }
 
   const rows: ModelMenuRow[] = [];

@@ -18,6 +18,7 @@ import {
   gradients 
 } from '@/features/simulation-charts/pypsa/chartUtils';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatNumber } from '@/utils/formatNumber';
 
 
 const InfoTooltip = ({ 
@@ -149,18 +150,18 @@ const isRenewableTech = (tech: string): boolean => {
 const formatCurrencyValue = (value: number): string => {
   if (!Number.isFinite(value)) return '€0';
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `€${(value / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `€${(value / 1_000).toFixed(2)}k`;
-  if (abs >= 1) return `€${value.toFixed(2)}`;
+  if (abs >= 1_000_000) return `€${formatNumber(value / 1_000_000, 2)}M`;
+  if (abs >= 1_000) return `€${formatNumber(value / 1_000, 2)}k`;
+  if (abs >= 1) return `€${formatNumber(value, 2)}`;
   if (abs === 0) return '€0.00';
-  return `€${value.toFixed(4)}`;
+  return `€${formatNumber(value, 4)}`;
 };
 
 const formatShare = (value: number, total: number): string => {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return '0%';
   const pct = (Math.abs(value) / total) * 100;
   if (pct > 0 && pct < 1) return '<1%';
-  return `${pct.toFixed(1)}%`;
+  return `${formatNumber(pct, 1)}%`;
 };
 
 const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelProps) => {

@@ -159,10 +159,7 @@
     "current": "Bieżący",
     "max": "Maks",
     "tooltips": {
-      "viewOnMap": "Zobacz na Mapie",
-      "editLocation": "Edytuj Lokalizację",
       "editName": "Edytuj nazwę",
-      "duplicate": "Duplikuj",
       "view": "Zobacz",
       "share": "Udostępnij",
       "moveToWorkspace": "Przenieś do Przestrzeni Roboczej",
@@ -275,8 +272,8 @@
     "draft": "Wersja Robocza",
     "queue": "W Kolejce",
     "calculating": "Obliczanie",
-    "running": "Uruchomiony",
-    "processing": "Przetwarzanie",
+    "running": "Symulacja",
+    "processing": "Przetwarzanie wyników",
     "completed": "Ukończone",
     "published": "Opublikowane",
     "failed": "Niepowodzenie",
@@ -900,7 +897,24 @@
       "failed_few": "{{count}} nieudane",
       "failed_many": "{{count}} nieudanych",
       "failed_other": "{{count}} nieudanych",
-      "pagination": "rodzin modeli"
+      "countModels_one": "model",
+      "countModels_few": "modele",
+      "countModels_many": "modeli",
+      "countModels_other": "modeli",
+      "countCopies_one": "kopia",
+      "countCopies_few": "kopie",
+      "countCopies_many": "kopii",
+      "countCopies_other": "kopii",
+      "ofModels_one": "modelu",
+      "ofModels_few": "modeli",
+      "ofModels_many": "modeli",
+      "ofModels_other": "modeli",
+      "collapseAll": "Zwiń wszystkie",
+      "expandAll": "Rozwiń wszystkie",
+      "link": "Połącz z oryginałem",
+      "linkFailed": "Nie udało się połączyć „{{name}}”: {{reason}}",
+      "unlink": "Odłącz od oryginału",
+      "unlinkFailed": "Nie udało się odłączyć „{{name}}”: {{reason}}"
     },
     "workspaceActions": "Działania obszaru roboczego",
     "selectedCount_one": "{{count}} zaznaczony",
@@ -1432,6 +1446,11 @@
   },
   "simulation": {
     "title": "Konfiguracja symulacji",
+    "mode": {
+      "label": "Tryb",
+      "simple": "Prosty",
+      "advanced": "Zaawansowany"
+    },
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
     "simulationPeriod": "Okres symulacji",
@@ -1466,9 +1485,7 @@
       "saveShortcut": "Zapisz (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "Moje budynki",
       "clearAll": "Usuń wszystkie wielokąty",
-      "toggleMyBuildings": "Przełącz moje budynki",
       "disableSelected": "Wyłącz zaznaczone budynki",
       "importArea": "Importuj obszar",
       "exportArea": "Eksportuj obszar",
@@ -1542,7 +1559,6 @@
       "back": "Wstecz"
     },
     "mapOverlay": {
-      "analyzingArea": "Analizowanie obszaru",
       "canHostChargers": "Możliwe ładowarki: {{count}}",
       "limitedChargers": "Ograniczone, ładowarki: {{count}}",
       "connectedBuildings": "Podłączone budynki",
@@ -1607,17 +1623,17 @@
     "resolutionComingSoon": "Rozdzielczość 30-minutowa pojawi się w przyszłej wersji",
     "runMode": {
       "label": "Tryb obliczeń",
-      "plan": "Planowanie",
-      "operate": "Eksploatacja",
-      "planHint": "Dobrać wielkość każdej technologii przy najniższym koszcie",
-      "operateHint": "Utrzymać każdą technologię przy maksymalnej wielkości i optymalizować tylko jej pracę",
-      "unsized": "Budynki wymagające wielkości w trybie eksploatacji: {{count}}. Kliknij wpis, aby ją ustawić.",
+      "plan": "Optymalizacja",
+      "operate": "Symulacja",
+      "planHint": "Proponuje brakujące wartości, np. wielkości, przy najniższym koszcie",
+      "operateHint": "Używa każdej technologii z wpisaną wielkością i wartościami i optymalizuje tylko jej pracę; potrzebne są wszystkie wartości, nie tylko wielkość",
+      "unsized": "Budynki wymagające wielkości do symulacji: {{count}}. Kliknij wpis, aby ją ustawić.",
       "unsizedEntry": "Budynek {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maksymalna wielkość",
         "cont_storage_cap_max": "wielkość magazynu"
       },
-      "fieldNeeded": "Tryb eksploatacji wymaga tu skończonej wielkości",
+      "fieldNeeded": "Symulacja wymaga tu skończonej wielkości",
       "moreFieldsNeeded": "Pola wymagające wielkości: {{count}}"
     },
     "siteMode": {
@@ -1659,7 +1675,7 @@
         "p90": "Rok o wysokim nasłonecznieniu (P90)"
       },
       "hints": {
-        "scenario": "Rok złożony z miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia.",
+        "scenario": "Rok złożony z historycznych miesięcy archiwum: typowy albo na dolnym lub górnym krańcu nasłonecznienia. To nie jest prognoza.",
         "year": "Wybierz rok historyczny w okresie symulacji poniżej; obliczenia używają zarejestrowanej pogody z tego roku."
       },
       "mode": {
@@ -1691,7 +1707,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Rok scenariusza",
-    "periodScenarioHint": "Pogoda scenariuszowa nie należy do żadnego roku kalendarzowego. Wybierz dni i miesiące do symulacji; daty są zapisywane w stałym roku odniesienia."
+    "periodScenarioHint": "Rok scenariuszowy jest składany miesiąc po miesiącu z historycznych danych pogodowych, więc nie ma własnego roku kalendarzowego. Miesiące nadal mają znaczenie: wyznaczają porę roku objętą symulacją, a z nią zapotrzebowanie na ciepło, uzysk energii słonecznej i czas obliczeń. Daty są zapisywane w stałym roku odniesienia.",
+    "periodCheckYear": "Przy pogodzie historycznej okres ustawiono na {{year}}, ostatni rok archiwum. Zachowaj go lub wybierz inny rok.",
+    "periodKeepYear": "Zachowaj {{year}}"
   },
   "mapLayers": {
     "title": "Warstwy mapy",
@@ -1741,10 +1759,6 @@
       "map": {
         "title": "Interaktywna Mapa",
         "description": "Twoja główna przestrzeń robocza do analizy geograficznej. Przeglądaj warstwy mapy, wybieraj obszary do oceny i wizualizuj dane o ryzyku energetycznym."
-      },
-      "locations": {
-        "title": "Zapisane Lokalizacje",
-        "description": "Zarządzaj zapisanymi lokalizacjami i obszarami zainteresowania. Szybki dostęp do często analizowanych regionów."
       },
       "reports": {
         "title": "Raporty Symulacji",
@@ -2130,24 +2144,6 @@
       "replace": "Zastąp we wszystkich budynkach ({{count}})"
     }
   },
-  "locations": {
-    "title": "Niestandardowe Lokalizacje",
-    "subtitle": "Twórz i zarządzaj lokalizacjami z klasyfikacjami budynków",
-    "refresh": "Odśwież lokalizacje",
-    "newLocation": "Nowa Lokalizacja",
-    "newLocationTooltip": "Utwórz nową niestandardową lokalizację",
-    "searchPlaceholder": "Szukaj lokalizacji...",
-    "stats": {
-      "total": "Łącznie",
-      "totalArea": "Całkowita Powierzchnia",
-      "totalDemand": "Całkowite Zapotrzebowanie",
-      "private": "Prywatne"
-    },
-    "empty": {
-      "title": "Nie znaleziono lokalizacji",
-      "description": "Utwórz swoją pierwszą niestandardową lokalizację, aby rozpocząć"
-    }
-  },
   "weather": {
     "temperature": "Temp.",
     "windSpeed": "Wiatr",
@@ -2407,7 +2403,12 @@
     "clickToDisableBuilding": "Kliknij, aby wyłączyć ten budynek",
     "clickToEnableBuilding": "Kliknij, aby ponownie włączyć ten budynek",
     "clickToSelectBuilding": "Kliknij, aby zaznaczyć ten budynek",
-    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia"
+    "clickToDeselectBuilding": "Kliknij, aby usunąć ten budynek z zaznaczenia",
+    "cancel": "Anuluj rysowanie",
+    "view3dOnly": "Widok 3D służy do oglądania: kliknij budynek, aby zobaczyć szczegóły. Przełącz na mapę, aby rysować lub edytować obszar.",
+    "legendPv": "PV",
+    "legendStorage": "Magazyn",
+    "legendHeat": "Źródło ciepła"
   },
   "forms": {
     "user": {
@@ -2651,11 +2652,6 @@
     "sourceNote": "Szacunek silnika sieci PyLoVo."
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Moje Budynki Niestandardowe",
-      "description": "Uwzględnij Twoje prywatne budynki niestandardowe w obliczeniach sieci. Są to budynki, które utworzyłeś i zapisałeś na swoim koncie.",
-      "example": "Możesz także wykluczyć poszczególne budynki, klikając na nie na mapie."
-    },
     "simulateEV": {
       "title": "Symuluj Pojemność Hostingu EV",
       "description": "Oblicz pojemność hostingu pojazdów elektrycznych dla każdego transformatora w wybranym obszarze. Określa to, ile ładowarek EV (11 kW Poziom 2) można podłączyć przed osiągnięciem ograniczeń sieci.",
@@ -2880,7 +2876,7 @@
   "regionSelector": {
     "goToRegion": "Przejdź do regionu",
     "jumpToRegion": "Przejdź do regionu z dostępnymi danymi siatki",
-    "searchPlaceholder": "Szukaj regionów...",
+    "searchPlaceholder": "Szukaj regionu lub kodu pocztowego...",
     "sortByGridCount": "Sortuj wg liczby siatek",
     "sortByName": "Sortuj wg nazwy",
     "setAsDefault": "Ustaw jako domyślny region",
@@ -2936,11 +2932,7 @@
       "demographicsFrom": "Dane demograficzne z",
       "cuzkName": "Czeski Urząd Geodezji, Kartografii i Katastru",
       "enrichedWith": "Dane budynku uzupełnione o",
-      "licensedUnder": "Licencja",
-      "include": "Uwzględnij",
-      "exclude": "Wyklucz",
-      "includeTooltip": "Uwzględnij ten własny budynek w sieci (wymaga ponownego wygenerowania)",
-      "excludeTooltip": "Wyklucz ten własny budynek z sieci (wymaga ponownego wygenerowania)"
+      "licensedUnder": "Licencja"
     }
   },
   "landing": {

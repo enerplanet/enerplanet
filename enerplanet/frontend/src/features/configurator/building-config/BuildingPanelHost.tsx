@@ -8,16 +8,18 @@
  * here.
  */
 
-import { useCallback, useMemo, type FC, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@spatialhub/ui';
 import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
 
 import { config } from '@/configuration/app';
-import { isExpert } from '@/features/admin-dashboard/utils/accessLevelUtils';
+import { useConfiguratorModeStore } from '@/features/configurator/store/configuratorModeStore';
 import { useModelStore } from '@/features/configurator/store/modelStore';
+import { TechTypeList } from '@/features/technologies/components/TechTypeList';
+import type { Technology } from '@/features/technologies/services/technologyService';
 import { useConfirm } from '@/hooks/useConfirmDialog';
-import { useAuth } from '@/providers/auth-provider';
 
 import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID, type DatasetCredit } from './credits';
 import { configuratorServicesFor } from './heatClient';
@@ -66,6 +68,9 @@ export type OnPvArrays = (osmId: string, arrays: PvArray[]) => void;
 
 /** Receives a building's technologies after each edit in the Technologies tab. */
 export type OnTechsChange = (osmId: string, techs: BuildingTechs) => void;
+
+/** Receives the technology type picked in the Technologies tab, for the host to add with a product. */
+export type OnAddTech = (osmId: string, tech: Technology) => void;
 
 /**
  * Offered over the view when the building's saved edits match none of its
@@ -174,13 +179,14 @@ interface PanelBodyProps {
   /** The building's technologies when the view opens. */
   techs: BuildingTechs | null;
   onTechsChange?: OnTechsChange;
+  onAddTech?: OnAddTech;
   /** The building's current technologies, read when a PV run starts. */
   techsFor?: (osmId: string) => BuildingTechs | null;
   /** The building's WGS84 [lon, lat], read when a PV run starts. */
   locationFor?: (osmId: string) => [number, number] | null;
 }
 
-const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, forPv, onPvArrays, techs, onTechsChange, techsFor, locationFor }) => {
+const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEdited, onReset, pv, forPv, onPvArrays, techs, onTechsChange, onAddTech, techsFor, locationFor }) => {
   const { building, loading, error, preparing, objectId, country, credits, edited, buildingCount } = useBuildingState(osmId);
   const { geometry, error: geometryError } = useBuildingGeometry(objectId, country);
   const [demandProfile, setDemandProfile] = useDemandProfile(modelId, osmId);
@@ -193,11 +199,15 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const fromDate = useModelStore((s) => s.fromDate);
   const toDate = useModelStore((s) => s.toDate);
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  // One mode for the simulation panel and the building view: switching either switches both.
+  const mode = useConfiguratorModeStore((s) => s.mode);
+  const setMode = useConfiguratorModeStore((s) => s.setMode);
   const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
   const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null);
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
-  const { technologies } = useBuildingTechnologies(techs, storeTechs);
+  const [pickingTech, setPickingTech] = useState(false);
+  const openTechPicker = useCallback(() => setPickingTech(true), []);
+  const { technologies } = useBuildingTechnologies(techs, storeTechs, onAddTech ? openTechPicker : undefined);
 
   if (preparing) {
     return (
@@ -246,11 +256,29 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         pv={pvMode.pv}
         technologies={technologies}
         defaultTab={forPv ? 'technologies' : undefined}
-        defaultMode={isExpert(user) ? 'expert' : 'basic'}
+        mode={mode}
+        onModeChange={setMode}
         language={i18n.language}
       />
       {detached && onReset && <ResetNotice onReset={() => onReset(osmId)} />}
       {buildingCount > 1 && <SharedOutlineNotice count={buildingCount} />}
+      <Dialog open={pickingTech} onOpenChange={setPickingTech}>
+        {/* The view closes the building on an Escape that reaches window. */}
+        <DialogContent className="max-w-sm gap-2 p-0" onEscapeKeyDown={(e) => e.stopPropagation()}>
+          <DialogHeader className="px-4 pt-4">
+            <DialogTitle>{t('technologies.addTechnology')}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto pb-2">
+            <TechTypeList
+              added={techs ?? {}}
+              onPick={(tech) => {
+                setPickingTech(false);
+                onAddTech?.(osmId, tech);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -268,11 +296,12 @@ interface BuildingPanelHostProps {
   /** The building's technologies, or null when it has none. */
   techsFor?: (osmId: string) => BuildingTechs | null;
   onTechsChange?: OnTechsChange;
+  onAddTech?: OnAddTech;
   /** The building's WGS84 [lon, lat], or null when it is not on the map; the PV run's location. */
   locationFor?: (osmId: string) => [number, number] | null;
 }
 
-export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays, techsFor, onTechsChange, locationFor }) => {
+export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId, onBuildingEdited, onBuildingReset, pvFor, onPvArrays, techsFor, onTechsChange, onAddTech, locationFor }) => {
   const { buildingId, isOpen, pvMode, close } = useConfiguratorParams();
 
   if (!isOpen || buildingId === null) return null;
@@ -297,6 +326,7 @@ export const BuildingPanelHost: FC<BuildingPanelHostProps> = ({ modelId, draftId
         onPvArrays={onPvArrays}
         techs={techsFor?.(buildingId) ?? null}
         onTechsChange={onTechsChange}
+        onAddTech={onAddTech}
         techsFor={techsFor}
         locationFor={locationFor}
       />

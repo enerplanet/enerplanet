@@ -9,6 +9,7 @@ import {
 } from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface DailyLoadProfileProps {
   consumption?: CarrierConRecord[];
@@ -38,9 +39,9 @@ const formatPower = (valueKw: number, carrier?: string): string => formatCarrier
 const formatAxisPower = (valueKw: number): string => {
   if (!Number.isFinite(valueKw)) return '0';
   const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(1)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(0)} W`;
+  if (abs >= 1000) return `${formatNumber(valueKw / 1000, 1)} MW`;
+  if (abs >= 1) return `${formatNumber(valueKw, 1)} kW`;
+  if (abs >= 0.001) return `${formatNumber(valueKw * 1000, 0)} W`;
   return '0';
 };
 

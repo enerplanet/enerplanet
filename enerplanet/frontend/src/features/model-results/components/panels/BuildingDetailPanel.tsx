@@ -26,6 +26,7 @@ import { BuildingResultData } from "../map/ResultsMapTypes";
 import { CostAnalysisChart } from "@/features/simulation-charts/model-results";
 import { useTranslation } from "@spatialhub/i18n";
 import { formatFClassLabel, parseFClassValue } from "@/features/configurator/utils/fClassUtils";
+import { formatCurrency, formatNumber } from "@/utils/formatNumber";
 
 interface WindTurbineInfo {
   nominal_power: number;
@@ -63,19 +64,19 @@ const getTechDisplayName = (techName: string, windTurbineName: string | null): s
 function formatEnergy(kwh: number): string {
   const abs = Math.abs(kwh);
   if (abs === 0) return "0 kWh";
-  if (abs >= 1000000) return `${(kwh / 1000000).toFixed(2)} GWh`;
-  if (abs >= 1000) return `${(kwh / 1000).toFixed(2)} MWh`;
-  if (abs >= 1) return `${kwh.toFixed(1)} kWh`;
-  return `${(kwh * 1000).toFixed(1)} Wh`;
+  if (abs >= 1000000) return `${formatNumber(kwh / 1000000, 2)} GWh`;
+  if (abs >= 1000) return `${formatNumber(kwh / 1000, 2)} MWh`;
+  if (abs >= 1) return `${formatNumber(kwh, 1)} kWh`;
+  return `${formatNumber(kwh * 1000, 1)} Wh`;
 }
 
 function formatPower(kw: number): string {
   const abs = Math.abs(kw);
   if (abs === 0) return "0 kW";
-  if (abs >= 1000) return `${(kw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(kw * 1000).toFixed(1)} W`;
-  return `${(kw * 1_000_000).toFixed(1)} mW`;
+  if (abs >= 1000) return `${formatNumber(kw / 1000, 2)} MW`;
+  if (abs >= 1) return `${formatNumber(kw, 1)} kW`;
+  if (abs >= 0.001) return `${formatNumber(kw * 1000, 1)} W`;
+  return `${formatNumber(kw * 1_000_000, 1)} mW`;
 }
 
 const getEnergyLabelColor = (label: string): string => {
@@ -241,7 +242,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                       {t("results.buildingDetail.area", "Area")}
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {building.area.toFixed(0)} m²
+                      {formatNumber(building.area, 0)} m²
                     </p>
                   </div>
                 </div>
@@ -265,7 +266,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                       {t("results.buildingDetail.height", "Height")}
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {heightVal.toFixed(1)} m
+                      {formatNumber(heightVal, 1)} m
                     </p>
                   </div>
                 </div>
@@ -304,7 +305,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                       {t("results.buildingDetail.households", "Households")}
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {building.cbsHouseholds.toLocaleString()}
+                      {formatNumber(building.cbsHouseholds, 3, 0)}
                     </p>
                   </div>
                 </div>
@@ -317,7 +318,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                       {t("results.buildingDetail.population", "Population")}
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {building.cbsPopulation.toLocaleString()}
+                      {formatNumber(building.cbsPopulation, 3, 0)}
                     </p>
                   </div>
                 </div>
@@ -402,7 +403,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
             <p className="text-base font-bold text-foreground">{formatPower(energyBalance)}</p>
             {building.totalDemand > 0 && (
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                {selfSufficiency.toFixed(1)}%{" "}
+                {formatNumber(selfSufficiency, 1)}%{" "}
                 {t("results.buildingDetail.selfSufficient", "self-sufficient")}
               </p>
             )}
@@ -417,7 +418,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
               {t("results.buildingDetail.totalCost", "Total Cost")}
             </span>
             <span className="font-bold text-foreground">
-              €{totalCost.toLocaleString("de-DE", { maximumFractionDigits: 0 })}
+              {formatCurrency(totalCost, 0)}
             </span>
           </div>
         )}
@@ -454,7 +455,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {}
                     <span className="text-sm font-medium text-foreground">{displayName}</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">
-                    {isBattery ? `${tech.capacity.toFixed(1)} kWh` : formatPower(tech.capacity)}
+                    {isBattery ? `${formatNumber(tech.capacity, 1)} kWh` : formatPower(tech.capacity)}
                   </span>
                 </div>
               );

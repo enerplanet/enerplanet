@@ -126,3 +126,25 @@ func TestIndexBuildingsByGrid_skipsDisabledBuildings(t *testing.T) {
 	}
 	assert.Equal(t, []interface{}{"1", "3"}, osmIDs)
 }
+
+// A building disabled after the grid was generated has no grid, and must not
+// come back as an unconnected node: its demand would make the run infeasible.
+func TestBuildTopologyFromPylovoData_skipsDisabledBuildingsWithoutGrid(t *testing.T) {
+	point := map[string]interface{}{"type": "Point", "coordinates": []interface{}{6.0, 52.0}}
+	config := map[string]interface{}{
+		"buildings": map[string]interface{}{"features": []interface{}{
+			map[string]interface{}{"geometry": point, "properties": map[string]interface{}{"osm_id": "house", "grid_result_id": 7.0, "area": 100.0}},
+			map[string]interface{}{"geometry": point, "properties": map[string]interface{}{"osm_id": "garage", "activated": false, "area": 20.0}},
+		}},
+		"transformers": map[string]interface{}{"features": []interface{}{
+			map[string]interface{}{"geometry": point, "properties": map[string]interface{}{"grid_result_id": 7.0}},
+		}},
+	}
+
+	var osmIDs []interface{}
+	for _, edge := range buildTopologyFromPylovoData(config, 1) {
+		from := edge.(map[string]interface{})["from"].(map[string]interface{})
+		osmIDs = append(osmIDs, from["properties"].(map[string]interface{})["osm_id"])
+	}
+	assert.Equal(t, []interface{}{"house"}, osmIDs)
+}

@@ -45,10 +45,10 @@ func MemeTargetFor(frameworks string) string {
 }
 
 // memePollBudget is how long a MEME dispatch may stay alive waiting for the
-// job. It matches TentaCron's own meme target poll timeout (30m), NOT the
-// backend's generic 60s opTimeout: a MEME solve takes minutes, and a too-short
-// deadline would error, trigger a asynq retry, and enqueue a duplicate.
-const memePollBudget = 30 * time.Minute
+// job. It exceeds TentaCron's meme target poll timeout (40m), so TentaCron
+// reports a timeout before this side gives up, and stays below the asynq task
+// timeout (60m, model_service_calculation.go).
+const memePollBudget = 45 * time.Minute
 
 // memeIdempotencyKey is the Idempotency-Key sent with a fresh MEME submit so a
 // resubmit (e.g. a retry racing the persist) returns the stored TentaCron job
@@ -90,7 +90,7 @@ type DispatchMemePayload struct {
 // modelDemandResolver resolves a model's BuEM series; DemandResolver
 // implements it.
 type modelDemandResolver interface {
-	Resolve(ctx context.Context, modelID uint) (further map[string]string, err error)
+	Resolve(ctx context.Context, modelID uint) (resolvedWays, error)
 }
 
 // modelPVResolver is implemented by PVResolver.
@@ -100,8 +100,7 @@ type modelPVResolver interface {
 
 // HandleDispatchMeme is the backend's native MEME calculation path: it builds
 // the model's calculation payload, translates it to a MEME job via the T1K
-// seam (electricity only; heat carriers are not translated),
-// submits it over TentaCron's "meme" target, and persists the result zip.
+// seam, submits it over TentaCron's "meme" target, and persists the result zip.
 //
 // TentaCron is itself the durable single-instance SQLite queue (ADR-0002) and
 // polls MEME to completion (response.mode: poll, ADR-0004); the produced job
@@ -124,6 +123,7 @@ func HandleDispatchMeme(
 	resolver modelDemandResolver,
 	seriesReader demandSeriesReader,
 	pvResolver modelPVResolver,
+	priceStore gridPriceStore,
 	store ResultZipStore,
 	enq IngestMemeEnqueuer,
 	maxMemoryMB int,
@@ -143,7 +143,7 @@ func HandleDispatchMeme(
 	}
 
 	// Any dispatch failure must leave the model in a terminal 'failed' state, or
-	// it sits in 'queue' forever (the ingest handler is the only other writer,
+	// it sits in a run status forever (the ingest handler is the only other writer,
 	// and it never runs when dispatch fails early).
 	defer func() {
 		if retErr != nil {
@@ -155,11 +155,12 @@ func HandleDispatchMeme(
 	if err := db.First(&model, p.ModelID).Error; err != nil {
 		return fmt.Errorf("failed to fetch model %d: %w", p.ModelID, err)
 	}
+	markModelBuildings(db, p.ModelID)
 
 	// 1. Build the calculation payload from the stored model, with the BuEM
 	//    series of its current config: a save resolves them in the background,
 	//    and a run started before that finishes would read none.
-	further, err := resolver.Resolve(ctx, model.ID)
+	ways, err := resolver.Resolve(ctx, model.ID)
 	if err != nil {
 		return modelstore.ServiceFailed(modelstore.ServiceBuem, fmt.Errorf("resolve BuEM series of model %d: %w", p.ModelID, err))
 	}
@@ -170,11 +171,18 @@ func HandleDispatchMeme(
 	if err := attachModelDemandSeries(seriesReader, &model, built); err != nil {
 		return err
 	}
+	var prices *gridPrices
 	if calc, ok := built.(payload.CalculationPayload); ok {
-		covered := dropFurtherWayDemand(calc.Topology, further)
+		covered := dropFurtherWayDemand(calc.Topology, ways.further)
+		if n := dropUnheatedHeat(calc.Topology, ways.notHeated); n > 0 {
+			log.Warnf("model %d: removed the heat technology of %d buildings that are not heated", p.ModelID, n)
+		}
 		warning, err := checkDemandCoverage(calc.Topology, covered)
 		if err != nil {
 			return modelstore.ServiceFailed(modelstore.ServiceCity2TABULA, fmt.Errorf("model %d: %w", p.ModelID, err))
+		}
+		if err := checkHeatCoverage(calc.Topology, covered); err != nil {
+			return modelstore.ServiceFailed(modelstore.ServiceBuem, fmt.Errorf("model %d: %w", p.ModelID, err))
 		}
 		if warning != nil {
 			log.Warnf("model %d: %d of %d buildings have no BuEM series and run on their yearly demand", p.ModelID, warning.Fallback, warning.Total)
@@ -183,7 +191,20 @@ func HandleDispatchMeme(
 		if err := pvResolver.Attach(ctx, &model, calc); err != nil {
 			return modelstore.ServiceFailed(modelstore.ServicePV, err)
 		}
+		def, err := priceStore.Default(calc.Country)
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		resolved, err := mergeGridPrices(def, json.RawMessage(model.Config))
+		if err != nil {
+			return fmt.Errorf("model %d: %w", p.ModelID, err)
+		}
+		applyGridPrices(calc.Topology, resolved)
+		prices = &resolved
 		if calc.Mode == "operate" {
+			if err := sizeHeatTechs(calc.Topology); err != nil {
+				return fmt.Errorf("model %d: %w", p.ModelID, err)
+			}
 			if err := checkOperateSizes(calc.Topology); err != nil {
 				return fmt.Errorf("model %d: %w", p.ModelID, err)
 			}
@@ -238,8 +259,12 @@ func HandleDispatchMeme(
 		if err := runs.Save(p.ModelID, jobID, "running"); err != nil {
 			log.Errorf("model %d: failed to persist MEME TentaCron job %s: %v", p.ModelID, jobID, err)
 		}
+		if prices != nil {
+			if err := priceStore.RecordUsed(p.ModelID, *prices); err != nil {
+				log.Errorf("model %d: failed to record grid prices %+v: %v", p.ModelID, *prices, err)
+			}
+		}
 		submittedNow = true
-		markModelRunning(db, p.ModelID)
 		log.Infof("model %d: submitted MEME job to TentaCron id=%s", p.ModelID, jobID)
 	default:
 		// A run is recorded and still alive (non-terminal, i.e. running):
@@ -248,6 +273,7 @@ func HandleDispatchMeme(
 		jobID = rec.RunID
 		log.Infof("model %d: resuming existing MEME TentaCron job id=%s (no resubmit)", p.ModelID, jobID)
 	}
+	markModelRunning(db, p.ModelID)
 
 	// 4. Long-poll by id on the meme budget, then read the raw zip via /result.
 	//    A MEME solve failure must take the run to the TERMINAL 'failed' state

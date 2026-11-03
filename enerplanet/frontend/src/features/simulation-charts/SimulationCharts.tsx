@@ -38,6 +38,8 @@ import { ComparisonCharts } from './components/ComparisonCharts';
 import { ComparisonMapPanel } from './components/ComparisonMapPanel';
 import { exportComparisonPDF } from '@/features/model-results/utils/pdfExport';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
+import { netCost } from '@/features/configurator/utils/costUtils';
 
 interface SimulationChartsProps {
   modelId?: number;
@@ -59,7 +61,7 @@ const formatPower = (value: number, carrier?: string): string => formatCarrierPo
 
 function formatPercent(value: number, digits: number = 1): string {
   const normalized = normalizeDisplayValue(value, digits + 1);
-  return `${normalized.toFixed(digits)}%`;
+  return `${formatNumber(normalized, digits)}%`;
 }
 
 function isMonetaryCost(costType?: string): boolean {
@@ -84,10 +86,7 @@ function calculateSummary(structured: StructuredModelResults) {
   const peakDemandRaw = Math.abs(structured.peak_demand || 0);
   const timesteps = structured.timestep_count || 8760;
 
-  const totalCost = structured.cost?.reduce((sum, c) => {
-    if (!isMonetaryCost(c.costs)) return sum;
-    return sum + Math.abs(c.value);
-  }, 0) || 0;
+  const totalCost = netCost(structured.cost?.filter((c) => isMonetaryCost(c.costs)));
 
   const structuredLcoe = (structured.model_total_levelised_cost || []).find((row) => {
     return (row.carrier || '').toLowerCase() === 'power' && isMonetaryCost(row.costs);
@@ -532,7 +531,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw, carrier) },
                   {
                     label: t('simulationComparison.metrics.totalCost'),
-                    value: `€${summary1.total_cost_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`,
+                    value: formatCurrency(summary1.total_cost_eur, 0),
                   },
                 ]}
               />
@@ -620,6 +619,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                     data1={summary1}
                     data2={summary2}
                     carrier={carrier}
+                    gridPrices={[structuredResults1?.grid_prices, structuredResults2?.grid_prices]}
                   />
                 </div>
 

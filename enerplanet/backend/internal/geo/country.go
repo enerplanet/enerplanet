@@ -198,7 +198,7 @@ var countryAliases = map[string]string{
 	"niederlande": "netherlands", "belgien": "belgium", "polen": "poland",
 	"schweden": "sweden", "norwegen": "norway", "finnland": "finland",
 	"dänemark": "denmark", "daenemark": "denmark", "irland": "ireland",
-	"tschechien": "czechia", "tschechische_republik": "czechia",
+	"czech_republic": "czechia", "tschechien": "czechia", "tschechische_republik": "czechia",
 	"rumänien": "romania", "rumaenien": "romania", "ungarn": "hungary",
 	"griechenland": "greece", "kroatien": "croatia", "bulgarien": "bulgaria",
 	"slowakei": "slovakia", "slowenien": "slovenia", "luxemburg": "luxembourg",

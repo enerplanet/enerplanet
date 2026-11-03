@@ -69,7 +69,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const regionsForLegend = response.regions.filter(r => r.region?.name).map(r => ({
       name: r.region!.name, gridCount: r.grid_count, country: r.region?.country,
       countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
-      has3d: r.has_3d || false, bbox: r.bbox,
+      has3d: r.has_3d || false, bbox: r.bbox, postcodes: r.postcodes,
     }));
     setAvailableRegions(regionsForLegend);
     availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
@@ -278,14 +278,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   return useMemo(() => ({
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
+    findBuilding, buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON,
     showBoundary, toggleBoundary, availableRegions,
   }), [
     pylovoGridData, setPylovoGridData, pylovoLayersRef, processPylovoData, previewSiteStation,
     updateTransformerKva, updateBuildingType, updateBuildingProperty, updateBuildingFClassDemand, storeBuildingBuem,
-    buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
+    findBuilding, buildingPv, storePvArrays, buildingTechs, storeBuildingTechs, buildingLocation,
     runPowerFlowAnalysis, isRunningPowerFlow, powerFlowResults,
     regionBoundary, availableBoundaryGeoJSON, showBoundary, toggleBoundary, availableRegions,
   ]);

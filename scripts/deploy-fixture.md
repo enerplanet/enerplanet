@@ -35,9 +35,9 @@ sent to the server separately (see [Weather](#weather)).
 
 | Path in `vN/` on the server | Content | Goes to |
 |---|---|---|
-| `3d/<country>/<provider>/` | 3D building files with their `attribution.json` | City2TABULA `data/lod2/<country>/<provider>/`, then imported |
-| `attributes/<country>/<provider>/` | building attributes, such as BAG building use | City2TABULA `data/attributes/<country>/<provider>/`, then imported |
-| `weather/<provider>/<country>/output/` | per-country weather archives in weather-serve's own layout, sent separately | weather-serve `/data/`, served from the next request on |
+| `3d/<country>/<provider>/` | 3D building files with their `attribution.json` | City2TABULA `data/lod2/<country>/<provider>/` |
+| `attributes/<country>/<provider>/` | building attributes, such as BAG building use | City2TABULA `data/attributes/<country>/<provider>/` |
+| `weather/<provider>/<country>/output/` | per-country weather archives in weather-serve's own layout, sent separately | replaces weather-serve `/data/<provider>/<country>/` |
 | `pylovo/<name>.sql.gz` | one PyLovo dump holding every region's grids | replaces the stack's PyLovo database |
 | `README.md` | what this version holds | not loaded |
 
@@ -71,26 +71,24 @@ from the neighbouring country. Leave out the provider-wide archives
 
 1. **3D and attributes.** Copies every file the stack does not have yet into
    the directories City2TABULA's server mounts. A file that is already there
-   with different content is kept, with a warning.
-2. **Import.** For each country in the folder, runs City2TABULA's CLI inside
-   the server container: `-create-db` when the country has no database yet,
-   otherwise `-import-data`, which skips files already imported. The buildings
-   land in the CityDB schema as raw data; features are extracted when a model
-   is first drawn over them.
-3. **Weather.** Copies every weather file the stack does not have yet into
-   weather-serve's data directory. weather-serve looks files up on each
-   request, so no restart is needed.
-4. **PyLovo.** Restores the dump into a temporary database, then drops the
+   with different content is kept, with a warning. Nothing is imported here:
+   when a model first runs in an area, City2TABULA imports the tiles under it,
+   then extracts and links those buildings.
+2. **Weather.** Replaces each `<provider>/<country>/` folder in weather-serve's
+   data directory with the version's folder, so no older cut is left beside
+   the new files. Folders the version does not hold stay as they are. If any
+   folder changed, weather-serve is restarted to clear its cached answers.
+3. **PyLovo.** Restores the dump into a temporary database, then drops the
    stack's PyLovo database and renames the new one into its place. If the
    restore fails, the old database stays untouched.
-5. **Relink.** Re-links every country's City2TABULA buildings to the new
+4. **Relink.** Re-links every country's City2TABULA buildings to the new
    PyLovo grids (`-link-pylovo -relink`), since earlier links point at the
    database just replaced.
-6. **Record.** Writes the version name to `.local/heat-stack/<prefix>/fixture.env`,
+5. **Record.** Writes the version name to `.local/heat-stack/<prefix>/fixture.env`,
    which `status` prints.
 
-Running the same version again is safe: no files are copied, nothing new is
-imported, and PyLovo is restored again from the same dump.
+Running the same version again is safe: no 3D or weather files are copied,
+and PyLovo is restored again from the same dump.
 
 ## Deploying a new version
 
@@ -153,18 +151,15 @@ grids.
 - **Removing a region.** A version that drops a region removes its PyLovo
   grids, but its 3D files and imported buildings stay. To clear them, run
   `down --volumes`, deploy again and load the version.
-- **Changed files.** A 3D or weather file whose name already exists on the
-  server is not replaced, and a 3D file is not re-imported. Publish a
-  correction under a new file name. weather-serve also caches answers until it
-  restarts.
+- **Changed files.** A 3D file whose name already exists on the server is
+  not replaced or re-imported. Publish a correction under a new file name.
 
 ## Errors
 
 | Message | Cause | Fix |
 |---|---|---|
-| `container <prefix>-city2tabula is not running` (or `-weather-serve`, `-pylovo-postgres`) | The stack is not up under that prefix | Deploy the stack first, or check `--prefix` |
+| `container <prefix>-city2tabula-api-1 is not running` (or `-city2tabula-db-1`, `-weather-api-1`, `-pylovo-postgres-1`) | No City2TABULA, weather or PyLovo container runs under that prefix | Deploy the stack first, or check `--prefix` |
 | `<country> is not a City2TABULA country` | A folder under `3d/` or `attributes/` has another name | Rename it to a name from the list in the message |
-| `<db> ... holds only a restored repository fixture` | The stack was deployed with the repository's fixtures, which restore databases that cannot take an import | Drop that database in `<prefix>-city2tabula-db`, then re-run |
 | `PyLovo: restoring ... failed; pylovo_db was left as it was` | The dump has an error | Fix or re-export the dump and re-run; the stack keeps its previous grids |
 | `holds N dumps; keep exactly one` | More than one `.sql.gz` in `pylovo/` | Keep the current dump only |
 | `has no 3d/, attributes/, weather/ or pylovo/*.sql.gz` | Wrong folder given | Pass the `vN` folder itself |

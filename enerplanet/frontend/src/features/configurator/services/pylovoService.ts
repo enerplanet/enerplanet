@@ -1,6 +1,7 @@
 import axios from "@/lib/axios";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import type { SiteStation } from "@/features/configurator/utils/siteStations";
+import type { BuildingExclusion } from "@/features/configurator/utils/siteExclusions";
 
 /** The pylovo site and generated revision a site grid's statistics and power flow must name. */
 export interface SiteScope {
@@ -249,8 +250,6 @@ export const pylovoService = {
         user_id?: string;
         model_id?: number;  // Model ID for filtering user-placed transformers (existing models)
         draft_id?: string;  // Draft ID for new models before saving
-        include_private_buildings?: boolean;
-        excluded_building_ids?: number[];
     }): Promise<PylovoGridResponse> => {
         // Support both new format (geom) and old format (polygon/polygons)
         let requestPayload: {
@@ -258,8 +257,7 @@ export const pylovoService = {
             user_id?: string;
             model_id?: number;
             draft_id?: string;
-            include_private_buildings?: boolean;
-            excluded_building_ids?: number[];
+            include_private_buildings?: false;
         };
 
         // Filter out null/empty polygons
@@ -297,7 +295,10 @@ export const pylovoService = {
             throw new Error("Invalid payload: must provide either geom or polygon/polygons with valid coordinates");
         }
 
-        // Include user_id for custom buildings filtering
+        // PyLovo reads a missing value as true and adds the user's custom buildings to the grid.
+        requestPayload.include_private_buildings = false;
+
+        // Scopes the user-placed transformers together with model_id or draft_id.
         if (payload.user_id) {
             requestPayload.user_id = payload.user_id;
         }
@@ -310,14 +311,6 @@ export const pylovoService = {
         // Include draft_id for user-placed transformers (new models before saving)
         if (payload.draft_id) {
             requestPayload.draft_id = payload.draft_id;
-        }
-
-        // Include custom building filter options
-        if (payload.include_private_buildings !== undefined) {
-            requestPayload.include_private_buildings = payload.include_private_buildings;
-        }
-        if (payload.excluded_building_ids && payload.excluded_building_ids.length > 0) {
-            requestPayload.excluded_building_ids = payload.excluded_building_ids;
         }
 
         const response = await axios.post<{ success: boolean; data: PylovoGridResponse }>("/v1/pylovo/generate-grid", requestPayload, {
@@ -389,12 +382,15 @@ export const pylovoService = {
 
     /**
      * Creates a pylovo site for the area, generates its grid and returns it in the
-     * /generate-grid shape with meta.mode "site". Rejects with the backend's message
-     * when the area is refused (no 3D-linked buildings, over the limit) or generation fails.
+     * /generate-grid shape with meta.mode "site", leaving out the buildings named by
+     * excludedOsmIds. Rejects with the backend's message when the area is refused
+     * (no 3D-linked buildings, over the limit) or generation fails.
      */
-    generateSiteGrid: async (name: string, polygons: number[][][]): Promise<PylovoGridResponse> => {
+    generateSiteGrid: async (name: string, polygons: number[][][], excludedOsmIds: string[] = []): Promise<PylovoGridResponse> => {
         const created = await axios.post<{ data: { site_id: number } }>("/v1/pylovo/sites", { name, geom: polygonsToGeom(polygons) });
-        return pylovoService.regenerateSiteGrid(created.data.data.site_id);
+        const siteId = created.data.data.site_id;
+        if (excludedOsmIds.length > 0) await pylovoService.patchSiteBuildings(siteId, excludedOsmIds.map(osm_id => ({ osm_id, excluded: true })));
+        return pylovoService.regenerateSiteGrid(siteId);
     },
 
     /** Generates the site's current revision and returns its grid; rejects with the job's error when generation fails. */
@@ -427,6 +423,11 @@ export const pylovoService = {
         await axios.put(`/v1/pylovo/sites/${siteId}/transformers`, stations);
     },
 
+    /** Leaves site buildings out of the grid or takes them back in; the grid is stale until the site is regenerated. */
+    patchSiteBuildings: async (siteId: number, exclusions: BuildingExclusion[]): Promise<void> => {
+        await axios.patch(`/v1/pylovo/sites/${siteId}/buildings`, exclusions);
+    },
+
     getEquipmentCosts: async (): Promise<EquipmentCosts> => {
         const response = await axios.get<{ data: { equipment: EquipmentCosts } }>("/v1/pylovo/equipment-costs");
         return response.data?.data?.equipment || {};
@@ -435,35 +436,6 @@ export const pylovoService = {
     getVoltageSettings: async (): Promise<VoltageSettings> => {
         const response = await axios.get<{ data: { settings: VoltageSettings } }>("/v1/pylovo/voltage-settings");
         return response.data?.data?.settings || {} as VoltageSettings;
-    },
-
-    addCustomBuilding: async (payload: {
-        title: string;
-        f_class: string;
-        area: number;
-        demand_energy: number;
-        geometry: GeoJSON.Point;
-        geometry_area: GeoJSON.Polygon;
-        icon?: string;
-    }): Promise<{ building_id: number; message: string }> => {
-        const response = await axios.post<{ data: { building: { id: number }; status: string } }>(
-            "/v1/pylovo/custom-buildings",
-            payload
-        );
-        // The API returns { status: "success", building: { id: ... } }
-        const buildingId = response.data?.data?.building?.id;
-        return { building_id: buildingId || 0, message: response.data?.data?.status || '' };
-    },
-
-    getCustomBuildings: async (): Promise<CustomBuilding[]> => {
-        const response = await axios.get<{ data: { buildings: CustomBuilding[]; count: number } }>(
-            "/v1/pylovo/custom-buildings"
-        );
-        return response.data?.data?.buildings || [];
-    },
-
-    deleteCustomBuilding: async (buildingId: number): Promise<void> => {
-        await axios.delete(`/v1/pylovo/custom-buildings/${buildingId}`);
     },
 
     runPipeline: async (payload: {
@@ -577,6 +549,7 @@ export const pylovoService = {
             country_code: string;
             state_code?: string;
             grid_count: number;
+            postcodes?: string[];
             has_3d?: boolean;
             centroid: { lat: number; lon: number };
             bbox: { west: number; south: number; east: number; north: number };
@@ -608,6 +581,7 @@ export const pylovoService = {
                 country_code: string;
                 state_code?: string;
                 grid_count: number;
+                postcodes?: string[];
                 has_3d?: boolean;
                 centroid: { lat: number; lon: number };
                 bbox: { west: number; south: number; east: number; north: number };
@@ -849,22 +823,6 @@ export const pylovoService = {
         return response.data?.data || response.data;
     },
 };
-
-export interface CustomBuilding {
-    id: number;  // PyLovo API returns "id" not "custom_building_id"
-    user_id: string;
-    title: string;
-    f_class: string;
-    building_type: string;
-    area: number;
-    peak_load_kw: number;
-    demand_energy: number;
-    geometry: GeoJSON.Point;
-    geometry_area: GeoJSON.Polygon;
-    is_owner: boolean;
-    icon: string;
-    created_at: string;
-}
 
 export type { GridStatistics };
 

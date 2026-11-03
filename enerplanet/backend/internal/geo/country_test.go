@@ -43,3 +43,7 @@ func TestBBoxFromGeoJSON_UnsupportedType(t *testing.T) {
 	_, _, _, _, err := BBoxFromGeoJSON(raw)
 	assert.Error(t, err)
 }
+
+func TestNormalizeCountry_CzechRepublic(t *testing.T) {
+	assert.Equal(t, "czechia", NormalizeCountry("Czech Republic"))
+}

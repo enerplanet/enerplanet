@@ -15,6 +15,7 @@ import (
 // runStageNames names the stage a run failed in (results.failed_stage).
 var runStageNames = map[string]string{
 	"queue":      "preparation",
+	"buildings":  "building simulation",
 	"running":    "simulation",
 	"processing": "processing",
 }

@@ -58,6 +58,7 @@ import ImportTechnologiesModal from "./components/ImportTechnologiesModal";
 import TechnologyDetailsModal from "./components/TechnologyDetailsModal";
 import TechnologiesSection from "./components/TechnologiesSection";
 import technologyService, { Technology, TechnologyConstraint } from "@/features/technologies/services/technologyService";
+import { formatNumber } from "@/utils/formatNumber";
 
 // Custom WindTurbine icon component using the SVG file
 const WindTurbine = forwardRef<SVGSVGElement, React.SVGProps<SVGSVGElement>>(
@@ -251,7 +252,7 @@ export default function TechnologiesPage() {
   const formatValue = (value: number | string) => {
     if (typeof value === "string" && value === "INF") return "∞";
     if (typeof value === "number") {
-      return value % 1 === 0 ? value.toString() : value.toFixed(4);
+      return formatNumber(value, 4, 0);
     }
     return value;
   };

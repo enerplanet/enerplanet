@@ -110,7 +110,8 @@ const OTHER_BUILDINGS = 'other_buildings';
  * Map each demand node location to its building's primary f_class, via a
  * spatial join: a building's footprint centre is matched to the nearest result
  * node (results coordinates are stored as {x: lon, y: lat}, building geometry
- * is GeoJSON [lon, lat]). A building without a usable f_class maps to
+ * is GeoJSON [lon, lat]). The building's use from its analysis (use_type)
+ * comes before its f_class. A building without either maps to
  * OTHER_BUILDINGS, so unknown usage forms one group rather than one per node.
  */
 export function buildLocationToFClass(
@@ -120,7 +121,8 @@ export function buildLocationToFClass(
   const map: Record<string, string> = {};
   for (const feature of buildings?.features ?? []) {
     const props = feature.properties ?? {};
-    const fClass = getPrimaryFClass(props) || normalizeFClass(String(props.f_class ?? '')) || OTHER_BUILDINGS;
+    const useType = typeof props.use_type === 'string' ? props.use_type : '';
+    const fClass = useType || getPrimaryFClass(props) || normalizeFClass(String(props.f_class ?? '')) || OTHER_BUILDINGS;
 
     const centre = geometryCentreLonLat(feature.geometry);
     if (!centre) continue;

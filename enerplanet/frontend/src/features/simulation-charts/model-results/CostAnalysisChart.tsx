@@ -5,6 +5,7 @@ import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
 import { formatLcoeCtkwh } from '@/features/model-results/lcoeUnits';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface CostItem {
   category: string;
@@ -22,13 +23,15 @@ interface CostAnalysisChartProps {
   height?: number;
   isPartialYear?: boolean;
   simulationDays?: number;
+  /** Feed-in revenue, already subtracted from totalCost. */
+  income?: number;
 }
 
 const formatShare = (value: number, total: number, decimals = 1): string => {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) return '0%';
   const pct = (Math.abs(value) / total) * 100;
   if (pct > 0 && pct < 1) return '<1%';
-  return `${pct.toFixed(decimals)}%`;
+  return `${formatNumber(pct, decimals)}%`;
 };
 
 export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
@@ -38,13 +41,16 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
   height = 280,
   isPartialYear,
   simulationDays,
+  income,
 }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
   const isDark = useIsDarkMode();
 
   const option: EChartsOption = useMemo(() => {
-    const total = totalCost || data.reduce((sum, d) => sum + Math.abs(d.value), 0);
+    // Shares are of gross cost; the centre shows the net total after feed-in income.
+    const shareBase = data.reduce((sum, d) => sum + Math.abs(d.value), 0);
+    const total = totalCost ?? shareBase;
     const pieData = data.map((d, idx) => ({
       name: d.category,
       value: Math.abs(d.value),
@@ -54,7 +60,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
       variableCost: d.variableCost,
     }));
 
-    const fmtEur = (v: number) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    const fmtEur = (v: number) => formatCurrency(v);
 
     return {
       tooltip: {
@@ -66,7 +72,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
         padding: [12, 16],
         textStyle: { color: themeColors.text, fontSize: 12 },
         formatter: (params: any) => {
-          const pct = formatShare(params.value, total, 1);
+          const pct = formatShare(params.value, shareBase, 1);
           const rowStyle = `display: flex; justify-content: space-between; gap: 24px; line-height: 1.8;`;
           const labelStyle = `color: ${themeColors.textMuted}; font-size: 11px;`;
           const valueStyle = `font-weight: 600; color: ${themeColors.text}; font-size: 11px;`;
@@ -145,7 +151,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
         formatter: (name: string) => {
           const item = data.find(d => d.category === name);
           if (item) {
-            const pct = formatShare(item.value, total, 0);
+            const pct = formatShare(item.value, shareBase, 0);
             return `${name} (${pct})`;
           }
           return name;
@@ -192,7 +198,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
             show: true,
             position: 'center',
             formatter: () => {
-              const totalFmt = total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+              const totalFmt = formatCurrency(total, 0);
               if (isPartialYear && simulationDays) {
                 return `{total|${totalFmt}}\n{period|${simulationDays} ${t('results.chartLabels.days')}}`;
               }
@@ -240,10 +246,17 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
   }
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: '100%' }}
-      opts={{ renderer: 'canvas' }}
-    />
+    <>
+      <ReactECharts
+        option={option}
+        style={{ height, width: '100%' }}
+        opts={{ renderer: 'canvas' }}
+      />
+      {income != null && income > 0.01 && (
+        <p className="mt-1 text-center text-xs text-muted-foreground">
+          {t('results.costInfo.feedInIncome', { amount: formatCurrency(income, 0) })}
+        </p>
+      )}
+    </>
   );
 };

@@ -15,12 +15,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ManagementHandler struct {
-	store *pylovoinstance.Store
+// regionListClearer empties the cached region list, which holds the regions of
+// whichever PyLovo instance was primary when it was filled.
+type regionListClearer interface {
+	ClearGridCounts() error
 }
 
-func NewManagementHandler(store *pylovoinstance.Store) *ManagementHandler {
-	return &ManagementHandler{store: store}
+type ManagementHandler struct {
+	store   *pylovoinstance.Store
+	regions regionListClearer
+}
+
+func NewManagementHandler(store *pylovoinstance.Store, regions regionListClearer) *ManagementHandler {
+	return &ManagementHandler{store: store, regions: regions}
 }
 
 func (h *ManagementHandler) parseID(c *gin.Context) (uint, bool) {
@@ -219,6 +226,11 @@ func (h *ManagementHandler) SetPrimary(c *gin.Context) {
 	}
 	if err := h.store.SetPrimary(id); err != nil {
 		httputil.InternalError(c, "Failed to set primary instance")
+		return
+	}
+	// The next region request then asks the new primary instead of listing the old one's regions.
+	if err := h.regions.ClearGridCounts(); err != nil {
+		httputil.InternalError(c, fmt.Sprintf("Instance %d is primary, but the region list still shows the previous instance's regions: %v", id, err))
 		return
 	}
 	instance, _ := h.store.GetByID(id)

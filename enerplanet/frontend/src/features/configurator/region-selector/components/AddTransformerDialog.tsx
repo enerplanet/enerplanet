@@ -3,6 +3,7 @@ import { useEffect, useState, type FC } from "react";
 import { Check, Loader2, MapPin, Plus, Zap } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/utils/formatNumber";
 
 interface AddTransformerDialogProps {
     open: boolean;
@@ -117,7 +118,7 @@ export const AddTransformerDialog: FC<AddTransformerDialogProps> = ({
                                         kVA
                                     </span>
                                     <span className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                                        €{item.cost_eur?.toLocaleString() ?? "—"}
+                                        {item.cost_eur == null ? "—" : formatCurrency(item.cost_eur, 2, 0)}
                                     </span>
                                 </button>
                             );
@@ -144,7 +145,7 @@ export const AddTransformerDialog: FC<AddTransformerDialogProps> = ({
                             <>
                                 <span className="font-medium text-foreground">{selectedSize.kva} kVA</span>
                                 {selectedSize.cost_eur != null && (
-                                    <> · €{selectedSize.cost_eur.toLocaleString()}</>
+                                    <> · {formatCurrency(selectedSize.cost_eur, 2, 0)}</>
                                 )}
                             </>
                         )}

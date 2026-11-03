@@ -100,9 +100,9 @@ deployment starts when every row is ready.
 | PyLovo | built from a pinned commit | published image | unknown | builds | not ready | PyLovo image publishing; image size (21 GB) |
 | TentaCron | built from a pinned commit | published image, pinned | yes | builds | not ready | TentaCron release with the EnerPlanET integration; restart policy on the `tentacron` service |
 | MEME | built from source | published image | unknown | builds | not ready | MEME image publishing and a restart policy on `api`, by its maintainer |
-| BuEM | pulled image, pinned | same | yes | ready | not ready | restart policy on `buem-gateway` and `buem-model` |
-| ignis | pulled image, pinned | same | yes | ready | not ready | restart policy on `ignis` and `db` |
-| City2TABULA | pulled image, pinned | same | yes | ready | not ready | restart policy on `city2tabula` and `city2tabula-db` |
+| BuEM | pulled image, pinned | same | yes | ready | not ready | restart policy on `api` and `model` |
+| ignis | pulled image, pinned | same | yes | ready | not ready | restart policy on `api` and `db` |
+| City2TABULA | pulled image, pinned | same | yes | ready | not ready | restart policy on `api` and `db` |
 | weather | pulled image, pinned | same | unknown | ready | not ready | confirm publishing waits for tests |
 | PV-Sim | does not exist | published image behind TentaCron | n/a | missing | missing | PV simulation service, no issue yet |
 | Data | committed fixtures for Bremen, Brno, Loenen, Vienna | fixtures for the test server; data pipeline for production | n/a | ready | not ready | data pipeline for new sites, not started |

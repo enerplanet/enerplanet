@@ -140,7 +140,12 @@
     "clickToDisableBuilding": "Klicken, um dieses Gebäude zu deaktivieren",
     "clickToEnableBuilding": "Klicken, um dieses Gebäude wieder zu aktivieren",
     "clickToSelectBuilding": "Klicken, um dieses Gebäude auszuwählen",
-    "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen"
+    "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen",
+    "cancel": "Zeichnen abbrechen",
+    "view3dOnly": "3D dient zur Ansicht: Klicken Sie auf ein Gebäude für seine Details. Wechseln Sie zur Karte, um das Gebiet zu zeichnen oder zu bearbeiten.",
+    "legendPv": "PV",
+    "legendStorage": "Speicher",
+    "legendHeat": "Wärmeversorgung"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",
@@ -161,6 +166,7 @@
     "techLoadFailed": "Fehler beim Laden der Technologie zur Bearbeitung",
     "heatAutoAssigned": "Wärmetechnologien wurden automatisch zugewiesen.",
     "heatResolved": "Wärmetechnologien zugewiesen. Aktualisierte Gebäude: {{count}}",
+    "heatRemovedNotHeated": "Wärmetechnologie von {{count}} nicht beheizten Gebäuden entfernt, z. B. Garagen und Schuppen.",
     "areaOverLimit": {
       "title": "Dieses Gebiet enthält {{buildings}} Gebäude; ein Modell darf {{limit}} enthalten",
       "description": "Verkleinern Sie das Gebiet um etwa {{excess}} Gebäude. Es bleibt auf der Karte, und das Netz wird geladen, sobald es passt."
@@ -220,10 +226,7 @@
     "current": "Aktuell",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "Auf Karte anzeigen",
-      "editLocation": "Standort bearbeiten",
       "editName": "Name bearbeiten",
-      "duplicate": "Duplizieren",
       "view": "Anzeigen",
       "share": "Teilen",
       "moveToWorkspace": "In Arbeitsbereich verschieben",
@@ -530,8 +533,10 @@
     "draft": "Entwurf",
     "queue": "Warteschlange",
     "calculating": "Berechnung",
-    "running": "Läuft",
-    "processing": "Verarbeitung",
+    "running": "Wird simuliert",
+    "buildings": "Gebäude werden simuliert",
+    "optimising": "Wird optimiert",
+    "processing": "Ergebnisse werden verarbeitet",
     "completed": "Abgeschlossen",
     "published": "Veröffentlicht",
     "failed": "Fehlgeschlagen",
@@ -539,6 +544,7 @@
     "modified": "Bearbeitet",
     "failedAt": {
       "queue": "Vorbereitung fehlgeschlagen",
+      "buildings": "Gebäudesimulation fehlgeschlagen",
       "running": "Simulation fehlgeschlagen",
       "processing": "Auswertung fehlgeschlagen"
     }
@@ -900,6 +906,7 @@
       "hours": "Stunden"
     },
     "costInfo": {
+      "feedInIncome": "Abzüglich {{amount}} Einnahmen aus ins Netz eingespeistem Strom.",
       "simulationPeriodNote": "Die angezeigten Kosten gelten für den simulierten Zeitraum von {{days}} Tagen ({{hours}} Stunden). Für vollständige Jahreskosten führen Sie eine 1-Jahres-Simulation (8.760 Stunden) durch.",
       "simulationPeriodShort": "{{days}}-Tage Simulationszeitraum",
       "costBreakdownTooltip": "Die Kosten beziehen sich nur auf den simulierten Zeitraum, nicht auf ein ganzes Jahr. Anschaffungskosten werden über die Lebensdauer der Anlage verteilt, während laufende Kosten (z.B. Strombezug aus dem Netz) den tatsächlichen Verbrauch im Zeitraum widerspiegeln. Bei kurzen Simulationen erscheinen Technologien mit hohen laufenden Kosten proportional größer.",
@@ -1147,7 +1154,18 @@
       "copies_other": "{{count}} Kopien",
       "failed_one": "{{count}} fehlgeschlagen",
       "failed_other": "{{count}} fehlgeschlagen",
-      "pagination": "Modellfamilien"
+      "countModels_one": "Modell",
+      "countModels_other": "Modelle",
+      "countCopies_one": "Kopie",
+      "countCopies_other": "Kopien",
+      "ofModels_one": "Modell",
+      "ofModels_other": "Modellen",
+      "collapseAll": "Alle einklappen",
+      "expandAll": "Alle ausklappen",
+      "link": "Mit Original verknüpfen",
+      "linkFailed": "\"{{name}}\" konnte nicht verknüpft werden: {{reason}}",
+      "unlink": "Vom Original trennen",
+      "unlinkFailed": "\"{{name}}\" konnte nicht getrennt werden: {{reason}}"
     },
     "workspaceActions": "Arbeitsbereich-Aktionen",
     "selectedCount_one": "{{count}} ausgewählt",
@@ -1247,7 +1265,8 @@
       "simulationEngine": "Simulations-Engine",
       "feedback": "Feedback",
       "userManagement": "Benutzerverwaltung",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Netzpreise"
     },
     "stats": {
       "accessLevel": "Zugriffsstufe",
@@ -1673,6 +1692,11 @@
   },
   "simulation": {
     "title": "Simulationskonfiguration",
+    "mode": {
+      "label": "Modus",
+      "simple": "Einfach",
+      "advanced": "Erweitert"
+    },
     "modelName": "Modellname",
     "modelNamePlaceholder": "Geben Sie einen Namen für Ihre Energiesimulation ein",
     "simulationPeriod": "Simulationszeitraum",
@@ -1762,9 +1786,10 @@
       "saveShortcut": "Speichern (Strg+S)"
     },
     "mapHeader": {
-      "myBuildings": "Meine Gebäude",
+      "resetArea": "Bereich zurücksetzen",
+      "resetAreaConfirmTitle": "Bereich zurücksetzen?",
+      "resetAreaConfirmDescription": "Entfernt alle gezeichneten Polygone, gesetzte Transformatoren und Gebäudezuordnungen.",
       "clearAll": "Alle Polygone entfernen",
-      "toggleMyBuildings": "Meine Gebäude umschalten",
       "disableSelected": "Ausgewählte Gebäude deaktivieren",
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
@@ -1783,7 +1808,6 @@
       "exportAreaHint": "Lädt das gezeichnete Gebiet als GeoJSON-Datei herunter (WGS 84, EPSG:4326). Sie lässt sich in ein anderes Modell importieren oder in QGIS öffnen."
     },
     "mapOverlay": {
-      "analyzingArea": "Gebiet wird analysiert",
       "canHostChargers": "Mögliche Ladepunkte: {{count}}",
       "limitedChargers": "Begrenzt, Ladepunkte: {{count}}",
       "connectedBuildings": "Angeschlossene Gebäude",
@@ -1811,11 +1835,27 @@
         "restaurant": "Restaurant",
         "school": "Schule",
         "supermarket": "Supermarkt",
-        "warehouse": "Lagerhalle"
+        "warehouse": "Lagerhalle",
+        "residential": "Wohngebäude",
+        "ancillary": "Nebengebäude",
+        "agriculture": "Landwirtschaft",
+        "industry": "Industrie",
+        "commercial": "Gewerbe",
+        "education": "Bildung",
+        "health": "Gesundheitswesen",
+        "hospitality": "Gastgewerbe",
+        "public": "Öffentlich",
+        "retail": "Einzelhandel"
       },
       "buemFailed": "BuEM fehlgeschlagen: {{reason}}",
       "buemShared": "Mit einem anderen Gebäude gezählt: {{detail}}",
       "buemPending": "BuEM-Ergebnis ausstehend",
+      "buemNotHeated": "Nicht beheizt: {{reason}}",
+      "useSource": {
+        "3d": "Nutzung aus den 3D-Daten",
+        "osm": "Nutzung aus OpenStreetMap",
+        "user": "Nutzung vom Benutzer festgelegt"
+      },
       "floors": "Geschosse",
       "height": "Höhe",
       "heightMedian": "Höhe (Median)",
@@ -1848,17 +1888,22 @@
     "resolutionComingSoon": "30-Minuten-Auflösung folgt in einer zukünftigen Version",
     "runMode": {
       "label": "Betriebsart",
-      "plan": "Planen",
-      "operate": "Betreiben",
-      "planHint": "Die Größe jeder Technologie zu minimalen Kosten wählen",
-      "operateHint": "Jede Technologie bei ihrer maximalen Größe halten und nur ihren Einsatz optimieren",
-      "unsized": "Gebäude, die für den Betriebsmodus eine Größe brauchen: {{count}}. Klicken Sie auf einen Eintrag, um sie festzulegen.",
+      "plan": "Optimierung",
+      "operate": "Simulation",
+      "planHint": "Schlägt offene Werte wie Größen zu minimalen Kosten vor",
+      "operateHint": "Betreibt jede Technologie mit der eingegebenen Größe und den eingegebenen Werten und optimiert nur ihren Einsatz; alle Werte müssen gesetzt sein, nicht nur die Größe",
+      "examples": "Beantwortet Fragen wie:",
+      "planQuestion1": "Wie groß sollten die platzierten Solaranlagen und Batterien für die geringsten Gesamtkosten sein?",
+      "planQuestion2": "Wie viel Wärme sollte jede Heizung liefern, wo ein Gebäude mehrere hat?",
+      "operateQuestion1": "Was kostet ein Jahr mit den Anlagen wie eingegeben?",
+      "operateQuestion2": "Wie viel Strom beziehen die Gebäude mit diesen Anlagen noch aus dem Netz?",
+      "unsized": "Gebäude, die für die Simulation eine Größe brauchen: {{count}}. Klicken Sie auf einen Eintrag, um sie festzulegen.",
       "unsizedEntry": "Gebäude {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximale Größe",
         "cont_storage_cap_max": "Speichergröße"
       },
-      "fieldNeeded": "Der Betriebsmodus braucht hier eine endliche Größe",
+      "fieldNeeded": "Die Simulation braucht hier eine endliche Größe",
       "moreFieldsNeeded": "Felder, die eine Größe brauchen: {{count}}"
     },
     "siteMode": {
@@ -1900,7 +1945,7 @@
         "p90": "Strahlungsreiches Jahr (P90)"
       },
       "hints": {
-        "scenario": "Ein aus den Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung.",
+        "scenario": "Ein aus historischen Monaten des Archivs zusammengesetztes Jahr: typisch oder am unteren bzw. oberen Ende der Sonneneinstrahlung. Keine Vorhersage.",
         "year": "Wählen Sie das historische Jahr im Simulationszeitraum unten; der Lauf nutzt das aufgezeichnete Wetter dieses Jahres."
       },
       "mode": {
@@ -1928,7 +1973,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Szenariojahr",
-    "periodScenarioHint": "Szenariowetter gehört zu keinem Kalenderjahr. Wählen Sie die zu simulierenden Tage und Monate; die Daten werden in einem festen Bezugsjahr gespeichert."
+    "periodScenarioHint": "Ein Szenariojahr wird Monat für Monat aus historischem Wetter zusammengesetzt und hat daher kein eigenes Kalenderjahr. Die Monate zählen trotzdem: Sie bestimmen, welche Jahreszeit die Simulation abdeckt, und damit Heizbedarf, Solarertrag und Rechenzeit. Die Daten werden in einem festen Bezugsjahr gespeichert.",
+    "periodCheckYear": "Mit historischem Wetter liegt der Zeitraum jetzt in {{year}}, dem letzten Jahr des Archivs. Behalten Sie es oder wählen Sie ein anderes Jahr.",
+    "periodKeepYear": "{{year}} behalten"
   },
   "mapLayers": {
     "title": "Kartenebenen",
@@ -1978,10 +2025,6 @@
       "map": {
         "title": "Interaktive Karte",
         "description": "Ihr Hauptarbeitsbereich für geografische Analysen. Zeigen Sie Kartenebenen an, wählen Sie Bereiche für die Bewertung aus und visualisieren Sie Energierisikodaten."
-      },
-      "locations": {
-        "title": "Gespeicherte Standorte",
-        "description": "Verwalten Sie Ihre gespeicherten Standorte und interessanten Bereiche. Schneller Zugriff auf häufig analysierte Regionen."
       },
       "reports": {
         "title": "Simulationsberichte",
@@ -2127,11 +2170,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "Meine benutzerdefinierten Gebäude",
-      "description": "Schließen Sie Ihre privaten benutzerdefinierten Gebäude in die Netzberechnung ein. Dies sind Gebäude, die Sie erstellt und in Ihrem Konto gespeichert haben.",
-      "example": "Sie können auch einzelne Gebäude ausschließen, indem Sie sie auf der Karte anklicken."
-    },
     "simulateEV": {
       "title": "E-Fahrzeug-Aufnahmekapazität simulieren",
       "description": "Berechnen Sie die Aufnahmekapazität für Elektrofahrzeuge für jeden Transformator im ausgewählten Bereich. Dies bestimmt, wie viele E-Ladegeräte (11 kW Stufe 2) angeschlossen werden können, bevor Netzgrenzen erreicht werden.",
@@ -2484,24 +2522,6 @@
       "replace": "Bei allen Gebäuden ersetzen ({{count}})"
     }
   },
-  "locations": {
-    "title": "Benutzerdefinierte Standorte",
-    "subtitle": "Standorte mit Gebäudeklassifikationen erstellen und verwalten",
-    "refresh": "Standorte aktualisieren",
-    "newLocation": "Neuer Standort",
-    "newLocationTooltip": "Neuen benutzerdefinierten Standort erstellen",
-    "searchPlaceholder": "Standorte suchen...",
-    "stats": {
-      "total": "Gesamt",
-      "totalArea": "Gesamtfläche",
-      "totalDemand": "Gesamtbedarf",
-      "private": "Privat"
-    },
-    "empty": {
-      "title": "Keine Standorte gefunden",
-      "description": "Erstellen Sie Ihren ersten benutzerdefinierten Standort"
-    }
-  },
   "weather": {
     "temperature": "Temp.",
     "windSpeed": "Wind",
@@ -2849,7 +2869,7 @@
   "regionSelector": {
     "goToRegion": "Zur Region gehen",
     "jumpToRegion": "Zu einer Region mit verfügbaren Rasterdaten springen",
-    "searchPlaceholder": "Regionen suchen...",
+    "searchPlaceholder": "Region oder Postleitzahl suchen...",
     "sortByGridCount": "Nach Rasteranzahl sortieren",
     "sortByName": "Nach Name sortieren",
     "setAsDefault": "Als Standardregion festlegen",
@@ -2905,11 +2925,7 @@
       "demographicsFrom": "Demografische Daten aus",
       "cuzkName": "Tschechisches Amt für Landesvermessung und Kataster",
       "enrichedWith": "Gebäudedaten ergänzt mit",
-      "licensedUnder": "Lizenziert unter",
-      "include": "Einbeziehen",
-      "exclude": "Ausschließen",
-      "includeTooltip": "Dieses benutzerdefinierte Gebäude in das Netz einbeziehen (erfordert Neugenerierung)",
-      "excludeTooltip": "Dieses benutzerdefinierte Gebäude aus dem Netz ausschließen (erfordert Neugenerierung)"
+      "licensedUnder": "Lizenziert unter"
     }
   },
   "landing": {
@@ -3141,6 +3157,38 @@
       "positive": "Muss größer als 0 sein",
       "notNegative": "Muss 0 oder größer sein",
       "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
+    }
+  },
+  "gridPrices": {
+    "title": "Netzstrompreise",
+    "description": "Standardpreise je Land für den Strombezug aus dem Netz und die Einspeisevergütung, in ct/kWh. Modelle verwenden sie, sofern sie keine eigenen setzen. Die Zeile für andere Länder gilt für jedes Land ohne eigene Zeile.",
+    "country": "Land",
+    "purchase": "Bezugspreis",
+    "feedIn": "Einspeisevergütung",
+    "source": "Quelle",
+    "lastChanged": "Zuletzt geändert",
+    "save": "Speichern",
+    "add": "Hinzufügen",
+    "saved": "Netzpreise für {{country}} gespeichert",
+    "saveFailed": "Netzpreise für {{country}} konnten nicht gespeichert werden: {{reason}}",
+    "countryPlaceholder": "Land, z. B. austria",
+    "otherCountries": "Andere Länder",
+    "resetToDefault": "Landesstandard verwenden",
+    "modelTitle": "Netzstrompreise",
+    "modelHint": "Was dieses Modell für Netzstrom zahlt und für eingespeisten Überschuss erhält, in ct/kWh. Ein leeres Feld verwendet den Landesstandard.",
+    "countryDefault": "Standard für {{country}}: {{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung.",
+    "fallbackDefault": "Kein Standard für {{country}}; es gilt der Standard für andere Länder: {{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung.",
+    "sources": "Quellen",
+    "sourceLabel": "Quelle: {{source}}",
+    "defaultUnknown": "Der Landesstandard gilt, sobald die Region bekannt ist.",
+    "usedInRun": "Netzstrom in diesem Lauf: Bezug zu {{import}} ct/kWh, Einspeisung zu {{export}} ct/kWh.",
+    "compared": "Netzstrompreise: Basis {{baseline}}, Vergleich {{comparison}}.",
+    "pair": "{{import}} ct/kWh Bezug, {{export}} ct/kWh Einspeisung",
+    "notRecorded": "nicht erfasst",
+    "errors": {
+      "importPositive": "Der Bezugspreis muss über 0 liegen.",
+      "exportNegative": "Die Einspeisevergütung darf nicht negativ sein.",
+      "exportAboveImport": "Die Einspeisevergütung darf nicht über dem Bezugspreis liegen."
     }
   }
 }

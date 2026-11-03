@@ -17,6 +17,7 @@ const PylovoManagement = lazy(() => import("./PylovoManagement"));
 const UserManagement = lazy(() => import("./UserManagement").then(m => ({ default: m.UserManagement })));
 const ModelsManagement = lazy(() => import("./ModelsManagement").then(m => ({ default: m.ModelsManagement })));
 const FeedbackManagement = lazy(() => import("./FeedbackManagement").then(m => ({ default: m.FeedbackManagement })));
+const GridPricesManagement = lazy(() => import("./GridPricesManagement"));
 
 interface TabPanelProps {
 	readonly children?: React.ReactNode;
@@ -136,6 +137,15 @@ export const Dashboard: React.FC = () => {
 						<TabPanel value={tabValue} index={getTabIndex("users")}>
 							<Suspense fallback={<TabLoadingFallback />}>
 								<UserManagement onUsersMutated={refreshUsersCount} />
+							</Suspense>
+						</TabPanel>
+					</Authorized>
+
+					{/* Default grid electricity prices per country (admin and manager) */}
+					<Authorized access={["expert", "manager"]}>
+						<TabPanel value={tabValue} index={getTabIndex("prices")}>
+							<Suspense fallback={<TabLoadingFallback />}>
+								<GridPricesManagement />
 							</Suspense>
 						</TabPanel>
 					</Authorized>

@@ -10,6 +10,7 @@ import {
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface EnergyBalanceChartProps {
   production: CarrierProdRecord[];
@@ -34,12 +35,12 @@ function formatAxisEnergy(value: number): string {
 
   if (normalized === 0) return '0';
   if (absolute >= 1000) {
-    return normalized.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return formatNumber(normalized, 0, 0);
   }
   if (absolute >= 10) {
-    return normalized.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return formatNumber(normalized, 1, 0);
   }
-  return normalized.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return formatNumber(normalized, 2, 0);
 }
 
 export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
@@ -205,7 +206,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
             if (isGeneration) {
               html += `<div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 4px;">
                 <span style="font-weight: 500;">${t('results.energy.selfSufficiency')}</span>
-                <span style="font-weight: 600; color: #059669;">${selfSuff.toFixed(1)}%</span>
+                <span style="font-weight: 600; color: #059669;">${formatNumber(selfSuff, 1)}%</span>
               </div>`;
             }
             html += `<div style="display: flex; justify-content: space-between; gap: 20px;">

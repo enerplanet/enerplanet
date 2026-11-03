@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { CarrierProdRecord, CarrierConRecord } from '@/features/model-results/types';
 import { useThemeColors } from '../pypsa/chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface BuildingEnergyChartProps {
   production: CarrierProdRecord[];
@@ -82,25 +83,25 @@ const CONSUMPTION_COLOR = '#dc2626';
 const formatPowerWithUnit = (valueKw: number): string => {
   const abs = Math.abs(valueKw);
   if (abs === 0) return '0.00 kW';
-  if (abs < 0.1) return `${(valueKw * 1000).toFixed(2)} W`;
-  return `${valueKw.toFixed(2)} kW`;
+  if (abs < 0.1) return `${formatNumber(valueKw * 1000, 2)} W`;
+  return `${formatNumber(valueKw, 2)} kW`;
 };
 
 const formatAxisKw = (valueKw: number): string => {
   const abs = Math.abs(valueKw);
-  if (abs >= 10) return valueKw.toFixed(1);
-  if (abs >= 1) return valueKw.toFixed(2);
-  if (abs >= 0.1) return valueKw.toFixed(3);
-  if (abs > 0) return valueKw.toFixed(4);
+  if (abs >= 10) return formatNumber(valueKw, 1);
+  if (abs >= 1) return formatNumber(valueKw, 2);
+  if (abs >= 0.1) return formatNumber(valueKw, 3);
+  if (abs > 0) return formatNumber(valueKw, 4);
   return '0';
 };
 
 const formatEnergyKwh = (valueKwh: number): string => {
   const abs = Math.abs(valueKwh);
-  if (abs >= 1000) return `${valueKwh.toLocaleString(undefined, { maximumFractionDigits: 1 })} kWh`;
-  if (abs >= 1) return `${valueKwh.toFixed(2)} kWh`;
-  if (abs >= 0.1) return `${valueKwh.toFixed(3)} kWh`;
-  if (abs > 0) return `${valueKwh.toFixed(4)} kWh`;
+  if (abs >= 1000) return `${formatNumber(valueKwh, 1, 0)} kWh`;
+  if (abs >= 1) return `${formatNumber(valueKwh, 2)} kWh`;
+  if (abs >= 0.1) return `${formatNumber(valueKwh, 3)} kWh`;
+  if (abs > 0) return `${formatNumber(valueKwh, 4)} kWh`;
   return '0.000 kWh';
 };
 
@@ -147,7 +148,7 @@ const formatStepLabel = (hours: number): string => {
   if (!Number.isFinite(hours) || hours <= 0) return '1 h';
   if (hours >= 1) {
     if (Math.abs(hours - Math.round(hours)) < 0.001) return `${Math.round(hours)} h`;
-    return `${hours.toFixed(1)} h`;
+    return `${formatNumber(hours, 1)} h`;
   }
   return `${Math.round(hours * 60)} min`;
 };

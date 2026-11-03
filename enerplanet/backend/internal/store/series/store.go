@@ -314,10 +314,12 @@ func (s *Store) Profiles(ids []int64) (map[int64]StoredProfile, error) {
 // LinkedSeries is one series linked to a building of a draft or model, with
 // the values and timing of the profile it points to.
 type LinkedSeries struct {
-	BuildingRef       string
-	Part              string
-	Series            string
-	Source            string
+	BuildingRef string
+	Part        string
+	Series      string
+	Source      string
+	// The config hash the link was made for, see contenthash.Of.
+	Revision          string
 	ProducerVersion   *string
 	StartTime         time.Time
 	ResolutionMinutes int
@@ -333,7 +335,7 @@ func (s *Store) LinkedSeries(owner Owner, buildingRef string) ([]LinkedSeries, e
 		return nil, err
 	}
 	q := s.db.Table("series_links AS l").
-		Select("l.building_ref, l.part, l.series, l.source, p.producer_version, p.start_time, p.resolution_minutes, v.unit, v.vals").
+		Select("l.building_ref, l.part, l.series, l.source, l.revision, p.producer_version, p.start_time, p.resolution_minutes, v.unit, v.vals").
 		Joins("JOIN series_profiles AS p ON p.id = l.profile_id").
 		Joins("JOIN series_values AS v ON v.profile_id = l.profile_id AND v.series = l.series")
 	if owner.ModelID != 0 {

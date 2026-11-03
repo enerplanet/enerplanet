@@ -11,9 +11,13 @@ import axios from '@/lib/axios';
 /** One building's stored outcome (backend contracts.BuildingDemandProfile). */
 export interface StoredDemandProfile {
   osm_id: string;
-  /** resolved, pending, failed or shared. */
+  /** resolved, pending, failed, shared or not_heated. */
   status: string;
   building_type?: string;
+  /** The building's use, from the 3D data or OpenStreetMap; absent for Other buildings. */
+  use_type?: string;
+  /** Where use_type came from: user, 3d or osm. */
+  use_source?: string;
   tabula_variant_code?: string;
   heating_kwh_a?: number;
   cooling_kwh_a?: number;
@@ -21,7 +25,7 @@ export interface StoredDemandProfile {
   hot_water_kwh_a?: number;
   /** kWh of gas, a separate carrier: never part of the total. */
   kitchen_kwh_a?: number;
-  /** Why it failed, or for a shared building the one it is counted under. */
+  /** Why it failed or is not heated, or for a shared building the one it is counted under. */
   error_message?: string;
   /** Storeys BuEM modelled, from the 3D geometry. */
   n_storeys?: number;
@@ -39,6 +43,7 @@ interface ModelDemandProfiles {
   pending: number;
   failed: number;
   shared: number;
+  not_heated: number;
   buildings: StoredDemandProfile[];
 }
 
@@ -47,7 +52,7 @@ export interface AnalysisProgress {
   /** idle (never analysed), resolving or completed. */
   status: string;
   total: number;
-  /** Buildings with an outcome: resolved, failed or shared. */
+  /** Buildings with an outcome: resolved, failed, shared or not heated. */
   done: number;
   failed: number;
 }
@@ -111,7 +116,7 @@ export function useModelDemandProfiles(
         if (cancelled) return;
         const d = res.data;
         setProfiles(new Map(d.buildings.map((b) => [b.osm_id, b])));
-        setProgress({ status: d.status, total: d.total, done: d.resolved + d.failed + d.shared, failed: d.failed });
+        setProgress({ status: d.status, total: d.total, done: d.resolved + d.failed + d.shared + (d.not_heated ?? 0), failed: d.failed });
         if (d.status === 'resolving') timer = setTimeout(load, RESOLVING_POLL_MS);
       } catch (err) {
         if (!cancelled) console.error('[map] could not load the stored demand profiles of model', modelId, err);

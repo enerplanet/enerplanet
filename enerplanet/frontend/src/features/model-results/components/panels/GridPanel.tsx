@@ -21,6 +21,7 @@ import { CLUSTER_COLORS } from '@/components/map-controls/maplibre/maplibre-styl
 import { DARK_CLUSTER_COLORS } from '@/features/interactive-map/utils/mapStyleUtils';
 import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { formatNumber } from '@/utils/formatNumber';
 
 
 const BusDetailsTooltip = () => {
@@ -187,21 +188,21 @@ interface GridPanelProps {
 const formatPowerValue = (valueKw: number): string => {
   if (!Number.isFinite(valueKw)) return '-';
   const abs = Math.abs(valueKw);
-  if (abs >= 1000) return `${(valueKw / 1000).toFixed(2)} MW`;
-  if (abs >= 1) return `${valueKw.toFixed(1)} kW`;
-  if (abs >= 0.001) return `${(valueKw * 1000).toFixed(1)} W`;
+  if (abs >= 1000) return `${formatNumber(valueKw / 1000, 2)} MW`;
+  if (abs >= 1) return `${formatNumber(valueKw, 1)} kW`;
+  if (abs >= 0.001) return `${formatNumber(valueKw * 1000, 1)} W`;
   if (abs === 0) return '0.0 kW';
-  return `${(valueKw * 1_000_000).toFixed(1)} mW`;
+  return `${formatNumber(valueKw * 1_000_000, 1)} mW`;
 };
 
 const formatApparentPowerValue = (valueKva: number): string => {
   if (!Number.isFinite(valueKva)) return '-';
   const abs = Math.abs(valueKva);
-  if (abs >= 1000) return `${(valueKva / 1000).toFixed(2)} MVA`;
-  if (abs >= 1) return `${valueKva.toFixed(1)} kVA`;
-  if (abs >= 0.001) return `${(valueKva * 1000).toFixed(1)} VA`;
+  if (abs >= 1000) return `${formatNumber(valueKva / 1000, 2)} MVA`;
+  if (abs >= 1) return `${formatNumber(valueKva, 1)} kVA`;
+  if (abs >= 0.001) return `${formatNumber(valueKva * 1000, 1)} VA`;
   if (abs === 0) return '0.0 kVA';
-  return `${(valueKva * 1_000_000).toFixed(1)} mVA`;
+  return `${formatNumber(valueKva * 1_000_000, 1)} mVA`;
 };
 
 const computeApparentPower = (pKw: number, qKvar = 0): number => {
@@ -543,7 +544,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">LPF mismatch</p>
                 <p className="text-sm font-semibold text-foreground">
-                  {convergence ? convergence.lpf_max_mismatch.toFixed(4) : '-'}
+                  {convergence ? formatNumber(convergence.lpf_max_mismatch, 4) : '-'}
                 </p>
               </div>
             </div>
@@ -593,7 +594,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-1">{t('results.grid.avgVoltage')}</p>
                   <p className="text-xl font-bold text-foreground">
-                    {selectedVoltageAvg !== null ? selectedVoltageAvg.toFixed(3) : '-'} <span className="text-sm font-normal">pu</span>
+                    {selectedVoltageAvg !== null ? formatNumber(selectedVoltageAvg, 3) : '-'} <span className="text-sm font-normal">pu</span>
                   </p>
                 </div>
               ) : SHOW_RESULT_GAPS ? (
@@ -614,7 +615,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                   <p className="text-xs text-muted-foreground mb-1">Voltage span</p>
                   <p className="text-sm font-semibold text-foreground">
                     {selectedVoltageMin !== null && selectedVoltageMax !== null
-                      ? `${selectedVoltageMin.toFixed(3)} - ${selectedVoltageMax.toFixed(3)} pu`
+                      ? `${formatNumber(selectedVoltageMin, 3)} - ${formatNumber(selectedVoltageMax, 3)} pu`
                       : '-'}
                   </p>
                 </div>
@@ -624,7 +625,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                   <p className="text-xs text-muted-foreground mb-1">Most loaded transformer</p>
                   <p className="text-sm font-semibold text-foreground truncate">
                     {busiestTransformer
-                      ? `${busiestTransformer.name} (${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%)`
+                      ? `${busiestTransformer.name} (${formatNumber(busiestTransformer.peakLoadingPercent || 0, 1)}%)`
                       : 'n/a'}
                   </p>
                 </div>
@@ -642,7 +643,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                     <span className="text-muted-foreground">Busiest line</span>
                     <span className="text-right font-medium text-foreground">
                       {busiestLine
-                        ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${busiestLine.peakLoadingPercent.toFixed(1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`
+                        ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${formatNumber(busiestLine.peakLoadingPercent, 1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`
                         : 'n/a'}
                     </span>
                   </div>
@@ -652,7 +653,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                     <span className="text-muted-foreground">Top transformer</span>
                     <span className="text-right font-medium text-foreground">
                       {busiestTransformer
-                        ? `${busiestTransformer.name} • ${(busiestTransformer.peakLoadingPercent || 0).toFixed(1)}%`
+                        ? `${busiestTransformer.name} • ${formatNumber(busiestTransformer.peakLoadingPercent || 0, 1)}%`
                         : 'n/a'}
                     </span>
                   </div>
@@ -793,7 +794,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                   <div key={item.name} className="flex items-start justify-between gap-3 text-xs">
                     <span className="text-muted-foreground truncate">{item.name}</span>
                     <span className="text-right font-medium text-foreground">
-                      {item.hoursOutside.toFixed(1)} h • {item.maxDeviationPu.toFixed(4)} pu
+                      {formatNumber(item.hoursOutside, 1)} h • {formatNumber(item.maxDeviationPu, 4)} pu
                     </span>
                   </div>
                 )) : (
@@ -816,8 +817,8 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
                       </span>
                       <span className={`text-right font-medium ${overloaded ? 'text-red-500' : 'text-foreground'}`}>
                         {item.peakLoadingPercent !== undefined
-                          ? `${item.peakLoadingPercent.toFixed(1)}%${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`
-                          : `${formatApparentPowerValue(item.peakApparentKva)}${capabilities.losses ? ` • ${item.peakLossKw.toFixed(2)} kW` : ''}`}
+                          ? `${formatNumber(item.peakLoadingPercent, 1)}%${capabilities.losses ? ` • ${formatNumber(item.peakLossKw, 2)} kW` : ''}`
+                          : `${formatApparentPowerValue(item.peakApparentKva)}${capabilities.losses ? ` • ${formatNumber(item.peakLossKw, 2)} kW` : ''}`}
                       </span>
                     </div>
                   );

@@ -1,4 +1,5 @@
 import { Model } from "@/features/model-dashboard/services/modelService";
+import { isActiveStatus } from "@/features/model-dashboard/utils/statusHelpers";
 
 export interface TimingUpdate {
 	updatedStartTimes: Record<number, string>;
@@ -16,7 +17,7 @@ function ensureRunningStart(
 	startTimes: Record<number, string>,
 	completionInfo: Record<number, CompletionDetails>
 ): { startChanged: boolean; completionCleared: boolean } {
-	if (model.status !== 'running') {
+	if (!isActiveStatus(model.status)) {
 		return { startChanged: false, completionCleared: false };
 	}
 

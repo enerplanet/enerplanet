@@ -134,7 +134,12 @@ type Building struct {
 	// FunctionCode is the source building's CityGML function, such as the
 	// ALKIS code 31001_1000; null where the dataset has none (City2TABULA
 	// 0.11.3 and later).
-	FunctionCode      *string   `json:"function_code,omitempty"`
+	FunctionCode *string `json:"function_code,omitempty"`
+	// UseType is FunctionCode mapped to City2TABULA's use vocabulary
+	// (residential, ancillary, agriculture, industry, other, ...); null where
+	// the code says nothing about use. Residential is whether it has dwellings.
+	UseType           *string   `json:"use_type,omitempty"`
+	Residential       *bool     `json:"residential,omitempty"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
 	MaxHeight         *float64  `json:"max_height,omitempty"`
 	RoomHeight        *float64  `json:"room_height,omitempty"`

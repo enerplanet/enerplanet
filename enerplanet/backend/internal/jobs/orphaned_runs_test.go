@@ -32,11 +32,11 @@ func orphanMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 // only such a model is failed, not one whose task is still queued or running.
 func TestFailOrphanedRuns_failsOnlyModelsWithoutALiveTask(t *testing.T) {
 	db, mock := orphanMockDB(t)
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT "id" FROM "models" WHERE status IN ($1,$2,$3) AND webservice_id IS NULL AND updated_at < $4`)).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT "id" FROM "models" WHERE status IN ($1,$2,$3,$4) AND webservice_id IS NULL AND updated_at < $5`)).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(7).AddRow(9))
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "models" SET`)).WithArgs(
-		sqlmock.AnyArg(), sqlmock.AnyArg(), "", "failed", sqlmock.AnyArg(), uint(9), "queue", "running", "processing",
+		sqlmock.AnyArg(), sqlmock.AnyArg(), "", "failed", sqlmock.AnyArg(), uint(9), "queue", "buildings", "running", "processing",
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 

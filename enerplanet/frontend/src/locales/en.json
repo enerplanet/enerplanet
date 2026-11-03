@@ -140,7 +140,12 @@
     "clickToDisableBuilding": "Click to disable this building",
     "clickToEnableBuilding": "Click to enable this building again",
     "clickToSelectBuilding": "Click to select this building",
-    "clickToDeselectBuilding": "Click to remove this building from the selection"
+    "clickToDeselectBuilding": "Click to remove this building from the selection",
+    "cancel": "Cancel drawing",
+    "view3dOnly": "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.",
+    "legendPv": "PV",
+    "legendStorage": "Storage",
+    "legendHeat": "Heat supply"
   },
   "gridNotifications": {
     "gridGenerated": "Grid generated: {{count}} buildings found",
@@ -161,6 +166,7 @@
     "techLoadFailed": "Failed to load technology for editing",
     "heatAutoAssigned": "Heat technologies assigned automatically.",
     "heatResolved": "Heat technologies assigned. Buildings updated: {{count}}",
+    "heatRemovedNotHeated": "Heat technology removed from {{count}} buildings that are not heated, such as garages and sheds.",
     "areaOverLimit": {
       "title": "This area holds {{buildings}} buildings; a model may hold {{limit}}",
       "description": "Reduce the area by about {{excess}} buildings. It stays on the map, and the grid is fetched once it fits."
@@ -220,10 +226,7 @@
     "current": "Current",
     "max": "Max",
     "tooltips": {
-      "viewOnMap": "View on Map",
-      "editLocation": "Edit Location",
       "editName": "Edit name",
-      "duplicate": "Duplicate",
       "view": "View",
       "share": "Share",
       "moveToWorkspace": "Move to Workspace",
@@ -530,8 +533,10 @@
     "draft": "Draft",
     "queue": "Queued",
     "calculating": "Calculating",
-    "running": "Running",
-    "processing": "Processing",
+    "running": "Simulating",
+    "buildings": "Simulating buildings",
+    "optimising": "Optimising",
+    "processing": "Processing results",
     "completed": "Completed",
     "published": "Published",
     "failed": "Failed",
@@ -539,6 +544,7 @@
     "modified": "Modified",
     "failedAt": {
       "queue": "Preparation failed",
+      "buildings": "Building simulation failed",
       "running": "Simulation failed",
       "processing": "Processing failed"
     }
@@ -900,6 +906,7 @@
       "hours": "hours"
     },
     "costInfo": {
+      "feedInIncome": "Net of {{amount}} income from electricity sold to the grid.",
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
       "simulationPeriodShort": "{{days}}-day simulation period",
       "costBreakdownTooltip": "Costs shown cover only the simulated time window, not a full year. Equipment costs are spread over the equipment lifetime, while running costs (e.g., grid electricity purchases) reflect actual usage during the period. In short simulations, technologies with high running costs appear proportionally larger.",
@@ -1147,7 +1154,18 @@
       "copies_other": "{{count}} copies",
       "failed_one": "{{count}} failed",
       "failed_other": "{{count}} failed",
-      "pagination": "families"
+      "countModels_one": "model",
+      "countModels_other": "models",
+      "countCopies_one": "copy",
+      "countCopies_other": "copies",
+      "ofModels_one": "model",
+      "ofModels_other": "models",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "link": "Link to original",
+      "linkFailed": "Could not link \"{{name}}\": {{reason}}",
+      "unlink": "Unlink from original",
+      "unlinkFailed": "Could not unlink \"{{name}}\": {{reason}}"
     },
     "workspaceActions": "Workspace actions",
     "selectedCount_one": "{{count}} selected",
@@ -1247,7 +1265,8 @@
       "simulationEngine": "Simulation-Engine",
       "feedback": "Feedback",
       "userManagement": "User Management",
-      "gridEngine": "Compute Engine"
+      "gridEngine": "Compute Engine",
+      "gridPrices": "Grid Prices"
     },
     "stats": {
       "accessLevel": "Access Level",
@@ -1673,6 +1692,11 @@
   },
   "simulation": {
     "title": "Simulation Configuration",
+    "mode": {
+      "label": "Mode",
+      "simple": "Simple",
+      "advanced": "Advanced"
+    },
     "modelName": "Model Name",
     "modelNamePlaceholder": "Enter a name for your energy simulation",
     "simulationPeriod": "Simulation Period",
@@ -1762,9 +1786,10 @@
       "saveShortcut": "Save (Ctrl+S)"
     },
     "mapHeader": {
-      "myBuildings": "My Buildings",
+      "resetArea": "Reset Area",
+      "resetAreaConfirmTitle": "Reset the area?",
+      "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
       "clearAll": "Remove all polygons",
-      "toggleMyBuildings": "Toggle my buildings",
       "disableSelected": "Disable selected buildings",
       "importArea": "Import area",
       "exportArea": "Export area",
@@ -1783,7 +1808,6 @@
       "exportAreaHint": "Download the drawn area as a GeoJSON file (WGS 84, EPSG:4326). Import it into another model or open it in QGIS."
     },
     "mapOverlay": {
-      "analyzingArea": "Analyzing area",
       "canHostChargers": "Chargers it can host: {{count}}",
       "limitedChargers": "Limited, chargers: {{count}}",
       "connectedBuildings": "Connected buildings",
@@ -1811,11 +1835,27 @@
         "restaurant": "Restaurant",
         "school": "School",
         "supermarket": "Supermarket",
-        "warehouse": "Warehouse"
+        "warehouse": "Warehouse",
+        "residential": "Residential",
+        "ancillary": "Ancillary building",
+        "agriculture": "Agricultural",
+        "industry": "Industrial",
+        "commercial": "Commercial",
+        "education": "Education",
+        "health": "Health care",
+        "hospitality": "Hospitality",
+        "public": "Public",
+        "retail": "Retail"
       },
       "buemFailed": "BuEM failed: {{reason}}",
       "buemShared": "Counted with another building: {{detail}}",
       "buemPending": "BuEM result pending",
+      "buemNotHeated": "Not heated: {{reason}}",
+      "useSource": {
+        "3d": "Use from the 3D data",
+        "osm": "Use from OpenStreetMap",
+        "user": "Use set by the user"
+      },
       "floors": "Floors",
       "height": "Height",
       "heightMedian": "Height (median)",
@@ -1848,21 +1888,26 @@
     "resolutionComingSoon": "30-minute resolution coming in a future release",
     "runMode": {
       "label": "Run mode",
-      "plan": "Plan",
-      "operate": "Operate",
-      "planHint": "Choose the size of each technology at least cost",
-      "operateHint": "Keep each technology at its maximum size and optimise only its use",
-      "unsized": "Buildings that need a size for operate mode: {{count}}. Click an entry to set it.",
+      "plan": "Optimisation",
+      "operate": "Simulation",
+      "planHint": "Suggests the values left open, such as sizes, at least cost",
+      "operateHint": "Runs each technology at the size and values entered and optimises only its use; every value must be set, not only the size",
+      "examples": "Answers questions such as:",
+      "planQuestion1": "How large should the solar panels and batteries I placed be for the lowest total cost?",
+      "planQuestion2": "Where a building has more than one heating option, how much heat should each supply?",
+      "operateQuestion1": "What does a year cost with the systems as entered?",
+      "operateQuestion2": "How much electricity do the buildings still buy from the grid with these systems?",
+      "unsized": "Buildings that need a size for simulation: {{count}}. Click an entry to set it.",
       "unsizedEntry": "Building {{building}}: {{tech}}, {{fields}}",
       "fields": {
         "cont_energy_cap_max": "maximum size",
         "cont_storage_cap_max": "storage size"
       },
-      "fieldNeeded": "Operate mode needs a finite size here",
+      "fieldNeeded": "Simulation needs a finite size here",
       "moreFieldsNeeded": "Fields that need a size: {{count}}"
     },
     "siteMode": {
-      "label": "Custom grid",
+      "label": "Custom Grid",
       "hint": "Place your own transformers and build the grid for this area from them, instead of using the pre-generated grid. Only buildings with 3D data are included, up to 150.",
       "switchHint": "Switching regenerates the grid for the drawn area.",
       "leaveTitle": "Leave the custom grid?",
@@ -1900,7 +1945,7 @@
         "p90": "High solar year (P90)"
       },
       "hints": {
-        "scenario": "A year stitched from the archive's months: typical, or the low or high end of solar irradiance.",
+        "scenario": "A year stitched from historical archive months: typical, or the low or high end of solar irradiance. Not a forecast.",
         "year": "Pick the historic year in the simulation period below; the run uses that year's recorded weather."
       },
       "mode": {
@@ -1928,7 +1973,9 @@
       "q4": "Q4"
     },
     "periodScenarioYear": "Scenario year",
-    "periodScenarioHint": "Scenario weather is not tied to a calendar year. Pick the days and months to simulate; the dates are saved in a fixed reference year."
+    "periodScenarioHint": "A scenario year is assembled month by month from historical weather, so it has no calendar year of its own. The months still matter: they decide which season the simulation covers, and with it heating demand, solar yield and run time. The dates are stored in a fixed reference year.",
+    "periodCheckYear": "Historic weather set the period to {{year}}, the latest year in the archive. Keep it or choose another year.",
+    "periodKeepYear": "Keep {{year}}"
   },
   "mapLayers": {
     "title": "Map Layers",
@@ -1978,10 +2025,6 @@
       "map": {
         "title": "Interactive Map",
         "description": "Your main workspace for geographical analysis. View map layers, select areas for assessment, and visualize energy risk data."
-      },
-      "locations": {
-        "title": "Saved Locations",
-        "description": "Manage your saved locations and areas of interest. Quick access to frequently analyzed regions."
       },
       "reports": {
         "title": "Simulation Reports",
@@ -2127,11 +2170,6 @@
     }
   },
   "tooltips": {
-    "privateBuildings": {
-      "title": "My Custom Buildings",
-      "description": "Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.",
-      "example": "You can also exclude individual buildings by clicking on them on the map."
-    },
     "simulateEV": {
       "title": "Simulate EV Hosting Capacity",
       "description": "Calculate the Electric Vehicle hosting capacity for each transformer in the selected area. This determines how many EV chargers (11 kW Level 2) can be connected before reaching grid constraints.",
@@ -2484,24 +2522,6 @@
       "replace": "Replace on all buildings ({{count}})"
     }
   },
-  "locations": {
-    "title": "Custom Locations",
-    "subtitle": "Create and manage locations with building classifications",
-    "refresh": "Refresh locations",
-    "newLocation": "New Location",
-    "newLocationTooltip": "Create a new custom location",
-    "searchPlaceholder": "Search locations...",
-    "stats": {
-      "total": "Total",
-      "totalArea": "Total Area",
-      "totalDemand": "Total Demand",
-      "private": "Private"
-    },
-    "empty": {
-      "title": "No locations found",
-      "description": "Create your first custom location to get started"
-    }
-  },
   "weather": {
     "temperature": "Temp.",
     "windSpeed": "Wind",
@@ -2849,7 +2869,7 @@
   "regionSelector": {
     "goToRegion": "Go to region",
     "jumpToRegion": "Jump to a region with available grid data",
-    "searchPlaceholder": "Search regions...",
+    "searchPlaceholder": "Search region or postcode...",
     "sortByGridCount": "Sort by grid count",
     "sortByName": "Sort by name",
     "setAsDefault": "Set as default region",
@@ -2905,11 +2925,7 @@
       "demographicsFrom": "Demographics from",
       "cuzkName": "Czech Office for Surveying, Mapping and Cadastre",
       "enrichedWith": "Building data enriched with",
-      "licensedUnder": "Licensed under",
-      "include": "Include",
-      "exclude": "Exclude",
-      "includeTooltip": "Include this custom building in the grid (requires regeneration)",
-      "excludeTooltip": "Exclude this custom building from the grid (requires regeneration)"
+      "licensedUnder": "Licensed under"
     }
   },
   "landing": {
@@ -3141,6 +3157,38 @@
       "positive": "Must be above 0",
       "notNegative": "Must be 0 or more",
       "notEditable": "This value cannot be edited here"
+    }
+  },
+  "gridPrices": {
+    "title": "Grid electricity prices",
+    "description": "Default prices per country for buying electricity from the grid and the feed-in tariff for selling it back, in ct/kWh. Models use them unless they set their own. The row for other countries applies to any country without its own row.",
+    "country": "Country",
+    "purchase": "Purchase price",
+    "feedIn": "Feed-in tariff",
+    "source": "Source",
+    "lastChanged": "Last changed",
+    "save": "Save",
+    "add": "Add",
+    "saved": "Grid prices for {{country}} saved",
+    "saveFailed": "Could not save grid prices for {{country}}: {{reason}}",
+    "countryPlaceholder": "Country, e.g. austria",
+    "otherCountries": "Other countries",
+    "resetToDefault": "Use the country default",
+    "modelTitle": "Grid electricity prices",
+    "modelHint": "What this model pays for electricity from the grid and earns for feeding surplus back, in ct/kWh. Leave a field empty to use the country default.",
+    "countryDefault": "Default for {{country}}: {{import}} ct/kWh to buy, {{export}} ct/kWh to sell.",
+    "fallbackDefault": "No default for {{country}}; the default for other countries applies: {{import}} ct/kWh to buy, {{export}} ct/kWh to sell.",
+    "sources": "Sources",
+    "sourceLabel": "Source: {{source}}",
+    "defaultUnknown": "The country default applies once the region is known.",
+    "usedInRun": "Grid electricity in this run: bought at {{import}} ct/kWh, sold at {{export}} ct/kWh.",
+    "compared": "Grid electricity prices: baseline {{baseline}}, comparison {{comparison}}.",
+    "pair": "{{import}} ct/kWh to buy, {{export}} ct/kWh to sell",
+    "notRecorded": "not recorded",
+    "errors": {
+      "importPositive": "The purchase price must be above 0.",
+      "exportNegative": "The feed-in tariff must not be negative.",
+      "exportAboveImport": "The feed-in tariff must not be above the purchase price."
     }
   }
 }

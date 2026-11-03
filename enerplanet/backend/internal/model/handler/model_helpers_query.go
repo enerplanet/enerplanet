@@ -294,15 +294,17 @@ func (h *ModelHandler) fetchModelsWithQuery(query *gorm.DB, limit, offset int, s
 	return modelsList, total, err
 }
 
-// familyIDExpr is a model's family: its original, or itself when it is one.
-// Copies are created with the root original as parent_model_id (see
-// modelService copy in the frontend); a copy of a copy would form its own family.
-const familyIDExpr = "COALESCE(parent_model_id, id)"
+// familyIDExpr is a model's family: the group_id it was copied or joined
+// into, else its original, else itself. group_id outlives the original, so
+// deleting the original or moving it away leaves its copies in one family.
+const familyIDExpr = "COALESCE(group_id, parent_model_id, id)"
 
 // fetchModelFamilies pages over families instead of models, so an original
 // and its copies are never split across pages. total counts the families
 // with a matching model; the page holds every matching model of limit
-// families, ordered by the originals' sortBy.
+// families, ordered by each family's lowest sortBy, which is its original's
+// while the original exists. Paging goes over the family ids rather than the
+// originals' rows, since an original may be hard-deleted.
 func (h *ModelHandler) fetchModelFamilies(query *gorm.DB, limit, offset int, sortBy, sortOrder string) ([]models.Model, int64, error) {
 	matching := query.Session(&gorm.Session{})
 	families := matching.Model(&models.Model{}).Select("DISTINCT " + familyIDExpr)
@@ -312,15 +314,19 @@ func (h *ModelHandler) fetchModelFamilies(query *gorm.DB, limit, offset int, sor
 		return nil, 0, fmt.Errorf("count model families: %w", err)
 	}
 
-	// Unscoped: the original of a family may be soft-deleted.
-	var pageIDs []uint
-	err := h.store.DB().Model(&models.Model{}).Unscoped().
-		Where("id IN (?)", families).
-		Order(sortBy + " " + sortOrder).Order("id " + sortOrder).
+	var page []struct{ Family uint }
+	err := matching.Session(&gorm.Session{}).Model(&models.Model{}).
+		Select(familyIDExpr + " AS family").
+		Group("family").
+		Order("MIN(" + sortBy + ") " + sortOrder).Order("family " + sortOrder).
 		Limit(limit).Offset(offset).
-		Pluck("id", &pageIDs).Error
+		Scan(&page).Error
 	if err != nil {
 		return nil, 0, fmt.Errorf("page model families: %w", err)
+	}
+	pageIDs := make([]uint, len(page))
+	for i, row := range page {
+		pageIDs[i] = row.Family
 	}
 
 	var modelsList []models.Model

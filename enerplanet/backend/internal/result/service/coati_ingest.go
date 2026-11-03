@@ -341,10 +341,25 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		log.Warnf("Coati document schema_version=%q (expected 1.0) model_id=%d", doc.SchemaVersion, modelID)
 	}
 
+	if err := fillOperateCapacities(&doc, extractDir); err != nil {
+		return nil, fmt.Errorf("model %d: %w", modelID, err)
+	}
+
 	parsed, err := mapCoatiDocument(&doc)
 	if err != nil {
 		log.Errorf("Map Coati document failed model_id=%d err=%v", modelID, err)
 		return nil, fmt.Errorf("map Coati document: %w", err)
+	}
+
+	// The Calliope leg writes long-format CSVs beside the results.nc it was
+	// parsed from; PyPSA-only bundles have no such dir and every read skips.
+	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
+	costs, investment, ok, err := calliopeCosts(csvDir)
+	if err != nil {
+		return nil, fmt.Errorf("read Calliope costs of model %d: %w", modelID, err)
+	}
+	if ok {
+		parsed.Cost, parsed.CostInvestment = costs, investment
 	}
 
 	// Wire loading: one mapping serves both legs, because Coati normalises PyPSA
@@ -369,11 +384,8 @@ func (s *ResultService) IngestCoatiResult(ctx context.Context, modelID uint, use
 		return nil, fmt.Errorf("marshal Coati summary: %w", err)
 	}
 
-	// The Calliope leg writes long-format CSVs (already in the result tables' long format) beside the
-	// results.nc it was parsed from. They carry the per-location × per-tech ×
-	// per-timestep matrix the Coati document lacks, so the time-series result tables
-	// are streamed from them (PyPSA-only bundles have no such dir → skipped).
-	csvDir := filepath.Join(filepath.Dir(resultsFile), "csv")
+	// The CSVs carry the per-location × per-tech × per-timestep matrix the
+	// Coati document lacks, so the time-series result tables are streamed from them.
 	techParents := make(map[string]string, len(doc.TechMetadata))
 	for tech, meta := range doc.TechMetadata {
 		techParents[tech] = meta.Parent
@@ -437,6 +449,68 @@ func replaceModelResultRow(tx *gorm.DB, modelID uint, userID, zipPath, extractDi
 	}
 	if err := tx.Create(row).Error; err != nil {
 		return fmt.Errorf("create result row: %w", err)
+	}
+	return nil
+}
+
+// memeJobSizes is the part of the MEME job (config.json in the result zip) that
+// carries each technology's fixed size.
+type memeJobSizes struct {
+	Experiment struct {
+		Mode string `json:"mode"`
+	} `json:"experiment"`
+	Model struct {
+		Technologies map[string]struct {
+			Node     string `json:"node"`
+			Capacity *struct {
+				Max *float64 `json:"max"`
+			} `json:"capacity"`
+			Storage *struct {
+				EnergyCapacity *struct {
+					Max *float64 `json:"max"`
+				} `json:"energy_capacity"`
+			} `json:"storage"`
+		} `json:"technologies"`
+	} `json:"model"`
+}
+
+// fillOperateCapacities gives an operate result the sizes it ran with. Operate
+// mode fixes every size, so Calliope reports no capacity result and Coati none
+// either; the sizes are the capacity maxima of the job in dir/config.json.
+func fillOperateCapacities(doc *CoatiResultsDocument, dir string) error {
+	if len(doc.Capacities) > 0 {
+		return nil
+	}
+	path := filepath.Join(dir, "config.json")
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read MEME job %s: %w", path, err)
+	}
+	var job memeJobSizes
+	if err := json.Unmarshal(raw, &job); err != nil {
+		return fmt.Errorf("decode MEME job %s: %w", path, err)
+	}
+	if job.Experiment.Mode != "operate" {
+		return nil
+	}
+	doc.Capacities = map[string]float64{}
+	if doc.StorageCapacities == nil {
+		doc.StorageCapacities = map[string]float64{}
+	}
+	for tech, t := range job.Model.Technologies {
+		if t.Node == "" {
+			continue
+		}
+		key := t.Node + "::" + tech
+		if t.Capacity != nil && t.Capacity.Max != nil {
+			doc.Capacities[key] = *t.Capacity.Max
+		}
+		if t.Storage != nil && t.Storage.EnergyCapacity != nil && t.Storage.EnergyCapacity.Max != nil {
+			doc.StorageCapacities[key] = *t.Storage.EnergyCapacity.Max
+		}
 	}
 	return nil
 }

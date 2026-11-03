@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { getTechColor } from '@/constants/tech-colors';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface TechCapacity {
   technology: string;
@@ -20,10 +21,10 @@ interface TechnologyCapacityBarProps {
 
 const formatCapacity = (kw: number): string => {
   const abs = Math.abs(kw);
-  if (abs >= 1000) return `${(kw / 1000).toFixed(1)} MW`;
-  if (abs >= 10) return `${kw.toFixed(0)} kW`;
-  if (abs >= 1) return `${kw.toFixed(1)} kW`;
-  if (abs > 0) return `${(kw * 1000).toFixed(0)} W`;
+  if (abs >= 1000) return `${formatNumber(kw / 1000, 1)} MW`;
+  if (abs >= 10) return `${formatNumber(kw, 0)} kW`;
+  if (abs >= 1) return `${formatNumber(kw, 1)} kW`;
+  if (abs > 0) return `${formatNumber(kw * 1000, 0)} W`;
   return '0 kW';
 };
 
@@ -61,7 +62,7 @@ export const TechnologyCapacityBar: FC<TechnologyCapacityBarProps> = ({
           const idx = params[0].dataIndex;
           const item = sortedData[idx];
           const isDemand = item.type === 'demand';
-          const utilizationPercent = (item.capacity_factor * 100).toFixed(1);
+          const utilizationPercent = formatNumber(item.capacity_factor * 100, 1);
 
           const labels = {
             installed: isDemand ? t('results.chartLabels.peakDemand', 'Peak Demand') : t('results.chartLabels.installedGen', 'Installed Generation'),
@@ -95,7 +96,7 @@ export const TechnologyCapacityBar: FC<TechnologyCapacityBarProps> = ({
                   <span style="font-weight: 700; color: ${lineMetricColor}; font-size: 14px;">${utilizationPercent}%</span>
                 </div>
                 <div style="width: 100%; height: 8px; background: ${themeColors.gridLine}; border-radius: 4px; overflow: hidden;">
-                  <div style="width: ${utilizationPercent}%; height: 100%; background: ${lineMetricColor}; border-radius: 4px;"></div>
+                  <div style="width: ${(item.capacity_factor * 100).toFixed(1)}%; height: 100%; background: ${lineMetricColor}; border-radius: 4px;"></div>
                 </div>
                 <div style="font-size: 10px; color: ${themeColors.textSubtle}; margin-top: 8px; line-height: 1.4; font-style: italic;">
                   ${labels.hint}

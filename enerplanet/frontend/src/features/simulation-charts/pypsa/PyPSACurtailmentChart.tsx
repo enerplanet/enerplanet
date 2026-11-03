@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { createChartGrid, createDataZoomWithStyle, createTimeXAxis, createSplitLineStyle, useThemeColors } from './chartUtils';
+import { formatNumber } from '@/utils/formatNumber';
 
 interface PyPSACurtailmentChartProps {
   timestamps: string[];
@@ -40,7 +41,7 @@ export const PyPSACurtailmentChart = ({
       formatter: (params: any) => {
         const lines = [`<div style="font-weight:600;margin-bottom:4px;color:${themeColors.text};">${params[0].axisValue}</div>`];
         params.forEach((item: any) => {
-          lines.push(`${item.marker} ${item.seriesName}: <b>${item.value.toFixed(2)} kW</b>`);
+          lines.push(`${item.marker} ${item.seriesName}: <b>${formatNumber(item.value, 2)} kW</b>`);
         });
         return lines.join('<br/>');
       },
