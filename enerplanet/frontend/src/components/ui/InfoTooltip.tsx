@@ -23,6 +23,8 @@ const TOOLTIP_HEIGHT_ESTIMATE_PX = 220;
 const TOOLTIP_MARGIN_PX = 8;
 const TOOLTIP_GAP_PX = 10;
 const TOOLTIP_MAX_WIDTH_CLASS = 'max-w-[calc(100vw-16px)]';
+// Long enough to move the pointer across the gap from the icon onto the card.
+const CLOSE_DELAY_MS = 150;
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | typeof FIXED_RIGHT | typeof FIXED_LEFT | typeof FIXED_LEFT_ANCHORED | typeof FIXED_RIGHT_ANCHORED;
 
@@ -45,6 +47,56 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 	const [anchoredStyle, setAnchoredStyle] = useState<{ top: number; left: number } | null>(null);
 	const [floatingStyle, setFloatingStyle] = useState<CSSProperties | null>(null);
 	const [resolvedFloatingPosition, setResolvedFloatingPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
+	const closeTimer = useRef<number | undefined>(undefined);
+	const pointerOnCard = useRef(false);
+	// Pressed inside: the card stays open until Escape or a press outside it.
+	const [pinned, setPinned] = useState(false);
+
+	// The card stays open while the pointer is on it, so its text can be selected.
+	const scheduleClose = useCallback(() => {
+		window.clearTimeout(closeTimer.current);
+		if (pinned) return;
+		closeTimer.current = window.setTimeout(() => {
+			if (!pointerOnCard.current) setShowTooltip(false);
+		}, CLOSE_DELAY_MS);
+	}, [pinned]);
+
+	useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+	useEffect(() => {
+		if (!pinned || !showTooltip) return;
+		const close = () => {
+			setShowTooltip(false);
+			setPinned(false);
+			pointerOnCard.current = false;
+		};
+		const swallow = (e: Event) => {
+			e.stopPropagation();
+			e.preventDefault();
+		};
+		// The press that closes the card must not reach what lies under it, such as the map.
+		const onPointerDown = (e: PointerEvent) => {
+			const target = e.target as Node;
+			if (tooltipRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+			swallow(e);
+			window.addEventListener('click', swallow, { capture: true, once: true });
+			window.addEventListener('pointerup', () => setTimeout(() => window.removeEventListener('click', swallow, true)), { once: true });
+			close();
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') close();
+		};
+		const endSelect = () => document.body.classList.remove('select-none');
+		window.addEventListener('pointerdown', onPointerDown, true);
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('mouseup', endSelect);
+		return () => {
+			window.removeEventListener('pointerdown', onPointerDown, true);
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('mouseup', endSelect);
+			endSelect();
+		};
+	}, [pinned, showTooltip]);
 	
 	const isFixedMode =
 		position === FIXED_RIGHT ||
@@ -198,9 +250,9 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const getTooltipClasses = () => {
 		if (isFixedMode || isPortalFloating) {
-			return `pointer-events-none w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+			return `select-text w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 		}
-		return `pointer-events-none absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+		return `select-text absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 	};
 
 	return (
@@ -210,19 +262,21 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 				role="button"
 				tabIndex={0}
 				onMouseEnter={() => {
+					window.clearTimeout(closeTimer.current);
 					setShowTooltip(true);
 					if (isAnchored) computeAnchoredPosition();
 					if (isPortalFloating) computeFloatingPosition();
 				}}
-				onMouseLeave={() => setShowTooltip(false)}
+				onMouseLeave={scheduleClose}
 				onFocus={() => {
 					setShowTooltip(true);
 					if (isAnchored) computeAnchoredPosition();
 					if (isPortalFloating) computeFloatingPosition();
 				}}
-				onBlur={() => setShowTooltip(false)}
+				onBlur={scheduleClose}
 				onClick={(e) => {
 					e.stopPropagation();
+					setPinned(false);
 					setShowTooltip((prev) => !prev);
 					if (isAnchored) computeAnchoredPosition();
 					if (isPortalFloating) computeFloatingPosition();
@@ -231,6 +285,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
 						e.stopPropagation();
+						setPinned(false);
 						setShowTooltip((prev) => !prev);
 						if (isAnchored) computeAnchoredPosition();
 						if (isPortalFloating) computeFloatingPosition();
@@ -247,6 +302,19 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 					<div
 						ref={tooltipRef}
 						className={getTooltipClasses()}
+						onMouseEnter={() => {
+							pointerOnCard.current = true;
+							window.clearTimeout(closeTimer.current);
+						}}
+						onMouseLeave={() => {
+							pointerOnCard.current = false;
+							scheduleClose();
+						}}
+						onMouseDown={() => {
+							setPinned(true);
+							// Keeps a drag that leaves the card from selecting the page behind it.
+							document.body.classList.add('select-none');
+						}}
 						style={
 							isAnchored && anchoredStyle
 								? { top: anchoredStyle.top, left: anchoredStyle.left }
