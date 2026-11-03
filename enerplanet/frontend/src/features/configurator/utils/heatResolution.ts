@@ -118,6 +118,7 @@ export async function resolveHeatTechAssignment(techKey: string): Promise<Techno
  * Applies a completed building analysis: each building in notHeated is marked
  * heated false and loses its heat technologies and heat link; any other
  * building loses that mark. Returns how many buildings lost a heat supply.
+ * Applying it again changes nothing, so it fires no feature change events.
  */
 export function applyNotHeated(buildings: Feature<Geometry>[], notHeated: Set<string>): number {
   let dropped = 0;
@@ -128,7 +129,8 @@ export function applyNotHeated(buildings: Feature<Geometry>[], notHeated: Set<st
     }
     f.set("heated", false);
     const techs = { ...(f.get("techs") || {}) };
-    if (hasHeatTech(techs) || f.get("heat_supplier")) dropped++;
+    if (!hasHeatTech(techs) && !f.get("heat_supplier")) continue;
+    dropped++;
     for (const key of HEAT_SUPPLY_TYPES) delete techs[key];
     f.set("techs", techs);
     f.unset("heat_supplier");

@@ -47,4 +47,18 @@ describe('applyNotHeated', () => {
     expect(applyNotHeated([workshop], new Set())).toBe(0);
     expect(workshop.get('heated')).toBeUndefined();
   });
+
+  it('changes nothing when applied again', () => {
+    // The map re-applies the analysis on every render; a change event here
+    // re-renders the technology drawer and loops.
+    const house = building('1');
+    const garage = building('2');
+    applyNotHeated([house, garage], new Set(['2']));
+    let changes = 0;
+    house.on('propertychange', () => changes++);
+    garage.on('propertychange', () => changes++);
+
+    expect(applyNotHeated([house, garage], new Set(['2']))).toBe(0);
+    expect(changes).toBe(0);
+  });
 });
