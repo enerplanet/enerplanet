@@ -105,7 +105,7 @@ const getCostBreakdown = (results: StructuredModelResults) => {
   results.cost?.forEach((c: CostRecord) => {
     if (!isMonetaryCost(c.costs)) return;
     const category = mapTechCategory(c.techs || '');
-    costs[category] = (costs[category] || 0) + Math.abs(c.value);
+    costs[category] = (costs[category] || 0) + c.value;
   });
 
   return costs;

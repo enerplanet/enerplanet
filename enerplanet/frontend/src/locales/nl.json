@@ -632,6 +632,7 @@
       "hours": "uur"
     },
     "costInfo": {
+      "feedInIncome": "Na aftrek van {{amount}} opbrengst uit aan het net verkochte stroom.",
       "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
       "simulationPeriodShort": "Simulatieperiode van {{days}} dagen",
       "costBreakdownTooltip": "De getoonde kosten gelden alleen voor de gesimuleerde periode, niet voor een heel jaar. Apparatuurkosten worden over de levensduur verdeeld, terwijl gebruikskosten (bijv. stroom uit het net) het werkelijke gebruik in de periode weergeven. In korte simulaties lijken technologieën met hoge gebruikskosten daardoor naar verhouding groter.",

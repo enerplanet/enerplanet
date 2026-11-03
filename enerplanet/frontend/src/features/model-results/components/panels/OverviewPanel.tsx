@@ -256,13 +256,15 @@ interface OverviewPanelProps {
   costBreakdown: ReturnType<typeof transformToCostBreakdown>;
   energyFlow: ReturnType<typeof transformToEnergyFlow>;
   avgCapacityFactor: number;
+  /** Feed-in revenue, already subtracted from summary.total_cost_eur. */
+  feedInIncome?: number;
   simulationPeriod?: {
     from_date: string;
     to_date: string;
   } | null;
 }
 
-const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCapacityFactor, simulationPeriod }: OverviewPanelProps) => {
+const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCapacityFactor, feedInIncome, simulationPeriod }: OverviewPanelProps) => {
   const { t } = useTranslation();
 
   const periodInfo = useMemo(() => {
@@ -326,6 +328,7 @@ const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCa
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
                 lcoe={summary?.lcoe_eur_mwh}
+                income={feedInIncome}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}
