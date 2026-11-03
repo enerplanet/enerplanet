@@ -563,6 +563,7 @@ func normalizeInfinityValueWithDefault(value interface{}) interface{} {
 
 // infinityFields is a set of constraint keys that should default to "inf" when null
 var infinityFields = map[string]bool{
+	"cont_energy_cap_max":            true,
 	"cont_energy_cap_max_systemwide": true,
 	"cont_export_cap":                true,
 	"cont_resource_area_max":         true,
