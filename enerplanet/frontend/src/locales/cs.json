@@ -1449,7 +1449,8 @@
     "mode": {
       "label": "Režim",
       "simple": "Jednoduchý",
-      "advanced": "Pokročilý"
+      "advanced": "Pokročilý",
+      "simpleHint": "Další možnosti jsou k dispozici v <advanced>pokročilém</advanced> zobrazení."
     },
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
@@ -1792,6 +1793,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Jednoduchý a pokročilý režim",
+        "description": "Tento přepínač přepíná mezi jednoduchým zobrazením s tím nejdůležitějším a pokročilým zobrazením s dalšími možnostmi, jako je počasí a ceny energie.",
+        "tip": "Jednoduché zobrazení stačí pro většinu modelů — přepněte na pokročilé, pokud potřebujete více."
+      },
       "welcome": {
         "title": "Průvodce Energetickou Simulací",
         "description": "Vítejte! Tato prohlídka vás provede vytvořením energetické simulace pro vámi zvolenou oblast.",

@@ -1449,7 +1449,8 @@
     "mode": {
       "label": "Tryb",
       "simple": "Prosty",
-      "advanced": "Zaawansowany"
+      "advanced": "Zaawansowany",
+      "simpleHint": "Więcej opcji jest dostępnych w widoku <advanced>zaawansowanym</advanced>."
     },
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
@@ -1792,6 +1793,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Tryb prosty i zaawansowany",
+        "description": "Ten przełącznik zmienia widok między prostym, z najważniejszymi opcjami, a zaawansowanym, z dodatkowymi opcjami, takimi jak pogoda i ceny energii.",
+        "tip": "Widok prosty wystarcza dla większości modeli — przełącz na zaawansowany, gdy potrzebujesz więcej."
+      },
       "welcome": {
         "title": "Przewodnik Symulacji Energetycznej",
         "description": "Witamy! Ta wycieczka przeprowadzi Cię przez tworzenie symulacji energetycznej dla wybranego regionu.",

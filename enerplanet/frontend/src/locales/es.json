@@ -1700,7 +1700,8 @@
     "mode": {
       "label": "Modo",
       "simple": "Sencillo",
-      "advanced": "Avanzado"
+      "advanced": "Avanzado",
+      "simpleHint": "Hay más opciones disponibles en la vista <advanced>avanzada</advanced>."
     },
     "modelName": "Nombre del modelo",
     "modelNamePlaceholder": "Introduzca un nombre para su simulación energética",
@@ -2055,6 +2056,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Modo simple y avanzado",
+        "description": "Este conmutador alterna entre la vista simple, con lo esencial, y la vista avanzada, con opciones adicionales como el clima y los precios de la red.",
+        "tip": "La vista simple es suficiente para la mayoría de los modelos: cambie a avanzada si necesita más."
+      },
       "welcome": {
         "title": "Guía de Simulación Energética",
         "description": "¡Bienvenido! Este recorrido te guiará a través de la creación de una simulación energética para tu región elegida.",

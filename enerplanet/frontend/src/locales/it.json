@@ -1429,7 +1429,8 @@
     "mode": {
       "label": "Modalità",
       "simple": "Semplice",
-      "advanced": "Avanzato"
+      "advanced": "Avanzato",
+      "simpleHint": "Sono disponibili altre opzioni nella vista <advanced>avanzata</advanced>."
     },
     "modelName": "Nome modello",
     "modelNamePlaceholder": "Inserisci un nome per la tua simulazione energetica",
@@ -1768,6 +1769,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Modalità semplice e avanzata",
+        "description": "Questo selettore alterna tra la vista semplice, con l'essenziale, e la vista avanzata, con opzioni aggiuntive come meteo e prezzi dell'energia.",
+        "tip": "La vista semplice basta per la maggior parte dei modelli: passa ad avanzata se ti serve di più."
+      },
       "welcome": {
         "title": "Guida alla Simulazione Energetica",
         "description": "Benvenuto! Questo tour ti guiderà nella creazione di una simulazione energetica per la tua regione scelta.",

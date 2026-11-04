@@ -1694,7 +1694,8 @@
     "mode": {
       "label": "Mode",
       "simple": "Simple",
-      "advanced": "Avancé"
+      "advanced": "Avancé",
+      "simpleHint": "D'autres options sont disponibles dans la vue <advanced>avancée</advanced>."
     },
     "modelName": "Nom du modèle",
     "modelNamePlaceholder": "Entrez un nom pour votre simulation énergétique",
@@ -2033,6 +2034,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Mode simple & avancé",
+        "description": "Cet interrupteur permet de basculer entre la vue simple, avec l'essentiel, et la vue avancée, avec des options supplémentaires comme la météo et les prix de l'électricité.",
+        "tip": "La vue simple suffit pour la plupart des modèles — passez en avancé pour plus d'options."
+      },
       "welcome": {
         "title": "Guide de Simulation Énergétique",
         "description": "Bienvenue ! Ce tour vous guidera dans la création d'une simulation énergétique pour votre région choisie.",

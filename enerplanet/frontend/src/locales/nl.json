@@ -1433,7 +1433,8 @@
     "mode": {
       "label": "Modus",
       "simple": "Eenvoudig",
-      "advanced": "Geavanceerd"
+      "advanced": "Geavanceerd",
+      "simpleHint": "Meer opties zijn beschikbaar in de <advanced>geavanceerde</advanced> weergave."
     },
     "modelName": "Modelnaam",
     "modelNamePlaceholder": "Voer een naam in voor uw energiesimulatie",
@@ -1788,6 +1789,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Eenvoudige en geavanceerde modus",
+        "description": "Deze schakelaar wisselt tussen de eenvoudige weergave met de essentie en de geavanceerde weergave met extra opties zoals weer en energieprijzen.",
+        "tip": "De eenvoudige weergave is voor de meeste modellen genoeg — schakel naar geavanceerd als je meer nodig hebt."
+      },
       "welcome": {
         "title": "Energiesimulatie Gids",
         "description": "Welkom! Deze rondleiding begeleidt u bij het maken van een energiesimulatie voor uw gekozen regio.",

@@ -1695,7 +1695,8 @@
     "mode": {
       "label": "Modus",
       "simple": "Einfach",
-      "advanced": "Erweitert"
+      "advanced": "Erweitert",
+      "simpleHint": "In der <advanced>erweiterten</advanced> Ansicht stehen weitere Optionen zur Verfügung."
     },
     "modelName": "Modellname",
     "modelNamePlaceholder": "Geben Sie einen Namen für Ihre Energiesimulation ein",
@@ -2058,6 +2059,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Einfacher & erweiterter Modus",
+        "description": "Dieser Umschalter wechselt zwischen der einfachen Ansicht mit dem Wesentlichen und der erweiterten Ansicht mit zusätzlichen Optionen wie Wetter und Strompreisen.",
+        "tip": "Die einfache Ansicht reicht für die meisten Modelle – wechseln Sie für mehr zu Erweitert."
+      },
       "welcome": {
         "title": "Energiesimulations-Leitfaden",
         "description": "Willkommen! Diese Tour führt Sie durch die Erstellung einer Energiesimulation für Ihre gewählte Region.",
