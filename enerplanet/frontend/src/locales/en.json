@@ -1695,7 +1695,8 @@
     "mode": {
       "label": "Mode",
       "simple": "Simple",
-      "advanced": "Advanced"
+      "advanced": "Advanced",
+      "simpleHint": "More options are available in the <advanced>advanced</advanced> view."
     },
     "modelName": "Model Name",
     "modelNamePlaceholder": "Enter a name for your energy simulation",
@@ -2058,6 +2059,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Simple & Advanced Mode",
+        "description": "This toggle switches between a simple view with the essentials and an advanced view with extra options like weather and grid prices.",
+        "tip": "The simple view is enough for most models — switch to advanced for more."
+      },
       "welcome": {
         "title": "Energy Simulation Guide",
         "description": "Welcome! This tour will guide you through creating an energy simulation for your chosen region.",

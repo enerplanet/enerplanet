@@ -35,7 +35,7 @@ import { selectGridStale, useModelStore, type RunMode } from "@/features/configu
 import type { OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { useTranslation } from "@spatialhub/i18n";
+import { Trans, useTranslation } from "@spatialhub/i18n";
 import { useEffect, useRef, useState, type FC, type ChangeEvent, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -353,15 +353,17 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
       <div className="flex items-center justify-between px-3 pt-4">
         <h3 className="text-base font-semibold text-foreground">{t("simulation.title")}</h3>
-        <SegmentedControl
-          aria-label={t("simulation.mode.label")}
-          value={configuratorMode}
-          onChange={setConfiguratorMode}
-          options={[
-            { value: "simple", label: t("simulation.mode.simple") },
-            { value: "advanced", label: t("simulation.mode.advanced") },
-          ]}
-        />
+        <div data-tour="simple-advanced-toggle" className="shrink-0">
+          <SegmentedControl
+            aria-label={t("simulation.mode.label")}
+            value={configuratorMode}
+            onChange={setConfiguratorMode}
+            options={[
+              { value: "simple", label: t("simulation.mode.simple") },
+              { value: "advanced", label: t("simulation.mode.advanced") },
+            ]}
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pb-4 px-3">
@@ -533,6 +535,23 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
             </Button>
           </div>
         </PanelSection>
+
+        {configuratorMode === "simple" && (
+          <p className="pb-2 text-xs text-muted-foreground">
+            <Trans
+              i18nKey="simulation.mode.simpleHint"
+              components={{
+                advanced: (
+                  <button
+                    type="button"
+                    onClick={() => setConfiguratorMode("advanced")}
+                    className="cursor-pointer font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                  />
+                ),
+              }}
+            />
+          </p>
+        )}
       </div>
 
       <div className="space-y-2 border-t border-border px-3 py-3">
