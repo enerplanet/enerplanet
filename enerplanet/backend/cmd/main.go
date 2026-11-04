@@ -635,7 +635,7 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	// Public Pylovo routes (no authentication required)
 	regionStore := region.NewStore(db)
 	pylovoInstanceStore := pylovoinstance.NewStore(db)
-	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore)
+	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore, deps.City2TabulaClient)
 	api.GET("/v1/pylovo/boundary", pylovoHandler.GetBoundary)
 	api.GET("/v1/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
 	api.GET("/v1/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
@@ -718,7 +718,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
-	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
+	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore, deps.City2TabulaClient)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
 	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient, modelstore.NewStore(deps.DB)))
 

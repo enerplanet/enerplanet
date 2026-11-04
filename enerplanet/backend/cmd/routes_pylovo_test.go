@@ -32,7 +32,7 @@ func newPylovoRouter(t *testing.T, accessLevel string) (*gin.Engine, *int32) {
 		c.Set("access_level", accessLevel)
 		c.Next()
 	})
-	registerPylovoRoutes(api, pylovo.NewPylovoHandler(upstream.URL, nil, nil))
+	registerPylovoRoutes(api, pylovo.NewPylovoHandler(upstream.URL, nil, nil, nil))
 	registerPylovoManagementRoutes(api, pylovo.NewManagementHandler(nil, nil))
 	return r, &hits
 }

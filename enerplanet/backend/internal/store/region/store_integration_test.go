@@ -39,6 +39,7 @@ func scratchDB(t *testing.T) *gorm.DB {
 		"031_add_has3d_to_cached_regions.sql",
 		"034_add_state_code_to_cached_regions.sql",
 		"053_add_postcodes_to_cached_regions.sql",
+		"059_enable_postgis.sql",
 	} {
 		migration, err := os.ReadFile("../../../migrations/" + name)
 		require.NoError(t, err)
@@ -147,4 +148,29 @@ func TestUpsertRegionsFromAPI_ServesTheLatestPostcodes(t *testing.T) {
 
 	require.NoError(t, s.UpsertRegionsFromAPI(postcodeAnswer(t, "94447", "94469")))
 	assert.Equal(t, []string{"94447", "94469"}, servedPostcodes(t, s))
+}
+
+func TestApplyCoverage_CutsBoundaryToThe3DFootprint(t *testing.T) {
+	db := scratchDB(t)
+	s := NewStore(db)
+	require.NoError(t, s.UpsertRegionsFromAPI(answer(t, [2]string{"AT", "wien"}, [2]string{"DE", "bavaria"})))
+	square := `{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}`
+	require.NoError(t, db.Exec("UPDATE cached_regions SET boundary = ?::jsonb, country = CASE country_code WHEN 'AT' THEN 'Austria' ELSE 'Germany' END", square).Error)
+
+	footprint := json.RawMessage(`{"type":"Polygon","coordinates":[[[1,1],[3,1],[3,3],[1,3],[1,1]]]}`)
+	require.NoError(t, s.ApplyCoverage(map[string][]json.RawMessage{"austria": {footprint}}))
+
+	var got []struct {
+		StateCode string
+		Has3D     bool `gorm:"column:has3_d"`
+		Area      float64
+	}
+	require.NoError(t, db.Raw("SELECT state_code, has3_d, ST_Area(ST_GeomFromGeoJSON(boundary->>'geometry')) AS area FROM cached_regions ORDER BY state_code").Scan(&got).Error)
+	require.Len(t, got, 2)
+	assert.Equal(t, "bavaria", got[0].StateCode)
+	assert.False(t, got[0].Has3D)
+	assert.InDelta(t, 4.0, got[0].Area, 1e-9)
+	assert.Equal(t, "wien", got[1].StateCode)
+	assert.True(t, got[1].Has3D)
+	assert.InDelta(t, 1.0, got[1].Area, 1e-9)
 }
