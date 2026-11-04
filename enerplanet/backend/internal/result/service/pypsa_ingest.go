@@ -176,10 +176,17 @@ func countLineRows(pypsaDir string) int {
 }
 
 // IngestPyPSAResult is the isolated PyPSA leg's ingest: it extracts the stored
-// `meme-pypsa` bundle, streams the electrical PF files (bus voltage, bus power,
-// line flows + loading, transformer flows) into the electrical R2 tables with
-// the existing StreamingInserter readers, records the convergence verdict, and
-// flips the model's capability source to full-grid-pf.
+// `meme-pypsa` bundle and fills the electrical R2 tables with the power-flow
+// result.
+//
+// Route 2 (preferred): the bundle's network.nc + power_flow/ export (MEME
+// main's layout) is read through COATI's native power-flow reader. The unified
+// document's details['power_flow'] fills results_pypsa_voltage (v_mag_pu +
+// v_ang), results_pypsa_power (p + q) and results_pypsa_line_loading
+// (loading_percent) — the columns the legacy CSV layout never carried — and
+// the per-snapshot convergence record. A bundle Coati cannot read (legacy
+// csv_sim_* export, or a convert/decode failure) falls back to the existing
+// direct-CSV streaming below.
 //
 // By design it does NOT delete or replace the Calliope results/summary: the
 // PyPSA leg ENRICHES the model (the electrical tables feed the Grid sections;
@@ -212,10 +219,42 @@ func (s *ResultService) IngestPyPSAResult(ctx context.Context, modelID uint, use
 	pypsaDir := locatePyPSAOutputDir(extractDir)
 	psummary := readPyPSAConvergence(pypsaDir)
 
+	// Route 2 — Coati's native power-flow reader. Prefer it whenever the
+	// bundle carries the network.nc + power_flow/ export MEME main always
+	// writes; the legacy csv_sim_* streaming cannot read that layout, and
+	// Coati fills the electrical columns the legacy export never carried.
+	if networkNC, err := locatePyPSANetworkNC(extractDir); err == nil {
+		// Only a power-flow export carries the record Coati's native reader
+		// consumes. An optimize bundle exports network.nc too but no
+		// power_flow/ dir — skip the subprocess and fall through to the
+		// legacy ingest, which is the outcome either way.
+		if _, err := os.Stat(filepath.Join(filepath.Dir(networkNC), "power_flow")); err == nil {
+			if doc, pf := s.pypsaCoatiDocument(ctx, networkNC, modelID, log); pf != nil {
+				psummary = summarizePyPSACoati(pf, doc)
+				powerFlowDir := filepath.Join(filepath.Dir(networkNC), "power_flow")
+				inserter := NewStreamingInserter(ctx, s.db, modelID, 1)
+				if err := s.streamCoatiVoltage(inserter, doc, pf); err != nil && !os.IsNotExist(err) {
+					log.Warnf("PyPSA stream voltage skipped model_id=%d err=%v", modelID, err)
+				}
+				if err := s.streamCoatiPower(inserter, doc, pf, powerFlowDir); err != nil && !os.IsNotExist(err) {
+					log.Warnf("PyPSA stream power skipped model_id=%d err=%v", modelID, err)
+				}
+				if err := s.streamCoatiLineLoading(inserter, doc, pf, powerFlowDir); err != nil && !os.IsNotExist(err) {
+					log.Warnf("PyPSA stream line loading skipped model_id=%d err=%v", modelID, err)
+				}
+				psummary.LineCount = countCoatiLines(pf, powerFlowDir)
+				log.Infof("PyPSA power flow ingested via Coati model_id=%d converged=%v snapshots=%d lines=%d",
+					modelID, psummary.Converged, psummary.TotalSnapshots, psummary.LineCount)
+				pypsaDir = "" // the Coati route owns the electrical tables
+			}
+		}
+	}
+
 	if pypsaDir != "" {
-		// Stream the electrical tables best-effort. Each is optional and
-		// independent: a non-converged (cleared) export is NORMAL, so a failure
-		// to stream one table must not fail the model — only gate that section.
+		// Legacy fallback: stream the csv_sim_* electrical files best-effort.
+		// Each is optional and independent: a non-converged (cleared) export
+		// is NORMAL, so a failure to stream one table must not fail the model
+		// — only gate that section.
 		inserter := NewStreamingInserter(ctx, s.db, modelID, 1)
 		if err := inserter.StreamPyPSAVoltage(pypsaDir); err != nil && !os.IsNotExist(err) {
 			log.Warnf("PyPSA stream voltage skipped model_id=%d err=%v", modelID, err)
