@@ -19,6 +19,7 @@ import {
 } from '@/features/simulation-charts/pypsa/chartUtils';
 import { useTranslation } from '@spatialhub/i18n';
 import { formatNumber } from '@/utils/formatNumber';
+import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 
 
 const InfoTooltip = ({ 
@@ -134,7 +135,12 @@ const prettifyTech = (tech: string): string =>
 
 const techBase = (tech: string): string => tech.split(':', 1)[0].toLowerCase();
 
-const isDemandTech = (tech: string): boolean => techBase(tech).endsWith('_demand');
+// On-site use: demand and conversion (a heat pump drawing power). Storage, export
+// and transmission only move the carrier. Same rule as isEndUse in the backend result store.
+const isDemandTech = (tech: string): boolean => {
+  const base = techBase(tech);
+  return !base.includes('transmission') && !base.includes('storage') && !base.endsWith('_export');
+};
 
 const isGridImportTech = (tech: string): boolean => {
   const base = techBase(tech);
@@ -422,7 +428,8 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
     if (!resourceCon.length) return [];
     const techTotals = new Map<string, number>();
     resourceCon.forEach((rc) => {
-      techTotals.set(rc.tech, (techTotals.get(rc.tech) || 0) + Math.abs(rc.value));
+      const tech = getTechGroup(rc.tech);
+      techTotals.set(tech, (techTotals.get(tech) || 0) + Math.abs(rc.value));
     });
     return Array.from(techTotals.entries())
       .map(([tech, value]) => ({ tech, value }))
@@ -439,12 +446,12 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
     if (!structuredResults?.cost_investment?.length) return [];
     const techTotals = new Map<string, number>();
     structuredResults.cost_investment.forEach((ci) => {
-      techTotals.set(ci.techs, (techTotals.get(ci.techs) || 0) + Math.abs(ci.value));
+      const tech = getTechGroup(ci.techs);
+      techTotals.set(tech, (techTotals.get(tech) || 0) + Math.abs(ci.value));
     });
     return Array.from(techTotals.entries())
       .map(([tech, value]) => ({ tech, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
+      .sort((a, b) => b.value - a.value);
   }, [structuredResults?.cost_investment]);
 
   const investmentTotal = useMemo(
@@ -1059,127 +1066,39 @@ const SystemPanel = ({ structuredResults, modelId, carrier = '' }: SystemPanelPr
               ]}
             />
           </h3>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              {investmentByTech.map((item, idx) => {
-                const maxVal = investmentByTech[0]?.value || 1;
-                const widthPct = maxVal > 0 ? (item.value / maxVal) * 100 : 0;
-                return (
-                  <div key={item.tech} className="group">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
-                        />
-                        <span className="text-sm text-foreground font-medium truncate max-w-[220px]">
-                          {prettifyTech(item.tech)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{formatShare(item.value, investmentTotal)}</span>
-                        <span className="text-sm font-semibold text-foreground">{formatCurrencyValue(item.value)}</span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500 group-hover:opacity-80"
-                        style={{
-                          width: `${widthPct}%`,
-                          background: `linear-gradient(90deg, ${CHART_COLORS[idx % CHART_COLORS.length]}, ${CHART_COLORS[idx % CHART_COLORS.length]}99)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">{t('results.system.totalInvestment')}</span>
-                <span className="text-lg font-bold text-foreground">{formatCurrencyValue(investmentTotal)}</span>
-              </div>
-            </div>
-
-            <div className="bg-muted/20 rounded-xl border border-border p-3">
-              <ReactECharts
-                option={
-                  {
-                    tooltip: {
-                      ...createBaseTooltip(),
-                      trigger: 'item',
-                      formatter: (params: any) => {
-                        return `
-                          <div style="font-weight: 600; margin-bottom: 6px;">${params.name}</div>
-                          <div style="display:flex;justify-content:space-between;gap:16px;">
-                            <span>${t('results.chartLabels.amount')}:</span>
-                            <span style="font-weight:600;">${formatCurrencyValue(params.value)}</span>
-                          </div>
-                          <div style="display:flex;justify-content:space-between;gap:16px;">
-                            <span>${t('results.chartLabels.share')}:</span>
-                            <span style="font-weight:600;">${formatShare(params.value, investmentTotal)}</span>
-                          </div>
-                        `;
-                      },
-                    },
-                    legend: {
-                      orient: 'horizontal',
-                      bottom: 0,
-                      itemWidth: 10,
-                      itemHeight: 10,
-                      icon: 'circle',
-                      textStyle: { fontSize: 10, color: '#6b7280' },
-                    },
-                    series: [
-                      {
-                        type: 'pie',
-                        roseType: 'area',
-                        radius: ['20%', '70%'],
-                        center: ['50%', '45%'],
-                        itemStyle: {
-                          borderRadius: 6,
-                          borderColor: 'rgba(255,255,255,0.2)',
-                          borderWidth: 2,
-                        },
-                        label: {
-                          show: true,
-                          formatter: (params: any) => {
-                            return `{name|${params.name}}\n{pct|${formatShare(params.value, investmentTotal)}}`;
-                          },
-                          rich: {
-                            name: { fontSize: 11, fontWeight: 600, lineHeight: 16 },
-                            pct: { fontSize: 10, color: '#6b7280', lineHeight: 14 },
-                          },
-                        },
-                        labelLine: {
-                          length: 12,
-                          length2: 8,
-                        },
-                        emphasis: {
-                          itemStyle: {
-                            shadowBlur: 12,
-                            shadowOffsetX: 0,
-                            shadowColor: 'rgba(0, 0, 0, 0.2)',
-                          },
-                          label: {
-                            fontSize: 13,
-                            fontWeight: 'bold',
-                          },
-                        },
-                        animationType: 'scale',
-                        animationEasing: 'elasticOut',
-                        data: investmentByTech.map((item, idx) => ({
-                          name: prettifyTech(item.tech),
-                          value: item.value,
-                          itemStyle: { color: CHART_COLORS[idx % CHART_COLORS.length] },
-                        })),
-                      },
-                    ],
-                  } as EChartsOption
-                }
-                style={{ height: 280 }}
-                opts={{ renderer: 'canvas' }}
+          <div className="flex h-6 w-full overflow-hidden rounded-full bg-muted/50">
+            {investmentByTech.map((item, idx) => (
+              <div
+                key={item.tech}
+                className="h-full transition-opacity hover:opacity-80"
+                style={{
+                  width: `${(item.value / (investmentTotal || 1)) * 100}%`,
+                  backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+                }}
+                title={`${prettifyTech(item.tech)}: ${formatShare(item.value, investmentTotal)}, ${formatCurrencyValue(item.value)}`}
               />
-            </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+            {investmentByTech.map((item, idx) => (
+              <div key={item.tech} className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+                  />
+                  <span className="truncate text-foreground">{prettifyTech(item.tech)}</span>
+                </span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-muted-foreground">{formatShare(item.value, investmentTotal)}</span>
+                  <span className="font-semibold text-foreground">{formatCurrencyValue(item.value)}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="pt-3 mt-3 border-t border-border flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">{t('results.system.totalInvestment')}</span>
+            <span className="text-lg font-bold text-foreground">{formatCurrencyValue(investmentTotal)}</span>
           </div>
         </div>
       )}

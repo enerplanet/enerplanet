@@ -11,6 +11,7 @@ import {
 import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
 import { energyKwhFromCost } from '../../lcoeUnits';
 
@@ -25,25 +26,15 @@ const COST_TECH_I18N_KEYS: Record<string, string> = {
   battery_storage: 'results.techNames.batteryStorage',
   geothermal_supply: 'results.techNames.geothermal',
   transformer_supply: 'results.techNames.gridElectricity',
+  grid_trafo_import: 'results.techNames.gridElectricity',
   power_transmission: 'results.techNames.powerLines',
   water_supply: 'results.techNames.hydroPower',
   households_supply: 'results.techNames.householdSupply',
   non_households_supply: 'results.techNames.nonHouseholdSupply',
 };
 
-/**
- * Normalize tech key: strip location suffixes like "power_transmission:Trafo_300" → "power_transmission"
- */
-function normalizeTechKey(tech: string): string {
-  const colonIdx = tech.indexOf(':');
-  if (colonIdx > 0) {
-    return tech.substring(0, colonIdx);
-  }
-  return tech;
-}
-
 function getTechLabel(tech: string, t: (key: string) => string): string {
-  const normalized = normalizeTechKey(tech);
+  const normalized = getTechGroup(tech);
   const i18nKey = COST_TECH_I18N_KEYS[normalized];
   return i18nKey
     ? t(i18nKey)
@@ -100,7 +91,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     if (!structuredResults?.model_levelised_cost?.length) return [];
     const byTech: Record<string, { sum: number; count: number }> = {};
     structuredResults.model_levelised_cost.forEach(r => {
-      const tech = normalizeTechKey(r.techs);
+      const tech = getTechGroup(r.techs);
       if (LCOE_EXCLUDED_TECHS.has(tech)) return;
       if (!byTech[tech]) byTech[tech] = { sum: 0, count: 0 };
       byTech[tech].sum += r.value;
@@ -111,11 +102,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     const costByTech: Record<string, number> = {};
     const investByTech: Record<string, number> = {};
     structuredResults.cost?.forEach((c: any) => {
-      const tech = normalizeTechKey(c.techs || '');
+      const tech = getTechGroup(c.techs || '');
       costByTech[tech] = (costByTech[tech] || 0) + Math.abs(c.value);
     });
     structuredResults.cost_investment?.forEach((c: any) => {
-      const tech = normalizeTechKey(c.techs || '');
+      const tech = getTechGroup(c.techs || '');
       investByTech[tech] = (investByTech[tech] || 0) + Math.abs(c.value);
     });
 
@@ -155,11 +146,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     const investByTech: Record<string, number> = {};
 
     structuredResults.cost.forEach(c => {
-      const tech = normalizeTechKey(c.techs);
+      const tech = getTechGroup(c.techs);
       totalByTech[tech] = (totalByTech[tech] || 0) + c.value;
     });
     structuredResults.cost_investment?.forEach(c => {
-      const tech = normalizeTechKey(c.techs);
+      const tech = getTechGroup(c.techs);
       investByTech[tech] = (investByTech[tech] || 0) + Math.abs(c.value);
     });
 

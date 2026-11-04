@@ -24,3 +24,20 @@ describe('cost totals with feed-in revenue', () => {
     expect(feedInIncome(results)).toBeCloseTo(2157.35, 2);
   });
 });
+
+describe('transformStructuredCostBreakdown', () => {
+  it('sums each technology over its buildings and transformers into one slice', () => {
+    const out = transformStructuredCostBreakdown({
+      cost: [
+        { from_location: 'n1', techs: 'air_source_heat_pump_1', costs: 'monetary', value: 100 },
+        { from_location: 'n2', techs: 'air_source_heat_pump_2', costs: 'monetary', value: 50 },
+        { from_location: 'ntrafo_1', techs: 'grid_trafo_1_import', costs: 'monetary', value: 300 },
+        { from_location: 'ntrafo_2', techs: 'grid_trafo_2_import', costs: 'monetary', value: 200 },
+      ],
+      cost_investment: [{ location: 'n1', techs: 'air_source_heat_pump_1', costs: 'monetary', value: 80 }],
+    } as unknown as StructuredModelResults);
+
+    expect(out.map((c) => [c.value, c.locationCount, c.investmentCost])).toEqual([[500, 2, 0], [150, 2, 80]]);
+    expect(out[1].category).toBe('Air Source Heat Pump');
+  });
+});
