@@ -332,8 +332,8 @@ webservice:
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -s .env.docker || cp .env.example .env.docker && make dev
-	@for i in $$(seq 60); do docker exec pylovo-api-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
-		echo "pylovo-api-1 did not answer /health within 120s, see 'docker logs pylovo-api-1'"; exit 1
+	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
+		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
 
 
 .PHONY: tentacron-stack
