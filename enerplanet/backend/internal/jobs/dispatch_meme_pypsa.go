@@ -323,24 +323,6 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	})
 }
 
-// injectPowerFlow embeds the pass's PowerFlow into the MEME job under the
-// top-level "power_flow" key. It is deliberately top-level (NOT under
-// job.model, whose schema MEME owns and must not gain an unknown key): the
-// `meme-pypsa` target's run.py PF mode reads it from there. The
-// key is overridable/clear — a job that carries one replaces any earlier value.
-func injectPowerFlow(memeJob map[string]interface{}, pf *pypsapass.PowerFlow) error {
-	b, err := json.Marshal(pf)
-	if err != nil {
-		return fmt.Errorf("marshal power flow: %w", err)
-	}
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return fmt.Errorf("decode power flow: %w", err)
-	}
-	memeJob["power_flow"] = v
-	return nil
-}
-
 // HandleDispatchMemePyPSA is the isolated PyPSA power-flow leg: AFTER a
 // successful Calliope run it builds a MEME `meme-pypsa` job from the parsed
 // Calliope flow CSVs, dispatches it independently (its own leg-keyed run
@@ -348,7 +330,8 @@ func injectPowerFlow(memeJob map[string]interface{}, pf *pypsapass.PowerFlow) er
 // logic), and persists the result zip. It mirrors HandleDispatchMeme's shape,
 // but:
 //   - gates on CalliopeLegReady (refuses without a completed Calliope leg);
-//   - injects the pass's power_flow block into the job body;
+//   - folds the pass's power flow into the canonical job (mode power_flow +
+//     the electrical model fields, ADR-0008) instead of a top-level block;
 //   - submits to memeTargetPyPSAOnly with a pypsa-scoped Idempotency-Key;
 //   - records the run via SaveLeg(modelID, MemeLegPyPSA, ...), never Save.
 //
@@ -417,26 +400,23 @@ func HandleDispatchMemePyPSA(
 	if err != nil {
 		return fmt.Errorf("translate payload to MEME job for model %d: %w", p.ModelID, err)
 	}
-	var memeJob any
-	if err := json.Unmarshal(translated.Job, &memeJob); err != nil {
-		return fmt.Errorf("decode translated MEME job for model %d: %w", p.ModelID, err)
-	}
-	var jobMap map[string]interface{}
-	if m, ok := memeJob.(map[string]interface{}); ok {
-		jobMap = m
-	}
-	if jobMap == nil {
-		jobMap = map[string]interface{}{}
-	}
 
-	// 4. Build the isolated power flow from the payload + Calliope flow CSVs and
-	//    inject it into the job body as the top-level "power_flow" block.
+	// 4. Build the isolated power flow from the payload + Calliope flow CSVs
+	//    and fold it into the canonical MEME job: experiment.mode=power_flow
+	//    with the pass's slack, node.electrical.v_nom, the electrical arcs
+	//    and the fixed dispatch (ADR-0008) — never the rejected top-level
+	//    "power_flow" block.
 	pf, err := pypsaPowerFlowFromBytes(calcBytes, csvDir)
 	if err != nil {
 		return fmt.Errorf("build pypsa power flow for model %d: %w", p.ModelID, err)
 	}
-	if err := injectPowerFlow(jobMap, pf); err != nil {
-		return fmt.Errorf("inject power flow into MEME job for model %d: %w", p.ModelID, err)
+	jobBytes, err := meme.ApplyPowerFlow(translated.Job, pf)
+	if err != nil {
+		return fmt.Errorf("apply power flow to MEME job for model %d: %w", p.ModelID, err)
+	}
+	var jobMap map[string]interface{}
+	if err := json.Unmarshal(jobBytes, &jobMap); err != nil {
+		return fmt.Errorf("decode power-flow MEME job for model %d: %w", p.ModelID, err)
 	}
 
 	// 5. Resolve the TentaCron job id for the PYPSA leg. No run recorded OR a
