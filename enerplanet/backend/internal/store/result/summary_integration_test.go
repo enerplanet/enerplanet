@@ -77,3 +77,52 @@ func TestGetCarrierSummary_CountsEveryEndUse(t *testing.T) {
 	assert.InDelta(t, 11, summary.PeakDemand, 1e-9)
 	assert.InDelta(t, 9, summary.GridImport, 1e-9)
 }
+
+// TestCarrierTimeSeries_GroupsTechsAcrossBuildings uses the per-building
+// technology ids of a MEME run: each series comes back once per technology,
+// summed over the buildings, lines and transformers that carry it.
+func TestCarrierTimeSeries_GroupsTechsAcrossBuildings(t *testing.T) {
+	db := scratchResultsDB(t)
+	h1 := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	h2 := h1.Add(time.Hour)
+
+	insert := func(table, techs string, at time.Time, value float64) {
+		require.NoError(t, db.Exec(
+			"INSERT INTO "+table+" (model_id, from_location, carrier, techs, timestep, value) VALUES (1, 'n1', 'power', ?, ?, ?)",
+			techs, at, value).Error)
+	}
+	for _, at := range []time.Time{h1, h2} {
+		insert("results_carrier_prod", "pv_supply_1_1", at, 1)
+		insert("results_carrier_prod", "pv_supply_2_1", at, 2)
+		insert("results_carrier_prod", "battery_storage_1", at, 3)
+		insert("results_carrier_prod", "battery_storage_2", at, 4)
+		insert("results_carrier_prod", "power_transmission:lv_0", at, 5)
+		insert("results_carrier_prod", "power_transmission:lv_1", at, 6)
+		insert("results_carrier_prod", "transformer_supply", at, 7)
+		insert("results_carrier_con", "n1_demand", at, -1)
+		insert("results_carrier_con", "n12_demand", at, -2)
+		insert("results_carrier_con", "grid_trafo_101720_export", at, -3)
+		insert("results_carrier_con", "grid_trafo_200499_export", at, -4)
+	}
+
+	byTech := func(rows []CarrierAggRow) map[string]float64 {
+		out := map[string]float64{}
+		for _, r := range rows {
+			out[r.Techs] += r.Value
+		}
+		return out
+	}
+	store := NewStore(db)
+	prod := store.GetCarrierProdTimeSeries(1, "power")
+	con := store.GetCarrierConTimeSeries(1, "power")
+
+	assert.Len(t, prod, 8)
+	assert.Equal(t, map[string]float64{
+		"pv_supply": 6, "battery_storage": 14, "power_transmission": 22, "transformer_supply": 14,
+	}, byTech(prod))
+	assert.Len(t, con, 4)
+	assert.Equal(t, map[string]float64{"power_demand": 6, "grid_trafo_export": 14}, byTech(con))
+
+	assert.Len(t, store.GetDailyCarrierProdTimeSeries(1, "power"), 4)
+	assert.Equal(t, byTech(con), byTech(store.GetDailyCarrierConTimeSeries(1, "power")))
+}

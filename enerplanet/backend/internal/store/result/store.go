@@ -367,6 +367,11 @@ func (s *Store) GetCarrierConTimestepCount(modelID uint, carrier ...string) int6
 // Carrier time-series (aggregated)
 // ---------------------------------------------------------------------------
 
+// techGroupSQL maps a per-building tech id to its technology, so a series is
+// summed over buildings, lines and transformers: pv_supply_3_1 -> pv_supply,
+// power_transmission:lv_8 -> power_transmission, n12_demand -> power_demand.
+const techGroupSQL = `regexp_replace(regexp_replace(regexp_replace(techs, ':.*$', ''), '^n[0-9]+_demand$', carrier || '_demand'), '_[0-9]+(?=_|$)', '', 'g')`
+
 // CarrierAggRow is the shape returned by the carrier time-series endpoint.
 type CarrierAggRow struct {
 	ModelID  uint      `json:"model_id"`
@@ -381,9 +386,9 @@ func (s *Store) GetCarrierProdTimeSeries(modelID uint, carrier ...string) []Carr
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
-		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, timestep").
+		Group("model_id, carrier, " + techGroupSQL + ", timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -394,9 +399,9 @@ func (s *Store) GetCarrierConTimeSeries(modelID uint, carrier ...string) []Carri
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
-		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, timestep").
+		Group("model_id, carrier, " + techGroupSQL + ", timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -407,9 +412,9 @@ func (s *Store) GetDailyCarrierProdTimeSeries(modelID uint, carrier ...string) [
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
-		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, DATE(timestep)").
+		Group("model_id, carrier, " + techGroupSQL + ", DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -420,9 +425,9 @@ func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
-		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, DATE(timestep)").
+		Group("model_id, carrier, " + techGroupSQL + ", DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
