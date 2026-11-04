@@ -78,6 +78,15 @@ function getBaseTech(tech: string): string {
   return tech.split(':', 1)[0].trim().replace(/(_\d+)+$/, '');
 }
 
+/**
+ * The technology summed over buildings and transformers, also dropping numbers
+ * inside the name: "grid_trafo_101197_import" -> "grid_trafo_import". Same rule
+ * as techGroupSQL in the backend result store.
+ */
+export function getTechGroup(tech: string): string {
+  return getBaseTech(tech).replace(/_\d+(?=_|$)/g, '');
+}
+
 function isCapacityChartTech(tech: string): boolean {
   const baseTech = getBaseTech(tech).toLowerCase();
   return Boolean(baseTech) && !EXCLUDED_CAPACITY_TECHS.has(baseTech);
