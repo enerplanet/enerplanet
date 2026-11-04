@@ -73,7 +73,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     }));
     setAvailableRegions(regionsForLegend);
     availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-    const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
+    const boundaryRegions = response.regions.filter(r => r.boundary && r.has_3d && r.region?.name).map(r => ({
       boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
       countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
     }));

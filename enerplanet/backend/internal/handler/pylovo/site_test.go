@@ -139,7 +139,7 @@ func serveSiteUsedBy(t *testing.T, fake *fakeSitePylovo, linked buildings3D, mod
 	pylovo := httptest.NewServer(fake)
 	t.Cleanup(pylovo.Close)
 
-	h := NewPylovoHandler(pylovo.URL, nil, nil)
+	h := NewPylovoHandler(pylovo.URL, nil, nil, nil)
 	sites := NewSiteHandler(h, fixedCountry("germany"), linked, models)
 	r := gin.New()
 	r.Use(func(c *gin.Context) { c.Set("user_id", user) })
