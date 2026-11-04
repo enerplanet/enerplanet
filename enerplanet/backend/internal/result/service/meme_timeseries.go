@@ -377,8 +377,18 @@ func (w *memeTimeSeriesWriter) streamCapacityFactor() error {
 }
 
 // results_systemwide_capacity_factor.csv -> results_model_capacity_factor
+//
+// An operate-mode export repeats each rolling window's own factor on every
+// timestep; the mean over those rows is the annual factor, since capacity is
+// fixed. A plan export has one row per tech and carrier and passes unchanged.
 func (w *memeTimeSeriesWriter) streamModelCapacityFactor() error {
-	batch := make([]models.ResultsModelCapacityFactor, 0, memeStreamBatchSize)
+	type key struct{ tech, carrier string }
+	type acc struct {
+		sum   float64
+		count int
+	}
+	totals := map[key]*acc{}
+	var order []key
 	err := readMemeCSV(w.csvDir, "results_systemwide_capacity_factor.csv", func(cols map[string]int, row []string) error {
 		value, ok := memeFloat(row, cols, "systemwide_capacity_factor")
 		if !ok {
@@ -388,19 +398,26 @@ func (w *memeTimeSeriesWriter) streamModelCapacityFactor() error {
 		if tech == "" {
 			return nil
 		}
-		batch = append(batch, models.ResultsModelCapacityFactor{
-			ModelID: w.modelID,
-			Carrier: normMemeCarrier(memeString(row, cols, "carriers")),
-			Techs:   tech,
-			Value:   value,
-		})
-		if len(batch) >= memeStreamBatchSize {
-			return flushMemeBatch(w.tx, &batch, "results_model_capacity_factor")
+		k := key{tech, normMemeCarrier(memeString(row, cols, "carriers"))}
+		if totals[k] == nil {
+			totals[k] = &acc{}
+			order = append(order, k)
 		}
+		totals[k].sum += value
+		totals[k].count++
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	batch := make([]models.ResultsModelCapacityFactor, 0, len(order))
+	for _, k := range order {
+		batch = append(batch, models.ResultsModelCapacityFactor{
+			ModelID: w.modelID,
+			Carrier: k.carrier,
+			Techs:   k.tech,
+			Value:   totals[k].sum / float64(totals[k].count),
+		})
 	}
 	return flushMemeBatch(w.tx, &batch, "results_model_capacity_factor")
 }
