@@ -183,7 +183,7 @@ const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost }: Ene
     label: t('results.energy.selfSufficiencyLabel', 'Self-sufficiency'),
     value: `${formatNumber(sufficiency * 100, 1)}%`,
     sub: t('results.energy.ofUsed', 'of {{energy}} used', { energy: energy(onSite) }),
-    info: t('results.metrics.selfSufficiencyDesc', 'PV generation minus grid export, divided by local consumption (Luthander et al., 2015)'),
+    info: t('results.metrics.selfSufficiencyDesc', 'Share of the electricity used that was not bought from the grid: 1 minus grid import divided by use (Luthander et al., 2015)'),
   });
   if (pv > 0) tiles.push({
     label: t('results.energy.pvOnSite', 'PV used on site'),

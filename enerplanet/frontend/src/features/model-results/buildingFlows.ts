@@ -93,32 +93,26 @@ export function summariseFlows(
 }
 
 /**
- * Self-sufficiency after Luthander et al. (2015): PV generation used on site
- * (generation minus export) over local consumption, 0..1; null without consumption.
+ * Self-sufficiency (Autarkiegrad): share of the electricity used that was not bought
+ * from the grid, 1 - grid import / use, 0..1; null without use. This is Luthander
+ * et al. (2015) self-consumed PV over use, with battery losses not counted as used.
  */
-export function luthanderSelfSufficiency(pvKwh: number, exportKwh: number, consumptionKwh: number): number | null {
+export function selfSufficiencyShare(gridImportKwh: number, consumptionKwh: number): number | null {
   if (consumptionKwh <= 0) return null;
-  return Math.min(1, Math.max(0, (pvKwh - exportKwh) / consumptionKwh));
+  return Math.min(1, Math.max(0, 1 - gridImportKwh / consumptionKwh));
 }
 
-/** Model-wide Luthander self-sufficiency from the stored aggregates, 0..1; 0 without consumption. */
+/** Model-wide self-sufficiency from the stored totals, 0..1; 0 without consumption. */
 export function modelSelfSufficiency(results: StructuredModelResults): number {
-  const total = (rows: { techs: string; total: number }[] | undefined, match: RegExp) =>
-    (rows ?? []).filter((r) => match.test(r.techs.split(':')[0])).reduce((sum, r) => sum + Math.abs(r.total), 0);
-  return luthanderSelfSufficiency(
-    total(results.prod_aggregates, /^pv_supply/),
-    total(results.con_aggregates, /_export$/),
-    Math.abs(results.sum_consumption || 0),
-  ) ?? 0;
+  return selfSufficiencyShare(Math.abs(results.grid_import || 0), Math.abs(results.sum_consumption || 0)) ?? 0;
 }
 
 /** Self-sufficiency of one node; local consumption excludes battery charging and export. */
 export function selfSufficiency(flows: BuildingFlow[]): number | null {
-  const total = (key: string) => flows.find((f) => f.key === key)?.totalKwh ?? 0;
   const consumption = flows
     .filter((f) => f.side === 'use' && f.key !== 'lineOut' && f.key !== 'batteryIn')
     .reduce((s, f) => s + f.totalKwh, 0);
-  return luthanderSelfSufficiency(total('pv_supply'), total('lineOut'), consumption);
+  return selfSufficiencyShare(flows.find((f) => f.key === 'lineIn')?.totalKwh ?? 0, consumption);
 }
 
 /** Energy from one supply to one use over the run. */

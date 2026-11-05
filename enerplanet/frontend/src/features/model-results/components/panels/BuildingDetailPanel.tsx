@@ -265,7 +265,7 @@ function kpiTiles(results: CarrierResult[], installed: ReturnType<typeof install
   const dash = "–";
   return [
     { label: t("results.buildingDetail.kpi.selfSufficiency", "Self-sufficiency"), value: share == null ? dash : `${formatNumber(share * 100, 0)}%`,
-      info: t("results.buildingDetail.kpi.selfSufficiencyInfo", "PV generation here minus what goes to the street line, divided by the electricity used here (Luthander et al., 2015).") },
+      info: t("results.buildingDetail.kpi.selfSufficiencyInfo", "Share of the electricity used here that did not come from the street line: 1 minus line import divided by use (Luthander et al., 2015).") },
     { label: t("results.buildingDetail.kpi.netCost", "Net energy cost"), value: net == null ? dash : formatCurrency(net, 0),
       info: t("results.buildingDetail.kpi.netCostInfo", "Over the run, as in the cost breakdown below.") },
     { label: t("results.buildingDetail.kpi.peakImport", "Peak grid import"), value: peak == null ? dash : formatCarrierPower(peak, "power") },

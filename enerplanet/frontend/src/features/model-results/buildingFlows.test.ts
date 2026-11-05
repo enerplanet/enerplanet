@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, ambientHeat, classifyFlow, installedCapacities, luthanderSelfSufficiency, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
+import { allocateFlows, ambientHeat, classifyFlow, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -66,31 +66,35 @@ describe('systemFlows', () => {
   });
 });
 
-describe('self-sufficiency (Luthander et al. 2015)', () => {
-  it('is PV generation minus export over local consumption', () => {
-    expect(luthanderSelfSufficiency(27.72, 8.08, 83.56)).toBeCloseTo(0.235, 3);
-    expect(luthanderSelfSufficiency(5, 0, 2)).toBe(1);
-    expect(luthanderSelfSufficiency(0, 0, 0)).toBeNull();
+describe('self-sufficiency', () => {
+  it('is the share of electricity used that was not bought from the grid', () => {
+    expect(selfSufficiencyShare(13.5, 23.17)).toBeCloseTo(0.417, 3);
+    expect(selfSufficiencyShare(0, 2)).toBe(1);
+    expect(selfSufficiencyShare(3, 2)).toBe(0);
+    expect(selfSufficiencyShare(0, 0)).toBeNull();
   });
 
-  it('counts PV stored in the battery as self-consumed, losses included', () => {
+  it('does not count battery losses as electricity used on site', () => {
     const { flows } = summariseFlows(
       [row('pv_supply_1_0', 't1', 4), row('battery_storage_1', 't2', 0.9), row('power_transmission:lv_0', 't2', 1.1)],
       [row('n1_demand', 't1', -1), row('battery_storage_1', 't1', -1), row('power_transmission:lv_0', 't1', -2),
         row('n1_demand', 't2', -1), row('air_source_heat_pump_1', 't2', -1)],
     );
-    expect(selfSufficiency(flows)).toBeCloseTo(2 / 3);
+    // 3 kWh used, 1.1 kWh from the street line; 1 kWh charged, 0.9 kWh discharged.
+    expect(selfSufficiency(flows)).toBeCloseTo(1 - 1.1 / 3);
   });
 });
 
 describe('modelSelfSufficiency', () => {
-  it('reads PV and export from the model aggregates', () => {
+  it('reads grid import and use from the model totals, battery losses not counted as used', () => {
+    // Totals of a 7-building operate run: 36.89 MWh PV, 12.66 MWh into batteries, 11.40 MWh out, no export.
     const results = {
-      sum_consumption: -83_560,
-      prod_aggregates: [{ techs: 'pv_supply_1_0:n4', total: 18_150 }, { techs: 'pv_supply_1_0:n1', total: 9_570 }, { techs: 'transformer_supply:t1', total: 64_620 }],
-      con_aggregates: [{ techs: 'grid_trafo_1_export:t1', total: -8_080 }, { techs: 'n1_demand:n1', total: -10_510 }],
+      sum_consumption: 96_170,
+      grid_import: 60_540,
+      prod_aggregates: [{ techs: 'pv_supply_1_0:n1', total: 36_890 }, { techs: 'transformer_supply:t1', total: 60_540 }],
+      con_aggregates: [{ techs: 'battery_storage_1:n1', total: -12_660 }],
     };
-    expect(modelSelfSufficiency(results as never)).toBeCloseTo(0.235, 3);
+    expect(modelSelfSufficiency(results as never)).toBeCloseTo(0.3705, 4);
     expect(modelSelfSufficiency({ sum_consumption: 0 } as never)).toBe(0);
   });
 });
