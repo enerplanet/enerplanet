@@ -16,6 +16,9 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly onRunMemePypsa?: (model: T) => void;
 	// Hide the PyPSA action once it has already run successfully.
 	readonly pypsaCompleted?: boolean;
+	// Render the PyPSA action red when the last attempt failed, so a failure
+	// stays obvious (the model itself stays 'completed').
+	readonly pypsaFailed?: boolean;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
 	readonly onMoveToWorkspace?: (model: T) => void;
@@ -47,6 +50,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onRunMeme,
 	onRunMemePypsa,
 	pypsaCompleted = false,
+	pypsaFailed = false,
 	onDelete,
 	onShare,
 	onMoveToWorkspace,
@@ -88,7 +92,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 		{
 			onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 			showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted
+			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
 		},
 		{ disabled, completed, shouldDisableDelete, deleteTooltipText },
 		t
@@ -106,7 +110,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	props: Pick<ModelActionsProps<T>,
 		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onRunMemePypsa" | "onDelete" | "onShare" | "onMoveToWorkspace" |
 		"showView" | "showEdit" | "showDownload" | "showCopy" | "showDelete" | "showShare" | "showMoveToWorkspace" |
-		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "pypsaCompleted"
+		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "pypsaCompleted" | "pypsaFailed"
 	>,
 	computed: {
 		disabled: boolean;
@@ -119,7 +123,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	const {
 		onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 		showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted
+		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
 	} = props;
 	const { disabled, completed, shouldDisableDelete, deleteTooltipText } = computed;
 
@@ -147,8 +151,8 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			// flow is a state change the UI offers only by request.
 			key: "runMemePypsa",
 			icon: Activity,
-			tooltip: t("common.modelActions.runPypsaOnMeme"),
-			variant: "secondary",
+			tooltip: pypsaFailed ? t("common.modelActions.runPypsaFailed") : t("common.modelActions.runPypsaOnMeme"),
+			variant: pypsaFailed ? ("danger" as const) : "secondary",
 			onClick: () => onRunMemePypsa?.(model),
 			show: !!onRunMemePypsa && completed && !pypsaCompleted,
 			disabled: false,

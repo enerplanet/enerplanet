@@ -259,7 +259,8 @@
       "delete": "Supprimer",
       "cannotDelete": "Suppression impossible - seul le propriétaire ou un expert peut supprimer",
       "runWithMeme": "Exécuter avec Calliope",
-      "runPypsaOnMeme": "Exécuter l'écoulement de puissance (PyPSA)"
+      "runPypsaOnMeme": "Exécuter l'écoulement de puissance (PyPSA)",
+      "runPypsaFailed": "L'écoulement de puissance a échoué — cliquez pour réessayer"
     },
     "pagination": {
       "showing": "Affichage de",

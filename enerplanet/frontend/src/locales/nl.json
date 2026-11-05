@@ -193,7 +193,8 @@
       "delete": "Verwijderen",
       "cannotDelete": "Kan niet verwijderen - alleen de eigenaar of een expert kan verwijderen",
       "runWithMeme": "Uitvoeren met Calliope",
-      "runPypsaOnMeme": "Vermogensstroom uitvoeren (PyPSA)"
+      "runPypsaOnMeme": "Vermogensstroom uitvoeren (PyPSA)",
+      "runPypsaFailed": "Vermogensstroom mislukt — klik om opnieuw te proberen"
     },
     "pagination": {
       "showing": "Weergave",
