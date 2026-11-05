@@ -9,6 +9,8 @@ import (
 
 	modelservice "spatialhub_backend/internal/model/service"
 
+	appmodels "spatialhub_backend/internal/models"
+
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
 	"platform.local/common/pkg/models"
@@ -549,6 +551,30 @@ func (h *ModelHandler) handleSharedModelWorkspace(userID string, model *models.M
 			model.WorkspaceID = &defaultWorkspace.ID
 			model.Workspace = defaultWorkspace
 		}
+	}
+}
+
+// populatePyPSALegStatus fills each model's PyPSALegStatus from its pypsa-leg
+// run record in one batch query, so the dashboard can hide the "Run power flow"
+// action once the leg has completed. A model with no pypsa leg keeps "".
+func (h *ModelHandler) populatePyPSALegStatus(modelsList []models.Model) {
+	if len(modelsList) == 0 {
+		return
+	}
+	ids := make([]uint, 0, len(modelsList))
+	for _, m := range modelsList {
+		ids = append(ids, m.ID)
+	}
+	var runs []appmodels.ModelMemeRun
+	if err := h.store.DB().Where("model_id IN ? AND leg = ?", ids, appmodels.MemeLegPyPSA).Find(&runs).Error; err != nil {
+		return
+	}
+	byModel := make(map[uint]string, len(runs))
+	for _, r := range runs {
+		byModel[r.ModelID] = r.Status
+	}
+	for i := range modelsList {
+		modelsList[i].PyPSALegStatus = byModel[modelsList[i].ID]
 	}
 }
 
