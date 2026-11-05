@@ -340,6 +340,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleCopy,
 		handleDelete,
 		handleRunMeme,
+		handleRunMemePypsa,
 		handleDownload,
 		updateTitle: updateTitleHandler,
 		handleBulkDelete: bulkDeleteHandler,
@@ -698,6 +699,12 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 		handleRunMeme([model.id]);
 	}, [handleRunMeme]);
 
+	// Isolated PyPSA power-flow leg, one model at a time (see ModelActions:
+	// the button shows only on completed models).
+	const handleRunMemePypsaSingle = useCallback((model: Model) => {
+		handleRunMemePypsa([model.id]);
+	}, [handleRunMemePypsa]);
+
 	// A model the MEME run action offers on: the same statuses the per-row Play
 	// shows for (draft | modified | failed). completed/published are excluded.
 	const bulkRunnableModels = useMemo(
@@ -834,6 +841,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 			onDownload={handleDownload}
 			onCopy={handleCopy}
 			onRunMeme={handleRunMemeSingle}
+			onRunMemePypsa={handleRunMemePypsaSingle}
 			onDelete={handleSingleDelete}
 			onShare={handleShare}
 			onMoveToWorkspace={handleMoveToWorkspace}
