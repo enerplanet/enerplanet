@@ -32,6 +32,9 @@ const TECH_COLORS: Record<string, string> = {
   'electric_boilers': '#ec4899',
   'gas_boiler': '#b45309',
 
+  // Fuel
+  'gas_import': '#a16207',
+
   // Storage
   'battery': '#8b5cf6',
   'battery storage': '#8b5cf6',

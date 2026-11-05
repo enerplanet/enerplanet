@@ -42,9 +42,9 @@ function rank(key: string): number {
   return 1;
 }
 
-/** Strips the per-node suffix: pv_supply_1_0 -> pv_supply, air_source_heat_pump_5 -> air_source_heat_pump. */
+/** Strips the per-node numbers: pv_supply_1_0 -> pv_supply, gas_3_import -> gas_import. */
 export function techFamily(tech: string): string {
-  return tech.split(':')[0].replace(/(_\d+)+$/, '');
+  return tech.split(':')[0].replace(/_\d+(?=_|$)/g, '');
 }
 
 /** Maps one result row to the category the building panel shows. */
@@ -160,6 +160,23 @@ export function ambientHeat(flows: BuildingFlow[]): { key: string; kwh: number }
     .filter((f) => input.has(f.key))
     .map((f) => ({ key: f.key, kwh: f.totalKwh - input.get(f.key)! }))
     .filter((a) => a.kwh > 0.5);
+}
+
+/**
+ * Energy each converter loses: what it takes in minus what it gives out, from
+ * flows of all carriers at one node, e.g. the tenth of its gas a 90% boiler loses.
+ */
+export function conversionLosses(flows: BuildingFlow[]): { key: string; kwh: number }[] {
+  const total = (side: FlowSide) => {
+    const sums = new Map<string, number>();
+    for (const f of flows) if (f.side === side) sums.set(f.key, (sums.get(f.key) ?? 0) + f.totalKwh);
+    return sums;
+  };
+  const input = total('use');
+  return [...total('supply')]
+    .filter(([key]) => input.has(key))
+    .map(([key, out]) => ({ key, kwh: input.get(key)! - out }))
+    .filter((l) => l.kwh > 0.5);
 }
 
 /** One carrier's flows at a node or for the whole model. */

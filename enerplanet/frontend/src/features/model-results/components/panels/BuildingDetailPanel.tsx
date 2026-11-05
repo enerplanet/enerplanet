@@ -8,7 +8,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import { formatCurrency, formatNumber } from "@/utils/formatNumber";
 import { useThemeColors } from "@/features/simulation-charts/pypsa/chartUtils";
 import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from "../../carrierUnits";
-import { allocateFlows, ambientHeat, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
+import { allocateFlows, ambientHeat, CarrierResult, conversionLosses, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
 import ChartInfoTooltip from "../ui/ChartInfoTooltip";
 import { BuildingProfileChart, ProfileResolution, Season } from "./BuildingProfileChart";
 
@@ -37,6 +37,7 @@ type TFn = ReturnType<typeof useTranslation>["t"];
 const PANEL_CLASS = "rounded-xl border border-border bg-card p-3 shadow-sm";
 const SIDE_PANEL_CLASS = "h-full rounded-xl border border-border bg-card px-3 py-2 shadow-sm";
 const AMBIENT_COLOR = "#84cc16";
+const LOSSES_COLOR = "#a8a29e";
 /** Runs at least this long count as a year, matching the Cost tab. */
 const FULL_YEAR_HOURS = 8760 * 0.95;
 
@@ -111,10 +112,16 @@ export function BuildingSankey({ results, t, label = flowLabel, compact = false 
         if (l.kwh > 0.5 && name(l.from) !== name(l.to)) links.push({ source: name(l.from), target: name(l.to), value: l.kwh });
       }
     }
+    const all = results.flatMap((r) => r.flows);
     const ambient = t("results.buildingDetail.flow.ambient", "Ambient heat");
-    for (const a of ambientHeat(results.flatMap((r) => r.flows))) {
+    for (const a of ambientHeat(all)) {
       nodes.set(ambient, AMBIENT_COLOR);
       links.push({ source: ambient, target: label(a.key, "heat", t), value: a.kwh });
+    }
+    const losses = t("results.buildingDetail.flow.losses", "Conversion losses");
+    for (const l of conversionLosses(all)) {
+      nodes.set(losses, LOSSES_COLOR);
+      links.push({ source: label(l.key, "heat", t), target: losses, value: l.kwh });
     }
     const targets = new Set(links.map((l) => l.target));
     return {
@@ -332,7 +339,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
 
       <div className={PANEL_CLASS}>
         <CardTitle icon={GitMerge} title={t("results.buildingDetail.energyFlowRun", "Energy flow over the run")}
-          info={t("results.buildingDetail.sankeyInfoRun", "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pump takes from the air or ground: its heat output minus its electricity input.")} />
+          info={t("results.buildingDetail.sankeyInfoRun", "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pump takes from the air or ground: its heat output minus its electricity input. Conversion losses are what a boiler loses: its fuel input minus its heat output.")} />
         {/* Width capped so the three node columns stay close enough for the links to read. */}
         <div className="mx-auto h-[340px] w-full max-w-5xl">
           <BuildingSankey results={results} t={t} />

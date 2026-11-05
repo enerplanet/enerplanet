@@ -93,7 +93,7 @@ const OverviewPanel = ({ modelId, carriers, gridPrices, energyCap, costs, mode }
             <span className="text-xs font-normal text-muted-foreground">{t('results.energy.allBuildings', 'all buildings')}</span>
             <ChartInfoTooltip
               title={t('results.charts.energyFlow')}
-              description={t('results.overview.sankeyInfo', "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run and over all buildings. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pumps take from the air or ground: their heat output minus their electricity input.")}
+              description={t('results.overview.sankeyInfo', "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run and over all buildings. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pumps take from the air or ground: their heat output minus their electricity input. Conversion losses are what the boilers lose: their fuel input minus their heat output.")}
             />
           </h3>
           <div className="h-[520px]">
