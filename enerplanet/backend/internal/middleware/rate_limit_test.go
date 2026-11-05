@@ -75,3 +75,15 @@ func TestRateLimit_UnmatchedPathsDoNotSpendQuota(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/known", nil))
 	assert.Equal(t, http.StatusOK, w.Code, "404s should leave the quota untouched")
 }
+
+// TestRateLimit_RejectionSaysWhenToRetry lets a client wait for the refill
+// instead of failing: Retry-After is the whole seconds left in the window.
+func TestRateLimit_RejectionSaysWhenToRetry(t *testing.T) {
+	r := engineOverQuota(t)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/known", nil))
+
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Equal(t, "60", w.Header().Get("Retry-After"))
+}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/store/demandprofile"
 )
 
@@ -38,4 +39,17 @@ func TestMapDemandProfiles(t *testing.T) {
 	require.Equal("222", got[1].OSMID)
 	require.Equal("pending", got[1].Status)
 	require.Nil(got[1].HeatingKwhA)
+}
+
+func TestComputedDemandProfiles(t *testing.T) {
+	demand.StartProgress(901)
+	defer demand.EndProgress(901)
+	for _, way := range []string{"w1", "w2", "w3"} {
+		demand.MarkComputed(901, way)
+	}
+
+	assert.Equal(t, int64(3), computedDemandProfiles(901, demandprofile.StatusCounts{Pending: 10}))
+	assert.Equal(t, int64(1), computedDemandProfiles(901, demandprofile.StatusCounts{Pending: 1}),
+		"rows linked before the count ends are not counted twice")
+	assert.Equal(t, int64(0), computedDemandProfiles(902, demandprofile.StatusCounts{Pending: 10}))
 }

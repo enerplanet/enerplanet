@@ -139,6 +139,9 @@ func awaitGroup(ctx context.Context, log *logrus.Entry, job buem.GroupJob, run b
 			log.Warnf("building %s: %s", b.ID, reason)
 		} else {
 			out.profiles[b.ID] = id
+			if run.onComputed != nil {
+				run.onComputed(b.ID)
+			}
 		}
 		mu.Unlock()
 	}

@@ -2573,6 +2573,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile"
                     }
                 },
+                "computed": {
+                    "type": "integer",
+                    "example": 4
+                },
                 "failed": {
                     "type": "integer",
                     "example": 2

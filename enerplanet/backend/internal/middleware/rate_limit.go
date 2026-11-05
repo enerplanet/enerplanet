@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -50,7 +51,9 @@ func (rl *rateLimiter) evictLoop() {
 	}
 }
 
-func (rl *rateLimiter) allow(clientIP string) bool {
+// allow spends one token of clientIP's bucket, or returns false and how long
+// until the bucket refills.
+func (rl *rateLimiter) allow(clientIP string) (bool, time.Duration) {
 	now := time.Now()
 
 	rl.mu.Lock()
@@ -69,10 +72,10 @@ func (rl *rateLimiter) allow(clientIP string) bool {
 	}
 
 	if bucket.tokens <= 0 {
-		return false
+		return false, bucket.lastRefillTime.Add(rl.refillInterval).Sub(now)
 	}
 	bucket.tokens--
-	return true
+	return true, 0
 }
 
 func RateLimit() gin.HandlerFunc {
@@ -95,7 +98,8 @@ func RateLimit() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if !rl.allow(c.ClientIP()) {
+		if ok, wait := rl.allow(c.ClientIP()); !ok {
+			c.Header("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
 			return
 		}

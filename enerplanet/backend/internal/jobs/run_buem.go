@@ -162,6 +162,9 @@ type buemRun struct {
 	uses       map[string]buildingUse
 	weather    json.RawMessage
 	start, end string
+	// onComputed, when set, is called with a building's BuEM id as its result
+	// is stored, under the lock that guards the run's outcome.
+	onComputed func(id string)
 }
 
 // prepareBuemRun resolves envelopes, U-values and weather for model. When no
