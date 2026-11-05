@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createSplitLineStyle, isOverloaded, useThemeColors, saveImageToolbox } from './chartUtils';
+import { createSplitLineStyle, isOverloaded, useThemeColors } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface LineLoadingItem {
@@ -138,5 +138,5 @@ export const PyPSALineLoadingChart = ({
     );
   }
 
-  return <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'line-loading') }} style={{ height, width: '100%' }} />;
+  return <ReactECharts option={option} style={{ height, width: '100%' }} />;
 };

@@ -3,7 +3,6 @@ import { useTranslation } from '@spatialhub/i18n';
 import { formatNumber } from '@/utils/formatNumber';
 import { PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
-import SaveChartButton from '../ui/SaveChartButton';
 import EnergySummary from './EnergySummary';
 import { BuildingSankey } from './BuildingDetailPanel';
 import { useSystemFlows } from '../../hooks/useSystemFlows';
@@ -96,7 +95,6 @@ const OverviewPanel = ({ modelId, carriers, gridPrices, energyCap, costs, mode }
               title={t('results.charts.energyFlow')}
               description={t('results.overview.sankeyInfo', "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run and over all buildings. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pumps take from the air or ground: their heat output minus their electricity input.")}
             />
-            <SaveChartButton name="energy-flow" />
           </h3>
           <div className="h-[520px]">
             <BuildingSankey results={results} t={t} label={systemFlowLabel} compact />

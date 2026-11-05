@@ -9,7 +9,6 @@ import { formatCurrency, formatNumber } from "@/utils/formatNumber";
 import { useThemeColors } from "@/features/simulation-charts/pypsa/chartUtils";
 import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from "../../carrierUnits";
 import { allocateFlows, ambientHeat, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
-import SaveChartButton from "../ui/SaveChartButton";
 import ChartInfoTooltip from "../ui/ChartInfoTooltip";
 import { BuildingProfileChart, ProfileResolution, Season } from "./BuildingProfileChart";
 
@@ -47,14 +46,13 @@ function installedHere(data: LocationTimeSeriesData | undefined) {
 }
 
 /** Small uppercase heading with an optional info icon for the explanation. */
-function CardTitle({ icon: Icon, title, info, saveAs, children }: { icon: typeof Zap; title: string; info?: string; saveAs?: string; children?: React.ReactNode }) {
+function CardTitle({ icon: Icon, title, info, children }: { icon: typeof Zap; title: string; info?: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {title}
         {info && <ChartInfoTooltip title={title} description={info} />}
-        {saveAs && <SaveChartButton name={saveAs} />}
       </h4>
       {children}
     </div>
@@ -333,7 +331,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
       </div>
 
       <div className={PANEL_CLASS}>
-        <CardTitle icon={GitMerge} title={t("results.buildingDetail.energyFlowRun", "Energy flow over the run")} saveAs="building-energy-flow"
+        <CardTitle icon={GitMerge} title={t("results.buildingDetail.energyFlowRun", "Energy flow over the run")}
           info={t("results.buildingDetail.sankeyInfoRun", "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pump takes from the air or ground: its heat output minus its electricity input.")} />
         {/* Width capped so the three node columns stay close enough for the links to read. */}
         <div className="mx-auto h-[340px] w-full max-w-5xl">
@@ -342,7 +340,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
       </div>
 
       <div className={PANEL_CLASS}>
-        <CardTitle icon={Activity} title={t("results.buildingDetail.profile", "Sources and uses")} saveAs="sources-and-uses"
+        <CardTitle icon={Activity} title={t("results.buildingDetail.profile", "Sources and uses")}
           info={t("results.buildingDetail.profileInfo", "Above zero: where the energy comes from. Below zero: what it is used for. The typical day averages each hour of the day over the selected months, in kW. Winter is December to February, summer June to August.")}>
           <div className="flex flex-wrap justify-end gap-2">
             {results.length > 1 && (
