@@ -333,6 +333,7 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	modelsList = h.applyPrivacyFilters(*userCtx, modelsList)
 	h.populateChildModelIDs(modelsList)
 	h.populateParentModelTitles(modelsList)
+	modelsList = trimListPayload(modelsList)
 
 	c.JSON(200, gin.H{
 		"success":     true,

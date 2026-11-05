@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"platform.local/common/pkg/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -548,4 +550,41 @@ func (h *ModelHandler) handleSharedModelWorkspace(userID string, model *models.M
 			model.Workspace = defaultWorkspace
 		}
 	}
+}
+
+// trimListPayload keeps GET /models light: the full config/results JSONB
+// blobs are dropped from the list, which the dashboard polls while a run is
+// busy. The table only renders config.mode and results.failed_stage /
+// failed_service / warning (failed-badge labels and the demand-fallback
+// notice). Full blobs stay available on GET /models/{id}. Extend
+// keepJSONKeys' key lists when a list consumer needs another key.
+func trimListPayload(modelsList []models.Model) []models.Model {
+	for i := range modelsList {
+		modelsList[i].Config = keepJSONKeys(modelsList[i].Config, "mode")
+		modelsList[i].Results = keepJSONKeys(modelsList[i].Results, "failed_stage", "failed_service", "warning")
+	}
+	return modelsList
+}
+
+// keepJSONKeys rebuilds a JSON value as an object holding only the given keys.
+// null or empty input passes through unchanged (config-less drafts).
+func keepJSONKeys(raw datatypes.JSON, keys ...string) datatypes.JSON {
+	if len(raw) == 0 || string(raw) == "null" {
+		return raw
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	out := make(map[string]json.RawMessage, len(keys))
+	for _, k := range keys {
+		if v, ok := obj[k]; ok {
+			out[k] = v
+		}
+	}
+	trimmed, err := json.Marshal(out)
+	if err != nil {
+		return nil
+	}
+	return datatypes.JSON(trimmed)
 }
