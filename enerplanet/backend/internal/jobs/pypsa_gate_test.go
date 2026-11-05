@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	commonModels "platform.local/common/pkg/models"
+
 	"spatialhub_backend/internal/models"
 )
 
@@ -50,4 +52,30 @@ func TestCalliopeLegReady_runningCalliopeRefuses(t *testing.T) {
 	err := CalliopeLegReady(runs, 42)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "completed")
+}
+
+// TestPypsaFailureStatus_keepsCompletedWhenCalliopeCompleted pins the
+// "no Calliope re-run on a PyPSA failure" contract: a failed PyPSA leg leaves
+// the model 'completed' as long as the Calliope leg it derives from is still
+// completed, so the leg stays retryable from the dashboard.
+func TestPypsaFailureStatus_keepsCompletedWhenCalliopeCompleted(t *testing.T) {
+	runs := &fakeGateRuns{rec: &models.ModelMemeRun{
+		ModelID: 42, Leg: models.MemeLegCalliope, RunID: "job-1", Status: models.MemeRunStatusCompleted,
+	}}
+	assert.Equal(t, commonModels.ModelStatusCompleted, pypsaFailureStatus(runs, 42))
+}
+
+// TestPypsaFailureStatus_failsWhenCalliopeNotCompleted guards the fallback: a
+// model whose Calliope leg is not completed must not be shown as completed.
+func TestPypsaFailureStatus_failsWhenCalliopeNotCompleted(t *testing.T) {
+	for name, runs := range map[string]*fakeGateRuns{
+		"no calliope run": {},
+		"calliope failed": {rec: &models.ModelMemeRun{
+			ModelID: 42, Leg: models.MemeLegCalliope, RunID: "job-1", Status: models.MemeRunStatusFailed,
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, commonModels.ModelStatusFailed, pypsaFailureStatus(runs, 42))
+		})
+	}
 }

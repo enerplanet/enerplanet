@@ -389,11 +389,13 @@ func HandleDispatchMemePyPSA(
 		return fmt.Errorf("failed to unmarshal dispatch_meme_pypsa payload: %w", err)
 	}
 
-	// Any dispatch failure must leave the model in a terminal 'failed' state,
-	// or it sits in 'queue' forever (see dispatch_meme.go).
+	// Any dispatch failure must leave the model terminal, or it sits in 'queue'
+	// forever (see dispatch_meme.go). A failed PyPSA leg restores the model to
+	// 'completed' (see failPypsaLeg): the Calliope results it was derived from
+	// are still valid, so the leg stays retryable without re-running Calliope.
 	defer func() {
 		if retErr != nil {
-			markModelFailed(db, p.ModelID, retErr)
+			failPypsaLeg(db, runs, p.ModelID, retErr)
 		}
 	}()
 
