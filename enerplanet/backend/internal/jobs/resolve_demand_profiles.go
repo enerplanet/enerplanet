@@ -17,6 +17,7 @@ import (
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/contenthash"
+	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
@@ -185,6 +186,12 @@ func (r DemandResolver) Resolve(ctx context.Context, modelID uint) (resolvedWays
 // the demand profile rows, unless the model changed while BuEM ran: a newer
 // run then links its own results, and these stay stored for reuse.
 func resolveAndLink(ctx context.Context, log *logrus.Entry, db *gorm.DB, modelID uint, revision string, run buemRun, p payload.CalculationPayload, buemVersion string, runner groupRunner, profileStore demandProfileStore, store seriesStore) error {
+	demand.StartProgress(modelID)
+	defer demand.EndProgress(modelID)
+	run.onComputed = func(id string) {
+		way, _, _ := strings.Cut(id, partSeparator)
+		demand.MarkComputed(modelID, way)
+	}
 	outcome, err := resolveSeries(ctx, log, run, p.Resolution, p.ModelID, buemVersion, store, runner)
 	if err != nil {
 		log.Warnf("model %d: resolving series failed, marking every building failed: %v", modelID, err)

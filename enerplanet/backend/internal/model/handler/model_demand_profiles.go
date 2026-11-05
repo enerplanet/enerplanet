@@ -9,6 +9,7 @@ import (
 	"platform.local/common/pkg/httputil"
 
 	"spatialhub_backend/internal/api/contracts"
+	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/store/demandprofile"
 )
 
@@ -66,8 +67,16 @@ func (h *ModelHandler) GetModelDemandProfiles(c *gin.Context) {
 		Failed:    counts.Failed,
 		Shared:    counts.Shared,
 		NotHeated: counts.NotHeated,
+		Computed:  computedDemandProfiles(model.ID, counts),
 		Buildings: mapDemandProfiles(rows),
 	})
+}
+
+// computedDemandProfiles is how many pending buildings have a BuEM result
+// stored but not yet linked; capped at pending, since rows are linked before
+// the count ends.
+func computedDemandProfiles(modelID uint, counts demandprofile.StatusCounts) int64 {
+	return min(demand.Computed(modelID), counts.Pending)
 }
 
 // overallDemandProfileStatus summarizes a model's resolution run from its row

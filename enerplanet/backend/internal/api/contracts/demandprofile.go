@@ -53,6 +53,9 @@ type ModelAnalysisResponse struct {
 //     shared or not_heated; a shared building's 3D building is resolved
 //     under another OSM way, and a not_heated building has no heat demand,
 //     both explained in its error_message)
+//
+// computed counts pending buildings whose BuEM result is in but not yet
+// linked; they become resolved when the whole analysis finishes.
 type ModelDemandProfilesResponse struct {
 	Status    string                  `json:"status" example:"resolving"`
 	Total     int64                   `json:"total" example:"42"`
@@ -61,5 +64,6 @@ type ModelDemandProfilesResponse struct {
 	Failed    int64                   `json:"failed" example:"2"`
 	Shared    int64                   `json:"shared" example:"1"`
 	NotHeated int64                   `json:"not_heated" example:"9"`
+	Computed  int64                   `json:"computed" example:"4"`
 	Buildings []BuildingDemandProfile `json:"buildings"`
 }
