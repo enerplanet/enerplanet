@@ -332,8 +332,8 @@ webservice:
 .PHONY: pylovo
 pylovo:
 	@cd dependencies/enerplanet-pylovo && test -s .env.docker || cp .env.example .env.docker && make dev
-	@for i in $$(seq 60); do docker exec pylovo-api-dev python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
-		echo "pylovo-api-dev did not answer /health within 120s, see 'docker logs pylovo-api-dev'"; exit 1
+	@for i in $$(seq 60); do docker exec pylovo-api-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" >/dev/null 2>&1 && exit 0; sleep 2; done; \
+		echo "pylovo-api-1 did not answer /health within 120s, see 'docker logs pylovo-api-1'"; exit 1
 
 
 .PHONY: tentacron-stack
@@ -357,6 +357,15 @@ tentacron: tentacron-network
 .PHONY: ignis
 ignis: tentacron-network
 	@cd dependencies/$(IGNIS_DIR)/environment && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose up -d --pull always --no-build
+	@# The api reaches its database by the compose service name `db`, which only
+	@# resolves on the project's own default network (ignis_default). A container
+	@# left over from an earlier run can be missing that attachment - it then
+	@# crash-loops on "lookup db ... server misbehaving", and `compose up` does
+	@# not recreate an existing container to fix it, so every later setup run
+	@# inherits the broken container. Reattach it. Stop first: connecting a
+	@# container that is mid-restart fails with "network sandbox ... not found".
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' ignis-api-1 | grep -q '"ignis_default"' || \
+		{ docker stop ignis-api-1 >/dev/null 2>&1; docker network connect ignis_default ignis-api-1; docker start ignis-api-1 >/dev/null 2>&1; }
 	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
