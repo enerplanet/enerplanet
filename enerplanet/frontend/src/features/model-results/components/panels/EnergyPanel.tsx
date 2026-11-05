@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
-import { LineChart, Info, Flame } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { LineChart, Info, Flame, Clock } from 'lucide-react';
 import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, CarrierProdRecord, CarrierConRecord } from '../../types';
-import {
-  carrierDisplay,
-  carrierLabelKey,
-  isGenerationCarrier,
-  sameCarrier,
-} from '../../carrierUnits';
+import { carrierDisplay, carrierLabelKey, isGenerationCarrier, sameCarrier } from '../../carrierUnits';
 import { fetchCarrierTimeSeries } from '../../api';
-import {
-  EnergyBalanceChart,
-} from '@/features/simulation-charts/model-results';
+import { EnergyBalanceChart } from '@/features/simulation-charts/model-results';
+import { systemFlowLabel, systemFlows } from '../../buildingFlows';
+import { BuildingProfileChart, type Season } from './BuildingProfileChart';
+import { Toggle } from './BuildingDetailPanel';
+import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import SaveChartButton from '../ui/SaveChartButton';
 import { useTranslation } from '@spatialhub/i18n';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -27,7 +25,7 @@ const InfoTip = ({ titleKey, descKey, items }: { titleKey: string; descKey: stri
   const [show, setShow] = useState(false);
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -76,6 +74,8 @@ interface EnergyPanelProps {
 
 const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelProps) => {
   const { t } = useTranslation();
+  const [carrierProd, setCarrierProd] = useState<CarrierProdRecord[]>([]);
+  const [carrierCon, setCarrierCon] = useState<CarrierConRecord[]>([]);
   const [dailyProd, setDailyProd] = useState<CarrierProdRecord[]>([]);
   const [dailyCon, setDailyCon] = useState<CarrierConRecord[]>([]);
   const [carrierLoading, setCarrierLoading] = useState(false);
@@ -90,6 +90,9 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
   }, [carrier, t]);
 
   const generation = isGenerationCarrier(carrier);
+  const [season, setSeason] = useState<Season>('winter');
+  const system = useMemo(() => systemFlows(carrierProd, carrierCon, carrier || 'power'), [carrierProd, carrierCon, carrier]);
+  const label = useCallback((key: string) => systemFlowLabel(key, carrier || 'power', t), [carrier, t]);
   const { energyUnit } = carrierDisplay(carrier);
 
   // Lazy-load carrier time-series data when this panel is first rendered.
@@ -108,6 +111,8 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
     );
 
     if (embeddedMatches) {
+      setCarrierProd(embeddedProd);
+      setCarrierCon(embeddedCon);
       setDailyProd(embeddedProd);
       setDailyCon(embeddedCon);
       setCarrierLoaded(true);
@@ -118,10 +123,24 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
     const loadCarrierData = async () => {
       setCarrierLoading(true);
       try {
-        const dailyData = await fetchCarrierTimeSeries(modelId, { aggregate: 'daily', carrier });
+        // Fetch hourly and daily data in parallel
+        const [hourlyData, dailyData] = await Promise.all([
+          fetchCarrierTimeSeries(modelId, { aggregate: 'hourly', carrier }),
+          fetchCarrierTimeSeries(modelId, { aggregate: 'daily', carrier }),
+        ]);
+
+        if (hourlyData) {
+          setCarrierProd(hourlyData.carrier_prod || []);
+          setCarrierCon(hourlyData.carrier_con || []);
+        }
+
         if (dailyData) {
           setDailyProd(dailyData.carrier_prod || []);
           setDailyCon(dailyData.carrier_con || []);
+        } else if (hourlyData) {
+          // Fallback if daily endpoint fails
+          setDailyProd(hourlyData.carrier_prod || []);
+          setDailyCon(hourlyData.carrier_con || []);
         }
 
         setCarrierLoaded(true);
@@ -162,6 +181,7 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
             descKey={generation ? 'results.energy.dailyEnergyBalanceDesc' : 'results.energy.dailyEnergyBalanceDescHeat'}
             items={ENERGY_BALANCE_ITEMS}
           />
+          <SaveChartButton name="daily-energy-balance" />
         </h3>
         <ErrorBoundary label="Energy Balance Chart">
           <EnergyBalanceChart
@@ -172,6 +192,32 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
           />
         </ErrorBoundary>
       </div>
+
+      {system.flows.length > 0 && (
+        <div className={CHART_CARD_CLASS}>
+          <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+            <Clock className="h-4 w-4 text-primary" />
+            {t('results.energy.typicalDay', 'Typical day')}
+            <span className="text-xs font-normal text-muted-foreground">{t('results.energy.allBuildings', 'all buildings')}</span>
+            <ChartInfoTooltip
+              title={t('results.energy.typicalDay', 'Typical day')}
+              description={t('results.energy.typicalDayInfo', 'Average power per hour of the day over the chosen months, summed over all buildings. Supplies above zero, uses below; the tallest bar below zero is when demand peaks.')}
+            />
+            <SaveChartButton name="typical-day" />
+            <div className="ml-auto">
+              <Toggle
+                options={[['winter', t('results.buildingDetail.winter', 'Winter')], ['summer', t('results.buildingDetail.summer', 'Summer')], ['year', t('results.buildingDetail.wholeYear', 'Whole year')]]}
+                value={season}
+                onChange={setSeason}
+              />
+            </div>
+          </h3>
+          <div className="h-[340px]">
+            <BuildingProfileChart timesteps={system.timesteps} flows={system.flows} carrier={carrier || 'power'} label={label} resolution="typical" season={season}
+              emptyText={t('results.energy.noHoursInSeason', 'No hour of this run falls in these months.')} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

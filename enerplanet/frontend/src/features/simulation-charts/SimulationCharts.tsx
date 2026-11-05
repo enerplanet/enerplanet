@@ -24,6 +24,7 @@ import {
 import { useDocumentTitle } from '@/hooks/use-document-title';
 import { fetchStructuredResults } from '@/features/model-results/api';
 import { StructuredModelResults } from '@/features/model-results/types';
+import { modelSelfSufficiency } from '@/features/model-results/buildingFlows';
 import {
   formatCarrierEnergy,
   formatCarrierPower,
@@ -92,11 +93,7 @@ function calculateSummary(structured: StructuredModelResults) {
   // meaning "not reported": the UI hides it instead of inventing one.
   const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
-  const co2Savings = renewableProduction * 0.4;
-
-  const selfSufficiencyRate = totalConsumption > 0
-    ? normalizeDisplayValue(Math.min(1, renewableProduction / totalConsumption), 6)
-    : 0;
+  const selfSufficiencyRate = normalizeDisplayValue(modelSelfSufficiency(structured), 6);
 
   const totalSupply = renewableProduction + gridImport;
   const gridDependencyRate = totalSupply > 0
@@ -114,7 +111,6 @@ function calculateSummary(structured: StructuredModelResults) {
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
     lcoe_eur_mwh: lcoe,
-    co2_savings_kg: co2Savings,
   };
 }
 

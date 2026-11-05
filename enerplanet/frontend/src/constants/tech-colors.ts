@@ -26,6 +26,12 @@ const TECH_COLORS: Record<string, string> = {
   'geothermal_supply': '#ef4444',
   'hydro': '#06b6d4',
 
+  // Heat
+  'air_source_heat_pump': '#3b82f6',
+  'ground_source_heat_pump': '#6366f1',
+  'electric_boilers': '#ec4899',
+  'gas_boiler': '#b45309',
+
   // Storage
   'battery': '#8b5cf6',
   'battery storage': '#8b5cf6',

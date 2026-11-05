@@ -314,6 +314,8 @@ interface ModelConfig {
   transformers?: GeoJSONFeatureCollection;
   grids?: unknown[];
   pypsa?: Record<string, unknown>;
+  /** "plan" sizes the technologies at least cost, "operate" only dispatches them; absent means plan. */
+  mode?: 'plan' | 'operate';
 }
 
 export interface ModelInfo {

@@ -145,14 +145,14 @@ function formatVolume(value: number, unit: string, digits: number): string {
 }
 
 /** Time-integrated quantity in the carrier's own unit (kWh / MWh / m³). */
-export function formatCarrierEnergy(value: number, carrier?: string | null): string {
+export function formatCarrierEnergy(value: number, carrier?: string | null, digits = 2): string {
   const { kind, energyUnit } = carrierDisplay(carrier);
   if (kind === 'volume') return formatVolume(value, energyUnit, 1);
 
   if (!Number.isFinite(value)) return `0 ${energyUnit}`;
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, 2)} GWh`;
-  if (abs >= 1_000) return `${formatNumber(value / 1_000, 2)} MWh`;
+  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, digits)} GWh`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, digits)} MWh`;
   return `${formatNumber(value, 1)} ${energyUnit}`;
 }
 

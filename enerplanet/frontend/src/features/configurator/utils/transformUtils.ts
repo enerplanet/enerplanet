@@ -1,5 +1,5 @@
 import { ModelResults } from '@/features/model-results/types';
-import { CostBreakdown, CapacityData } from '@/features/simulation-charts/types';
+import { CapacityData } from '@/features/simulation-charts/types';
 import { getPrimaryFClass, normalizeFClass, formatFClassLabel } from './fClassUtils';
 
 interface CapacityBuildingsSource {
@@ -282,35 +282,4 @@ function techLabelForDemandGroup(groupKey: string, fallbackTech: string, t?: Tra
     return normalized ? formatFClassLabel(normalized) : getTechDisplayName(fallbackTech, t);
   }
   return getTechDisplayName(fallbackTech, t);
-}
-
-/**
- * Transform levelised cost data for the cost breakdown chart
- */
-export function transformToCostBreakdown(results: ModelResults): CostBreakdown[] {
-  if (!results.total_levelised_cost || results.total_levelised_cost.length === 0) {
-    return [];
-  }
-
-  // Group costs by category
-  const costsByCategory: Record<string, number> = {};
-
-  results.total_levelised_cost.forEach(cost => {
-    const category = cost.costs || 'Other';
-    if (!costsByCategory[category]) {
-      costsByCategory[category] = 0;
-    }
-    costsByCategory[category] += cost.value;
-  });
-
-  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-
-  return Object.entries(costsByCategory)
-    .filter(([_, value]) => Math.abs(value) > 0.001)
-    .map(([category, value], index) => ({
-      category: category.replaceAll('_', ' ').replaceAll(/\b\w/g, c => c.toUpperCase()),
-      value: value * 1000, // Convert to EUR
-      color: colors[index % colors.length],
-    }))
-    .sort((a, b) => b.value - a.value);
 }

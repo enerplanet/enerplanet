@@ -1,32 +1,17 @@
-import { useState, useEffect, useMemo } from "react";
-import { CHART_CARD_CLASS } from '../ui/PanelStates';
-import {
-  Activity,
-  Battery,
-  Building2,
-  DollarSign,
-  Flame,
-  Loader2,
-  TrendingUp,
-  TrendingDown,
-  Zap,
-  Scale,
-  Layers,
-  Ruler,
-  Calendar,
-  Users,
-  Home,
-  MapPin,
-  Gauge,
-  Sun,
-} from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
+import { Activity, Euro, GitMerge, Loader2, Sun, Zap } from "lucide-react";
 import { fetchLocationTimeSeries, LocationTimeSeriesData } from "../../api";
-import { BuildingEnergyChart } from "@/features/simulation-charts/calliope";
 import { BuildingResultData } from "../map/ResultsMapTypes";
-import { CostAnalysisChart } from "@/features/simulation-charts/model-results";
 import { useTranslation } from "@spatialhub/i18n";
-import { formatFClassLabel, parseFClassValue } from "@/features/configurator/utils/fClassUtils";
 import { formatCurrency, formatNumber } from "@/utils/formatNumber";
+import { useThemeColors } from "@/features/simulation-charts/pypsa/chartUtils";
+import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from "../../carrierUnits";
+import { allocateFlows, ambientHeat, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
+import SaveChartButton from "../ui/SaveChartButton";
+import ChartInfoTooltip from "../ui/ChartInfoTooltip";
+import { BuildingProfileChart, ProfileResolution, Season } from "./BuildingProfileChart";
 
 interface WindTurbineInfo {
   nominal_power: number;
@@ -39,524 +24,349 @@ interface BuildingDetailPanelProps {
   building: BuildingResultData;
   modelId: number;
   carrier?: string;
+  /** Carriers the run has results for. */
+  carriers?: string[];
+  /** Grid prices of the run, ct/kWh; used to price this building's line exchange. */
+  gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
   turbineData?: Record<string, WindTurbineInfo>;
+  /** Heated floor area BuEM used (A_ref), m². */
+  floorArea?: number;
 }
 
-type BuildingTab = "energy" | "cost";
+type TFn = ReturnType<typeof useTranslation>["t"];
 
-const getTechIcon = (techName: string): string | null => {
-  if (techName.includes("pv")) return "/images/tech-icons/solar-panel.svg";
-  if (techName.includes("wind")) return "/images/tech-icons/wind-turbine.svg";
-  if (techName.includes("biomass")) return "/images/tech-icons/biomass.svg";
-  if (techName.includes("geothermal")) return "/images/tech-icons/geothermal.svg";
-  return null;
-};
+const PANEL_CLASS = "rounded-xl border border-border bg-card p-3 shadow-sm";
+const SIDE_PANEL_CLASS = "h-full rounded-xl border border-border bg-card px-3 py-2 shadow-sm";
+const AMBIENT_COLOR = "#84cc16";
+/** Runs at least this long count as a year, matching the Cost tab. */
+const FULL_YEAR_HOURS = 8760 * 0.95;
 
-const getTechDisplayName = (techName: string, windTurbineName: string | null): string => {
-  if (techName.includes("wind") && windTurbineName) return windTurbineName;
-  if (techName.includes("pv")) return "Solar PV";
-  if (techName.includes("biomass")) return "Biomass";
-  if (techName.includes("geothermal")) return "Geothermal";
-  if (techName.includes("battery")) return "Battery";
-  return techName.replaceAll("_", " ");
-};
-
-function formatEnergy(kwh: number): string {
-  const abs = Math.abs(kwh);
-  if (abs === 0) return "0 kWh";
-  if (abs >= 1000000) return `${formatNumber(kwh / 1000000, 2)} GWh`;
-  if (abs >= 1000) return `${formatNumber(kwh / 1000, 2)} MWh`;
-  if (abs >= 1) return `${formatNumber(kwh, 1)} kWh`;
-  return `${formatNumber(kwh * 1000, 1)} Wh`;
+/** Installed capacities at the node, one row per technology; PV summed over the roof surfaces. */
+function installedHere(data: LocationTimeSeriesData | undefined) {
+  return installedCapacities(data?.energy_cap ?? []);
 }
 
-function formatPower(kw: number): string {
-  const abs = Math.abs(kw);
-  if (abs === 0) return "0 kW";
-  if (abs >= 1000) return `${formatNumber(kw / 1000, 2)} MW`;
-  if (abs >= 1) return `${formatNumber(kw, 1)} kW`;
-  if (abs >= 0.001) return `${formatNumber(kw * 1000, 1)} W`;
-  return `${formatNumber(kw * 1_000_000, 1)} mW`;
+/** Small uppercase heading with an optional info icon for the explanation. */
+function CardTitle({ icon: Icon, title, info, saveAs, children }: { icon: typeof Zap; title: string; info?: string; saveAs?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+        {title}
+        {info && <ChartInfoTooltip title={title} description={info} />}
+        {saveAs && <SaveChartButton name={saveAs} />}
+      </h4>
+      {children}
+    </div>
+  );
 }
 
-const getEnergyLabelColor = (label: string): string => {
-  const colors: Record<string, string> = {
-    "A+++++": "bg-green-700 text-white",
-    "A++++": "bg-green-700 text-white",
-    "A+++": "bg-green-600 text-white",
-    "A++": "bg-green-500 text-white",
-    "A+": "bg-green-400 text-white",
-    A: "bg-green-500 text-white",
-    B: "bg-lime-500 text-white",
-    C: "bg-yellow-400 text-black",
-    D: "bg-orange-400 text-white",
-    E: "bg-orange-500 text-white",
-    F: "bg-red-500 text-white",
-    G: "bg-red-700 text-white",
-  };
-  return colors[label] || "bg-muted text-muted-foreground";
-};
+/** One headline figure in the header row. */
+function Kpi({ label, value, unit, info }: { label: string; value: string; unit?: string; info?: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm">
+      <div className="flex items-center text-[10px] uppercase text-muted-foreground">
+        <span className="leading-tight">{label}</span>
+        {info && <ChartInfoTooltip title={label} description={info} />}
+      </div>
+      <div className="whitespace-nowrap text-base font-semibold tabular-nums text-foreground">
+        {value}{unit && value !== "–" && <span className="ml-1 text-[11px] font-normal text-muted-foreground">{unit}</span>}
+      </div>
+    </div>
+  );
+}
 
-const BuildingDetailPanel = ({ building, modelId, carrier = '', turbineData = {} }: BuildingDetailPanelProps) => {
-  const [timeSeriesData, setTimeSeriesData] = useState<LocationTimeSeriesData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<BuildingTab>('energy');
-  const { t } = useTranslation();
+/** Row of small toggle buttons. */
+export function Toggle<T extends string>({ options, value, onChange }: { options: [T, string][]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+      {options.map(([v, label]) => (
+        <button key={v} onClick={() => onChange(v)}
+          className={`rounded px-2 py-0.5 text-xs ${v === value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-  const turbineIdToName = useMemo(() => {
-    const lookup: Record<number, string> = {};
-    Object.entries(turbineData).forEach(([name, info]) => {
-      lookup[info.turbine_id] = name;
-    });
-    return lookup;
-  }, [turbineData]);
+/** Supplies to uses over the run, all carriers in one diagram, joined at the heat pump. */
+/** Splits a long name at the space nearest its middle, so compact labels need less width. */
+function twoLines(name: string): string {
+  if (name.length <= 16) return name;
+  const spaces = [...name.matchAll(/ /g)].map((m) => m.index!);
+  if (spaces.length === 0) return name;
+  const cut = spaces.reduce((best, i) => (Math.abs(i - name.length / 2) < Math.abs(best - name.length / 2) ? i : best));
+  return `${name.slice(0, cut)}\n${name.slice(cut + 1)}`;
+}
 
-  const getWindTurbineName = (): string | null => {
-    if (!building.techConfig) return null;
-    const windKey = Object.keys(building.techConfig).find(
-      (k) => k.includes("wind") || k === "wind_onshore"
-    );
-    if (!windKey) return null;
-    const windConfig = building.techConfig[windKey] as Record<string, unknown> | undefined;
-    if (!windConfig) return null;
-    const constraints = windConfig.constraints as
-      | Array<{ key: string; value: unknown }>
-      | undefined;
-    let turbineId: number | null = null;
-    if (constraints) {
-      const idConstraint = constraints.find((c) => c.key === "turbine_id");
-      if (idConstraint) turbineId = Number(idConstraint.value);
-    } else if (windConfig.turbine_id) {
-      turbineId = Number(windConfig.turbine_id);
-    }
-    if (turbineId && turbineIdToName[turbineId]) {
-      return turbineIdToName[turbineId];
-    }
-    return null;
-  };
-
-  const windTurbineName = getWindTurbineName();
-
-  useEffect(() => {
-    const loadTimeSeries = async () => {
-      if (!building.matchedLocationId) return;
-      setLoading(true);
-      try {
-        const data = await fetchLocationTimeSeries(modelId, building.matchedLocationId, undefined, undefined, carrier);
-        setTimeSeriesData(data);
-      } catch (error) {
-        console.error("Failed to load time series:", error);
-      } finally {
-        setLoading(false);
+/** `compact` wraps long names, puts each value with one decimal under its name, and narrows the side margins. */
+export function BuildingSankey({ results, t, label = flowLabel, compact = false }: { results: CarrierResult[]; t: TFn; label?: typeof flowLabel; compact?: boolean }) {
+  const colors = useThemeColors();
+  const option = useMemo<EChartsOption>(() => {
+    const nodes = new Map<string, string>();
+    const links: { source: string; target: string; value: number }[] = [];
+    for (const r of results) {
+      const name = (key: string) => label(key, r.carrier, t);
+      r.flows.forEach((f) => nodes.set(name(f.key), f.color));
+      for (const l of allocateFlows(r.flows)) {
+        if (l.kwh > 0.5 && name(l.from) !== name(l.to)) links.push({ source: name(l.from), target: name(l.to), value: l.kwh });
       }
+    }
+    const ambient = t("results.buildingDetail.flow.ambient", "Ambient heat");
+    for (const a of ambientHeat(results.flatMap((r) => r.flows))) {
+      nodes.set(ambient, AMBIENT_COLOR);
+      links.push({ source: ambient, target: label(a.key, "heat", t), value: a.kwh });
+    }
+    const targets = new Set(links.map((l) => l.target));
+    return {
+      animation: false,
+      tooltip: {
+        trigger: "item",
+        confine: true,
+        backgroundColor: colors.tooltipBg,
+        borderColor: colors.tooltipBorder,
+        textStyle: { color: colors.text, fontSize: 11 },
+        formatter: (p: any) => p.dataType === "edge"
+          ? `${p.data.source} → ${p.data.target}<br/>${formatCarrierEnergy(p.data.value, "power")}`
+          : `${p.name}<br/>${formatCarrierEnergy(p.value, "power")}`,
+      },
+      series: [{
+        type: "sankey",
+        left: compact ? 95 : 170, right: compact ? 125 : 230, top: 8, bottom: 8,
+        nodeWidth: 14,
+        nodeGap: compact ? 24 : 16,
+        draggable: false,
+        emphasis: { focus: "adjacency" },
+        data: [...nodes].map(([name, color]) => ({
+          name,
+          itemStyle: { color, borderColor: color },
+          label: { position: targets.has(name) ? "right" as const : "left" as const },
+        })),
+        links,
+        lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.45 },
+        label: { color: colors.text, fontSize: 11, formatter: (p: any) => `${compact ? twoLines(p.name) : p.name}${compact ? "\n" : "  "}{v|${formatCarrierEnergy(p.value, "power", compact ? 1 : 2)}}`, rich: { v: { color: colors.textMuted, fontSize: 10 } } },
+      }],
     };
-    loadTimeSeries();
-  }, [modelId, building.matchedLocationId, carrier]);
+  }, [results, t, colors, label, compact]);
+  return <ReactECharts option={option} style={{ height: "100%", width: "100%" }} notMerge />;
+}
 
-  const fClassLabels = useMemo(() => {
-    const rawClasses =
-      building.fClasses && building.fClasses.length > 0
-        ? building.fClasses
-        : parseFClassValue(building.fClass);
-    return rawClasses.map(formatFClassLabel).filter(Boolean);
-  }, [building.fClass, building.fClasses]);
+/** Installed capacities at the node: PV in kWp, battery as power and storage. */
+function InstalledPanel({ data, t, windName }: { data?: LocationTimeSeriesData; t: TFn; windName?: string }) {
+  const rows = installedHere(data).map((r) => {
+    const name = r.family.includes("wind") && windName ? windName : flowLabel(r.family, "power", t);
+    if (r.family.includes("pv")) return [name, `${formatNumber(r.kw, 1)} kWp`];
+    return [name, r.kwh > 0 ? `${formatNumber(r.kw, 1)} kW · ${formatNumber(r.kwh, 1)} kWh` : `${formatNumber(r.kw, 1)} kW`];
+  });
+  return (
+    <div className={SIDE_PANEL_CLASS}>
+      <CardTitle icon={Sun} title={t("results.buildingDetail.installedTechnologies", "Installed technologies")} />
+      <table className="mt-1 w-full text-xs">
+        <tbody>
+          {rows.map(([name, value]) => (
+            <tr key={name} className="border-t border-border/60 first:border-0">
+              <td className="py-0.5 text-foreground">{name}</td>
+              <td className="py-0.5 text-right tabular-nums whitespace-nowrap text-foreground">{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length === 0 && <p className="text-xs text-muted-foreground">{t("results.buildingDetail.nothingInstalled", "No equipment at this building.")}</p>}
+    </div>
+  );
+}
 
-  const isTransformer =
-    building.fClass === "Transformer" ||
-    (building.fClasses ?? []).some((value) => value.toLowerCase() === "transformer");
+interface CostLine { label: string; value: number; color: string; bold?: boolean }
 
-  // totalProduction and totalDemand sum installed capacities (kW), not energy.
-  const energyBalance = building.totalProduction - building.totalDemand;
+/** This building's line exchange at the run's prices, plus equipment and gas cost where the run stores them. */
+function costLines(data: LocationTimeSeriesData | undefined, power: CarrierResult | undefined,
+  gridPrices: BuildingDetailPanelProps["gridPrices"], t: TFn): CostLine[] {
+  if (!gridPrices || !power) return [];
+  const flow = (key: string) => power.flows.find((f) => f.key === key);
+  const stored = (gas: boolean) => (data?.costs ?? [])
+    .filter((c) => c.costs === "monetary" && c.value > 0 && c.techs.endsWith("_import") === gas)
+    .reduce((s, c) => s + c.value, 0);
+  const equipment = stored(false);
+  const gas = stored(true);
+  const bought = ((flow("lineIn")?.totalKwh ?? 0) * gridPrices.import_ct_per_kwh) / 100;
+  const sold = ((flow("lineOut")?.totalKwh ?? 0) * gridPrices.export_ct_per_kwh) / 100;
+  const lines: CostLine[] = [
+    { label: t("results.buildingDetail.importCost", "Import cost"), value: bought, color: flow("lineIn")?.color ?? "#94a3b8" },
+    { label: t("results.buildingDetail.exportRevenue", "Export revenue"), value: -sold, color: flow("lineOut")?.color ?? "#0d9488" },
+  ];
+  if (equipment > 0) lines.push({ label: t("results.buildingDetail.equipment", "Equipment"), value: equipment, color: "#f59e0b" });
+  if (gas > 0) lines.push({ label: t("results.buildingDetail.gas", "Gas"), value: gas, color: "#a16207" });
+  lines.push({ label: t("results.buildingDetail.netTotal", "Net total"), value: bought - sold + equipment + gas, color: "#3b82f6", bold: true });
+  return lines;
+}
 
-  // Compute self-sufficiency for this building
-  const selfSufficiency =
-    building.totalDemand > 0
-      ? Math.max(0, Math.min(100, (building.totalProduction / building.totalDemand) * 100))
-      : 0;
+/** Cost over the run as horizontal bars around a zero line: costs to the right, revenue to the left. */
+function CostPanel({ lines, gridPrices, t }: { lines: CostLine[]; gridPrices: BuildingDetailPanelProps["gridPrices"]; t: TFn }) {
+  const max = Math.max(1, ...lines.map((l) => Math.abs(l.value)));
+  const info = gridPrices && t("results.buildingDetail.costInfo",
+    "Electricity bought at {{imp}} ct/kWh and sold at {{exp}} ct/kWh. Some of the bought electricity may be a neighbour's PV, which the model does not charge for. Equipment cost appears only when the run stores it.",
+    { imp: formatNumber(gridPrices.import_ct_per_kwh, 1), exp: formatNumber(gridPrices.export_ct_per_kwh, 1) });
+  return (
+    <div className={SIDE_PANEL_CLASS}>
+      <CardTitle icon={Euro} title={t("results.buildingDetail.runCost", "Cost over the run")} info={info || undefined} />
+      <div className="mt-1.5 space-y-1">
+        {lines.map((l) => (
+          <div key={l.label} className={`grid grid-cols-[6rem_1fr_4rem] items-center gap-2 text-xs ${l.bold ? "font-semibold" : ""}`}>
+            <span className="truncate text-foreground">{l.label}</span>
+            <div className="relative h-3">
+              <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
+              <div className="absolute inset-y-0 rounded-sm" style={{
+                background: l.color,
+                width: `${(Math.abs(l.value) / max) * 50}%`,
+                [l.value < 0 ? "right" : "left"]: "50%",
+              }} />
+            </div>
+            <span className="text-right tabular-nums text-foreground">{formatCurrency(l.value, 0)}</span>
+          </div>
+        ))}
+      </div>
+      {lines.length === 0 && <p className="text-xs text-muted-foreground">{t("results.buildingDetail.noPrices", "No grid prices for this run.")}</p>}
+    </div>
+  );
+}
 
-  // Compute total cost from time series data
-  const totalCost = useMemo(() => {
-    if (!timeSeriesData?.costs) return null;
-    // Assuming grid import costs are positive values in the costs array
-    const sum = timeSeriesData.costs.reduce((acc, c) => acc + (c.value > 0 ? c.value : 0), 0);
-    return sum > 0 ? sum : null;
-  }, [timeSeriesData?.costs]);
+/** Loads the node's results for every carrier of the run. */
+function useBuildingResults(modelId: number, location: string | undefined, carriers: string[]) {
+  const [byCarrier, setByCarrier] = useState<Record<string, LocationTimeSeriesData>>({});
+  const [loading, setLoading] = useState(false);
+  const key = carriers.join(",");
+  useEffect(() => {
+    if (!location) return;
+    const controller = new AbortController();
+    setLoading(true);
+    Promise.all(key.split(",").map((c) => fetchLocationTimeSeries(modelId, location, undefined, undefined, c, controller.signal)))
+      .then((list) => {
+        const next: Record<string, LocationTimeSeriesData> = {};
+        key.split(",").forEach((c, i) => { if (list[i]) next[c] = list[i]!; });
+        setByCarrier(next);
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [modelId, location, key]);
+  return { byCarrier, loading };
+}
 
-  // Building properties
-  const floors = building.floors3dbag || building.levels;
-  const heightVal = building.heightMax || building.height;
-  const yearBuilt = building.constructionYear || building.yearBuilt;
+/** Headline figures for the header row; a dash where the run lacks the input. */
+function kpiTiles(results: CarrierResult[], installed: ReturnType<typeof installedHere>, lines: CostLine[], floorArea: number | undefined, t: TFn) {
+  const power = results.find((r) => r.carrier === "power")?.flows ?? [];
+  const fullYear = (results[0]?.timesteps.length ?? 0) >= FULL_YEAR_HOURS;
+  const heatDemand = results.find((r) => r.carrier === "heat")?.flows.find((f) => f.key === "demand")?.totalKwh;
+  const pvKwh = power.find((f) => f.key === "pv_supply")?.totalKwh;
+  const pvKwp = installed.find((r) => r.family === "pv_supply")?.kw;
+  const share = selfSufficiency(power);
+  const net = lines.find((l) => l.bold)?.value;
+  const peak = power.find((f) => f.key === "lineIn")?.peakKw;
+  const dash = "–";
+  return [
+    { label: t("results.buildingDetail.kpi.selfSufficiency", "Self-sufficiency"), value: share == null ? dash : `${formatNumber(share * 100, 0)}%`,
+      info: t("results.buildingDetail.kpi.selfSufficiencyInfo", "PV generation here minus what goes to the street line, divided by the electricity used here (Luthander et al., 2015).") },
+    { label: t("results.buildingDetail.kpi.netCost", "Net energy cost"), value: net == null ? dash : formatCurrency(net, 0),
+      info: t("results.buildingDetail.kpi.netCostInfo", "Over the run, as in the cost breakdown below.") },
+    { label: t("results.buildingDetail.kpi.peakImport", "Peak grid import"), value: peak == null ? dash : formatCarrierPower(peak, "power") },
+    { label: t("results.buildingDetail.kpi.specificHeat", "Specific heat demand"),
+      value: heatDemand && floorArea ? formatNumber(heatDemand / floorArea, 0) : dash, unit: fullYear ? "kWh/m²a" : "kWh/m²",
+      info: t("results.buildingDetail.kpi.specificHeatInfo", "Space heating and hot water of the run, divided by the heated floor area BuEM used.") },
+    { label: t("results.buildingDetail.kpi.pvYield", "PV specific yield"),
+      value: pvKwh && pvKwp ? formatNumber(pvKwh / pvKwp, 0) : dash, unit: "kWh/kWp",
+      info: t("results.buildingDetail.kpi.pvYieldInfo", "PV generation of the run divided by the PV capacity on all roof surfaces.") },
+  ];
+}
+
+const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPrices, turbineData = {}, floorArea }: BuildingDetailPanelProps) => {
+  const { t } = useTranslation();
+  const carrierList = carriers && carriers.length > 0
+    ? [...carriers].sort((a, b) => Number(b === "power") - Number(a === "power"))
+    : [carrier || "power"];
+  const { byCarrier, loading } = useBuildingResults(modelId, building.matchedLocationId, carrierList);
+  const [profileCarrier, setProfileCarrier] = useState(carrierList[0]);
+  const [resolution, setResolution] = useState<ProfileResolution>("monthly");
+  const [season, setSeason] = useState<Season>("winter");
+
+  const results = useMemo<CarrierResult[]>(() =>
+    carrierList
+      .filter((c) => byCarrier[c])
+      .map((c) => ({ carrier: c, ...summariseFlows(byCarrier[c].production ?? [], byCarrier[c].consumption ?? [], c) }))
+      .filter((r) => r.flows.length > 0),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [byCarrier, carrierList.join(",")]);
+
+  const anyData = byCarrier[carrierList[0]] ?? Object.values(byCarrier)[0];
+  const installed = installedHere(anyData);
+  const lines = costLines(anyData, results.find((r) => r.carrier === "power"), gridPrices, t);
+  const kpis = kpiTiles(results, installed, lines, floorArea, t);
+  const profile = results.find((r) => r.carrier === profileCarrier) ?? results[0];
+  const label = useCallback((key: string) => flowLabel(key, profile?.carrier ?? "power", t), [profile?.carrier, t]);
+  const carrierName = (c: string) => { const d = carrierDisplay(c); return d.labelKey ? t(d.labelKey, c) : c; };
+
+  const header = results.length > 0 && (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 @min-[720px]:grid-cols-5">
+      {kpis.map((k) => <Kpi key={k.label} {...k} />)}
+    </div>
+  );
+
+  if (loading || results.length === 0) {
+    return (
+      <div className="space-y-3 p-3">
+        {header}
+        <div className={`${PANEL_CLASS} flex items-center gap-2 text-sm text-muted-foreground`}>
+          {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          {loading ? t("results.buildingDetail.loadingTimeSeries", "Loading time series...")
+            : building.matchedLocationId ? t("results.buildingDetail.noEnergyData") : t("results.buildingDetail.noSimulationLinked")}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="md-stagger p-4 space-y-4">
-      {/* Header */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <div className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl">
-              {isTransformer ? (
-                <img
-                  src="/images/transformer-icon-black.svg"
-                  alt={t("results.grid.transformer")}
-                  className="w-6 h-6 dark:invert"
-                />
-              ) : (
-                <Building2 className="w-6 h-6 text-primary" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-foreground">
-                {isTransformer
-                  ? building.matchedLocationId || t("results.grid.transformer")
-                  : `${t("results.buildingDetail.building")} ${building.osmId || building.buildingId}`}
-              </h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {fClassLabels.map((label, idx) => (
-                  <span
-                    key={`${label}-${idx}`}
-                    className="px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full"
-                  >
-                    {label}
-                  </span>
-                ))}
-                {building.matchedLocationId && !isTransformer && (
-                  <span className="px-2 py-0.5 text-xs font-mono bg-muted text-muted-foreground rounded-full flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {building.matchedLocationId}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="@container space-y-3 p-3">
+      {header}
 
-        {/* Building Properties */}
-        {!isTransformer && (
-          <div className="px-4 pb-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {building.area != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.area", "Area")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatNumber(building.area, 0)} m²
-                    </p>
-                  </div>
-                </div>
-              )}
-              {floors != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Layers className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.floors", "Floors")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">{floors}</p>
-                  </div>
-                </div>
-              )}
-              {heightVal != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Ruler className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.height", "Height")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatNumber(heightVal, 1)} m
-                    </p>
-                  </div>
-                </div>
-              )}
-              {yearBuilt != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.yearBuilt", "Built")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">{yearBuilt}</p>
-                  </div>
-                </div>
-              )}
-              {building.energyLabel && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Gauge className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.energyLabel", "Energy Label")}
-                    </p>
-                    <span
-                      className={`inline-block mt-0.5 font-bold px-2 py-0 rounded text-xs ${getEnergyLabelColor(building.energyLabel)}`}
-                    >
-                      {building.energyLabel}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {building.cbsHouseholds != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Home className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.households", "Households")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatNumber(building.cbsHouseholds, 3, 0)}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {building.cbsPopulation != null && (
-                <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      {t("results.buildingDetail.population", "Population")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatNumber(building.cbsPopulation, 3, 0)}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <InstalledPanel data={anyData} t={t} windName={Object.keys(turbineData)[0]} />
+        <CostPanel lines={lines} gridPrices={gridPrices} t={t} />
       </div>
 
-      {/* Energy Metrics */}
-      <div className={CHART_CARD_CLASS}>
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-          <Zap className="w-3.5 h-3.5" />
-          {t("results.buildingDetail.energyOverview", "Energy Overview")}
-        </h4>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {building.yearlyDemandKwh != null && building.yearlyDemandKwh > 0 && (
-            <div className="bg-muted/50 rounded-lg p-3 border border-border">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  {t("results.buildingDetail.yearlyElectricityDemand", "Yearly Electricity Demand")}
-                </span>
-              </div>
-              <p className="text-base font-bold text-foreground">
-                {formatEnergy(building.yearlyDemandKwh)}
-              </p>
-              {building.peakLoadKw != null && building.peakLoadKw > 0 && (
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {t("results.buildingDetail.peak", "Peak")}: {formatPower(building.peakLoadKw)}
-                </p>
-              )}
-            </div>
-          )}
-          {building.yearlyHeatDemandKwh != null && building.yearlyHeatDemandKwh > 0 && (
-            <div className="bg-muted/50 rounded-lg p-3 border border-border">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Flame className="w-3.5 h-3.5 text-orange-500" />
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  {t("results.buildingDetail.yearlyHeatDemand", "Yearly Heat Demand")}
-                </span>
-                {building.heatDemandEstimated && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
-                    {t("results.buildingDetail.estimated", "estimated")}
-                  </span>
-                )}
-              </div>
-              <p className="text-base font-bold text-foreground">
-                {formatEnergy(building.yearlyHeatDemandKwh)}
-              </p>
-            </div>
-          )}
-          <div className="bg-muted/50 rounded-lg p-3 border border-border">
-            <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {t("results.buildingDetail.production")}
-              </span>
-            </div>
-            <p className="text-base font-bold text-foreground">
-              {formatPower(building.totalProduction)}
-            </p>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-3 border border-border">
-            <div className="flex items-center gap-1.5 mb-1">
-              <TrendingDown className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {t("results.buildingDetail.demand")}
-              </span>
-            </div>
-            <p className="text-base font-bold text-foreground">
-              {formatPower(-Math.abs(building.totalDemand))}
-            </p>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-3 border border-border">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Scale className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {t("results.buildingDetail.balance")}
-              </span>
-            </div>
-            <p className="text-base font-bold text-foreground">{formatPower(energyBalance)}</p>
-            {building.totalDemand > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {formatNumber(selfSufficiency, 1)}%{" "}
-                {t("results.buildingDetail.selfSufficient", "self-sufficient")}
-              </p>
+      <div className={PANEL_CLASS}>
+        <CardTitle icon={GitMerge} title={t("results.buildingDetail.energyFlowRun", "Energy flow over the run")} saveAs="building-energy-flow"
+          info={t("results.buildingDetail.sankeyInfoRun", "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pump takes from the air or ground: its heat output minus its electricity input.")} />
+        {/* Width capped so the three node columns stay close enough for the links to read. */}
+        <div className="mx-auto h-[340px] w-full max-w-5xl">
+          <BuildingSankey results={results} t={t} />
+        </div>
+      </div>
+
+      <div className={PANEL_CLASS}>
+        <CardTitle icon={Activity} title={t("results.buildingDetail.profile", "Sources and uses")} saveAs="sources-and-uses"
+          info={t("results.buildingDetail.profileInfo", "Above zero: where the energy comes from. Below zero: what it is used for. The typical day averages each hour of the day over the selected months, in kW. Winter is December to February, summer June to August.")}>
+          <div className="flex flex-wrap justify-end gap-2">
+            {results.length > 1 && (
+              <Toggle value={profile.carrier} onChange={setProfileCarrier}
+                options={results.map((r) => [r.carrier, carrierName(r.carrier)] as [string, string])} />
+            )}
+            <Toggle value={resolution} onChange={setResolution} options={[
+              ["monthly", t("results.buildingDetail.monthly", "Monthly")],
+              ["daily", t("results.buildingDetail.daily", "Daily")],
+              ["typical", t("results.buildingDetail.typicalDay", "Typical day")],
+            ]} />
+            {resolution === "typical" && (
+              <Toggle value={season} onChange={setSeason} options={[
+                ["winter", t("results.buildingDetail.winter", "Winter")],
+                ["summer", t("results.buildingDetail.summer", "Summer")],
+                ["year", t("results.buildingDetail.wholeYear", "Whole year")],
+              ]} />
             )}
           </div>
-        </div>
-
-        {/* Cost summary (if available) */}
-        {totalCost != null && (
-          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-sm">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <DollarSign className="w-3.5 h-3.5" />
-              {t("results.buildingDetail.totalCost", "Total Cost")}
-            </span>
-            <span className="font-bold text-foreground">
-              {formatCurrency(totalCost, 0)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Technologies */}
-      {building.technologies.length > 0 && (
-        <div className={CHART_CARD_CLASS}>
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <Sun className="w-3.5 h-3.5" />
-            {t("results.buildingDetail.installedTechnologies", "Installed Technologies")}
-          </h4>
-          <div className="space-y-2">
-            {building.technologies.map((tech) => {
-              const iconSrc = getTechIcon(tech.tech);
-              const displayName = getTechDisplayName(tech.tech, windTurbineName);
-              const isBattery = tech.tech.includes("battery");
-
-              return (
-                <div
-                  key={tech.tech}
-                  className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2.5 border border-border/50"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-background rounded-md border border-border/50">
-                      {iconSrc ? (
-                        <img src={iconSrc} alt={tech.tech} className="w-4 h-4" />
-                      ) : isBattery ? (
-                        <Battery className="w-4 h-4 text-foreground" />
-                      ) : (
-                        <Zap className="w-4 h-4 text-foreground" />
-                      )}
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{displayName}</span>
-                  </div>
-                  <span className="text-sm font-bold text-foreground">
-                    {isBattery ? `${formatNumber(tech.capacity, 1)} kWh` : formatPower(tech.capacity)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Energy / Cost Tabs */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex border-b border-border">
-          {[
-            {
-              id: "energy" as BuildingTab,
-              label: t("results.buildingDetail.energyProfile"),
-              icon: Activity,
-            },
-            {
-              id: "cost" as BuildingTab,
-              label: t("results.buildingDetail.costs"),
-              icon: DollarSign,
-            },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? "border-b-2 border-primary bg-card text-foreground"
-                  : "border-b-2 border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div key={activeTab} className="md-fade-in p-4">
-          {(() => {
-            if (loading) {
-              return (
-                <div className="space-y-3" aria-busy="true" aria-live="polite">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>
-                      {t("results.buildingDetail.loadingTimeSeries", "Loading time series...")}
-                    </span>
-                  </div>
-                  <div className="md-skeleton h-[260px] w-full rounded-lg bg-muted" />
-                </div>
-              );
-            }
-            if (activeTab === "energy") {
-              const hasEnergyData =
-                building.matchedLocationId &&
-                timeSeriesData &&
-                (timeSeriesData.production?.length > 0 || timeSeriesData.consumption?.length > 0);
-              if (hasEnergyData) {
-                return (
-                  <BuildingEnergyChart
-                    production={timeSeriesData.production || []}
-                    consumption={timeSeriesData.consumption || []}
-                    expectedYearlyDemandKwh={building.yearlyDemandKwh}
-                    height={300}
-                  />
-                );
-              }
-              return (
-                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-                  <Activity className="w-10 h-10 mb-2 opacity-30" />
-                  <p className="text-sm">
-                    {building.matchedLocationId
-                      ? t("results.buildingDetail.noEnergyData")
-                      : t("results.buildingDetail.noSimulationLinked")}
-                  </p>
-                </div>
-              );
-            }
-
-            if (timeSeriesData?.costs && timeSeriesData.costs.length > 0) {
-              return (
-                <CostAnalysisChart
-                  data={timeSeriesData.costs.map((c) => ({
-                    category: (c.techs || "")
-                      .replaceAll("_", " ")
-                      .replaceAll(/\b\w/g, (l) => l.toUpperCase()),
-                    value: c.value,
-                  }))}
-                  totalCost={timeSeriesData.costs.reduce((sum, c) => sum + c.value, 0)}
-                  height={280}
-                />
-              );
-            }
-            return (
-              <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
-                <DollarSign className="w-10 h-10 mb-2 opacity-30" />
-                <p className="text-sm">{t("results.chartLabels.noCostData")}</p>
-              </div>
-            );
-          })()}
+        </CardTitle>
+        <div className="h-[340px]">
+          <BuildingProfileChart timesteps={profile.timesteps} flows={profile.flows} carrier={profile.carrier} label={label}
+            resolution={resolution} season={season}
+            emptyText={t("results.energy.noHoursInSeason", "No hour of this run falls in these months.")} />
         </div>
       </div>
     </div>

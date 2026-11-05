@@ -434,7 +434,7 @@ const VoltageStatusTooltip: FC = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}

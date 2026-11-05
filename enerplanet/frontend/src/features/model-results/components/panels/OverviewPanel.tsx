@@ -1,113 +1,106 @@
-import { useState, useMemo } from 'react';
-import { CHART_CARD_CLASS } from '../ui/PanelStates';
-import { PieChart, Info } from 'lucide-react';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { CostAnalysisChart } from '@/features/simulation-charts/model-results';
-import { transformToCostBreakdown } from '@/features/configurator/utils/transformUtils';
+import { GitMerge, Sun } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatNumber } from '@/utils/formatNumber';
+import { PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
+import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import SaveChartButton from '../ui/SaveChartButton';
+import EnergySummary from './EnergySummary';
+import { BuildingSankey } from './BuildingDetailPanel';
+import { useSystemFlows } from '../../hooks/useSystemFlows';
+import { flowLabel, installedCapacities, systemFlowLabel } from '../../buildingFlows';
+import type { CostRecord, EnergyCapRecord } from '../../types';
 
-const CostDistributionTooltip = () => {
+const GRID_EXCHANGE = /^grid_trafo(_\d+)?_(import|export)$/;
+
+/**
+ * Installed capacities of the run, one light tile per technology: as configured in
+ * operate mode, as chosen by the optimiser in plan mode.
+ */
+function InstalledCard({ energyCap, mode, roundTrip }: { energyCap: EnergyCapRecord[]; mode?: 'plan' | 'operate'; roundTrip?: number }) {
   const { t } = useTranslation();
-  const [show, setShow] = useState(false);
-
+  const rows = installedCapacities(energyCap);
+  const value = (r: ReturnType<typeof installedCapacities>[number]) =>
+    r.family.includes('pv') ? `${formatNumber(r.kw, 1)} kWp`
+      : r.kwh > 0 ? `${formatNumber(r.kw, 1)} kW · ${formatNumber(r.kwh, 1)} kWh`
+        : `${formatNumber(r.kw, 1)} kW`;
+  const buildings = (n: number) => n === 1 ? t('results.overview.oneBuilding', '1 building') : t('results.overview.buildingCount', '{{count}} buildings', { count: n });
   return (
-    <div className="relative inline-block ml-1">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={t('results.charts.costDistribution')}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className="absolute z-[100] top-full left-0 translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('results.charts.costDistribution')}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              {t('results.charts.costDistributionDesc')}
+    <div className={CHART_CARD_CLASS}>
+      <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+        <Sun className="h-4 w-4 text-primary" />
+        {t('results.overview.installed', 'Installed capacities')}
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+          {mode === 'operate' ? t('results.overview.configured', 'Configured') : t('results.overview.optimised', 'Optimised')}
+        </span>
+      </h3>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2">
+        {rows.map((r) => (
+          <div key={r.family} className="min-w-0 rounded-lg border border-border/60 px-3 py-2">
+            <div className="flex items-baseline justify-between gap-2 text-xs">
+              <span className="truncate text-muted-foreground">{flowLabel(r.family, 'power', t)}</span>
+              <span className="whitespace-nowrap text-muted-foreground">{buildings(r.units)}</span>
             </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.capitalCosts')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.capitalCostsDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.lcoe')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.lcoeDesc')}</p>
-                </div>
-              </div>
+            <div className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">
+              {value(r)} <span className="text-xs font-normal text-muted-foreground">{t('results.overview.total', 'total')}</span>
             </div>
+            {r.kwh > 0 && roundTrip != null && (
+              <div className="text-xs text-muted-foreground">{t('results.overview.roundTripLine', '{{value}} round trip', { value: `${formatNumber(roundTrip * 100, 1)}%` })}</div>
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
+      {rows.length === 0 && <p className="text-xs text-muted-foreground">{t('results.overview.nothingInstalled', 'No equipment installed.')}</p>}
     </div>
   );
-};
-
-interface SummaryData {
-  total_cost_eur: number;
-  /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
-  lcoe_eur_mwh: number;
 }
 
 interface OverviewPanelProps {
-  summary: SummaryData | null;
-  costBreakdown: ReturnType<typeof transformToCostBreakdown>;
-  /** Feed-in revenue, already subtracted from summary.total_cost_eur. */
-  feedInIncome?: number;
-  simulationPeriod?: {
-    from_date: string;
-    to_date: string;
-  } | null;
+  modelId: number | null;
+  carriers: string[];
+  gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
+  energyCap: EnergyCapRecord[];
+  /** Cost rows of the run; equipment and fuel cost is every monetary row except grid electricity bought and sold. */
+  costs: CostRecord[];
+  mode?: 'plan' | 'operate';
 }
 
-const OverviewPanel = ({ summary, costBreakdown, feedInIncome, simulationPeriod }: OverviewPanelProps) => {
+/** Electricity over the run, what is installed, and the model-wide energy flow, stacked full width. */
+const OverviewPanel = ({ modelId, carriers, gridPrices, energyCap, costs, mode }: OverviewPanelProps) => {
   const { t } = useTranslation();
+  const { results, loading } = useSystemFlows(modelId, carriers);
+  const summary = results.find((r) => r.carrier === 'power');
+  const battery = (key: string) => summary?.flows.find((f) => f.key === key)?.totalKwh ?? 0;
+  const roundTrip = battery('batteryIn') > 0 ? battery('batteryOut') / battery('batteryIn') : undefined;
+  const equipmentCost = costs
+    .filter((c) => c.costs === 'monetary' && !GRID_EXCHANGE.test(c.techs))
+    .reduce((sum, c) => sum + c.value, 0);
 
-  const periodInfo = useMemo(() => {
-    const hoursInYear = 8760;
-    const fromDateObj = simulationPeriod?.from_date ? new Date(simulationPeriod.from_date) : null;
-    const toDateObj = simulationPeriod?.to_date ? new Date(simulationPeriod.to_date) : null;
-    let timesteps = hoursInYear;
-    if (fromDateObj && toDateObj && !isNaN(fromDateObj.getTime()) && !isNaN(toDateObj.getTime())) {
-      const diffMs = toDateObj.getTime() - fromDateObj.getTime();
-      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
-    }
-    const days = Math.round((timesteps / 24) * 10) / 10;
-    const isPartialYear = timesteps < hoursInYear * 0.95;
-    return { days, isPartialYear };
-  }, [simulationPeriod]);
+  if (loading) {
+    return <PanelLoadingState label={t('results.energy.loadingTimeSeries', 'Loading energy time series...')} />;
+  }
 
   return (
-    <div className="md-stagger p-4 space-y-4">
-      {costBreakdown.length > 0 && (
+    <div className="md-stagger space-y-4 p-4">
+      {summary && <EnergySummary flows={summary.flows} carrier={summary.carrier} hours={summary.timesteps.length} gridPrices={gridPrices}
+        equipmentCost={mode === 'operate' ? undefined : equipmentCost} />}
+
+      <InstalledCard energyCap={energyCap} mode={mode} roundTrip={roundTrip} />
+
+      {results.length > 0 && (
         <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <PieChart className="w-4 h-4 text-primary" />
-            {t('results.charts.costDistribution')}
-            <CostDistributionTooltip />
-          </h3>
-          <ErrorBoundary label="Cost Analysis">
-            <CostAnalysisChart
-              data={costBreakdown}
-              totalCost={summary?.total_cost_eur}
-              lcoe={summary?.lcoe_eur_mwh}
-              income={feedInIncome}
-              height={320}
-              isPartialYear={periodInfo.isPartialYear}
-              simulationDays={periodInfo.days}
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <GitMerge className="h-4 w-4 text-primary" />
+            {t('results.charts.energyFlow')}
+            <span className="text-xs font-normal text-muted-foreground">{t('results.energy.allBuildings', 'all buildings')}</span>
+            <ChartInfoTooltip
+              title={t('results.charts.energyFlow')}
+              description={t('results.overview.sankeyInfo', "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run and over all buildings. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pumps take from the air or ground: their heat output minus their electricity input.")}
             />
-          </ErrorBoundary>
+            <SaveChartButton name="energy-flow" />
+          </h3>
+          <div className="h-[520px]">
+            <BuildingSankey results={results} t={t} label={systemFlowLabel} compact />
+          </div>
         </div>
       )}
     </div>

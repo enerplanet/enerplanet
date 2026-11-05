@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react';
 import { StructuredModelResults, CostRecord } from '@/features/model-results/types';
 import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
 import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
+import { modelSelfSufficiency } from '@/features/model-results/buildingFlows';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
@@ -202,9 +203,7 @@ const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics =>
   // No stored levelised cost => 0 = "not reported". Do not derive one from
   // cost ÷ renewable energy: that is not an LCOE and reads as authoritative.
 
-  const selfSufficiency = totalConsumption > 0
-    ? normalizeMetricValue(Math.min(100, (renewableProduction / totalConsumption) * 100))
-    : 0;
+  const selfSufficiency = normalizeMetricValue(modelSelfSufficiency(results) * 100);
 
   const totalSupply = renewableProduction + gridImport;
   const gridDependency = totalSupply > 0

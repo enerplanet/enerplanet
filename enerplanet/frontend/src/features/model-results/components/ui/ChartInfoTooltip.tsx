@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Info } from 'lucide-react';
 
 interface ChartInfoTooltipProps {
@@ -10,14 +10,22 @@ interface ChartInfoTooltipProps {
 
 const ChartInfoTooltip = ({ title, description, items, children }: ChartInfoTooltipProps) => {
   const [show, setShow] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Open leftwards when a w-72 (288 px) box would run past the window edge.
+  const open = (next: boolean) => {
+    if (next && ref.current) setAlignRight(ref.current.getBoundingClientRect().left + 304 > window.innerWidth);
+    setShow(next);
+  };
 
   return (
-    <div className="relative inline-block ml-1">
+    <div ref={ref} className="relative inline-flex ml-1 normal-case">
       <button
         type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
+        onMouseEnter={() => open(true)}
+        onMouseLeave={() => open(false)}
+        onClick={() => open(!show)}
         className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
         aria-label={title}
       >
@@ -25,7 +33,7 @@ const ChartInfoTooltip = ({ title, description, items, children }: ChartInfoTool
       </button>
 
       {show && (
-        <div className="absolute z-[100] top-full left-0 translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
+        <div className={`absolute z-[100] top-full ${alignRight ? 'right-0' : 'left-0'} translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4`}>
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{description}</div>

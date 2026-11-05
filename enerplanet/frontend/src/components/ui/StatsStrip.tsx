@@ -22,7 +22,7 @@ export function StatsStrip({ items, className = "" }: StatsStripProps) {
 					title={item.hint}
 					className="flex h-9 items-center gap-2 rounded-lg border border-border bg-muted/30 px-3"
 				>
-					<span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+					<span className="text-[10px] font-medium uppercase text-muted-foreground">
 						{item.label}
 					</span>
 					<span

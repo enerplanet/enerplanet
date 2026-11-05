@@ -291,8 +291,8 @@ func (s *Store) GetUsedGridPrices(modelID uint) (interface{}, error) {
 
 // TechAggregate holds a tech-level aggregation row.
 type TechAggregate struct {
-	Techs string  `gorm:"column:techs"`
-	Total float64 `gorm:"column:total"`
+	Techs string  `gorm:"column:techs" json:"techs"`
+	Total float64 `gorm:"column:total" json:"total"`
 }
 
 // resolveCarrier returns the carrier to query, defaulting to "power" if not specified.
@@ -568,14 +568,14 @@ func (s *Store) GetLocationPyPSAPower(modelID uint, location string) ([]backendM
 
 // CarrierSummary holds the computed carrier summary fields.
 type CarrierSummary struct {
-	SumProduction       float64
-	SumConsumption      float64
-	RenewableProduction float64
-	GridImport          float64
-	PeakDemand          float64
-	TimestepCount       int64
-	ProdAggregates      []TechAggregate
-	ConAggregates       []TechAggregate
+	SumProduction       float64         `json:"sum_production"`
+	SumConsumption      float64         `json:"sum_consumption"`
+	RenewableProduction float64         `json:"renewable_production"`
+	GridImport          float64         `json:"grid_import"`
+	PeakDemand          float64         `json:"peak_demand"`
+	TimestepCount       int64           `json:"timestep_count"`
+	ProdAggregates      []TechAggregate `json:"prod_aggregates"`
+	ConAggregates       []TechAggregate `json:"con_aggregates"`
 }
 
 // GetCarrierSummary returns carrier summary for a specific carrier (defaults to "power").

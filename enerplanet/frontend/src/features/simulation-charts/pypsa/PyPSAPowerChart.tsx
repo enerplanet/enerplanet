@@ -1,6 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo } from 'react';
-import { createTimeXAxis, createDataZoom, createSplitLineStyle } from './chartUtils';
+import { createTimeXAxis, createDataZoom, createSplitLineStyle, saveImageToolbox, useThemeColors } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface PowerFlowChartProps {
@@ -34,6 +34,7 @@ export const PyPSAPowerChart = ({
   title = 'Power Flow',
   showReactive = true,
 }: PowerFlowChartProps) => {
+  const themeColors = useThemeColors();
   const option = useMemo(() => {
     const series: any[] = [
       {
@@ -125,7 +126,7 @@ export const PyPSAPowerChart = ({
 
   return (
     <div className="w-full">
-      <ReactECharts option={option} style={{ height }} />
+      <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'power') }} style={{ height }} />
     </div>
   );
 };

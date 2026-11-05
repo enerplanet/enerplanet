@@ -1,5 +1,6 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { GridComponentOption, XAXisComponentOption, DataZoomComponentOption, TooltipComponentOption } from 'echarts';
+import { i18n } from '@spatialhub/i18n';
+import type { GridComponentOption, XAXisComponentOption, DataZoomComponentOption, TooltipComponentOption, ToolboxComponentOption } from 'echarts';
 
 // Theme detection for ECharts (which uses canvas, not CSS)
 function subscribeToTheme(callback: () => void) {
@@ -43,6 +44,17 @@ export function useThemeColors(): ThemeColors {
     tooltipBorder: isDark ? '#4b5563' : '#e5e7eb',  // gray-600 : gray-200
     gridLine: isDark ? '#4b5563' : '#f3f4f6',       // gray-600 : gray-100
   }), [isDark]);
+}
+
+/** Icon in the chart's top-right corner that downloads it as a PNG. */
+export function saveImageToolbox(colors: ThemeColors, name: string): ToolboxComponentOption {
+  return {
+    right: 4,
+    top: 0,
+    itemSize: 14,
+    iconStyle: { borderColor: colors.textMuted },
+    feature: { saveAsImage: { name, title: i18n.t('results.saveImage', 'Save as PNG'), pixelRatio: 2, backgroundColor: colors.background } },
+  };
 }
 
 export function createChartGrid(topPercent: number = 20): GridComponentOption {

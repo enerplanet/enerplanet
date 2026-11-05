@@ -8,10 +8,5 @@ export interface CapacityData {
   type?: 'supply' | 'demand';
 }
 
-export interface CostBreakdown {
-  category: string;
-  value: number;
-  color?: string;
-}
 
 
