@@ -37,7 +37,10 @@ export const useModelsQuery = (params?: {
 			const models = Array.isArray(res.data) ? res.data : [];
 			const hasActive = models.some((m) => isActiveStatus(m.status));
 
-			return hasActive ? 3000 : 30000;
+			// Busy runs: refresh every 5s so rows flip on completion. Idle:
+			// stop polling — statuses only change via user actions (mutations
+			// invalidate) or the window-focus refetch, both covered above.
+			return hasActive ? 5000 : false;
 		},
 		staleTime: (query) => {
 			const res = query.state.data as ModelListResponse | undefined;

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestForLegacyAndFullGridPFAreFull(t *testing.T) {
+func TestForLegacyIsFull(t *testing.T) {
 	want := Capabilities{
 		Convergence:  true,
 		Voltage:      true,
@@ -15,10 +15,26 @@ func TestForLegacyAndFullGridPFAreFull(t *testing.T) {
 		Curtailment:  true,
 		Losses:       true,
 	}
-	for _, s := range []Source{SourceLegacy, SourceFullGridPF} {
-		if got := For(s); got != want {
-			t.Errorf("For(%q) = %+v, want %+v", s, got, want)
-		}
+	if got := For(SourceLegacy); got != want {
+		t.Errorf("For(%q) = %+v, want %+v", SourceLegacy, got, want)
+	}
+}
+
+// SourceFullGridPF covers the same electrical data as legacy EXCEPT curtailment:
+// the power_flow/ output carries no available-vs-actual pair (dispatch is fixed), so
+// the capability must not claim it — otherwise the Grid renders a meaningless section.
+func TestForFullGridPFIsFullExceptCurtailment(t *testing.T) {
+	want := Capabilities{
+		Convergence:  true,
+		Voltage:      true,
+		Power:        true,
+		Transformers: true,
+		LineLoading:  true,
+		Curtailment:  false,
+		Losses:       true,
+	}
+	if got := For(SourceFullGridPF); got != want {
+		t.Errorf("For(%q) = %+v, want %+v", SourceFullGridPF, got, want)
 	}
 }
 

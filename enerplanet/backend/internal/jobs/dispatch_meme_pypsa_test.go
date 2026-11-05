@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spatialhub_backend/internal/meme/pypsapass"
 	"spatialhub_backend/internal/models"
 
 	tentacronclient "spatialhub_backend/internal/tentacron"
@@ -146,6 +147,28 @@ nb1,demand_1,electricity,2020-01-01T01:00:00,300
 	return dir
 }
 
+// writePypsaLegCSVs writes the Calliope flow CSVs of a realistic PyPSA leg: a
+// grid import at the transformer (the flow_out-only tech the pass turns into
+// the Slack generator on the transformer's MV bus), building PV, and the
+// building's demand. The node/tech names mirror what MEME's Calliope emitter
+// produces (grid_<trafo id>_import).
+func writePypsaLegCSVs(t *testing.T, root string) string {
+	t.Helper()
+	dir := root + "/csv"
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_out.csv", []byte(`nodes,techs,carriers,timesteps,flow_out
+ntrafo_1,grid_trafo_1_import,electricity,2020-01-01T00:00:00,100
+ntrafo_1,grid_trafo_1_import,electricity,2020-01-01T01:00:00,200
+nb1,pv_supply_1,electricity,2020-01-01T00:00:00,1000
+nb1,pv_supply_1,electricity,2020-01-01T01:00:00,2000
+`), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_in.csv", []byte(`nodes,techs,carriers,timesteps,flow_in
+nb1,demand_1,electricity,2020-01-01T00:00:00,500
+nb1,demand_1,electricity,2020-01-01T01:00:00,300
+`), 0o644))
+	return dir
+}
+
 func TestReadFlowCSV_buildsIndexAlignedCarrierSeries(t *testing.T) {
 	dir := writeFlowCSVs(t, t.TempDir())
 
@@ -256,6 +279,78 @@ ntrafo_82,grid_trafo_82_export,electricity,2020-01-01T00:00:00,0
 	require.Len(t, pf.Buses, 3, "n1, ntrafo_82 (LV), ntrafo_82_mv (MV)")
 }
 
+// TestFilterCarrier_keepsElectricityAndUnknown pins the electrical-only filter:
+// heat/gas flows are dropped, electricity and unknown-carrier (a CSV without a
+// carriers column) are kept.
+func TestFilterCarrier_keepsElectricityAndUnknown(t *testing.T) {
+	in := []pypsapass.CarrierSeries{
+		{Tech: "grid", Carrier: "electricity"},
+		{Tech: "heat_pump", Carrier: "heat"},
+		{Tech: "gas_boiler", Carrier: "natural_gas"},
+		{Tech: "legacy", Carrier: ""},
+	}
+	got := filterCarrier(in, "electricity")
+	require.Len(t, got, 2)
+	assert.Equal(t, "grid", got[0].Tech)
+	assert.Equal(t, "legacy", got[1].Tech)
+}
+
+// TestPypsaPowerFlow_heatPumpIsLoadNotLineTech is the regression for the
+// "needs a fixed dispatch for air_source_heat_pump" failure: a heat pump
+// appears in BOTH flow files (heat out, electricity in) with DIFFERENT
+// carriers, so it must not be mistaken for a connecting line and stripped. The
+// electrical pass keeps only its electricity draw, as a load.
+func TestPypsaPowerFlow_heatPumpIsLoadNotLineTech(t *testing.T) {
+	root := t.TempDir()
+	dir := root + "/csv"
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_out.csv", []byte(`nodes,techs,carriers,timesteps,flow_out
+ntrafo_1,grid_trafo_1_import,electricity,2020-01-01T00:00,100
+n1,air_source_heat_pump_1,heat,2020-01-01T00:00,300
+`), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_in.csv", []byte(`nodes,techs,carriers,timesteps,flow_in
+n1,air_source_heat_pump_1,electricity,2020-01-01T00:00,90
+n1,demand_1,electricity,2020-01-01T00:00,50
+`), 0o644))
+
+	calc := map[string]interface{}{
+		"topology": []interface{}{
+			map[string]interface{}{
+				"from": map[string]interface{}{"id": "1"},
+				"to": map[string]interface{}{
+					"id": "trafo_1",
+					"properties": map[string]interface{}{
+						"feature_type": "TopologyNode",
+						"f_class":      "transformer",
+						"rated_power":  400000.0,
+					},
+				},
+				"length": 0.05,
+				"pipe":   "lv",
+			},
+		},
+		"pypsa": map[string]interface{}{},
+	}
+	calcBytes, err := json.Marshal(calc)
+	require.NoError(t, err)
+
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir)
+	require.NoError(t, err)
+
+	// The heat pump's heat output is not electrical: only the grid import is a
+	// generator. The heat pump is NOT stripped as a line tech.
+	require.Len(t, pf.Generators, 1, "only the grid import is an electrical generator")
+	assert.Contains(t, pf.Generators[0].Name, "grid_trafo_1_import")
+
+	// Its electricity draw is a load, alongside the building demand.
+	var loadNames []string
+	for _, l := range pf.Loads {
+		loadNames = append(loadNames, l.Name)
+	}
+	assert.Contains(t, loadNames, "n1_air_source_heat_pump_1", "the heat pump's electricity draw is a load")
+	assert.Contains(t, loadNames, "n1_demand_1")
+}
+
 func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testing.T) {
 	const modelID = uint(42)
 	fakeZip := []byte("PK\x03\x04simulated-meme-pypsa-result\x00tail\xff")
@@ -266,7 +361,7 @@ func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testin
 	db, _ := newDispatchMockDB(t, modelRows(modelID))
 
 	root := t.TempDir()
-	csvDir := writeFlowCSVs(t, root)
+	csvDir := writePypsaLegCSVs(t, root)
 	locator := &fakeCalliopeLocator{csvDir: csvDir}
 	store := NewFilesystemResultZipStore(root)
 	enq := &fakePypsaEnqueuer{}
@@ -274,23 +369,59 @@ func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testin
 	err := HandleDispatchMemePyPSA(context.Background(), pypsaDispatchTask(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, store, locator, enq)
 	require.NoError(t, err)
 
-	// The T1K job reached the isolated PyPSA-only target, with a leg-scoped
-	// Idempotency-Key and exactly one submit.
+	// The canonical power-flow job reached the isolated PyPSA-only target, with
+	// a leg-scoped Idempotency-Key and exactly one submit.
 	require.Equal(t, memeTargetPyPSAOnly, fake.gotTarget)
-	require.Contains(t, fake.gotPayload, "power_flow", "the pass output is embedded in the job body")
+	require.NotContains(t, fake.gotPayload, "power_flow", "the rejected top-level power_flow block must not be emitted")
 	require.Equal(t, "model_42_pypsa", fake.gotIdempotency, "Idempotency-Key is pypsa-leg + model scoped")
 	require.EqualValues(t, 1, fake.submitted.Load())
 
-	// The power_flow block carries the pass's generators/loads (p_set from the
-	// flow CSVs, scaled by the pass at build time).
-	pf, _ := fake.gotPayload["power_flow"].(map[string]interface{})
-	require.NotNil(t, pf, "power_flow block present")
-	if pf != nil {
-		gens, _ := pf["generators"].([]interface{})
-		loads, _ := pf["loads"].([]interface{})
-		require.Greater(t, len(gens), 0, "generators p_set injected")
-		require.Greater(t, len(loads), 0, "loads p_set injected")
+	// The experiment is the canonical power_flow mode with the pass's Slack
+	// generator resolved to its supply technology.
+	exp, _ := fake.gotPayload["experiment"].(map[string]interface{})
+	require.NotNil(t, exp)
+	require.Equal(t, "power_flow", exp["mode"])
+	pfOpts, _ := exp["power_flow"].(map[string]interface{})
+	require.NotNil(t, pfOpts, "experiment.power_flow present")
+	require.NotEmpty(t, pfOpts["slack"], "the balancing supply technology is named")
+	require.Equal(t, "grid_trafo_1_import", pfOpts["slack"])
+	require.Equal(t, "newton_raphson", pfOpts["method"])
+	require.Equal(t, false, pfOpts["distribute_slack"])
+	require.NotContains(t, exp, "scenarios")
+
+	// The electrical network lives in the canonical model: every node of the
+	// pass (including the invented transformer MV buses) has electrical.v_nom,
+	// every transmission arc carries transmission.electrical, and the grid
+	// import trade is gone (the mode gate rejects it).
+	model, _ := fake.gotPayload["model"].(map[string]interface{})
+	require.NotNil(t, model)
+	require.NotContains(t, model, "trade", "trade is a decision and rejected in power_flow mode")
+	nodes, _ := model["nodes"].(map[string]interface{})
+	require.NotNil(t, nodes)
+	require.Equal(t, 5, len(nodes), "nb1, ntrafo_1/2, ntrafo_1_mv/ntrafo_2_mv")
+	for id, raw := range nodes {
+		n, _ := raw.(map[string]interface{})
+		elec, _ := n["electrical"].(map[string]interface{})
+		require.NotNil(t, elec, "node %s carries electrical.v_nom", id)
+		vn, _ := elec["v_nom"].(float64)
+		require.Greater(t, vn, 0.0, "node %s v_nom is positive", id)
 	}
+	transmissions, _ := model["transmission"].(map[string]interface{})
+	require.Equal(t, 4, len(transmissions), "lv_1, mv_0 + the two transformers")
+	for id, raw := range transmissions {
+		arc, _ := raw.(map[string]interface{})
+		elec, _ := arc["electrical"].(map[string]interface{})
+		require.NotNil(t, elec, "transmission %s carries electrical", id)
+		require.Contains(t, []string{"line", "transformer"}, elec["kind"], "transmission %s has a branch kind", id)
+	}
+	techs, _ := model["technologies"].(map[string]interface{})
+	slack, _ := techs["grid_trafo_1_import"].(map[string]interface{})
+	require.NotNil(t, slack, "the slack supply technology is in the model")
+	require.Equal(t, "supply", slack["role"])
+	require.NotContains(t, slack, "dispatch", "the slack balances; no fixed dispatch")
+	pv, _ := techs["pv_supply_1"].(map[string]interface{})
+	require.NotNil(t, pv, "the non-slack generator technology is in the model")
+	require.NotEmpty(t, pv["dispatch"], "generator p_set becomes technology.dispatch")
 
 	// The PyPSA-leg run was saved (never the Calliope record).
 	require.NotNil(t, runs.rec)

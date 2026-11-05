@@ -333,6 +333,8 @@ func (h *ModelHandler) GetModels(c *gin.Context) {
 	modelsList = h.applyPrivacyFilters(*userCtx, modelsList)
 	h.populateChildModelIDs(modelsList)
 	h.populateParentModelTitles(modelsList)
+	modelsList = trimListPayload(modelsList)
+	h.populatePyPSALegStatus(modelsList)
 
 	c.JSON(200, gin.H{
 		"success":     true,
@@ -380,6 +382,9 @@ func (h *ModelHandler) GetModel(c *gin.Context) {
 	h.filterWorkspaceData(&model, userCtx.UserID, userCtx.Email)
 	h.populateChildModelIDsForModel(&model)
 	h.populateParentModelTitleForModel(&model)
+	single := []models.Model{model}
+	h.populatePyPSALegStatus(single)
+	model.PyPSALegStatus = single[0].PyPSALegStatus
 
 	httputil.SuccessResponse(c, model)
 }

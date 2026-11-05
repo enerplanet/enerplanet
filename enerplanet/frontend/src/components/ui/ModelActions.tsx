@@ -14,6 +14,11 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	readonly onCopy?: (model: T) => void;
 	readonly onRunMeme?: (model: T) => void;
 	readonly onRunMemePypsa?: (model: T) => void;
+	// Hide the PyPSA action once it has already run successfully.
+	readonly pypsaCompleted?: boolean;
+	// Render the PyPSA action red when the last attempt failed, so a failure
+	// stays obvious (the model itself stays 'completed').
+	readonly pypsaFailed?: boolean;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
 	readonly onMoveToWorkspace?: (model: T) => void;
@@ -44,6 +49,8 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onCopy,
 	onRunMeme,
 	onRunMemePypsa,
+	pypsaCompleted = false,
+	pypsaFailed = false,
 	onDelete,
 	onShare,
 	onMoveToWorkspace,
@@ -66,7 +73,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	const { t } = useTranslation();
 	const disabled = isModelDisabled(model.status);
 	const completed = isModelCompleted(model.status);
-	
+
 	const isOwner = currentUserId && 'user_id' in model &&
 		String(model.user_id) === String(currentUserId);
 
@@ -85,7 +92,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 		{
 			onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 			showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
+			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
 		},
 		{ disabled, completed, shouldDisableDelete, deleteTooltipText },
 		t
@@ -100,10 +107,10 @@ const getTooltip = (defaultText: string, disabled: boolean, disabledText?: strin
 
 function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?: string }>(
 	model: T,
-	props: Pick<ModelActionsProps<T>, 
+	props: Pick<ModelActionsProps<T>,
 		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onRunMemePypsa" | "onDelete" | "onShare" | "onMoveToWorkspace" |
 		"showView" | "showEdit" | "showDownload" | "showCopy" | "showDelete" | "showShare" | "showMoveToWorkspace" |
-		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip"
+		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "pypsaCompleted" | "pypsaFailed"
 	>,
 	computed: {
 		disabled: boolean;
@@ -116,7 +123,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	const {
 		onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 		showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip
+		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
 	} = props;
 	const { disabled, completed, shouldDisableDelete, deleteTooltipText } = computed;
 
@@ -140,13 +147,15 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			// run (the derived pass reads the Calliope results), so it shows
 			// only on completed models — mirroring view/download. The backend
 			// also enforces this gate (400 on run-meme-pypsa without one).
+			// Hidden once the leg has completed: re-running a successful power
+			// flow is a state change the UI offers only by request.
 			key: "runMemePypsa",
 			icon: Activity,
-			tooltip: t("common.modelActions.runPypsaOnMeme"),
-			variant: "secondary",
+			tooltip: pypsaFailed ? t("common.modelActions.runPypsaFailed") : t("common.modelActions.runPypsaOnMeme"),
+			variant: pypsaFailed ? ("danger" as const) : "secondary",
 			onClick: () => onRunMemePypsa?.(model),
-			show: !!onRunMemePypsa && completed,
-			disabled,
+			show: !!onRunMemePypsa && completed && !pypsaCompleted,
+			disabled: false,
 		},
 		{
 			key: "view",

@@ -120,13 +120,13 @@ func csvRowAt(row []string, idx int) string {
 }
 
 type flowCSVRow struct {
-	node, tech, ts string
-	val            float64
+	node, tech, carrier, ts string
+	val                     float64
 }
 
 type flowSeries struct {
-	node, tech string
-	values     []float64
+	node, tech, carrier string
+	values              []float64
 }
 
 // setOfTechs returns the set of tech names present in the given series.
@@ -134,6 +134,19 @@ func setOfTechs(series []pypsapass.CarrierSeries) map[string]bool {
 	out := make(map[string]bool, len(series))
 	for _, s := range series {
 		out[s.Tech] = true
+	}
+	return out
+}
+
+// filterCarrier keeps only the series carrying carrier. A series with an
+// unknown (empty) carrier is kept too: a flow CSV without a carriers column
+// predates the filter and must not silently drop every flow.
+func filterCarrier(series []pypsapass.CarrierSeries, carrier string) []pypsapass.CarrierSeries {
+	out := make([]pypsapass.CarrierSeries, 0, len(series))
+	for _, s := range series {
+		if s.Carrier == carrier || s.Carrier == "" {
+			out = append(out, s)
+		}
 	}
 	return out
 }
@@ -177,6 +190,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 	}
 	nodeIdx := csvColIdx(cols, "nodes")
 	techIdx := csvColIdx(cols, "techs")
+	carrierIdx := csvColIdx(cols, "carriers")
 	tsIdx := csvColIdx(cols, "timesteps")
 	valIdx := csvColIdx(cols, valueCol)
 	if nodeIdx < 0 || techIdx < 0 || tsIdx < 0 || valIdx < 0 {
@@ -195,6 +209,10 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		}
 		node := csvRowAt(row, nodeIdx)
 		tech := csvRowAt(row, techIdx)
+		carrier := ""
+		if carrierIdx >= 0 {
+			carrier = csvRowAt(row, carrierIdx)
+		}
 		ts := csvRowAt(row, tsIdx)
 		if node == "" || tech == "" || ts == "" {
 			continue
@@ -204,7 +222,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 			continue
 		}
 		tsSet[ts] = true
-		rows = append(rows, flowCSVRow{node: node, tech: tech, ts: ts, val: v})
+		rows = append(rows, flowCSVRow{node: node, tech: tech, carrier: carrier, ts: ts, val: v})
 	}
 
 	// Deterministic index alignment: distinct timesteps sorted (RFC3339 timestamps
@@ -224,7 +242,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		key := r.node + "\x00" + r.tech
 		s := groups[key]
 		if s == nil {
-			s = &flowSeries{node: r.node, tech: r.tech, values: make([]float64, len(tsList))}
+			s = &flowSeries{node: r.node, tech: r.tech, carrier: r.carrier, values: make([]float64, len(tsList))}
 			groups[key] = s
 		}
 		if idx := tsIdxMap[r.ts]; idx < len(s.values) {
@@ -244,6 +262,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		out = append(out, pypsapass.CarrierSeries{
 			FromLocation: s.node,
 			Tech:         s.tech,
+			Carrier:      s.carrier,
 			Timeseries:   s.values,
 		})
 	}
@@ -268,6 +287,16 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	if err != nil {
 		return nil, fmt.Errorf("read calliope flow_in for pypsa p_set: %w", err)
 	}
+
+	// The power flow solves the ELECTRICAL network only. The flow CSVs carry
+	// every carrier (heat, natural_gas, ...): a heat pump's heat output or a gas
+	// boiler's gas draw is not an electrical injection/withdrawal, so keep only
+	// electricity. This also makes the link-tech strip below correct: a real
+	// cable appears in both files with the SAME carrier (electricity), while a
+	// heat pump appears with heat out and electricity in — different carriers,
+	// so it is no longer mistaken for a line and stripped.
+	prod = filterCarrier(prod, "electricity")
+	con = filterCarrier(con, "electricity")
 
 	// Strip the transmission (connecting-line) techs. results_flow_*.csv carry
 	// BOTH the real dispatch (supply techs like grid_trafo_82_import in flow_out,
@@ -323,24 +352,6 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	})
 }
 
-// injectPowerFlow embeds the pass's PowerFlow into the MEME job under the
-// top-level "power_flow" key. It is deliberately top-level (NOT under
-// job.model, whose schema MEME owns and must not gain an unknown key): the
-// `meme-pypsa` target's run.py PF mode reads it from there. The
-// key is overridable/clear — a job that carries one replaces any earlier value.
-func injectPowerFlow(memeJob map[string]interface{}, pf *pypsapass.PowerFlow) error {
-	b, err := json.Marshal(pf)
-	if err != nil {
-		return fmt.Errorf("marshal power flow: %w", err)
-	}
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return fmt.Errorf("decode power flow: %w", err)
-	}
-	memeJob["power_flow"] = v
-	return nil
-}
-
 // HandleDispatchMemePyPSA is the isolated PyPSA power-flow leg: AFTER a
 // successful Calliope run it builds a MEME `meme-pypsa` job from the parsed
 // Calliope flow CSVs, dispatches it independently (its own leg-keyed run
@@ -348,7 +359,8 @@ func injectPowerFlow(memeJob map[string]interface{}, pf *pypsapass.PowerFlow) er
 // logic), and persists the result zip. It mirrors HandleDispatchMeme's shape,
 // but:
 //   - gates on CalliopeLegReady (refuses without a completed Calliope leg);
-//   - injects the pass's power_flow block into the job body;
+//   - folds the pass's power flow into the canonical job (mode power_flow +
+//     the electrical model fields, ADR-0008) instead of a top-level block;
 //   - submits to memeTargetPyPSAOnly with a pypsa-scoped Idempotency-Key;
 //   - records the run via SaveLeg(modelID, MemeLegPyPSA, ...), never Save.
 //
@@ -377,11 +389,13 @@ func HandleDispatchMemePyPSA(
 		return fmt.Errorf("failed to unmarshal dispatch_meme_pypsa payload: %w", err)
 	}
 
-	// Any dispatch failure must leave the model in a terminal 'failed' state,
-	// or it sits in 'queue' forever (see dispatch_meme.go).
+	// Any dispatch failure must leave the model terminal, or it sits in 'queue'
+	// forever (see dispatch_meme.go). A failed PyPSA leg restores the model to
+	// 'completed' (see failPypsaLeg): the Calliope results it was derived from
+	// are still valid, so the leg stays retryable without re-running Calliope.
 	defer func() {
 		if retErr != nil {
-			markModelFailed(db, p.ModelID, retErr)
+			failPypsaLeg(db, runs, p.ModelID, retErr)
 		}
 	}()
 
@@ -417,26 +431,23 @@ func HandleDispatchMemePyPSA(
 	if err != nil {
 		return fmt.Errorf("translate payload to MEME job for model %d: %w", p.ModelID, err)
 	}
-	var memeJob any
-	if err := json.Unmarshal(translated.Job, &memeJob); err != nil {
-		return fmt.Errorf("decode translated MEME job for model %d: %w", p.ModelID, err)
-	}
-	var jobMap map[string]interface{}
-	if m, ok := memeJob.(map[string]interface{}); ok {
-		jobMap = m
-	}
-	if jobMap == nil {
-		jobMap = map[string]interface{}{}
-	}
 
-	// 4. Build the isolated power flow from the payload + Calliope flow CSVs and
-	//    inject it into the job body as the top-level "power_flow" block.
+	// 4. Build the isolated power flow from the payload + Calliope flow CSVs
+	//    and fold it into the canonical MEME job: experiment.mode=power_flow
+	//    with the pass's slack, node.electrical.v_nom, the electrical arcs
+	//    and the fixed dispatch (ADR-0008) — never the rejected top-level
+	//    "power_flow" block.
 	pf, err := pypsaPowerFlowFromBytes(calcBytes, csvDir)
 	if err != nil {
 		return fmt.Errorf("build pypsa power flow for model %d: %w", p.ModelID, err)
 	}
-	if err := injectPowerFlow(jobMap, pf); err != nil {
-		return fmt.Errorf("inject power flow into MEME job for model %d: %w", p.ModelID, err)
+	jobBytes, err := meme.ApplyPowerFlow(translated.Job, pf)
+	if err != nil {
+		return fmt.Errorf("apply power flow to MEME job for model %d: %w", p.ModelID, err)
+	}
+	var jobMap map[string]interface{}
+	if err := json.Unmarshal(jobBytes, &jobMap); err != nil {
+		return fmt.Errorf("decode power-flow MEME job for model %d: %w", p.ModelID, err)
 	}
 
 	// 5. Resolve the TentaCron job id for the PYPSA leg. No run recorded OR a
