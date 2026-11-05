@@ -120,13 +120,13 @@ func csvRowAt(row []string, idx int) string {
 }
 
 type flowCSVRow struct {
-	node, tech, ts string
-	val            float64
+	node, tech, carrier, ts string
+	val                     float64
 }
 
 type flowSeries struct {
-	node, tech string
-	values     []float64
+	node, tech, carrier string
+	values              []float64
 }
 
 // setOfTechs returns the set of tech names present in the given series.
@@ -134,6 +134,19 @@ func setOfTechs(series []pypsapass.CarrierSeries) map[string]bool {
 	out := make(map[string]bool, len(series))
 	for _, s := range series {
 		out[s.Tech] = true
+	}
+	return out
+}
+
+// filterCarrier keeps only the series carrying carrier. A series with an
+// unknown (empty) carrier is kept too: a flow CSV without a carriers column
+// predates the filter and must not silently drop every flow.
+func filterCarrier(series []pypsapass.CarrierSeries, carrier string) []pypsapass.CarrierSeries {
+	out := make([]pypsapass.CarrierSeries, 0, len(series))
+	for _, s := range series {
+		if s.Carrier == carrier || s.Carrier == "" {
+			out = append(out, s)
+		}
 	}
 	return out
 }
@@ -177,6 +190,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 	}
 	nodeIdx := csvColIdx(cols, "nodes")
 	techIdx := csvColIdx(cols, "techs")
+	carrierIdx := csvColIdx(cols, "carriers")
 	tsIdx := csvColIdx(cols, "timesteps")
 	valIdx := csvColIdx(cols, valueCol)
 	if nodeIdx < 0 || techIdx < 0 || tsIdx < 0 || valIdx < 0 {
@@ -195,6 +209,10 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		}
 		node := csvRowAt(row, nodeIdx)
 		tech := csvRowAt(row, techIdx)
+		carrier := ""
+		if carrierIdx >= 0 {
+			carrier = csvRowAt(row, carrierIdx)
+		}
 		ts := csvRowAt(row, tsIdx)
 		if node == "" || tech == "" || ts == "" {
 			continue
@@ -204,7 +222,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 			continue
 		}
 		tsSet[ts] = true
-		rows = append(rows, flowCSVRow{node: node, tech: tech, ts: ts, val: v})
+		rows = append(rows, flowCSVRow{node: node, tech: tech, carrier: carrier, ts: ts, val: v})
 	}
 
 	// Deterministic index alignment: distinct timesteps sorted (RFC3339 timestamps
@@ -224,7 +242,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		key := r.node + "\x00" + r.tech
 		s := groups[key]
 		if s == nil {
-			s = &flowSeries{node: r.node, tech: r.tech, values: make([]float64, len(tsList))}
+			s = &flowSeries{node: r.node, tech: r.tech, carrier: r.carrier, values: make([]float64, len(tsList))}
 			groups[key] = s
 		}
 		if idx := tsIdxMap[r.ts]; idx < len(s.values) {
@@ -244,6 +262,7 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 		out = append(out, pypsapass.CarrierSeries{
 			FromLocation: s.node,
 			Tech:         s.tech,
+			Carrier:      s.carrier,
 			Timeseries:   s.values,
 		})
 	}
@@ -268,6 +287,16 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	if err != nil {
 		return nil, fmt.Errorf("read calliope flow_in for pypsa p_set: %w", err)
 	}
+
+	// The power flow solves the ELECTRICAL network only. The flow CSVs carry
+	// every carrier (heat, natural_gas, ...): a heat pump's heat output or a gas
+	// boiler's gas draw is not an electrical injection/withdrawal, so keep only
+	// electricity. This also makes the link-tech strip below correct: a real
+	// cable appears in both files with the SAME carrier (electricity), while a
+	// heat pump appears with heat out and electricity in — different carriers,
+	// so it is no longer mistaken for a line and stripped.
+	prod = filterCarrier(prod, "electricity")
+	con = filterCarrier(con, "electricity")
 
 	// Strip the transmission (connecting-line) techs. results_flow_*.csv carry
 	// BOTH the real dispatch (supply techs like grid_trafo_82_import in flow_out,

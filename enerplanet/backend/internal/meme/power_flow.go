@@ -53,10 +53,12 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 		return nil, fmt.Errorf("meme: decode job experiment: %w", err)
 	}
 
-	// The pass labels exactly one generator control=Slack (the grid/trafo MV
-	// connection); it becomes experiment.power_flow.slack, a supply technology
-	// on the electricity network. distribute_slack=false so ONLY that slack
-	// balances; every other injection needs its own fixed dispatch.
+	// resolveSlack picks the pass's single slack from its control=Slack
+	// generators (the strongest grid/trafo MV connection; a model can span
+	// several, see resolveSlack); it becomes experiment.power_flow.slack, a
+	// supply technology on the electricity network. distribute_slack=false so
+	// ONLY that slack balances; every other injection — including the other
+	// grid imports — needs its own fixed dispatch.
 	slackName, slackNode, slackTech, err := resolveSlack(pf)
 	if err != nil {
 		return nil, fmt.Errorf("meme: apply power flow: %w", err)
@@ -145,6 +147,16 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The power flow solves the electrical network only. Drop every non-demand
+	// technology whose output carrier is not electricity (heat pumps, gas
+	// boilers, gas imports): MEME's power_flow gate requires a fixed dispatch on
+	// every non-demand technology, which the electrical pass cannot supply for a
+	// heat or gas tech. A heat pump's electricity draw is carried by the pass as
+	// a load (its flow_in), so the loads loop below re-creates it as a demand
+	// technology — the correct electrical picture.
+	if err := dropNonElectricalSupply(techs); err != nil {
+		return nil, err
+	}
 	for _, g := range pf.Generators {
 		if g.Name == slackName {
 			continue
@@ -221,19 +233,25 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	return json.Marshal(top)
 }
 
-// resolveSlack finds the pass's single control=Slack generator and maps its
-// name back to the canonical supply technology id (the <node>_<tech> suffix
-// against the pass's own buses).
+// resolveSlack finds the pass's control=Slack generators and picks the single
+// one MEME balances on, mapping its name back to the canonical supply
+// technology id (the <node>_<tech> suffix against the pass's own buses).
+//
+// A model can span several grid connections (one per transformer, joined into
+// a single MV network), and the pass labels each as Slack; MEME's power_flow
+// mode takes exactly one reference bus, so the strongest connection (largest
+// total scheduled |MW|, tie-broken by name) is chosen as the slack and every
+// other grid import keeps its scheduled dispatch as a fixed PQ injection
+// (ApplyPowerFlow gives every non-slack generator its dispatch series).
 func resolveSlack(pf *pypsapass.PowerFlow) (name, node, techID string, err error) {
 	var slack *pypsapass.Generator
 	for i := range pf.Generators {
 		if pf.Generators[i].Control != "Slack" {
 			continue
 		}
-		if slack != nil {
-			return "", "", "", fmt.Errorf("the pass labels more than one generator control=Slack (%q and %q); MEME balances on the single named slack", slack.Name, pf.Generators[i].Name)
+		if slack == nil || strongerConnection(&pf.Generators[i], slack) {
+			slack = &pf.Generators[i]
 		}
-		slack = &pf.Generators[i]
 	}
 	if slack == nil {
 		return "", "", "", fmt.Errorf("the pass labels no generator control=Slack (the grid/trafo MV connection that balances the network)")
@@ -243,6 +261,29 @@ func resolveSlack(pf *pypsapass.PowerFlow) (name, node, techID string, err error
 		return "", "", "", fmt.Errorf("cannot resolve the supply technology of the slack generator %q (its name is not <node>_<tech> for any pass bus)", slack.Name)
 	}
 	return slack.Name, slack.Bus, techID, nil
+}
+
+// strongerConnection reports whether a is the better slack of two grid
+// connections: the one with the larger total scheduled |MW| absorbs the
+// network imbalance with the least relative disturbance; an equal total falls
+// back to name order so the choice is deterministic.
+func strongerConnection(a, b *pypsapass.Generator) bool {
+	if sa, sb := totalAbsMW(a.PSet), totalAbsMW(b.PSet); sa != sb {
+		return sa > sb
+	}
+	return a.Name < b.Name
+}
+
+// totalAbsMW sums a series' absolute values; a nil or empty series is 0.
+func totalAbsMW(series []float64) float64 {
+	var sum float64
+	for _, v := range series {
+		if v < 0 {
+			v = -v
+		}
+		sum += v
+	}
+	return sum
 }
 
 // componentTechID splits a pass component name "<location>_<tech>" at the
@@ -266,6 +307,31 @@ func componentTechID(name string, buses []pypsapass.Bus) string {
 		return ""
 	}
 	return name[len(best)+1:]
+}
+
+// dropNonElectricalSupply removes every supply/storage/conversion technology
+// whose output carrier is not electricity. The power flow solves the electrical
+// network only, and MEME's power_flow gate requires a fixed dispatch on every
+// non-demand technology — which the electrical pass cannot supply for a heat or
+// gas tech. Demand technologies are kept (MEME skips them; they ride their own
+// carrier's bus). A heat pump's electricity draw is carried by the pass as a
+// load, so removing its heat-supply tech is correct: the loads loop re-creates
+// it as a demand technology.
+func dropNonElectricalSupply(techs map[string]json.RawMessage) error {
+	for id, raw := range techs {
+		var t map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return fmt.Errorf("meme: decode technology %q: %w", id, err)
+		}
+		if unquote(t["role"]) == "demand" {
+			continue
+		}
+		if contains(decodeStringList(t["carrier_out"]), "electricity") {
+			continue
+		}
+		delete(techs, id)
+	}
+	return nil
 }
 
 // ensureTech returns the technology with id, creating a fresh one at node when

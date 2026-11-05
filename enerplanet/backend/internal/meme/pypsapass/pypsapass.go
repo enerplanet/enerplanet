@@ -115,10 +115,13 @@ type Load struct {
 
 // CarrierSeries is one location's per-timestep production or consumption.
 // FromLocation is the Calliope location (which maps onto a bus name); Tech is
-// the technology id; Timeseries is index-aligned with the model timesteps.
+// the technology id; Carrier is the energy carrier the flow carries
+// (electricity, heat, natural_gas, ...); Timeseries is index-aligned with the
+// model timesteps.
 type CarrierSeries struct {
 	FromLocation string
 	Tech         string
+	Carrier      string
 	Timeseries   []float64
 }
 

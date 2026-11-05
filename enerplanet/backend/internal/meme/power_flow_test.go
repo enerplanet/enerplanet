@@ -212,6 +212,78 @@ func TestApplyPowerFlow_rejectsPassWithoutSlack(t *testing.T) {
 	assert.Contains(t, err.Error(), "no generator control=Slack")
 }
 
+// TestApplyPowerFlow_multiGridPicksOneSlack pins the multi-grid-contract: a
+// model can span several transformers, so the pass labels each grid import
+// control=Slack; resolveSlack picks exactly one (the strongest connection by
+// total scheduled |MW|) and the other grid imports keep their scheduled
+// dispatch as fixed PQ injections, so MEME still balances on one reference.
+func TestApplyPowerFlow_multiGridPicksOneSlack(t *testing.T) {
+	job, err := TranslatePayload(elOnlyPayload())
+	require.NoError(t, err)
+	pf := &pypsapass.PowerFlow{
+		Buses: []pypsapass.Bus{
+			{Name: "nb1", VNom: 0.4},
+			{Name: "ntrafo_1", VNom: 20},
+			{Name: "ntrafo_1_mv", VNom: 20},
+			{Name: "ntrafo_2", VNom: 20},
+			{Name: "ntrafo_2_mv", VNom: 20},
+		},
+		Lines: []pypsapass.Line{},
+		Generators: []pypsapass.Generator{
+			// The stronger grid connection (300 |MW| total): wins the slack.
+			{Name: "ntrafo_1_grid_trafo_1_import", Bus: "ntrafo_1_mv", Control: "Slack", PSet: []float64{100, 200}},
+			// The weaker one (75 |MW| total): demoted to a fixed PQ injection.
+			{Name: "ntrafo_2_grid_trafo_2_import", Bus: "ntrafo_2_mv", Control: "Slack", PSet: []float64{50, 25}},
+			{Name: "nb1_pv_supply_1", Bus: "nb1", Control: "PQ", PSet: []float64{10, 20}},
+		},
+		Loads: []pypsapass.Load{},
+	}
+
+	got, err := ApplyPowerFlow(job.Job, pf)
+	require.NoError(t, err, "two grid connections must not be rejected")
+
+	var top map[string]interface{}
+	require.NoError(t, json.Unmarshal(got, &top))
+	exp := top["experiment"].(map[string]interface{})
+	assert.Equal(t, "grid_trafo_1_import", exp["power_flow"].(map[string]interface{})["slack"], "the stronger connection is the slack")
+
+	m := top["model"].(map[string]interface{})
+	techs := m["technologies"].(map[string]interface{})
+
+	slack, _ := techs["grid_trafo_1_import"].(map[string]interface{})
+	require.NotNil(t, slack)
+	assert.Equal(t, []interface{}{"ntrafo_1_mv"}, slack["node"])
+	assert.NotContains(t, slack, "dispatch", "the slack balances; it needs no fixed dispatch")
+
+	other, _ := techs["grid_trafo_2_import"].(map[string]interface{})
+	require.NotNil(t, other, "the second grid import keeps a technology")
+	assert.Equal(t, []interface{}{50.0, 25.0}, other["dispatch"], "the demoted grid import keeps its scheduled injection")
+}
+
+// TestDropNonElectricalSupply_removesHeatAndGasKeepsElectricity pins the
+// electrical-only job: heat/gas supply techs (which MEME's power_flow gate
+// would demand a dispatch for) are dropped, while electricity supply and every
+// demand tech stay.
+func TestDropNonElectricalSupply_removesHeatAndGasKeepsElectricity(t *testing.T) {
+	techs := map[string]json.RawMessage{
+		"grid_import":  mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
+		"pv":           mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
+		"gas_boiler":   mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
+		"heat_pump":    mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
+		"gas_import":   mustJSON(map[string]any{"role": "supply", "carrier_out": "natural_gas"}),
+		"demand_1":     mustJSON(map[string]any{"role": "demand", "carrier_in": "electricity"}),
+		"demand_heat":  mustJSON(map[string]any{"role": "demand", "carrier_in": "heat"}),
+	}
+	require.NoError(t, dropNonElectricalSupply(techs))
+
+	for _, kept := range []string{"grid_import", "pv", "demand_1", "demand_heat"} {
+		assert.Contains(t, techs, kept, "%s must be kept", kept)
+	}
+	for _, dropped := range []string{"gas_boiler", "heat_pump", "gas_import"} {
+		assert.NotContains(t, techs, dropped, "%s must be dropped", dropped)
+	}
+}
+
 // TestComponentTechID_pinsTheNameSplitting pins the slack/tech id resolution:
 // the longest bus prefix wins, so an underscore-carrying location (ntrafo_82)
 // splits before the tech suffix, and a plain building node splits at its own

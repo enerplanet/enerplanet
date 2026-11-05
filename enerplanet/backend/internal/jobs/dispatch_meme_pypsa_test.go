@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spatialhub_backend/internal/meme/pypsapass"
 	"spatialhub_backend/internal/models"
 
 	tentacronclient "spatialhub_backend/internal/tentacron"
@@ -276,6 +277,78 @@ ntrafo_82,grid_trafo_82_export,electricity,2020-01-01T00:00:00,0
 	// The line itself still exists in the topology (buses n1 <-> ntrafo_82).
 	require.Len(t, pf.Lines, 1)
 	require.Len(t, pf.Buses, 3, "n1, ntrafo_82 (LV), ntrafo_82_mv (MV)")
+}
+
+// TestFilterCarrier_keepsElectricityAndUnknown pins the electrical-only filter:
+// heat/gas flows are dropped, electricity and unknown-carrier (a CSV without a
+// carriers column) are kept.
+func TestFilterCarrier_keepsElectricityAndUnknown(t *testing.T) {
+	in := []pypsapass.CarrierSeries{
+		{Tech: "grid", Carrier: "electricity"},
+		{Tech: "heat_pump", Carrier: "heat"},
+		{Tech: "gas_boiler", Carrier: "natural_gas"},
+		{Tech: "legacy", Carrier: ""},
+	}
+	got := filterCarrier(in, "electricity")
+	require.Len(t, got, 2)
+	assert.Equal(t, "grid", got[0].Tech)
+	assert.Equal(t, "legacy", got[1].Tech)
+}
+
+// TestPypsaPowerFlow_heatPumpIsLoadNotLineTech is the regression for the
+// "needs a fixed dispatch for air_source_heat_pump" failure: a heat pump
+// appears in BOTH flow files (heat out, electricity in) with DIFFERENT
+// carriers, so it must not be mistaken for a connecting line and stripped. The
+// electrical pass keeps only its electricity draw, as a load.
+func TestPypsaPowerFlow_heatPumpIsLoadNotLineTech(t *testing.T) {
+	root := t.TempDir()
+	dir := root + "/csv"
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_out.csv", []byte(`nodes,techs,carriers,timesteps,flow_out
+ntrafo_1,grid_trafo_1_import,electricity,2020-01-01T00:00,100
+n1,air_source_heat_pump_1,heat,2020-01-01T00:00,300
+`), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_in.csv", []byte(`nodes,techs,carriers,timesteps,flow_in
+n1,air_source_heat_pump_1,electricity,2020-01-01T00:00,90
+n1,demand_1,electricity,2020-01-01T00:00,50
+`), 0o644))
+
+	calc := map[string]interface{}{
+		"topology": []interface{}{
+			map[string]interface{}{
+				"from": map[string]interface{}{"id": "1"},
+				"to": map[string]interface{}{
+					"id": "trafo_1",
+					"properties": map[string]interface{}{
+						"feature_type": "TopologyNode",
+						"f_class":      "transformer",
+						"rated_power":  400000.0,
+					},
+				},
+				"length": 0.05,
+				"pipe":   "lv",
+			},
+		},
+		"pypsa": map[string]interface{}{},
+	}
+	calcBytes, err := json.Marshal(calc)
+	require.NoError(t, err)
+
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir)
+	require.NoError(t, err)
+
+	// The heat pump's heat output is not electrical: only the grid import is a
+	// generator. The heat pump is NOT stripped as a line tech.
+	require.Len(t, pf.Generators, 1, "only the grid import is an electrical generator")
+	assert.Contains(t, pf.Generators[0].Name, "grid_trafo_1_import")
+
+	// Its electricity draw is a load, alongside the building demand.
+	var loadNames []string
+	for _, l := range pf.Loads {
+		loadNames = append(loadNames, l.Name)
+	}
+	assert.Contains(t, loadNames, "n1_air_source_heat_pump_1", "the heat pump's electricity draw is a load")
+	assert.Contains(t, loadNames, "n1_demand_1")
 }
 
 func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testing.T) {
