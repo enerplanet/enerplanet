@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createChartGrid, createSplitLineStyle, useThemeColors, saveImageToolbox } from './chartUtils';
+import { createChartGrid, createSplitLineStyle, useThemeColors } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface TransformerLoadingItem {
@@ -123,5 +123,5 @@ export const PyPSATransformerLoadingChart = ({
     );
   }
 
-  return <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'transformer-loading') }} style={{ height, width: '100%' }} />;
+  return <ReactECharts option={option} style={{ height, width: '100%' }} />;
 };

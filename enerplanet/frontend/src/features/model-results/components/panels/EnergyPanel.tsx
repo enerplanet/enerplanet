@@ -9,7 +9,6 @@ import { systemFlowLabel, systemFlows } from '../../buildingFlows';
 import { BuildingProfileChart, type Season } from './BuildingProfileChart';
 import { Toggle } from './BuildingDetailPanel';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
-import SaveChartButton from '../ui/SaveChartButton';
 import { useTranslation } from '@spatialhub/i18n';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -181,7 +180,6 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
             descKey={generation ? 'results.energy.dailyEnergyBalanceDesc' : 'results.energy.dailyEnergyBalanceDescHeat'}
             items={ENERGY_BALANCE_ITEMS}
           />
-          <SaveChartButton name="daily-energy-balance" />
         </h3>
         <ErrorBoundary label="Energy Balance Chart">
           <EnergyBalanceChart
@@ -203,7 +201,6 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
               title={t('results.energy.typicalDay', 'Typical day')}
               description={t('results.energy.typicalDayInfo', 'Average power per hour of the day over the chosen months, summed over all buildings. Supplies above zero, uses below; the tallest bar below zero is when demand peaks.')}
             />
-            <SaveChartButton name="typical-day" />
             <div className="ml-auto">
               <Toggle
                 options={[['winter', t('results.buildingDetail.winter', 'Winter')], ['summer', t('results.buildingDetail.summer', 'Summer')], ['year', t('results.buildingDetail.wholeYear', 'Whole year')]]}

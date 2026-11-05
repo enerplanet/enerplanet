@@ -13,7 +13,6 @@ import type { StructuredModelResults } from '@/features/model-results/types';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
-import SaveChartButton from '../ui/SaveChartButton';
 import { energyKwhFromCost } from '../../lcoeUnits';
 import { splitGridPurchase } from '../../costSplit';
 
@@ -242,7 +241,6 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
                   { color: '#f59e0b', label: t('results.chartLabels.capex'), description: t('results.costInfo.equipmentCostDesc') },
                 ]}
               />
-              <SaveChartButton name="cost-distribution" />
             </h3>
             <ErrorBoundary label="Cost Analysis">
               <CostAnalysisChart
@@ -271,7 +269,6 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
                   { color: '#f59e0b', label: t('results.chartLabels.operatingCost'), description: t('results.costInfo.runningCostDesc') },
                 ]}
               />
-              <SaveChartButton name="system-cost-summary" />
             </h3>
             <ErrorBoundary label="System Cost Summary">
               <SystemCostSummaryChart
@@ -300,7 +297,6 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
                 title={t('results.charts.lcoeComparison')}
                 description={t('results.costInfo.lcoeComparisonDesc')}
               />
-              <SaveChartButton name="lcoe-comparison" />
             </h3>
             <ErrorBoundary label="LCOE Comparison">
               <LCOEComparisonChart data={lcoeData} systemLCOE={systemLCOE} height={300} />
@@ -321,7 +317,6 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
                   { color: '#f59e0b', label: t('results.chartLabels.operatingCost'), description: t('results.costInfo.runningCostDesc') },
                 ]}
               />
-              <SaveChartButton name="investment-breakdown" />
             </h3>
             <ErrorBoundary label="Investment Breakdown">
               <InvestmentBreakdownChart data={investmentData} height={300} simulationDays={periodInfo.days} isPartialYear={periodInfo.isPartialYear} systemTotalCost={systemCostSummary?.totalCost} />

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createChartGrid, createDataZoomWithStyle, createTimeXAxis, createSplitLineStyle, useThemeColors, saveImageToolbox } from './chartUtils';
+import { createChartGrid, createDataZoomWithStyle, createTimeXAxis, createSplitLineStyle, useThemeColors } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface PyPSACurtailmentChartProps {
@@ -93,5 +93,5 @@ export const PyPSACurtailmentChart = ({
     );
   }
 
-  return <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'curtailment') }} style={{ height, width: '100%' }} />;
+  return <ReactECharts option={option} style={{ height, width: '100%' }} />;
 };
