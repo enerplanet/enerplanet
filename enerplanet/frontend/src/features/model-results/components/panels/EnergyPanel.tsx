@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { LineChart, TrendingUp, Zap, Sun, Info, Flame } from 'lucide-react';
+import { LineChart, Info, Flame } from 'lucide-react';
 import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, CarrierProdRecord, CarrierConRecord } from '../../types';
 import {
@@ -10,10 +10,7 @@ import {
 } from '../../carrierUnits';
 import { fetchCarrierTimeSeries } from '../../api';
 import {
-  DailyLoadProfile,
   EnergyBalanceChart,
-  HourlyRenewableGenerationChart,
-  LoadDurationCurve,
 } from '@/features/simulation-charts/model-results';
 import { useTranslation } from '@spatialhub/i18n';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -71,22 +68,6 @@ const ENERGY_BALANCE_ITEMS: InfoTipItem[] = [
   { color: 'bg-red-500', labelKey: 'results.energy.consumption', descKey: 'results.energy.consumptionDesc' },
 ];
 
-const RENEWABLE_ITEMS: InfoTipItem[] = [
-  { color: 'bg-amber-500', labelKey: 'results.energy.techContribution', descKey: 'results.energy.techContributionDesc' },
-  { color: 'bg-blue-500', labelKey: 'results.energy.zoomAndInspect', descKey: 'results.energy.zoomAndInspectDesc' },
-];
-
-const GENERATION_DURATION_ITEMS: InfoTipItem[] = [
-  { color: 'bg-amber-500', labelKey: 'results.energy.peakHours', descKey: 'results.energy.peakHoursDesc' },
-  { color: 'bg-blue-500', labelKey: 'results.energy.loadDuration', descKey: 'results.energy.loadDurationDesc' },
-];
-
-const LOAD_PROFILE_ITEMS: InfoTipItem[] = [
-  { color: 'bg-red-500', labelKey: 'results.energy.peakPeriods', descKey: 'results.energy.peakPeriodsDesc' },
-  { color: 'bg-green-500', labelKey: 'results.energy.offPeak', descKey: 'results.energy.offPeakDesc' },
-  { color: 'bg-gray-400', labelKey: 'results.energy.averageLine', descKey: 'results.energy.averageLineDesc' },
-];
-
 interface EnergyPanelProps {
   structuredResults: StructuredModelResults | null;
   modelId: number | null;
@@ -95,8 +76,6 @@ interface EnergyPanelProps {
 
 const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelProps) => {
   const { t } = useTranslation();
-  const [carrierProd, setCarrierProd] = useState<CarrierProdRecord[]>([]);
-  const [carrierCon, setCarrierCon] = useState<CarrierConRecord[]>([]);
   const [dailyProd, setDailyProd] = useState<CarrierProdRecord[]>([]);
   const [dailyCon, setDailyCon] = useState<CarrierConRecord[]>([]);
   const [carrierLoading, setCarrierLoading] = useState(false);
@@ -129,8 +108,6 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
     );
 
     if (embeddedMatches) {
-      setCarrierProd(embeddedProd);
-      setCarrierCon(embeddedCon);
       setDailyProd(embeddedProd);
       setDailyCon(embeddedCon);
       setCarrierLoaded(true);
@@ -141,24 +118,10 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
     const loadCarrierData = async () => {
       setCarrierLoading(true);
       try {
-        // Fetch hourly and daily data in parallel
-        const [hourlyData, dailyData] = await Promise.all([
-          fetchCarrierTimeSeries(modelId, { aggregate: 'hourly', carrier }),
-          fetchCarrierTimeSeries(modelId, { aggregate: 'daily', carrier }),
-        ]);
-
-        if (hourlyData) {
-          setCarrierProd(hourlyData.carrier_prod || []);
-          setCarrierCon(hourlyData.carrier_con || []);
-        }
-
+        const dailyData = await fetchCarrierTimeSeries(modelId, { aggregate: 'daily', carrier });
         if (dailyData) {
           setDailyProd(dailyData.carrier_prod || []);
           setDailyCon(dailyData.carrier_con || []);
-        } else if (hourlyData) {
-          // Fallback if daily endpoint fails
-          setDailyProd(hourlyData.carrier_prod || []);
-          setDailyCon(hourlyData.carrier_con || []);
         }
 
         setCarrierLoaded(true);
@@ -208,84 +171,6 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
             height={320}
           />
         </ErrorBoundary>
-      </div>
-
-      {/* Generation charts only make sense for a generating carrier; a heat
-          load has no renewable mix and no generation duration curve. */}
-      {generation && (
-        <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Sun className="w-4 h-4 text-primary" />
-            {t('results.energy.hourlyRenewableGeneration', 'Hourly renewable generation')}
-            <InfoTip
-              titleKey="results.energy.hourlyRenewableGeneration"
-              descKey="results.energy.hourlyRenewableGenerationDesc"
-              items={RENEWABLE_ITEMS}
-            />
-          </h3>
-          <ErrorBoundary label="Renewable Generation Chart">
-            <HourlyRenewableGenerationChart
-              production={carrierProd}
-              carrier={carrier}
-              height={340}
-            />
-          </ErrorBoundary>
-        </div>
-      )}
-
-      {/* Two charts side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            {generation ? (
-              <Zap className="w-4 h-4 text-primary" />
-            ) : (
-              <Flame className="w-4 h-4 text-orange-500" />
-            )}
-            {t('results.energy.dailyLoadProfile')}
-            <InfoTip
-              titleKey="results.energy.dailyLoadProfile"
-              descKey={generation ? 'results.energy.dailyLoadProfileDesc' : 'results.energy.dailyLoadProfileDescHeat'}
-              items={LOAD_PROFILE_ITEMS}
-            />
-          </h3>
-          <ErrorBoundary label="Daily Load Profile">
-            <DailyLoadProfile
-              consumption={carrierCon}
-              carrier={carrier}
-              height={280}
-              title=""
-            />
-          </ErrorBoundary>
-        </div>
-
-        <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            {generation
-              ? t('results.energy.generationDurationCurve', 'Generation duration curve')
-              : t('results.energy.demandDurationCurve')}
-            <InfoTip
-              titleKey={generation ? 'results.energy.generationDurationCurve' : 'results.energy.demandDurationCurve'}
-              descKey={
-                generation
-                  ? 'results.energy.generationDurationCurveDesc'
-                  : 'results.energy.demandDurationCurveDesc'
-              }
-              items={generation ? GENERATION_DURATION_ITEMS : LOAD_PROFILE_ITEMS}
-            />
-          </h3>
-          <ErrorBoundary label="Generation Duration Curve">
-            <LoadDurationCurve
-              production={carrierProd}
-              consumption={carrierCon}
-              carrier={carrier}
-              variant={generation ? 'supply' : 'demand'}
-              height={280}
-              title=""
-            />
-          </ErrorBoundary>
-        </div>
       </div>
     </div>
   );

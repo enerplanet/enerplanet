@@ -437,63 +437,6 @@ func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []
 // System time-series
 // ---------------------------------------------------------------------------
 
-// BalanceDailyRow is the shape for daily-aggregated system balance / unmet demand.
-type BalanceDailyRow struct {
-	ModelID  uint      `json:"model_id"`
-	Carrier  string    `json:"carrier"`
-	Location string    `json:"location"`
-	Timestep time.Time `gorm:"column:timestep" json:"timestep"`
-	Value    float64   `json:"value"`
-}
-
-func (s *Store) GetDailySystemBalance(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsSystemBalance{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, AVG(value) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetDailyUnmetDemand(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsUnmetDemand{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-// ResourceTotalRow is the shape for resource consumption totals.
-type ResourceTotalRow struct {
-	ModelID  uint    `json:"model_id"`
-	Location string  `json:"location"`
-	Tech     string  `json:"tech"`
-	Timestep string  `json:"timestep"`
-	Value    float64 `json:"value"`
-}
-
-func (s *Store) GetResourceConTotals(modelID uint) []ResourceTotalRow {
-	var rows []ResourceTotalRow
-	s.db.Model(&backendModels.ResultsResourceCon{}).
-		Select("model_id, 'all' as location, tech, '' as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, tech").
-		Order("value DESC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetLineFlows(modelID uint) ([]backendModels.ResultsLineFlow, error) {
-	var items []backendModels.ResultsLineFlow
-	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
-	return items, err
-}
-
 func (s *Store) GetTransformerFlows(modelID uint) ([]backendModels.ResultsTransformerFlow, error) {
 	var items []backendModels.ResultsTransformerFlow
 	err := s.db.Where("model_id = ?", modelID).Find(&items).Error

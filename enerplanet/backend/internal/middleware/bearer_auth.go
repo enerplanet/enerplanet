@@ -114,7 +114,7 @@ func toolboxReadRoute(route string) bool {
 	switch route {
 	case "/api/auth/whoami", "/api/models", "/api/models/:id",
 		"/api/models/:id/results", "/api/models/:id/results/structured",
-		"/api/models/:id/results/carrier-timeseries", "/api/models/:id/results/system-timeseries",
+		"/api/models/:id/results/carrier-timeseries",
 		"/api/models/:id/results/location/:location", "/api/models/:id/results/pypsa",
 		"/api/models/:id/download", "/api/results/:id", "/api/results/:id/layer":
 		return true

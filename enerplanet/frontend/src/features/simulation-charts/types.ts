@@ -1,20 +1,5 @@
 // Types for Calliope simulation results
 
-interface SankeyNode {
-  name: string;
-}
-
-interface SankeyLink {
-  source: string;
-  target: string;
-  value: number;
-}
-
-export interface EnergyFlowData {
-  nodes: SankeyNode[];
-  links: SankeyLink[];
-}
-
 export interface CapacityData {
   technology: string;
   installed_capacity_kw: number;

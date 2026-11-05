@@ -7,7 +7,6 @@ import { ModelInfo, StructuredModelResults } from './types';
 import {
   transformToCapacityData,
   transformToCostBreakdown,
-  transformToEnergyFlow,
 } from '@/features/configurator/utils/transformUtils';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { Model } from '@/features/model-dashboard/services/modelService';
@@ -55,7 +54,6 @@ import EnergyPanel from './components/panels/EnergyPanel';
 import GridPanel from './components/panels/GridPanel';
 import BuildingDetailPanel from './components/panels/BuildingDetailPanel';
 import CostPanel from './components/panels/CostPanel';
-import SystemPanel from './components/panels/SystemPanel';
 import { useTranslation } from '@spatialhub/i18n';
 import { capabilitiesFrom } from '@/config/resultCapabilities';
 import {
@@ -71,7 +69,7 @@ import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulati
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 import { useMapFocusArea } from '@/features/interactive-map/hooks/useMapFocusArea';
 
-type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'system' | 'building';
+type RightPanelView = 'overview' | 'energy' | 'cost' | 'grid' | 'building';
 
 // Extracted component: Map tooltip for transformer
 
@@ -492,7 +490,6 @@ export const ModelResultsViewer = () => {
     }
     return results ? transformToCostBreakdown(results) : [];
   }, [structuredResults, results]);
-  const energyFlow = useMemo(() => (results ? transformToEnergyFlow(results, t, model?.config?.buildings) : { nodes: [], links: [] }), [results, t, model?.config?.buildings]);
 
   // Buildings GeoJSON for MapLibre 3D overlay
   const buildingsGeoJSON = useMemo(() => {
@@ -635,12 +632,7 @@ export const ModelResultsViewer = () => {
     return connections;
   }, [results?.energy_cap, structuredResults?.energy_cap]);
 
-  // Average capacity factor — only for supply techs (PV, wind, etc.), not demand
   const supplyCapacity = capacityData.filter(d => d.type === 'supply');
-  const avgCapacityFactor = supplyCapacity.length > 0
-    ? supplyCapacity.reduce((sum, d) => sum + (d.installed_capacity_kw * d.capacity_factor), 0) /
-      supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0)
-    : 0;
 
   // Memoize panel content to reduce cognitive complexity
   const panelContent = useMemo(() => {
@@ -660,10 +652,7 @@ export const ModelResultsViewer = () => {
         return (
           <OverviewPanel
             summary={summary}
-            capacityData={capacityData}
             costBreakdown={costBreakdown}
-            energyFlow={energyFlow}
-            avgCapacityFactor={avgCapacityFactor}
             feedInIncome={structuredResults ? feedInIncome(structuredResults) : undefined}
             simulationPeriod={model ? {
               from_date: model.from_date,
@@ -699,14 +688,12 @@ export const ModelResultsViewer = () => {
             highlightedBuildings={highlightedBuildings}
           />
         );
-      case 'system':
-        return <SystemPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       default:
         return null;
     }
   }, [
     selectedBuilding, modelId, turbineData, rightPanelView, summary,
-    capacityData, costBreakdown, energyFlow, avgCapacityFactor,
+    costBreakdown,
     structuredResults, pypsaData, selectedBus, setSelectedBus,
     selectedVoltage, selectedPower, lineConnections, highlightedBuildings,
     carrier, capabilities,
@@ -1170,7 +1157,6 @@ export const ModelResultsViewer = () => {
                   { id: 'energy' as RightPanelView, label: t('results.tabs.energy'), icon: LineChart },
                   { id: 'cost' as RightPanelView, label: t('results.tabs.cost'), icon: DollarSign },
                   { id: 'grid' as RightPanelView, label: t('results.tabs.grid'), icon: Network },
-                  { id: 'system' as RightPanelView, label: t('results.tabs.system'), icon: Activity },
                 ].map(tab => (
                   <button
                     key={tab.id}
