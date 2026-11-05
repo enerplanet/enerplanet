@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, ambientHeat, classifyFlow, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
+import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -7,6 +7,7 @@ const row = (techs: string, timestep: string, value: number) =>
 describe('buildingFlows', () => {
   it('groups node rows into categories', () => {
     expect(techFamily('pv_supply_1_0')).toBe('pv_supply');
+    expect(techFamily('gas_3_import')).toBe('gas_import');
     expect(classifyFlow('n1_demand', 'con')).toEqual({ key: 'demand', side: 'use' });
     expect(classifyFlow('power_transmission:lv_0', 'prod')).toEqual({ key: 'lineIn', side: 'supply' });
     expect(classifyFlow('power_transmission:lv_0', 'con')).toEqual({ key: 'lineOut', side: 'use' });
@@ -52,6 +53,21 @@ describe('buildingFlows', () => {
     const heat = summariseFlows([row('air_source_heat_pump_1', 't1', 10)], [row('n1_demand', 't1', -10)], 'heat').flows;
     expect(ambientHeat([...power, ...heat])).toEqual([{ key: 'air_source_heat_pump', kwh: 7 }]);
     expect(ambientHeat(power)).toEqual([]);
+  });
+});
+
+describe('conversionLosses', () => {
+  it('is fuel in minus heat out for a boiler, and nothing for a heat pump', () => {
+    const gas = summariseFlows([row('gas_1_import', 't1', 10)], [row('gas_boiler_1', 't1', -10)], 'natural_gas').flows;
+    const heat = summariseFlows([row('gas_boiler_1', 't1', 9), row('air_source_heat_pump_1', 't1', 10)], [row('n1_demand', 't1', -19)], 'heat').flows;
+    const power = summariseFlows([row('power_transmission:lv_0', 't1', 3)], [row('air_source_heat_pump_1', 't1', -3)]).flows;
+    expect(conversionLosses([...gas, ...heat, ...power])).toEqual([{ key: 'gas_boiler', kwh: 1 }]);
+    expect(conversionLosses(gas)).toEqual([]);
+  });
+
+  it('colours gas import as gas, not with the fallback blue', () => {
+    const gas = summariseFlows([row('gas_1_import', 't1', 10)], [row('gas_boiler_1', 't1', -10)], 'natural_gas').flows;
+    expect(gas.find((f) => f.key === 'gas_import')?.color).toBe('#a16207');
   });
 });
 
