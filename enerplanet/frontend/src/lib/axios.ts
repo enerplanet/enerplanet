@@ -76,9 +76,13 @@ axios.interceptors.response.use(
 		return response;
 	},
 	async (error: AxiosError) => {
-		const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean, _csrfRetry?: boolean });
+		const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean, _csrfRetry?: boolean, _rateRetries?: number });
 		const status = error.response?.status;
 		const errorData = error.response?.data as { code?: string } | undefined;
+
+		if (status === 429 && (originalRequest._rateRetries ?? 0) < RATE_LIMIT_RETRIES) {
+			return retryAfterRateLimit(originalRequest, error);
+		}
 
 		if (shouldRetryWithCSRF(status, errorData, originalRequest)) {
 			return retryWithNewCSRFToken(originalRequest, error);
@@ -105,6 +109,24 @@ axios.interceptors.response.use(
 		throw error;
 	}
 );
+
+const RATE_LIMIT_RETRIES = 2;
+
+/**
+ * Sends a rate-limited request again once the backend's quota refills, after
+ * Retry-After seconds (1 when absent, at most 60). The limiter rejects before
+ * any handler runs, so repeating a write is safe.
+ */
+async function retryAfterRateLimit(
+	originalRequest: InternalAxiosRequestConfig & { _rateRetries?: number },
+	error: AxiosError
+) {
+	originalRequest._rateRetries = (originalRequest._rateRetries ?? 0) + 1;
+	const seconds = Number(error.response?.headers?.["retry-after"]);
+	const wait = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 60) : 1;
+	await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+	return axios(originalRequest);
+}
 
 function shouldRetryWithCSRF(
 	status: number | undefined,

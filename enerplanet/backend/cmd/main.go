@@ -368,7 +368,7 @@ func setupGinEngine(cfg *config.Config, log *logrus.Logger) *gin.Engine {
 	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", headerContentType, headerAccept, "Authorization", "X-Requested-With", "X-CSRF-Token"},
-		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Retry-After"},
 		AllowCredentials: true,
 	}
 
