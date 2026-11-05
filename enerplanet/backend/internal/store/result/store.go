@@ -291,8 +291,8 @@ func (s *Store) GetUsedGridPrices(modelID uint) (interface{}, error) {
 
 // TechAggregate holds a tech-level aggregation row.
 type TechAggregate struct {
-	Techs string  `gorm:"column:techs"`
-	Total float64 `gorm:"column:total"`
+	Techs string  `gorm:"column:techs" json:"techs"`
+	Total float64 `gorm:"column:total" json:"total"`
 }
 
 // resolveCarrier returns the carrier to query, defaulting to "power" if not specified.
@@ -437,63 +437,6 @@ func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []
 // System time-series
 // ---------------------------------------------------------------------------
 
-// BalanceDailyRow is the shape for daily-aggregated system balance / unmet demand.
-type BalanceDailyRow struct {
-	ModelID  uint      `json:"model_id"`
-	Carrier  string    `json:"carrier"`
-	Location string    `json:"location"`
-	Timestep time.Time `gorm:"column:timestep" json:"timestep"`
-	Value    float64   `json:"value"`
-}
-
-func (s *Store) GetDailySystemBalance(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsSystemBalance{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, AVG(value) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetDailyUnmetDemand(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsUnmetDemand{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-// ResourceTotalRow is the shape for resource consumption totals.
-type ResourceTotalRow struct {
-	ModelID  uint    `json:"model_id"`
-	Location string  `json:"location"`
-	Tech     string  `json:"tech"`
-	Timestep string  `json:"timestep"`
-	Value    float64 `json:"value"`
-}
-
-func (s *Store) GetResourceConTotals(modelID uint) []ResourceTotalRow {
-	var rows []ResourceTotalRow
-	s.db.Model(&backendModels.ResultsResourceCon{}).
-		Select("model_id, 'all' as location, tech, '' as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, tech").
-		Order("value DESC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetLineFlows(modelID uint) ([]backendModels.ResultsLineFlow, error) {
-	var items []backendModels.ResultsLineFlow
-	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
-	return items, err
-}
-
 func (s *Store) GetTransformerFlows(modelID uint) ([]backendModels.ResultsTransformerFlow, error) {
 	var items []backendModels.ResultsTransformerFlow
 	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
@@ -625,14 +568,14 @@ func (s *Store) GetLocationPyPSAPower(modelID uint, location string) ([]backendM
 
 // CarrierSummary holds the computed carrier summary fields.
 type CarrierSummary struct {
-	SumProduction       float64
-	SumConsumption      float64
-	RenewableProduction float64
-	GridImport          float64
-	PeakDemand          float64
-	TimestepCount       int64
-	ProdAggregates      []TechAggregate
-	ConAggregates       []TechAggregate
+	SumProduction       float64         `json:"sum_production"`
+	SumConsumption      float64         `json:"sum_consumption"`
+	RenewableProduction float64         `json:"renewable_production"`
+	GridImport          float64         `json:"grid_import"`
+	PeakDemand          float64         `json:"peak_demand"`
+	TimestepCount       int64           `json:"timestep_count"`
+	ProdAggregates      []TechAggregate `json:"prod_aggregates"`
+	ConAggregates       []TechAggregate `json:"con_aggregates"`
 }
 
 // GetCarrierSummary returns carrier summary for a specific carrier (defaults to "power").

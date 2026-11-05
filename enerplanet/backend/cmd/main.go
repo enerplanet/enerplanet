@@ -919,7 +919,6 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
-	api.GET(routeModelByID+"/results/system-timeseries", resultHandler.GetSystemTimeSeries)
 	api.GET(routeModelByID+"/results/location/:location", resultHandler.GetLocationTimeSeries)
 	api.GET(routeModelByID+"/results/pypsa", resultHandler.GetPyPSAResults)
 	api.GET(routeModelByID+"/download", resultHandler.DownloadModelResult)

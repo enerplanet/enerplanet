@@ -142,6 +142,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
       legend: {
         type: 'scroll',
         orient: 'horizontal',
+        data: pieData.map(d => d.name),
         bottom: '0%',
         left: 'center',
         itemWidth: 12,

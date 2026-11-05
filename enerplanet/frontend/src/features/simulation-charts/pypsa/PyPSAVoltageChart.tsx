@@ -1,6 +1,6 @@
 import ReactECharts from 'echarts-for-react';
 import { useMemo } from 'react';
-import { createChartGrid, createTimeXAxis, createDataZoom, createSplitLineStyle } from './chartUtils';
+import { createChartGrid, createTimeXAxis, createDataZoom, createSplitLineStyle, saveImageToolbox, useThemeColors } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface VoltageChartProps {
@@ -16,6 +16,7 @@ export const PyPSAVoltageChart = ({
   height = 300,
   title = 'Voltage Profile'
 }: VoltageChartProps) => {
+  const themeColors = useThemeColors();
   const option = useMemo(() => {
     // Calculate voltage bounds (typically 0.95 - 1.05 pu)
     const minV = Math.min(...voltage);
@@ -101,7 +102,7 @@ export const PyPSAVoltageChart = ({
 
   return (
     <div className="w-full">
-      <ReactECharts option={option} style={{ height }} />
+      <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'voltage') }} style={{ height }} />
       <div className="flex justify-center gap-6 mt-2 text-xs text-muted-foreground">
         <span>Min: {formatNumber(Math.min(...voltage), 4)} pu</span>
         <span>Max: {formatNumber(Math.max(...voltage), 4)} pu</span>

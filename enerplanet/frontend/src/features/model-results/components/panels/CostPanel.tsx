@@ -13,7 +13,9 @@ import type { StructuredModelResults } from '@/features/model-results/types';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import SaveChartButton from '../ui/SaveChartButton';
 import { energyKwhFromCost } from '../../lcoeUnits';
+import { splitGridPurchase } from '../../costSplit';
 
 
 const COST_TECH_I18N_KEYS: Record<string, string> = {
@@ -53,10 +55,13 @@ interface CostPanelProps {
     to_date: string;
     timestep_count: number;
   } | null;
+  /** Run mode; LCOE is shown for plan runs only. */
+  mode?: 'plan' | 'operate';
 }
 
-const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelProps) => {
+const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostPanelProps) => {
   const { t } = useTranslation();
+  const plan = mode !== 'operate';
 
   // Calculate simulation period details — always derived from model from_date / to_date
   const periodInfo = useMemo(() => {
@@ -66,8 +71,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
     let timesteps = hoursInYear;
     if (fromDateObj && toDateObj && !isNaN(fromDateObj.getTime()) && !isNaN(toDateObj.getTime())) {
+      // to_date is the run's last day at midnight, and the run includes that day.
       const diffMs = toDateObj.getTime() - fromDateObj.getTime();
-      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)) + 24);
     }
 
     const days = Math.round((timesteps / 24) * 10) / 10;
@@ -154,7 +160,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
       investByTech[tech] = (investByTech[tech] || 0) + Math.abs(c.value);
     });
 
-    return Object.entries(totalByTech)
+    const rows = Object.entries(totalByTech)
       .filter(([_, total]) => total > 0.01)
       .map(([tech, total]) => ({
         tech,
@@ -162,7 +168,8 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         investment: investByTech[tech] || 0,
         variable: Math.max(0, total - (investByTech[tech] || 0)),
       }));
-  }, [structuredResults?.cost, structuredResults?.cost_investment, t]);
+    return splitGridPurchase(rows, structuredResults.con_aggregates, t);
+  }, [structuredResults?.cost, structuredResults?.cost_investment, structuredResults?.con_aggregates, t]);
 
   // System cost summary
   const systemCostSummary = useMemo(() => {
@@ -235,12 +242,13 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                   { color: '#f59e0b', label: t('results.chartLabels.capex'), description: t('results.costInfo.equipmentCostDesc') },
                 ]}
               />
+              <SaveChartButton name="cost-distribution" />
             </h3>
             <ErrorBoundary label="Cost Analysis">
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_mwh}
+                lcoe={plan ? summary?.lcoe_eur_mwh : undefined}
                 income={structuredResults ? feedInIncome(structuredResults) : undefined}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
@@ -263,10 +271,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                   { color: '#f59e0b', label: t('results.chartLabels.operatingCost'), description: t('results.costInfo.runningCostDesc') },
                 ]}
               />
+              <SaveChartButton name="system-cost-summary" />
             </h3>
             <ErrorBoundary label="System Cost Summary">
               <SystemCostSummaryChart
-                systemLCOE={systemLCOE}
+                systemLCOE={plan ? systemLCOE : undefined}
                 totalCost={systemCostSummary.totalCost}
                 investmentCost={systemCostSummary.investmentCost}
                 variableCost={systemCostSummary.variableCost}
@@ -282,7 +291,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
       {/* Bottom row: LCOE Comparison + Investment Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {lcoeData.length > 0 && (
+        {plan && lcoeData.length > 0 && (
           <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
@@ -291,6 +300,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                 title={t('results.charts.lcoeComparison')}
                 description={t('results.costInfo.lcoeComparisonDesc')}
               />
+              <SaveChartButton name="lcoe-comparison" />
             </h3>
             <ErrorBoundary label="LCOE Comparison">
               <LCOEComparisonChart data={lcoeData} systemLCOE={systemLCOE} height={300} />
@@ -311,6 +321,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
                   { color: '#f59e0b', label: t('results.chartLabels.operatingCost'), description: t('results.costInfo.runningCostDesc') },
                 ]}
               />
+              <SaveChartButton name="investment-breakdown" />
             </h3>
             <ErrorBoundary label="Investment Breakdown">
               <InvestmentBreakdownChart data={investmentData} height={300} simulationDays={periodInfo.days} isPartialYear={periodInfo.isPartialYear} systemTotalCost={systemCostSummary?.totalCost} />

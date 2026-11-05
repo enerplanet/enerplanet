@@ -3,7 +3,6 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
-import { getTechColor } from '@/constants/tech-colors';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface InvestmentItem {
@@ -125,8 +124,9 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
           fontSize: 10,
           color: themeColors.textMuted,
           rotate: labels.length > 4 ? 25 : 0,
-          width: 80,
-          overflow: 'truncate',
+          width: 90,
+          overflow: 'break',
+          interval: 0,
         },
         axisLine: { lineStyle: { color: themeColors.gridLine } },
         axisTick: { show: false },
@@ -147,10 +147,10 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
           name: t('results.chartLabels.investmentCost'),
           type: 'bar',
           stack: 'cost',
-          data: sorted.map((d, i) => ({
+          itemStyle: { color: '#3b82f6' },
+          data: sorted.map((d) => ({
             value: d.investment,
             itemStyle: {
-              color: getTechColor(d.tech, i),
               borderRadius: d.variable > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0],
             },
           })),
@@ -160,11 +160,10 @@ export const InvestmentBreakdownChart: FC<InvestmentBreakdownChartProps> = ({
           name: t('results.chartLabels.operatingCost'),
           type: 'bar',
           stack: 'cost',
-          data: sorted.map((d, i) => ({
+          itemStyle: { color: '#f59e0b' },
+          data: sorted.map((d) => ({
             value: d.variable,
             itemStyle: {
-              color: getTechColor(d.tech, i),
-              opacity: 0.5,
               borderRadius: [4, 4, 0, 0],
             },
           })),

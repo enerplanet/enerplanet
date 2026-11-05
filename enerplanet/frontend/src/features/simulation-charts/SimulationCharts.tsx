@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, useMemo, useRef } from 'react';
+import { FC, useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   GitCompare,
@@ -8,7 +8,6 @@ import {
   BarChart3,
   ArrowLeft,
   AlertCircle,
-  Download,
   Map as MapIcon
 } from 'lucide-react';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
@@ -19,13 +18,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StatsStrip } from '@/components/ui/StatsStrip';
 import { CardGridSkeleton, PanelSkeleton } from '@/components/ui/Skeletons';
 import {
-  PRIMARY_BUTTON_CLASS,
   TOOLBAR_BUTTON_CLASS,
   TOOLBAR_ICON_BUTTON_CLASS,
 } from '@/components/ui/toolbar';
 import { useDocumentTitle } from '@/hooks/use-document-title';
 import { fetchStructuredResults } from '@/features/model-results/api';
 import { StructuredModelResults } from '@/features/model-results/types';
+import { modelSelfSufficiency } from '@/features/model-results/buildingFlows';
 import {
   formatCarrierEnergy,
   formatCarrierPower,
@@ -36,7 +35,6 @@ import CarrierToggle from '@/features/model-results/components/CarrierToggle';
 import { ComparisonSummary } from './components/ComparisonSummary';
 import { ComparisonCharts } from './components/ComparisonCharts';
 import { ComparisonMapPanel } from './components/ComparisonMapPanel';
-import { exportComparisonPDF } from '@/features/model-results/utils/pdfExport';
 import { useTranslation } from '@spatialhub/i18n';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 import { netCost } from '@/features/configurator/utils/costUtils';
@@ -95,11 +93,7 @@ function calculateSummary(structured: StructuredModelResults) {
   // meaning "not reported": the UI hides it instead of inventing one.
   const lcoe = structuredLcoe ? Math.abs(structuredLcoe.value) : 0;
 
-  const co2Savings = renewableProduction * 0.4;
-
-  const selfSufficiencyRate = totalConsumption > 0
-    ? normalizeDisplayValue(Math.min(1, renewableProduction / totalConsumption), 6)
-    : 0;
+  const selfSufficiencyRate = normalizeDisplayValue(modelSelfSufficiency(structured), 6);
 
   const totalSupply = renewableProduction + gridImport;
   const gridDependencyRate = totalSupply > 0
@@ -117,7 +111,6 @@ function calculateSummary(structured: StructuredModelResults) {
     average_demand_kw: totalConsumption / timesteps,
     total_cost_eur: totalCost,
     lcoe_eur_mwh: lcoe,
-    co2_savings_kg: co2Savings,
   };
 }
 
@@ -160,27 +153,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
   const [error1, setError1] = useState<string | null>(null);
   const [error2, setError2] = useState<string | null>(null);
 
-  // Map and export state
   const [showMaps, setShowMaps] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  // Export handler
-  const handleExportPDF = async () => {
-    if (!contentRef.current || !model1 || !model2) return;
-
-    setIsExporting(true);
-    try {
-      await exportComparisonPDF(contentRef.current, model1, model2, {
-        title: t('simulationComparison.pdfTitle'),
-        subtitle: `${model1.title} vs ${model2.title}`,
-      });
-    } catch (error) {
-      console.error('Failed to export PDF:', error);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // Sync with store workspace initially
   useEffect(() => {
@@ -421,18 +394,6 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <MapIcon className="h-4 w-4 text-muted-foreground" />
                   {showMaps ? t('simulationComparison.hideMaps') : t('simulationComparison.showMaps')}
                 </button>
-                <button
-                  onClick={handleExportPDF}
-                  disabled={isExporting}
-                  className={PRIMARY_BUTTON_CLASS}
-                >
-                  {isExporting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {t('simulationComparison.exportPdf')}
-                </button>
               </div>
             )}
           </div>
@@ -605,7 +566,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           }
           if (hasComparison && summary1 && summary2) {
             return (
-              <div ref={contentRef} className="space-y-6">
+              <div className="space-y-6">
                 {/* Side-by-side Maps */}
                 {showMaps && (
                   <div className="md-rise">

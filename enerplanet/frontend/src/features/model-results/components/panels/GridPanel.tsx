@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Activity, AlertTriangle, Gauge, Network, Info, Zap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
+import SaveChartButton from '../ui/SaveChartButton';
 import { GatedSection, GapNote, SHOW_RESULT_GAPS } from '../ui/GatedSection';
 import type { Capabilities } from '@/config/resultCapabilities';
 import { PyPSAModelResults } from '../../api';
@@ -29,7 +30,7 @@ const BusDetailsTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -76,7 +77,7 @@ const VoltageProfileTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -125,7 +126,7 @@ const PowerFlowTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -481,6 +482,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Network className="w-4 h-4 text-primary" />
             {t('results.grid.networkTopology')}
+            <SaveChartButton name="network-topology" />
           </h3>
           <ErrorBoundary label="Network Topology">
             <NetworkTopology

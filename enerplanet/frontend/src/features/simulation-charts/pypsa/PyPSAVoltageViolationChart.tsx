@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { createChartGrid, createSplitLineStyle, useThemeColors } from './chartUtils';
+import { createChartGrid, createSplitLineStyle, useThemeColors, saveImageToolbox } from './chartUtils';
 import { formatNumber } from '@/utils/formatNumber';
 
 interface VoltageViolationItem {
@@ -96,5 +96,5 @@ export const PyPSAVoltageViolationChart = ({
     );
   }
 
-  return <ReactECharts option={option} style={{ height, width: '100%' }} />;
+  return <ReactECharts option={{ ...option, toolbox: saveImageToolbox(themeColors, 'voltage-violations') }} style={{ height, width: '100%' }} />;
 };

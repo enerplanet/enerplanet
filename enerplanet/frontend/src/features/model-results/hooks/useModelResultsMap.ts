@@ -44,6 +44,8 @@ export interface MapTooltipData {
   yearlyHeatDemandKwh?: number;
   /** True when heat demand is estimated locally. */
   heatDemandEstimated?: boolean;
+  /** Result node the building is matched to (n1, n4, ...), when the run has one. */
+  node?: string;
   techs?: Record<string, unknown>;
 }
 
@@ -219,8 +221,31 @@ const createBuildingTooltip = (pixel: number[], props: any): MapTooltipData => {
     yearlyDemandKwh: props.yearly_demand_kwh || props.demand_energy,
     yearlyHeatDemandKwh: heat.kwh,
     heatDemandEstimated: heat.estimated,
+    node: props.node_id,
     techs: props.techs,
   };
+};
+
+/**
+ * Writes each result node onto the one building feature nearest to it. Every
+ * building inside the match radius resolves to some node, so only the closest
+ * one per node is tagged; outbuildings and deactivated buildings get no node.
+ */
+const tagBuildingNodes = (source: VectorSource, coordinates: Record<string, { x: number; y: number }> | undefined) => {
+  if (!coordinates) return;
+  const best = new Map<string, { feature: Feature<Geometry>; dist: number }>();
+  source.getFeatures().forEach((f) => {
+    f.unset('node_id', true);
+    const geom = f.getGeometry();
+    if (!geom || f.get('feature_type') !== 'building' || f.get('activated') === false) return;
+    const lonLat = toLonLat(getCenter(geom.getExtent()));
+    const node = findClosestLocation(lonLat, coordinates);
+    if (!node) return;
+    const dist = Math.hypot(lonLat[0] - coordinates[node].x, lonLat[1] - coordinates[node].y);
+    const current = best.get(node);
+    if (!current || dist < current.dist) best.set(node, { feature: f, dist });
+  });
+  best.forEach(({ feature }, node) => feature.set('node_id', node));
 };
 
 interface UseModelResultsMapOptions {
@@ -232,6 +257,8 @@ interface UseModelResultsMapOptions {
   busStatusData?: BusStatusData[];
   showBusMarkers?: boolean;
   highlightedBuildings?: string[] | null;
+  /** osm_id of the building whose panel is open; drawn highlighted. */
+  selectedBuildingId?: string | null;
   /**
    * Data-driven connection layer: one straight wire segment per connection
    * (bus0 -> bus1) in EPSG:4326, with an `overloaded` property. Drawn on the 2D
@@ -249,6 +276,7 @@ export const useModelResultsMap = ({
   busStatusData,
   showBusMarkers = false,
   highlightedBuildings,
+  selectedBuildingId,
   connectionGeoJSON,
 }: UseModelResultsMapOptions) => {
   const { map } = useMapStore();
@@ -305,6 +333,9 @@ export const useModelResultsMap = ({
       polygonLayerRef.current = polygonLayer;
     }
 
+    // The model area is what the user drew; the grid reaches far beyond it.
+    const focusFeatures = [...allFeatures];
+
     // Load grid layers using shared utility
     const { layers, buildingSource, allFeatures: gridFeatures } = loadGridLayers(map, model.config, { enable3D: false });
     layersRef.current = layers;
@@ -315,12 +346,12 @@ export const useModelResultsMap = ({
     if (allFeatures.length > 0) {
       // Initial fit after a short delay to let layers initialize
       const initialFitTimeout = setTimeout(() => {
-        fitToFeatures(map, allFeatures, { duration: 800, padding: [50, 50, 50, 50] });
+        fitToFeatures(map, focusFeatures.length > 0 ? focusFeatures : allFeatures, { duration: 800, padding: [50, 50, 50, 50] });
       }, 300);
 
       // Second fit after layers are fully rendered
       const finalFitTimeout = setTimeout(() => {
-        fitToFeatures(map, allFeatures, { duration: 500, padding: [50, 50, 50, 50] });
+        fitToFeatures(map, focusFeatures.length > 0 ? focusFeatures : allFeatures, { duration: 500, padding: [50, 50, 50, 50] });
       }, 800);
 
       return () => {
@@ -657,9 +688,11 @@ export const useModelResultsMap = ({
     // Don't reset if we're currently hovering a transformer
     if (hoveredTransformerId !== null) return;
 
+    tagBuildingNodes(buildingSource, results?.coordinates);
     buildingSource.getFeatures().forEach(f => f.setStyle(createBuildingStyleFunction(true, false)));
 
-    if (!highlightedBuildings?.length) return;
+    const toHighlight = [...(highlightedBuildings ?? []), ...(selectedBuildingId ? [selectedBuildingId] : [])];
+    if (!toHighlight.length) return;
 
     const featureMap = new Map<string, Feature<Geometry>>();
     buildingSource.getFeatures().forEach(f => {
@@ -669,13 +702,13 @@ export const useModelResultsMap = ({
       if (locId) featureMap.set(locId, f as Feature<Geometry>);
     });
 
-    highlightedBuildings.forEach(id => {
+    toHighlight.forEach(id => {
       const feature = featureMap.get(id) || featureMap.get(`ID_${id}`) || featureMap.get(id.replace('ID_', ''));
       if (feature) {
-        (feature as any).setStyle(createBuildingHighlightStyleFunction());
+        feature.setStyle(createBuildingHighlightStyleFunction());
       }
     });
-  }, [highlightedBuildings, hoveredTransformerId]);
+  }, [map, highlightedBuildings, selectedBuildingId, hoveredTransformerId, results?.coordinates, model]);
 
   return { buildingSourceRef };
 };
