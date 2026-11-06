@@ -351,6 +351,7 @@
       "selfSufficiencyDesc": "% van de vraag gedekt door hernieuwbare energie",
       "peakDemand": "Piekvraag",
       "totalCost": "Totale Kosten",
+      "totalCostAllEnergy": "Totale kosten, alle energie",
       "over": "over",
       "from": "van",
       "installed": "geïnstalleerd",

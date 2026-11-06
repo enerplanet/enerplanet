@@ -357,6 +357,7 @@
       "selfSufficiencyDesc": "% zapotrzebowania pokrytego przez OZE",
       "peakDemand": "Szczytowe Zapotrzebowanie",
       "totalCost": "Całkowity Koszt",
+      "totalCostAllEnergy": "Całkowity koszt, wszystkie nośniki",
       "over": "w ciągu",
       "from": "z",
       "installed": "zainstalowanych",

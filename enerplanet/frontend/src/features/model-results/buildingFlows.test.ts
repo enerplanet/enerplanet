@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
+import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -13,6 +13,15 @@ describe('buildingFlows', () => {
     expect(classifyFlow('power_transmission:lv_0', 'con')).toEqual({ key: 'lineOut', side: 'use' });
     expect(classifyFlow('battery_storage_1', 'con')).toEqual({ key: 'batteryIn', side: 'use' });
     expect(classifyFlow('air_source_heat_pump_1', 'con')).toEqual({ key: 'air_source_heat_pump', side: 'use' });
+  });
+
+  it('gives the heat pump share, boiler heat and seasonal COP of the heat flows', () => {
+    const flow = (key: string, side: 'supply' | 'use', totalKwh: number) =>
+      ({ key, side, color: '', totalKwh, peakKw: 0, hourly: [] });
+    const flows = [flow('air_source_heat_pump', 'supply', 300), flow('boiler', 'supply', 100), flow('demand', 'use', 400)];
+    expect(heatFigures(flows, 100)).toEqual({ heatPumpShare: 0.75, boilerKwh: 100, seasonalCop: 3 });
+    expect(heatFigures(flows)).toEqual({ heatPumpShare: 0.75, boilerKwh: 100, seasonalCop: null });
+    expect(heatFigures([flow('boiler', 'supply', 100)], 50)).toEqual({ heatPumpShare: null, boilerKwh: 100, seasonalCop: null });
   });
 
   it('sums energy, peaks and self-sufficiency', () => {

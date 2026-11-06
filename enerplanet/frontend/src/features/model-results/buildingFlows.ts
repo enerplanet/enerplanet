@@ -115,6 +115,24 @@ export function selfSufficiency(flows: BuildingFlow[]): number | null {
   return selfSufficiencyShare(flows.find((f) => f.key === 'lineIn')?.totalKwh ?? 0, consumption);
 }
 
+/**
+ * Heat figures of a run from its heat flows: the heat pumps' share of the heat supplied,
+ * the heat from boilers, and the heat pumps' seasonal COP (heat out over electricity in)
+ * when their electricity input is given; shares and COP are null without a base.
+ */
+export function heatFigures(flows: BuildingFlow[], heatPumpElectricityKwh?: number) {
+  const supplied = (match: string) => flows
+    .filter((f) => f.side === 'supply' && f.key.includes(match))
+    .reduce((s, f) => s + f.totalKwh, 0);
+  const total = flows.filter((f) => f.side === 'supply').reduce((s, f) => s + f.totalKwh, 0);
+  const heatPumpKwh = supplied('heat_pump');
+  return {
+    heatPumpShare: total > 0 && heatPumpKwh > 0 ? heatPumpKwh / total : null,
+    boilerKwh: supplied('boiler'),
+    seasonalCop: heatPumpKwh > 0 && heatPumpElectricityKwh ? heatPumpKwh / heatPumpElectricityKwh : null,
+  };
+}
+
 /** Energy from one supply to one use over the run. */
 export interface FlowLink {
   from: string;
