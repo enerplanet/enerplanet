@@ -56,6 +56,8 @@ function InstalledCard({ energyCap, mode, roundTrip }: { energyCap: EnergyCapRec
 interface OverviewPanelProps {
   modelId: number | null;
   carriers: string[];
+  /** Carrier picked in the results toggle; '' is electricity. */
+  carrier: string;
   gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
   energyCap: EnergyCapRecord[];
   /** Cost rows of the run; equipment and fuel cost is every monetary row except grid electricity bought and sold. */
@@ -63,12 +65,14 @@ interface OverviewPanelProps {
   mode?: 'plan' | 'operate';
 }
 
-/** Electricity over the run, what is installed, and the model-wide energy flow, stacked full width. */
-const OverviewPanel = ({ modelId, carriers, gridPrices, energyCap, costs, mode }: OverviewPanelProps) => {
+/** The selected carrier over the run, what is installed, and the model-wide energy flow, stacked full width. */
+const OverviewPanel = ({ modelId, carriers, carrier, gridPrices, energyCap, costs, mode }: OverviewPanelProps) => {
   const { t } = useTranslation();
   const { results, loading } = useSystemFlows(modelId, carriers);
-  const summary = results.find((r) => r.carrier === 'power');
-  const battery = (key: string) => summary?.flows.find((f) => f.key === key)?.totalKwh ?? 0;
+  const summary = results.find((r) => r.carrier === (carrier || 'power'));
+  const power = results.find((r) => r.carrier === 'power');
+  const battery = (key: string) => power?.flows.find((f) => f.key === key)?.totalKwh ?? 0;
+  const heatPumpElectricity = power?.flows.filter((f) => f.side === 'use' && f.key.includes('heat_pump')).reduce((sum, f) => sum + f.totalKwh, 0);
   const roundTrip = battery('batteryIn') > 0 ? battery('batteryOut') / battery('batteryIn') : undefined;
   const equipmentCost = costs
     .filter((c) => c.costs === 'monetary' && !GRID_EXCHANGE.test(c.techs))
@@ -81,7 +85,7 @@ const OverviewPanel = ({ modelId, carriers, gridPrices, energyCap, costs, mode }
   return (
     <div className="md-stagger space-y-4 p-4">
       {summary && <EnergySummary flows={summary.flows} carrier={summary.carrier} hours={summary.timesteps.length} gridPrices={gridPrices}
-        equipmentCost={mode === 'operate' ? undefined : equipmentCost} />}
+        equipmentCost={mode === 'operate' ? undefined : equipmentCost} heatPumpElectricityKwh={heatPumpElectricity} />}
 
       <InstalledCard energyCap={energyCap} mode={mode} roundTrip={roundTrip} />
 

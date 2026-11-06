@@ -656,6 +656,7 @@ export const ModelResultsViewer = () => {
           <OverviewPanel
             modelId={modelId}
             carriers={availableCarriers}
+            carrier={carrier}
             gridPrices={structuredResults?.grid_prices}
             energyCap={structuredResults?.energy_cap ?? []}
             costs={structuredResults?.cost ?? []}

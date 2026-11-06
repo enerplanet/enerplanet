@@ -4,8 +4,8 @@ import { useTranslation } from '@spatialhub/i18n';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 import { CHART_CARD_CLASS } from '../ui/PanelStates';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
-import { carrierDisplay, formatCarrierEnergy } from '../../carrierUnits';
-import { selfSufficiency, systemFlowLabel, type BuildingFlow } from '../../buildingFlows';
+import { carrierDisplay, carrierLabelKey, formatCarrierEnergy } from '../../carrierUnits';
+import { heatFigures, selfSufficiency, systemFlowLabel, type BuildingFlow } from '../../buildingFlows';
 
 type TileData = { label: string; value: string; sub: string; info: string };
 
@@ -144,6 +144,34 @@ const FlowBar = ({ title, flows, total, carrier, label, shortLabel }: {
   );
 };
 
+type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
+
+/** Headline figures of the heat summary: peak demand, the heat pumps' share and their seasonal COP. */
+function heatTiles(flows: BuildingFlow[], energy: (kwh: number) => string, powerUnit: string, heatPumpElectricityKwh: number | undefined, t: Translate): TileData[] {
+  const tiles: TileData[] = [];
+  const demand = flows.find((f) => f.key === 'demand');
+  const { heatPumpShare, boilerKwh, seasonalCop } = heatFigures(flows, heatPumpElectricityKwh);
+  if (demand) tiles.push({
+    label: t('results.energy.peakHeatDemand', 'Peak heat demand'),
+    value: formatPower1(demand.peakKw, powerUnit),
+    sub: t('results.energy.heatUsed', '{{energy}} used', { energy: energy(demand.totalKwh) }),
+    info: t('results.energy.peakHeatDemandInfo', 'Highest hourly space heating and hot water demand over the run, summed over all buildings.'),
+  });
+  if (heatPumpShare !== null) tiles.push({
+    label: t('results.energy.heatPumpShare', 'Heat pump share'),
+    value: `${formatNumber(heatPumpShare * 100, 1)}%`,
+    sub: boilerKwh > 0 ? t('results.energy.fromBoilers', '{{energy}} from boilers', { energy: energy(boilerKwh) }) : t('results.energy.ofHeatSupplied', 'of the heat supplied'),
+    info: t('results.energy.heatPumpShareInfo', 'Share of the heat supplied over the run that came from heat pumps.'),
+  });
+  if (seasonalCop !== null && heatPumpElectricityKwh) tiles.push({
+    label: t('results.energy.seasonalCop', 'Heat pump seasonal COP'),
+    value: formatNumber(seasonalCop, 2),
+    sub: t('results.energy.electricityIn', '{{energy}} electricity in', { energy: formatCarrierEnergy(heatPumpElectricityKwh, 'power', 1) }),
+    info: t('results.energy.seasonalCopInfo', 'Heat the heat pumps delivered over the run divided by the electricity they drew.'),
+  });
+  return tiles;
+}
+
 interface EnergySummaryProps {
   flows: BuildingFlow[];
   carrier: string;
@@ -152,14 +180,18 @@ interface EnergySummaryProps {
   gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
   /** Equipment and fuel cost over the run (plan runs); when set, the cost tile shows the total annualised cost. */
   equipmentCost?: number;
+  /** Electricity the heat pumps drew over the run; gives the seasonal COP in the heat summary. */
+  heatPumpElectricityKwh?: number;
 }
 
 /** Totals of every supply and use over the run, summed over all buildings. */
-const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost }: EnergySummaryProps) => {
+const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost, heatPumpElectricityKwh }: EnergySummaryProps) => {
   const { t } = useTranslation();
   if (flows.length === 0) return null;
   const label = (key: string) => systemFlowLabel(key, carrier || 'power', t);
-  const shortLabel = (key: string) => (SHORT_LABELS[key] ? t(...SHORT_LABELS[key]) : label(key));
+  const isHeat = carrierLabelKey(carrier) === 'results.carrier.heat';
+  // The short demand label names appliances, which only fits electricity.
+  const shortLabel = (key: string) => (SHORT_LABELS[key] && !(isHeat && key === 'demand') ? t(...SHORT_LABELS[key]) : label(key));
 
   const find = (key: string) => flows.find((f) => f.key === key);
   const total = (key: string) => find(key)?.totalKwh ?? 0;
@@ -178,7 +210,7 @@ const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost }: Ene
   const sufficiency = selfSufficiency(flows);
   const gridIn = find('lineIn');
 
-  const tiles: TileData[] = [];
+  const tiles: TileData[] = isHeat ? heatTiles(flows, energy, powerUnit, heatPumpElectricityKwh, t) : [];
   if (pv > 0 && sufficiency !== null) tiles.push({
     label: t('results.energy.selfSufficiencyLabel', 'Self-sufficiency'),
     value: `${formatNumber(sufficiency * 100, 1)}%`,
@@ -224,17 +256,21 @@ const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost }: Ene
     }
   }
 
+  const title = isHeat ? t('results.energy.heatSummary', 'Heat over the run') : t('results.energy.electricitySummary', 'Electricity over the run');
+
   return (
     <div className={CHART_CARD_CLASS}>
       <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
         <Gauge className="h-4 w-4 text-primary" />
-        {t('results.energy.electricitySummary', 'Electricity over the run')}
+        {title}
         <span className="text-xs font-normal text-muted-foreground">
           {t('results.energy.allBuildingsBalanced', 'all buildings · {{energy}} balanced', { energy: energy(balanced) })}
         </span>
         <ChartInfoTooltip
-          title={t('results.energy.electricitySummary', 'Electricity over the run')}
-          description={t('results.energy.summaryInfo', 'Totals over the whole run period, summed over all buildings. Flows on the lines between buildings are left out; grid import and export are at the transformer.')}
+          title={title}
+          description={isHeat
+            ? t('results.energy.heatSummaryInfo', 'Heat totals over the whole run period, summed over all buildings.')
+            : t('results.energy.summaryInfo', 'Totals over the whole run period, summed over all buildings. Flows on the lines between buildings are left out; grid import and export are at the transformer.')}
         />
       </h3>
       {tiles.length > 0 && <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2">{tiles.map((tile) => <Tile key={tile.label} {...tile} />)}</div>}
