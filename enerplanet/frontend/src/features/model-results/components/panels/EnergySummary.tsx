@@ -125,7 +125,7 @@ const FlowBar = ({ title, flows, total, carrier, label, shortLabel }: {
               className="pointer-events-none absolute bottom-full z-50 mb-1.5 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-lg"
             >
               <div className="font-medium">{label(selected.key)}</div>
-              <div className="tabular-nums text-muted-foreground">{energy(selected)} · {percent(selected)}</div>
+              <div className="tabular-nums text-muted-foreground">{energy(selected)} · {t('results.energy.shareOfTotal', '{{share}} of {{total}}', { share: percent(selected), total: formatCarrierEnergy(total, carrier, 1) })}</div>
               <div className="tabular-nums text-muted-foreground">{t('results.energy.peak', 'peak')} {formatPower1(selected.peakKw, powerUnit)}</div>
             </div>
           )}
@@ -213,12 +213,12 @@ const EnergySummary = ({ flows, carrier, hours, gridPrices, heatPumpElectricityK
     label: t('results.energy.selfSufficiencyLabel', 'Self-sufficiency'),
     value: `${formatNumber(sufficiency * 100, 1)}%`,
     sub: t('results.energy.ofUsed', 'of {{energy}} used', { energy: energy(onSite) }),
-    info: t('results.metrics.selfSufficiencyDesc', 'Share of the electricity used that was not bought from the grid: 1 minus grid import divided by use (Luthander et al., 2015)'),
+    info: t('results.metrics.selfSufficiencyDesc', 'Share of the electricity used that did not come from the grid.\nSelf-sufficiency = 1 − grid import ÷ electricity used\n(Luthander et al., 2015)'),
   });
   if (pv > 0) tiles.push({
     label: t('results.energy.pvOnSite', 'PV used on site'),
     value: `${formatNumber(Math.max(0, 1 - total('lineOut') / pv) * 100, 1)}%`,
-    sub: t('results.energy.exported', '{{energy}} exported', { energy: energy(total('lineOut')) }),
+    sub: t('results.energy.exportedShare', '{{energy}} ({{share}}) exported', { energy: energy(total('lineOut')), share: `${formatNumber(Math.min(1, total('lineOut') / pv) * 100, 1)}%` }),
     info: t('results.energy.pvOnSiteInfo', 'Share of PV generation that is not exported to the grid.'),
   });
   if (gridIn) tiles.push({

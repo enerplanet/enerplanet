@@ -36,7 +36,7 @@ const ChartInfoTooltip = ({ title, description, items, children }: ChartInfoTool
         <div className={`absolute z-[100] top-full ${alignRight ? 'right-0' : 'left-0'} translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4`}>
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{description}</div>
+            <div className="whitespace-pre-line text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{description}</div>
 
             {items && items.length > 0 && (
               <div className="space-y-2 text-xs">
