@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { triangulatePlanar } from './maplibre-lod2';
+import * as maplibregl from 'maplibre-gl';
+import * as THREE from 'three';
+
+import { Lod2Layer, triangulatePlanar } from './maplibre-lod2';
+import type { Lod2Surface } from './useLod2Surfaces';
 import { addByOsmId, lod2SurfacesOf } from './useLod2Surfaces';
 import { pvBuildingsOf } from './usePvSurfaceIds';
 
@@ -77,5 +81,41 @@ describe('pvBuildingsOf', () => {
   it('reads techs from techsFor when given, not from the property', () => {
     const techsFor = (osmId: string) => (osmId === '4' ? { pv_supply: { arrays: [{ surface_id: 'r9' } as never] } } : null);
     expect(pvBuildingsOf(buildings, techsFor)).toEqual([['4', ['r9']]]);
+  });
+});
+
+describe('Lod2Layer.pick', () => {
+  // Two flat roofs 10 m above a 10 m x 10 m footprint, the second about 50 m east of the first.
+  const lng0 = 8.4233, lat0 = 48.1016, dLng = 50 / (111320 * Math.cos((lat0 * Math.PI) / 180));
+  const box = (lng: number): Lod2Surface[] => {
+    const d = 10 / 111320;
+    const ground = [[lng, lat0, 300], [lng + d, lat0, 300]];
+    const roof = [[lng, lat0, 310], [lng + d, lat0, 310], [lng + d, lat0 + d, 310], [lng, lat0 + d, 310], [lng, lat0, 310]];
+    return [{ id: `${lng}-w`, roof: false, rings: [[...ground, [lng + d, lat0, 310], [lng, lat0, 310], ground[0]]] }, { id: `${lng}-r`, roof: true, rings: [roof] }];
+  };
+
+  /** A layer viewed from 200 m straight above the first building's roof centre. */
+  const layerFromAbove = () => {
+    const layer = new Lod2Layer();
+    layer.setBuildings(new Map([['a', box(lng0)], ['b', box(lng0 + dLng)]]));
+    const origin = maplibregl.MercatorCoordinate.fromLngLat([lng0, lat0], 0);
+    const metre = origin.meterInMercatorCoordinateUnits();
+    const toMercator = new THREE.Matrix4().makeTranslation(origin.x, origin.y, 0).scale(new THREE.Vector3(metre, -metre, metre));
+    const camera = new THREE.PerspectiveCamera(30, 1, 1, 1000);
+    camera.position.set(5, 5, 200);
+    camera.updateMatrixWorld();
+    const view = camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse);
+    const mainMatrix = view.multiply(toMercator.invert()).toArray();
+    layer.render(null as never, { defaultProjectionData: { mainMatrix } } as never);
+    return { layer, view: camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse) };
+  };
+
+  it('finds the building drawn under a point and nothing beside them', () => {
+    const { layer, view } = layerFromAbove();
+    expect(layer.pick(0, 0)).toBe('a');
+    const b = new THREE.Vector3(55, 5, 10).applyMatrix4(view);
+    expect(layer.pick(b.x, b.y)).toBe('b');
+    const between = new THREE.Vector3(30, 5, 10).applyMatrix4(view);
+    expect(layer.pick(between.x, between.y)).toBeNull();
   });
 });

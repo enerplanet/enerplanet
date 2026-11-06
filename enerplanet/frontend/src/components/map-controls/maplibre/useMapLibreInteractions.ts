@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import type { Map as OlMap } from 'ol';
 import { INTERACTIVE_LAYERS } from './maplibre-styles';
+import type { Lod2Layer } from './maplibre-lod2';
 
 export interface InteractionCallbacks {
   onBuildingClick?: (properties: Record<string, any>, lngLat: [number, number]) => void;
@@ -13,10 +14,12 @@ export interface InteractionCallbacks {
 }
 
 /**
- * Hook: Forward OL click/hover events to MapLibre queryRenderedFeatures.
+ * Hook: Forward OL click/hover events to MapLibre queryRenderedFeatures, and
+ * to the LoD2 layer for buildings drawn in 3D, which MapLibre cannot query.
  */
 export function useMapLibreInteractions(
   mapRef: React.RefObject<maplibregl.Map | null>,
+  lod2Ref: React.RefObject<Lod2Layer | null>,
   olMap: OlMap,
   visible: boolean,
   callbacks: InteractionCallbacks,
@@ -93,7 +96,23 @@ export function useMapLibreInteractions(
       });
       if (!layers.length) return null;
       const features = map.queryRenderedFeatures(pixel, { layers });
-      return features.length > 0 ? features[0] : null;
+      const f = features.length > 0 ? features[0] : null;
+      if (f && !f.layer.id.startsWith('buildings-3d')) return f;
+      // A 3D building stands in front of the footprints MapLibre finds on the ground.
+      return pickLod2Building(map, pixel) ?? f;
+    };
+
+    /** The footprint feature of the LoD2 building under the pixel, found by its osm_id. */
+    const pickLod2Building = (map: maplibregl.Map, pixel: [number, number]) => {
+      const canvas = map.getCanvas();
+      const osmId = lod2Ref.current?.pick((pixel[0] / canvas.clientWidth) * 2 - 1, 1 - (pixel[1] / canvas.clientHeight) * 2);
+      if (!osmId) return null;
+      const [footprint] = map.querySourceFeatures('buildings-3d', { filter: ['==', ['to-string', ['get', 'osm_id']], osmId] });
+      return footprint ? { layer: { id: 'buildings-3d-lod2' }, properties: footprint.properties } : null;
+    };
+
+    const setHovered = (props: Record<string, any> | null) => {
+      lod2Ref.current?.setHovered(props?.osm_id == null ? null : String(props.osm_id));
     };
 
     const handleClick = (evt: any) => {
@@ -133,6 +152,7 @@ export function useMapLibreInteractions(
           const props = f.properties || {};
           olMap.getTargetElement().style.cursor = 'pointer';
 
+          setHovered(layerId.startsWith('buildings-3d') ? props : null);
           if (layerId.startsWith('buildings-3d')) {
             setConnectedBuildingsFilter(null);
             cbRefs.current.onBuildingHover?.(props, pixel);
@@ -152,6 +172,7 @@ export function useMapLibreInteractions(
           }
         } else {
           setConnectedBuildingsFilter(null);
+          setHovered(null);
           olMap.getTargetElement().style.cursor = '';
           cbRefs.current.onBuildingHover?.(null, pixel);
           cbRefs.current.onTransformerHover?.(null, pixel);
@@ -166,8 +187,9 @@ export function useMapLibreInteractions(
     return () => {
       if (throttleTimeout !== null) clearTimeout(throttleTimeout);
       setConnectedBuildingsFilter(null);
+      setHovered(null);
       olMap.un('click', handleClick);
       olMap.un('pointermove', handlePointerMove);
     };
-  }, [mapRef, olMap, visible]);
+  }, [mapRef, lod2Ref, olMap, visible]);
 }
