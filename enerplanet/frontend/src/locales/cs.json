@@ -357,6 +357,7 @@
       "selfSufficiencyDesc": "% spotřeby pokryté obnovitelnými zdroji",
       "peakDemand": "Špičková Spotřeba",
       "totalCost": "Celkové Náklady",
+      "totalCostAllEnergy": "Celkové náklady, všechny energie",
       "over": "za",
       "from": "z",
       "installed": "instalovaných",

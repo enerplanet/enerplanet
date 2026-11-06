@@ -178,14 +178,12 @@ interface EnergySummaryProps {
   /** Hours in the run, to scale the net energy cost to a year. */
   hours: number;
   gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
-  /** Equipment and fuel cost over the run (plan runs); when set, the cost tile shows the total annualised cost. */
-  equipmentCost?: number;
   /** Electricity the heat pumps drew over the run; gives the seasonal COP in the heat summary. */
   heatPumpElectricityKwh?: number;
 }
 
 /** Totals of every supply and use over the run, summed over all buildings. */
-const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost, heatPumpElectricityKwh }: EnergySummaryProps) => {
+const EnergySummary = ({ flows, carrier, hours, gridPrices, heatPumpElectricityKwh }: EnergySummaryProps) => {
   const { t } = useTranslation();
   if (flows.length === 0) return null;
   const label = (key: string) => systemFlowLabel(key, carrier || 'power', t);
@@ -237,23 +235,12 @@ const EnergySummary = ({ flows, carrier, hours, gridPrices, equipmentCost, heatP
       bought: formatCurrency(bought, 0), sold: formatCurrency(sold, 0),
       imp: formatNumber(gridPrices.import_ct_per_kwh, 1), exp: formatNumber(gridPrices.export_ct_per_kwh, 1),
     };
-    const perYearText = t('results.energy.perYear', 'per year');
-    if (equipmentCost == null) tiles.push({
-      label: t('results.energy.netEnergyCost', 'Net energy cost'),
+    tiles.push({
+      label: t('results.energy.netGridCost', 'Net grid cost'),
       value: formatCurrency(bought - sold, 0),
-      sub: perYearText,
-      info: t('results.energy.netEnergyCostInfo', '{{bought}} of grid electricity bought at {{imp}} ct/kWh, minus {{sold}} earned on export at {{exp}} ct/kWh, scaled to one year. Equipment cost is on the Cost tab.', values),
+      sub: t('results.energy.perYear', 'per year'),
+      info: t('results.energy.netGridCostInfo', '{{bought}} of grid electricity bought at {{imp}} ct/kWh, minus {{sold}} earned on export at {{exp}} ct/kWh, scaled to one year. The total cost of all energy, equipment included, is in the header and on the Cost tab.', values),
     });
-    else {
-      const equipment = equipmentCost * perYear;
-      tiles.push({
-        label: t('results.energy.totalAnnualisedCost', 'Total annualised cost'),
-        value: formatCurrency(equipment + bought - sold, 0),
-        sub: perYearText,
-        info: t('results.energy.totalAnnualisedCostInfo', '{{investment}} annualised investment in the installed equipment, including its fixed upkeep and any gas bought, plus {{bought}} of grid electricity bought at {{imp}} ct/kWh, minus {{sold}} earned on export at {{exp}} ct/kWh, scaled to one year.',
-          { ...values, investment: formatCurrency(equipment, 0) }),
-      });
-    }
   }
 
   const title = isHeat ? t('results.energy.heatSummary', 'Heat over the run') : t('results.energy.electricitySummary', 'Electricity over the run');

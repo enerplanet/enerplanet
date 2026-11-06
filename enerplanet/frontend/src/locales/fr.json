@@ -614,6 +614,7 @@
       "selfSufficiencyDesc": "% de la demande couverte par les renouvelables",
       "peakDemand": "Demande de Pointe",
       "totalCost": "Coût Total",
+      "totalCostAllEnergy": "Coût total, toutes énergies",
       "over": "sur",
       "from": "de",
       "installed": "installés",

@@ -659,7 +659,6 @@ export const ModelResultsViewer = () => {
             carrier={carrier}
             gridPrices={structuredResults?.grid_prices}
             energyCap={structuredResults?.energy_cap ?? []}
-            costs={structuredResults?.cost ?? []}
             mode={model?.config?.mode}
           />
         );
@@ -978,7 +977,7 @@ export const ModelResultsViewer = () => {
                     hint: periodLabel,
                   },
                   {
-                    label: t('results.metrics.totalCost'),
+                    label: t('results.metrics.totalCostAllEnergy', 'Total cost, all energy'),
                     value: formatCurrency(summary.total_cost_eur, 0),
                     hint: periodLabel
                       ? `${t('results.metrics.equipmentAndRunning')} · ${periodLabel}`

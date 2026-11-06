@@ -617,6 +617,7 @@
       "selfSufficiencyDesc": "Anteil des verbrauchten Stroms, der nicht aus dem Netz bezogen wurde: 1 minus Netzbezug geteilt durch Verbrauch (Luthander et al., 2015)",
       "peakDemand": "Spitzenbedarf",
       "totalCost": "Gesamtkosten",
+      "totalCostAllEnergy": "Gesamtkosten, alle Energieträger",
       "over": "über",
       "from": "aus",
       "installed": "installiert",
