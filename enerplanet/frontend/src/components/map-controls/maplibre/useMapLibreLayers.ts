@@ -285,5 +285,5 @@ export function useMapLibreLayers(
   // Buildings left as flat footprints once the LoD2 lookup has finished.
   const footprintOnly = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
 
-  return { loadAll, footprintOnly };
+  return { loadAll, footprintOnly, lod2LayerRef };
 }
