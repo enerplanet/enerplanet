@@ -676,11 +676,7 @@ func (h *PylovoHandler) GetAvailableRegions(c *gin.Context) {
 	httputil.SuccessResponse(c, result)
 
 	if h.regionStore != nil {
-		go func() {
-			if cacheErr := h.regionStore.UpsertRegionsFromAPI(body); cacheErr != nil {
-				logger.Logger.Warnf("Failed to cache regions: %v", cacheErr)
-			}
-		}()
+		go h.cacheRegions(context.Background(), body)
 	}
 }
 
@@ -718,6 +714,12 @@ func (h *PylovoHandler) refreshRegionCache() {
 		return
 	}
 
+	h.cacheRegions(ctx, body)
+}
+
+// cacheRegions stores PyLovo's /boundary/available response and marks the
+// regions that overlap City2TABULA's 3D datasets.
+func (h *PylovoHandler) cacheRegions(ctx context.Context, body []byte) {
 	if err := h.regionStore.UpsertRegionsFromAPI(body); err != nil {
 		logger.Logger.Warnf("Failed to update region cache: %v", err)
 		return
