@@ -564,6 +564,10 @@ const modelSnapshotEqual = (
   prev.id === next.id &&
   prev.title === next.title &&
   prev.status === next.status &&
+  // The PyPSA leg's status drives the action's spinner/red/hidden state, and
+  // the leg does NOT touch the model row (no status/updated_at change), so the
+  // row would never re-render on a poll that flips it.
+  prev.pypsa_leg_status === next.pypsa_leg_status &&
   prev.created_at === next.created_at &&
   prev.updated_at === next.updated_at &&
   prev.user_id === next.user_id &&
