@@ -329,6 +329,30 @@
                     "max": 2
                 },
                 {
+                    "key": "module_width_m",
+                    "alias": "PV Module Width",
+                    "default_value": 1.134,
+                    "unit": "m",
+                    "min": 0.1,
+                    "max": 5
+                },
+                {
+                    "key": "module_height_m",
+                    "alias": "PV Module Height",
+                    "default_value": 1.762,
+                    "unit": "m",
+                    "min": 0.1,
+                    "max": 5
+                },
+                {
+                    "key": "module_power_kwp",
+                    "alias": "PV Module Power",
+                    "default_value": 0.4,
+                    "unit": "kWp",
+                    "min": 0.01,
+                    "max": 2
+                },
+                {
                     "key": "cost_energy_cap",
                     "alias": "Cost of energy capacity",
                     "default_value": 575,
