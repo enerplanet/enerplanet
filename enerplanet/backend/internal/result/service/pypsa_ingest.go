@@ -236,6 +236,16 @@ func (s *ResultService) IngestPyPSAResult(ctx context.Context, modelID uint, use
 		return nil, fmt.Errorf("failed to extract zip: %w", err)
 	}
 
+	// Record where the bundle was unpacked on the pypsa leg's run row: the
+	// PyPSA zip has no model_results row, so this is how GET /results/pypsa
+	// finds ITS bundle (convergence, transformer loading, line ratings) rather
+	// than falling back to the Calliope one.
+	if err := s.db.Model(&models.ModelMemeRun{}).
+		Where("model_id = ? AND leg = ?", modelID, models.MemeLegPyPSA).
+		Update("extracted_path", extractDir).Error; err != nil {
+		log.Warnf("PyPSA ingest: record extract path model_id=%d err=%v", modelID, err)
+	}
+
 	pypsaDir := locatePyPSAOutputDir(extractDir)
 	psummary := readPyPSAConvergence(pypsaDir)
 

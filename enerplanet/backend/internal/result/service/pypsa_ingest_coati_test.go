@@ -428,8 +428,10 @@ func TestIngestPyPSAResult_CoatiRoute(t *testing.T) {
 	runner := &fakePyPSACoatiRunner{doc: doc}
 	svc := NewResultService(db).WithCoatiRunner(runner)
 
-	// One transaction: 3 deletes (replace, don't append) + 3 INSERT ... RETURNING
-	// (one per electrical table); then the result_source UPDATE.
+	// The extract-path record, then one transaction: 3 deletes (replace, don't
+	// append) + 3 INSERT ... RETURNING (one per electrical table); then the
+	// result_source UPDATE.
+	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 	expectPyPSAElectricalReplace(mock, 3)
 	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -488,7 +490,9 @@ func TestIngestPyPSAResult_NonConvergedKeepsCompleting(t *testing.T) {
 	runner := &fakePyPSACoatiRunner{doc: doc}
 	svc := NewResultService(db).WithCoatiRunner(runner)
 
-	// 3 deletes + 3 electrical inserts in one tx + the result_source UPDATE.
+	// extract-path record + 3 deletes + 3 electrical inserts in one tx + the
+	// result_source UPDATE.
+	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 	expectPyPSAElectricalReplace(mock, 3)
 	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 

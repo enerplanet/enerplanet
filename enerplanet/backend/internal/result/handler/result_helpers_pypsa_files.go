@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	backendModels "spatialhub_backend/internal/models"
 )
 
 type pypsaConvergenceSummary struct {
@@ -45,6 +47,19 @@ func (h *ResultHandler) latestExtractedPath(modelID uint) string {
 		return ""
 	}
 	return results[0].ExtractedPath
+}
+
+// pypsaExtractedPath returns the PyPSA leg's OWN bundle directory: the isolated
+// PyPSA zip is unpacked into its own model_<id>_<ts>/ folder and never gets a
+// model_results row, but the ingest records that folder on the pypsa run row.
+// Falls back to the newest model_results bundle (the Calliope one) only when the
+// leg recorded no path — a legacy bundle — so the section readers never silently
+// read the Calliope bundle for a PyPSA result.
+func (h *ResultHandler) pypsaExtractedPath(modelID uint) string {
+	if path, err := h.store.GetLegExtractedPath(modelID, backendModels.MemeLegPyPSA); err == nil && path != "" {
+		return path
+	}
+	return h.latestExtractedPath(modelID)
 }
 
 func readPyPSAConvergenceSummary(extractDir string) (*pypsaConvergenceSummary, error) {

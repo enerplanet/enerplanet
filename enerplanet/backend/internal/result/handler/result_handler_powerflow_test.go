@@ -31,12 +31,12 @@ func TestGetPyPSAResults_PowerFlowLayout(t *testing.T) {
 		WithArgs("4", 1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "results"}).
 			AddRow(4, "owner", []byte(`{}`)))
-	// latestExtractedPath: the stored result's extracted bundle is the
-	// power_flow fixture.
-	mock.ExpectQuery(`SELECT \* FROM "model_results" WHERE model_id = \$1`).
-		WithArgs(4).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "model_id", "extracted_path", "created_at"}).
-			AddRow(1, 4, extractDir, time.Now()))
+	// pypsaExtractedPath: the pypsa leg's run row records ITS OWN bundle dir
+	// (the Calliope model_results bundle would be wrong here). No model_results
+	// expectation is queued: falling back to it must fail the run.
+	mock.ExpectQuery(`SELECT "extracted_path" FROM "model_meme_runs"`).
+		WithArgs(4, "pypsa", 1).
+		WillReturnRows(sqlmock.NewRows([]string{"extracted_path"}).AddRow(extractDir))
 	// The remaining store reads (result_source, voltage, power, line_loading,
 	// transformer_flows, settings, locations) have no expectation: they log
 	// and skip their sections, exactly as the pre-existing handler test.
@@ -69,4 +69,43 @@ func TestGetPyPSAResults_PowerFlowLayout(t *testing.T) {
 	assert.Contains(t, body, `"line_ratings"`)
 	assert.Contains(t, body, `"line_lv_1":500`)
 	assert.Contains(t, body, `"line_mv_1":8000`)
+}
+
+// TestGetPyPSAResults_FallsBackToModelResultsBundle pins the legacy fallback:
+// when the pypsa leg recorded no bundle path (an old run), the readers fall
+// back to the newest model_results bundle rather than serving nothing.
+func TestGetPyPSAResults_FallsBackToModelResultsBundle(t *testing.T) {
+	extractDir, err := filepath.Abs("testdata/powerflow")
+	require.NoError(t, err)
+
+	db, mock := testutil.NewMockDB(t)
+	handler := NewResultHandler(db, nil, nil, "secret", nil)
+
+	mock.ExpectQuery(`SELECT \* FROM "models" WHERE id = \$1`).
+		WithArgs("4", 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "results"}).
+			AddRow(4, "owner", []byte(`{}`)))
+	// The pypsa leg exists but recorded no path.
+	mock.ExpectQuery(`SELECT "extracted_path" FROM "model_meme_runs"`).
+		WithArgs(4, "pypsa", 1).
+		WillReturnRows(sqlmock.NewRows([]string{"extracted_path"}).AddRow(""))
+	// Fallback: the newest model_results bundle.
+	mock.ExpectQuery(`SELECT \* FROM "model_results" WHERE model_id = \$1`).
+		WithArgs(4).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "model_id", "extracted_path", "created_at"}).
+			AddRow(1, 4, extractDir, time.Now()))
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/models/4/results/pypsa", nil)
+	c.Params = gin.Params{{Key: "id", Value: "4"}}
+	c.Set("user_id", "owner")
+	c.Set("access_level", "expert")
+
+	handler.GetPyPSAResults(c)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	body := w.Body.String()
+	assert.Contains(t, body, `"convergence"`, "the fallback bundle's sections are read")
+	assert.Contains(t, body, `"transformer_loading"`)
 }
