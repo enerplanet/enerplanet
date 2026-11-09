@@ -16,6 +16,12 @@ type memeLegRunStore interface {
 	SaveLeg(modelID uint, leg, runID, status string) error
 	UpdateStatusLeg(modelID uint, leg, status, errMsg string) error
 	GetLeg(modelID uint, leg string) (*models.ModelMemeRun, error)
+	// MarkLegFailed ensures the leg's run record exists and is terminal
+	// 'failed' with the error, preserving an already-recorded run id. It is the
+	// writer for a failure that happens BEFORE a submit (so no row was ever
+	// written) — without it such a failure left no leg status at all and the
+	// dashboard showed a grey, not red, action.
+	MarkLegFailed(modelID uint, leg, errMsg string) error
 }
 
 // CalliopeLegReady is the GATE for the derived, isolated PyPSA leg: it refuses

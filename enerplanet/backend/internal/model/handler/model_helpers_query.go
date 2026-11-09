@@ -2,17 +2,21 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	modelservice "spatialhub_backend/internal/model/service"
 
+	appmodels "spatialhub_backend/internal/models"
+
 	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
 	"platform.local/common/pkg/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -548,4 +552,65 @@ func (h *ModelHandler) handleSharedModelWorkspace(userID string, model *models.M
 			model.Workspace = defaultWorkspace
 		}
 	}
+}
+
+// populatePyPSALegStatus fills each model's PyPSALegStatus from its pypsa-leg
+// run record in one batch query, so the dashboard can hide the "Run power flow"
+// action once the leg has completed. A model with no pypsa leg keeps "".
+func (h *ModelHandler) populatePyPSALegStatus(modelsList []models.Model) {
+	if len(modelsList) == 0 {
+		return
+	}
+	ids := make([]uint, 0, len(modelsList))
+	for _, m := range modelsList {
+		ids = append(ids, m.ID)
+	}
+	var runs []appmodels.ModelMemeRun
+	if err := h.store.DB().Where("model_id IN ? AND leg = ?", ids, appmodels.MemeLegPyPSA).Find(&runs).Error; err != nil {
+		return
+	}
+	byModel := make(map[uint]string, len(runs))
+	for _, r := range runs {
+		byModel[r.ModelID] = r.Status
+	}
+	for i := range modelsList {
+		modelsList[i].PyPSALegStatus = byModel[modelsList[i].ID]
+	}
+}
+
+// trimListPayload keeps GET /models light: the full config/results JSONB
+// blobs are dropped from the list, which the dashboard polls while a run is
+// busy. The table only renders config.mode and results.failed_stage /
+// failed_service / warning (failed-badge labels and the demand-fallback
+// notice). Full blobs stay available on GET /models/{id}. Extend
+// keepJSONKeys' key lists when a list consumer needs another key.
+func trimListPayload(modelsList []models.Model) []models.Model {
+	for i := range modelsList {
+		modelsList[i].Config = keepJSONKeys(modelsList[i].Config, "mode")
+		modelsList[i].Results = keepJSONKeys(modelsList[i].Results, "failed_stage", "failed_service", "warning")
+	}
+	return modelsList
+}
+
+// keepJSONKeys rebuilds a JSON value as an object holding only the given keys.
+// null or empty input passes through unchanged (config-less drafts).
+func keepJSONKeys(raw datatypes.JSON, keys ...string) datatypes.JSON {
+	if len(raw) == 0 || string(raw) == "null" {
+		return raw
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil
+	}
+	out := make(map[string]json.RawMessage, len(keys))
+	for _, k := range keys {
+		if v, ok := obj[k]; ok {
+			out[k] = v
+		}
+	}
+	trimmed, err := json.Marshal(out)
+	if err != nil {
+		return nil
+	}
+	return datatypes.JSON(trimmed)
 }

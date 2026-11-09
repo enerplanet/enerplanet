@@ -259,6 +259,12 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 
+	// Resolve the PyPSA leg's own bundle directory up front: the section
+	// readers below (convergence, transformer loading, line ratings) read its
+	// files from disk, and the pypsa leg records its own extract dir on its run
+	// row — never the Calliope model_results bundle.
+	extractDir := h.pypsaExtractedPath(modelIDUint)
+
 	// Declare what this result actually contains before returning any data: the
 	// UI hides the sections a source cannot provide (and must not render an
 	// empty state that reads as a clean bill of health). The mapping lives in
@@ -297,7 +303,6 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	response["locations"] = h.store.GetPyPSALocations(modelIDUint)
 
-	extractDir := h.latestExtractedPath(modelIDUint)
 	if extractDir != "" {
 		if convergence, err := readPyPSAConvergenceSummary(extractDir); err == nil && convergence != nil {
 			response["convergence"] = convergence

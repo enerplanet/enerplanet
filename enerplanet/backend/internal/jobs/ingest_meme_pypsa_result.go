@@ -58,20 +58,21 @@ func HandleIngestMemePyPSAResult(ctx context.Context, t *asynq.Task, db *gorm.DB
 
 	if _, err := ingester.IngestPyPSAResult(ctx, p.ModelID, p.UserID, p.ZipPath); err != nil {
 		// Zero masking: record the terminal 'failed' state with the actual cause
-		// and return it so it surfaces exactly once.
+		// and return it so it surfaces exactly once. The MODEL's own status is
+		// left untouched — the pypsa leg is a derived add-on over a completed (or
+		// published) Calliope result, so its failure must not demote the model.
 		if uerr := runs.UpdateStatusLeg(p.ModelID, models.MemeLegPyPSA, models.MemeRunStatusFailed, err.Error()); uerr != nil {
 			log.Errorf("model %d: failed to mark MEME pypsa run failed: %v", p.ModelID, uerr)
 		}
-		markModelFailed(db, p.ModelID, err)
 		return fmt.Errorf("ingest MEME pypsa result model_id=%d zip=%s: %w", p.ModelID, p.ZipPath, err)
 	}
 
 	// Success: the isolated PyPSA leg (dispatch + ingest) is done. Clearing the
 	// error restores a pypsa leg a prior failed parse had flipped to 'failed'.
+	// The model's own status is NOT changed (see above).
 	if err := runs.UpdateStatusLeg(p.ModelID, models.MemeLegPyPSA, models.MemeRunStatusCompleted, ""); err != nil {
 		log.Errorf("model %d: failed to mark MEME pypsa run completed: %v", p.ModelID, err)
 	}
-	markModelCompleted(db, p.ModelID)
 	return nil
 }
 

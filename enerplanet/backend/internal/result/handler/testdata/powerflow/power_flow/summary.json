@@ -1,0 +1,12 @@
+{
+  "method": "newton_raphson",
+  "slack": "grid_import",
+  "slack_bus": "n1::electricity",
+  "snapshots": 3,
+  "converged_snapshots": 3,
+  "min_v_mag_pu": 0.9943,
+  "max_v_mag_pu": 1.0,
+  "max_line_loading": 1.0,
+  "max_transformer_loading": 1.0,
+  "failure": null
+}

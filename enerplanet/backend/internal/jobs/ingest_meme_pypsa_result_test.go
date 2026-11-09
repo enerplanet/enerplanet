@@ -60,6 +60,12 @@ func (f *fakePypsaIngestRuns) UpdateStatusLeg(modelID uint, leg, status, errMsg 
 func (f *fakePypsaIngestRuns) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, error) {
 	return nil, nil
 }
+func (f *fakePypsaIngestRuns) MarkLegFailed(modelID uint, leg, errMsg string) error {
+	f.leg = leg
+	f.status = models.MemeRunStatusFailed
+	f.errMsg = errMsg
+	return nil
+}
 
 // newPypsaIngestMockDB returns a permissive gorm DB. The model-status UPDATE
 // (markModelCompleted/Failed) is logged-not-fatal when unanticipated, so the

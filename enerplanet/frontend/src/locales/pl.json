@@ -193,7 +193,9 @@
       "delete": "Usuń",
       "cannotDelete": "Nie można usunąć - tylko właściciel lub ekspert może usunąć",
       "runWithMeme": "Uruchom z Calliope",
-      "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)"
+      "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)",
+      "runPypsaFailed": "Przepływ mocy nie powiódł się — kliknij, aby ponowić",
+      "runPypsaRunning": "Obliczanie przepływu mocy…"
     },
     "pagination": {
       "showing": "Wyświetlanie",

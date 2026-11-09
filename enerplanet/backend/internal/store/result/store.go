@@ -2,6 +2,7 @@ package result
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -116,6 +117,27 @@ func (s *Store) GetModelResults(modelID uint) ([]commonModels.ModelResult, error
 		return nil, err
 	}
 	return results, nil
+}
+
+// GetLegExtractedPath returns the directory the leg's result bundle was
+// extracted into (model_meme_runs.extracted_path), or "" when the leg recorded
+// none. The GET /results/pypsa disk readers use it to find the PyPSA bundle
+// instead of falling back to the Calliope one.
+func (s *Store) GetLegExtractedPath(modelID uint, leg string) (string, error) {
+	var row struct {
+		ExtractedPath string `gorm:"column:extracted_path"`
+	}
+	err := s.db.Model(&backendModels.ModelMemeRun{}).
+		Select("extracted_path").
+		Where("model_id = ? AND leg = ?", modelID, leg).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return row.ExtractedPath, nil
 }
 
 // GetResultByID fetches a result by primary key with its Model preloaded.

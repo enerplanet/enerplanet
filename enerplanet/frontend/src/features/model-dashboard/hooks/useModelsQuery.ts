@@ -11,6 +11,19 @@ const modelKeys = {
 	detail: (id: number) => [...modelKeys.all, "detail", id] as const,
 };
 
+/** The isolated PyPSA leg's in-flight statuses (model_meme_runs.status). */
+const PYPSA_LEG_RUNNING = new Set(["running", "pending"]);
+
+/**
+ * A page is busy when any row's model is active OR its derived PyPSA leg is
+ * still in flight. The leg deliberately does NOT change the model's status (it
+ * is an add-on over a completed Calliope run), so without the leg check the
+ * dashboard would stop polling the moment a power flow is dispatched and the
+ * action's spinner would never clear.
+ */
+const hasActiveRun = (models: Model[]): boolean =>
+	models.some((m) => isActiveStatus(m.status) || PYPSA_LEG_RUNNING.has(m.pypsa_leg_status ?? ""));
+
 export const useModelsQuery = (params?: {
 	limit?: number;
 	offset?: number;
@@ -35,18 +48,19 @@ export const useModelsQuery = (params?: {
 			if (!res) return 5000;
 
 			const models = Array.isArray(res.data) ? res.data : [];
-			const hasActive = models.some((m) => isActiveStatus(m.status));
 
-			return hasActive ? 3000 : 30000;
+			// Busy runs: refresh every 5s so rows flip on completion. Idle:
+			// stop polling — statuses only change via user actions (mutations
+			// invalidate) or the window-focus refetch, both covered above.
+			return hasActiveRun(models) ? 5000 : false;
 		},
 		staleTime: (query) => {
 			const res = query.state.data as ModelListResponse | undefined;
 			if (!res) return 0;
 
 			const models = Array.isArray(res.data) ? res.data : [];
-			const hasActive = models.some((m) => isActiveStatus(m.status));
 
-			return hasActive ? 0 : 15000;
+			return hasActiveRun(models) ? 0 : 15000;
 		},
 	});
 };
@@ -165,9 +179,11 @@ export const useRunMemeMutation = () => {
 	});
 };
 
-// Dispatch the isolated PyPSA power-flow leg (the add-on). Same
-// optimistic/rollback shape as useRunMemeMutation: on dispatch the model goes
-// to 'queue' and both lists + stats invalidate on success.
+// Dispatch the isolated PyPSA power-flow leg (the add-on). onMutate marks the
+// model's LEG running optimistically so the action's spinner appears at once
+// (the leg does not change the model's own status); both lists + stats
+// invalidate on success, and the leg-driven polling interval keeps the row
+// fresh until the leg lands.
 export const useRunMemePypsaMutation = () => {
 	const queryClient = useQueryClient();
 
@@ -184,7 +200,7 @@ export const useRunMemePypsaMutation = () => {
 					return {
 						...old,
 						data: old.data.map((model: Model) =>
-							model.id === id ? { ...model, status: "queue" as const } : model
+							model.id === id ? { ...model, pypsa_leg_status: "running" } : model
 						),
 					} as ModelListResponse;
 				}
