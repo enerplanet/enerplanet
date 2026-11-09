@@ -4,7 +4,7 @@
  * The arrays are EnerPlanET's; the view only renders them.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_PV_MODULE,
   type PvMode,
@@ -151,10 +151,14 @@ export function usePvMode(
     [polygonById],
   );
 
+  // Hosts pass a new onArrays on every render; a new pv object would make the view lay out every surface again.
+  const host = useRef(onArrays);
+  host.current = onArrays;
+
   const change = useCallback((next: PvArray[]) => {
     setArrays(next);
-    onArrays(next);
-  }, [onArrays]);
+    host.current(next);
+  }, []);
 
   const onToggle = useCallback((surfaceId: string, on: boolean) => {
     const row = rows?.find((r) => r.surface_id === surfaceId);
