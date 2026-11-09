@@ -2,9 +2,11 @@ package resultservice
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,6 +100,16 @@ func (f *fakePyPSACoatiRunner) Convert(_ context.Context, resultFile, frameworkI
 		return nil, f.err
 	}
 	return json.Marshal(f.doc)
+}
+
+// ConvertReader satisfies CoatiRunner; the fake serves the canned document as a
+// stream (Convert is the byte form).
+func (f *fakePyPSACoatiRunner) ConvertReader(ctx context.Context, resultFile, frameworkID string) (io.ReadCloser, error) {
+	raw, err := f.Convert(ctx, resultFile, frameworkID)
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(bytes.NewReader(raw)), nil
 }
 
 // writePFFixtureZip writes a MEME-main layout bundle: network.nc next to a

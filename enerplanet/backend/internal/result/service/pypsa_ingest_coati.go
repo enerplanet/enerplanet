@@ -95,14 +95,23 @@ func decodeCoatiPowerFlow(doc *CoatiResultsDocument) *coatiPowerFlow {
 // is NOT fatal: the bundle may predate the native reader, and the caller falls
 // back to the legacy CSV ingest.
 func (s *ResultService) pypsaCoatiDocument(ctx context.Context, networkNC string, modelID uint, log *logrus.Entry) (*CoatiResultsDocument, *coatiPowerFlow) {
-	raw, err := s.coati().Convert(ctx, networkNC, CoatiFrameworkPyPSA124)
+	// Decode STRAIGHT from coati's stdout: the results document can be large, so
+	// it is never buffered whole in memory (see CoatiRunner.ConvertReader).
+	rc, err := s.coati().ConvertReader(ctx, networkNC, CoatiFrameworkPyPSA124)
 	if err != nil {
 		log.Warnf("Coati convert (pypsa power flow) failed model_id=%d file=%s err=%v; using the legacy CSV ingest", modelID, networkNC, err)
 		return nil, nil
 	}
 	var doc CoatiResultsDocument
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		log.Warnf("Decode PyPSA Coati document failed model_id=%d err=%v; using the legacy CSV ingest", modelID, err)
+	decodeErr := json.NewDecoder(rc).Decode(&doc)
+	// Close before deciding: a non-zero exit (a failed conversion) must win over
+	// a decode error, so the log carries why coati failed.
+	if closeErr := rc.Close(); closeErr != nil {
+		log.Warnf("Coati convert (pypsa power flow) failed model_id=%d file=%s err=%v; using the legacy CSV ingest", modelID, networkNC, closeErr)
+		return nil, nil
+	}
+	if decodeErr != nil {
+		log.Warnf("Decode PyPSA Coati document failed model_id=%d err=%v; using the legacy CSV ingest", modelID, decodeErr)
 		return nil, nil
 	}
 	pf := decodeCoatiPowerFlow(&doc)
