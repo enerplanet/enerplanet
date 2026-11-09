@@ -38,17 +38,26 @@ grep -rn "tasks/closed/" enerplanet/ --include=*.go --include=*.ts --include=*.t
    **remove every code reference to it** (the hard rule above), and add its
    **"Code this governs"** line.
 5. **Diagrams are not tasks** — they live in `.local/docs/` (gitignored).
+6. **`optional/` holds deferred *design* decisions** — a known trade-off that was consciously not taken now,
+   with its options, upsides/downsides and the trigger that should reopen it. Nothing in `optional/` is
+   committed work; a doc moves to `open/` when its trigger fires.
 
 ## Open — what still needs doing
 
 | Doc | What it is | What it needs |
 |---|---|---|
 | `open/pypsa-isolated-run-plan.md` | **the active plan** — the isolated PyPSA (power-flow) run: Calliope first, PyPSA as a second, separate pass fed by the parsed Calliope results | Phases 1–6. **Gated on B1**: can MEME's schema express `lines` at all? Start at Phase 1 step 3 — it needs no services |
-| `open/pr377-review-fixes.md` | the step-by-step resolution of PR #377's review (6 blocking + 6 other findings), with a per-step commit log | **Live validation pending** (checklist with Stefan); **N6 open** — the PR split decision |
+| `open/pr377-review-fixes.md` | the step-by-step resolution of PR #377's review (6 blocking + 6 other findings), with a per-step commit log and the fixes found during live validation | **live validation in progress** (checklist in `open/pr377-validation.md`); N6 decided — ship as one PR |
 | `open/pr377-validation.md` | the live-validation checklist for the PR #377 fixes: stack prep, the models to use, V1–V9 click-through steps split by who does what | run it after `make migrate` + a backend hot-patch; then reply to the reviewer |
 | `open/pypsa-pass-ask.md` | the sendable ask to the MEME/T1K/TentaCron dev (8 questions, the legacy + schema ones) | **Send it.** Then record the answers in the plan's §12 and unblock B1 |
 | `open/heat-patch.md` | deferred register — the heat vector on the MEME dispatch path. **Re-baselined 2026-10-20:** the T1K mapping already carries heat/cooling/gas and run mode exists; the gaps are frontend `energyVectors` + heat techs, the unconditional `capacity.expandable` vs `operate`, and enforcing `operate` for heat models | gap 1 (frontend schema) first, then the Go expandable pass |
 | `open/pv-patch.md` | deferred register — a precomputed profile for physics PV/wind (a `pv_supply` tech currently 422s the whole dispatch) | when a real TentaCron `resolvent-pvgis` run is available |
+
+## Optional — deferred design decisions
+
+| Doc | The decision | Reopen when |
+|---|---|---|
+| `optional/pypsa-payload-parity.md` | the pypsa leg rebuilds a **bare** payload while the Calliope leg enriches its own (BuEM series, PV arrays, grid prices, heat pruning), so the two jobs differ in tech-id space. Options: share the enrichment (adds BuEM/PV/price deps + model writes to a leg meant to be a passthrough), persist what Calliope built (storage + a column), or keep tolerating (mapper guards) | a **new enrichment step** lands in `HandleDispatchMeme`, or drift shows up **electrically** (a dropped/created tech changes the solved network, not just the job's non-electrical parts) |
 
 ## Closed — what shipped, and what it records
 
