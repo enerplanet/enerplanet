@@ -46,6 +46,26 @@ All blocking issues and every non-blocking item except the PR split are fixed on
 | N5 | working notes moved out of the repo root into `.local/docs/` (gitignored) | done |
 | N6 | PR split (list payload / polling / Makefile as their own PRs) | **decided: ship as one PR** (Stefan, 2026-11-09) |
 
+### Found during live validation (beyond the review)
+
+| Fix | Commit | What broke |
+|---|---|---|
+| Expose `pypsa_leg_status` on the dashboard action | `73c20f6` | Leg running → spinner; plus the polling gate and the optimistic leg status (see below) |
+| `performance` stripped from **every** tech | `94c7691` | F1 was scoped to *dispatched* techs; MEME validates **every** technology, so an undispatched PV base tech (`pv_supply_2`) still 422'd live |
+| Drop undispatched supplies, strip purchase costs | `d19f587` | Two more pypsa-target rejections: a non-demand tech with no dispatch, and `costs.monetary.purchase` (no PyPSA slot) |
+| Stop the leg resetting the execution time | `c075dec` | `calculation_started_at` refreshed while `calculation_completed_at` held the Calliope time → duration clamped to 0 |
+| Let a leg-status change re-render the row | `5878231` | `ModelTableRow`'s memo comparator ignored `pypsa_leg_status`; the leg no longer mutates the model row, so nothing else busted the memo → the spinner never appeared |
+
+**Root cause behind the last three:** `HandleDispatchMemePyPSA` builds a **bare** payload
+(`payload.BuildCalculationPayload`) while `dispatch_meme` applies the full enrichment — BuEM demand
+series, `pvResolver.Attach` (which renames a building's `pv_supply` into one tech per array), grid
+prices, heat pruning, operate sizing. The two jobs therefore differ in the technology-id space
+(`pv_supply_2` in the job vs `pv_supply_2_0..4` in the results). The fixes above make the leg
+tolerate the drift, because every electrical injection comes from the Calliope flow CSVs. **Follow-up
+(Stefan's call):** share the enrichment between the two dispatches — that threads `resolver`,
+`seriesReader`, `pvResolver`, `priceStore` into `HandleDispatchMemePyPSA` (signature + `main.go`
+wiring + fakes).
+
 **Still to do after review:** live validation (see the validation checklist handed
 to Stefan). N6 decided: ship as one PR.
 
