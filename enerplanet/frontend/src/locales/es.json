@@ -618,6 +618,7 @@
       "selfSufficiencyDesc": "% de demanda cubierta por renovables",
       "peakDemand": "Demanda Pico",
       "totalCost": "Costo Total",
+      "totalCostAllEnergy": "Costo total, todas las energías",
       "over": "en",
       "from": "de",
       "installed": "instalados",
