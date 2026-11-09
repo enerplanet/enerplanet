@@ -172,6 +172,14 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 		if err := setSeriesAt(techID, "dispatch", g.Bus, g.PSet, tech); err != nil {
 			return nil, err
 		}
+		// A technology the power flow drives with a fixed dispatch is a plain
+		// fixed injection: MEME's pypsa validator rejects a physics performance
+		// model without a precomputed profile BEFORE it looks at the dispatch
+		// (meme internal/target/validate.go), so a PV tech with
+		// performance.physics="pv" would fail the whole leg.
+		if err := stripPerformance(tech); err != nil {
+			return nil, fmt.Errorf("meme: strip performance of generator %q: %w", techID, err)
+		}
 		techs[techID] = mustJSON(tech)
 	}
 	for _, l := range pf.Loads {
@@ -203,6 +211,11 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	slack["node"] = mustJSON([]string{slackNode})
 	slack["role"] = mustJSON("supply")
 	slack["carrier_out"] = mustJSON("electricity")
+	// The slack is a fixed supply on the electrical network too: no physics
+	// performance survives (see the generator loop above).
+	if err := stripPerformance(slack); err != nil {
+		return nil, fmt.Errorf("meme: strip performance of slack %q: %w", slackTech, err)
+	}
 	techs[slackTech] = mustJSON(slack)
 	model["technologies"] = mustJSON(techs)
 
@@ -307,6 +320,38 @@ func componentTechID(name string, buses []pypsapass.Bus) string {
 		return ""
 	}
 	return name[len(best)+1:]
+}
+
+// stripPerformance removes the physics performance model from a technology and
+// from every node override. A technology the power flow drives with a fixed
+// dispatch (a generator's p_set series or the slack) is a plain fixed injection
+// and carries no physics: MEME's pypsa validator rejects any performance model
+// without a precomputed profile BEFORE it looks at the dispatch
+// (meme internal/target/validate.go), so leaving performance.physics="pv" on a
+// PV tech fails the whole leg.
+func stripPerformance(tech map[string]json.RawMessage) error {
+	delete(tech, "performance")
+	raw, ok := tech["node_overrides"]
+	if !ok {
+		return nil
+	}
+	var overrides map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &overrides); err != nil {
+		return fmt.Errorf("decode node_overrides: %w", err)
+	}
+	for node, ovRaw := range overrides {
+		var ov map[string]json.RawMessage
+		if err := json.Unmarshal(ovRaw, &ov); err != nil {
+			return fmt.Errorf("decode node override %q: %w", node, err)
+		}
+		if _, has := ov["performance"]; !has {
+			continue
+		}
+		delete(ov, "performance")
+		overrides[node] = mustJSON(ov)
+	}
+	tech["node_overrides"] = mustJSON(overrides)
+	return nil
 }
 
 // dropNonElectricalSupply removes every supply/storage/conversion technology

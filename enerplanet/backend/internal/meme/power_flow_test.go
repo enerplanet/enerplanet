@@ -311,3 +311,72 @@ func TestApplyPowerFlow_isDeterministicAndIdempotent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(once), string(twice), "applying the overlay twice changes nothing")
 }
+
+// TestApplyPowerFlow_dropsPerformanceOnDispatchedTechs is the regression for
+// the PV rejection: MEME's pypsa validator rejects a physics model without a
+// precomputed profile before it looks at the fixed dispatch, so a PV tech that
+// keeps performance.physics fails the whole leg. Every technology the pass
+// drives with a fixed dispatch (the PV generator, the slack) must lose
+// performance — on the tech and on every node override.
+func TestApplyPowerFlow_dropsPerformanceOnDispatchedTechs(t *testing.T) {
+	pf, job := powerFlowFixture(t)
+
+	// Inject a physics performance model on the tech that becomes a dispatched
+	// generator, and a per-node override that carries one too.
+	var top map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(job, &top))
+	var m map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(top["model"], &m))
+	var techs map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(m["technologies"], &techs))
+	techs["pv_supply_1"] = mustJSON(map[string]any{
+		"role":           "supply",
+		"carrier_out":    "electricity",
+		"node":           []string{"nb1"},
+		"performance":    map[string]any{"physics": "pv"},
+		"node_overrides": map[string]any{"nb1": map[string]any{"performance": map[string]any{"physics": "pv"}}},
+	})
+	m["technologies"] = mustJSON(techs)
+	top["model"] = mustJSON(m)
+	jobWithPerf := mustJSON(top)
+
+	got, err := ApplyPowerFlow(jobWithPerf, pf)
+	require.NoError(t, err)
+
+	var out map[string]interface{}
+	require.NoError(t, json.Unmarshal(got, &out))
+	outTechs := out["model"].(map[string]interface{})["technologies"].(map[string]interface{})
+
+	pv := outTechs["pv_supply_1"].(map[string]interface{})
+	require.NotEmpty(t, pv["dispatch"], "the generator still carries its fixed dispatch")
+	assert.NotContains(t, pv, "performance", "a dispatched tech must not keep a physics model")
+	if ovs, ok := pv["node_overrides"].(map[string]interface{}); ok {
+		for node, raw := range ovs {
+			assert.NotContains(t, raw.(map[string]interface{}), "performance", "override %s must not keep a physics model", node)
+		}
+	}
+
+	slack := outTechs["grid_trafo_1_import"].(map[string]interface{})
+	assert.NotContains(t, slack, "performance", "the slack is a fixed supply too")
+}
+
+// TestStripPerformance_removesTechAndOverridePerformance pins the helper: both
+// the tech-level and the per-node-override performance blocks are removed.
+func TestStripPerformance_removesTechAndOverridePerformance(t *testing.T) {
+	tech := map[string]json.RawMessage{
+		"role":        mustJSON("supply"),
+		"performance": mustJSON(map[string]any{"physics": "pv"}),
+		"node_overrides": mustJSON(map[string]any{
+			"n1": map[string]any{"performance": map[string]any{"physics": "pv"}, "dispatch": []float64{1, 2}},
+			"n2": map[string]any{"dispatch": []float64{3, 4}},
+		}),
+	}
+	require.NoError(t, stripPerformance(tech))
+	assert.NotContains(t, tech, "performance")
+
+	var ovs map[string]map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(tech["node_overrides"], &ovs))
+	assert.NotContains(t, ovs["n1"], "performance", "override performance is dropped")
+	assert.Contains(t, ovs["n1"], "dispatch", "other override fields survive")
+	assert.Contains(t, ovs["n2"], "dispatch")
+}
