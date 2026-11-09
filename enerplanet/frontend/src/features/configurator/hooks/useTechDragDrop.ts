@@ -14,7 +14,7 @@ import { HEAT_SUPPLY_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue 
 import { hasHeatTech } from "@/features/configurator/utils/heatResolution";
 import { useConfiguratorParams } from "@/features/configurator/building-config/useConfiguratorParams";
 import { fetchBestFitArrays, type BuildingPlace } from "@/features/configurator/building-config/pvBestFit";
-import { DEFAULT_USABLE_SHARE } from "@/features/configurator/building-config/usePvMode";
+import { DEFAULT_USABLE_SHARE, type PvArray } from "@/features/configurator/building-config/usePvMode";
 import { forEachLimited } from "@/components/map-controls/maplibre/useLod2Surfaces";
 
 /** Whether a building carries any technology or a heat link to a producer. */
@@ -105,6 +105,21 @@ export const layOutPv = async (buildings: Feature<Geometry>[], usableShare: numb
   return failed;
 };
 
+/**
+ * A technology as one building stores it when added. Arrays chosen in PV mode
+ * outlive a later edit of the parameters. PV added in the building's 3D view
+ * starts on no surface, for the user to place; elsewhere it gets the best fit.
+ */
+export const addedTech = (
+  techKey: string,
+  entry: Record<string, unknown>,
+  stored: { arrays?: PvArray[] | null } | undefined,
+  inView: boolean,
+): Record<string, unknown> => {
+  const arrays = stored?.arrays ?? (techKey === "pv_supply" && inView ? [] : undefined);
+  return { ...entry, ...(arrays && { arrays }) };
+};
+
 /** A heat supply waiting for the user to choose which buildings it goes on. */
 export interface HeatScopeRequest {
   techKey: string;
@@ -143,7 +158,7 @@ export const useTechDragDrop = ({
   const setIsAddingTechToAll = useModelStore((s) => s.setIsAddingTechToAll);
   const appliedTechKeys = useModelStore((s) => s.appliedTechKeys);
   const setAppliedTechKeys = useModelStore((s) => s.setAppliedTechKeys);
-  const { openBuilding } = useConfiguratorParams();
+  const { buildingId: openBuildingId, openBuilding } = useConfiguratorParams();
   const [heatScopeRequest, setHeatScopeRequest] = useState<HeatScopeRequest | null>(null);
 
   const handleTechDragStart = useCallback((tech: Technology) => { setDraggingTech(tech); }, [setDraggingTech]);
@@ -206,20 +221,19 @@ export const useTechDragDrop = ({
     } else {
       // A new object, so the open building configurator sees the change.
       const existing = { ...(selectedBuildingForTech.get("techs") || {}) };
-      // Arrays chosen in PV mode outlive a later edit of the parameters.
-      const arrays = existing[techKey]?.arrays;
-      existing[techKey] = { ...entry, ...(arrays && { arrays }) };
+      const inView = openBuildingId === String(selectedBuildingForTech.get("osm_id"));
+      existing[techKey] = addedTech(techKey, entry, existing[techKey], inView);
       selectedBuildingForTech.set("techs", existing);
       selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
       showSuccess(t("gridNotifications.techAddedToBuilding", { tech: source.alias }));
-      if (techKey === "pv_supply") continuePvOnBuilding(selectedBuildingForTech, Boolean(arrays), usableShare);
+      if (techKey === "pv_supply") continuePvOnBuilding(selectedBuildingForTech, Boolean(existing[techKey].arrays), usableShare);
     }
     setTechDialogOpen(false);
     setSelectedTechForDialog(null);
     setSelectedBuildingForTech(null);
     setIsAddingTechToAll(false);
     setIsModified(true);
-  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, layOutPvAndReport, continuePvOnBuilding]);
+  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, layOutPvAndReport, continuePvOnBuilding, openBuildingId]);
 
   /** Applies the waiting heat supply to the chosen buildings, or drops it when scope is null. */
   const resolveHeatScope = useCallback((scope: HeatScope | null) => {

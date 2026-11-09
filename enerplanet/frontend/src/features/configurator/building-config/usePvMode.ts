@@ -129,7 +129,14 @@ export function usePvMode(
   t: (key: string, options?: Record<string, unknown>) => string,
   polygons: readonly SurfacePolygon[] | null,
 ): { pv: PvMode | undefined; failed: boolean } {
-  const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
+  const stored = building?.arrays ?? null;
+  const [arrays, setArrays] = useState<PvArray[] | null>(stored);
+  // PV added or removed while the view is open replaces the arrays held here.
+  const [seen, setSeen] = useState(stored);
+  if (stored !== seen) {
+    setSeen(stored);
+    setArrays(stored);
+  }
   const active = building !== null;
   const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
