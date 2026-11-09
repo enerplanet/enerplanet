@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -551,6 +552,27 @@ func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testin
 	assert.Equal(t, fakeZip, got, "the fetched MEME pypsa zip is stored verbatim")
 
 	require.Equal(t, modelID, enq.enqueued[0].ModelID)
+}
+
+// TestPypsaDispatchPayload_carriesStartedAt pins the per-solve Idempotency-Key
+// discriminator: it lives in the DISPATCH PAYLOAD (this leg must never touch
+// model.calculation_started_at, which the dashboard measures the model's
+// execution time from), differs per solve, and stays leg-scoped.
+func TestPypsaDispatchPayload_carriesStartedAt(t *testing.T) {
+	started := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	raw, err := json.Marshal(DispatchMemePyPSAPayload{ModelID: 42, UserID: "u1", StartedAt: started})
+	require.NoError(t, err)
+
+	var back DispatchMemePyPSAPayload
+	require.NoError(t, json.Unmarshal(raw, &back))
+	assert.True(t, started.Equal(back.StartedAt), "StartedAt survives the payload round-trip")
+
+	later := time.Date(2026, 1, 1, 11, 0, 0, 0, time.UTC)
+	assert.NotEqual(t, pypsaIdempotencyKey(42, &started), pypsaIdempotencyKey(42, &later),
+		"a re-solve (new StartedAt) must produce a different key")
+	assert.Equal(t, "model_42_pypsa", pypsaIdempotencyKey(42, nil),
+		"no start time -> the bare per-model key (leg-scoped)")
+	assert.True(t, strings.HasSuffix(pypsaIdempotencyKey(42, &started), "_pypsa"))
 }
 
 func TestHandleDispatchMemePyPSA_gateRefusesWithoutCompletedCalliope(t *testing.T) {

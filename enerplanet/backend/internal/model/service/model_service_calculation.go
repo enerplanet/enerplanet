@@ -238,22 +238,15 @@ func (s *ModelService) StartMemePyPSACalculation(ctx context.Context, userID str
 		return nil, err
 	}
 
-	now := time.Now().UTC()
-	// Refresh the run discriminator (the PyPSA Idempotency-Key is built from
-	// calculation_started_at, so a user re-solve produces a NEW TentaCron job)
-	// but DO NOT touch the model's status: the PyPSA leg is a derived add-on
-	// over an already-completed (or published) Calliope result, so its state
-	// lives on its own leg row and must never demote a published model.
-	if err := s.store.Update(model, map[string]interface{}{
-		"calculation_started_at": now,
-		"updated_at":             now,
-	}); err != nil {
-		return nil, fmt.Errorf("failed to update model status: %w", err)
-	}
-
+	// The pypsa leg must NOT touch the model's timing fields: calculation_started_at
+	// and calculation_completed_at describe the CALLIOPE run, and the dashboard
+	// measures the model's execution time from them — refreshing started_at made
+	// a completed model's timer recompute to ~0. The per-solve discriminator for
+	// the TentaCron Idempotency-Key travels in the payload instead.
 	payloadBytes, err := json.Marshal(jobs.DispatchMemePyPSAPayload{
-		ModelID: model.ID,
-		UserID:  userID,
+		ModelID:   model.ID,
+		UserID:    userID,
+		StartedAt: time.Now().UTC(),
 	})
 	if err != nil {
 		log.Errorf("failed to marshal dispatch_meme_pypsa payload model_id=%d err=%v", model.ID, err)

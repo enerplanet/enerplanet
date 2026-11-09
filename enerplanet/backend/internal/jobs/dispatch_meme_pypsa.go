@@ -39,6 +39,13 @@ const TypeDispatchMemePyPSA = "dispatch_meme_pypsa"
 type DispatchMemePyPSAPayload struct {
 	ModelID uint   `json:"model_id"`
 	UserID  string `json:"user_id"`
+	// StartedAt is this dispatch's own timestamp, the per-solve discriminator
+	// for the TentaCron Idempotency-Key (so a user re-solve produces a NEW job).
+	// It travels in the payload because the PyPSA leg must NOT touch
+	// model.calculation_started_at: that field, with calculation_completed_at,
+	// describes the CALLIOPE run the dashboard measures the model's execution
+	// time from — refreshing it made a completed model's timer recompute to 0.
+	StartedAt time.Time `json:"started_at"`
 }
 
 // CalliopeCSVLocator resolves the stored Calliope bundle's per-target csv dir
@@ -554,9 +561,16 @@ func HandleDispatchMemePyPSA(
 	}
 	jobID := ""
 	submittedNow := false
+	// The Idempotency-Key discriminator is the dispatch's own StartedAt (see the
+	// payload): a re-solve carries a fresh one and gets a NEW TentaCron job,
+	// while a retry of the same task reuses its own key.
+	var startedAt *time.Time
+	if !p.StartedAt.IsZero() {
+		startedAt = &p.StartedAt
+	}
 	switch {
 	case rec == nil || models.MemeRunFinished(rec.Status):
-		jobID, err = tc.SubmitMeme(ctx, memeTargetPyPSAOnly, jobMap, pypsaIdempotencyKey(model.ID, model.CalculationStartedAt))
+		jobID, err = tc.SubmitMeme(ctx, memeTargetPyPSAOnly, jobMap, pypsaIdempotencyKey(model.ID, startedAt))
 		if err != nil {
 			return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme pypsa dispatch via TentaCron for model %d: %w", p.ModelID, err))
 		}
