@@ -196,7 +196,7 @@ must not sit pulsing in `running`.
 | **N2** `q` basis | On the Grid tab's power chart, `p` and `q` now describe the **same per-bus net quantity** (from `buses-q.csv`) instead of `q` being a generator-only sum. If the bundle was old and had no `buses-q.csv`, `q` falls back and I'll flag it. |
 | **N3** streaming Coati | Not visible in the UI. Evidence: memory/peak RSS of `energy-backend` during a large power-flow ingest (I measure it). |
 | **N5** root notes | Nothing to see — `affects.md` + `update-plan-pypsa-powerflow.md` are out of the repo root (now `.local/docs/`). |
-| **N6** PR split | **Open decision, yours:** split dashboard list-payload/polling + Makefile changes into their own PRs, or ship as one? |
+| **N6** PR split | **Decided: ship as one PR** (no split). The reviewer's note is acknowledged in the reply. |
 
 ---
 
@@ -211,7 +211,7 @@ must not sit pulsing in `running`.
 - [ ] V7 pre-submit failure → red action with error recorded
 - [ ] V8 a published model stays published (design change — confirm or send back)
 - [ ] V9 no regression on the gas-boiler model
-- [ ] N6 decision taken (split the PR or not)
+- [x] N6 decision taken — **ship as one PR**
 
 **Then:** reply to jravani on the PR with the per-fix commit list + the validation result, and I
 close `tasks/open/pr377-review-fixes.md`.

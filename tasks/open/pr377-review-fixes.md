@@ -44,10 +44,10 @@ All blocking issues and every non-blocking item except the PR split are fixed on
 | N1+N2 | `36dee03` fix(pypsa): keep Coati table alignment and use the net reactive | done |
 | N3 | `d77607e` fix(pypsa): stream the coati document instead of buffering it | done |
 | N5 | working notes moved out of the repo root into `.local/docs/` (gitignored) | done |
-| N6 | PR split (list payload / polling / Makefile as their own PRs) | **open — decision for Stefan** |
+| N6 | PR split (list payload / polling / Makefile as their own PRs) | **decided: ship as one PR** (Stefan, 2026-11-09) |
 
 **Still to do after review:** live validation (see the validation checklist handed
-to Stefan) and the N6 split decision.
+to Stefan). N6 decided: ship as one PR.
 
 ---
 
@@ -198,6 +198,7 @@ locally but are gone from the tree). Neither was referenced by any code or track
 **N6 — PR split.** Reviewer: the list-payload trim, the idle-polling stop and the Makefile dev-stack attaches "would
 review faster as their own PRs". Consider splitting this branch into (a) PyPSA leg backend fixes, (b) dashboard
 payload/polling, (c) Makefile dev-stack attaches — after the blocking fixes land.
+**Decided (Stefan, 2026-11-09): ship as one PR.** No split; the reviewer's note is acknowledged in the reply.
 
 ---
 
