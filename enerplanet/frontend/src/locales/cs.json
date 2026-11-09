@@ -194,7 +194,8 @@
       "cannotDelete": "Nelze smazat - pouze vlastník nebo expert může smazat",
       "runWithMeme": "Spustit s Calliope",
       "runPypsaOnMeme": "Spustit tok výkonu (PyPSA)",
-      "runPypsaFailed": "Tok výkonu selhal — kliknutím opakujete"
+      "runPypsaFailed": "Tok výkonu selhal — kliknutím opakujete",
+      "runPypsaRunning": "Výpočet toků probíhá…"
     },
     "pagination": {
       "showing": "Zobrazeno",

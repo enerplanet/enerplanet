@@ -261,7 +261,8 @@
       "cannotDelete": "Löschen nicht möglich - nur der Eigentümer oder ein Experte kann löschen",
       "runWithMeme": "Mit Calliope ausführen",
       "runPypsaOnMeme": "Leistungsfluss ausführen (PyPSA)",
-      "runPypsaFailed": "Leistungsfluss fehlgeschlagen — zum Wiederholen klicken"
+      "runPypsaFailed": "Leistungsfluss fehlgeschlagen — zum Wiederholen klicken",
+      "runPypsaRunning": "Lastflussberechnung läuft…"
     },
     "pagination": {
       "showing": "Zeige",

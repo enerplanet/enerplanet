@@ -261,7 +261,8 @@
       "cannotDelete": "Cannot delete - only the owner or an expert can delete",
       "runWithMeme": "Run with Calliope",
       "runPypsaOnMeme": "Run power flow (PyPSA)",
-      "runPypsaFailed": "Power flow failed — click to retry"
+      "runPypsaFailed": "Power flow failed — click to retry",
+      "runPypsaRunning": "Power flow running…"
     },
     "pagination": {
       "showing": "Showing",

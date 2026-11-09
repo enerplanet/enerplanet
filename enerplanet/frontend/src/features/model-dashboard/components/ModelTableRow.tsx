@@ -524,6 +524,7 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             onRunMemePypsa={onRunMemePypsa}
             pypsaCompleted={(model as { pypsa_leg_status?: string }).pypsa_leg_status === 'completed'}
             pypsaFailed={(model as { pypsa_leg_status?: string }).pypsa_leg_status === 'failed'}
+            pypsaRunning={['running', 'pending'].includes((model as { pypsa_leg_status?: string }).pypsa_leg_status ?? '')}
             onDelete={onDelete}
             onShare={onShare}
             onMoveToWorkspace={onMoveToWorkspace}

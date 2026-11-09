@@ -19,6 +19,9 @@ interface ModelActionsProps<T extends { id: number; status: ModelStatus; user_id
 	// Render the PyPSA action red when the last attempt failed, so a failure
 	// stays obvious (the model itself stays 'completed').
 	readonly pypsaFailed?: boolean;
+	// Swap the PyPSA action for a spinner while the leg is in flight, so the
+	// click has visible feedback (the model's own status does not change).
+	readonly pypsaRunning?: boolean;
 	readonly onDelete?: (model: T) => void;
 	readonly onShare?: (model: T) => void;
 	readonly onMoveToWorkspace?: (model: T) => void;
@@ -51,6 +54,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 	onRunMemePypsa,
 	pypsaCompleted = false,
 	pypsaFailed = false,
+	pypsaRunning = false,
 	onDelete,
 	onShare,
 	onMoveToWorkspace,
@@ -92,7 +96,7 @@ function ModelActions<T extends { id: number; status: ModelStatus; user_id?: str
 		{
 			onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 			showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
+			disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed, pypsaRunning
 		},
 		{ disabled, completed, shouldDisableDelete, deleteTooltipText },
 		t
@@ -110,7 +114,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	props: Pick<ModelActionsProps<T>,
 		"onView" | "onEdit" | "onDownload" | "onCopy" | "onRunMeme" | "onRunMemePypsa" | "onDelete" | "onShare" | "onMoveToWorkspace" |
 		"showView" | "showEdit" | "showDownload" | "showCopy" | "showDelete" | "showShare" | "showMoveToWorkspace" |
-		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "pypsaCompleted" | "pypsaFailed"
+		"disableMoveToWorkspace" | "moveToWorkspaceTooltip" | "disableShare" | "shareTooltip" | "pypsaCompleted" | "pypsaFailed" | "pypsaRunning"
 	>,
 	computed: {
 		disabled: boolean;
@@ -123,7 +127,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 	const {
 		onView, onEdit, onDownload, onCopy, onRunMeme, onRunMemePypsa, onDelete, onShare, onMoveToWorkspace,
 		showView, showEdit, showDownload, showCopy, showDelete, showShare, showMoveToWorkspace,
-		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed
+		disableMoveToWorkspace, moveToWorkspaceTooltip, disableShare, shareTooltip, pypsaCompleted, pypsaFailed, pypsaRunning
 	} = props;
 	const { disabled, completed, shouldDisableDelete, deleteTooltipText } = computed;
 
@@ -147,14 +151,20 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 			// run (the derived pass reads the Calliope results), so it shows
 			// only on completed models — mirroring view/download. The backend
 			// also enforces this gate (400 on run-meme-pypsa without one).
-			// Hidden once the leg has completed: re-running a successful power
-			// flow is a state change the UI offers only by request.
+			// The leg's OWN status drives the button (the model's status does
+			// not change while it runs): a spinner while it is in flight,
+			// hidden once it completed, red when it failed.
 			key: "runMemePypsa",
 			icon: Activity,
-			tooltip: pypsaFailed ? t("common.modelActions.runPypsaFailed") : t("common.modelActions.runPypsaOnMeme"),
+			tooltip: pypsaFailed
+				? t("common.modelActions.runPypsaFailed")
+				: pypsaRunning
+					? t("common.modelActions.runPypsaRunning")
+					: t("common.modelActions.runPypsaOnMeme"),
 			variant: pypsaFailed ? ("danger" as const) : "secondary",
 			onClick: () => onRunMemePypsa?.(model),
 			show: !!onRunMemePypsa && completed && !pypsaCompleted,
+			loading: pypsaRunning,
 			disabled: false,
 		},
 		{

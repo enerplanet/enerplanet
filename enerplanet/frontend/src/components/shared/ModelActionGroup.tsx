@@ -1,5 +1,5 @@
 import React from "react";
-import { LucideIcon } from "lucide-react";
+import { Loader2, LucideIcon } from "lucide-react";
 import { Button, Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,8 @@ export interface ActionConfig {
 	onClick: () => void;
 	show?: boolean;
 	disabled?: boolean;
+	/** Swap the icon for a spinner and block clicks: the action is in flight. */
+	loading?: boolean;
 	className?: string;
 }
 
@@ -62,13 +64,15 @@ const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "
 			{visibleActions.map((action) => {
 				const variant = action.variant || "default";
 				const Icon = action.icon;
-				
+				const busy = action.loading === true;
+
 				const button = (
 					<Button
 						variant="ghost"
 						size="icon"
 						aria-label={action.tooltip}
-						disabled={action.disabled}
+						aria-busy={busy || undefined}
+						disabled={action.disabled || busy}
 						onClick={(e) => {
 							e.stopPropagation();
 							action.onClick();
@@ -77,11 +81,13 @@ const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "
 							SIZE_STYLES[size],
 							VARIANT_STYLES[variant],
 							"transition-colors duration-200",
-							action.disabled && "opacity-50 cursor-not-allowed",
+							(action.disabled || busy) && "opacity-50 cursor-not-allowed",
 							action.className
 						)}
 					>
-						<Icon className={ICON_SIZES[size]} />
+						{busy
+							? <Loader2 className={cn(ICON_SIZES[size], "animate-spin")} />
+							: <Icon className={ICON_SIZES[size]} />}
 					</Button>
 				);
 				

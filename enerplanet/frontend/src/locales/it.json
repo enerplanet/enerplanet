@@ -194,7 +194,8 @@
       "cannotDelete": "Impossibile eliminare - solo il proprietario o un esperto può eliminare",
       "runWithMeme": "Esegui con Calliope",
       "runPypsaOnMeme": "Esegui il flusso di potenza (PyPSA)",
-      "runPypsaFailed": "Flusso di potenza non riuscito — fai clic per riprovare"
+      "runPypsaFailed": "Flusso di potenza non riuscito — fai clic per riprovare",
+      "runPypsaRunning": "Flusso di carico in corso…"
     },
     "pagination": {
       "showing": "Visualizzazione",
