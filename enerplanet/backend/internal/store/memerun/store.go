@@ -8,6 +8,7 @@ package memerun
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -89,4 +90,27 @@ func (s *Store) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, error) {
 func (s *Store) DeleteLeg(modelID uint, leg string) error {
 	return s.db.Where("model_id = ? AND leg = ?", modelID, leg).
 		Delete(&models.ModelMemeRun{}).Error
+}
+
+// MarkLegFailed upserts the leg's run record to a terminal 'failed' status with
+// errMsg, preserving an already-recorded run_id (a row recorded 'running' keeps
+// its TentaCron job id). It is the writer for a failure that happens BEFORE a
+// submit — a bundle/CSV/slack error — when no row exists yet, so the leg's
+// failure is visible (and the dashboard renders the action red).
+func (s *Store) MarkLegFailed(modelID uint, leg, errMsg string) error {
+	msg := errMsg
+	row := models.ModelMemeRun{
+		ModelID: modelID,
+		Leg:     leg,
+		Status:  models.MemeRunStatusFailed,
+		Error:   &msg,
+	}
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "model_id"}, {Name: "leg"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"status":     models.MemeRunStatusFailed,
+			"error":      msg,
+			"updated_at": time.Now(),
+		}),
+	}).Create(&row).Error
 }

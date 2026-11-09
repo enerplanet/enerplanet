@@ -44,7 +44,7 @@ func TestStore_SaveLegIsolatesLeg(t *testing.T) {
 	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
 		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
 	mock.ExpectExec(upsert).
-		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
@@ -97,6 +97,21 @@ func TestStore_DeleteLegScopesToModelAndLeg(t *testing.T) {
 	mock.ExpectCommit()
 
 	require.NoError(t, NewStore(db).DeleteLeg(7, models.MemeLegPyPSA))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestStore_MarkLegFailedUpsertsPreservingRunID guards the pre-submit failure
+// writer: it upserts a terminal 'failed' row with the error, never clobbering an
+// already-recorded run id.
+func TestStore_MarkLegFailedUpsertsPreservingRunID(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
+		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
+	mock.ExpectExec(upsert).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).MarkLegFailed(7, models.MemeLegPyPSA, "bundle not found"))
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

@@ -475,8 +475,14 @@ func HandleDispatchMemePyPSA(
 	// forever (see dispatch_meme.go). A failed PyPSA leg restores the model to
 	// 'completed' (see failPypsaLeg): the Calliope results it was derived from
 	// are still valid, so the leg stays retryable without re-running Calliope.
+	// Record the leg's failure FIRST: an error before the submit (bundle not
+	// found, no slack, CSV parse) never calls SaveLeg, so without this the leg
+	// had no row, no error and the dashboard showed a grey, not red, action.
 	defer func() {
 		if retErr != nil {
+			if err := runs.MarkLegFailed(p.ModelID, models.MemeLegPyPSA, retErr.Error()); err != nil {
+				log.Errorf("model %d: failed to record the pypsa leg failure: %v", p.ModelID, err)
+			}
 			failPypsaLeg(db, runs, p.ModelID, retErr)
 		}
 	}()

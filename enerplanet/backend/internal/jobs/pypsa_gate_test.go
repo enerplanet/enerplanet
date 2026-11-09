@@ -29,6 +29,11 @@ func (f *fakeGateRuns) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, e
 	}
 	return nil, nil
 }
+func (f *fakeGateRuns) MarkLegFailed(modelID uint, leg, errMsg string) error {
+	e := errMsg
+	f.rec = &models.ModelMemeRun{ModelID: modelID, Leg: leg, Status: models.MemeRunStatusFailed, Error: &e}
+	return nil
+}
 
 func TestCalliopeLegReady_completedCalliopeAllowsPyPSA(t *testing.T) {
 	runs := &fakeGateRuns{rec: &models.ModelMemeRun{

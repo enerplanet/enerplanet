@@ -97,6 +97,11 @@ func (f *fakePypsaRuns) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, 
 	}
 	return f.rec, nil
 }
+func (f *fakePypsaRuns) MarkLegFailed(modelID uint, leg, errMsg string) error {
+	e := errMsg
+	f.rec = &models.ModelMemeRun{ModelID: modelID, Leg: leg, Status: models.MemeRunStatusFailed, Error: &e}
+	return nil
+}
 
 // fakeCalliopeLocator returns a caller-provided csv dir (a temp dir with the
 // flow CSVs written by writeFlowCSVs).
@@ -585,4 +590,12 @@ func TestHandleDispatchMemePyPSA_missingBundleIsError(t *testing.T) {
 	err := HandleDispatchMemePyPSA(context.Background(), pypsaDispatchTask(t, modelID), db, tentacronclient.New(srv.URL, "k"), runs, NewFilesystemResultZipStore(t.TempDir()), locator, &fakePypsaEnqueuer{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "calliope")
+
+	// The pre-submit failure still leaves a FAILED pypsa leg row with the error,
+	// so the dashboard renders the action red (not grey) and it stays retryable.
+	require.NotNil(t, runs.rec, "a failure before the submit must still record the leg")
+	assert.Equal(t, models.MemeLegPyPSA, runs.rec.Leg)
+	assert.Equal(t, models.MemeRunStatusFailed, runs.rec.Status)
+	require.NotNil(t, runs.rec.Error)
+	assert.Contains(t, *runs.rec.Error, "calliope")
 }
