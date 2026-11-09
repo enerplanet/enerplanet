@@ -47,8 +47,6 @@ grep -rn "tasks/closed/" enerplanet/ --include=*.go --include=*.ts --include=*.t
 | Doc | What it is | What it needs |
 |---|---|---|
 | `open/pypsa-isolated-run-plan.md` | **the active plan** — the isolated PyPSA (power-flow) run: Calliope first, PyPSA as a second, separate pass fed by the parsed Calliope results | Phases 1–6. **Gated on B1**: can MEME's schema express `lines` at all? Start at Phase 1 step 3 — it needs no services |
-| `open/pr377-review-fixes.md` | the step-by-step resolution of PR #377's review (6 blocking + 6 other findings), with a per-step commit log and the fixes found during live validation | **live validation in progress** (checklist in `open/pr377-validation.md`); N6 decided — ship as one PR |
-| `open/pr377-validation.md` | the live-validation checklist for the PR #377 fixes: stack prep, the models to use, V1–V9 click-through steps split by who does what | run it after `make migrate` + a backend hot-patch; then reply to the reviewer |
 | `open/pypsa-pass-ask.md` | the sendable ask to the MEME/T1K/TentaCron dev (8 questions, the legacy + schema ones) | **Send it.** Then record the answers in the plan's §12 and unblock B1 |
 | `open/heat-patch.md` | deferred register — the heat vector on the MEME dispatch path. **Re-baselined 2026-10-20:** the T1K mapping already carries heat/cooling/gas and run mode exists; the gaps are frontend `energyVectors` + heat techs, the unconditional `capacity.expandable` vs `operate`, and enforcing `operate` for heat models | gap 1 (frontend schema) first, then the Go expandable pass |
 | `open/pv-patch.md` | deferred register — a precomputed profile for physics PV/wind (a `pv_supply` tech currently 422s the whole dispatch) | when a real TentaCron `resolvent-pvgis` run is available |
@@ -67,6 +65,8 @@ grep -rn "tasks/closed/" enerplanet/ --include=*.go --include=*.ts --include=*.t
 | `closed/grid-result-capabilities-plan.md` | the capability/provenance contract (`legacy`/`meme`/`full-grid-pf`), the conditional Grid UI, migration 047 | Phase 3 is **partly superseded** — see the banner at its §4 |
 | `closed/meme-integration-plan.md` | the umbrella runbook: steps 1–10 and the D-decision register | ~all `[DONE]`; its open residuals are listed below |
 | `closed/meme-pypsa-result-parity.md` | the API-contract vs MEME-PyPSA **parity analysis** (the field-coverage tables) | it is the evidence base for the open plan's **Phase 2** — read it before deciding the parsing |
+| `closed/pr377-review-fixes.md` | the PR #377 review resolution: the B1–B6/N1–N6 triage with file·line refs, the per-fix commit log, and the fixes found during live validation | the `pending`-request handshake (`pending` row + 409 guard) was added **after** the review; the review's N4 wording was later re-scoped in the validation doc |
+| `closed/pr377-validation.md` | the live-validation record for those fixes: V1–V9 with per-step evidence, the corrections to my own expectations, and the findings the runs produced | V8's original target (`published`) is unreachable — the status is vestigial; legacy pre-059 runs still lack the file-derived Grid sections |
 
 ## Start here — the MEME migration story, in order
 
@@ -83,7 +83,24 @@ Nothing should silently disappear when a doc moves to `closed/`. Currently:
 - `closed/meme-integration-plan.md` **Step 10 — "retire the webservice path, at parity"** → __not started__, gated on parity.
 - `closed/meme-integration-plan.md` **Step 7 — run-id diff schema** → deferred, and it has no doc of its own (tracked here).
 - **Heat** and **PV** → their `open/` registers.
-- The **`modified` model status** (2 rows in the DB carry it, but the lifecycle enum and state machine don't define it) → reconcile when the status × stage work happens (PyPSA plan Phase 5).
+- **`modified` model status** → the entry here previously claimed "2 rows in the DB carry it"; the current DB
+  has **none** (`draft` ×2, `completed` ×7, `failed` ×3 only), so either those rows were re-run or the claim was
+  stale. The lifecycle enum still doesn't define it → reconcile when the status × stage work happens (PyPSA plan Phase 5), **together with `published`** (below).
+- **PR #377 (`feature/pypsa-update`)** → the reviewer reply (per-fix commit ids + the **line-loading disclosure**:
+  the old ingest over-counted lines, so pre-branch numbers change) and the **push** are both outstanding. The
+  branch is committed locally (20+ commits) and has never been pushed. Docs closed, action pending.
+- **The `published` model status is vestigial** → declared in the contract enum, rendered by the frontend
+  (type union, badge colours, `isDone`, the always-zero admin/status counters) and read exactly once in the
+  backend (`stats.Published = byStatus[models.ModelStatusPublished]`, `model/handler/model.go:550`) — but **no
+  code path anywhere sets it**, and the DB has never held one. Not related to sharing (`model_shares`, keyed by
+  user/email and explicitly independent of workspaces). → cleanup ticket.
+- **Legacy pre-059 power-flow runs** → a `pypsa` leg row with no `extracted_path` falls back to the newest
+  `model_results` bundle (the Calliope one), which has no `power_flow/`, so the file-derived Grid sections
+  (convergence, transformer loading, line ratings) are **absent**. Not a regression (F3 could not retroactively
+  fix a pre-059 row) and a re-run repairs it. Optional follow-up: have `pypsaExtractedPath` search sibling
+  `model_<id>_*` dirs for a `power_flow` marker before giving up. Evidence: `closed/pr377-validation.md` V9.
+- **Coati document version skew** → Coati emits `schema_version="1.1"` while the backend expects `1.0`
+  (non-fatal, `success=true capacities=3`). On the **Calliope** ingest path, not PR #377. Unexamined.
 
 ## Conventions
 

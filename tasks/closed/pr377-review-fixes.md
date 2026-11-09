@@ -1,6 +1,17 @@
 # PR #377 review fixes — plan
 
-**Status:** active · **Scope:** `feature/pypsa-update` (HEAD `fa0bea4`) · **Reviewer verdict:** CHANGES_REQUESTED (jravani, 2026-11-06)
+**Status:** IMPLEMENTED — closed 2026-11-09 (all 6 blocking + 6 other findings resolved and live-validated) · **Scope:** `feature/pypsa-update` · **Reviewer verdict:** CHANGES_REQUESTED (jravani, 2026-11-06) → **resolved**
+**Live validation:** `tasks/closed/pr377-validation.md` — V1–V9 all PASS, with evidence.
+**Code this governs:** `internal/meme/power_flow.go` (F1); `internal/jobs/dispatch_meme_pypsa.go` (F2, F4),
+`internal/jobs/dispatch_meme.go` (F6), `internal/jobs/pypsa_gate.go`,
+`internal/jobs/ingest_meme_pypsa_result.go`; `internal/result/service/{pypsa_ingest,pypsa_ingest_coati,coati}.go`
+(F5, N1, N2, N3); `internal/result/handler/{result_helpers_pypsa_files.go,result_handler.go}` (F3);
+`internal/store/memerun/store.go` (F4, F6), `internal/store/result/store.go` (F3);
+`internal/models/model_meme_run.go` + `migrations/059_add_extracted_path_to_model_meme_runs.sql` (F3);
+`internal/model/service/model_service_calculation.go` (N4 + the pending-request handshake);
+`frontend/src/features/model-dashboard/components/ModelTableRow.tsx`,
+`frontend/src/components/ui/ModelActions.tsx`, `frontend/src/components/shared/ModelActionGroup.tsx`
++ the 8 locales (the leg-status contract the dashboard consumes).
 **Context:** the isolated PyPSA power-flow leg runs end to end on a PV-less, gas-boiler model (converged on all 2160
 snapshots, tested merged onto current `dev`). A model **with PV** is rejected by MEME and the Grid tab never gets
 convergence/transformer-loading/line-ratings. Line refs below are against `fa0bea4`.
@@ -235,10 +246,11 @@ payload/polling, (c) Makefile dev-stack attaches — after the blocking fixes la
 
 ## Verification checklist (before replying to the reviewer)
 
-- [ ] `go build ./...`, `go vet`, `gofmt -l` clean
-- [ ] `go test ./internal/meme/... ./internal/jobs/ ./internal/model/handler/ ./internal/result/...` green
-- [ ] New tests: F1 physics-strip, F2 battery-vs-line, F4 early-failure leg row, F5 coati-failure + no-double, F6 rerun invalidation
-- [ ] `tsc -b` clean (frontend untouched by F1–F6, but the leg-status contract is consumed by the dashboard)
-- [ ] Live, model **with PV + battery + 3 grid regions**: leg completes; Grid tab shows convergence + transformer loading + line ratings
-- [ ] Live: a forced Coati failure fails the leg (red action), not "completed, empty"
-- [ ] Live: Calliope rerun re-shows the PyPSA action; a published model stays published
+- [x] `go build ./...`, `go vet`, `gofmt -l` clean
+- [x] `go test ./internal/meme/... ./internal/jobs/ ./internal/model/handler/ ./internal/result/...` green — full tree: 42 packages, exit 0
+- [x] New tests: F1 physics-strip, F2 battery-vs-line, F4 early-failure leg row, F5 coati-failure + no-double, F6 rerun invalidation, plus the `pending`-request handshake (store + dispatch)
+- [x] `tsc -b` clean (frontend untouched by F1–F6, but the leg-status contract is consumed by the dashboard)
+- [x] Live — **PV model (8) + battery model (9) + the combined copy (11)** and a full-year model (6): leg completes; Grid tab shows convergence + transformer loading + line ratings (V1, V2, V3)
+- [x] Live — a forced Coati failure fails the leg (red action), not "completed, empty" (V4)
+- [x] Live — a Calliope rerun re-shows the PyPSA action (V6)
+- [x] Live — the leg never mutates the model's lifecycle status (V8, **re-scoped**: the original wording targeted a `published` status that nothing can set — see V8 in the validation doc)

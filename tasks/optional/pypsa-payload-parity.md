@@ -178,8 +178,9 @@ pattern for adding one is established (§3).
 
 ## See also
 
-- `tasks/open/pr377-review-fixes.md` — the review resolution and the per-commit log, including the three fixes
-  this document exists because of.
+- `tasks/closed/pr377-review-fixes.md` — the review resolution and the per-commit log, including the three fixes
+  this document exists because of. (Now closed; the live-validation record is its sibling
+  `tasks/closed/pr377-validation.md`.)
 - `tasks/open/pypsa-isolated-run-plan.md` — the leg's design and the ADR-0008 decision it follows.
 - `dependencies/meme` `internal/target/pypsa/powerflow.go` (`validatePowerFlow`) and `pypsa.go`
   (`purchaseCost`) — the validator whose messages drove §1.
