@@ -178,6 +178,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 		},
 		{
 			key: "download",
+			menu: true,
 			icon: Download,
 			tooltip: t("common.modelActions.downloadResults"),
 			variant: "info",
@@ -205,6 +206,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 		},
 		{
 			key: "moveToWorkspace",
+			menu: true,
 			icon: FolderInput,
 			tooltip: getTooltip(t("common.modelActions.moveToWorkspace"), !!disableMoveToWorkspace, moveToWorkspaceTooltip),
 			variant: "secondary",
@@ -214,6 +216,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 		},
 		{
 			key: "share",
+			menu: true,
 			icon: Share,
 			tooltip: getTooltip(t("common.modelActions.shareModel"), !!disableShare, shareTooltip),
 			variant: "secondary",
@@ -223,6 +226,7 @@ function getActionConfigs<T extends { id: number; status: ModelStatus; user_id?:
 		},
 		{
 			key: "delete",
+			menu: true,
 			icon: Trash2,
 			tooltip: deleteTooltipText,
 			variant: "danger",

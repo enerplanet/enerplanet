@@ -182,6 +182,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Další akce",
       "viewResults": "Zobrazit Výsledky",
       "downloadResults": "Stáhnout Výsledky",
       "downloadFailed": "Stažení se nezdařilo: {{reason}}",

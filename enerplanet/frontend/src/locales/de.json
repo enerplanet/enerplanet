@@ -249,6 +249,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Weitere Aktionen",
       "viewResults": "Ergebnisse anzeigen",
       "downloadResults": "Ergebnisse herunterladen",
       "downloadFailed": "Download fehlgeschlagen: {{reason}}",

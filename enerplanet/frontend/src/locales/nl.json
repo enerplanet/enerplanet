@@ -182,6 +182,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Meer acties",
       "viewResults": "Resultaten Bekijken",
       "downloadResults": "Resultaten Downloaden",
       "downloadFailed": "Downloaden mislukt: {{reason}}",

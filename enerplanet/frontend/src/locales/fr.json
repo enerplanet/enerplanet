@@ -248,6 +248,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Plus d'actions",
       "viewResults": "Voir les Résultats",
       "downloadResults": "Télécharger les Résultats",
       "downloadFailed": "Échec du téléchargement : {{reason}}",
