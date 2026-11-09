@@ -877,7 +877,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
-        onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        onPvArrays={(osmId, arrays, products) => { pylovoLayers.storePvArrays(osmId, arrays, products); setIsModified(true); }}
         techsFor={pylovoLayers.buildingTechs}
         locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
