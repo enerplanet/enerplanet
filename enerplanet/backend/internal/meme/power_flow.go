@@ -157,6 +157,17 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	if err := dropNonElectricalSupply(techs); err != nil {
 		return nil, err
 	}
+	// NO technology in a power_flow job carries a physics performance model:
+	// every one of them is a fixed injection or a fixed demand. MEME's pypsa
+	// validator rejects a performance model without a precomputed profile
+	// BEFORE it looks at the dispatch, and it checks EVERY technology — so a
+	// tech the pass carries no series for (a PV on a building whose flow never
+	// reached the pass, e.g. pv_supply_2) would still 422 the whole leg. Strip
+	// centrally, before the loops below add dispatch/demand_profile (a tech
+	// ensureTech creates fresh has no performance anyway).
+	if err := stripPerformanceFromAll(techs); err != nil {
+		return nil, err
+	}
 	for _, g := range pf.Generators {
 		if g.Name == slackName {
 			continue
@@ -171,14 +182,6 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 		}
 		if err := setSeriesAt(techID, "dispatch", g.Bus, g.PSet, tech); err != nil {
 			return nil, err
-		}
-		// A technology the power flow drives with a fixed dispatch is a plain
-		// fixed injection: MEME's pypsa validator rejects a physics performance
-		// model without a precomputed profile BEFORE it looks at the dispatch
-		// (meme internal/target/validate.go), so a PV tech with
-		// performance.physics="pv" would fail the whole leg.
-		if err := stripPerformance(tech); err != nil {
-			return nil, fmt.Errorf("meme: strip performance of generator %q: %w", techID, err)
 		}
 		techs[techID] = mustJSON(tech)
 	}
@@ -211,11 +214,6 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	slack["node"] = mustJSON([]string{slackNode})
 	slack["role"] = mustJSON("supply")
 	slack["carrier_out"] = mustJSON("electricity")
-	// The slack is a fixed supply on the electrical network too: no physics
-	// performance survives (see the generator loop above).
-	if err := stripPerformance(slack); err != nil {
-		return nil, fmt.Errorf("meme: strip performance of slack %q: %w", slackTech, err)
-	}
 	techs[slackTech] = mustJSON(slack)
 	model["technologies"] = mustJSON(techs)
 
@@ -320,6 +318,25 @@ func componentTechID(name string, buses []pypsapass.Bus) string {
 		return ""
 	}
 	return name[len(best)+1:]
+}
+
+// stripPerformanceFromAll removes the physics performance model from EVERY
+// technology of a power_flow job (tech-level and per-node override). The job has
+// no decision variables and drives each tech with an explicit series, so no
+// physics is ever needed — and MEME rejects a performance model without a
+// precomputed profile on ANY tech, even one the pass carries no series for.
+func stripPerformanceFromAll(techs map[string]json.RawMessage) error {
+	for id, raw := range techs {
+		var t map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return fmt.Errorf("meme: decode technology %q: %w", id, err)
+		}
+		if err := stripPerformance(t); err != nil {
+			return fmt.Errorf("meme: strip performance of technology %q: %w", id, err)
+		}
+		techs[id] = mustJSON(t)
+	}
+	return nil
 }
 
 // stripPerformance removes the physics performance model from a technology and
