@@ -81,3 +81,12 @@ func (s *Store) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, error) {
 	}
 	return &row, nil
 }
+
+// DeleteLeg drops the model's leg run record. Used to invalidate a derived leg
+// (the PyPSA power-flow add-on) when the leg it was derived from (Calliope) is
+// re-dispatched: the old power flow no longer matches the new base results, so
+// the record must go and the dashboard must offer the leg again.
+func (s *Store) DeleteLeg(modelID uint, leg string) error {
+	return s.db.Where("model_id = ? AND leg = ?", modelID, leg).
+		Delete(&models.ModelMemeRun{}).Error
+}

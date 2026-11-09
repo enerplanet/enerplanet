@@ -74,6 +74,7 @@ func TestStore_GetNoRecordReturnsNil(t *testing.T) {
 	assert.Nil(t, rec, "no recorded run must come back as nil, not an error")
 }
 
+// TestStore_UpdateStatusSetsError covers the Calliope-leg status writer.
 func TestStore_UpdateStatusSetsError(t *testing.T) {
 	db, mock := newMockDB(t)
 	mock.ExpectBegin()
@@ -82,6 +83,21 @@ func TestStore_UpdateStatusSetsError(t *testing.T) {
 	mock.ExpectCommit()
 
 	require.NoError(t, NewStore(db).UpdateStatus(7, "failed", "boom"))
+}
+
+// TestStore_DeleteLegScopesToModelAndLeg guards the derived-leg invalidation:
+// the DELETE must be keyed to (model_id, leg) so clearing the PyPSA leg can
+// never touch the Calliope leg's row.
+func TestStore_DeleteLegScopesToModelAndLeg(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	mock.ExpectExec(`DELETE FROM "model_meme_runs" WHERE model_id = \$1 AND leg = \$2`).
+		WithArgs(int64(7), models.MemeLegPyPSA).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).DeleteLeg(7, models.MemeLegPyPSA))
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 // TestMigrationTableName guards the migration file so a rename does not

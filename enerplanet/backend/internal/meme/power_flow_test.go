@@ -266,13 +266,13 @@ func TestApplyPowerFlow_multiGridPicksOneSlack(t *testing.T) {
 // demand tech stay.
 func TestDropNonElectricalSupply_removesHeatAndGasKeepsElectricity(t *testing.T) {
 	techs := map[string]json.RawMessage{
-		"grid_import":  mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
-		"pv":           mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
-		"gas_boiler":   mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
-		"heat_pump":    mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
-		"gas_import":   mustJSON(map[string]any{"role": "supply", "carrier_out": "natural_gas"}),
-		"demand_1":     mustJSON(map[string]any{"role": "demand", "carrier_in": "electricity"}),
-		"demand_heat":  mustJSON(map[string]any{"role": "demand", "carrier_in": "heat"}),
+		"grid_import": mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
+		"pv":          mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
+		"gas_boiler":  mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
+		"heat_pump":   mustJSON(map[string]any{"role": "supply", "carrier_out": "heat"}),
+		"gas_import":  mustJSON(map[string]any{"role": "supply", "carrier_out": "natural_gas"}),
+		"demand_1":    mustJSON(map[string]any{"role": "demand", "carrier_in": "electricity"}),
+		"demand_heat": mustJSON(map[string]any{"role": "demand", "carrier_in": "heat"}),
 	}
 	require.NoError(t, dropNonElectricalSupply(techs))
 
