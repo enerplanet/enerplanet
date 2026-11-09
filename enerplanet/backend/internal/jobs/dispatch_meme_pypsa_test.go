@@ -257,7 +257,7 @@ ntrafo_82,grid_trafo_82_export,electricity,2020-01-01T00:00:00,0
 	calcBytes, err := json.Marshal(calc)
 	require.NoError(t, err)
 
-	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir)
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir, map[string]bool{"lv_1_trafo_82": true})
 	require.NoError(t, err)
 
 	// Only the grid import survives as a generator; the lv_1_trafo_82 line tech
@@ -334,7 +334,7 @@ n1,demand_1,electricity,2020-01-01T00:00,50
 	calcBytes, err := json.Marshal(calc)
 	require.NoError(t, err)
 
-	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir)
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir, map[string]bool{"lv_0": true})
 	require.NoError(t, err)
 
 	// The heat pump's heat output is not electrical: only the grid import is a
@@ -349,6 +349,113 @@ n1,demand_1,electricity,2020-01-01T00:00,50
 	}
 	assert.Contains(t, loadNames, "n1_air_source_heat_pump_1", "the heat pump's electricity draw is a load")
 	assert.Contains(t, loadNames, "n1_demand_1")
+}
+
+// TestPypsaPowerFlow_batteryIsStorageNotLineTech is the regression for the
+// battery being dropped: a battery discharges (flow_out) AND charges (flow_in),
+// so it appears in BOTH files and the old "in both files -> it's a line" rule
+// deleted it from both sides. With the line techs taken from the model's
+// transmission ids, the battery survives as a NET generator (flow_out -
+// flow_in); it must not also appear as a load.
+func TestPypsaPowerFlow_batteryIsStorageNotLineTech(t *testing.T) {
+	root := t.TempDir()
+	dir := root + "/csv"
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_out.csv", []byte(`nodes,techs,carriers,timesteps,flow_out
+ntrafo_1,grid_trafo_1_import,electricity,2020-01-01T00:00,100
+n1,battery_1,electricity,2020-01-01T00:00,40
+n1,battery_1,electricity,2020-01-01T01:00,10
+`), 0o644))
+	require.NoError(t, os.WriteFile(dir+"/results_flow_in.csv", []byte(`nodes,techs,carriers,timesteps,flow_in
+n1,battery_1,electricity,2020-01-01T00:00,15
+n1,battery_1,electricity,2020-01-01T01:00,5
+n1,demand_1,electricity,2020-01-01T00:00,80
+n1,demand_1,electricity,2020-01-01T01:00,40
+`), 0o644))
+
+	calc := map[string]interface{}{
+		"topology": []interface{}{
+			map[string]interface{}{
+				"from": map[string]interface{}{"id": "1"},
+				"to": map[string]interface{}{
+					"id": "trafo_1",
+					"properties": map[string]interface{}{
+						"feature_type": "TopologyNode",
+						"f_class":      "transformer",
+						"rated_power":  400000.0,
+					},
+				},
+				"length": 0.05,
+				"pipe":   "lv",
+			},
+		},
+		"pypsa": map[string]interface{}{},
+	}
+	calcBytes, err := json.Marshal(calc)
+	require.NoError(t, err)
+
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, dir, map[string]bool{"lv_0": true})
+	require.NoError(t, err)
+
+	var battery *pypsapass.Generator
+	for i := range pf.Generators {
+		if pf.Generators[i].Name == "n1_battery_1" {
+			battery = &pf.Generators[i]
+		}
+	}
+	require.NotNil(t, battery, "the battery must survive as a generator")
+	require.Len(t, battery.PSet, 2)
+	require.InDelta(t, 25, battery.PSet[0], 1e-9, "net dispatch = flow_out - flow_in")
+	require.InDelta(t, 5, battery.PSet[1], 1e-9)
+
+	for _, l := range pf.Loads {
+		assert.NotEqual(t, "n1_battery_1", l.Name, "the battery must not also be a load")
+	}
+}
+
+// TestMatchingLineTechs_usesArcIds pins the line classifier: a tech is a line
+// when it is a transmission arc id (exactly or as a "_"-delimited prefix), so a
+// battery that merely appears in both files is NOT classified as a line.
+func TestMatchingLineTechs_usesArcIds(t *testing.T) {
+	prod := []pypsapass.CarrierSeries{
+		{Tech: "lv_1_trafo_82"}, // the connecting line (arc id lv_1)
+		{Tech: "battery_1"},     // storage: in both, but not an arc
+		{Tech: "pv_supply_1"},   // generation only
+	}
+	con := []pypsapass.CarrierSeries{
+		{Tech: "lv_1_trafo_82"},
+		{Tech: "battery_1"},
+	}
+	got := matchingLineTechs(prod, con, map[string]bool{"lv_1": true})
+	assert.True(t, got["lv_1_trafo_82"], "the arc-id-prefixed link tech is a line")
+	assert.False(t, got["battery_1"], "a battery must not be classified as a line")
+	assert.False(t, got["pv_supply_1"])
+
+	// No arc information (legacy bundle): fall back to the both-files rule.
+	fallback := matchingLineTechs(prod, con, nil)
+	assert.True(t, fallback["lv_1_trafo_82"])
+	assert.True(t, fallback["battery_1"], "the fallback cannot tell a battery from a line")
+}
+
+// TestNetStorageSeries_collapsesBothSides pins the net dispatch: a tech on both
+// sides becomes flow_out - flow_in on the generation side and leaves the load
+// side; a tech on one side is untouched.
+func TestNetStorageSeries_collapsesBothSides(t *testing.T) {
+	prod := []pypsapass.CarrierSeries{
+		{FromLocation: "n1", Tech: "battery_1", Timeseries: []float64{40, 10}},
+		{FromLocation: "n1", Tech: "pv_supply_1", Timeseries: []float64{7, 8}},
+	}
+	con := []pypsapass.CarrierSeries{
+		{FromLocation: "n1", Tech: "battery_1", Timeseries: []float64{15, 5}},
+		{FromLocation: "n1", Tech: "demand_1", Timeseries: []float64{80, 40}},
+	}
+	gotProd, gotCon := netStorageSeries(prod, con)
+
+	require.Len(t, gotProd, 2)
+	assert.InDelta(t, 25, gotProd[0].Timeseries[0], 1e-9, "battery net = 40 - 15")
+	assert.InDelta(t, 5, gotProd[0].Timeseries[1], 1e-9)
+	require.Len(t, gotCon, 1, "the battery leaves the load side; the demand stays")
+	assert.Equal(t, "demand_1", gotCon[0].Tech)
 }
 
 func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testing.T) {

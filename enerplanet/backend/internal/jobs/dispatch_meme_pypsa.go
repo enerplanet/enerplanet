@@ -164,6 +164,82 @@ func filterTechs(series []pypsapass.CarrierSeries, techs map[string]bool, keep b
 	return out
 }
 
+// matchingLineTechs returns the techs present in the flow series that are a
+// model transmission arc: the arc id exactly, or the arc id as a "_"-delimited
+// prefix (the emitter can suffix a link tech with its endpoint, e.g. the line
+// arc "lv_1" -> tech "lv_1_trafo_82"). arcIDs is empty for a bundle the caller
+// could not map to a model; then the caller has no line information, so fall
+// back to the legacy "appears in both files" heuristic.
+func matchingLineTechs(prod, con []pypsapass.CarrierSeries, arcIDs map[string]bool) map[string]bool {
+	out := map[string]bool{}
+	names := map[string]bool{}
+	for _, s := range prod {
+		names[s.Tech] = true
+	}
+	for _, s := range con {
+		names[s.Tech] = true
+	}
+	if len(arcIDs) == 0 {
+		conTechs := setOfTechs(con)
+		for _, s := range prod {
+			if conTechs[s.Tech] {
+				out[s.Tech] = true
+			}
+		}
+		return out
+	}
+	for name := range names {
+		if arcIDs[name] {
+			out[name] = true
+			continue
+		}
+		for id := range arcIDs {
+			if strings.HasPrefix(name, id+"_") {
+				out[name] = true
+				break
+			}
+		}
+	}
+	return out
+}
+
+// netStorageSeries collapses a tech that appears on BOTH sides (a battery:
+// charge in flow_in, discharge in flow_out) into a single net series
+// (flow_out - flow_in) kept on the generation side. A tech on only one side is
+// untouched — a real generator (flow_out only) or a real demand (flow_in only).
+func netStorageSeries(prod, con []pypsapass.CarrierSeries) ([]pypsapass.CarrierSeries, []pypsapass.CarrierSeries) {
+	prodByKey := make(map[string]*pypsapass.CarrierSeries, len(prod))
+	for i := range prod {
+		prodByKey[seriesKey(prod[i])] = &prod[i]
+	}
+	kept := make([]pypsapass.CarrierSeries, 0, len(con))
+	for _, s := range con {
+		if p, ok := prodByKey[seriesKey(s)]; ok {
+			p.Timeseries = subtractSeries(p.Timeseries, s.Timeseries)
+			continue
+		}
+		kept = append(kept, s)
+	}
+	return prod, kept
+}
+
+// seriesKey identifies a series by its (location, tech) pair.
+func seriesKey(s pypsapass.CarrierSeries) string {
+	return s.FromLocation + "\x00" + s.Tech
+}
+
+// subtractSeries returns a - b, extending a with zeros when b is longer.
+func subtractSeries(a, b []float64) []float64 {
+	out := append([]float64(nil), a...)
+	if len(b) > len(out) {
+		out = append(out, make([]float64, len(b)-len(out))...)
+	}
+	for i := range b {
+		out[i] -= b[i]
+	}
+	return out
+}
+
 // readFlowCSV parses a MEME bundle flow CSV (results_flow_out.csv /
 // results_flow_in.csv — columns nodes, techs, timesteps, carriers plus the
 // value column flow_out | flow_in) into per (node, tech) pypsapass carrier
@@ -273,7 +349,12 @@ func readFlowCSV(csvDir, filename, valueCol string) ([]pypsapass.CarrierSeries, 
 // calculation payload (its topology + pypsa settings) and the Calliope flow CSVs,
 // then runs the pass. It is the pure "parsed Calliope results + payload -> the
 // isolated power flow" step, split out so it is unit-testable without a Dispatch.
-func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerFlow, error) {
+//
+// arcIDs is the set of the translated job's transmission arc ids
+// (meme.TransmissionIDs): the connecting lines the topology already models. It
+// is how the pass tells a line tech from a storage tech (see below); pass nil
+// only for a bundle with no transmission information (a legacy fallback).
+func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string, arcIDs map[string]bool) (*pypsapass.PowerFlow, error) {
 	var calc map[string]interface{}
 	if err := json.Unmarshal(calcBytes, &calc); err != nil {
 		return nil, fmt.Errorf("decode calculation payload: %w", err)
@@ -306,17 +387,18 @@ func pypsaPowerFlowFromBytes(calcBytes []byte, csvDir string) (*pypsapass.PowerF
 	// flow files is NOT a generator or a load — it is the physical connection
 	// the topology already models as a Line. Turning it into a per-node
 	// generator that equals the node's own load cancels the network's net
-	// dispatch (flat 1.0 p.u., zero flow/loss). Discriminator: a link tech
-	// appears in both files; real supply = flow_out-only; real demand =
-	// flow_in-only.
-	linkTechs := map[string]bool{}
-	for _, s := range prod {
-		if _, ok := setOfTechs(con)[s.Tech]; ok {
-			linkTechs[s.Tech] = true
-		}
-	}
-	prod = filterTechs(prod, linkTechs, false)
-	con = filterTechs(con, linkTechs, false)
+	// dispatch (flat 1.0 p.u., zero flow/loss). The line techs are identified by
+	// the model's transmission ids, NOT by the "appears in both files" test: a
+	// battery also charges and discharges, so that test would delete it.
+	lineTechs := matchingLineTechs(prod, con, arcIDs)
+	prod = filterTechs(prod, lineTechs, false)
+	con = filterTechs(con, lineTechs, false)
+
+	// Whatever still appears in BOTH files after the line strip is storage (a
+	// battery: charge in flow_in, discharge in flow_out). Collapse it to its net
+	// dispatch (flow_out - flow_in) on the generation side so it reaches the
+	// power flow as a single fixed injection, not as a generator AND a load.
+	prod, con = netStorageSeries(prod, con)
 
 	// Both sides must be index-aligned with the model's timesteps; they naturally
 	// agree (same snapshots), but take the wider when they ever diverge.
@@ -437,7 +519,14 @@ func HandleDispatchMemePyPSA(
 	//    with the pass's slack, node.electrical.v_nom, the electrical arcs
 	//    and the fixed dispatch (ADR-0008) — never the rejected top-level
 	//    "power_flow" block.
-	pf, err := pypsaPowerFlowFromBytes(calcBytes, csvDir)
+	//    The translated job names the model's connecting lines (transmission
+	//    arcs); the pass uses those ids to tell a line tech from a storage tech
+	//    in the flow CSVs.
+	arcIDs, err := meme.TransmissionIDs(translated.Job)
+	if err != nil {
+		return fmt.Errorf("read transmission ids for model %d: %w", p.ModelID, err)
+	}
+	pf, err := pypsaPowerFlowFromBytes(calcBytes, csvDir, arcIDs)
 	if err != nil {
 		return fmt.Errorf("build pypsa power flow for model %d: %w", p.ModelID, err)
 	}

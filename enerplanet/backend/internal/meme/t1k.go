@@ -42,6 +42,39 @@ func TranslatePayload(input []byte) (TranslatedJob, error) {
 	return TranslatedJob{Job: job}, nil
 }
 
+// TransmissionIDs returns the set of the translated job's transmission arc
+// ids — the connecting lines/transformers the model carries, keyed exactly as
+// the job names them. The isolated PyPSA pass consumes this to tell a
+// connecting line (whose flow rides both the flow_out and flow_in series) from
+// a storage tech (which also rides both, for a different reason).
+func TransmissionIDs(job []byte) (map[string]bool, error) {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(job, &top); err != nil {
+		return nil, fmt.Errorf("meme: decode T1K job: %w", err)
+	}
+	raw, ok := top["model"]
+	if !ok {
+		return map[string]bool{}, nil
+	}
+	var model map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &model); err != nil {
+		return nil, fmt.Errorf("meme: decode job model: %w", err)
+	}
+	arcRaw, ok := model["transmission"]
+	if !ok {
+		return map[string]bool{}, nil
+	}
+	var arcs map[string]json.RawMessage
+	if err := json.Unmarshal(arcRaw, &arcs); err != nil {
+		return nil, fmt.Errorf("meme: decode job transmission: %w", err)
+	}
+	out := make(map[string]bool, len(arcs))
+	for id := range arcs {
+		out[id] = true
+	}
+	return out, nil
+}
+
 // withoutUnmetDemand deletes experiment.allow_unmet_demand from a MEME job.
 // Values stay raw JSON, so numbers are never re-encoded.
 func withoutUnmetDemand(job []byte) ([]byte, error) {
