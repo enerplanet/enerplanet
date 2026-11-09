@@ -33,10 +33,14 @@ const constraintValue = (product: Technology, key: string): number | undefined =
 };
 
 /**
- * Lists the catalogue products of one technology type to choose from; a type's
- * only product is applied without asking, except PV for all buildings, which
- * asks for the usable roof share.
+ * Whether a product is applied without asking: a type's only product, or PV on
+ * one building, which keeps its current product or gets the type's default.
+ * PV for all buildings always asks, for the usable roof share.
  */
+export const appliesDefault = (type: string, count: number, applyToAll: boolean): boolean =>
+  count > 0 && !(applyToAll && type === "pv_supply") && (count === 1 || type === "pv_supply");
+
+/** Lists the catalogue products of one technology type to choose from, unless appliesDefault. */
 export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, current, applyToAll, onPick, onDefineOwn, onClose }) => {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Technology[] | null>(null);
@@ -54,8 +58,8 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
       if (cancelled) return;
       const ofType = productsOfType(all, type);
       setSharePercent(DEFAULT_USABLE_SHARE * 100);
-      if (ofType.length === 1 && !asksShare) {
-        onPick(ofType[0]);
+      if (appliesDefault(type, ofType.length, applyToAll)) {
+        onPick(ofType.find((p) => p.key === current) ?? ofType[0]);
         return;
       }
       setProducts(ofType);
