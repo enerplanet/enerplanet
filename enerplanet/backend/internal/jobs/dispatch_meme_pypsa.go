@@ -471,19 +471,18 @@ func HandleDispatchMemePyPSA(
 		return fmt.Errorf("failed to unmarshal dispatch_meme_pypsa payload: %w", err)
 	}
 
-	// Any dispatch failure must leave the model terminal, or it sits in 'queue'
-	// forever (see dispatch_meme.go). A failed PyPSA leg restores the model to
-	// 'completed' (see failPypsaLeg): the Calliope results it was derived from
-	// are still valid, so the leg stays retryable without re-running Calliope.
-	// Record the leg's failure FIRST: an error before the submit (bundle not
-	// found, no slack, CSV parse) never calls SaveLeg, so without this the leg
-	// had no row, no error and the dashboard showed a grey, not red, action.
+	// Any dispatch failure must leave the LEG terminal: an error before the
+	// submit (bundle not found, no slack, CSV parse) never calls SaveLeg, so
+	// record the leg's failure first — otherwise there is no leg row, no error
+	// and the dashboard shows a grey, not red, action. The MODEL's own status is
+	// deliberately never touched: the pypsa leg is a derived add-on over a
+	// completed (or published) Calliope result, so its failure must not demote
+	// the model.
 	defer func() {
 		if retErr != nil {
 			if err := runs.MarkLegFailed(p.ModelID, models.MemeLegPyPSA, retErr.Error()); err != nil {
 				log.Errorf("model %d: failed to record the pypsa leg failure: %v", p.ModelID, err)
 			}
-			failPypsaLeg(db, runs, p.ModelID, retErr)
 		}
 	}()
 
@@ -565,7 +564,9 @@ func HandleDispatchMemePyPSA(
 			log.Errorf("model %d: failed to persist MEME pypsa TentaCron job %s: %v", p.ModelID, jobID, err)
 		}
 		submittedNow = true
-		markModelRunning(db, p.ModelID)
+		// The model's own status is left untouched: the pypsa leg is a derived
+		// add-on whose state is the leg row, so starting it must not turn a
+		// published (or completed) model into 'running'.
 		log.Infof("model %d: submitted isolated MEME pypsa job to TentaCron id=%s", p.ModelID, jobID)
 	default:
 		jobID = rec.RunID

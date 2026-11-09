@@ -3,10 +3,6 @@ package jobs
 import (
 	"fmt"
 
-	"gorm.io/gorm"
-
-	commonModels "platform.local/common/pkg/models"
-
 	"spatialhub_backend/internal/models"
 )
 
@@ -51,31 +47,4 @@ func CalliopeLegReady(runs memeLegRunStore, modelID uint) error {
 		return fmt.Errorf("pypsa leg model %d: calliope leg must be completed before pypsa (current status %q); run the calliope leg first", modelID, rec.Status)
 	}
 	return nil
-}
-
-// pypsaFailureStatus is the model status a failed PyPSA leg leaves behind:
-// 'completed' when the Calliope leg it derives from is still completed (the
-// Calliope results are valid, so the leg stays retryable without re-running
-// Calliope), else 'failed' (the gate should have prevented the run, so a
-// genuinely broken model is never shown as completed).
-func pypsaFailureStatus(runs memeLegRunStore, modelID uint) string {
-	rec, err := runs.GetLeg(modelID, models.MemeLegCalliope)
-	if err != nil || rec == nil || rec.Status != models.MemeRunStatusCompleted {
-		return commonModels.ModelStatusFailed
-	}
-	return commonModels.ModelStatusCompleted
-}
-
-// failPypsaLeg records a failed PyPSA leg WITHOUT forcing a Calliope re-run:
-// the power flow is a derived add-on over a completed Calliope leg, so its
-// failure must leave the model 'completed' — the Calliope results are still
-// valid and only the PyPSA leg record carries the failure, so the PyPSA leg
-// stays retryable from the dashboard. The caller marks the leg failed and
-// returns the error to surface it.
-func failPypsaLeg(db *gorm.DB, runs memeLegRunStore, modelID uint, failure error) {
-	if pypsaFailureStatus(runs, modelID) == commonModels.ModelStatusCompleted {
-		markModelCompleted(db, modelID)
-		return
-	}
-	markModelFailed(db, modelID, failure)
 }
