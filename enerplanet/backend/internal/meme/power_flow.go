@@ -199,6 +199,19 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 		}
 		techs[techID] = mustJSON(tech)
 	}
+	// Two more classes of thing MEME's pypsa target rejects, both fatal to the
+	// whole leg:
+	//   - a fixed purchase cost (no slot in PyPSA; power_flow has no objective);
+	//   - a non-demand technology with no dispatch (only the slack balances), so
+	//     a tech the model carries but the Calliope flow series do not — a PV
+	//     base tech whose arrays the results name separately, say — must go: it
+	//     contributes nothing electrical to the network the pass solves.
+	if err := stripPurchaseCosts(techs); err != nil {
+		return nil, err
+	}
+	if err := dropUndispatchedSupply(techs, slackTech); err != nil {
+		return nil, err
+	}
 	// The slack must be a supply technology on the electricity network placed
 	// at the transformer's MV bus, so MEME emits exactly the pass's Slack
 	// generator there. Its id is the pass generator's tech suffix, so an
@@ -337,6 +350,144 @@ func stripPerformanceFromAll(techs map[string]json.RawMessage) error {
 		techs[id] = mustJSON(t)
 	}
 	return nil
+}
+
+// transformTechFields applies fn to a technology's own field map and to the
+// field map of every one of its node overrides.
+func transformTechFields(t map[string]json.RawMessage, fn func(fields map[string]json.RawMessage) error) error {
+	if err := fn(t); err != nil {
+		return err
+	}
+	raw, ok := t["node_overrides"]
+	if !ok {
+		return nil
+	}
+	var overrides map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &overrides); err != nil {
+		return fmt.Errorf("decode node_overrides: %w", err)
+	}
+	if len(overrides) == 0 {
+		return nil
+	}
+	for node, ovRaw := range overrides {
+		var ov map[string]json.RawMessage
+		if err := json.Unmarshal(ovRaw, &ov); err != nil {
+			return fmt.Errorf("decode node override %q: %w", node, err)
+		}
+		if err := fn(ov); err != nil {
+			return err
+		}
+		overrides[node] = mustJSON(ov)
+	}
+	t["node_overrides"] = mustJSON(overrides)
+	return nil
+}
+
+// stripPurchaseCosts removes costs.<class>.purchase from every technology and
+// node override. MEME's pypsa target has no slot for a fixed purchase cost
+// (Calliope's cost_purchase) and rejects the whole job for it; a power-flow job
+// solves a fixed network with no objective, so the field is simply dropped.
+func stripPurchaseCosts(techs map[string]json.RawMessage) error {
+	for id, raw := range techs {
+		var t map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return fmt.Errorf("meme: decode technology %q: %w", id, err)
+		}
+		if err := transformTechFields(t, dropPurchaseCost); err != nil {
+			return fmt.Errorf("meme: strip purchase cost of technology %q: %w", id, err)
+		}
+		techs[id] = mustJSON(t)
+	}
+	return nil
+}
+
+// dropPurchaseCost deletes the purchase field of every cost class in fields,
+// and the (now empty) class/costs wrappers with it.
+func dropPurchaseCost(fields map[string]json.RawMessage) error {
+	raw, ok := fields["costs"]
+	if !ok {
+		return nil
+	}
+	var costs map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &costs); err != nil {
+		return fmt.Errorf("decode costs: %w", err)
+	}
+	changed := false
+	for class, classRaw := range costs {
+		var c map[string]json.RawMessage
+		if err := json.Unmarshal(classRaw, &c); err != nil {
+			return fmt.Errorf("decode costs.%s: %w", class, err)
+		}
+		if _, has := c["purchase"]; !has {
+			continue
+		}
+		delete(c, "purchase")
+		changed = true
+		if len(c) == 0 {
+			delete(costs, class)
+		} else {
+			costs[class] = mustJSON(c)
+		}
+	}
+	if !changed {
+		return nil
+	}
+	if len(costs) == 0 {
+		delete(fields, "costs")
+	} else {
+		fields["costs"] = mustJSON(costs)
+	}
+	return nil
+}
+
+// dropUndispatchedSupply removes every non-demand technology the pass carries no
+// fixed dispatch for (and that is not the slack). MEME's power_flow mode
+// requires a dispatch on every non-slack, non-demand technology, so a tech the
+// model carries but the Calliope flow series do not 422s the whole leg while
+// contributing nothing electrical to the network being solved. Demand
+// technologies ride demand_profile and stay; the slack balances and stays.
+func dropUndispatchedSupply(techs map[string]json.RawMessage, slackTech string) error {
+	for id, raw := range techs {
+		if id == slackTech {
+			continue
+		}
+		var t map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return fmt.Errorf("meme: decode technology %q: %w", id, err)
+		}
+		if unquote(t["role"]) == "demand" || hasDispatch(t) {
+			continue
+		}
+		delete(techs, id)
+	}
+	return nil
+}
+
+// hasDispatch reports whether a technology carries a fixed dispatch series —
+// on the technology itself or in any node override (where setSeriesAt puts it
+// when the tech does not live at exactly that node).
+func hasDispatch(t map[string]json.RawMessage) bool {
+	if _, ok := t["dispatch"]; ok {
+		return true
+	}
+	raw, ok := t["node_overrides"]
+	if !ok {
+		return false
+	}
+	var overrides map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &overrides); err != nil {
+		return false
+	}
+	for _, ovRaw := range overrides {
+		var ov map[string]json.RawMessage
+		if err := json.Unmarshal(ovRaw, &ov); err != nil {
+			continue
+		}
+		if _, ok := ov["dispatch"]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // stripPerformance removes the physics performance model from a technology and

@@ -356,10 +356,8 @@ func TestApplyPowerFlow_dropsPerformanceOnEveryTech(t *testing.T) {
 	require.NotEmpty(t, dispatched["dispatch"], "the dispatched generator still carries its fixed dispatch")
 	assert.NotContains(t, dispatched, "performance", "a dispatched tech must not keep a physics model")
 
-	undispatched, ok := outTechs["pv_supply_2"].(map[string]interface{})
-	require.True(t, ok, "the tech the pass carries no series for survives")
-	assert.NotContains(t, undispatched, "performance",
-		"a tech the pass carries NO series for must still lose its physics model (live 422: pv_supply_2)")
+	_, ok := outTechs["pv_supply_2"]
+	assert.False(t, ok, "a tech the pass carries NO series for is dropped (live 422: pv_supply_2)")
 
 	for id, raw := range outTechs {
 		tech := raw.(map[string]interface{})
@@ -371,6 +369,60 @@ func TestApplyPowerFlow_dropsPerformanceOnEveryTech(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestDropUndispatchedSupply_keepsDemandSlackAndDispatched pins the power_flow
+// contract MEME enforces: only the slack balances, and every other non-demand
+// technology needs a fixed dispatch — so an undispatched supply (a PV base tech
+// whose arrays the results name separately) must be dropped, while demands, the
+// slack and any tech carrying a dispatch (tech-level or via a node override)
+// stay.
+func TestDropUndispatchedSupply_keepsDemandSlackAndDispatched(t *testing.T) {
+	techs := map[string]json.RawMessage{
+		"pv_supply_2": mustJSON(map[string]any{"role": "supply", "carrier_out": "electricity"}),
+		"pv_supply_1": mustJSON(map[string]any{"role": "supply", "dispatch": []float64{1, 2}}),
+		"pv_override": mustJSON(map[string]any{"role": "supply", "node_overrides": map[string]any{"n1": map[string]any{"dispatch": []float64{1, 2}}}}),
+		"demand_1":    mustJSON(map[string]any{"role": "demand", "demand_profile": []float64{1, 2}}),
+		"grid_import": mustJSON(map[string]any{"role": "supply"}),
+	}
+	require.NoError(t, dropUndispatchedSupply(techs, "grid_import"))
+
+	assert.NotContains(t, techs, "pv_supply_2", "an undispatched supply must be dropped")
+	for _, kept := range []string{"pv_supply_1", "pv_override", "demand_1", "grid_import"} {
+		assert.Contains(t, techs, kept, "%s must be kept", kept)
+	}
+}
+
+// TestStripPurchaseCosts_removesOnlyPurchase pins the other pypsa rejection: a
+// fixed purchase cost has no slot in PyPSA, but the rest of the cost block is
+// untouched (and a class left empty by the removal goes with it).
+func TestStripPurchaseCosts_removesOnlyPurchase(t *testing.T) {
+	techs := map[string]json.RawMessage{
+		"battery_storage_2": mustJSON(map[string]any{
+			"role": "storage",
+			"costs": map[string]any{
+				"monetary": map[string]any{"purchase": 500.0, "investment_per_capacity": 100.0},
+				"co2":      map[string]any{"purchase": 1.0},
+			},
+			"node_overrides": map[string]any{
+				"n1": map[string]any{"costs": map[string]any{"monetary": map[string]any{"purchase": 7.0}}},
+			},
+		}),
+	}
+	require.NoError(t, stripPurchaseCosts(techs))
+
+	var parsed map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(techs["battery_storage_2"], &parsed))
+	var costs map[string]map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(parsed["costs"], &costs))
+
+	assert.NotContains(t, costs["monetary"], "purchase")
+	assert.Contains(t, costs["monetary"], "investment_per_capacity", "the rest of the cost block survives")
+	assert.NotContains(t, costs, "co2", "a class left empty by the removal is dropped")
+
+	var ovs map[string]map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(parsed["node_overrides"], &ovs))
+	assert.NotContains(t, ovs["n1"], "costs", "the override's purchase-only costs block is gone")
 }
 
 // TestStripPerformance_removesTechAndOverridePerformance pins the helper: both
