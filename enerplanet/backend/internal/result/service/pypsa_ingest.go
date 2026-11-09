@@ -10,9 +10,12 @@ import (
 	"strconv"
 	"strings"
 
+	"gorm.io/gorm"
+
 	commonModels "platform.local/common/pkg/models"
 	"platform.local/platform/logger"
 
+	"spatialhub_backend/internal/models"
 	resultcapabilities "spatialhub_backend/internal/result/capabilities"
 )
 
@@ -175,6 +178,23 @@ func countLineRows(pypsaDir string) int {
 	return count
 }
 
+// deletePyPSAElectricalRows clears the model's power-flow electrical rows
+// (voltage, power, line loading) so an ingest REPLACES them instead of
+// appending: a second run of the leg would otherwise double every row. It runs
+// inside the caller's transaction on the Coati route.
+func deletePyPSAElectricalRows(db *gorm.DB, modelID uint) error {
+	for _, m := range []any{
+		&models.ResultsPyPSAVoltage{},
+		&models.ResultsPyPSAPower{},
+		&models.ResultsPyPSALineLoading{},
+	} {
+		if err := db.Where("model_id = ?", modelID).Delete(m).Error; err != nil {
+			return fmt.Errorf("delete %T for model %d: %w", m, modelID, err)
+		}
+	}
+	return nil
+}
+
 // IngestPyPSAResult is the isolated PyPSA leg's ingest: it extracts the stored
 // `meme-pypsa` bundle and fills the electrical R2 tables with the power-flow
 // result.
@@ -229,24 +249,44 @@ func (s *ResultService) IngestPyPSAResult(ctx context.Context, modelID uint, use
 		// power_flow/ dir — skip the subprocess and fall through to the
 		// legacy ingest, which is the outcome either way.
 		if _, err := os.Stat(filepath.Join(filepath.Dir(networkNC), "power_flow")); err == nil {
-			if doc, pf := s.pypsaCoatiDocument(ctx, networkNC, modelID, log); pf != nil {
-				psummary = summarizePyPSACoati(pf, doc)
-				powerFlowDir := filepath.Join(filepath.Dir(networkNC), "power_flow")
-				inserter := NewStreamingInserter(ctx, s.db, modelID, 1)
-				if err := s.streamCoatiVoltage(inserter, doc, pf); err != nil && !os.IsNotExist(err) {
-					log.Warnf("PyPSA stream voltage skipped model_id=%d err=%v", modelID, err)
-				}
-				if err := s.streamCoatiPower(inserter, doc, pf, powerFlowDir); err != nil && !os.IsNotExist(err) {
-					log.Warnf("PyPSA stream power skipped model_id=%d err=%v", modelID, err)
-				}
-				if err := s.streamCoatiLineLoading(inserter, doc, pf, powerFlowDir); err != nil && !os.IsNotExist(err) {
-					log.Warnf("PyPSA stream line loading skipped model_id=%d err=%v", modelID, err)
-				}
-				psummary.LineCount = countCoatiLines(pf, powerFlowDir)
-				log.Infof("PyPSA power flow ingested via Coati model_id=%d converged=%v snapshots=%d lines=%d",
-					modelID, psummary.Converged, psummary.TotalSnapshots, psummary.LineCount)
-				pypsaDir = "" // the Coati route owns the electrical tables
+			// A power_flow/ bundle IS Coati's layout: the legacy csv_sim_*
+			// streaming cannot read it, so a Coati failure here must FAIL the
+			// leg rather than let it complete with empty electrical tables (the
+			// old behaviour silently produced a "completed, empty" leg).
+			doc, pf := s.pypsaCoatiDocument(ctx, networkNC, modelID, log)
+			if pf == nil {
+				return nil, fmt.Errorf("coati could not read the power_flow bundle for model %d (network %s): the electrical tables cannot be filled", modelID, networkNC)
 			}
+			psummary = summarizePyPSACoati(pf, doc)
+			powerFlowDir := filepath.Join(filepath.Dir(networkNC), "power_flow")
+
+			// Replace, don't append: a rerun would otherwise double every row.
+			// Delete the model's electrical rows and insert the fresh ones in
+			// one transaction, so a mid-stream failure leaves the previous
+			// result intact instead of a half-written mix.
+			if err := s.db.Transaction(func(tx *gorm.DB) error {
+				if err := deletePyPSAElectricalRows(tx, modelID); err != nil {
+					return err
+				}
+				inserter := NewStreamingInserter(ctx, tx, modelID, 1)
+				if err := s.streamCoatiVoltage(inserter, doc, pf); err != nil {
+					return fmt.Errorf("stream pypsa voltage: %w", err)
+				}
+				if err := s.streamCoatiPower(inserter, doc, pf, powerFlowDir); err != nil {
+					return fmt.Errorf("stream pypsa power: %w", err)
+				}
+				if err := s.streamCoatiLineLoading(inserter, doc, pf, powerFlowDir); err != nil {
+					return fmt.Errorf("stream pypsa line loading: %w", err)
+				}
+				return nil
+			}); err != nil {
+				return nil, fmt.Errorf("ingest pypsa power flow for model %d: %w", modelID, err)
+			}
+
+			psummary.LineCount = countCoatiLines(pf, powerFlowDir)
+			log.Infof("PyPSA power flow ingested via Coati model_id=%d converged=%v snapshots=%d lines=%d",
+				modelID, psummary.Converged, psummary.TotalSnapshots, psummary.LineCount)
+			pypsaDir = "" // the Coati route owns the electrical tables
 		}
 	}
 
@@ -254,7 +294,11 @@ func (s *ResultService) IngestPyPSAResult(ctx context.Context, modelID uint, use
 		// Legacy fallback: stream the csv_sim_* electrical files best-effort.
 		// Each is optional and independent: a non-converged (cleared) export
 		// is NORMAL, so a failure to stream one table must not fail the model
-		// — only gate that section.
+		// — only gate that section. Still replace, not append: clear the
+		// model's electrical rows first so a rerun does not double them.
+		if err := deletePyPSAElectricalRows(s.db, modelID); err != nil {
+			log.Warnf("PyPSA legacy ingest: clear old electrical rows model_id=%d err=%v", modelID, err)
+		}
 		inserter := NewStreamingInserter(ctx, s.db, modelID, 1)
 		if err := inserter.StreamPyPSAVoltage(pypsaDir); err != nil && !os.IsNotExist(err) {
 			log.Warnf("PyPSA stream voltage skipped model_id=%d err=%v", modelID, err)

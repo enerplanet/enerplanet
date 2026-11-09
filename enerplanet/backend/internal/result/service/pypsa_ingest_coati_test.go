@@ -399,6 +399,20 @@ func TestDecodeCoatiPowerFlow_AbsentIsNil(t *testing.T) {
 
 // ----------------------------------------------------------------- ingest ---
 
+// expectPyPSAElectricalReplace queues the SQL of one Coati-route electrical
+// ingest: BEGIN, one DELETE per electrical table (voltage, power, line
+// loading), `inserts` batched INSERTs, COMMIT.
+func expectPyPSAElectricalReplace(mock sqlmock.Sqlmock, inserts int) {
+	mock.ExpectBegin()
+	for i := 0; i < 3; i++ {
+		mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 0))
+	}
+	for i := 0; i < inserts; i++ {
+		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
+	}
+	mock.ExpectCommit()
+}
+
 // TestIngestPyPSAResult_CoatiRoute runs the FULL isolated PyPSA ingest over a
 // MEME-main bundle: Coati is driven on the network.nc and the electrical
 // tables are filled with the scaled columns (v_ang, q, loading_percent).
@@ -414,11 +428,9 @@ func TestIngestPyPSAResult_CoatiRoute(t *testing.T) {
 	runner := &fakePyPSACoatiRunner{doc: doc}
 	svc := NewResultService(db).WithCoatiRunner(runner)
 
-	// Three INSERT ... RETURNING (one per electrical table) + the
-	// result_source UPDATE.
-	for i := 0; i < 3; i++ {
-		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
-	}
+	// One transaction: 3 deletes (replace, don't append) + 3 INSERT ... RETURNING
+	// (one per electrical table); then the result_source UPDATE.
+	expectPyPSAElectricalReplace(mock, 3)
 	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 
 	modelDir := t.TempDir()
@@ -476,10 +488,8 @@ func TestIngestPyPSAResult_NonConvergedKeepsCompleting(t *testing.T) {
 	runner := &fakePyPSACoatiRunner{doc: doc}
 	svc := NewResultService(db).WithCoatiRunner(runner)
 
-	// 3 electrical inserts + the result_source UPDATE.
-	for i := 0; i < 3; i++ {
-		mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
-	}
+	// 3 deletes + 3 electrical inserts in one tx + the result_source UPDATE.
+	expectPyPSAElectricalReplace(mock, 3)
 	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
 
 	modelDir := t.TempDir()
@@ -522,24 +532,24 @@ func TestIngestPyPSAResult_FallsBackWhenNoPowerFlow(t *testing.T) {
 	require.Contains(t, capture.String(), "full-grid-pf", "the legacy leg still flips the source")
 }
 
-// A Coati conversion failure must not fail the model — the legacy ingest owns
-// the bundle then.
-func TestIngestPyPSAResult_FallsBackWhenCoatiFails(t *testing.T) {
+// A Coati conversion failure over a power_flow/ bundle MUST fail the leg: the
+// legacy csv_sim_* path cannot read that layout, so falling through would
+// complete the leg with empty electrical tables. Fixes PR #377 review B5.
+func TestIngestPyPSAResult_CoatiFailureFailsTheLeg(t *testing.T) {
 	capture := &sqlCaptureWriter{}
 	db, mock := newCoatiPermissiveDB(t, capture)
 	runner := &fakePyPSACoatiRunner{err: fmt.Errorf("coati: no such framework")}
 	svc := NewResultService(db).WithCoatiRunner(runner)
 
-	// No electrical tables stream; only the result_source UPDATE.
-	mock.ExpectExec("").WillReturnResult(sqlmock.NewResult(0, 1))
-
+	// No DB write happens: the ingest fails before it touches the tables.
 	modelDir := t.TempDir()
 	zipPath := writePFFixtureZip(t, modelDir, "sim_7_pypsa.zip", powerFlowFixtureTables())
 
 	summary, err := svc.IngestPyPSAResult(context.Background(), 7, "u1", zipPath)
-	require.NoError(t, err)
+	require.Error(t, err, "a Coati failure over a power_flow/ bundle must fail the leg")
+	require.Nil(t, summary)
+	require.ErrorContains(t, err, "power_flow bundle")
 	require.NoError(t, mock.ExpectationsWereMet())
 	require.Equal(t, 1, runner.called)
-	require.NotNil(t, summary)
-	assert.Contains(t, capture.String(), "full-grid-pf")
+	require.NotContains(t, capture.String(), "full-grid-pf", "a failed leg must not flip the source")
 }
