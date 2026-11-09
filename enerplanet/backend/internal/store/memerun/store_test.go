@@ -115,6 +115,28 @@ func TestStore_MarkLegFailedUpsertsPreservingRunID(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+// TestStore_MarkLegPendingRecordsRequestAndClearsRunID guards the request-path
+// writer: it upserts 'pending' with an EMPTY run id (the previous solve's job
+// must not be resumed) and clears any stale error.
+func TestStore_MarkLegPendingRecordsRequestAndClearsRunID(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
+		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
+	mock.ExpectExec(upsert).
+		WithArgs(
+			// the INSERT: model_id, leg, run_id, status, error, grid prices, extracted_path, created_at, updated_at
+			int64(7), models.MemeLegPyPSA, "", models.MemeRunStatusPending, nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			// the ON CONFLICT assignment values, in gorm's key order: error, run_id, status, updated_at
+			nil, "", models.MemeRunStatusPending, sqlmock.AnyArg(),
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).MarkLegPending(7, models.MemeLegPyPSA))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 // TestMigrationTableName guards the migration file so a rename does not
 // silently break resume-by-id persistence.
 func TestMigrationTableName(t *testing.T) {

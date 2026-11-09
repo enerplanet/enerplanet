@@ -17,6 +17,7 @@ import (
 	platformlogger "platform.local/platform/logger"
 	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/jobs"
+	backendmodels "spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
 	"spatialhub_backend/internal/store/memerun"
 )
@@ -228,7 +229,18 @@ func (s *ModelService) StartMemePyPSACalculation(ctx context.Context, userID str
 	}
 
 	// GATE (request time): fail fast unless the Calliope leg completed.
-	if err := jobs.CalliopeLegReady(memerun.NewStore(s.db), model.ID); err != nil {
+	legRuns := memerun.NewStore(s.db)
+	if err := jobs.CalliopeLegReady(legRuns, model.ID); err != nil {
+		return nil, err
+	}
+
+	// The isolated leg does not change the model's status, so nothing else
+	// guards it: refuse a second request while one is already in flight, then
+	// record the intent SYNCHRONOUSLY as 'pending'. Without that the dashboard
+	// had no in-flight state between the click and the worker picking the task
+	// up (seconds later) — the action flipped back to its idle look and a user
+	// could fire the same power flow twice.
+	if err := refuseRunningPypsaLeg(legRuns, model.ID); err != nil {
 		return nil, err
 	}
 
@@ -236,6 +248,10 @@ func (s *ModelService) StartMemePyPSACalculation(ctx context.Context, userID str
 	// model, but a model that cannot build one should fail this request (400).
 	if _, err := s.BuildCalculationPayload(model); err != nil {
 		return nil, err
+	}
+
+	if err := legRuns.MarkLegPending(model.ID, backendmodels.MemeLegPyPSA); err != nil {
+		return nil, fmt.Errorf("record the power flow request: %w", err)
 	}
 
 	// The pypsa leg must NOT touch the model's timing fields: calculation_started_at
@@ -262,8 +278,31 @@ func (s *ModelService) StartMemePyPSACalculation(ctx context.Context, userID str
 	)
 	if err != nil {
 		log.Errorf("failed to enqueue dispatch_meme_pypsa model_id=%d err=%v", model.ID, err)
+		// The leg was recorded 'pending' for this request; without this it would
+		// spin forever. A failed leg reads as red + retryable.
+		if merr := legRuns.MarkLegFailed(model.ID, backendmodels.MemeLegPyPSA, err.Error()); merr != nil {
+			log.Errorf("model %d: failed to mark the unqueued power flow leg failed: %v", model.ID, merr)
+		}
 		return nil, fmt.Errorf("failed to enqueue calculation: %w", err)
 	}
 
 	return model, nil
+}
+
+// refuseRunningPypsaLeg refuses a new power-flow request while the leg is
+// already pending (requested, waiting for a worker) or running (dispatched).
+// The PyPSA leg deliberately does not touch the model's status, so this is the
+// only guard against a second dispatch of the same power flow.
+func refuseRunningPypsaLeg(runs *memerun.Store, modelID uint) error {
+	rec, err := runs.GetLeg(modelID, backendmodels.MemeLegPyPSA)
+	if err != nil {
+		return fmt.Errorf("read the power flow leg of model %d: %w", modelID, err)
+	}
+	if rec == nil {
+		return nil
+	}
+	if rec.Status == backendmodels.MemeRunStatusPending || rec.Status == backendmodels.MemeRunStatusRunning {
+		return fmt.Errorf("power flow already in progress")
+	}
+	return nil
 }

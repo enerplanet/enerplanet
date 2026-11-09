@@ -554,6 +554,33 @@ func TestHandleDispatchMemePyPSA_endToEndInjectsPowerFlowAndDispatches(t *testin
 	require.Equal(t, modelID, enq.enqueued[0].ModelID)
 }
 
+// TestHandleDispatchMemePyPSA_pendingRequestIsFreshlySubmitted pins the
+// request-path handshake: the request records the leg 'pending' (so the
+// dashboard shows it in flight from the click), and the worker must treat that
+// row as a FRESH submit — its run id is empty, so resuming it would dispatch
+// nothing.
+func TestHandleDispatchMemePyPSA_pendingRequestIsFreshlySubmitted(t *testing.T) {
+	const modelID = uint(42)
+	fakeZip := []byte("PK\x03\x04simulated-meme-pypsa-result\x00tail\xff")
+	fake := newFakePypsaTentacron(t, "job-pypsa-42", fakeZip)
+
+	runs := &fakePypsaRuns{}
+	runs.calliope = &models.ModelMemeRun{ModelID: modelID, Leg: models.MemeLegCalliope, RunID: "job-calliope", Status: models.MemeRunStatusCompleted}
+	// The request path already wrote this row (no run id yet).
+	runs.rec = &models.ModelMemeRun{ModelID: modelID, Leg: models.MemeLegPyPSA, Status: models.MemeRunStatusPending}
+
+	db, _ := newDispatchMockDB(t, modelRows(modelID))
+	root := t.TempDir()
+	locator := &fakeCalliopeLocator{csvDir: writePypsaLegCSVs(t, root)}
+
+	err := HandleDispatchMemePyPSA(context.Background(), pypsaDispatchTask(t, modelID), db, tentacronclient.New(fake.URL(), "k"), runs, NewFilesystemResultZipStore(root), locator, &fakePypsaEnqueuer{})
+	require.NoError(t, err)
+
+	require.EqualValues(t, 1, fake.submitted.Load(), "a pending request is freshly submitted, not resumed")
+	require.Equal(t, "job-pypsa-42", runs.rec.RunID)
+	require.Equal(t, "running", runs.rec.Status)
+}
+
 // TestPypsaDispatchPayload_carriesStartedAt pins the per-solve Idempotency-Key
 // discriminator: it lives in the DISPATCH PAYLOAD (this leg must never touch
 // model.calculation_started_at, which the dashboard measures the model's

@@ -92,6 +92,28 @@ func (s *Store) DeleteLeg(modelID uint, leg string) error {
 		Delete(&models.ModelMemeRun{}).Error
 }
 
+// MarkLegPending records that the leg has been REQUESTED but not yet dispatched.
+// The row exists from the click so the dashboard can show the action as
+// in-flight immediately instead of waiting for the worker to pick the task up
+// (a window in which a user could fire the request twice). It clears the run id
+// — the previous solve's TentaCron job must not be resumed — so callers must
+// refuse to mark a leg that is already pending/running.
+func (s *Store) MarkLegPending(modelID uint, leg string) error {
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "model_id"}, {Name: "leg"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"run_id":     "",
+			"status":     models.MemeRunStatusPending,
+			"error":      nil,
+			"updated_at": time.Now(),
+		}),
+	}).Create(&models.ModelMemeRun{
+		ModelID: modelID,
+		Leg:     leg,
+		Status:  models.MemeRunStatusPending,
+	}).Error
+}
+
 // MarkLegFailed upserts the leg's run record to a terminal 'failed' status with
 // errMsg, preserving an already-recorded run_id (a row recorded 'running' keeps
 // its TentaCron job id). It is the writer for a failure that happens BEFORE a

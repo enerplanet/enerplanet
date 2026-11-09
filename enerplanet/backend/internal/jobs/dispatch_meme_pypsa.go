@@ -569,7 +569,10 @@ func HandleDispatchMemePyPSA(
 		startedAt = &p.StartedAt
 	}
 	switch {
-	case rec == nil || models.MemeRunFinished(rec.Status):
+	case rec == nil || models.MemeRunFinished(rec.Status) || rec.Status == models.MemeRunStatusPending:
+		// Fresh submit: no run recorded (first solve), a TERMINAL run (a user
+		// re-solve), or a 'pending' request row the request path wrote (its run
+		// id is empty — resuming it would be meaningless).
 		jobID, err = tc.SubmitMeme(ctx, memeTargetPyPSAOnly, jobMap, pypsaIdempotencyKey(model.ID, startedAt))
 		if err != nil {
 			return modelstore.ServiceFailed(modelstore.ServiceMeme, fmt.Errorf("meme pypsa dispatch via TentaCron for model %d: %w", p.ModelID, err))
