@@ -242,6 +242,30 @@ func TestMapCoatiPowerFlowPower_ScalesPAndQ(t *testing.T) {
 	assert.Nil(t, rowsNoReactive[2].Q)
 }
 
+// TestMapCoatiPowerFlowPower_QPrefersPerBusNetTable pins the basis fix: when the
+// bundle carries buses-q.csv, q is the per-bus NET reactive (the same basis as
+// p), not the generator-only per-location sum.
+func TestMapCoatiPowerFlowPower_QPrefersPerBusNetTable(t *testing.T) {
+	doc := powerFlowDocFixture()
+	pf := decodeCoatiPowerFlow(doc)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "buses-p.csv"),
+		[]byte(pfTableCSV("snapshot,n1::electricity,n2::electricity,n3::electricity",
+			"2025-01-01 00:00:00,1.5031,-1.0,-0.5")), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "buses-q.csv"),
+		[]byte(pfTableCSV("snapshot,n1::electricity,n2::electricity,n3::electricity",
+			"2025-01-01 00:00:00,-0.42,-0.11,0.0")), 0o600))
+
+	rows := mapCoatiPowerFlowPower(7, doc, pf, dir)
+	require.Len(t, rows, 3)
+	require.NotNil(t, rows[0].Q)
+	assert.InDelta(t, -420.0, *rows[0].Q, 1e-9, "q is the per-bus net reactive (MVAr -> kVAr)")
+	require.NotNil(t, rows[1].Q)
+	assert.InDelta(t, -110.0, *rows[1].Q, 1e-9)
+	require.NotNil(t, rows[2].Q)
+	assert.Equal(t, 0.0, *rows[2].Q)
+}
+
 func TestMapCoatiPowerFlowPower_SkipsBusesMissingFromPTable(t *testing.T) {
 	doc := powerFlowDocFixture()
 	pf := decodeCoatiPowerFlow(doc)
@@ -337,6 +361,27 @@ func TestMapCoatiPowerFlowLineLoading_UnresolvableEndpointsSkipped(t *testing.T)
 
 	rows := mapCoatiPowerFlowLineLoading(7, doc, pf, dir)
 	require.Len(t, rows, 0)
+}
+
+// TestPowerFlowBusTable_KeepsIndexAlignmentOnUnparseableCell pins the fix: a
+// diverged snapshot's NaN/blank cell becomes a 0 placeholder, so every column
+// still gets one entry per snapshot and a LATER snapshot is never shifted up by
+// one.
+func TestPowerFlowBusTable_KeepsIndexAlignmentOnUnparseableCell(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "buses-p.csv")
+	require.NoError(t, os.WriteFile(path, []byte(pfTableCSV("snapshot,bus_a,bus_b",
+		"2025-01-01 00:00:00,1.0,2.0",
+		"2025-01-01 01:00:00,NaN,4.0", // diverged snapshot: NaN cell
+		"2025-01-01 02:00:00,3.0",     // ragged row: last column missing
+		"2025-01-01 03:00:00,5.0,8.0")), 0o600))
+
+	values, err := powerFlowBusTable(path)
+	require.NoError(t, err)
+	require.Len(t, values["bus_a"], 4, "one entry per snapshot, the diverged cell included")
+	require.Len(t, values["bus_b"], 4, "the ragged row still appends for every column")
+	assert.Equal(t, []float64{1, 0, 3, 5}, values["bus_a"])
+	assert.Equal(t, []float64{2, 4, 0, 8}, values["bus_b"])
 }
 
 func TestSummarizePyPSACoati(t *testing.T) {

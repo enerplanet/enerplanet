@@ -41,9 +41,11 @@ import (
 //	results_pypsa_voltage      v_mag_pu = voltage_magnitude (pu, as-is)
 //	                           v_ang    = voltage_angle (rad, as-is)
 //	results_pypsa_power        p        = buses-p.csv (MW -> kW, x1000)
-//	                           q        = sum of reactive_power per location
-//	                                      (MVAr -> kVAr, x1000) on the
-//	                                      location's AC bus
+//	                           q        = buses-q.csv (MVAr -> kVAr, x1000) —
+//	                                      the per-bus NET reactive, same basis
+//	                                      as p; falls back to the per-location
+//	                                      sum of reactive_power (generators
+//	                                      only) when the table is absent
 //	results_pypsa_line_loading loading_percent = branch_loading ratio x100
 //	                           bus0/bus1 = the branch's endpoint AC buses
 //	                           p0/p1/q0/q1 = lines-*.csv (MW -> kW) when present
@@ -206,23 +208,32 @@ func powerFlowBusTable(path string) (map[string][]float64, error) {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1 // tolerate a ragged row; pad the missing columns below
 	header, err := reader.Read()
 	if err != nil {
 		return nil, err
 	}
 	names := header[1:]
 	values := make(map[string][]float64, len(names))
-	// Column order fixed by the header; rows appended per snapshot.
+	// Column order fixed by the header; rows appended per snapshot. EVERY column
+	// is appended for EVERY row — a blank or non-finite cell (a diverged
+	// snapshot) becomes a 0 placeholder rather than a skipped append, so a later
+	// snapshot is never shifted by one. The convergence record flags the
+	// diverged snapshot; the value itself is meaningless there.
 	series := make([][]float64, len(names))
 	for {
 		row, err := reader.Read()
 		if err != nil {
 			break // io.EOF or a ragged tail row: stop, keep what parsed
 		}
-		for i := 1; i < len(row) && i-1 < len(names); i++ {
-			if v, err := parseCSVFloat(row[i]); err == nil {
-				series[i-1] = append(series[i-1], v)
+		for i := 0; i < len(names); i++ {
+			v := 0.0
+			if col := i + 1; col < len(row) {
+				if parsed, perr := parseCSVFloat(row[col]); perr == nil {
+					v = parsed
+				}
 			}
+			series[i] = append(series[i], v)
 		}
 	}
 	for i, name := range names {
@@ -261,11 +272,15 @@ func aggregateCoatiReactive(pf *coatiPowerFlow) map[string][]float64 {
 }
 
 // mapCoatiPowerFlowPower maps the bus power rows: p is the per-bus net
-// injection from MEME's power_flow/buses-p.csv (MW -> kW), q is the document's
-// per-location reactive total (MVAr -> kVAr) written to the location's AC bus.
-// Rows cover the AC buses (the same set the voltage table carries); a bus
-// without an active series is skipped (p is NOT NULL), one without reactive
-// data carries q NULL.
+// injection from MEME's power_flow/buses-p.csv and q is the per-bus net
+// reactive from power_flow/buses-q.csv (both MW/MVAr -> kW/kVAr) — the SAME
+// per-bus NET basis, so the two columns of a row always describe the same
+// quantity. Only when the bundle carries no buses-q.csv does q fall back to the
+// document's per-location reactive total (MVAr -> kVAr), which sums GENERATORS
+// only — a different basis, flagged in the log by the caller's absence of the
+// table. Rows cover the AC buses (the same set the voltage table carries); a bus
+// without an active series is skipped (p is NOT NULL), one without reactive data
+// carries q NULL.
 func mapCoatiPowerFlowPower(modelID uint, doc *CoatiResultsDocument, pf *coatiPowerFlow, powerFlowDir string) []models.ResultsPyPSAPower {
 	timestamps := coatiTimestamps(doc)
 	if len(timestamps) == 0 {
@@ -275,6 +290,8 @@ func mapCoatiPowerFlowPower(modelID uint, doc *CoatiResultsDocument, pf *coatiPo
 	if err != nil {
 		return nil // no active-per-bus table: nothing honest to write
 	}
+	// Per-bus net reactive (same basis as p) when MEME wrote it.
+	qByBus, _ := powerFlowBusTable(filepath.Join(powerFlowDir, "buses-q.csv"))
 	reactive := aggregateCoatiReactive(pf)
 
 	buses := make([]string, 0, len(pf.VoltageMagnitude))
@@ -290,7 +307,10 @@ func mapCoatiPowerFlowPower(modelID uint, doc *CoatiResultsDocument, pf *coatiPo
 		if len(pSeries) == 0 {
 			continue
 		}
-		qSeries := reactive[loc]
+		qSeries := qByBus[bus]
+		if qSeries == nil {
+			qSeries = reactive[loc] // fallback: generator-only reactive on this location
+		}
 		for i := 0; i < len(pSeries) && i < len(timestamps); i++ {
 			row := models.ResultsPyPSAPower{
 				ModelID:  modelID,
