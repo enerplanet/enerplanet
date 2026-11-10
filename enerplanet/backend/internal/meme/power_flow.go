@@ -168,6 +168,15 @@ func ApplyPowerFlow(job []byte, pf *pypsapass.PowerFlow) ([]byte, error) {
 	if err := stripPerformanceFromAll(techs); err != nil {
 		return nil, err
 	}
+	// No storage in a power_flow job carries a stored-ENERGY size: the PF fixes
+	// every dispatch, so the energy sizing cannot affect the result, and MEME
+	// uses its presence to emit the storage as a Store on a bus of its own,
+	// which its power flow cannot solve (single-bus sub-network, no slack ->
+	// KeyError: None, every snapshot non-convergent). Without it MEME writes a
+	// StorageUnit on the technology's own bus and the PF solves.
+	if err := stripStorageEnergy(techs); err != nil {
+		return nil, err
+	}
 	for _, g := range pf.Generators {
 		if g.Name == slackName {
 			continue
@@ -436,6 +445,64 @@ func dropPurchaseCost(fields map[string]json.RawMessage) error {
 		delete(fields, "costs")
 	} else {
 		fields["costs"] = mustJSON(costs)
+	}
+	return nil
+}
+
+// stripStorageEnergy removes the stored-energy sizing from every storage
+// technology (tech-level and per-node override). A power_flow job drives every
+// storage with a fixed dispatch, so the energy size cannot affect the solve;
+// MEME, however, reads storage.energy_capacity as the signal to emit the
+// storage as a Store on a bus of its own, joined to the building bus by a
+// charge and a discharge link. Its power flow then treats that bus as a
+// single-bus sub-network with no slack generator and aborts every snapshot
+// (KeyError: None in sub_network_pf_singlebus). Dropping the energy block makes
+// MEME write a StorageUnit on the technology's own bus instead, which solves.
+// The fields MEME accepts only alongside energy_capacity go with it: its pypsa
+// target rejects depth_of_discharge (calliope-only) and requires
+// max_charge_rate/max_discharge_rate to accompany an energy size.
+func stripStorageEnergy(techs map[string]json.RawMessage) error {
+	for id, raw := range techs {
+		var t map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &t); err != nil {
+			return fmt.Errorf("meme: decode technology %q: %w", id, err)
+		}
+		if err := transformTechFields(t, dropStorageEnergy); err != nil {
+			return fmt.Errorf("meme: strip storage energy of technology %q: %w", id, err)
+		}
+		techs[id] = mustJSON(t)
+	}
+	return nil
+}
+
+// dropStorageEnergy deletes energy_capacity and the energy-only fields from a
+// technology's storage block, keeping the charge/discharge efficiencies, the
+// initial state of charge, self-discharge and the fixed dispatch. The
+// (now empty) storage wrapper goes with them.
+func dropStorageEnergy(fields map[string]json.RawMessage) error {
+	raw, ok := fields["storage"]
+	if !ok {
+		return nil
+	}
+	var storage map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &storage); err != nil {
+		return fmt.Errorf("decode storage: %w", err)
+	}
+	changed := false
+	for _, key := range []string{"energy_capacity", "depth_of_discharge", "max_charge_rate", "max_discharge_rate"} {
+		if _, has := storage[key]; !has {
+			continue
+		}
+		delete(storage, key)
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	if len(storage) == 0 {
+		delete(fields, "storage")
+	} else {
+		fields["storage"] = mustJSON(storage)
 	}
 	return nil
 }

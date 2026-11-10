@@ -445,3 +445,92 @@ func TestStripPerformance_removesTechAndOverridePerformance(t *testing.T) {
 	assert.Contains(t, ovs["n1"], "dispatch", "other override fields survive")
 	assert.Contains(t, ovs["n2"], "dispatch")
 }
+
+// TestStripStorageEnergy_stripsEnergyKeepsEfficiency pins the helper: the
+// stored-energy size and its energy-only companions are removed at tech level
+// and in a node override, while the efficiencies and initial state survive.
+func TestStripStorageEnergy_stripsEnergyKeepsEfficiency(t *testing.T) {
+	techs := map[string]json.RawMessage{
+		"battery_storage_2": mustJSON(map[string]any{
+			"role": "storage",
+			"storage": map[string]any{
+				"charge_eff":         0.949,
+				"discharge_eff":      0.949,
+				"energy_capacity":    map[string]any{"expandable": true, "max": 0.02, "min": 0.0},
+				"depth_of_discharge": 0.0,
+				"initial_soc":        0.0,
+				"self_discharge":     4e-05,
+			},
+			"node_overrides": map[string]any{
+				"n1": map[string]any{"storage": map[string]any{
+					"energy_capacity":    map[string]any{"max": 0.02},
+					"max_charge_rate":    0.5,
+					"max_discharge_rate": 0.5,
+				}},
+			},
+		}),
+	}
+	require.NoError(t, stripStorageEnergy(techs))
+
+	var parsed map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(techs["battery_storage_2"], &parsed))
+	var storage map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(parsed["storage"], &storage))
+
+	assert.NotContains(t, storage, "energy_capacity", "the field that makes MEME emit a Store")
+	assert.NotContains(t, storage, "depth_of_discharge")
+	assert.Contains(t, storage, "charge_eff", "the efficiencies survive")
+	assert.Contains(t, storage, "discharge_eff")
+	assert.Contains(t, storage, "self_discharge")
+
+	var ovs map[string]map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(parsed["node_overrides"], &ovs))
+	assert.NotContains(t, ovs["n1"], "storage", "the override's energy-only storage block is dropped")
+}
+
+// TestApplyPowerFlow_stripsStorageEnergy_keepsDispatch is the issue #391
+// regression: a battery with storage.energy_capacity sent through the full
+// pass comes out with its fixed dispatch and efficiencies intact but no
+// energy size — the shape MEME turns into a StorageUnit instead of an
+// unsolvable Store. It fails without stripStorageEnergy.
+func TestApplyPowerFlow_stripsStorageEnergy_keepsDispatch(t *testing.T) {
+	pf, job := powerFlowFixture(t)
+
+	var top map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(job, &top))
+	var m map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(top["model"], &m))
+	var techs map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(m["technologies"], &techs))
+	techs["battery_storage_1"] = mustJSON(map[string]any{
+		"role":        "storage",
+		"carrier_out": "electricity",
+		"node":        []string{"nb1"},
+		"dispatch":    []float64{1, 2},
+		"storage": map[string]any{
+			"charge_eff":         0.949,
+			"discharge_eff":      0.949,
+			"energy_capacity":    map[string]any{"expandable": true, "max": 0.02, "min": 0.0},
+			"depth_of_discharge": 0.0,
+			"initial_soc":        0.0,
+			"self_discharge":     4e-05,
+		},
+	})
+	m["technologies"] = mustJSON(techs)
+	top["model"] = mustJSON(m)
+
+	got, err := ApplyPowerFlow(mustJSON(top), pf)
+	require.NoError(t, err)
+
+	var out map[string]interface{}
+	require.NoError(t, json.Unmarshal(got, &out))
+	outTech, ok := out["model"].(map[string]interface{})["technologies"].(map[string]interface{})["battery_storage_1"].(map[string]interface{})
+	require.True(t, ok, "a dispatched battery survives to the job")
+
+	require.NotEmpty(t, outTech["dispatch"], "the battery keeps its fixed dispatch")
+	storage, ok := outTech["storage"].(map[string]interface{})
+	require.True(t, ok, "the storage block survives (it still carries the efficiencies)")
+	assert.NotContains(t, storage, "energy_capacity", "the energy size is what makes MEME emit a Store")
+	assert.NotContains(t, storage, "depth_of_discharge")
+	assert.Contains(t, storage, "charge_eff", "the charge efficiency survives")
+}
