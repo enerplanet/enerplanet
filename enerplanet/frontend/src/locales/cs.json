@@ -299,7 +299,9 @@
       "heat": "Teplo",
       "gas": "Plyn",
       "oil": "Olej",
-      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie"
+      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie",
+      "cooling": "Chlazení",
+      "heatingCooling": "Vytápění a chlazení"
     },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
@@ -364,7 +366,9 @@
       "over": "za",
       "from": "z",
       "installed": "instalovaných",
-      "equipmentAndRunning": "Vybavení + Provozní náklady"
+      "equipmentAndRunning": "Vybavení + Provozní náklady",
+      "peakHeating": "Špička vytápění",
+      "peakCooling": "Špička chlazení"
     },
     "techNames": {
       "solarPv": "Solární FV",
@@ -701,6 +705,23 @@
       "notConvergedTitle": "Tok výkonu nekonvergoval",
       "convergedDescription": "Výpočet elektrického toku výkonu úspěšně nalezl stabilní řešení. Hodnoty napětí a výkonu v síti jsou fyzikálně platné.",
       "notConvergedDescription": "Výpočet toku výkonu nemohl najít stabilní řešení v limitu iterací. Výsledky mohou být nepřesné nebo neúplné."
+    },
+    "thermal": {
+      "title": "Vytápění a chlazení za období",
+      "info": "Součty vytápění a chlazení za období přes všechny budovy. Teplo a chlad jsou v modelu oddělené: teplo nemůže pokrýt potřebu chlazení, proto má každé své vlastní zařízení.",
+      "demand": "Potřeba vytápění a chlazení",
+      "overRun": "za období",
+      "demandInfo": "Energie potřebná za období k udržení příjemné teploty v budovách: vytápění, teplá voda a chlazení, sečteno přes všechny budovy.",
+      "heatingShare": "Podíl vytápění",
+      "heatingSub": "{{energy}} vytápění a teplá voda",
+      "heatingShareInfo": "Podíl potřeby vytápění a chlazení připadající na vytápění a teplou vodu.",
+      "coolingShare": "Podíl chlazení",
+      "coolingSub": "{{energy}} chlazení",
+      "coolingShareInfo": "Podíl potřeby vytápění a chlazení připadající na chlazení.",
+      "electricity": "Spotřebovaná elektřina",
+      "electricitySub": "tepelnými čerpadly a klimatizacemi",
+      "electricityInfo": "Elektřina, kterou zařízení pro vytápění a chlazení odebrala za období. Zbytek tepla a chladu pocházel bezplatně z venkovního vzduchu nebo země.",
+      "noDemand": "V tomto běhu není žádná potřeba vytápění ani chlazení."
     }
   },
   "auth": {

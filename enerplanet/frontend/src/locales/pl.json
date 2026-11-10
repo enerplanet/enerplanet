@@ -299,7 +299,9 @@
       "heat": "Ciepło",
       "gas": "Gaz",
       "oil": "Olej",
-      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii"
+      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii",
+      "cooling": "Chłodzenie",
+      "heatingCooling": "Ogrzewanie i chłodzenie"
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
@@ -364,7 +366,9 @@
       "over": "w ciągu",
       "from": "z",
       "installed": "zainstalowanych",
-      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji"
+      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji",
+      "peakHeating": "Szczyt ogrzewania",
+      "peakCooling": "Szczyt chłodzenia"
     },
     "techNames": {
       "solarPv": "Solar PV",
@@ -701,6 +705,23 @@
       "notConvergedTitle": "Przepływ mocy niezbieżny",
       "convergedDescription": "Obliczenia przepływu mocy elektrycznej pomyślnie znalazły stabilne rozwiązanie. Wartości napięcia i mocy w sieci są fizycznie prawidłowe.",
       "notConvergedDescription": "Obliczenia przepływu mocy nie znalazły stabilnego rozwiązania w limicie iteracji. Wyniki mogą być niedokładne lub niekompletne."
+    },
+    "thermal": {
+      "title": "Ogrzewanie i chłodzenie w okresie",
+      "info": "Sumy ogrzewania i chłodzenia w okresie dla wszystkich budynków. Ciepło i chłód są w modelu rozdzielone: ciepło nie pokryje zapotrzebowania na chłód, więc każde ma własne urządzenia.",
+      "demand": "Zapotrzebowanie na ogrzewanie i chłodzenie",
+      "overRun": "w okresie",
+      "demandInfo": "Energia potrzebna w okresie, by utrzymać w budynkach komfortową temperaturę: ogrzewanie, ciepła woda i chłodzenie, zsumowane dla wszystkich budynków.",
+      "heatingShare": "Udział ogrzewania",
+      "heatingSub": "{{energy}} ogrzewanie i ciepła woda",
+      "heatingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na ogrzewanie i ciepłą wodę.",
+      "coolingShare": "Udział chłodzenia",
+      "coolingSub": "{{energy}} chłodzenie",
+      "coolingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na chłodzenie.",
+      "electricity": "Zużyta energia elektryczna",
+      "electricitySub": "przez pompy ciepła i klimatyzatory",
+      "electricityInfo": "Energia elektryczna pobrana przez urządzenia grzewcze i chłodzące w okresie. Reszta ciepła i chłodu pochodziła bezpłatnie z powietrza zewnętrznego lub gruntu.",
+      "noDemand": "Brak zapotrzebowania na ogrzewanie i chłodzenie w tym przebiegu."
     }
   },
   "auth": {

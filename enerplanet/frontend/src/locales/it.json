@@ -295,7 +295,9 @@
       "heat": "Calore",
       "gas": "Gas",
       "oil": "Olio combustibile",
-      "toggleItemHint": "Mostra i risultati di questo vettore energetico"
+      "toggleItemHint": "Mostra i risultati di questo vettore energetico",
+      "cooling": "Raffrescamento",
+      "heatingCooling": "Riscaldamento e raffrescamento"
     },
     "selectModel": "Seleziona Modello",
     "completedSimulations": "Simulazioni Completate",
@@ -356,7 +358,9 @@
       "over": "in",
       "from": "da",
       "installed": "installati",
-      "equipmentAndRunning": "Attrezzatura + Costi operativi"
+      "equipmentAndRunning": "Attrezzatura + Costi operativi",
+      "peakHeating": "Picco di riscaldamento",
+      "peakCooling": "Picco di raffrescamento"
     },
     "techNames": {
       "solarPv": "Solare FV",
@@ -693,6 +697,23 @@
       "notConvergedTitle": "Il flusso di potenza non è convergito",
       "convergedDescription": "Il calcolo del flusso di potenza elettrica ha trovato con successo una soluzione stabile. I valori di tensione e potenza attraverso la rete sono fisicamente validi.",
       "notConvergedDescription": "Il calcolo del flusso di potenza non è riuscito a trovare una soluzione stabile entro il limite di iterazione. I risultati potrebbero essere imprecisi o incompleti."
+    },
+    "thermal": {
+      "title": "Riscaldamento e raffrescamento nel periodo",
+      "info": "Totali di riscaldamento e raffrescamento nel periodo, sommati su tutti gli edifici. Caldo e freddo sono separati nel modello: il calore non può coprire una domanda di freddo, quindi ciascuno ha il proprio impianto.",
+      "demand": "Domanda di riscaldamento e raffrescamento",
+      "overRun": "nel periodo",
+      "demandInfo": "Energia necessaria nel periodo per mantenere gli edifici a una temperatura confortevole: riscaldamento, acqua calda e raffrescamento, sommati su tutti gli edifici.",
+      "heatingShare": "Quota riscaldamento",
+      "heatingSub": "{{energy}} riscaldamento e acqua calda",
+      "heatingShareInfo": "Quota della domanda di riscaldamento e raffrescamento dovuta a riscaldamento e acqua calda.",
+      "coolingShare": "Quota raffrescamento",
+      "coolingSub": "{{energy}} raffrescamento",
+      "coolingShareInfo": "Quota della domanda di riscaldamento e raffrescamento dovuta al raffrescamento.",
+      "electricity": "Elettricità consumata",
+      "electricitySub": "da pompe di calore e condizionatori",
+      "electricityInfo": "Elettricità assorbita dagli impianti di riscaldamento e raffrescamento nel periodo. Il resto del calore e del freddo è venuto gratuitamente dall’aria esterna o dal terreno.",
+      "noDemand": "Nessuna domanda di riscaldamento o raffrescamento in questa simulazione."
     }
   },
   "auth": {

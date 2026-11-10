@@ -7,10 +7,10 @@ import ChartInfoTooltip from '../ui/ChartInfoTooltip';
 import { carrierDisplay, carrierLabelKey, formatCarrierEnergy } from '../../carrierUnits';
 import { heatFigures, selfSufficiency, systemFlowLabel, type BuildingFlow } from '../../buildingFlows';
 
-type TileData = { label: string; value: string; sub: string; info: string };
+export type TileData = { label: string; value: string; sub: string; info: string };
 
 /** One headline figure in the energy summary. */
-const Tile = ({ label, value, sub, info }: TileData) => (
+export const Tile = ({ label, value, sub, info }: TileData) => (
   <div className="min-w-0 rounded-lg bg-muted/50 px-3 py-2.5">
     <div className="flex items-center text-xs text-muted-foreground">
       <span className="truncate">{label}</span>
@@ -81,7 +81,7 @@ const Segment = ({ text, label, share, color, active, onActivate, onRelease, onT
  * One stacked bar with its own legend; segment widths are shares of the balanced total.
  * The legend uses short names and one decimal; hovering or tapping shows the full name, two decimals and the peak.
  */
-const FlowBar = ({ title, flows, total, carrier, label, shortLabel }: {
+export const FlowBar = ({ title, flows, total, carrier, label, shortLabel }: {
   title: string; flows: BuildingFlow[]; total: number; carrier: string;
   label: (key: string) => string; shortLabel: (key: string) => string;
 }) => {

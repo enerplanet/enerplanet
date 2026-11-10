@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { LineChart, Info, Flame, Clock } from 'lucide-react';
+import { LineChart, Info, Flame, Clock, Snowflake } from 'lucide-react';
 import { PanelEmptyState, PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { StructuredModelResults, CarrierProdRecord, CarrierConRecord } from '../../types';
 import { carrierDisplay, carrierLabelKey, isGenerationCarrier, sameCarrier } from '../../carrierUnits';
@@ -170,6 +170,8 @@ const EnergyPanel = ({ structuredResults, modelId, carrier = '' }: EnergyPanelPr
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           {generation ? (
             <LineChart className="w-4 h-4 text-primary" />
+          ) : sameCarrier(carrier, 'cooling') ? (
+            <Snowflake className="w-4 h-4 text-cyan-500" />
           ) : (
             <Flame className="w-4 h-4 text-orange-500" />
           )}

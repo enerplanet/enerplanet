@@ -560,7 +560,9 @@
       "heat": "Chaleur",
       "gas": "Gaz",
       "oil": "Fioul",
-      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique"
+      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique",
+      "cooling": "Refroidissement",
+      "heatingCooling": "Chauffage et refroidissement"
     },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
@@ -621,7 +623,9 @@
       "over": "sur",
       "from": "de",
       "installed": "installés",
-      "equipmentAndRunning": "Équipement + Coûts de fonctionnement"
+      "equipmentAndRunning": "Équipement + Coûts de fonctionnement",
+      "peakHeating": "Pointe de chauffage",
+      "peakCooling": "Pointe de refroidissement"
     },
     "techNames": {
       "solarPv": "Solaire PV",
@@ -958,6 +962,23 @@
       "notConvergedTitle": "Le flux de puissance n'a pas convergé",
       "convergedDescription": "Le calcul du flux de puissance électrique a trouvé avec succès une solution stable. Les valeurs de tension et de puissance à travers le réseau sont physiquement valides.",
       "notConvergedDescription": "Le calcul du flux de puissance n'a pas pu trouver une solution stable dans la limite d'itération. Les résultats peuvent être inexacts ou incomplets."
+    },
+    "thermal": {
+      "title": "Chauffage et refroidissement sur la période",
+      "info": "Totaux de chauffage et de refroidissement sur la période, additionnés pour tous les bâtiments. Chaleur et froid sont séparés dans le modèle : la chaleur ne peut pas couvrir un besoin de froid, chacun a donc son propre équipement.",
+      "demand": "Besoin de chauffage et de refroidissement",
+      "overRun": "sur la période",
+      "demandInfo": "Énergie nécessaire sur la période pour maintenir les bâtiments à une température confortable : chauffage, eau chaude et refroidissement, additionnés pour tous les bâtiments.",
+      "heatingShare": "Part du chauffage",
+      "heatingSub": "{{energy}} chauffage et eau chaude",
+      "heatingShareInfo": "Part du besoin de chauffage et de refroidissement due au chauffage et à l’eau chaude.",
+      "coolingShare": "Part du refroidissement",
+      "coolingSub": "{{energy}} refroidissement",
+      "coolingShareInfo": "Part du besoin de chauffage et de refroidissement due au refroidissement.",
+      "electricity": "Électricité consommée",
+      "electricitySub": "par les pompes à chaleur et climatiseurs",
+      "electricityInfo": "Électricité consommée par les équipements de chauffage et de refroidissement sur la période. Le reste de la chaleur et du froid provenait gratuitement de l’air extérieur ou du sol.",
+      "noDemand": "Aucun besoin de chauffage ni de refroidissement dans ce calcul."
     }
   },
   "auth": {

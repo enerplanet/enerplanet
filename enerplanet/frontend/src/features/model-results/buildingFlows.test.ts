@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows } from './buildingFlows';
+import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows, thermalDemand, thermalFigures, thermalFlows, flowLabel } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -141,5 +141,23 @@ describe('installedCapacities', () => {
       { family: 'battery_storage', kw: 20, kwh: 40, units: 2 },
       { family: 'pv_supply', kw: 9.6, kwh: 0, units: 1 },
     ]);
+  });
+
+  it('combines heating and cooling: shares, the electricity behind them, and one demand timeline', () => {
+    const flow = (key: string, side: 'supply' | 'use', hourly: number[]) =>
+      ({ key, side, color: '', totalKwh: hourly.reduce((a, b) => a + b, 0), peakKw: Math.max(...hourly), hourly });
+    const results = [
+      { carrier: 'power', timesteps: ['t1', 't2'], flows: [flow('air_source_heat_pump', 'use', [1, 0]), flow('air_conditioner', 'use', [0, 1]), flow('demand', 'use', [5, 5])] },
+      { carrier: 'heat', timesteps: ['t1', 't2'], flows: [flow('air_source_heat_pump', 'supply', [3, 0]), flow('demand', 'use', [3, 0])] },
+      { carrier: 'cooling', timesteps: ['t2'], flows: [flow('air_conditioner', 'supply', [1]), flow('demand', 'use', [1])] },
+    ];
+    expect(thermalFigures(results)).toEqual({ totalKwh: 4, heatKwh: 3, coolingKwh: 1, electricityKwh: 2, heatShare: 0.75, coolingShare: 0.25 });
+    expect(thermalFlows(results).map((f) => f.key)).toEqual(['heat:air_source_heat_pump', 'heat:demand', 'cooling:air_conditioner', 'cooling:demand']);
+    const demand = thermalDemand(results);
+    expect(demand.timesteps).toEqual(['t1', 't2']);
+    expect(demand.flows.map((f) => [f.key, f.side, f.hourly])).toEqual([['heat:demand', 'supply', [3, 0]], ['cooling:demand', 'supply', [0, 1]]]);
+    const t = (_key: string, fallback: string) => fallback;
+    expect(flowLabel('cooling:demand', 'heat', t)).toBe('Cooling');
+    expect(flowLabel('heat:demand', 'cooling', t)).toBe('Space heating and hot water');
   });
 });

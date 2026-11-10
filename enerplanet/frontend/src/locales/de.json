@@ -563,7 +563,9 @@
       "heat": "Wärme",
       "gas": "Gas",
       "oil": "Öl",
-      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen"
+      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen",
+      "cooling": "Kühlung",
+      "heatingCooling": "Heizen und Kühlen"
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
@@ -624,7 +626,9 @@
       "over": "über",
       "from": "aus",
       "installed": "installiert",
-      "equipmentAndRunning": "Anschaffung + Laufende Kosten"
+      "equipmentAndRunning": "Anschaffung + Laufende Kosten",
+      "peakHeating": "Spitzenlast Heizen",
+      "peakCooling": "Spitzenlast Kühlen"
     },
     "powerFlow": {
       "converged": "Konvergiert",
@@ -962,6 +966,23 @@
       "gridIndependence": "Netzunabhängigkeit",
       "capacityFactor": "Kapazitätsfaktor",
       "co2Reduction": "CO₂-Reduktion"
+    },
+    "thermal": {
+      "title": "Heizen und Kühlen im Zeitraum",
+      "info": "Summen für Heizen und Kühlen im Zeitraum über alle Gebäude. Wärme und Kälte sind im Modell getrennt: Wärme kann keinen Kältebedarf decken, daher hat jede ihre eigene Anlage.",
+      "demand": "Bedarf Heizen und Kühlen",
+      "overRun": "im Zeitraum",
+      "demandInfo": "Energie, die im Zeitraum nötig ist, um die Gebäude angenehm temperiert zu halten: Raumwärme, Warmwasser und Kühlung, über alle Gebäude summiert.",
+      "heatingShare": "Anteil Heizen",
+      "heatingSub": "{{energy}} Raumwärme und Warmwasser",
+      "heatingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Raumwärme und Warmwasser entfiel.",
+      "coolingShare": "Anteil Kühlen",
+      "coolingSub": "{{energy}} Kühlung",
+      "coolingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Kühlung entfiel.",
+      "electricity": "Verbrauchter Strom",
+      "electricitySub": "durch Wärmepumpen und Klimageräte",
+      "electricityInfo": "Strom, den die Anlagen für Heizen und Kühlen im Zeitraum bezogen haben. Der Rest der Wärme und Kälte kam kostenlos aus Außenluft oder Erdreich.",
+      "noDemand": "Kein Bedarf für Heizen oder Kühlen in diesem Lauf."
     }
   },
   "auth": {

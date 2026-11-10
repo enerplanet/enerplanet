@@ -4,6 +4,8 @@ import { formatNumber } from '@/utils/formatNumber';
 import { PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
 import EnergySummary from './EnergySummary';
+import ThermalSummary from './ThermalSummary';
+import { HEATING_COOLING } from '../../carrierUnits';
 import { BuildingSankey } from './BuildingDetailPanel';
 import { useSystemFlows } from '../../hooks/useSystemFlows';
 import { flowLabel, installedCapacities, systemFlowLabel } from '../../buildingFlows';
@@ -77,8 +79,10 @@ const OverviewPanel = ({ modelId, carriers, carrier, gridPrices, energyCap, mode
 
   return (
     <div className="md-stagger space-y-4 p-4">
-      {summary && <EnergySummary flows={summary.flows} carrier={summary.carrier} hours={summary.timesteps.length} gridPrices={gridPrices}
-        heatPumpElectricityKwh={heatPumpElectricity} />}
+      {carrier === HEATING_COOLING
+        ? <ThermalSummary results={results} />
+        : summary && <EnergySummary flows={summary.flows} carrier={summary.carrier} hours={summary.timesteps.length} gridPrices={gridPrices}
+          heatPumpElectricityKwh={heatPumpElectricity} />}
 
       <InstalledCard energyCap={energyCap} mode={mode} roundTrip={roundTrip} />
 

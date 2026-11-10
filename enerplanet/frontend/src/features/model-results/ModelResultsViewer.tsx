@@ -59,7 +59,10 @@ import {
   carrierLabelKey,
   formatCarrierEnergy,
   formatCarrierPower,
+  HEATING_COOLING,
   isGenerationCarrier,
+  thermalCarriers,
+  toggleCarriers,
 } from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
@@ -423,6 +426,7 @@ export const ModelResultsViewer = () => {
     carrier,
     setCarrier,
     availableCarriers,
+    carrierSummaries,
   } = useModelData(modelId);
   useMapFocusArea(model?.coordinates?.coordinates);
 
@@ -663,6 +667,9 @@ export const ModelResultsViewer = () => {
           />
         );
       case 'energy':
+        if (carrier === HEATING_COOLING) {
+          return thermalCarriers(availableCarriers).map((c) => <EnergyPanel key={c} structuredResults={structuredResults} modelId={modelId} carrier={c} />);
+        }
         return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
       case 'cost':
         return (
@@ -857,7 +864,7 @@ export const ModelResultsViewer = () => {
               {/* Energy carrier toggle (electricity / heat) — only when multiple carriers present */}
               {!loading && (
                 <CarrierToggle
-                  carriers={availableCarriers}
+                  carriers={toggleCarriers(availableCarriers)}
                   activeCarrier={carrier}
                   onSelect={setCarrier}
                 />
@@ -936,6 +943,19 @@ export const ModelResultsViewer = () => {
             const key = carrierLabelKey(carrier);
             return key ? t(key) : carrier;
           })();
+          // Heating and cooling are separate carriers: demand adds up, their peaks do not, so each keeps its own.
+          const thermal = carrier === HEATING_COOLING;
+          const demandKwh = (c: string) => (carrierSummaries[c]?.con_aggregates ?? [])
+            .filter((a) => a.techs.endsWith('_demand'))
+            .reduce((sum, a) => sum + Math.abs(a.total), 0);
+          const thermalDemandKwh = thermalCarriers(availableCarriers).reduce((sum, c) => sum + demandKwh(c), 0);
+          const peakItems = thermal
+            ? thermalCarriers(availableCarriers).map((c) => ({
+                label: c === 'heat' ? t('results.metrics.peakHeating', 'Peak heating') : t('results.metrics.peakCooling', 'Peak cooling'),
+                value: formatCarrierPower(Math.abs(carrierSummaries[c]?.peak_demand ?? 0), c),
+                hint: periodLabel,
+              }))
+            : [{ label: t('results.metrics.peakDemand'), value: formatCarrierPower(summary.peak_demand_kw, carrier), hint: periodLabel }];
           const installedRenewable = generation && supplyCapacity.length > 0
             ? formatCarrierPower(supplyCapacity.reduce((sum, d) => sum + d.installed_capacity_kw, 0), carrier)
             : undefined;
@@ -967,15 +987,11 @@ export const ModelResultsViewer = () => {
                 items={[
                   {
                     label: t('results.metrics.totalDemand'),
-                    value: formatCarrierEnergy(summary.total_demand_kwh, carrier),
+                    value: formatCarrierEnergy(thermal ? thermalDemandKwh : summary.total_demand_kwh, carrier),
                     hint: carrierLabel && periodLabel ? `${carrierLabel} · ${periodLabel}` : periodLabel,
                   },
                   ...generationItems,
-                  {
-                    label: t('results.metrics.peakDemand'),
-                    value: formatCarrierPower(summary.peak_demand_kw, carrier),
-                    hint: periodLabel,
-                  },
+                  ...peakItems,
                   {
                     label: t('results.metrics.totalCostAllEnergy', 'Total cost, all energy'),
                     value: formatCurrency(summary.total_cost_eur, 0),

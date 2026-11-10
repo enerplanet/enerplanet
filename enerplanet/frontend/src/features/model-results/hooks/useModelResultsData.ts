@@ -6,7 +6,8 @@ import {
   fetchPyPSAResults,
   PyPSAModelResults,
 } from '@/features/model-results/api';
-import { ModelInfo, ModelResults, StructuredModelResults } from '@/features/model-results/types';
+import { CarrierSummary, ModelInfo, ModelResults, StructuredModelResults } from '@/features/model-results/types';
+import { HEATING_COOLING, thermalCarriers } from '@/features/model-results/carrierUnits';
 import technologyService from '@/features/technologies/services/technologyService';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
@@ -121,6 +122,8 @@ export const useModelData = (modelId: number | null) => {
   const [carrier, setCarrier] = useState<string>('');
   // Carriers present in the results, from the unfiltered response.
   const [availableCarriers, setAvailableCarriers] = useState<string[]>(['power']);
+  // Per-carrier totals from the unfiltered response; a filtered response leaves them out.
+  const [carrierSummaries, setCarrierSummaries] = useState<Record<string, CarrierSummary>>({});
 
   useEffect(() => {
     if (!modelId) {
@@ -160,6 +163,7 @@ export const useModelData = (modelId: number | null) => {
 
           // Derive available carriers from what the backend actually served.
           const summaries = structuredData.carrier_summaries;
+          setCarrierSummaries(summaries ?? {});
           if (summaries && Object.keys(summaries).length > 0) {
             setAvailableCarriers(Object.keys(summaries));
           } else {
@@ -193,11 +197,13 @@ export const useModelData = (modelId: number | null) => {
 
   // Re-fetch structured results when the carrier toggle changes.
   // '' (default) already fetched above; only non-default carriers need this.
+  // Heating and cooling is no backend carrier: its structured results are the first thermal carrier's.
+  const fetchCarrier = carrier === HEATING_COOLING ? thermalCarriers(availableCarriers)[0] ?? '' : carrier;
   useEffect(() => {
-    if (!modelId || carrier === '') return;
+    if (!modelId || fetchCarrier === '') return;
 
     let cancelled = false;
-    fetchStructuredResults(modelId, carrier).then((data) => {
+    fetchStructuredResults(modelId, fetchCarrier).then((data) => {
       if (cancelled || !data) return;
       setStructuredResults(data);
       setResults(convertStructuredToLegacy(data));
@@ -205,7 +211,7 @@ export const useModelData = (modelId: number | null) => {
     return () => {
       cancelled = true;
     };
-  }, [modelId, carrier]);
+  }, [modelId, fetchCarrier]);
 
   return {
     model,
@@ -220,5 +226,6 @@ export const useModelData = (modelId: number | null) => {
     carrier,
     setCarrier,
     availableCarriers,
+    carrierSummaries,
   };
 };

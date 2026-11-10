@@ -563,7 +563,9 @@
       "heat": "Heat",
       "gas": "Gas",
       "oil": "Oil",
-      "toggleItemHint": "Show results for this carrier"
+      "toggleItemHint": "Show results for this carrier",
+      "cooling": "Cooling",
+      "heatingCooling": "Heating and cooling"
     },
     "selectModel": "Select Model",
     "completedSimulations": "Completed Simulations",
@@ -624,7 +626,9 @@
       "over": "over",
       "from": "from",
       "installed": "installed",
-      "equipmentAndRunning": "Equipment + Running Costs"
+      "equipmentAndRunning": "Equipment + Running Costs",
+      "peakHeating": "Peak heating",
+      "peakCooling": "Peak cooling"
     },
     "powerFlow": {
       "converged": "Converged",
@@ -962,6 +966,23 @@
       "gridIndependence": "Grid Independence",
       "capacityFactor": "Capacity Factor",
       "co2Reduction": "CO₂ Reduction"
+    },
+    "thermal": {
+      "title": "Heating and cooling over the run",
+      "info": "Heating and cooling totals over the run, summed over all buildings. Heat and cooling are separate in the model: heat cannot meet a cooling demand, so each is supplied by its own equipment.",
+      "demand": "Heating and cooling demand",
+      "overRun": "over the run",
+      "demandInfo": "Energy needed over the run to keep the buildings at a comfortable temperature: space heating, hot water and cooling, summed over all buildings.",
+      "heatingShare": "Heating share",
+      "heatingSub": "{{energy}} space heating and hot water",
+      "heatingShareInfo": "Share of the heating and cooling demand that was space heating and hot water.",
+      "coolingShare": "Cooling share",
+      "coolingSub": "{{energy}} cooling",
+      "coolingShareInfo": "Share of the heating and cooling demand that was cooling.",
+      "electricity": "Electricity used",
+      "electricitySub": "by heat pumps and air conditioners",
+      "electricityInfo": "Electricity the heating and cooling equipment drew over the run. The rest of the heat and cooling came from the outside air or ground at no cost.",
+      "noDemand": "No heating or cooling demand in this run."
     }
   },
   "auth": {

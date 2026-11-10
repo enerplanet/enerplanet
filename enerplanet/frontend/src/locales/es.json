@@ -564,7 +564,9 @@
       "heat": "Calor",
       "gas": "Gas",
       "oil": "Fuelóleo",
-      "toggleItemHint": "Mostrar los resultados de este vector energético"
+      "toggleItemHint": "Mostrar los resultados de este vector energético",
+      "cooling": "Refrigeración",
+      "heatingCooling": "Calefacción y refrigeración"
     },
     "selectModel": "Seleccionar Modelo",
     "completedSimulations": "Simulaciones Completadas",
@@ -625,7 +627,9 @@
       "over": "en",
       "from": "de",
       "installed": "instalados",
-      "equipmentAndRunning": "Equipamiento + Costos operativos"
+      "equipmentAndRunning": "Equipamiento + Costos operativos",
+      "peakHeating": "Pico de calefacción",
+      "peakCooling": "Pico de refrigeración"
     },
     "techNames": {
       "solarPv": "Solar FV",
@@ -963,6 +967,23 @@
       "notConvergedTitle": "El flujo de potencia no convergió",
       "convergedDescription": "El cálculo del flujo de potencia eléctrica encontró exitosamente una solución estable. Los valores de voltaje y potencia en toda la red son físicamente válidos.",
       "notConvergedDescription": "El cálculo del flujo de potencia no pudo encontrar una solución estable dentro del límite de iteración. Los resultados pueden ser inexactos o incompletos."
+    },
+    "thermal": {
+      "title": "Calefacción y refrigeración en el periodo",
+      "info": "Totales de calefacción y refrigeración en el periodo, sumados para todos los edificios. El calor y el frío están separados en el modelo: el calor no puede cubrir una demanda de frío, así que cada uno tiene su propio equipo.",
+      "demand": "Demanda de calefacción y refrigeración",
+      "overRun": "en el periodo",
+      "demandInfo": "Energía necesaria en el periodo para mantener los edificios a una temperatura confortable: calefacción, agua caliente y refrigeración, sumadas para todos los edificios.",
+      "heatingShare": "Parte de calefacción",
+      "heatingSub": "{{energy}} calefacción y agua caliente",
+      "heatingShareInfo": "Parte de la demanda de calefacción y refrigeración que fue calefacción y agua caliente.",
+      "coolingShare": "Parte de refrigeración",
+      "coolingSub": "{{energy}} refrigeración",
+      "coolingShareInfo": "Parte de la demanda de calefacción y refrigeración que fue refrigeración.",
+      "electricity": "Electricidad consumida",
+      "electricitySub": "por bombas de calor y aires acondicionados",
+      "electricityInfo": "Electricidad que consumieron los equipos de calefacción y refrigeración en el periodo. El resto del calor y del frío vino gratis del aire exterior o del suelo.",
+      "noDemand": "No hay demanda de calefacción ni de refrigeración en esta ejecución."
     }
   },
   "auth": {
