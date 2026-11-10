@@ -358,7 +358,8 @@
             "key": "air_conditioner",
             "alias": "Air Conditioner",
             "icon": "snowflake",
-            "description": "Split or room air conditioner that turns electricity into cooling. Efficiency is the European seasonal energy efficiency ratio (SEER) in kW of cooling per kW of electricity; a US SEER in BTU/Wh divided by 3.412 gives this value. Capacity is in kW of cooling; 1 ton of cooling is 3.517 kW.",
+            "description": "Split or room air conditioner that turns electricity into cooling. Efficiency is the coefficient of performance (COP), kW of cooling per kW of electricity; a US SEER in BTU/Wh divided by 3.412 gives a comparable seasonal value. Capacity is in kW of cooling; 1 ton of cooling is 3.517 kW.",
+            "source": "enerplanet/conversion-technologies b798e38, chiller electric household; COP 3.2",
             "constraints": [
                 {
                     "key": "cont_energy_cap_max",
@@ -378,8 +379,8 @@
                 },
                 {
                     "key": "cont_energy_eff",
-                    "alias": "Seasonal energy efficiency ratio (SEER)",
-                    "default_value": 4.6,
+                    "alias": "Coefficient of performance (COP)",
+                    "default_value": 3.2,
                     "unit": "W/W",
                     "min": 1,
                     "max": 12
@@ -387,7 +388,7 @@
                 {
                     "key": "cont_lifetime",
                     "alias": "Technology lifetime",
-                    "default_value": 12,
+                    "default_value": 15,
                     "unit": "years",
                     "min": null,
                     "max": null
@@ -395,7 +396,7 @@
                 {
                     "key": "cost_energy_cap",
                     "alias": "Investment cost",
-                    "default_value": 450,
+                    "default_value": 500,
                     "unit": "EUR/kW",
                     "min": null,
                     "max": null
