@@ -862,7 +862,6 @@
     "loadingModels": "Caricamento modelli...",
     "loadingWorkspaceDescription": "Attendere durante l'inizializzazione delle preferenze dell'area di lavoro.",
     "loadingModelsDescription": "Attendere durante il caricamento dei modelli di valutazione energetica.",
-    "selectWorkspace": "Seleziona o crea un'area di lavoro",
     "refreshModels": "Aggiorna elenco modelli",
     "share": "Condividi",
     "shareDescription": "Condividi \"{{title}}\" con un altro utente",

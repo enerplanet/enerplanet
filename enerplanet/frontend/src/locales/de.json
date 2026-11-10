@@ -1133,7 +1133,6 @@
     "loadingModels": "Modelle werden geladen...",
     "loadingWorkspaceDescription": "Bitte warten Sie, während wir Ihre Arbeitsbereichseinstellungen initialisieren.",
     "loadingModelsDescription": "Bitte warten Sie, während wir Ihre Energiebewertungsmodelle abrufen.",
-    "selectWorkspace": "Wählen oder erstellen Sie einen Arbeitsbereich",
     "refreshModels": "Modellliste aktualisieren",
     "share": "Teilen",
     "shareDescription": "\"{{title}}\" mit einem anderen Benutzer teilen",

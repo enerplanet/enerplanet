@@ -871,7 +871,6 @@
     "loadingModels": "Ładowanie modeli...",
     "loadingWorkspaceDescription": "Proszę czekać, inicjalizujemy preferencje przestrzeni roboczej.",
     "loadingModelsDescription": "Proszę czekać, pobieramy modele oceny energetycznej.",
-    "selectWorkspace": "Wybierz lub utwórz przestrzeń roboczą",
     "refreshModels": "Odśwież listę modeli",
     "share": "Udostępnij",
     "shareDescription": "Udostępnij \"{{title}}\" innemu użytkownikowi",

@@ -870,7 +870,6 @@
     "loadingModels": "Načítání modelů...",
     "loadingWorkspaceDescription": "Prosím počkejte, inicializujeme vaše preference pracovního prostoru.",
     "loadingModelsDescription": "Prosím počkejte, načítáme vaše modely energetického hodnocení.",
-    "selectWorkspace": "Vyberte nebo vytvořte pracovní prostor",
     "refreshModels": "Obnovit seznam modelů",
     "share": "Sdílet",
     "shareDescription": "Sdílet \"{{title}}\" s jiným uživatelem",

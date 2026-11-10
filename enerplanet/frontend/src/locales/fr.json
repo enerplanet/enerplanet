@@ -1129,7 +1129,6 @@
     "loadingModels": "Chargement des modèles...",
     "loadingWorkspaceDescription": "Veuillez patienter pendant l'initialisation de vos préférences d'espace de travail.",
     "loadingModelsDescription": "Veuillez patienter pendant le chargement de vos modèles d'évaluation énergétique.",
-    "selectWorkspace": "Sélectionnez ou créez un espace de travail",
     "refreshModels": "Actualiser la liste des modèles",
     "share": "Partager",
     "shareDescription": "Partager \"{{title}}\" avec un autre utilisateur",

@@ -118,7 +118,7 @@ const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownIt
             <Icon className="w-3.5 h-3.5 text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`}>
+            <div className={`truncate ${isSelected || role === 'parent' ? 'font-semibold' : 'font-medium'}`} title={model.title}>
               {model.title}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -769,7 +769,10 @@ export const ModelResultsViewer = () => {
                           <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>{t('results.selectModel')}</TooltipContent>
+                      <TooltipContent>
+                        {model?.title && <div className="font-medium">{model.title}</div>}
+                        <div className="opacity-70">{t('results.selectModel')}</div>
+                      </TooltipContent>
                     </Tooltip>
 
                     {/* Model Dropdown */}
@@ -823,7 +826,7 @@ export const ModelResultsViewer = () => {
 
               {/* Model title when viewing from admin */}
               {isFromAdmin && model && (
-                <span className="font-medium text-foreground text-sm truncate max-w-[240px]">
+                <span className="font-medium text-foreground text-sm truncate max-w-[240px]" title={model.title}>
                   {model.title}
                 </span>
               )}

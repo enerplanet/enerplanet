@@ -1133,7 +1133,6 @@
     "loadingModels": "Loading models...",
     "loadingWorkspaceDescription": "Please wait while we initialize your workspace preferences.",
     "loadingModelsDescription": "Please wait while we fetch your Energy assessment models.",
-    "selectWorkspace": "Select or create a workspace to organize your models",
     "refreshModels": "Refresh models list",
     "share": "Share",
     "shareDescription": "Share \"{{title}}\" with another user",
