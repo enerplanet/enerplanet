@@ -236,10 +236,6 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
               <ChartInfoTooltip
                 title={t('results.charts.costDistribution')}
                 description={t('results.costInfo.costBreakdownTooltip')}
-                items={[
-                  { color: '#6b7280', label: t('results.chartLabels.opex'), description: t('results.costInfo.runningCostDesc') },
-                  { color: '#f59e0b', label: t('results.chartLabels.capex'), description: t('results.costInfo.equipmentCostDesc') },
-                ]}
               />
             </h3>
             <ErrorBoundary label="Cost Analysis">

@@ -299,7 +299,9 @@
       "heat": "Ciepło",
       "gas": "Gaz",
       "oil": "Olej",
-      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii"
+      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii",
+      "cooling": "Chłodzenie",
+      "heatingCooling": "Ogrzewanie i chłodzenie"
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
@@ -364,7 +366,9 @@
       "over": "w ciągu",
       "from": "z",
       "installed": "zainstalowanych",
-      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji"
+      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji",
+      "peakHeating": "Szczyt ogrzewania",
+      "peakCooling": "Szczyt chłodzenia"
     },
     "techNames": {
       "solarPv": "Solar PV",
@@ -649,7 +653,7 @@
     "costInfo": {
       "simulationPeriodNote": "Pokazane koszty dotyczą symulowanego okresu {{days}} dni ({{hours}} godzin). Aby zobaczyć pełne koszty roczne, uruchom symulację roczną (8760 godzin).",
       "simulationPeriodShort": "Okres symulacji: {{days}} dni",
-      "costBreakdownTooltip": "Pokazane koszty dotyczą tylko symulowanego okresu, a nie całego roku. Koszty urządzeń są rozłożone na okres ich eksploatacji, a koszty eksploatacji (np. zakup energii z sieci) odzwierciedlają rzeczywiste zużycie w tym okresie. W krótkich symulacjach technologie o wysokich kosztach eksploatacji wydają się więc proporcjonalnie większe.",
+      "costBreakdownTooltip": "Każdy wycinek to jedna technologia lub zakup, w kolorze z legendy pod wykresem. Energia kupiona z sieci to koszt bieżący: to, co zużyto w symulowanym okresie. Urządzenia takie jak pompy ciepła, panele słoneczne i baterie to koszt zakupu rozłożony na okres eksploatacji, więc liczy się tylko część przypadająca na symulowany okres. W krótkich symulacjach koszty bieżące wydają się więc proporcjonalnie większe.",
       "annualProjection": "Szacunek roczny: {{value}}",
       "equipmentCostNote": "Koszt urządzeń jest rozłożony na okres eksploatacji; pokazano tylko część przypadającą na ten okres symulacji.",
       "equipmentCostDesc": "Panele słoneczne, baterie i inne urządzenia. Koszt zakupu jest rozłożony na okres eksploatacji (np. 25 lat dla fotowoltaiki).",
@@ -701,6 +705,23 @@
       "notConvergedTitle": "Przepływ mocy niezbieżny",
       "convergedDescription": "Obliczenia przepływu mocy elektrycznej pomyślnie znalazły stabilne rozwiązanie. Wartości napięcia i mocy w sieci są fizycznie prawidłowe.",
       "notConvergedDescription": "Obliczenia przepływu mocy nie znalazły stabilnego rozwiązania w limicie iteracji. Wyniki mogą być niedokładne lub niekompletne."
+    },
+    "thermal": {
+      "title": "Ogrzewanie i chłodzenie w okresie",
+      "info": "Sumy ogrzewania i chłodzenia w okresie dla wszystkich budynków. Ciepło i chłód są w modelu rozdzielone: ciepło nie pokryje zapotrzebowania na chłód, więc każde ma własne urządzenia.",
+      "demand": "Zapotrzebowanie na ogrzewanie i chłodzenie",
+      "overRun": "w okresie",
+      "demandInfo": "Energia potrzebna w okresie, by utrzymać w budynkach komfortową temperaturę: ogrzewanie, ciepła woda i chłodzenie, zsumowane dla wszystkich budynków.",
+      "heatingShare": "Udział ogrzewania",
+      "heatingSub": "{{energy}} ogrzewanie i ciepła woda",
+      "heatingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na ogrzewanie i ciepłą wodę.",
+      "coolingShare": "Udział chłodzenia",
+      "coolingSub": "{{energy}} chłodzenie",
+      "coolingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na chłodzenie.",
+      "electricity": "Zużyta energia elektryczna",
+      "electricitySub": "przez pompy ciepła i klimatyzatory",
+      "electricityInfo": "Energia elektryczna pobrana przez urządzenia grzewcze i chłodzące w okresie. Reszta ciepła i chłodu pochodziła bezpłatnie z powietrza zewnętrznego lub gruntu.",
+      "noDemand": "Brak zapotrzebowania na ogrzewanie i chłodzenie w tym przebiegu."
     }
   },
   "auth": {
@@ -850,7 +871,6 @@
     "loadingModels": "Ładowanie modeli...",
     "loadingWorkspaceDescription": "Proszę czekać, inicjalizujemy preferencje przestrzeni roboczej.",
     "loadingModelsDescription": "Proszę czekać, pobieramy modele oceny energetycznej.",
-    "selectWorkspace": "Wybierz lub utwórz przestrzeń roboczą",
     "refreshModels": "Odśwież listę modeli",
     "share": "Udostępnij",
     "shareDescription": "Udostępnij \"{{title}}\" innemu użytkownikowi",

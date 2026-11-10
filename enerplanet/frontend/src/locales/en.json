@@ -563,7 +563,9 @@
       "heat": "Heat",
       "gas": "Gas",
       "oil": "Oil",
-      "toggleItemHint": "Show results for this carrier"
+      "toggleItemHint": "Show results for this carrier",
+      "cooling": "Cooling",
+      "heatingCooling": "Heating and cooling"
     },
     "selectModel": "Select Model",
     "completedSimulations": "Completed Simulations",
@@ -624,7 +626,9 @@
       "over": "over",
       "from": "from",
       "installed": "installed",
-      "equipmentAndRunning": "Equipment + Running Costs"
+      "equipmentAndRunning": "Equipment + Running Costs",
+      "peakHeating": "Peak heating",
+      "peakCooling": "Peak cooling"
     },
     "powerFlow": {
       "converged": "Converged",
@@ -918,7 +922,7 @@
       "feedInIncome": "Net of {{amount}} income from electricity sold to the grid.",
       "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
       "simulationPeriodShort": "{{days}}-day simulation period",
-      "costBreakdownTooltip": "Costs shown cover only the simulated time window, not a full year. Equipment costs are spread over the equipment lifetime, while running costs (e.g., grid electricity purchases) reflect actual usage during the period. In short simulations, technologies with high running costs appear proportionally larger.",
+      "costBreakdownTooltip": "Each slice is one technology or purchase, in the colour shown in the legend below the chart. Grid electricity bought is a running cost: what was used in the simulated period. Equipment such as heat pumps, solar panels and batteries is a purchase cost spread over its lifetime, so only the share for the simulated period counts. In short simulations, running costs therefore appear proportionally larger.",
       "annualProjection": "Estimated annual: {{value}}",
       "equipmentCostNote": "Equipment cost is spread over its lifetime, showing only the share for this simulation period.",
       "equipmentCostDesc": "Solar panels, batteries, and other hardware. The purchase cost is spread over the equipment's lifetime (e.g. 25 years for solar).",
@@ -962,6 +966,23 @@
       "gridIndependence": "Grid Independence",
       "capacityFactor": "Capacity Factor",
       "co2Reduction": "CO₂ Reduction"
+    },
+    "thermal": {
+      "title": "Heating and cooling over the run",
+      "info": "Heating and cooling totals over the run, summed over all buildings. Heat and cooling are separate in the model: heat cannot meet a cooling demand, so each is supplied by its own equipment.",
+      "demand": "Heating and cooling demand",
+      "overRun": "over the run",
+      "demandInfo": "Energy needed over the run to keep the buildings at a comfortable temperature: space heating, hot water and cooling, summed over all buildings.",
+      "heatingShare": "Heating share",
+      "heatingSub": "{{energy}} space heating and hot water",
+      "heatingShareInfo": "Share of the heating and cooling demand that was space heating and hot water.",
+      "coolingShare": "Cooling share",
+      "coolingSub": "{{energy}} cooling",
+      "coolingShareInfo": "Share of the heating and cooling demand that was cooling.",
+      "electricity": "Electricity used",
+      "electricitySub": "by heat pumps and air conditioners",
+      "electricityInfo": "Electricity the heating and cooling equipment drew over the run. The rest of the heat and cooling came from the outside air or ground at no cost.",
+      "noDemand": "No heating or cooling demand in this run."
     }
   },
   "auth": {
@@ -1112,7 +1133,6 @@
     "loadingModels": "Loading models...",
     "loadingWorkspaceDescription": "Please wait while we initialize your workspace preferences.",
     "loadingModelsDescription": "Please wait while we fetch your Energy assessment models.",
-    "selectWorkspace": "Select or create a workspace to organize your models",
     "refreshModels": "Refresh models list",
     "share": "Share",
     "shareDescription": "Share \"{{title}}\" with another user",

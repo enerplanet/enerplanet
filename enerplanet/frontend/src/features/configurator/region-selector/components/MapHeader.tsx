@@ -98,32 +98,30 @@ export const MapHeader: FC<MapHeaderProps> = ({
     <div className="md-fade-in relative z-40 bg-background dark:bg-gray-800 border-b border-border px-2 py-1.5 flex flex-wrap items-center justify-between gap-y-1.5">
       <div className="flex items-center gap-2">
         {!isLoadingPreference && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <WorkspaceSelector
-                  onWorkspaceChange={onWorkspaceChange}
-                  onCreateWorkspace={onOpenCreateWorkspace}
-                  reloadKey={wsReloadKey}
-                  initialWorkspaceId={normalizedWorkspaceId ?? preferredWorkspaceId ?? undefined}
-                  activeWorkspace={currentWorkspace}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>{t("model.selectWorkspace")}</TooltipContent>
-          </Tooltip>
+          <WorkspaceSelector
+            onWorkspaceChange={onWorkspaceChange}
+            onCreateWorkspace={onOpenCreateWorkspace}
+            reloadKey={wsReloadKey}
+            initialWorkspaceId={normalizedWorkspaceId ?? preferredWorkspaceId ?? undefined}
+            activeWorkspace={currentWorkspace}
+          />
         )}
         {onRegionSelect && availableRegions.length > 0 && (
           <RegionSelector regions={availableRegions} onRegionSelect={onRegionSelect} />
         )}
         {/* A saved model's region is fixed by its polygon, so it is shown, not selectable. */}
         {modelRegionName && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
-            <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
-              <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-            </div>
-            <span className="font-normal text-foreground max-w-[160px] truncate text-sm">{modelRegionName}</span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg">
+                <div className="flex items-center justify-center w-6 h-6 bg-muted rounded">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                </div>
+                <span className="font-normal text-foreground max-w-[160px] truncate text-sm">{modelRegionName}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{modelRegionName}</TooltipContent>
+          </Tooltip>
         )}
         {isLoadingPreference && (
           <div className="md-fade-in flex items-center gap-2 px-2 py-1 border border-border rounded bg-background dark:bg-gray-700 text-xs">

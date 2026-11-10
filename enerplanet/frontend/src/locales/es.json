@@ -564,7 +564,9 @@
       "heat": "Calor",
       "gas": "Gas",
       "oil": "Fuelóleo",
-      "toggleItemHint": "Mostrar los resultados de este vector energético"
+      "toggleItemHint": "Mostrar los resultados de este vector energético",
+      "cooling": "Refrigeración",
+      "heatingCooling": "Calefacción y refrigeración"
     },
     "selectModel": "Seleccionar Modelo",
     "completedSimulations": "Simulaciones Completadas",
@@ -625,7 +627,9 @@
       "over": "en",
       "from": "de",
       "installed": "instalados",
-      "equipmentAndRunning": "Equipamiento + Costos operativos"
+      "equipmentAndRunning": "Equipamiento + Costos operativos",
+      "peakHeating": "Pico de calefacción",
+      "peakCooling": "Pico de refrigeración"
     },
     "techNames": {
       "solarPv": "Solar FV",
@@ -911,7 +915,7 @@
       "feedInIncome": "Descontados {{amount}} de ingresos por electricidad vendida a la red.",
       "simulationPeriodNote": "Los costes mostrados corresponden al periodo simulado de {{days}} días ({{hours}} horas). Para ver los costes anuales completos, ejecute una simulación de 1 año (8760 horas).",
       "simulationPeriodShort": "Periodo de simulación de {{days}} días",
-      "costBreakdownTooltip": "Los costes mostrados cubren solo el periodo simulado, no un año completo. Los costes de equipos se reparten a lo largo de su vida útil, mientras que los de funcionamiento (p. ej., compra de electricidad a la red) reflejan el uso real en el periodo. En simulaciones cortas, las tecnologías con altos costes de funcionamiento parecen proporcionalmente mayores.",
+      "costBreakdownTooltip": "Cada sector es una tecnología o una compra, con el color de la leyenda bajo el gráfico. La electricidad comprada a la red es un coste de funcionamiento: lo consumido en el periodo simulado. Los equipos como bombas de calor, paneles solares y baterías son un coste de compra repartido a lo largo de su vida útil, así que solo cuenta la parte del periodo simulado. En simulaciones cortas, los costes de funcionamiento parecen por ello proporcionalmente mayores.",
       "annualProjection": "Estimación anual: {{value}}",
       "equipmentCostNote": "El coste de los equipos se reparte a lo largo de su vida útil; solo se muestra la parte de este periodo de simulación.",
       "equipmentCostDesc": "Paneles solares, baterías y otros equipos. El coste de compra se reparte a lo largo de su vida útil (p. ej., 25 años para la fotovoltaica).",
@@ -963,6 +967,23 @@
       "notConvergedTitle": "El flujo de potencia no convergió",
       "convergedDescription": "El cálculo del flujo de potencia eléctrica encontró exitosamente una solución estable. Los valores de voltaje y potencia en toda la red son físicamente válidos.",
       "notConvergedDescription": "El cálculo del flujo de potencia no pudo encontrar una solución estable dentro del límite de iteración. Los resultados pueden ser inexactos o incompletos."
+    },
+    "thermal": {
+      "title": "Calefacción y refrigeración en el periodo",
+      "info": "Totales de calefacción y refrigeración en el periodo, sumados para todos los edificios. El calor y el frío están separados en el modelo: el calor no puede cubrir una demanda de frío, así que cada uno tiene su propio equipo.",
+      "demand": "Demanda de calefacción y refrigeración",
+      "overRun": "en el periodo",
+      "demandInfo": "Energía necesaria en el periodo para mantener los edificios a una temperatura confortable: calefacción, agua caliente y refrigeración, sumadas para todos los edificios.",
+      "heatingShare": "Parte de calefacción",
+      "heatingSub": "{{energy}} calefacción y agua caliente",
+      "heatingShareInfo": "Parte de la demanda de calefacción y refrigeración que fue calefacción y agua caliente.",
+      "coolingShare": "Parte de refrigeración",
+      "coolingSub": "{{energy}} refrigeración",
+      "coolingShareInfo": "Parte de la demanda de calefacción y refrigeración que fue refrigeración.",
+      "electricity": "Electricidad consumida",
+      "electricitySub": "por bombas de calor y aires acondicionados",
+      "electricityInfo": "Electricidad que consumieron los equipos de calefacción y refrigeración en el periodo. El resto del calor y del frío vino gratis del aire exterior o del suelo.",
+      "noDemand": "No hay demanda de calefacción ni de refrigeración en esta ejecución."
     }
   },
   "auth": {
@@ -1113,7 +1134,6 @@
     "loadingModels": "Cargando modelos...",
     "loadingWorkspaceDescription": "Por favor espera mientras inicializamos tus preferencias de espacio de trabajo.",
     "loadingModelsDescription": "Por favor espera mientras obtenemos tus modelos de evaluación energética.",
-    "selectWorkspace": "Selecciona o crea un espacio de trabajo",
     "refreshModels": "Actualizar lista de modelos",
     "share": "Compartir",
     "shareDescription": "Compartir \"{{title}}\" con otro usuario",

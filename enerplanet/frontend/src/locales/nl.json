@@ -297,7 +297,9 @@
       "heat": "Warmte",
       "gas": "Gas",
       "oil": "Olie",
-      "toggleItemHint": "Resultaten voor deze energiedrager tonen"
+      "toggleItemHint": "Resultaten voor deze energiedrager tonen",
+      "cooling": "Koeling",
+      "heatingCooling": "Verwarming en koeling"
     },
     "selectModel": "Selecteer Model",
     "completedSimulations": "Voltooide Simulaties",
@@ -358,7 +360,9 @@
       "over": "over",
       "from": "van",
       "installed": "geïnstalleerd",
-      "equipmentAndRunning": "Apparatuur + Lopende kosten"
+      "equipmentAndRunning": "Apparatuur + Lopende kosten",
+      "peakHeating": "Piek verwarming",
+      "peakCooling": "Piek koeling"
     },
     "techNames": {
       "solarPv": "Zonne-PV",
@@ -644,7 +648,7 @@
       "feedInIncome": "Na aftrek van {{amount}} opbrengst uit aan het net verkochte stroom.",
       "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
       "simulationPeriodShort": "Simulatieperiode van {{days}} dagen",
-      "costBreakdownTooltip": "De getoonde kosten gelden alleen voor de gesimuleerde periode, niet voor een heel jaar. Apparatuurkosten worden over de levensduur verdeeld, terwijl gebruikskosten (bijv. stroom uit het net) het werkelijke gebruik in de periode weergeven. In korte simulaties lijken technologieën met hoge gebruikskosten daardoor naar verhouding groter.",
+      "costBreakdownTooltip": "Elk segment is één technologie of aankoop, in de kleur uit de legenda onder de grafiek. Ingekochte netstroom is een gebruikskost: wat in de gesimuleerde periode is verbruikt. Installaties zoals warmtepompen, zonnepanelen en batterijen zijn aanschafkosten verdeeld over hun levensduur; alleen het deel voor de gesimuleerde periode telt. In korte simulaties lijken gebruikskosten daardoor naar verhouding groter.",
       "annualProjection": "Geschat per jaar: {{value}}",
       "equipmentCostNote": "Apparatuurkosten worden over de levensduur verdeeld; alleen het deel voor deze simulatieperiode wordt getoond.",
       "equipmentCostDesc": "Zonnepanelen, batterijen en andere apparatuur. De aanschafprijs wordt over de levensduur verdeeld (bijv. 25 jaar voor zonne-energie).",
@@ -696,6 +700,23 @@
       "notConvergedTitle": "Vermogensstroom niet geconvergeerd",
       "convergedDescription": "De berekening van de elektrische vermogensstroom heeft succesvol een stabiele oplossing gevonden. Spanning- en vermogenswaarden over het netwerk zijn fysiek geldig.",
       "notConvergedDescription": "De vermogensstroomberekening kon geen stabiele oplossing vinden binnen de iteratielimiet. Resultaten kunnen onnauwkeurig of onvolledig zijn."
+    },
+    "thermal": {
+      "title": "Verwarming en koeling over de periode",
+      "info": "Totalen voor verwarming en koeling over de periode, opgeteld over alle gebouwen. Warmte en koude zijn in het model gescheiden: warmte kan geen koelvraag dekken, dus elk heeft een eigen installatie.",
+      "demand": "Vraag verwarming en koeling",
+      "overRun": "over de periode",
+      "demandInfo": "Energie die over de periode nodig is om de gebouwen op een comfortabele temperatuur te houden: ruimteverwarming, warm water en koeling, opgeteld over alle gebouwen.",
+      "heatingShare": "Aandeel verwarming",
+      "heatingSub": "{{energy}} ruimteverwarming en warm water",
+      "heatingShareInfo": "Aandeel van de vraag naar verwarming en koeling dat ruimteverwarming en warm water was.",
+      "coolingShare": "Aandeel koeling",
+      "coolingSub": "{{energy}} koeling",
+      "coolingShareInfo": "Aandeel van de vraag naar verwarming en koeling dat koeling was.",
+      "electricity": "Verbruikte elektriciteit",
+      "electricitySub": "door warmtepompen en airco’s",
+      "electricityInfo": "Elektriciteit die de installaties voor verwarming en koeling over de periode afnamen. De rest van de warmte en koude kwam kosteloos uit de buitenlucht of de bodem.",
+      "noDemand": "Geen vraag naar verwarming of koeling in deze run."
     }
   },
   "auth": {
@@ -844,7 +865,6 @@
     "loadingModels": "Modellen laden...",
     "loadingWorkspaceDescription": "Even geduld terwijl we je werkruimtevoorkeuren initialiseren.",
     "loadingModelsDescription": "Even geduld terwijl we je energie-evaluatiemodellen ophalen.",
-    "selectWorkspace": "Selecteer of maak een werkruimte",
     "refreshModels": "Modellenlijst vernieuwen",
     "share": "Delen",
     "shareDescription": "\"{{title}}\" delen met een andere gebruiker",

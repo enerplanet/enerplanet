@@ -131,7 +131,7 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
     const hasBattery = dischargeData.some(v => v > 0) || chargeData.some(v => v > 0);
     const hasExport = gridExportData.some(v => v > 0);
     const batteryColor = getTechColor('battery storage');
-    const chargeColor = '#c4b5fd';
+    const chargeColor = '#d8c0e8';
     const exportColor = '#0d9488';
 
     const row = (marker: string, label: string, value: number, valueStyle = 'font-weight: 500;') =>

@@ -89,6 +89,13 @@ export function Toggle<T extends string>({ options, value, onChange }: { options
   );
 }
 
+/** Total energy per flow key on one side, over all carriers. */
+function sumBySide(flows: CarrierResult["flows"], side: "supply" | "use"): Map<string, number> {
+  const sums = new Map<string, number>();
+  for (const f of flows) if (f.side === side) sums.set(f.key, (sums.get(f.key) ?? 0) + f.totalKwh);
+  return sums;
+}
+
 /** Supplies to uses over the run, all carriers in one diagram, joined at the heat pump. */
 /** Splits a long name at the space nearest its middle, so compact labels need less width. */
 function twoLines(name: string): string {
@@ -124,6 +131,14 @@ export function BuildingSankey({ results, t, label = flowLabel, compact = false 
       links.push({ source: label(l.key, "heat", t), target: losses, value: l.kwh });
     }
     const targets = new Set(links.map((l) => l.target));
+    // A converter's hover names its input and the ratio (the COP of a heat pump or air conditioner).
+    const converted = new Map<string, string>();
+    for (const [key, out] of sumBySide(all, "supply")) {
+      const input = sumBySide(all, "use").get(key);
+      if (!input) continue;
+      converted.set(label(key, "heat", t), t("results.buildingDetail.flow.converterHint", "{{out}} out from {{in}} in, ratio {{ratio}}",
+        { out: formatCarrierEnergy(out, "power"), in: formatCarrierEnergy(input, "power"), ratio: formatNumber(out / input, 2) }));
+    }
     return {
       animation: false,
       tooltip: {
@@ -134,7 +149,7 @@ export function BuildingSankey({ results, t, label = flowLabel, compact = false 
         textStyle: { color: colors.text, fontSize: 11 },
         formatter: (p: any) => p.dataType === "edge"
           ? `${p.data.source} → ${p.data.target}<br/>${formatCarrierEnergy(p.data.value, "power")}`
-          : `${p.name}<br/>${formatCarrierEnergy(p.value, "power")}`,
+          : `${p.name}<br/>${converted.get(p.name) ?? formatCarrierEnergy(p.value, "power")}`,
       },
       series: [{
         type: "sankey",

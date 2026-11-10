@@ -1,5 +1,6 @@
 import { getTechColor } from '@/constants/tech-colors';
 import type { CarrierProdRecord, CarrierConRecord, EnergyCapRecord, StructuredModelResults } from './types';
+import { THERMAL_CARRIERS } from './carrierUnits';
 
 /** Supply flows into the building's node, or uses out of it. */
 export type FlowSide = 'supply' | 'use';
@@ -27,8 +28,8 @@ const DEMAND_COLORS: Record<string, string> = {
 const FIXED_COLORS: Record<string, string> = {
   lineIn: '#94a3b8',
   lineOut: '#0d9488',
-  batteryIn: '#c4b5fd',
-  batteryOut: '#8b5cf6',
+  batteryIn: '#d8c0e8',
+  batteryOut: '#a870c8',
 };
 
 const IS_STORAGE = /battery|storage/;
@@ -214,6 +215,52 @@ export function systemFlows(
   return summariseFlows(own(production), own(consumption), carrier);
 }
 
+/** The thermal carriers' flows as one list; each key is prefixed with its carrier ("heat:demand"), so heat and cooling stay apart. */
+export function thermalFlows(results: CarrierResult[]): BuildingFlow[] {
+  return results
+    .filter((r) => THERMAL_CARRIERS.includes(r.carrier))
+    .flatMap((r) => r.flows.map((f) => ({ ...f, key: `${r.carrier}:${f.key}` })));
+}
+
+/**
+ * Heating and cooling demand of a run, their shares of the two together, and the
+ * electricity the equipment that met them drew; shares are null without demand.
+ */
+export function thermalFigures(results: CarrierResult[]) {
+  const thermal = results.filter((r) => THERMAL_CARRIERS.includes(r.carrier));
+  const demand = (carrier: string) => thermal.find((r) => r.carrier === carrier)?.flows.find((f) => f.key === 'demand')?.totalKwh ?? 0;
+  const heatKwh = demand('heat');
+  const coolingKwh = demand('cooling');
+  const totalKwh = heatKwh + coolingKwh;
+  const equipment = new Set(thermal.flatMap((r) => r.flows.filter((f) => f.side === 'supply').map((f) => f.key)));
+  const electricityKwh = (results.find((r) => r.carrier === 'power')?.flows ?? [])
+    .filter((f) => f.side === 'use' && equipment.has(f.key))
+    .reduce((sum, f) => sum + f.totalKwh, 0);
+  return {
+    totalKwh, heatKwh, coolingKwh, electricityKwh,
+    heatShare: totalKwh > 0 ? heatKwh / totalKwh : null,
+    coolingShare: totalKwh > 0 ? coolingKwh / totalKwh : null,
+  };
+}
+
+/**
+ * Heating and cooling demand on one timeline, one flow per carrier keyed like thermalFlows.
+ * Side is supply so a stacked chart draws the demand above zero.
+ */
+export function thermalDemand(results: CarrierResult[]): { timesteps: string[]; flows: BuildingFlow[] } {
+  const thermal = results.filter((r) => THERMAL_CARRIERS.includes(r.carrier));
+  const timesteps = [...new Set(thermal.flatMap((r) => r.timesteps))].sort();
+  const index = new Map(timesteps.map((ts, i) => [ts, i]));
+  const flows = thermal.flatMap((r) => {
+    const demand = r.flows.find((f) => f.key === 'demand');
+    if (!demand) return [];
+    const hourly = new Array(timesteps.length).fill(0);
+    r.timesteps.forEach((ts, i) => { hourly[index.get(ts)!] = demand.hourly[i]; });
+    return [{ ...demand, key: `${r.carrier}:demand`, side: 'supply' as const, hourly }];
+  });
+  return { timesteps, flows };
+}
+
 type Translate = (key: string, fallback: string) => string;
 
 const DEMAND_LABELS: Record<string, [string, string]> = {
@@ -230,11 +277,16 @@ const FLOW_LABELS: Record<string, [string, string]> = {
   batteryOut: ['results.buildingDetail.flow.batteryOut', 'Battery discharging'],
   pv_supply: ['results.buildingDetail.flow.pv', 'Solar PV'],
   air_source_heat_pump: ['results.buildingDetail.flow.heatPump', 'Heat pump'],
+  air_conditioner: ['results.buildingDetail.flow.airConditioner', 'Air conditioner'],
   boiler: ['results.buildingDetail.flow.boiler', 'Boiler'],
 };
 
-/** Human label for a flow category on a given carrier. */
+/** Human label for a flow category on a given carrier; a "carrier:key" key names its own carrier. */
 export function flowLabel(key: string, carrier: string, t: Translate): string {
+  if (key.includes(':')) {
+    const [own, rest] = key.split(':');
+    return flowLabel(rest, own, t);
+  }
   const entry = key === 'demand' ? DEMAND_LABELS[carrier] : FLOW_LABELS[key];
   if (entry) return t(entry[0], entry[1]);
   const text = key.replaceAll('_', ' ');

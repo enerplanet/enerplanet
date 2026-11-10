@@ -954,22 +954,13 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 										</div>
 									) : (
 										<>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<div>
-														<WorkspaceSelector
-															onWorkspaceChange={handleWorkspaceChange}
-															onCreateWorkspace={() => setIsCreateWsOpen(true)}
-															reloadKey={wsReloadKey}
-															initialWorkspaceId={normalizedWorkspaceId ?? preferredWorkspaceId ?? undefined}
-															activeWorkspace={currentWorkspace}
-														/>
-													</div>
-												</TooltipTrigger>
-												<TooltipContent>
-													{t('model.selectWorkspace')}
-												</TooltipContent>
-											</Tooltip>
+											<WorkspaceSelector
+												onWorkspaceChange={handleWorkspaceChange}
+												onCreateWorkspace={() => setIsCreateWsOpen(true)}
+												reloadKey={wsReloadKey}
+												initialWorkspaceId={normalizedWorkspaceId ?? preferredWorkspaceId ?? undefined}
+												activeWorkspace={currentWorkspace}
+											/>
 
 											<Tooltip>
 												<TooltipTrigger asChild>

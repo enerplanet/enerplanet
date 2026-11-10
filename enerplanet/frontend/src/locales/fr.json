@@ -560,7 +560,9 @@
       "heat": "Chaleur",
       "gas": "Gaz",
       "oil": "Fioul",
-      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique"
+      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique",
+      "cooling": "Refroidissement",
+      "heatingCooling": "Chauffage et refroidissement"
     },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
@@ -621,7 +623,9 @@
       "over": "sur",
       "from": "de",
       "installed": "installés",
-      "equipmentAndRunning": "Équipement + Coûts de fonctionnement"
+      "equipmentAndRunning": "Équipement + Coûts de fonctionnement",
+      "peakHeating": "Pointe de chauffage",
+      "peakCooling": "Pointe de refroidissement"
     },
     "techNames": {
       "solarPv": "Solaire PV",
@@ -906,7 +910,7 @@
     "costInfo": {
       "simulationPeriodNote": "Les coûts affichés portent sur la période simulée de {{days}} jours ({{hours}} heures). Pour les coûts annuels complets, lancez une simulation sur 1 an (8 760 heures).",
       "simulationPeriodShort": "Période de simulation de {{days}} jours",
-      "costBreakdownTooltip": "Les coûts affichés couvrent uniquement la période simulée, pas une année entière. Les coûts d'équipement sont répartis sur leur durée de vie, tandis que les coûts d'exploitation (p. ex. l'achat d'électricité au réseau) reflètent l'usage réel sur la période. Dans les simulations courtes, les technologies à coûts d'exploitation élevés paraissent donc proportionnellement plus importantes.",
+      "costBreakdownTooltip": "Chaque secteur est une technologie ou un achat, dans la couleur indiquée par la légende sous le graphique. L’électricité achetée au réseau est un coût d’exploitation : ce qui a été consommé sur la période simulée. Les équipements comme les pompes à chaleur, panneaux solaires et batteries sont un coût d’achat réparti sur leur durée de vie ; seule la part de la période simulée compte. Dans les simulations courtes, les coûts d’exploitation paraissent donc proportionnellement plus grands.",
       "annualProjection": "Estimation annuelle : {{value}}",
       "equipmentCostNote": "Le coût d'équipement est réparti sur sa durée de vie ; seule la part de cette période de simulation est affichée.",
       "equipmentCostDesc": "Panneaux solaires, batteries et autres équipements. Le coût d'achat est réparti sur la durée de vie de l'équipement (p. ex. 25 ans pour le solaire).",
@@ -958,6 +962,23 @@
       "notConvergedTitle": "Le flux de puissance n'a pas convergé",
       "convergedDescription": "Le calcul du flux de puissance électrique a trouvé avec succès une solution stable. Les valeurs de tension et de puissance à travers le réseau sont physiquement valides.",
       "notConvergedDescription": "Le calcul du flux de puissance n'a pas pu trouver une solution stable dans la limite d'itération. Les résultats peuvent être inexacts ou incomplets."
+    },
+    "thermal": {
+      "title": "Chauffage et refroidissement sur la période",
+      "info": "Totaux de chauffage et de refroidissement sur la période, additionnés pour tous les bâtiments. Chaleur et froid sont séparés dans le modèle : la chaleur ne peut pas couvrir un besoin de froid, chacun a donc son propre équipement.",
+      "demand": "Besoin de chauffage et de refroidissement",
+      "overRun": "sur la période",
+      "demandInfo": "Énergie nécessaire sur la période pour maintenir les bâtiments à une température confortable : chauffage, eau chaude et refroidissement, additionnés pour tous les bâtiments.",
+      "heatingShare": "Part du chauffage",
+      "heatingSub": "{{energy}} chauffage et eau chaude",
+      "heatingShareInfo": "Part du besoin de chauffage et de refroidissement due au chauffage et à l’eau chaude.",
+      "coolingShare": "Part du refroidissement",
+      "coolingSub": "{{energy}} refroidissement",
+      "coolingShareInfo": "Part du besoin de chauffage et de refroidissement due au refroidissement.",
+      "electricity": "Électricité consommée",
+      "electricitySub": "par les pompes à chaleur et climatiseurs",
+      "electricityInfo": "Électricité consommée par les équipements de chauffage et de refroidissement sur la période. Le reste de la chaleur et du froid provenait gratuitement de l’air extérieur ou du sol.",
+      "noDemand": "Aucun besoin de chauffage ni de refroidissement dans ce calcul."
     }
   },
   "auth": {
@@ -1108,7 +1129,6 @@
     "loadingModels": "Chargement des modèles...",
     "loadingWorkspaceDescription": "Veuillez patienter pendant l'initialisation de vos préférences d'espace de travail.",
     "loadingModelsDescription": "Veuillez patienter pendant le chargement de vos modèles d'évaluation énergétique.",
-    "selectWorkspace": "Sélectionnez ou créez un espace de travail",
     "refreshModels": "Actualiser la liste des modèles",
     "share": "Partager",
     "shareDescription": "Partager \"{{title}}\" avec un autre utilisateur",

@@ -28,17 +28,20 @@ const TECH_COLORS: Record<string, string> = {
 
   // Heat
   'air_source_heat_pump': '#3b82f6',
-  'ground_source_heat_pump': '#6366f1',
+  'ground_source_heat_pump': '#a09800',
   'electric_boilers': '#ec4899',
   'gas_boiler': '#b45309',
+
+  // Cooling
+  'air_conditioner': '#b800b8',
 
   // Fuel
   'gas_import': '#a16207',
 
   // Storage
-  'battery': '#8b5cf6',
-  'battery storage': '#8b5cf6',
-  'battery_storage': '#8b5cf6',
+  'battery': '#a870c8',
+  'battery storage': '#a870c8',
+  'battery_storage': '#a870c8',
 
   // Grid / Infrastructure
   'grid': '#6b7280',

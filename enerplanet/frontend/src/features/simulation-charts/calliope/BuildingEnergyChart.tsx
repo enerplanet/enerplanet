@@ -37,7 +37,7 @@ const SOURCE_CONFIGS: Record<SourceCategory, SourceConfig> = {
   },
   battery: {
     label: 'Battery',
-    color: '#8b5cf6',
+    color: '#a870c8',
     icon: '🔋',
     matchPatterns: ['battery', 'storage'],
   },

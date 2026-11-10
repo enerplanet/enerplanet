@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties, type FC, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, type CSSProperties, type FC, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { TOOLTIP_CONTENTS, TOOLTIP_KEYS, type TooltipKey } from '@/components/shared/tooltip-contents';
 import { useTranslation } from '@spatialhub/i18n';
@@ -22,11 +22,33 @@ const TOOLTIP_WIDTH_PX = 320;
 const TOOLTIP_HEIGHT_ESTIMATE_PX = 220;
 const TOOLTIP_MARGIN_PX = 8;
 const TOOLTIP_GAP_PX = 10;
-const TOOLTIP_MAX_WIDTH_CLASS = 'max-w-[calc(100vw-16px)]';
+const TOOLTIP_MAX_SIZE_CLASS = 'max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] overflow-y-auto';
 // Long enough to move the pointer across the gap from the icon onto the card.
 const CLOSE_DELAY_MS = 150;
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | typeof FIXED_RIGHT | typeof FIXED_LEFT | typeof FIXED_LEFT_ANCHORED | typeof FIXED_RIGHT_ANCHORED;
+
+type Box = { top: number; left: number; right: number; height: number };
+
+/**
+ * Where an anchored card goes: beside the icon, vertically centred on it, but moved so the whole
+ * card stays inside the viewport. `top` is the card's centre; `left` is its right edge when the
+ * card opens to the left of the icon, its left edge otherwise (see the -translate classes).
+ */
+export function anchoredPlacement(
+	icon: Box,
+	card: { width: number; height: number },
+	viewport: { width: number; height: number },
+	side: 'left' | 'right',
+): { top: number; left: number } {
+	const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+	const halfHeight = Math.min(card.height, viewport.height - TOOLTIP_MARGIN_PX * 2) / 2;
+	const top = clamp(icon.top + icon.height / 2, TOOLTIP_MARGIN_PX + halfHeight, viewport.height - TOOLTIP_MARGIN_PX - halfHeight);
+	const left = side === 'left'
+		? Math.max(icon.left - TOOLTIP_GAP_PX, TOOLTIP_MARGIN_PX + card.width)
+		: Math.min(icon.right + TOOLTIP_GAP_PX, viewport.width - TOOLTIP_MARGIN_PX - card.width);
+	return { top, left };
+}
 
 interface InfoTooltipProps {
 	content: TooltipContent;
@@ -112,21 +134,19 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const computeAnchoredPosition = useCallback(() => {
 		if (!triggerRef.current) return;
-		const rect = triggerRef.current.getBoundingClientRect();
-		const gap = TOOLTIP_GAP_PX;
-		const top = rect.top + rect.height / 2;
-		let left = 0;
-		// The left-anchored tooltip is placed by its right edge (-translate-x-full), since
-		// its rendered width follows the root font size rather than TOOLTIP_WIDTH_PX.
-		if (position === FIXED_LEFT_ANCHORED) {
-			left = rect.left - gap;
-		} else {
-			left = rect.right + gap;
-		}
-		setAnchoredStyle({ top, left });
+		// The card's rendered size follows the root font size, so it is measured rather than taken
+		// from TOOLTIP_WIDTH_PX; before the first render the estimates stand in.
+		const card = tooltipRef.current?.getBoundingClientRect();
+		setAnchoredStyle(anchoredPlacement(
+			triggerRef.current.getBoundingClientRect(),
+			{ width: card?.width ?? TOOLTIP_WIDTH_PX, height: card?.height ?? TOOLTIP_HEIGHT_ESTIMATE_PX },
+			{ width: window.innerWidth, height: window.innerHeight },
+			position === FIXED_LEFT_ANCHORED ? 'left' : 'right',
+		));
 	}, [position]);
 
-	useEffect(() => {
+	// Before paint, so the card measured on its first render never shows off-screen.
+	useLayoutEffect(() => {
 		if (!isAnchored || !showTooltip) return;
 		computeAnchoredPosition();
 		const onScrollOrResize = () => computeAnchoredPosition();
@@ -250,9 +270,9 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const getTooltipClasses = () => {
 		if (isFixedMode || isPortalFloating) {
-			return `select-text w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+			return `select-text w-80 ${TOOLTIP_MAX_SIZE_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 		}
-		return `select-text absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+		return `select-text absolute z-[100] w-80 ${TOOLTIP_MAX_SIZE_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 	};
 
 	return (

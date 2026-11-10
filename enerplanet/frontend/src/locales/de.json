@@ -563,7 +563,9 @@
       "heat": "Wärme",
       "gas": "Gas",
       "oil": "Öl",
-      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen"
+      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen",
+      "cooling": "Kühlung",
+      "heatingCooling": "Heizen und Kühlen"
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
@@ -624,7 +626,9 @@
       "over": "über",
       "from": "aus",
       "installed": "installiert",
-      "equipmentAndRunning": "Anschaffung + Laufende Kosten"
+      "equipmentAndRunning": "Anschaffung + Laufende Kosten",
+      "peakHeating": "Spitzenlast Heizen",
+      "peakCooling": "Spitzenlast Kühlen"
     },
     "powerFlow": {
       "converged": "Konvergiert",
@@ -918,7 +922,7 @@
       "feedInIncome": "Abzüglich {{amount}} Einnahmen aus ins Netz eingespeistem Strom.",
       "simulationPeriodNote": "Die angezeigten Kosten gelten für den simulierten Zeitraum von {{days}} Tagen ({{hours}} Stunden). Für vollständige Jahreskosten führen Sie eine 1-Jahres-Simulation (8.760 Stunden) durch.",
       "simulationPeriodShort": "{{days}}-Tage Simulationszeitraum",
-      "costBreakdownTooltip": "Die Kosten beziehen sich nur auf den simulierten Zeitraum, nicht auf ein ganzes Jahr. Anschaffungskosten werden über die Lebensdauer der Anlage verteilt, während laufende Kosten (z.B. Strombezug aus dem Netz) den tatsächlichen Verbrauch im Zeitraum widerspiegeln. Bei kurzen Simulationen erscheinen Technologien mit hohen laufenden Kosten proportional größer.",
+      "costBreakdownTooltip": "Jedes Segment ist eine Technologie oder ein Einkauf, in der Farbe aus der Legende unter dem Diagramm. Bezogener Netzstrom ist ein laufender Kostenpunkt: was im simulierten Zeitraum verbraucht wurde. Anlagen wie Wärmepumpen, Solarmodule und Batterien sind Anschaffungskosten, die über ihre Lebensdauer verteilt werden; es zählt nur der Anteil für den simulierten Zeitraum. In kurzen Simulationen erscheinen laufende Kosten daher anteilig größer.",
       "annualProjection": "Geschätzte Jahreskosten: {{value}}",
       "equipmentCostNote": "Die Anschaffungskosten werden über die Lebensdauer verteilt — hier nur der Anteil für den Simulationszeitraum.",
       "equipmentCostDesc": "Solarmodule, Batterien und andere Hardware. Die Anschaffungskosten werden über die Lebensdauer verteilt (z.B. 25 Jahre für Solar).",
@@ -962,6 +966,23 @@
       "gridIndependence": "Netzunabhängigkeit",
       "capacityFactor": "Kapazitätsfaktor",
       "co2Reduction": "CO₂-Reduktion"
+    },
+    "thermal": {
+      "title": "Heizen und Kühlen im Zeitraum",
+      "info": "Summen für Heizen und Kühlen im Zeitraum über alle Gebäude. Wärme und Kälte sind im Modell getrennt: Wärme kann keinen Kältebedarf decken, daher hat jede ihre eigene Anlage.",
+      "demand": "Bedarf Heizen und Kühlen",
+      "overRun": "im Zeitraum",
+      "demandInfo": "Energie, die im Zeitraum nötig ist, um die Gebäude angenehm temperiert zu halten: Raumwärme, Warmwasser und Kühlung, über alle Gebäude summiert.",
+      "heatingShare": "Anteil Heizen",
+      "heatingSub": "{{energy}} Raumwärme und Warmwasser",
+      "heatingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Raumwärme und Warmwasser entfiel.",
+      "coolingShare": "Anteil Kühlen",
+      "coolingSub": "{{energy}} Kühlung",
+      "coolingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Kühlung entfiel.",
+      "electricity": "Verbrauchter Strom",
+      "electricitySub": "durch Wärmepumpen und Klimageräte",
+      "electricityInfo": "Strom, den die Anlagen für Heizen und Kühlen im Zeitraum bezogen haben. Der Rest der Wärme und Kälte kam kostenlos aus Außenluft oder Erdreich.",
+      "noDemand": "Kein Bedarf für Heizen oder Kühlen in diesem Lauf."
     }
   },
   "auth": {
@@ -1112,7 +1133,6 @@
     "loadingModels": "Modelle werden geladen...",
     "loadingWorkspaceDescription": "Bitte warten Sie, während wir Ihre Arbeitsbereichseinstellungen initialisieren.",
     "loadingModelsDescription": "Bitte warten Sie, während wir Ihre Energiebewertungsmodelle abrufen.",
-    "selectWorkspace": "Wählen oder erstellen Sie einen Arbeitsbereich",
     "refreshModels": "Modellliste aktualisieren",
     "share": "Teilen",
     "shareDescription": "\"{{title}}\" mit einem anderen Benutzer teilen",

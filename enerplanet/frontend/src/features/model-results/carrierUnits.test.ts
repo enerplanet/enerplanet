@@ -10,6 +10,8 @@ import {
   isGenerationCarrier,
   normalizeCarrier,
   sameCarrier,
+  thermalCarriers,
+  toggleCarriers,
 } from './carrierUnits';
 
 describe('carrierUnits', () => {
@@ -81,5 +83,13 @@ describe('carrierUnits', () => {
     expect(carrierEnergyAxis('Energy', 'natural_gas')).toBe('Energy (m³)');
     expect(carrierPowerAxis('Power', 'heat')).toBe('Power (kW)');
     expect(carrierPowerAxis('Flow', 'natural_gas')).toBe('Flow (m³/h)');
+  });
+
+  it('lists heat and cooling as one Heating and cooling toggle entry', () => {
+    expect(toggleCarriers(['power', 'heat', 'cooling'])).toEqual(['power', 'heating_cooling']);
+    expect(toggleCarriers(['cooling', 'power'])).toEqual(['heating_cooling', 'power']);
+    expect(toggleCarriers(['power', 'gas'])).toEqual(['power', 'gas']);
+    expect(thermalCarriers(['cooling', 'power', 'heat'])).toEqual(['heat', 'cooling']);
+    expect(carrierLabelKey('cooling')).toBe('results.carrier.cooling');
   });
 });
