@@ -1658,7 +1658,6 @@
     },
     "sections": {
       "grid": "Rete",
-      "model": "Modello",
       "energySystem": "Sistema energetico"
     },
     "analysis": {

@@ -1948,7 +1948,6 @@
     },
     "sections": {
       "grid": "Netz",
-      "model": "Modell",
       "energySystem": "Energiesystem"
     },
     "analysis": {

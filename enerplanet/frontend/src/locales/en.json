@@ -1948,7 +1948,6 @@
     },
     "sections": {
       "grid": "Grid",
-      "model": "Model",
       "energySystem": "Energy system"
     },
     "analysis": {

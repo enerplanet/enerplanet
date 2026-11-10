@@ -1678,7 +1678,6 @@
     },
     "sections": {
       "grid": "Net",
-      "model": "Model",
       "energySystem": "Energiesysteem"
     },
     "analysis": {

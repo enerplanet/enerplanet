@@ -1923,7 +1923,6 @@
     },
     "sections": {
       "grid": "Réseau",
-      "model": "Modèle",
       "energySystem": "Système énergétique"
     },
     "analysis": {
