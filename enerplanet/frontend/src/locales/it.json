@@ -641,7 +641,7 @@
     "costInfo": {
       "simulationPeriodNote": "I costi mostrati si riferiscono al periodo simulato di {{days}} giorni ({{hours}} ore). Per i costi annui completi, esegui una simulazione di 1 anno (8.760 ore).",
       "simulationPeriodShort": "Periodo di simulazione di {{days}} giorni",
-      "costBreakdownTooltip": "I costi mostrati coprono solo il periodo simulato, non un anno intero. I costi degli impianti sono ripartiti sulla loro vita utile, mentre i costi di esercizio (ad es. acquisto di elettricità dalla rete) riflettono l'uso effettivo nel periodo. Nelle simulazioni brevi, le tecnologie con alti costi di esercizio appaiono quindi proporzionalmente maggiori.",
+      "costBreakdownTooltip": "Ogni settore è una tecnologia o un acquisto, nel colore indicato nella legenda sotto il grafico. L’elettricità acquistata dalla rete è un costo di esercizio: quanto consumato nel periodo simulato. Gli impianti come pompe di calore, pannelli solari e batterie sono un costo d’acquisto ripartito sulla loro durata, quindi conta solo la quota del periodo simulato. Nelle simulazioni brevi i costi di esercizio appaiono quindi proporzionalmente maggiori.",
       "annualProjection": "Stima annua: {{value}}",
       "equipmentCostNote": "Il costo degli impianti è ripartito sulla vita utile; è mostrata solo la quota di questo periodo di simulazione.",
       "equipmentCostDesc": "Pannelli solari, batterie e altri impianti. Il costo d'acquisto è ripartito sulla vita utile (ad es. 25 anni per il fotovoltaico).",

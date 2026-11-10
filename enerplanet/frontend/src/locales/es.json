@@ -911,7 +911,7 @@
       "feedInIncome": "Descontados {{amount}} de ingresos por electricidad vendida a la red.",
       "simulationPeriodNote": "Los costes mostrados corresponden al periodo simulado de {{days}} días ({{hours}} horas). Para ver los costes anuales completos, ejecute una simulación de 1 año (8760 horas).",
       "simulationPeriodShort": "Periodo de simulación de {{days}} días",
-      "costBreakdownTooltip": "Los costes mostrados cubren solo el periodo simulado, no un año completo. Los costes de equipos se reparten a lo largo de su vida útil, mientras que los de funcionamiento (p. ej., compra de electricidad a la red) reflejan el uso real en el periodo. En simulaciones cortas, las tecnologías con altos costes de funcionamiento parecen proporcionalmente mayores.",
+      "costBreakdownTooltip": "Cada sector es una tecnología o una compra, con el color de la leyenda bajo el gráfico. La electricidad comprada a la red es un coste de funcionamiento: lo consumido en el periodo simulado. Los equipos como bombas de calor, paneles solares y baterías son un coste de compra repartido a lo largo de su vida útil, así que solo cuenta la parte del periodo simulado. En simulaciones cortas, los costes de funcionamiento parecen por ello proporcionalmente mayores.",
       "annualProjection": "Estimación anual: {{value}}",
       "equipmentCostNote": "El coste de los equipos se reparte a lo largo de su vida útil; solo se muestra la parte de este periodo de simulación.",
       "equipmentCostDesc": "Paneles solares, baterías y otros equipos. El coste de compra se reparte a lo largo de su vida útil (p. ej., 25 años para la fotovoltaica).",

@@ -644,7 +644,7 @@
       "feedInIncome": "Na aftrek van {{amount}} opbrengst uit aan het net verkochte stroom.",
       "simulationPeriodNote": "De getoonde kosten gelden voor de gesimuleerde periode van {{days}} dagen ({{hours}} uur). Voer een simulatie van 1 jaar (8.760 uur) uit voor de volledige jaarkosten.",
       "simulationPeriodShort": "Simulatieperiode van {{days}} dagen",
-      "costBreakdownTooltip": "De getoonde kosten gelden alleen voor de gesimuleerde periode, niet voor een heel jaar. Apparatuurkosten worden over de levensduur verdeeld, terwijl gebruikskosten (bijv. stroom uit het net) het werkelijke gebruik in de periode weergeven. In korte simulaties lijken technologieën met hoge gebruikskosten daardoor naar verhouding groter.",
+      "costBreakdownTooltip": "Elk segment is één technologie of aankoop, in de kleur uit de legenda onder de grafiek. Ingekochte netstroom is een gebruikskost: wat in de gesimuleerde periode is verbruikt. Installaties zoals warmtepompen, zonnepanelen en batterijen zijn aanschafkosten verdeeld over hun levensduur; alleen het deel voor de gesimuleerde periode telt. In korte simulaties lijken gebruikskosten daardoor naar verhouding groter.",
       "annualProjection": "Geschat per jaar: {{value}}",
       "equipmentCostNote": "Apparatuurkosten worden over de levensduur verdeeld; alleen het deel voor deze simulatieperiode wordt getoond.",
       "equipmentCostDesc": "Zonnepanelen, batterijen en andere apparatuur. De aanschafprijs wordt over de levensduur verdeeld (bijv. 25 jaar voor zonne-energie).",
