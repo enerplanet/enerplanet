@@ -2724,7 +2724,7 @@
       "comparison": "Comparison"
     },
     "metrics": {
-      "demandBaseline": "Demand (Baseline)",
+      "demand": "Demand",
       "renewableGen": "Renewable Gen.",
       "gridImport": "Grid Import",
       "selfSufficiency": "Self-Sufficiency",

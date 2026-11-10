@@ -2723,7 +2723,7 @@
       "comparison": "Vergleich"
     },
     "metrics": {
-      "demandBaseline": "Bedarf (Basislinie)",
+      "demand": "Bedarf",
       "renewableGen": "Erneuerbare Erzeugung",
       "gridImport": "Netzimport",
       "selfSufficiency": "Autarkie",

@@ -2345,7 +2345,7 @@
       "comparison": "Porównanie"
     },
     "metrics": {
-      "demandBaseline": "Zapotrzebowanie (Linia bazowa)",
+      "demand": "Zapotrzebowanie",
       "renewableGen": "Generacja odnawialna",
       "gridImport": "Import z sieci",
       "selfSufficiency": "Samowystarczalność",

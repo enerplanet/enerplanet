@@ -2341,7 +2341,7 @@
       "comparison": "Vergelijking"
     },
     "metrics": {
-      "demandBaseline": "Vraag (Basislijn)",
+      "demand": "Vraag",
       "renewableGen": "Hernieuwbare opwekking",
       "gridImport": "Netimport",
       "selfSufficiency": "Zelfvoorziening",
