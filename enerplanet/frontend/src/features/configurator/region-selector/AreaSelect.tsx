@@ -912,6 +912,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         open={techOperations.techDialogOpen && techOperations.techDialogStep === "pick"}
         type={techOperations.selectedTechForDialog?.key ?? null}
         current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
+        product={techOperations.selectedTechForDialog?.product}
         applyToAll={techOperations.isAddingTechToAll}
         onPick={(product, usableShare) => {
           const tech = asBuildingTechnology(product);

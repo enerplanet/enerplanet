@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { getCenter } from "ol/extent";
 import { toLonLat, type ProjectionLike } from "ol/proj";
-import { DEFAULT_PV_MODULE } from "@thd-spatial-ai/building-configurator";
+import { moduleOf } from "@/features/configurator/building-config/pvProducts";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { useModelStore } from "@/features/configurator/store/modelStore";
-import { createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
+import { createBuildingHighlightStyleFunction, createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { HEAT_SUPPLY_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue } from "@/features/technologies/catalogue";
 import { hasHeatTech } from "@/features/configurator/utils/heatResolution";
@@ -41,11 +41,29 @@ export const clearTechs = (buildings: Feature<Geometry>[]): number => {
 /** Whether a building has its heat supply: a heat technology or a link to a producer's. */
 export const hasHeatSupply = (f: Feature<Geometry>): boolean => hasHeatTech(f.get("techs")) || Boolean(f.get("heat_supplier"));
 
-/** Technology keys present on at least one of the buildings. */
-export const techKeysInUse = (buildings: Feature<Geometry>[]): string[] => {
+/** The product a building's technology entry names; an entry without one uses the type's default product, keyed by the type. */
+const productOf = (type: string, entry: { product?: string } | undefined): string => entry?.product ?? type;
+
+/** Keys of the products present on at least one of the buildings. */
+export const productsInUse = (buildings: Feature<Geometry>[]): string[] => {
   const keys = new Set<string>();
-  for (const f of buildings) for (const key of Object.keys(f.get("techs") || {})) keys.add(key);
+  for (const f of buildings) for (const [type, entry] of Object.entries(f.get("techs") || {})) keys.add(productOf(type, entry as { product?: string }));
   return [...keys];
+};
+
+/** Removes the technology from the buildings that carry this product of it; returns how many. */
+export const removeProduct = (buildings: Feature<Geometry>[], tech: { key: string; product?: string }): number => {
+  const product = tech.product ?? tech.key;
+  let count = 0;
+  for (const f of buildings) {
+    const existing = f.get("techs") || {};
+    if (!existing[tech.key] || productOf(tech.key, existing[tech.key]) !== product) continue;
+    const { [tech.key]: _removed, ...rest } = existing;
+    f.set("techs", rest);
+    f.setStyle(createBuildingStyleFunction(true, false));
+    count++;
+  }
+  return count;
 };
 
 /** For a heat supply added to many buildings: only those without one, or all with theirs replaced. */
@@ -79,9 +97,10 @@ export const applyToBuildings = (
 };
 
 /**
- * Stores best-fit PV arrays at one usable share on each of the buildings that
- * carries PV, and returns how many could not be laid out. Those keep automatic
- * placement, which the backend sizes by roof area.
+ * Stores best-fit PV arrays, at one usable share and with the module of each
+ * building's PV product, on each of the buildings that carries PV, and returns
+ * how many could not be laid out. Those keep automatic placement, which the
+ * backend sizes by roof area.
  */
 export const layOutPv = async (buildings: Feature<Geometry>[], usableShare: number, projection: ProjectionLike): Promise<number> => {
   let country: string | null = null;
@@ -93,7 +112,7 @@ export const layOutPv = async (buildings: Feature<Geometry>[], usableShare: numb
     const place: BuildingPlace | null = country ? { country } : point ? { lon: point[0], lat: point[1] } : null;
     if (!place) { failed++; return; }
     try {
-      const result = await fetchBestFitArrays(osmId, place, usableShare, DEFAULT_PV_MODULE);
+      const result = await fetchBestFitArrays(osmId, place, usableShare, moduleOf(f.get("techs")?.pv_supply?.constraints));
       country = result.country;
       const techs = f.get("techs");
       if (techs?.pv_supply) f.set("techs", { ...techs, pv_supply: { ...techs.pv_supply, arrays: result.arrays } });
@@ -119,6 +138,35 @@ export const addedTech = (
   const arrays = stored?.arrays ?? (techKey === "pv_supply" && inView ? [] : undefined);
   return { ...entry, ...(arrays && { arrays }) };
 };
+
+/** The buildings a drop applies to: the whole selection when the drop lands on a selected building, else the dropped one. */
+export const dropTargets = (dropped: Feature<Geometry>, selected: Set<string>, buildings: Feature<Geometry>[]): Feature<Geometry>[] =>
+  selected.has(String(dropped.get("osm_id"))) && selected.size > 1
+    ? buildings.filter((f) => selected.has(String(f.get("osm_id"))))
+    : [dropped];
+
+/**
+ * Adds the technology to each building, keeping a selected building highlighted,
+ * and returns the buildings whose new PV still needs a layout.
+ */
+const addToBuildings = (
+  buildings: Feature<Geometry>[],
+  techKey: string,
+  entry: Record<string, unknown>,
+  openBuildingId: string | null,
+  selected: Set<string>,
+): Feature<Geometry>[] =>
+  buildings.filter((building) => {
+    // A new object, so the open building configurator sees the change.
+    const existing = { ...(building.get("techs") || {}) };
+    const id = String(building.get("osm_id"));
+    existing[techKey] = addedTech(techKey, entry, existing[techKey], openBuildingId === id);
+    building.set("techs", existing);
+    building.setStyle(selected.has(id) ? createBuildingHighlightStyleFunction() : createBuildingStyleFunction(true, false));
+    return techKey === "pv_supply" && !existing[techKey].arrays;
+  });
+
+const ADDED_TO_ALL = "gridNotifications.techAddedToAll";
 
 /** A heat supply waiting for the user to choose which buildings it goes on. */
 export interface HeatScopeRequest {
@@ -158,8 +206,11 @@ export const useTechDragDrop = ({
   const setIsAddingTechToAll = useModelStore((s) => s.setIsAddingTechToAll);
   const appliedTechKeys = useModelStore((s) => s.appliedTechKeys);
   const setAppliedTechKeys = useModelStore((s) => s.setAppliedTechKeys);
-  const { buildingId: openBuildingId, openBuilding } = useConfiguratorParams();
+  const { buildingId: openBuildingId } = useConfiguratorParams();
   const [heatScopeRequest, setHeatScopeRequest] = useState<HeatScopeRequest | null>(null);
+
+  // Set by a drop, read when its product is applied.
+  const dropTargetsRef = useRef<Feature<Geometry>[] | null>(null);
 
   const handleTechDragStart = useCallback((tech: Technology) => { setDraggingTech(tech); }, [setDraggingTech]);
   const handleTechDragEnd = useCallback(() => { setDraggingTech(null); }, [setDraggingTech]);
@@ -173,11 +224,14 @@ export const useTechDragDrop = ({
       const rect = mapElement.getBoundingClientRect();
       const pixel = [e.clientX - rect.left, e.clientY - rect.top];
       const feature = map.forEachFeatureAtPixel(pixel, (f: any) => f.get('feature_type') === 'building' ? f : null);
-      if (feature) { setSelectedTechForDialog(draggingTech); setSelectedBuildingForTech(feature); setTechDialogStep("pick"); setTechDialogOpen(true); }
+      if (feature) {
+        dropTargetsRef.current = dropTargets(feature, useModelStore.getState().selectedBuildingIds, collectBuildingsFromLayers(pylovoLayersRef.current));
+        setSelectedTechForDialog(draggingTech); setSelectedBuildingForTech(feature); setTechDialogStep("pick"); setTechDialogOpen(true);
+      }
       else showError(t("gridNotifications.dropOnBuilding"));
     } catch (error) { console.error("Error handling tech drop:", error); }
     finally { setDraggingTech(null); }
-  }, [map, draggingTech, mapRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep, setDraggingTech]);
+  }, [map, draggingTech, mapRef, pylovoLayersRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep, setDraggingTech]);
 
   const handleMapDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -197,12 +251,16 @@ export const useTechDragDrop = ({
     });
   }, [map, showError, t, setIsModified]);
 
-  /** PV on one building gets the best fit unless it has arrays, then continues in the 3D view, where its surfaces can be changed. */
-  const continuePvOnBuilding = useCallback((building: Feature<Geometry>, hasArrays: boolean, usableShare: number) => {
-    const open = () => openBuilding(String(building.get("osm_id")), { pv: true });
-    if (hasArrays) open();
-    else layOutPvAndReport([building], usableShare, open);
-  }, [openBuilding, layOutPvAndReport]);
+  /** Adds the technology to the buildings of the last drop on this building, else to the building alone, without opening it. */
+  const addToDropTargets = useCallback((building: Feature<Geometry>, techKey: string, entry: { alias: string } & Record<string, unknown>, usableShare: number) => {
+    const dropped = dropTargetsRef.current;
+    const targets = dropped?.includes(building) ? dropped : [building];
+    const toLayOut = addToBuildings(targets, techKey, entry, openBuildingId, useModelStore.getState().selectedBuildingIds);
+    showSuccess(targets.length > 1
+      ? t(ADDED_TO_ALL, { tech: entry.alias, count: targets.length })
+      : t("gridNotifications.techAddedToBuilding", { tech: entry.alias }));
+    if (toLayOut.length > 0) layOutPvAndReport(toLayOut, usableShare);
+  }, [openBuildingId, showSuccess, t, layOutPvAndReport]);
 
   const handleSaveTechToBuildingBulk = useCallback((techKey: string, constraints: { key: string; value: number | string }[], applyToAll: boolean = false, product?: Technology, usableShare: number = DEFAULT_USABLE_SHARE) => {
     const source = product ?? selectedTechForDialog;
@@ -215,25 +273,19 @@ export const useTechDragDrop = ({
         setHeatScopeRequest({ techKey, alias: source.alias, entry, withHeat, total: buildings.length });
       } else {
         const count = applyToBuildings(buildings, techKey, entry);
-        showSuccess(t("gridNotifications.techAddedToAll", { tech: source.alias, count }));
+        showSuccess(t(ADDED_TO_ALL, { tech: source.alias, count }));
         if (techKey === "pv_supply") layOutPvAndReport(buildings, usableShare);
       }
     } else {
-      // A new object, so the open building configurator sees the change.
-      const existing = { ...(selectedBuildingForTech.get("techs") || {}) };
-      const inView = openBuildingId === String(selectedBuildingForTech.get("osm_id"));
-      existing[techKey] = addedTech(techKey, entry, existing[techKey], inView);
-      selectedBuildingForTech.set("techs", existing);
-      selectedBuildingForTech.setStyle(createBuildingStyleFunction(true, false));
-      showSuccess(t("gridNotifications.techAddedToBuilding", { tech: source.alias }));
-      if (techKey === "pv_supply") continuePvOnBuilding(selectedBuildingForTech, Boolean(existing[techKey].arrays), usableShare);
+      addToDropTargets(selectedBuildingForTech, techKey, entry, usableShare);
     }
+    dropTargetsRef.current = null;
     setTechDialogOpen(false);
     setSelectedTechForDialog(null);
     setSelectedBuildingForTech(null);
     setIsAddingTechToAll(false);
     setIsModified(true);
-  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, layOutPvAndReport, continuePvOnBuilding, openBuildingId]);
+  }, [selectedBuildingForTech, selectedTechForDialog, showSuccess, pylovoLayersRef, t, setIsModified, setTechDialogOpen, setSelectedTechForDialog, setSelectedBuildingForTech, setIsAddingTechToAll, layOutPvAndReport, addToDropTargets]);
 
   /** Applies the waiting heat supply to the chosen buildings, or drops it when scope is null. */
   const resolveHeatScope = useCallback((scope: HeatScope | null) => {
@@ -241,7 +293,7 @@ export const useTechDragDrop = ({
     setHeatScopeRequest(null);
     if (!request || !scope) return;
     const count = applyToBuildings(collectBuildingsFromLayers(pylovoLayersRef.current), request.techKey, request.entry, scope);
-    showSuccess(t("gridNotifications.techAddedToAll", { tech: request.alias, count }));
+    showSuccess(t(ADDED_TO_ALL, { tech: request.alias, count }));
     setIsModified(true);
   }, [heatScopeRequest, pylovoLayersRef, showSuccess, t, setIsModified]);
 
@@ -260,16 +312,7 @@ export const useTechDragDrop = ({
   }, [showError, pylovoLayersRef, t, setSelectedTechForDialog, setIsAddingTechToAll, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep]);
 
   const handleRemoveTechFromAll = useCallback((tech: Technology) => {
-    let count = 0;
-    pylovoLayersRef.current.forEach((layer: any) => {
-      const src = layer.getSource();
-      if (src) src.getFeatures().forEach((f: Feature<Geometry>) => {
-        if (f.get('feature_type') === 'building') {
-          const existing = f.get("techs") || {};
-          if (existing[tech.key]) { delete existing[tech.key]; f.set("techs", existing); f.setStyle(createBuildingStyleFunction(true, false)); count++; }
-        }
-      });
-    });
+    const count = removeProduct(collectBuildingsFromLayers(pylovoLayersRef.current), tech);
     showSuccess(t("gridNotifications.techRemovedFromAll", { tech: tech.alias, count }));
     setIsModified(true);
   }, [showSuccess, pylovoLayersRef, t, setIsModified]);
@@ -277,7 +320,7 @@ export const useTechDragDrop = ({
   // Follows every building edit while the drawer is open, whichever path made it.
   useEffect(() => {
     if (!showTechDrawer) return;
-    const refresh = () => setAppliedTechKeys(techKeysInUse(collectBuildingsFromLayers(pylovoLayersRef.current)));
+    const refresh = () => setAppliedTechKeys(productsInUse(collectBuildingsFromLayers(pylovoLayersRef.current)));
     refresh();
     const sources = pylovoLayersRef.current.map((layer) => layer.getSource()).filter((s): s is VectorSource => s !== null);
     for (const s of sources) s.on("changefeature", refresh);
@@ -298,6 +341,7 @@ export const useTechDragDrop = ({
   }, [pylovoLayersRef, setAppliedTechKeys, showSuccess, t, setIsModified]);
 
   const handleEditTechFromDialog = useCallback(async (techKey: string, buildingFeature: Feature<Geometry>) => {
+    dropTargetsRef.current = null;
     try {
       const catalogue = await loadCatalogue();
       const stored = buildingFeature.get("techs")?.[techKey]?.product;

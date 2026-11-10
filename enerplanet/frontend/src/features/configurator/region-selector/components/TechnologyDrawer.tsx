@@ -1,9 +1,10 @@
 import { useState, useEffect, type FC } from "react";
-import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, GripVertical, Plus, Minus, SolarPanel, Fan, Zap, Search, Trash2, type LucideIcon } from "lucide-react";
+import { Battery, Sun, Wind, Leaf, Flame, Snowflake, Droplets, Home, Building2, CircuitBoard, Loader2, SolarPanel, Fan, Zap, Trash2, type LucideIcon } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirmDialog";
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@spatialhub/ui";
+import { Button } from "@spatialhub/ui";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import { ELECTRICITY_TYPES, HEAT_TYPES, asBuildingTechnology, defaultProduct, loadCatalogue, productType } from "@/features/technologies/catalogue";
+import { ELECTRICITY_TYPES, HEAT_TYPES, defaultProduct, loadCatalogue, productsOfType } from "@/features/technologies/catalogue";
+import { ProductCategory } from "./ProductCategory";
 import { useTranslation } from "@spatialhub/i18n";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -29,6 +30,7 @@ interface TechnologyDrawerProps {
     onTechDragEnd: () => void;
     onAddTechToAll?: (tech: Technology) => void;
     onRemoveTechFromAll?: (tech: Technology) => void;
+    /** Keys of the products some building carries. */
     appliedTechKeys?: string[];
     /** Removes every technology and heat link from every building, after a confirmation. */
     onRemoveAllTechs?: () => void;
@@ -51,9 +53,6 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
     const confirm = useConfirm();
     const [catalogue, setCatalogue] = useState<Technology[]>([]);
     const [loading, setLoading] = useState(true);
-    // Client-side search across the active carrier's techs (catalog is small
-    // and cached — no server-side filtering needed).
-    const [search, setSearch] = useState("");
     const [isAnimating, setIsAnimating] = useState(false);
     const [draggedTech, setDraggedTech] = useState<Technology | null>(null);
     const [carrierView, setCarrierView] = useState<CarrierView>("electricity");
@@ -99,108 +98,27 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
 
     if (!isOpen) return null;
 
-    const q = search.trim().toLowerCase();
-    const matches = (tech: Technology): boolean =>
-      q === "" ||
-      tech.alias.toLowerCase().includes(q) ||
-      tech.key.toLowerCase().includes(q);
-
-    const renderTechCard = (tech: Technology) => {
-        const productCount = catalogue.filter((p) => productType(p) === tech.key).length;
-        const IconComponent = iconMap[tech.icon] || CircuitBoard;
-        const isDragged = draggedTech?.key === tech.key;
-        const isApplied = appliedTechKeys.includes(tech.key);
-
-        return (
-            <div
-                key={tech.id || tech.key}
-                className={`
-                    flex items-center gap-2 p-2.5 rounded-lg border border-border
-                    bg-card hover:bg-muted/50 transition-all duration-200
-                    ${isDragged ? "opacity-50 scale-95" : "hover:shadow-md"}
-                    ${isApplied ? "border-primary/50 bg-primary/5" : ""}
-                `}
-            >
-                {onAddTechToAll && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                onClick={() => onAddTechToAll(tech)}
-                                aria-label={t("technologies.addToAllBuildings")}
-                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-primary/10 hover:bg-primary/20"
-                            >
-                                <Plus className="w-3.5 h-3.5 text-primary" />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                            <p className="text-xs">{t("technologies.addToAllBuildings")}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                )}
-                {isApplied && onRemoveTechFromAll && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                onClick={() => onRemoveTechFromAll(tech)}
-                                aria-label={t("technologies.removeFromAllBuildings")}
-                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50"
-                            >
-                                <Minus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                            <p className="text-xs">{t("technologies.removeFromAllBuildings")}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                )}
-
-                {/* Draggable area */}
-                <button
-                    type="button"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, tech)}
+    const renderCategories = (types: string[]) =>
+        types.map((type) => {
+            const products = productsOfType(catalogue, type);
+            const icon = iconMap[defaultProduct(catalogue, type)?.icon ?? ""] || CircuitBoard;
+            return (
+                <ProductCategory
+                    key={type}
+                    type={type}
+                    title={t(`technologies.types.${type}`, { defaultValue: type })}
+                    icon={icon}
+                    products={products}
+                    appliedProducts={appliedTechKeys}
+                    draggedProduct={draggedTech?.product}
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
-                    className="flex-1 flex items-center gap-2 cursor-grab active:cursor-grabbing min-w-0 bg-transparent border-none p-0 text-left"
-                >
-                    <div className="flex-shrink-0 w-7 h-7 rounded-md bg-muted flex items-center justify-center">
-                        <IconComponent className="w-3.5 h-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-sm text-foreground truncate">{tech.alias}</span>
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">{t("technologies.products.count", { count: productCount })}</div>
-                    </div>
-                    <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                </button>
-            </div>
-        );
-    };
-
-    const renderSection = (title: string, techs: Technology[]) => {
-        if (techs.length === 0) return null;
-
-        return (
-            <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                    {title}
-                </h4>
-                <div className="space-y-2">
-                    {techs.map((tech) => renderTechCard(tech))}
-                </div>
-            </div>
-        );
-    };
-
-    // One card per technology type; dropping it asks which product to use.
-    const typeCards = (types: string[]): Technology[] =>
-        types.flatMap((type) => {
-            const product = defaultProduct(catalogue, type);
-            return product ? [{ ...asBuildingTechnology(product), alias: t(`technologies.types.${type}`, { defaultValue: product.alias }) }] : [];
-        }).filter(matches);
-    const supplyTechs = typeCards(ELECTRICITY_TYPES.filter((type) => type !== "battery_storage"));
-    const storageTechs = typeCards(["battery_storage"]);
-    const heatTechs = typeCards(HEAT_TYPES);
+                    onAddToAll={onAddTechToAll}
+                    onRemoveFromAll={onRemoveTechFromAll}
+                />
+            );
+        });
+    const hasType = (types: string[]) => types.some((type) => productsOfType(catalogue, type).length > 0);
 
     return (
         <>
@@ -233,18 +151,6 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                         {t("technologies.dragInstruction")}
                     </div>
 
-                    {/* Search */}
-                    <div className="relative mt-3">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder={t("technologies.searchPlaceholder")}
-                            className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-xs text-foreground outline-none focus:border-primary"
-                        />
-                    </div>
-
                     {/* Carrier toggle: electricity / heat */}
                     <div
                         className="mt-3 flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5"
@@ -275,7 +181,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                     </div>
                 </div>
 
-                <div className="px-3 py-4 space-y-6 h-[calc(100vh-290px)] overflow-y-auto">
+                <div className="px-3 py-4 space-y-3 h-[calc(100vh-290px)] overflow-y-auto">
                     {(() => {
                         if (loading) {
                             return (
@@ -285,19 +191,8 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 </div>
                             );
                         }
-                        const noSearchResults =
-                            search.trim() !== "" &&
-                            supplyTechs.length === 0 && storageTechs.length === 0 && heatTechs.length === 0;
-                        if (noSearchResults) {
-                            return (
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <Search className="w-8 h-8 text-muted-foreground mb-2" />
-                                    <p className="text-sm text-muted-foreground">{t("technologies.noSearchResults")}</p>
-                                </div>
-                            );
-                        }
                         if (carrierView === "heat") {
-                            if (heatTechs.length === 0) {
+                            if (!hasType(HEAT_TYPES)) {
                                 return (
                                     <div className="flex flex-col items-center justify-center py-12">
                                         <Flame className="w-8 h-8 text-muted-foreground mb-2" />
@@ -305,11 +200,9 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                     </div>
                                 );
                             }
-                            return (
-                                renderSection(t("technologies.categories.conversion"), heatTechs)
-                            );
+                            return renderCategories(HEAT_TYPES);
                         }
-                        if (supplyTechs.length === 0 && storageTechs.length === 0) {
+                        if (!hasType(ELECTRICITY_TYPES)) {
                             return (
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <CircuitBoard className="w-8 h-8 text-muted-foreground mb-2" />
@@ -317,12 +210,7 @@ export const TechnologyDrawer: FC<TechnologyDrawerProps> = ({
                                 </div>
                             );
                         }
-                        return (
-                            <>
-                                {renderSection(t("technologies.categories.supply"), supplyTechs)}
-                                {renderSection(t("technologies.categories.storage"), storageTechs)}
-                            </>
-                        );
+                        return renderCategories(ELECTRICITY_TYPES);
                     })()}
                 </div>
 

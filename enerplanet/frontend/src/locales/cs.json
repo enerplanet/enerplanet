@@ -1939,7 +1939,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} let",
       "defineOwn": "Definovat vlastní",
-      "count": "Produkty: {{count}}"
+      "search": "Hledat produkty",
+      "sort": "Seřadit produkty",
+      "sortName": "Název",
+      "sortCost": "Investiční náklady"
     },
     "title": "Technologie",
     "subtitle": "Energetické technologie pro vaše simulace",

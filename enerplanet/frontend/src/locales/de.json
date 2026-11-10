@@ -2317,7 +2317,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} Jahre",
       "defineOwn": "Eigenes definieren",
-      "count": "Produkte: {{count}}"
+      "search": "Produkte suchen",
+      "sort": "Produkte sortieren",
+      "sortName": "Name",
+      "sortCost": "Investitionskosten"
     },
     "title": "Technologien",
     "subtitle": "Energietechnologien für Ihre Simulationen",
