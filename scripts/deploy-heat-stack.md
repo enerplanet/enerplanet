@@ -46,7 +46,7 @@ can coexist.
 | BuEM | `buem-gateway-api-1`, `buem-gateway-model-1` | pulled, `BUEM_IMAGE_TAG` and `BUEM_MODEL_IMAGE_TAG` | no |
 | City2TABULA | `city2tabula-api-1`, `city2tabula-db-1` | pulled, `CITY2TABULA_IMAGE_TAG` | no |
 | weather | `weather-api-1` | pulled, `WEATHER_IMAGE_TAG` | no |
-| PV service | `pysam-pv-api-1` | **built**, no published image | no |
+| PV service | `pysam-pv-api-1` | pulled, `PV_SERVICE_IMAGE_TAG` | no |
 
 A pulled tag that is not published stops the deploy; there is no fallback to a
 build. Built images are tagged `<prefix>-build`, so they never replace a
