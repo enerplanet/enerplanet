@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle, PlugZap } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { TrendingUp, Layers, Gauge, PieChart, Clock, PlugZap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -13,6 +13,7 @@ import type { StructuredModelResults } from '@/features/model-results/types';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
 import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import { ViewTabs, type ChartView } from '../ui/ViewTabs';
 import { energyKwhFromCost } from '../../lcoeUnits';
 import { splitGridPurchase } from '../../costSplit';
 
@@ -58,8 +59,11 @@ interface CostPanelProps {
   mode?: 'plan' | 'operate';
 }
 
+type CostView = 'distribution' | 'summary' | 'lcoe' | 'investment';
+
 const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostPanelProps) => {
   const { t } = useTranslation();
+  const [view, setView] = useState<CostView>('distribution');
   const plan = mode !== 'operate';
 
   // Calculate simulation period details — always derived from model from_date / to_date
@@ -186,29 +190,29 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
 
   const hasData = costBreakdown.length > 0 || lcoeData.length > 0 || investmentData.length > 0;
 
+  const icon = 'h-4 w-4 text-primary';
+  const views: ChartView<CostView>[] = [
+    ...(costBreakdown.length > 0 ? [{ id: 'distribution' as const, icon: <PieChart className={icon} />, name: t('results.charts.costDistribution'), kind: t('results.costInfo.distributionKind', 'Donut chart, cost by technology') }] : []),
+    ...(systemCostSummary && systemCostSummary.totalCost > 0 ? [{ id: 'summary' as const, icon: <Gauge className={icon} />, name: t('results.charts.systemCostSummary'), kind: t('results.costInfo.summaryKind', 'Donut chart, investment and operating') }] : []),
+    ...(plan && lcoeData.length > 0 ? [{ id: 'lcoe' as const, icon: <TrendingUp className={icon} />, name: t('results.charts.lcoeComparison'), kind: t('results.costInfo.lcoeKind', 'Bar chart, cost per MWh by technology') }] : []),
+    ...(investmentData.length > 0 ? [{ id: 'investment' as const, icon: <Layers className={icon} />, name: t('results.charts.investmentVsOperating'), kind: t('results.costInfo.investmentKind', 'Stacked bars, cost by technology') }] : []),
+  ];
+  const active = views.some((v) => v.id === view) ? view : views[0]?.id;
+
+
   if (!hasData) {
     return <PanelEmptyState icon={PieChart} title={t('results.chartLabels.noCostData')} />;
   }
 
   return (
     <div className="md-stagger p-4 space-y-4">
-      {/* Simulation period info banner */}
       {periodInfo.isPartialYear && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex items-start gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-          <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
-            <p className="font-medium flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              {t('results.chartLabels.simulationPeriod')}: {periodInfo.days} {t('results.chartLabels.days')} ({periodInfo.timesteps} {t('results.chartLabels.hours')})
-              {periodInfo.fromDate && periodInfo.toDate && (
-                <span className="text-amber-600 dark:text-amber-400 font-normal">
-                  ({periodInfo.fromDate} — {periodInfo.toDate})
-                </span>
-              )}
-            </p>
-            <p>{t('results.costInfo.simulationPeriodNote', { days: periodInfo.days.toString(), hours: periodInfo.timesteps.toString() })}</p>
-          </div>
-        </div>
+        <p className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          {periodInfo.fromDate && periodInfo.toDate
+            ? t('results.costInfo.partialYearRange', 'Costs cover {{days}} days ({{from}} to {{to}}), not a full year.', { days: periodInfo.days, from: periodInfo.fromDate, to: periodInfo.toDate })
+            : t('results.costInfo.partialYear', 'Costs cover {{days}} days, not a full year.', { days: periodInfo.days })}
+        </p>
       )}
 
       {structuredResults?.grid_prices && (
@@ -221,18 +225,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
         </p>
       )}
 
-      {/* Top row: Cost Distribution + System Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {costBreakdown.length > 0 && (
-          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-primary" />
-              {t('results.charts.costDistribution')}
-              {periodInfo.isPartialYear && (
-                <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
-                  {t('results.costInfo.simulationPeriodShort', { days: periodInfo.days.toString() })}
-                </span>
-              )}
+      <div className={CHART_CARD_CLASS}>
+        <ViewTabs views={views} value={active} onChange={setView} />
+        {active === 'distribution' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.costDistribution')}
                 description={t('results.costInfo.costBreakdownTooltip')}
@@ -252,11 +249,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
           </div>
         )}
 
-        {systemCostSummary && systemCostSummary.totalCost > 0 && (
-          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Gauge className="w-4 h-4 text-primary" />
-              {t('results.charts.systemCostSummary')}
+        {active === 'summary' && systemCostSummary && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.systemCostSummary')}
                 description={t('results.costInfo.systemCostSummaryDesc')}
@@ -280,15 +275,10 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
             </ErrorBoundary>
           </div>
         )}
-      </div>
 
-      {/* Bottom row: LCOE Comparison + Investment Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {plan && lcoeData.length > 0 && (
-          <div className={CHART_CARD_CLASS}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              {t('results.charts.lcoeComparison')}
+        {active === 'lcoe' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.lcoeComparison')}
                 description={t('results.costInfo.lcoeComparisonDesc')}
@@ -300,11 +290,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostP
           </div>
         )}
 
-        {investmentData.length > 0 && (
-          <div className={CHART_CARD_CLASS}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" />
-              {t('results.charts.investmentVsOperating')}
+        {active === 'investment' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.investmentVsOperating')}
                 description={t('results.costInfo.investmentBreakdownDesc')}

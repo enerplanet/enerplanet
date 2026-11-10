@@ -651,8 +651,6 @@
       "hours": "godzin"
     },
     "costInfo": {
-      "simulationPeriodNote": "Pokazane koszty dotyczą symulowanego okresu {{days}} dni ({{hours}} godzin). Aby zobaczyć pełne koszty roczne, uruchom symulację roczną (8760 godzin).",
-      "simulationPeriodShort": "Okres symulacji: {{days}} dni",
       "costBreakdownTooltip": "Każdy wycinek to jedna technologia lub zakup, w kolorze z legendy pod wykresem. Energia kupiona z sieci to koszt bieżący: to, co zużyto w symulowanym okresie. Urządzenia takie jak pompy ciepła, panele słoneczne i baterie to koszt zakupu rozłożony na okres eksploatacji, więc liczy się tylko część przypadająca na symulowany okres. W krótkich symulacjach koszty bieżące wydają się więc proporcjonalnie większe.",
       "annualProjection": "Szacunek roczny: {{value}}",
       "equipmentCostNote": "Koszt urządzeń jest rozłożony na okres eksploatacji; pokazano tylko część przypadającą na ten okres symulacji.",

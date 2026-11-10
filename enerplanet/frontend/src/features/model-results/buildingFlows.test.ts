@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, ambientHeat, classifyFlow, conversionLosses, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows, thermalDemand, thermalFigures, thermalFlows, flowLabel } from './buildingFlows';
+import { allocateFlows, combineCarriers, netBattery, classifyFlow, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows, thermalFigures, thermalFlows, flowLabel } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -56,24 +56,9 @@ describe('buildingFlows', () => {
       'lineIn>air_source_heat_pump': 1,
     });
   });
-
-  it('takes ambient heat as heat pump output minus electricity input', () => {
-    const power = summariseFlows([row('power_transmission:lv_0', 't1', 3)], [row('air_source_heat_pump_1', 't1', -3)]).flows;
-    const heat = summariseFlows([row('air_source_heat_pump_1', 't1', 10)], [row('n1_demand', 't1', -10)], 'heat').flows;
-    expect(ambientHeat([...power, ...heat])).toEqual([{ key: 'air_source_heat_pump', kwh: 7 }]);
-    expect(ambientHeat(power)).toEqual([]);
-  });
 });
 
-describe('conversionLosses', () => {
-  it('is fuel in minus heat out for a boiler, and nothing for a heat pump', () => {
-    const gas = summariseFlows([row('gas_1_import', 't1', 10)], [row('gas_boiler_1', 't1', -10)], 'natural_gas').flows;
-    const heat = summariseFlows([row('gas_boiler_1', 't1', 9), row('air_source_heat_pump_1', 't1', 10)], [row('n1_demand', 't1', -19)], 'heat').flows;
-    const power = summariseFlows([row('power_transmission:lv_0', 't1', 3)], [row('air_source_heat_pump_1', 't1', -3)]).flows;
-    expect(conversionLosses([...gas, ...heat, ...power])).toEqual([{ key: 'gas_boiler', kwh: 1 }]);
-    expect(conversionLosses(gas)).toEqual([]);
-  });
-
+describe('gas import', () => {
   it('colours gas import as gas, not with the fallback blue', () => {
     const gas = summariseFlows([row('gas_1_import', 't1', 10)], [row('gas_boiler_1', 't1', -10)], 'natural_gas').flows;
     expect(gas.find((f) => f.key === 'gas_import')?.color).toBe('#a16207');
@@ -88,6 +73,20 @@ describe('systemFlows', () => {
       [row('n1_demand', -6), row('power_transmission:lv_1', -9), row('grid_trafo_1_export', -2)] as never,
     );
     expect(Object.fromEntries(flows.map((f) => [f.key, f.totalKwh]))).toEqual({ pv_supply: 3, lineIn: 5, demand: 6, lineOut: 2 });
+  });
+});
+
+describe('netBattery', () => {
+  it('replaces charging and discharging with the losses, and the bars still balance', () => {
+    const { flows } = summariseFlows(
+      [row('pv_supply_1_0', 't1', 10), row('battery_1', 't2', 9), row('power_transmission:lv_0', 't2', 2)],
+      [row('battery_1', 't1', -10), row('n1_demand', 't2', -11)],
+    );
+    const net = netBattery(flows);
+    const sum = (side: string) => net.filter((f) => f.side === side).reduce((s, f) => s + f.totalKwh, 0);
+    expect(Object.fromEntries(net.map((f) => [f.key, f.totalKwh]))).toEqual({ pv_supply: 10, lineIn: 2, demand: 11, batteryLoss: 1 });
+    expect(sum('supply')).toBe(sum('use'));
+    expect(netBattery(flows.filter((f) => !f.key.startsWith('battery')))).toHaveLength(3);
   });
 });
 
@@ -143,7 +142,7 @@ describe('installedCapacities', () => {
     ]);
   });
 
-  it('combines heating and cooling: shares, the electricity behind them, and one demand timeline', () => {
+  it('combines heating and cooling: shares, the electricity behind them, and one timeline', () => {
     const flow = (key: string, side: 'supply' | 'use', hourly: number[]) =>
       ({ key, side, color: '', totalKwh: hourly.reduce((a, b) => a + b, 0), peakKw: Math.max(...hourly), hourly });
     const results = [
@@ -153,11 +152,13 @@ describe('installedCapacities', () => {
     ];
     expect(thermalFigures(results)).toEqual({ totalKwh: 4, heatKwh: 3, coolingKwh: 1, electricityKwh: 2, heatShare: 0.75, coolingShare: 0.25 });
     expect(thermalFlows(results).map((f) => f.key)).toEqual(['heat:air_source_heat_pump', 'heat:demand', 'cooling:air_conditioner', 'cooling:demand']);
-    const demand = thermalDemand(results);
-    expect(demand.timesteps).toEqual(['t1', 't2']);
-    expect(demand.flows.map((f) => [f.key, f.side, f.hourly])).toEqual([['heat:demand', 'supply', [3, 0]], ['cooling:demand', 'supply', [0, 1]]]);
     const t = (_key: string, fallback: string) => fallback;
     expect(flowLabel('cooling:demand', 'heat', t)).toBe('Cooling');
     expect(flowLabel('heat:demand', 'cooling', t)).toBe('Space heating and hot water');
+    const both = combineCarriers(results.slice(1));
+    expect(both.flows.map((f) => [f.key, f.side, f.hourly])).toEqual([
+      ['heat:air_source_heat_pump', 'supply', [3, 0]], ['heat:demand', 'use', [3, 0]],
+      ['cooling:air_conditioner', 'supply', [0, 1]], ['cooling:demand', 'use', [0, 1]],
+    ]);
   });
 });

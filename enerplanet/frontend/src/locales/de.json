@@ -920,8 +920,6 @@
     },
     "costInfo": {
       "feedInIncome": "Abzüglich {{amount}} Einnahmen aus ins Netz eingespeistem Strom.",
-      "simulationPeriodNote": "Die angezeigten Kosten gelten für den simulierten Zeitraum von {{days}} Tagen ({{hours}} Stunden). Für vollständige Jahreskosten führen Sie eine 1-Jahres-Simulation (8.760 Stunden) durch.",
-      "simulationPeriodShort": "{{days}}-Tage Simulationszeitraum",
       "costBreakdownTooltip": "Jedes Segment ist eine Technologie oder ein Einkauf, in der Farbe aus der Legende unter dem Diagramm. Bezogener Netzstrom ist ein laufender Kostenpunkt: was im simulierten Zeitraum verbraucht wurde. Anlagen wie Wärmepumpen, Solarmodule und Batterien sind Anschaffungskosten, die über ihre Lebensdauer verteilt werden; es zählt nur der Anteil für den simulierten Zeitraum. In kurzen Simulationen erscheinen laufende Kosten daher anteilig größer.",
       "annualProjection": "Geschätzte Jahreskosten: {{value}}",
       "equipmentCostNote": "Die Anschaffungskosten werden über die Lebensdauer verteilt — hier nur der Anteil für den Simulationszeitraum.",

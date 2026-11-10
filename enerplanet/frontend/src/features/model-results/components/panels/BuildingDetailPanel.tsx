@@ -8,9 +8,11 @@ import { useTranslation } from "@spatialhub/i18n";
 import { formatCurrency, formatNumber } from "@/utils/formatNumber";
 import { useThemeColors } from "@/features/simulation-charts/pypsa/chartUtils";
 import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from "../../carrierUnits";
-import { allocateFlows, ambientHeat, CarrierResult, conversionLosses, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
+import { resultFill } from "@/constants/tech-colors";
+import { useResultColors } from "../../hooks/useResultColors";
+import { allocateFlows, netBattery, type BuildingFlow, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
 import ChartInfoTooltip from "../ui/ChartInfoTooltip";
-import { BuildingProfileChart, ProfileResolution, Season } from "./BuildingProfileChart";
+import { BuildingProfileChart, firstSeason, ProfileResolution, Season } from "./BuildingProfileChart";
 
 interface WindTurbineInfo {
   nominal_power: number;
@@ -36,10 +38,8 @@ type TFn = ReturnType<typeof useTranslation>["t"];
 
 const PANEL_CLASS = "rounded-xl border border-border bg-card p-3 shadow-sm";
 const SIDE_PANEL_CLASS = "h-full rounded-xl border border-border bg-card px-3 py-2 shadow-sm";
-const AMBIENT_COLOR = "#84cc16";
-const LOSSES_COLOR = "#a8a29e";
 /** Runs at least this long count as a year, matching the Cost tab. */
-const FULL_YEAR_HOURS = 8760 * 0.95;
+export const FULL_YEAR_HOURS = 8760 * 0.95;
 
 /** Installed capacities at the node, one row per technology; PV summed over the roof surfaces. */
 function installedHere(data: LocationTimeSeriesData | undefined) {
@@ -96,7 +96,35 @@ function sumBySide(flows: CarrierResult["flows"], side: "supply" | "use"): Map<s
   return sums;
 }
 
-/** Supplies to uses over the run, all carriers in one diagram, joined at the heat pump. */
+type SankeyNode = { color: string; depth: number };
+type SankeyLink = { source: string; target: string; value: number; lineStyle: { color: string } };
+
+/** Grid import links in light mode; the token grey at half opacity fades into white. */
+const GRID_LINK_COLOR = "#4B5563";
+
+/**
+ * Sankey column of a flow. Electricity: sources, the hub, then every direct use. Other carriers:
+ * a primary supply (gas import) next to the hub, converters with the electricity uses, end uses last.
+ */
+function columnOf(f: BuildingFlow, carrier: string, converters: Set<string>): number {
+  if (converters.has(f.key)) return 2;
+  if (carrier === "power") return f.side === "supply" ? 0 : 2;
+  return f.side === "supply" ? 1 : 3;
+}
+
+/** Electricity uses top to bottom; other converters sit after the air conditioner. */
+const USE_ORDER = [/heat_pump/, /air_conditioner/, /^demand$/, /^lineOut$/, /^batteryLoss$/];
+const useRank = (key: string) => {
+  const i = USE_ORDER.findIndex((p) => p.test(key));
+  return i < 0 ? 1.5 : i;
+};
+
+/** Ratio name by output carrier: COP for heat, EER for cooling. */
+const RATIO_NAMES: Record<string, [string, string]> = {
+  heat: ["results.buildingDetail.flow.cop", "COP"],
+  cooling: ["results.buildingDetail.flow.eer", "EER"],
+};
+
 /** Splits a long name at the space nearest its middle, so compact labels need less width. */
 function twoLines(name: string): string {
   if (name.length <= 16) return name;
@@ -106,39 +134,61 @@ function twoLines(name: string): string {
   return `${name.slice(0, cut)}\n${name.slice(cut + 1)}`;
 }
 
+/**
+ * Nodes and links of the energy flow, from model flows only: sources into an electricity hub, out
+ * to its direct uses, converters on to their end uses. Every link goes one column to the right.
+ * `converters` maps a converter's node name to its label: electricity in and output ÷ input.
+ */
+function sankeyGraph(results: CarrierResult[], t: TFn, label: typeof flowLabel, palette: ReturnType<typeof useResultColors>, hubColor: string) {
+  const nodes = new Map<string, SankeyNode>();
+  const links: SankeyLink[] = [];
+  const node = (name: string, color: string, depth: number) => {
+    if (!nodes.has(name)) nodes.set(name, { color, depth });
+    return name;
+  };
+  const link = (source: string, target: string, value: number, color: string) => {
+    if (value > 0.5 && source !== target) links.push({ source, target, value, lineStyle: { color } });
+  };
+  const supplied = sumBySide(results.flatMap((r) => r.flows), "supply");
+  const used = sumBySide(results.flatMap((r) => r.flows), "use");
+  const isConverter = new Set([...supplied.keys()].filter((k) => used.has(k)));
+  const flowNode = (f: BuildingFlow, carrier: string) => node(label(f.key, carrier, t), palette.fill(f, carrier), columnOf(f, carrier, isConverter));
+
+  // The battery appears only as its losses, charging minus discharging, as in the balance bars.
+  const power = netBattery(results.find((r) => r.carrier === "power")?.flows ?? []);
+  const hub = t("results.buildingDetail.flow.electricity", "Electricity");
+  const gridColor = palette.dark ? "source" : GRID_LINK_COLOR;
+  for (const f of power.filter((f) => f.side === "supply")) {
+    link(flowNode(f, "power"), node(hub, hubColor, 1), f.totalKwh, f.key === "lineIn" ? gridColor : "source");
+  }
+  const uses = power.filter((f) => f.side === "use").sort((a, b) => useRank(a.key) - useRank(b.key));
+  for (const f of uses) link(hub, flowNode(f, "power"), f.totalKwh, "target");
+
+  // Heat first, so space heating sits above cooling, level with the heat pump.
+  const converters = new Map<string, string>();
+  const others = results.filter((r) => r.carrier !== "power").sort((a, b) => Number(a.carrier !== "heat") - Number(b.carrier !== "heat"));
+  for (const r of others) {
+    r.flows.forEach((f) => flowNode(f, r.carrier));
+    for (const l of allocateFlows(r.flows)) {
+      link(label(l.from, r.carrier, t), label(l.to, r.carrier, t), l.kwh, isConverter.has(l.from) ? "gradient" : "source");
+    }
+    for (const f of r.flows.filter((f) => f.side === "supply" && isConverter.has(f.key))) {
+      const input = used.get(f.key)!;
+      const [key, fallback] = RATIO_NAMES[r.carrier] ?? ["results.buildingDetail.flow.efficiency", "efficiency"];
+      converters.set(label(f.key, r.carrier, t), t("results.buildingDetail.flow.converterLabel", "{{energy}} in · {{ratio}} {{value}}",
+        { energy: formatCarrierEnergy(input, "power", 1), ratio: t(key, fallback), value: String(Number((f.totalKwh / input).toFixed(2))) }));
+    }
+  }
+  return { nodes, links, converters };
+}
+
 /** `compact` wraps long names, puts each value with one decimal under its name, and narrows the side margins. */
 export function BuildingSankey({ results, t, label = flowLabel, compact = false }: { results: CarrierResult[]; t: TFn; label?: typeof flowLabel; compact?: boolean }) {
   const colors = useThemeColors();
+  const palette = useResultColors();
   const option = useMemo<EChartsOption>(() => {
-    const nodes = new Map<string, string>();
-    const links: { source: string; target: string; value: number }[] = [];
-    for (const r of results) {
-      const name = (key: string) => label(key, r.carrier, t);
-      r.flows.forEach((f) => nodes.set(name(f.key), f.color));
-      for (const l of allocateFlows(r.flows)) {
-        if (l.kwh > 0.5 && name(l.from) !== name(l.to)) links.push({ source: name(l.from), target: name(l.to), value: l.kwh });
-      }
-    }
-    const all = results.flatMap((r) => r.flows);
-    const ambient = t("results.buildingDetail.flow.ambient", "Ambient heat");
-    for (const a of ambientHeat(all)) {
-      nodes.set(ambient, AMBIENT_COLOR);
-      links.push({ source: ambient, target: label(a.key, "heat", t), value: a.kwh });
-    }
-    const losses = t("results.buildingDetail.flow.losses", "Conversion losses");
-    for (const l of conversionLosses(all)) {
-      nodes.set(losses, LOSSES_COLOR);
-      links.push({ source: label(l.key, "heat", t), target: losses, value: l.kwh });
-    }
-    const targets = new Set(links.map((l) => l.target));
-    // A converter's hover names its input and the ratio (the COP of a heat pump or air conditioner).
-    const converted = new Map<string, string>();
-    for (const [key, out] of sumBySide(all, "supply")) {
-      const input = sumBySide(all, "use").get(key);
-      if (!input) continue;
-      converted.set(label(key, "heat", t), t("results.buildingDetail.flow.converterHint", "{{out}} out from {{in}} in, ratio {{ratio}}",
-        { out: formatCarrierEnergy(out, "power"), in: formatCarrierEnergy(input, "power"), ratio: formatNumber(out / input, 2) }));
-    }
+    const { nodes, links, converters } = sankeyGraph(results, t, label, palette, colors.textMuted);
+    const value = (p: any) => converters.get(p.name) ?? formatCarrierEnergy(p.value, "power", compact ? 1 : 2);
     return {
       animation: false,
       tooltip: {
@@ -149,7 +199,7 @@ export function BuildingSankey({ results, t, label = flowLabel, compact = false 
         textStyle: { color: colors.text, fontSize: 11 },
         formatter: (p: any) => p.dataType === "edge"
           ? `${p.data.source} → ${p.data.target}<br/>${formatCarrierEnergy(p.data.value, "power")}`
-          : `${p.name}<br/>${converted.get(p.name) ?? formatCarrierEnergy(p.value, "power")}`,
+          : `${p.name}<br/>${value(p)}`,
       },
       series: [{
         type: "sankey",
@@ -157,18 +207,23 @@ export function BuildingSankey({ results, t, label = flowLabel, compact = false 
         nodeWidth: 14,
         nodeGap: compact ? 24 : 16,
         draggable: false,
+        // Data order, not ECharts' relaxation, sets each column's order; left alignment keeps end uses
+        // of electricity in column 3 instead of pushing them to the last column.
+        nodeAlign: "left",
+        layoutIterations: 0,
         emphasis: { focus: "adjacency" },
-        data: [...nodes].map(([name, color]) => ({
+        data: [...nodes].map(([name, { color, depth }]) => ({
           name,
+          depth,
           itemStyle: { color, borderColor: color },
-          label: { position: targets.has(name) ? "right" as const : "left" as const },
+          label: { position: depth === 0 ? "left" as const : "right" as const },
         })),
         links,
-        lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.45 },
-        label: { color: colors.text, fontSize: 11, formatter: (p: any) => `${compact ? twoLines(p.name) : p.name}${compact ? "\n" : "  "}{v|${formatCarrierEnergy(p.value, "power", compact ? 1 : 2)}}`, rich: { v: { color: colors.textMuted, fontSize: 10 } } },
+        lineStyle: { curveness: 0.5, opacity: 0.45 },
+        label: { color: colors.text, fontSize: 11, formatter: (p: any) => `${compact ? twoLines(p.name) : p.name}${compact || converters.has(p.name) ? "\n" : "  "}{v|${value(p)}}`, rich: { v: { color: colors.textMuted, fontSize: 10 } } },
       }],
     };
-  }, [results, t, colors, label, compact]);
+  }, [results, t, colors, palette, label, compact]);
   return <ReactECharts option={option} style={{ height: "100%", width: "100%" }} notMerge />;
 }
 
@@ -201,7 +256,7 @@ interface CostLine { label: string; value: number; color: string; bold?: boolean
 
 /** This building's line exchange at the run's prices, plus equipment and gas cost where the run stores them. */
 function costLines(data: LocationTimeSeriesData | undefined, power: CarrierResult | undefined,
-  gridPrices: BuildingDetailPanelProps["gridPrices"], t: TFn): CostLine[] {
+  gridPrices: BuildingDetailPanelProps["gridPrices"], t: TFn, dark: boolean): CostLine[] {
   if (!gridPrices || !power) return [];
   const flow = (key: string) => power.flows.find((f) => f.key === key);
   const stored = (gas: boolean) => (data?.costs ?? [])
@@ -212,8 +267,8 @@ function costLines(data: LocationTimeSeriesData | undefined, power: CarrierResul
   const bought = ((flow("lineIn")?.totalKwh ?? 0) * gridPrices.import_ct_per_kwh) / 100;
   const sold = ((flow("lineOut")?.totalKwh ?? 0) * gridPrices.export_ct_per_kwh) / 100;
   const lines: CostLine[] = [
-    { label: t("results.buildingDetail.importCost", "Import cost"), value: bought, color: flow("lineIn")?.color ?? "#94a3b8" },
-    { label: t("results.buildingDetail.exportRevenue", "Export revenue"), value: -sold, color: flow("lineOut")?.color ?? "#0d9488" },
+    { label: t("results.buildingDetail.importCost", "Import cost"), value: bought, color: resultFill("lineIn", dark)! },
+    { label: t("results.buildingDetail.exportRevenue", "Export revenue"), value: -sold, color: resultFill("lineOut", dark)! },
   ];
   if (equipment > 0) lines.push({ label: t("results.buildingDetail.equipment", "Equipment"), value: equipment, color: "#f59e0b" });
   if (gas > 0) lines.push({ label: t("results.buildingDetail.gas", "Gas"), value: gas, color: "#a16207" });
@@ -306,7 +361,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
   const { byCarrier, loading } = useBuildingResults(modelId, building.matchedLocationId, carrierList);
   const [profileCarrier, setProfileCarrier] = useState(carrierList[0]);
   const [resolution, setResolution] = useState<ProfileResolution>("monthly");
-  const [season, setSeason] = useState<Season>("winter");
+  const [chosenSeason, setSeason] = useState<Season | null>(null);
 
   const results = useMemo<CarrierResult[]>(() =>
     carrierList
@@ -318,9 +373,11 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
 
   const anyData = byCarrier[carrierList[0]] ?? Object.values(byCarrier)[0];
   const installed = installedHere(anyData);
-  const lines = costLines(anyData, results.find((r) => r.carrier === "power"), gridPrices, t);
+  const { dark } = useResultColors();
+  const lines = costLines(anyData, results.find((r) => r.carrier === "power"), gridPrices, t, dark);
   const kpis = kpiTiles(results, installed, lines, floorArea, t);
   const profile = results.find((r) => r.carrier === profileCarrier) ?? results[0];
+  const season = chosenSeason ?? firstSeason(profile?.timesteps ?? []);
   const label = useCallback((key: string) => flowLabel(key, profile?.carrier ?? "power", t), [profile?.carrier, t]);
   const carrierName = (c: string) => { const d = carrierDisplay(c); return d.labelKey ? t(d.labelKey, c) : c; };
 
@@ -354,7 +411,7 @@ const BuildingDetailPanel = ({ building, modelId, carrier = "", carriers, gridPr
 
       <div className={PANEL_CLASS}>
         <CardTitle icon={GitMerge} title={t("results.buildingDetail.energyFlowRun", "Energy flow over the run")}
-          info={t("results.buildingDetail.sankeyInfoRun", "Each hour, the energy supplied is shared over that hour's uses in proportion to their size, then summed over the run. The run reports totals per technology, so the split between sources is an estimate. Ambient heat is what the heat pump takes from the air or ground: its heat output minus its electricity input. Conversion losses are what a boiler loses: its fuel input minus its heat output.")} />
+          info={t("results.buildingDetail.sankeyInfoRun", "Energy of this building over the run, from the model's flows. Solar PV and grid import feed the Electricity hub, which supplies every direct use of electricity. Heat pumps and air conditioners turn electricity into heat and cooling. Their output is larger than their electricity input because of their efficiency: output = electricity in × efficiency (COP for heating, EER for cooling). Each of these nodes shows its electricity input and its output ÷ input over the run. The battery stores energy rather than supplying it, so it appears only as its losses: energy charged minus energy discharged. Where a carrier has several supplies, each hour's supplies are shared over that hour's uses in proportion to their size.")} />
         {/* Width capped so the three node columns stay close enough for the links to read. */}
         <div className="mx-auto h-[340px] w-full max-w-5xl">
           <BuildingSankey results={results} t={t} />
