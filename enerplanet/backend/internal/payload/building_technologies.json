@@ -16,8 +16,8 @@
     "cont_energy_eff": 0.9, "cost_energy_cap": 100, "cont_lifetime": 18, "cost_interest_rate": 0.1
   },
   "air_conditioner": {
-    "_source": "SEER: EU Regulation 206/2012 minimum below 6 kW; lifetime: IEA air-to-air assumption; cost: installed 3.5 kW mono-split price, to be replaced by a technology-catalogue value",
-    "cont_energy_eff": 4.6, "cost_energy_cap": 450, "cont_lifetime": 12, "cost_interest_rate": 0.1
+    "_source": "enerplanet/conversion-technologies b798e38, chiller electric household",
+    "cont_energy_eff": 3.2, "cost_energy_cap": 500, "cont_lifetime": 15, "cost_interest_rate": 0.1
   },
   "gas_supply": {
     "_source": "enerplanet/conversion-technologies cb1abca, gas boiler cost_flow_in",

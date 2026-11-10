@@ -106,7 +106,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 300,
                     "unit": "EUR/kW",
                     "min": null,
@@ -330,7 +330,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 575,
                     "unit": "EUR/kW",
                     "min": null,
@@ -358,7 +358,8 @@
             "key": "air_conditioner",
             "alias": "Air Conditioner",
             "icon": "snowflake",
-            "description": "Split or room air conditioner that turns electricity into cooling, rated by its seasonal energy efficiency ratio (SEER)",
+            "description": "Split or room air conditioner that turns electricity into cooling. Efficiency is the coefficient of performance (COP), kW of cooling per kW of electricity; a US SEER in BTU/Wh divided by 3.412 gives a comparable seasonal value. Capacity is in kW of cooling; 1 ton of cooling is 3.517 kW.",
+            "source": "enerplanet/conversion-technologies b798e38, chiller electric household; COP 3.2",
             "constraints": [
                 {
                     "key": "cont_energy_cap_max",
@@ -378,24 +379,24 @@
                 },
                 {
                     "key": "cont_energy_eff",
-                    "alias": "Seasonal energy efficiency ratio (SEER)",
-                    "default_value": 4.6,
-                    "unit": "SEER",
+                    "alias": "Coefficient of performance (COP)",
+                    "default_value": 3.2,
+                    "unit": "W/W",
                     "min": 1,
                     "max": 12
                 },
                 {
                     "key": "cont_lifetime",
                     "alias": "Technology lifetime",
-                    "default_value": 12,
+                    "default_value": 15,
                     "unit": "years",
                     "min": null,
                     "max": null
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
-                    "default_value": 450,
+                    "alias": "Investment cost",
+                    "default_value": 500,
                     "unit": "EUR/kW",
                     "min": null,
                     "max": null
@@ -477,7 +478,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 900,
                     "unit": "EUR/kW",
                     "min": null,
@@ -551,7 +552,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 1800,
                     "unit": "EUR/kW",
                     "min": null,
@@ -625,7 +626,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 150,
                     "unit": "EUR/kW",
                     "min": null,
@@ -699,7 +700,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 100,
                     "unit": "EUR/kW",
                     "min": null,

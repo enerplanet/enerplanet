@@ -80,7 +80,7 @@ function TechnologyDetailsModal({
           event.preventDefault();
           closeButtonRef.current?.focus();
         }}
-        className="sm:max-w-2xl p-5"
+        className="sm:max-w-3xl p-5"
       >
         <AlertDialogDescription className="sr-only">{t('technologies.detailsModal.viewAndEdit')}</AlertDialogDescription>
         <Button
@@ -104,7 +104,7 @@ function TechnologyDetailsModal({
           <AlertDialogDescription className="mt-1">{selectedTech.description}</AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="relative max-h-[60dvh] overflow-auto no-scrollbar border-y border-border py-4">
+        <div className="relative max-h-[60dvh] overflow-auto border-y border-border py-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-foreground">{t('technologies.parameters')}</h3>
             <div className="flex items-center gap-2">
@@ -126,14 +126,14 @@ function TechnologyDetailsModal({
             </div>
           </div>
 
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-muted/50">
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-foreground">{t('technologies.form.parameter')}</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-foreground">{t('technologies.form.defaultValue')}</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-foreground">{t('technologies.form.unit')}</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-foreground">{t('technologies.form.range')}</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-foreground">{t('technologies.form.defaultValue')}</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-foreground">{t('technologies.form.unit')}</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-foreground">{t('technologies.form.range')}</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-foreground w-12"></th>
                 </tr>
               </thead>
@@ -144,28 +144,28 @@ function TechnologyDetailsModal({
                       <>
                         <td className="px-4 py-3">
                           <p className="text-sm text-foreground">{constraint.alias}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{constraint.key}</p>
+                          <p className="text-xs text-muted-foreground font-mono break-all">{constraint.key}</p>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center">
                           <input
                             type="number"
                             step="any"
                             value={constraint.default_value}
                             onChange={(e) => updateEditedConstraint(index, "default_value", e.target.value)}
-                            className="w-full px-2 py-1 bg-background border border-border rounded text-sm text-foreground text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="w-20 px-2 py-1 bg-background border border-border rounded text-sm text-foreground text-center focus:outline-none focus:ring-1 focus:ring-ring"
                           />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center">
                           <input
                             type="text"
                             value={constraint.unit || ""}
                             onChange={(e) => updateEditedConstraint(index, "unit", e.target.value || null)}
                             placeholder="—"
-                            className="w-full px-2 py-1 bg-background border border-border rounded text-xs text-foreground text-right placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="w-16 px-2 py-1 bg-background border border-border rounded text-xs text-foreground text-center placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1 justify-end">
+                          <div className="flex items-center gap-1 justify-center">
                             <input
                               type="number"
                               step="any"
@@ -206,22 +206,22 @@ function TechnologyDetailsModal({
                           <div className="flex items-center gap-1.5">
                             <div>
                               <p className="text-sm text-foreground">{constraint.alias}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{constraint.key}</p>
+                              <p className="text-xs text-muted-foreground font-mono break-all">{constraint.key}</p>
                             </div>
                             <ParameterInfoTooltip alias={constraint.alias} paramKey={constraint.key} description={constraint.description} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-center">
                           <span className="text-sm font-medium text-foreground">
                             {constraint.relationData && typeof constraint.relationData === 'object' 
                               ? <span className="text-xs text-muted-foreground italic">{t('technologies.detailsModal.selectFromOptions', { count: Object.keys(constraint.relationData).length })}</span>
                               : formatValue(constraint.default_value)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-center">
                           <span className="text-xs text-muted-foreground">{constraint.unit || "—"}</span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-center">
                           <span className="text-xs text-muted-foreground">
                             {(() => {
                               if (constraint.min === null && constraint.max === null) return "—";

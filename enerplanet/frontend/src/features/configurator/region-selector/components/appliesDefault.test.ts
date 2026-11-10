@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { appliesDefault } from "./ProductPickerDialog";
+import type { Technology } from "@/features/technologies/services/technologyService";
+import { appliesDefault, offeredProducts } from "./ProductPickerDialog";
 
 describe("appliesDefault", () => {
   it("applies PV for one building without asking, whatever the catalogue holds", () => {
@@ -18,5 +19,18 @@ describe("appliesDefault", () => {
 
   it("applies nothing when the type has no product", () => {
     expect(appliesDefault("pv_supply", 0, false)).toBe(false);
+  });
+});
+
+describe("offeredProducts", () => {
+  const product = (key: string, type: string) => ({ key, type, alias: key, constraints: [] }) as unknown as Technology;
+  const all = [product("pv_facade_400", "pv_supply"), product("pv_supply", "pv_supply"), product("battery_storage", "battery_storage")];
+
+  it("offers only the dropped product", () => {
+    expect(offeredProducts(all, "pv_supply", "pv_facade_400").map((p) => p.key)).toEqual(["pv_facade_400"]);
+  });
+
+  it("offers every product of the type, the default first, when none is given", () => {
+    expect(offeredProducts(all, "pv_supply").map((p) => p.key)).toEqual(["pv_supply", "pv_facade_400"]);
   });
 });

@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Hloubka vybití úložiště",
       "cont_storage_initial": "Počáteční úroveň úložiště",
       "cont_storage_loss": "Míra ztrát úložiště",
-      "cost_energy_cap": "Náklady na energetickou kapacitu",
+      "cost_energy_cap": "Investiční náklady",
       "cost_export": "Náklady na export",
       "cost_interest_rate": "Úroková sazba",
       "cost_om_annual": "Roční náklady na provoz a údržbu",
@@ -1959,7 +1959,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} let",
       "defineOwn": "Definovat vlastní",
-      "count": "Produkty: {{count}}"
+      "search": "Hledat produkty",
+      "sort": "Seřadit produkty",
+      "sortName": "Název",
+      "sortCost": "Investiční náklady"
     },
     "title": "Technologie",
     "subtitle": "Energetické technologie pro vaše simulace",

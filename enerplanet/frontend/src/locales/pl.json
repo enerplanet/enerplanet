@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Głębokość rozładowania magazynu",
       "cont_storage_initial": "Początkowy poziom magazynowania",
       "cont_storage_loss": "Wskaźnik strat magazynowania",
-      "cost_energy_cap": "Koszt mocy energetycznej",
+      "cost_energy_cap": "Koszt inwestycji",
       "cost_export": "Koszt eksportu",
       "cost_interest_rate": "Stopa procentowa",
       "cost_om_annual": "Roczne koszty O&M",
@@ -1959,7 +1959,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} lat",
       "defineOwn": "Zdefiniuj własny",
-      "count": "Produkty: {{count}}"
+      "search": "Szukaj produktów",
+      "sort": "Sortuj produkty",
+      "sortName": "Nazwa",
+      "sortCost": "Koszt inwestycji"
     },
     "title": "Technologie",
     "subtitle": "Technologie energetyczne do symulacji",

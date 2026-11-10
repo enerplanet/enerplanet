@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Storage discharge depth",
       "cont_storage_initial": "Initial storage level",
       "cont_storage_loss": "Storage loss rate",
-      "cost_energy_cap": "Cost of energy capacity",
+      "cost_energy_cap": "Investment cost",
       "cost_export": "Export cost",
       "cost_interest_rate": "Interest rate",
       "cost_om_annual": "Yearly O&M costs",
@@ -2337,7 +2337,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} years",
       "defineOwn": "Define my own",
-      "count": "Products: {{count}}"
+      "search": "Search products",
+      "sort": "Sort products",
+      "sortName": "Name",
+      "sortCost": "Investment cost"
     },
     "title": "Technologies",
     "subtitle": "Energy technologies for your simulations",

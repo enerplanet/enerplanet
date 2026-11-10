@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Ontlaaddiepte opslag",
       "cont_storage_initial": "Initieel opslagpeil",
       "cont_storage_loss": "Opslagverliespercentage",
-      "cost_energy_cap": "Kosten energiecapaciteit",
+      "cost_energy_cap": "Investeringskosten",
       "cost_export": "Exportkosten",
       "cost_interest_rate": "Rentepercentage",
       "cost_om_annual": "Jaarlijkse O&M-kosten",
@@ -1955,7 +1955,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} jaar",
       "defineOwn": "Zelf definiëren",
-      "count": "Producten: {{count}}"
+      "search": "Producten zoeken",
+      "sort": "Producten sorteren",
+      "sortName": "Naam",
+      "sortCost": "Investeringskosten"
     },
     "title": "Technologieën",
     "subtitle": "Energietechnologieën voor uw simulaties",

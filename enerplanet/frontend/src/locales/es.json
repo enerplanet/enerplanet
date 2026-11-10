@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Profundidad de descarga del almacenamiento",
       "cont_storage_initial": "Nivel inicial de almacenamiento",
       "cont_storage_loss": "Tasa de pérdida de almacenamiento",
-      "cost_energy_cap": "Costo de capacidad energética",
+      "cost_energy_cap": "Costo de inversión",
       "cost_export": "Costo de exportación",
       "cost_interest_rate": "Tasa de interés",
       "cost_om_annual": "Costos anuales de O&M",
@@ -2334,7 +2334,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} años",
       "defineOwn": "Definir el mío",
-      "count": "Productos: {{count}}"
+      "search": "Buscar productos",
+      "sort": "Ordenar productos",
+      "sortName": "Nombre",
+      "sortCost": "Costo de inversión"
     },
     "title": "Tecnologías",
     "subtitle": "Tecnologías energéticas para sus simulaciones",
