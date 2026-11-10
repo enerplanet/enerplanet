@@ -11,6 +11,30 @@ import { useSystemFlows } from '../../hooks/useSystemFlows';
 import { flowLabel, installedCapacities, systemFlowLabel } from '../../buildingFlows';
 import type { EnergyCapRecord } from '../../types';
 
+type Translate = ReturnType<typeof useTranslation>['t'];
+type InstalledRow = ReturnType<typeof installedCapacities>[number];
+
+/**
+ * A tile's main value and the line under it. Conversion capacities are on the
+ * output side, as Calliope sizes them: heat for heat pumps and boilers, cooling
+ * for air conditioners.
+ */
+function capacityLines(r: InstalledRow, roundTrip: number | undefined, t: Translate): { main: string; sub: string } {
+  const kw = `${formatNumber(r.kw, 1)} kW`;
+  if (r.kwh > 0) {
+    return {
+      main: `${formatNumber(r.kwh, 1)} kWh`,
+      sub: roundTrip == null
+        ? t('results.overview.batteryPower', 'up to {{power}}', { power: kw })
+        : t('results.overview.batteryLine', 'up to {{power}} · {{roundTrip}} round trip', { power: kw, roundTrip: `${formatNumber(roundTrip * 100, 0)}%` }),
+    };
+  }
+  if (r.family.includes('pv')) return { main: `${formatNumber(r.kw, 1)} kWp`, sub: t('results.overview.peakPower', 'peak power') };
+  if (/heat_pump|boiler/.test(r.family)) return { main: kw, sub: t('results.overview.heatOutput', 'heat output') };
+  if (r.family.includes('air_conditioner')) return { main: kw, sub: t('results.overview.coolingOutput', 'cooling output') };
+  return { main: kw, sub: t('results.overview.ratedPower', 'rated power') };
+}
+
 /**
  * Installed capacities of the run, one light tile per technology: as configured in
  * operate mode, as chosen by the optimiser in plan mode.
@@ -18,35 +42,31 @@ import type { EnergyCapRecord } from '../../types';
 function InstalledCard({ energyCap, mode, roundTrip }: { energyCap: EnergyCapRecord[]; mode?: 'plan' | 'operate'; roundTrip?: number }) {
   const { t } = useTranslation();
   const rows = installedCapacities(energyCap);
-  const value = (r: ReturnType<typeof installedCapacities>[number]) =>
-    r.family.includes('pv') ? `${formatNumber(r.kw, 1)} kWp`
-      : r.kwh > 0 ? `${formatNumber(r.kw, 1)} kW · ${formatNumber(r.kwh, 1)} kWh`
-        : `${formatNumber(r.kw, 1)} kW`;
   const buildings = (n: number) => n === 1 ? t('results.overview.oneBuilding', '1 building') : t('results.overview.buildingCount', '{{count}} buildings', { count: n });
   return (
     <div className={CHART_CARD_CLASS}>
       <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
         <Sun className="h-4 w-4 text-primary" />
         {t('results.overview.installed', 'Installed capacities')}
+        <span className="text-xs font-normal text-muted-foreground">{t('results.overview.totalsAcrossBuildings', 'totals across buildings')}</span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
           {mode === 'operate' ? t('results.overview.configured', 'Configured') : t('results.overview.optimised', 'Optimised')}
         </span>
       </h3>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2">
-        {rows.map((r) => (
-          <div key={r.family} className="min-w-0 rounded-lg border border-border/60 px-3 py-2">
-            <div className="flex items-baseline justify-between gap-2 text-xs">
-              <span className="truncate text-muted-foreground">{flowLabel(r.family, 'power', t)}</span>
-              <span className="whitespace-nowrap text-muted-foreground">{buildings(r.units)}</span>
+        {rows.map((r) => {
+          const { main, sub } = capacityLines(r, roundTrip, t);
+          return (
+            <div key={r.family} className="min-w-0 rounded-lg border border-border/60 px-3 py-2">
+              <div className="flex items-baseline justify-between gap-2 text-xs">
+                <span className="truncate text-muted-foreground">{flowLabel(r.family, 'power', t)}</span>
+                <span className="whitespace-nowrap text-muted-foreground">{buildings(r.units)}</span>
+              </div>
+              <div className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">{main}</div>
+              <div className="text-xs text-muted-foreground">{sub}</div>
             </div>
-            <div className="whitespace-nowrap text-sm font-medium tabular-nums text-foreground">
-              {value(r)} <span className="text-xs font-normal text-muted-foreground">{t('results.overview.total', 'total')}</span>
-            </div>
-            {r.kwh > 0 && roundTrip != null && (
-              <div className="text-xs text-muted-foreground">{t('results.overview.roundTripLine', '{{value}} round trip', { value: `${formatNumber(roundTrip * 100, 1)}%` })}</div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {rows.length === 0 && <p className="text-xs text-muted-foreground">{t('results.overview.nothingInstalled', 'No equipment installed.')}</p>}
     </div>
