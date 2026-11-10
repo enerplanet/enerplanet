@@ -2306,6 +2306,8 @@
     "hideMaps": "Verberg kaarten",
     "showMaps": "Toon kaarten",
     "exportPdf": "Exporteer PDF",
+    "generateReport": "Rapport genereren",
+    "reportComingSoon": "Het genereren van rapporten komt beschikbaar in een volgende update.",
     "locationMaps": "Locatiekaarten",
     "performanceComparison": "Prestatievergelijking",
     "loading": "Simulatiegegevens laden...",

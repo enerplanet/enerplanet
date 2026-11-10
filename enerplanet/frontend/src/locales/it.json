@@ -2286,6 +2286,8 @@
     "hideMaps": "Nascondi mappe",
     "showMaps": "Mostra mappe",
     "exportPdf": "Esporta PDF",
+    "generateReport": "Genera report",
+    "reportComingSoon": "La generazione dei report sarà disponibile in un prossimo aggiornamento.",
     "locationMaps": "Mappe delle posizioni",
     "performanceComparison": "Confronto prestazioni",
     "loading": "Caricamento dati simulazione...",

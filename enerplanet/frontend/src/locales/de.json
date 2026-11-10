@@ -2688,6 +2688,8 @@
     "hideMaps": "Karten ausblenden",
     "showMaps": "Karten anzeigen",
     "exportPdf": "PDF exportieren",
+    "generateReport": "Bericht erstellen",
+    "reportComingSoon": "Die Berichterstellung wird mit einem kommenden Update verfügbar.",
     "locationMaps": "Standortkarten",
     "performanceComparison": "Leistungsvergleich",
     "loading": "Simulationsdaten werden geladen...",

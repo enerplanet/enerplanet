@@ -2685,6 +2685,8 @@
     "hideMaps": "Ocultar mapas",
     "showMaps": "Mostrar mapas",
     "exportPdf": "Exportar PDF",
+    "generateReport": "Generar informe",
+    "reportComingSoon": "La generación de informes estará disponible en una próxima actualización.",
     "locationMaps": "Mapas de ubicación",
     "performanceComparison": "Comparación de rendimiento",
     "loading": "Cargando datos de simulación...",

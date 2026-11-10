@@ -8,13 +8,14 @@ import {
   BarChart3,
   ArrowLeft,
   AlertCircle,
+  FileText,
   Map as MapIcon
 } from 'lucide-react';
 import { modelService, Model } from '@/features/model-dashboard/services/modelService';
 import { Workspace } from '@/components/workspace/services/workspaceService';
 import { useWorkspaceStore } from '@/components/workspace/store/workspace-store';
 import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@spatialhub/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip, TooltipContent, TooltipTrigger } from '@spatialhub/ui';
 import { StatsStrip } from '@/components/ui/StatsStrip';
 import { CardGridSkeleton, PanelSkeleton } from '@/components/ui/Skeletons';
 import {
@@ -394,6 +395,20 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <MapIcon className="h-4 w-4 text-muted-foreground" />
                   {showMaps ? t('simulationComparison.hideMaps') : t('simulationComparison.showMaps')}
                 </button>
+                {/* A disabled button fires no pointer events, so the span carries the tooltip. */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} className="inline-flex">
+                      <button disabled className={`${TOOLBAR_BUTTON_CLASS} pointer-events-none opacity-50`}>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        {t('simulationComparison.generateReport')}
+                      </button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">{t('simulationComparison.reportComingSoon')}</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>

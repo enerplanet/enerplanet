@@ -2663,6 +2663,8 @@
     "hideMaps": "Masquer les cartes",
     "showMaps": "Afficher les cartes",
     "exportPdf": "Exporter PDF",
+    "generateReport": "Générer le rapport",
+    "reportComingSoon": "La génération de rapports sera disponible dans une prochaine mise à jour.",
     "locationMaps": "Cartes de localisation",
     "performanceComparison": "Comparaison des performances",
     "loading": "Chargement des données de simulation...",

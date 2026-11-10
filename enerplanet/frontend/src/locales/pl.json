@@ -2310,6 +2310,8 @@
     "hideMaps": "Ukryj mapy",
     "showMaps": "Pokaż mapy",
     "exportPdf": "Eksportuj PDF",
+    "generateReport": "Generuj raport",
+    "reportComingSoon": "Generowanie raportów będzie dostępne w jednej z kolejnych aktualizacji.",
     "locationMaps": "Mapy lokalizacji",
     "performanceComparison": "Porównanie wydajności",
     "loading": "Ładowanie danych symulacji...",

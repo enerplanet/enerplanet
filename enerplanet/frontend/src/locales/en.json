@@ -2689,6 +2689,8 @@
     "hideMaps": "Hide Maps",
     "showMaps": "Show Maps",
     "exportPdf": "Export PDF",
+    "generateReport": "Generate report",
+    "reportComingSoon": "Report generation will be available in an upcoming update.",
     "locationMaps": "Location Maps",
     "performanceComparison": "Performance Comparison",
     "loading": "Loading simulation data...",

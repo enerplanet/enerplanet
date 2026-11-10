@@ -2310,6 +2310,8 @@
     "hideMaps": "Skrýt mapy",
     "showMaps": "Zobrazit mapy",
     "exportPdf": "Exportovat PDF",
+    "generateReport": "Vytvořit zprávu",
+    "reportComingSoon": "Vytváření zpráv bude dostupné v některé z příštích aktualizací.",
     "locationMaps": "Mapy lokalit",
     "performanceComparison": "Porovnání výkonu",
     "loading": "Načítání dat simulace...",
