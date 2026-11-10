@@ -27,8 +27,8 @@ const DEMAND_COLORS: Record<string, string> = {
 const FIXED_COLORS: Record<string, string> = {
   lineIn: '#94a3b8',
   lineOut: '#0d9488',
-  batteryIn: '#c4b5fd',
-  batteryOut: '#8b5cf6',
+  batteryIn: '#d8c0e8',
+  batteryOut: '#a870c8',
 };
 
 const IS_STORAGE = /battery|storage/;
