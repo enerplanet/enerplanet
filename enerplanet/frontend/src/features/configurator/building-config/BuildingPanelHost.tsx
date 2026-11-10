@@ -8,15 +8,16 @@
  * here.
  */
 
-import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FC, type ReactNode } from 'react';
 
 import { useTranslation } from '@spatialhub/i18n';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@spatialhub/ui';
-import { Building3DView, isEnvelopeDetached, type BuildingState } from '@thd-spatial-ai/building-configurator';
+import { Building3DView, isEnvelopeDetached, type BuildingState, type TechnologyProduct } from '@thd-spatial-ai/building-configurator';
 
 import { config } from '@/configuration/app';
 import { useConfiguratorModeStore } from '@/features/configurator/store/configuratorModeStore';
 import { useModelStore } from '@/features/configurator/store/modelStore';
+import { loadCatalogue, productType, productsOfType } from '@/features/technologies/catalogue';
 import { TechTypeList } from '@/features/technologies/components/TechTypeList';
 import type { Technology } from '@/features/technologies/services/technologyService';
 import { useConfirm } from '@/hooks/useConfirmDialog';
@@ -29,6 +30,7 @@ import { PreparationProgress } from './PreparationProgress';
 import { useBuildingGeometry } from './useBuildingGeometry';
 import { useBuildingState } from './useBuildingState';
 import { useDemandProfile } from './useDemandProfile';
+import type { PvProductCopy } from './pvProducts';
 import { usePvMode, type BuildingPv, type PvArray } from './usePvMode';
 import type { PvYieldContext } from './pvYield';
 import { useBuildingTechnologies } from './useBuildingTechnologies';
@@ -64,7 +66,7 @@ export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 export type OnBuildingReset = (osmId: string) => void;
 
 /** Receives a building's PV arrays after each change in PV mode. */
-export type OnPvArrays = (osmId: string, arrays: PvArray[]) => void;
+export type OnPvArrays = (osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>) => void;
 
 /** Receives a building's technologies after each edit in the Technologies tab. */
 export type OnTechsChange = (osmId: string, techs: BuildingTechs) => void;
@@ -162,6 +164,31 @@ function pvNotice(hasPv: boolean, forPv: boolean, pvMode: { pv: unknown; failed:
   return hasPv && !pvMode.pv ? 'buildingConfig.loading' : null;
 }
 
+/** A catalogue product as the building configurator lists it, identified by its key. */
+const asProduct = (p: Technology): TechnologyProduct => ({
+  id: p.key,
+  key: p.key,
+  type: productType(p),
+  manufacturer: p.manufacturer ?? undefined,
+  model: p.model ?? undefined,
+  alias: p.alias,
+  constraints: p.constraints.map((c) => ({
+    key: c.key, alias: c.alias, description: c.description, default_value: c.default_value,
+    unit: c.unit ?? undefined, min: c.min ?? undefined, max: c.max ?? undefined, options: c.options,
+  })),
+});
+
+/** The catalogue's PV products, loaded once per view; undefined until loaded. */
+function usePvCatalogue(): TechnologyProduct[] | undefined {
+  const [products, setProducts] = useState<TechnologyProduct[]>();
+  useEffect(() => {
+    let cancelled = false;
+    loadCatalogue().then((all) => { if (!cancelled) setProducts(productsOfType(all, 'pv_supply').map(asProduct)); });
+    return () => { cancelled = true; };
+  }, []);
+  return products;
+}
+
 interface PanelBodyProps {
   osmId: string;
   /** A saved model's id; without it the building belongs to the draft. */
@@ -202,12 +229,25 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   // One mode for the simulation panel and the building view: switching either switches both.
   const mode = useConfiguratorModeStore((s) => s.mode);
   const setMode = useConfiguratorModeStore((s) => s.setMode);
-  const storeArrays = useCallback((arrays: PvArray[]) => onPvArrays?.(osmId, arrays), [onPvArrays, osmId]);
-  const pvMode = usePvMode(osmId, country, pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null);
+  const storeArrays = useCallback(
+    (arrays: PvArray[], products: Record<string, PvProductCopy>) => onPvArrays?.(osmId, arrays, products),
+    [onPvArrays, osmId],
+  );
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
   const [pickingTech, setPickingTech] = useState(false);
   const openTechPicker = useCallback(() => setPickingTech(true), []);
   const { technologies } = useBuildingTechnologies(techs, storeTechs, onAddTech ? openTechPicker : undefined);
+  // The host does not render again when PV is removed, so the view stops showing it here until PV is added again.
+  const [pvRemoved, setPvRemoved] = useState(false);
+  const removePv = useCallback(() => {
+    technologies?.onRemove('pv_supply');
+    setPvRemoved(true);
+  }, [technologies]);
+  const pvCatalogue = usePvCatalogue();
+  const pvMode = usePvMode(
+    osmId, country, pvRemoved ? null : pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null,
+    technologies ? removePv : undefined, pvCatalogue,
+  );
 
   if (preparing) {
     return (
@@ -273,6 +313,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
               added={techs ?? {}}
               onPick={(tech) => {
                 setPickingTech(false);
+                setPvRemoved(false);
                 onAddTech?.(osmId, tech);
               }}
             />
