@@ -106,7 +106,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 300,
                     "unit": "EUR/kW",
                     "min": null,
@@ -354,7 +354,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 575,
                     "unit": "EUR/kW",
                     "min": null,
@@ -418,7 +418,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 450,
                     "unit": "EUR/kW",
                     "min": null,
@@ -501,7 +501,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 900,
                     "unit": "EUR/kW",
                     "min": null,
@@ -575,7 +575,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 1800,
                     "unit": "EUR/kW",
                     "min": null,
@@ -649,7 +649,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 150,
                     "unit": "EUR/kW",
                     "min": null,
@@ -723,7 +723,7 @@
                 },
                 {
                     "key": "cost_energy_cap",
-                    "alias": "Cost of energy capacity",
+                    "alias": "Investment cost",
                     "default_value": 100,
                     "unit": "EUR/kW",
                     "min": null,
