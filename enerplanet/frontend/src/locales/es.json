@@ -2299,7 +2299,30 @@
     "tabs": {
       "profile": "Perfil",
       "general": "General",
-      "notifications": "Notificaciones"
+      "notifications": "Notificaciones",
+      "experimental": "Experimental"
+    },
+    "featureFlags": {
+      "warning": {
+        "title": "En desarrollo",
+        "description": "Estas funciones están en desarrollo activo y pueden ser inestables o cambiar sin previo aviso."
+      },
+      "empty": "No hay feature flags disponibles.",
+      "sections": {
+        "experimental": {
+          "title": "Funciones experimentales"
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "Model builder modular basado en flujos de trabajo (reemplaza el configurador)."
+        },
+        "experimentalSettings": {
+          "label": "Pestaña Experimental",
+          "description": "Muestra la pestaña Experimental en Ajustes. Desactívala para ocultarla; abre /app/settings/experimental para volver a desbloquearla."
+        }
+      }
     },
     "language": {
       "title": "Idioma",

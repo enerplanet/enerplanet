@@ -1926,7 +1926,30 @@
     "tabs": {
       "profile": "Profiel",
       "general": "Algemeen",
-      "notifications": "Meldingen"
+      "notifications": "Meldingen",
+      "experimental": "Experimenteel"
+    },
+    "featureFlags": {
+      "warning": {
+        "title": "In ontwikkeling",
+        "description": "Deze functies zijn in actieve ontwikkeling en kunnen instabiel zijn of zonder aankondiging veranderen."
+      },
+      "empty": "Geen feature flags beschikbaar.",
+      "sections": {
+        "experimental": {
+          "title": "Experimentele functies"
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "Modulaire, workflow-gedreven model builder (vervangt de configurator)."
+        },
+        "experimentalSettings": {
+          "label": "Experimenteel-tab",
+          "description": "Toont het tabblad Experimenteel in Instellingen. Zet het uit om het tabblad te verbergen; open /app/settings/experimental om het weer te ontgrendelen."
+        }
+      }
     },
     "language": {
       "title": "Taal",
