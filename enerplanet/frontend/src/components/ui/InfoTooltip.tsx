@@ -27,6 +27,9 @@ const TOOLTIP_MAX_SIZE_CLASS = 'max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)
 const CLOSE_DELAY_MS = 150;
 // Hover must rest on the icon this long, so a pointer passing over it on its way elsewhere opens nothing.
 const OPEN_DELAY_MS = 300;
+// Matches duration-200 in FADE: a closing card stays mounted until its fade-out ends.
+const FADE_MS = 200;
+const FADE = 'transition-opacity duration-200 starting:opacity-0 motion-reduce:transition-none';
 
 /** Closes the card that is open now; opening another card calls it first, so only one card shows. */
 let closeOpenCard: (() => void) | null = null;
@@ -76,6 +79,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 	const [resolvedFloatingPosition, setResolvedFloatingPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
 	const closeTimer = useRef<number | undefined>(undefined);
 	const openTimer = useRef<number | undefined>(undefined);
+	const [rendered, setRendered] = useState(false);
 	const pointerOnCard = useRef(false);
 	// Pressed inside: the card stays open until Escape or a press outside it.
 	const [pinned, setPinned] = useState(false);
@@ -99,6 +103,15 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		setPinned(false);
 		pointerOnCard.current = false;
 	}, []);
+
+	useEffect(() => {
+		if (showTooltip) {
+			setRendered(true);
+			return;
+		}
+		const id = window.setTimeout(() => setRendered(false), FADE_MS);
+		return () => window.clearTimeout(id);
+	}, [showTooltip]);
 
 	useEffect(() => {
 		if (!showTooltip) return;
@@ -337,11 +350,11 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 				{children}
 			</span>
 
-			{showTooltip && (() => {
+			{(showTooltip || rendered) && (() => {
 				const tooltipEl = (
 					<div
 						ref={tooltipRef}
-						className={getTooltipClasses()}
+						className={`${getTooltipClasses()} ${FADE} ${showTooltip ? '' : 'pointer-events-none opacity-0'}`}
 						onMouseEnter={() => {
 							pointerOnCard.current = true;
 							window.clearTimeout(closeTimer.current);
@@ -379,7 +392,15 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 						</div>
 					</div>
 				);
-				return (isAnchored || isPortalFloating) ? createPortal(tooltipEl, document.body) : tooltipEl;
+				if (!isAnchored && !isPortalFloating) return tooltipEl;
+				// Dims the page so the card stands out; it takes no pointer events, so hover and outside presses still reach the page.
+				return createPortal(
+					<>
+						<div aria-hidden className={`pointer-events-none fixed inset-0 z-[9998] bg-black/20 dark:bg-black/40 ${FADE} ${showTooltip ? '' : 'opacity-0'}`} />
+						{tooltipEl}
+					</>,
+					document.body,
+				);
 			})()}
 		</div>
 	);
