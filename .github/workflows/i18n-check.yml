@@ -1,0 +1,53 @@
+# i18n key hygiene gate: runs `npm run i18n:check` on every PR to main/dev.
+#
+# - FAILS the check when a translation key used in the code is missing from a
+#   locale file (en/de/es/nl). The failure message prints the keys as paste-ready
+#   JSON so they can be added straight into the locale files.
+# - Only WARNS (does not fail) for unused keys, so the gate stays green while
+#   dead translations accumulate; remove them locally with `npm run i18n:prune`.
+#
+# NOTE: this workflow only REPORTS the status. To actually block a merge, mark
+# "i18n check" as a required status check in branch protection for main/dev
+# (Settings > Branches > Branch protection rules > status checks).
+
+name: i18n check
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: i18n-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  i18n-check:
+    runs-on: ubuntu-latest
+    steps:
+      # Submodules (libs, platform-core, infrastructure) may be private repos;
+      # the deploy pipeline needs a PAT (SUBMODULE_TOKEN) for them. Use the same
+      # secret here when it is configured, otherwise fall back to GITHUB_TOKEN.
+      - name: Allow PAT access to submodules
+        if: ${{ secrets.SUBMODULE_TOKEN != '' }}
+        run: git config --global --add url."https://${{ secrets.SUBMODULE_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: enerplanet/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: enerplanet/frontend
+        run: npm ci
+
+      - name: Run i18n check
+        working-directory: enerplanet/frontend
+        run: npm run i18n:check

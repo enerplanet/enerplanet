@@ -219,7 +219,7 @@ const DirectShareList: React.FC<DirectShareListProps> = ({
                   disabled={disabled || revokingShareId !== null}
                   onClick={() => onRevoke(share)}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={t('model.revokeAccessFor', `Revoke access for ${share.email}`)}
+                  aria-label={t('model.revokeAccessFor', { email: share.email })}
                 >
                   <UserMinus className="size-3.5" aria-hidden="true" />
                   {isRevoking
