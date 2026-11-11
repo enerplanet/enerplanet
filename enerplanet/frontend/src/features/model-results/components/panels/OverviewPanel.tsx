@@ -37,8 +37,8 @@ interface CapacitySpec {
  */
 function outputKind(family: string, t: Translate) {
   if (family.includes('pv')) return { unit: 'kWp', caption: t('results.overview.peakPower', 'peak power'), energyLabel: t('results.overview.generated', 'Generated') };
-  if (/heat_pump|boiler/.test(family)) return { unit: 'kW', caption: t('results.overview.heatOutput', 'heat output'), energyLabel: t('results.overview.heatDelivered', 'Heat delivered') };
-  if (family.includes('air_conditioner')) return { unit: 'kW', caption: t('results.overview.coolingOutput', 'cooling output'), energyLabel: t('results.overview.coolingDelivered', 'Cooling delivered') };
+  if (/heat_pump|boiler/.test(family)) return { unit: 'kW', caption: t('results.overview.heatOutput', 'heat output'), energyLabel: t('results.overview.delivered', 'Delivered') };
+  if (family.includes('air_conditioner')) return { unit: 'kW', caption: t('results.overview.coolingOutput', 'cooling output'), energyLabel: t('results.overview.delivered', 'Delivered') };
   return { unit: 'kW', caption: t('results.overview.ratedPower', 'rated power'), energyLabel: t('results.overview.generated', 'Generated') };
 }
 
@@ -114,16 +114,15 @@ function InstalledCard({ energyCap, mode, results }: { energyCap: EnergyCapRecor
           const spec = capacitySpec(r, results, t);
           const name = flowLabel(r.family, 'power', t);
           return (
-            <div key={r.family} className="min-w-0 rounded-lg border border-border/60 px-3 py-2">
+            <div key={r.family} className="flex min-w-0 flex-col rounded-lg border border-border/60 px-3 py-2">
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: getTechColor(r.family, 0, dark) }} />
                 <span className="truncate text-muted-foreground">{name}</span>
                 <ChartInfoTooltip title={name} description={spec.info} />
-                <span className="ml-auto whitespace-nowrap text-muted-foreground">{buildings(r.units)}</span>
               </div>
               <div className="mt-1 whitespace-nowrap text-base font-semibold tabular-nums text-foreground">{spec.main}</div>
-              <div className="text-xs text-muted-foreground">{spec.caption}</div>
-              <dl className="mt-2 divide-y divide-border/60 border-t border-border/60 text-xs">
+              <div className="mb-2 text-xs text-muted-foreground">{spec.caption} · {buildings(r.units)}</div>
+              <dl className="mt-auto divide-y divide-border/60 border-t border-border/60 text-xs">
                 <SpecRow label={spec.energyLabel} value={spec.energy} />
                 <SpecRow label={spec.useLabel} value={spec.use} />
               </dl>
