@@ -31,8 +31,12 @@ jobs:
       # the deploy pipeline needs a PAT (SUBMODULE_TOKEN) for them. Use the same
       # secret here when it is configured, otherwise fall back to GITHUB_TOKEN.
       - name: Allow PAT access to submodules
-        if: ${{ secrets.SUBMODULE_TOKEN != '' }}
-        run: git config --global --add url."https://${{ secrets.SUBMODULE_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        env:
+          SUBMODULE_TOKEN: ${{ secrets.SUBMODULE_TOKEN }}
+        run: |
+          if [ -n "$SUBMODULE_TOKEN" ]; then
+            git config --global --add url."https://$SUBMODULE_TOKEN@github.com/".insteadOf "https://github.com/"
+          fi
 
       - uses: actions/checkout@v4
         with:
