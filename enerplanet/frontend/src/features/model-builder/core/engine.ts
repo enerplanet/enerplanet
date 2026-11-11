@@ -12,27 +12,50 @@
 
 import { portPath, type DiffOp, type Transaction } from "./diff";
 import { PortWriteRejected } from "./errors";
-import type { Module, ModuleCtx } from "./module";
+import type { Module, ModuleCtx, NodeRef } from "./module";
 import type { ModelData, PortKey } from "./ports";
 import type { Store } from "./store";
 
 export interface Engine {
   /**
-   * Run one module against the store.
+   * Run one module against the store as one workflow node.
    *
-   * @returns the sealed transaction, or `undefined` when the run changed nothing.
+   * The transaction only exists *after* `run()` returns — unless the module declares
+   * `seal: "per-commit"`, in which case each `commit()` seals its own atomic transaction.
+   *
+   * @param node the workflow node this run belongs to. `auto` is a node property, not a
+   *             module one — the same module can be auto in one workflow and interactive in
+   *             another — and it is stamped on the transaction so history can skip it (T14).
+   * @returns the last sealed transaction, or `undefined` when the run changed nothing.
    * @throws {PortWriteRejected} when the module writes outside its declared surface, or
    * blind-overwrites a port it never read.
    */
-  runModule(module: Module, nodeId?: string): Promise<Transaction | undefined>;
+  runModule(module: Module, node?: NodeRef): Promise<Transaction | undefined>;
 }
 
 export function createEngine(store: Store): Engine {
   return {
-    async runModule(module, nodeId) {
+    async runModule(module, node) {
       const declared = new Set<PortKey>(module.params.map((param) => param.port));
       const consumed = new Set<PortKey>();
-      const pending = new Map<PortKey, unknown>();
+      let pending = new Map<PortKey, unknown>();
+      let sealed: Transaction | undefined;
+
+      /** Turn the buffered writes into one sealed transaction (nothing buffered → no transaction). */
+      const flush = (): void => {
+        const primary: DiffOp[] = [];
+        for (const [port, next] of pending) {
+          const prev = store.data[port];
+          if (Object.is(prev, next)) continue; // nothing changed — no op, no transaction
+          primary.push(
+            next === undefined
+              ? { op: "remove", path: portPath(port), prev }
+              : { op: "replace", path: portPath(port), prev, next },
+          );
+        }
+        pending = new Map();
+        if (primary.length > 0) sealed = store.applyTransaction(primary, [], node);
+      };
 
       const ctx: ModuleCtx = {
         get store(): Readonly<ModelData> {
@@ -55,6 +78,8 @@ export function createEngine(store: Store): Engine {
 
             pending.set(port, next);
           }
+
+          if (module.seal === "per-commit") flush();
         },
 
         state: "active",
@@ -62,20 +87,11 @@ export function createEngine(store: Store): Engine {
 
       if (module.run) await module.run(ctx);
 
-      const primary: DiffOp[] = [];
-      for (const [port, next] of pending) {
-        const prev = store.data[port];
-        if (Object.is(prev, next)) continue; // nothing changed — no op, no transaction
-        primary.push(
-          next === undefined
-            ? { op: "remove", path: portPath(port), prev }
-            : { op: "replace", path: portPath(port), prev, next },
-        );
-      }
+      // Default is one transaction for the whole run, so a module sees the pre-state for its
+      // entire run and a rejection means nothing happened at all. `per-commit` opted out.
+      if (module.seal !== "per-commit") flush();
 
-      if (primary.length === 0) return undefined;
-
-      return store.applyTransaction(primary, [], nodeId);
+      return sealed;
     },
   };
 }

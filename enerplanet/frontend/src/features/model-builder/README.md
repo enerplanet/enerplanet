@@ -34,15 +34,18 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | File | Responsibility |
 |---|---|
 | `ports.ts` | the port catalog: `PortKey`, `ModelData`, energy vectors (an open set) |
-| `module.ts` | the module contract: `params`, `affect`, `layout`, `run`, `validate` |
-| `diff.ts` | reversible `DiffOp`s, sealed `Transaction`, pure path application |
-| `store.ts` | the projection + the append-only transaction log (one write path) |
-| `engine.ts` | runs a module, enforces the write boundary, seals one transaction |
+| `module.ts` | the module contract: `params`, `affect`, `layout`, `seal`, `run`, `validate` |
+| `diff.ts` | reversible `DiffOp`s, sealed `Transaction` (carrying `nodeId` + `auto`), pure path application |
+| `store.ts` | the projection + the append-only transaction log + the undo/redo cursor (one write path) |
+| `engine.ts` | runs a module as one workflow node, enforces the write boundary, seals transactions |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) |
 
-Implemented so far, all green: **T1–T3** (one sealed transaction per action; undeclared-port
-writes rejected; anti-clobber). History/undo (T4–T6), the invalidator (T7–T8), gating
-(T10–T12) and the save node (T13) are not written yet.
+Implemented so far, all green: **T1–T16** (one sealed transaction per action; undeclared-port
+writes rejected; anti-clobber; undo restores pruned downstream edits exactly; the discard tail;
+redo re-derives the cascade; undo skips auto work and lands on the interactive boundary; undo
+alone never writes; per-commit vs at-completion sealing). Not written yet: the invalidator
+(T7–T8), gating (T10–T12), the artefact (T18), branching + the prompt (T17/T19) and the save
+node (T13).
 
 ## Commands
 
@@ -66,3 +69,13 @@ npx eslint src/features/model-builder --ext .ts,.tsx
   diff paths address object keys (`/buildingParams/electricity`), not array indices.
 - **No-op writes produce no op.** A write whose value is reference-equal to the current one
   is dropped, and a run that changed nothing seals no transaction.
+- **The cursor only rests on an interactive boundary.** Undo unwinds the trailing step *and*
+  any auto node's work below it, and reports what it unwound (`{ transactions, nodeIds }`) so
+  the shell can say *"undid: power-flow (auto), area-edit"*. Auto nodes run **only as part of a
+  forward action** (activate / complete / redo) — never on a passive state change — because
+  otherwise undo would be a silent no-op: the auto node's deps look satisfied again and it
+  immediately re-runs. Both prototypes violated this (`runAutoNodes()` from `updateContext`).
+- **Seal granularity is the module's call.** `seal: "at-completion"` (default) seals one
+  transaction for the whole `run()`; `seal: "per-commit"` seals one atomic transaction per
+  `commit()`, which buys field-level undo for modules whose writes are independent
+  (settings fields) and is wrong for interdependent ones (`grid-generation`).

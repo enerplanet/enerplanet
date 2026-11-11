@@ -14,6 +14,26 @@ export type Region = "sidebar" | "bottom" | "overlay" | "map";
 /** Lifecycle of one workflow node (`Plan.md` §7). */
 export type NodeState = "pending" | "ready" | "active" | "done" | "skipped" | "stale" | "error";
 
+/**
+ * How often a node's work is written to the log.
+ *
+ * - `"at-completion"` (default) — one sealed transaction for the whole `run()`. Required
+ *   when the module's writes are interdependent (`grid-generation` writes buildings +
+ *   transformers + lines + grids; a partial state there violates the module's own guarantee).
+ * - `"per-commit"` — one atomic transaction per `commit()`. Right when the module's writes
+ *   are independent (settings fields), and it buys the user field-level undo for free.
+ *
+ * Atomicity stays a property of the *transaction*; only the group differs.
+ */
+export type SealGranularity = "at-completion" | "per-commit";
+
+/** Identifies the workflow node a run belongs to (`auto` is a node property, not a module's). */
+export interface NodeRef {
+  id: string;
+  /** Auto nodes run headlessly as part of a forward action — never on a passive state change (T15). */
+  auto?: boolean;
+}
+
 /** One store parameter a module declares. */
 export interface Param {
   port: PortKey;
@@ -56,6 +76,11 @@ export interface Module {
   affect: Partial<Record<PortKey, readonly PortKey[]>>;
   /** Where its Component mounts when the node is active. */
   layout: readonly Region[];
+  /**
+   * How often the node's work is sealed into the log. Defaults to `"at-completion"`.
+   * Only declare `"per-commit"` when the module's writes are independent (T16).
+   */
+  seal?: SealGranularity;
   /** Headless execution — how `auto` nodes run without rendering anything. */
   run?(ctx: ModuleCtx): void | Promise<void>;
   /** Completeness / data gate (the save node turns this into "what's missing"). */

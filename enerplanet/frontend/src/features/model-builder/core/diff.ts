@@ -24,6 +24,13 @@ export interface Transaction {
   readonly cascade: readonly DiffOp[];
   /** Workflow node that produced it, when known. */
   readonly nodeId?: string;
+  /**
+   * The workflow node that produced it was an **auto** node (`Plan.md` §7).
+   *
+   * Stamped at seal time so history never has to consult the workflow to know which
+   * transactions it may skip when undoing (T14).
+   */
+  readonly auto?: boolean;
 }
 
 /** JSON-pointer path of a top-level port, e.g. `"/buildings"`. */
@@ -107,11 +114,14 @@ export function applyDiffs(data: ModelData, ops: readonly DiffOp[]): ModelData {
 /**
  * Reverse a diff. Applied in reverse order so multi-op diffs restore correctly
  * (`Plan.md` §4: undo restores the transaction's pre-values exactly).
+ *
+ * Inverting a `remove` therefore restores the value it dropped — the first bug this
+ * function had, caught by T4.
  */
 export function invertDiffs(ops: readonly DiffOp[]): DiffOp[] {
   return [...ops].reverse().map((op) =>
     op.op === "replace"
       ? { op: "replace", path: op.path, prev: op.next, next: op.prev }
-      : { op: "replace", path: op.path, prev: op.prev, next: undefined },
+      : { op: "replace", path: op.path, prev: undefined, next: op.prev },
   );
 }

@@ -11,43 +11,7 @@ import { createStore } from "./store";
 import { createEngine } from "./engine";
 import { defineModule } from "./module";
 import { PortWriteRejected } from "./errors";
-import type { ModelData } from "./ports";
-
-// ── fixtures ────────────────────────────────────────────────────────────────
-
-function fc(features: GeoJSON.Feature[] = []): GeoJSON.FeatureCollection {
-  return { type: "FeatureCollection", features };
-}
-
-function building(osmId: string): GeoJSON.Feature {
-  return {
-    type: "Feature",
-    properties: { osmId },
-    geometry: { type: "Point", coordinates: [8.68, 49.41] },
-  };
-}
-
-function seed(overrides: Partial<ModelData> = {}): ModelData {
-  return {
-    modelName: "Contract fixture",
-    fromDate: "2025-01-01",
-    toDate: "2025-12-31",
-    resolution: 60,
-    coordinates: [],
-    buildings: fc(),
-    ...overrides,
-  };
-}
-
-/** Runs a promise expected to reject and returns the rejection for inspection. */
-async function captureError(promise: Promise<unknown>): Promise<PortWriteRejected> {
-  try {
-    await promise;
-  } catch (err) {
-    return err as PortWriteRejected;
-  }
-  throw new Error("expected the call to reject, but it resolved");
-}
+import { building, captureError, fc, seed } from "./fixtures";
 
 // ── T1 ──────────────────────────────────────────────────────────────────────
 
@@ -70,7 +34,7 @@ describe("T1 — one sealed transaction per action", () => {
       validate: () => [],
     });
 
-    await engine.runModule(module, NODE_ID);
+    await engine.runModule(module, { id: NODE_ID });
 
     expect(store.log).toHaveLength(1);
     const [txn] = store.log;
@@ -102,7 +66,7 @@ describe("T1 — one sealed transaction per action", () => {
       validate: () => [],
     });
 
-    await engine.runModule(module, "two-writes");
+    await engine.runModule(module, { id: "two-writes" });
 
     expect(observedInsideRun).toEqual([{ buildings: 0, log: 0 }]);
     expect(store.data.buildings?.features).toHaveLength(1);
@@ -130,7 +94,7 @@ describe("T2 — undeclared port writes are rejected at the boundary", () => {
       validate: () => [],
     });
 
-    const error = await captureError(engine.runModule(module, MODULE_ID));
+    const error = await captureError(engine.runModule(module, { id: MODULE_ID }));
 
     expect(error).toBeInstanceOf(PortWriteRejected);
     expect(error.moduleId).toBe(MODULE_ID);
@@ -160,7 +124,7 @@ describe("T3 — anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    const error = await captureError(engine.runModule(blind, BLIND_ID));
+    const error = await captureError(engine.runModule(blind, { id: BLIND_ID }));
 
     expect(error).toBeInstanceOf(PortWriteRejected);
     expect(error.port).toBe("buildings");
@@ -184,7 +148,7 @@ describe("T3 — anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    await engine.runModule(editor, "building-editor");
+    await engine.runModule(editor, { id: "building-editor" });
 
     expect(store.data.buildings?.features).toHaveLength(1);
     expect(store.log).toHaveLength(1);
@@ -204,10 +168,65 @@ describe("T3 — anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    await engine.runModule(producer, "transformer-producer");
+    await engine.runModule(producer, { id: "transformer-producer" });
 
     expect(store.data.transformers).toEqual(fc());
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary[0]).toMatchObject({ op: "replace", path: "/transformers", prev: undefined });
+  });
+});
+
+// ── T16 ─────────────────────────────────────────────────────────────────────
+
+describe("T16 — seal granularity is a module declaration", () => {
+  /** Edits two independent fields — the shape `simulation-settings` really has. */
+  function fieldEditor(id: string, seal?: "at-completion" | "per-commit") {
+    return defineModule({
+      id,
+      seal,
+      params: [{ port: "modelName" }, { port: "resolution" }],
+      affect: {},
+      layout: [],
+      run: (ctx) => {
+        ctx.read("modelName");
+        ctx.read("resolution");
+        ctx.commit({ modelName: "renamed" });
+        ctx.commit({ resolution: 15 });
+      },
+      validate: () => [],
+    });
+  }
+
+  it("per-commit seals one atomic transaction per commit", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+    const NODE_ID = "per-commit-editor";
+
+    await engine.runModule(fieldEditor(NODE_ID, "per-commit"), { id: NODE_ID });
+
+    expect(store.log).toHaveLength(2);
+    expect(store.log.map((txn) => txn.primary.length)).toEqual([1, 1]);
+    expect(store.log.every((txn) => txn.nodeId === NODE_ID)).toBe(true);
+
+    // undo granularity follows: one config change, not the whole node
+    store.undo();
+    expect(store.data.resolution).toBe(60);
+    expect(store.data.modelName).toBe("renamed");
+  });
+
+  it("at-completion seals the whole run as one transaction", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+    const NODE_ID = "whole-node-editor";
+
+    await engine.runModule(fieldEditor(NODE_ID), { id: NODE_ID });
+
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(2);
+
+    // one undo takes the whole node back
+    store.undo();
+    expect(store.data.resolution).toBe(60);
+    expect(store.data.modelName).toBe("Contract fixture");
   });
 });
