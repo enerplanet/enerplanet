@@ -1,5 +1,5 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { Info } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { TextInfoIcon } from '@/components/ui/InfoTooltip';
 
 interface ChartInfoTooltipProps {
   title: string;
@@ -8,57 +8,36 @@ interface ChartInfoTooltipProps {
   children?: ReactNode;
 }
 
+/** Info icon on a results chart or tile; the card stays inside the window, above the icon when there is no room below. */
 const ChartInfoTooltip = ({ title, description, items, children }: ChartInfoTooltipProps) => {
-  const [show, setShow] = useState(false);
-  const [alignRight, setAlignRight] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const body = (
+    <div className="space-y-3">
+      <div className="whitespace-pre-line">{description}</div>
 
-  // Open leftwards when a w-72 (288 px) box would run past the window edge.
-  const open = (next: boolean) => {
-    if (next && ref.current) setAlignRight(ref.current.getBoundingClientRect().left + 304 > window.innerWidth);
-    setShow(next);
-  };
-
-  return (
-    <div ref={ref} className="relative inline-flex ml-1 normal-case">
-      <button
-        type="button"
-        onMouseEnter={() => open(true)}
-        onMouseLeave={() => open(false)}
-        onClick={() => open(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={title}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className={`absolute z-[100] top-full ${alignRight ? 'right-0' : 'left-0'} translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4`}>
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</div>
-            <div className="whitespace-pre-line text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{description}</div>
-
-            {items && items.length > 0 && (
-              <div className="space-y-2 text-xs">
-                {items.map((item, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1`} style={{ backgroundColor: item.color }} />
-                    <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
-                      {item.description && (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{item.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      {items && items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: item.color }} />
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
+                {item.description && (
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{item.description}</p>
+                )}
               </div>
-            )}
-
-            {children}
-          </div>
+            </div>
+          ))}
         </div>
       )}
+
+      {children}
     </div>
+  );
+
+  return (
+    <span className="inline-flex ml-1 normal-case">
+      <TextInfoIcon title={title} description={body} position="bottom" />
+    </span>
   );
 };
 

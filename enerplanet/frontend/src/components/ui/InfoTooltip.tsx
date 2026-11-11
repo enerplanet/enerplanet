@@ -25,6 +25,11 @@ const TOOLTIP_GAP_PX = 10;
 const TOOLTIP_MAX_SIZE_CLASS = 'max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] overflow-y-auto';
 // Long enough to move the pointer across the gap from the icon onto the card.
 const CLOSE_DELAY_MS = 150;
+// Hover must rest on the icon this long, so a pointer passing over it on its way elsewhere opens nothing.
+const OPEN_DELAY_MS = 300;
+
+/** Closes the card that is open now; opening another card calls it first, so only one card shows. */
+let closeOpenCard: (() => void) | null = null;
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | typeof FIXED_RIGHT | typeof FIXED_LEFT | typeof FIXED_LEFT_ANCHORED | typeof FIXED_RIGHT_ANCHORED;
 
@@ -70,6 +75,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 	const [floatingStyle, setFloatingStyle] = useState<CSSProperties | null>(null);
 	const [resolvedFloatingPosition, setResolvedFloatingPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
 	const closeTimer = useRef<number | undefined>(undefined);
+	const openTimer = useRef<number | undefined>(undefined);
 	const pointerOnCard = useRef(false);
 	// Pressed inside: the card stays open until Escape or a press outside it.
 	const [pinned, setPinned] = useState(false);
@@ -83,15 +89,28 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		}, CLOSE_DELAY_MS);
 	}, [pinned]);
 
-	useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+	useEffect(() => () => {
+		window.clearTimeout(closeTimer.current);
+		window.clearTimeout(openTimer.current);
+	}, []);
+
+	const close = useCallback(() => {
+		setShowTooltip(false);
+		setPinned(false);
+		pointerOnCard.current = false;
+	}, []);
+
+	useEffect(() => {
+		if (!showTooltip) return;
+		closeOpenCard?.();
+		closeOpenCard = close;
+		return () => {
+			if (closeOpenCard === close) closeOpenCard = null;
+		};
+	}, [showTooltip, close]);
 
 	useEffect(() => {
 		if (!pinned || !showTooltip) return;
-		const close = () => {
-			setShowTooltip(false);
-			setPinned(false);
-			pointerOnCard.current = false;
-		};
 		const swallow = (e: Event) => {
 			e.stopPropagation();
 			e.preventDefault();
@@ -118,7 +137,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 			window.removeEventListener('mouseup', endSelect);
 			endSelect();
 		};
-	}, [pinned, showTooltip]);
+	}, [pinned, showTooltip, close]);
 	
 	const isFixedMode =
 		position === FIXED_RIGHT ||
@@ -166,7 +185,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		let nextPosition: 'top' | 'bottom' | 'left' | 'right' = position as 'top' | 'bottom' | 'left' | 'right';
 		const vw = window.innerWidth;
 		const vh = window.innerHeight;
-		const tooltipWidth = Math.min(TOOLTIP_WIDTH_PX, Math.max(TOOLTIP_WIDTH_PX / 2, vw - (TOOLTIP_MARGIN_PX * 2)));
+		const tooltipWidth = tooltipRect?.width ?? Math.min(TOOLTIP_WIDTH_PX, Math.max(TOOLTIP_WIDTH_PX / 2, vw - (TOOLTIP_MARGIN_PX * 2)));
 		const tooltipHeight = Math.min(
 			tooltipRect?.height ?? TOOLTIP_HEIGHT_ESTIMATE_PX,
 			Math.max(TOOLTIP_HEIGHT_ESTIMATE_PX / 2, vh - (TOOLTIP_MARGIN_PX * 2))
@@ -216,7 +235,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		setFloatingStyle({ top, left });
 	}, [position, isPortalFloating]);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (!isPortalFloating || !showTooltip) return;
 		computeFloatingPosition();
 		const onScrollOrResize = () => computeFloatingPosition();
@@ -283,11 +302,12 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 				tabIndex={0}
 				onMouseEnter={() => {
 					window.clearTimeout(closeTimer.current);
-					setShowTooltip(true);
-					if (isAnchored) computeAnchoredPosition();
-					if (isPortalFloating) computeFloatingPosition();
+					openTimer.current = window.setTimeout(() => setShowTooltip(true), OPEN_DELAY_MS);
 				}}
-				onMouseLeave={scheduleClose}
+				onMouseLeave={() => {
+					window.clearTimeout(openTimer.current);
+					scheduleClose();
+				}}
 				onFocus={() => {
 					setShowTooltip(true);
 					if (isAnchored) computeAnchoredPosition();
