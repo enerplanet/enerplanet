@@ -2302,7 +2302,30 @@
     "tabs": {
       "profile": "Profil",
       "general": "Allgemein",
-      "notifications": "Benachrichtigungen"
+      "notifications": "Benachrichtigungen",
+      "experimental": "Experimentell"
+    },
+    "featureFlags": {
+      "warning": {
+        "title": "In Entwicklung",
+        "description": "Diese Funktionen sind in aktiver Entwicklung und können instabil sein oder sich ohne Ankündigung ändern."
+      },
+      "empty": "Keine Feature-Flags verfügbar.",
+      "sections": {
+        "experimental": {
+          "title": "Experimentelle Funktionen"
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "Modularer, workflow-getriebener Modell-Builder (ersetzt den Configurator)."
+        },
+        "experimentalSettings": {
+          "label": "Experimentell-Tab",
+          "description": "Zeigt den Tab „Experimentell“ in den Einstellungen. Ausschalten blendet ihn aus; /app/settings/experimental schaltet ihn wieder frei."
+        }
+      }
     },
     "language": {
       "title": "Sprache",

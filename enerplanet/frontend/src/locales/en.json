@@ -2302,7 +2302,30 @@
     "tabs": {
       "profile": "Profile",
       "general": "General",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "experimental": "Experimental"
+    },
+    "featureFlags": {
+      "warning": {
+        "title": "In development",
+        "description": "These features are in active development and can be unstable or change without notice."
+      },
+      "empty": "No feature flags available.",
+      "sections": {
+        "experimental": {
+          "title": "Experimental Features"
+        }
+      },
+      "flags": {
+        "modelbuilder": {
+          "label": "Model Builder",
+          "description": "Modular, workflow-driven model builder (replaces the configurator)."
+        },
+        "experimentalSettings": {
+          "label": "Experimental tab",
+          "description": "Shows the Experimental tab in Settings. Turn it off to hide the tab; open /app/settings/experimental to unlock it again."
+        }
+      }
     },
     "language": {
       "title": "Language",
