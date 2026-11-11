@@ -34,6 +34,7 @@ type RegionCacheStore interface {
 	GetAllCachedRegions() ([]models.CachedRegion, error)
 	GetEnabledCachedRegions() ([]models.CachedRegion, error)
 	UpsertRegionsFromAPI(responseBody []byte) error
+	ApplyCoverage(footprints map[string][]json.RawMessage) error
 	DeleteCachedRegion(id uint) error
 	ToggleCachedRegion(id uint, enabled bool) error
 }
@@ -42,10 +43,11 @@ type PylovoHandler struct {
 	baseURL             string
 	regionStore         RegionCacheStore
 	pylovoInstanceStore *pylovoinstance.Store
+	c2t                 *city2tabula.Client
 }
 
-func NewPylovoHandler(baseURL string, regionStore RegionCacheStore, instanceStore *pylovoinstance.Store) *PylovoHandler {
-	return &PylovoHandler{baseURL: baseURL, regionStore: regionStore, pylovoInstanceStore: instanceStore}
+func NewPylovoHandler(baseURL string, regionStore RegionCacheStore, instanceStore *pylovoinstance.Store, c2t *city2tabula.Client) *PylovoHandler {
+	return &PylovoHandler{baseURL: baseURL, regionStore: regionStore, pylovoInstanceStore: instanceStore, c2t: c2t}
 }
 
 // resolveBaseURL returns the base URL of the primary pylovo instance from the DB,
@@ -674,11 +676,7 @@ func (h *PylovoHandler) GetAvailableRegions(c *gin.Context) {
 	httputil.SuccessResponse(c, result)
 
 	if h.regionStore != nil {
-		go func() {
-			if cacheErr := h.regionStore.UpsertRegionsFromAPI(body); cacheErr != nil {
-				logger.Logger.Warnf("Failed to cache regions: %v", cacheErr)
-			}
-		}()
+		go h.cacheRegions(context.Background(), body)
 	}
 }
 
@@ -716,8 +714,24 @@ func (h *PylovoHandler) refreshRegionCache() {
 		return
 	}
 
+	h.cacheRegions(ctx, body)
+}
+
+// cacheRegions stores PyLovo's /boundary/available response and marks the
+// regions that overlap City2TABULA's 3D datasets.
+func (h *PylovoHandler) cacheRegions(ctx context.Context, body []byte) {
 	if err := h.regionStore.UpsertRegionsFromAPI(body); err != nil {
 		logger.Logger.Warnf("Failed to update region cache: %v", err)
+		return
+	}
+
+	footprints, err := h.c2t.DatasetFootprints(ctx)
+	if err != nil {
+		logger.Logger.Warnf("Region cache: 3D footprints unavailable, coverage not applied: %v", err)
+		return
+	}
+	if err := h.regionStore.ApplyCoverage(footprints); err != nil {
+		logger.Logger.Warnf("Failed to apply 3D coverage to region cache: %v", err)
 	}
 }
 

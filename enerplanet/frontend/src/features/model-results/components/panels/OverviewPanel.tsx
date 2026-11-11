@@ -1,353 +1,176 @@
-import { useState, useMemo } from 'react';
-import { CHART_CARD_CLASS } from '../ui/PanelStates';
-import {
-  Activity,
-  BarChart3,
-  Network,
-  PieChart,
-  Info,
-} from 'lucide-react';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { EnergyFlowSankey } from '@/features/simulation-charts/common';
-import {
-  TechnologyCapacityBar,
-  CostAnalysisChart,
-  PerformanceGauges,
-} from '@/features/simulation-charts/model-results';
-import {
-  transformToCapacityData,
-  transformToCostBreakdown,
-  transformToEnergyFlow,
-} from '@/features/configurator/utils/transformUtils';
+import { Sun } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
+import { formatNumber } from '@/utils/formatNumber';
+import { PanelLoadingState, CHART_CARD_CLASS } from '../ui/PanelStates';
+import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import EnergySummary from './EnergySummary';
+import ThermalSummary from './ThermalSummary';
+import { formatCarrierEnergy, HEATING_COOLING } from '../../carrierUnits';
+import { useSystemFlows } from '../../hooks/useSystemFlows';
+import { flowLabel, installedCapacities, type CarrierResult } from '../../buildingFlows';
+import { getTechColor } from '@/constants/tech-colors';
+import { useIsDarkMode } from '@/features/simulation-charts/pypsa/chartUtils';
+import type { EnergyCapRecord } from '../../types';
 
+type Translate = ReturnType<typeof useTranslation>['t'];
+type InstalledRow = ReturnType<typeof installedCapacities>[number];
 
-const SystemPerformanceTooltip = () => {
-  const { t } = useTranslation();
-  const [show, setShow] = useState(false);
+/** Energy one technology moved over the run on one side, summed over carriers and buildings. */
+function flowTotal(results: CarrierResult[], key: string, side: 'supply' | 'use'): number {
+  return results.flatMap((r) => r.flows).filter((f) => f.key === key && f.side === side).reduce((sum, f) => sum + f.totalKwh, 0);
+}
 
+/** One installed-capacity card: the capacity, then the same two rows for every technology. */
+interface CapacitySpec {
+  main: string;
+  caption: string;
+  energyLabel: string;
+  energy: string;
+  useLabel: string;
+  use: string;
+  info: string;
+}
+
+/**
+ * Capacity unit, caption and energy row label by technology. Conversion capacities are on
+ * the output side, as Calliope sizes them: heat for heat pumps and boilers, cooling for air conditioners.
+ */
+function outputKind(family: string, t: Translate) {
+  if (family.includes('pv')) return { unit: 'kWp', caption: t('results.overview.peakPower', 'peak power'), energyLabel: t('results.overview.generated', 'Generated') };
+  if (/heat_pump|boiler/.test(family)) return { unit: 'kW', caption: t('results.overview.heatOutput', 'heat output'), energyLabel: t('results.overview.delivered', 'Delivered') };
+  if (family.includes('air_conditioner')) return { unit: 'kW', caption: t('results.overview.coolingOutput', 'cooling output'), energyLabel: t('results.overview.delivered', 'Delivered') };
+  return { unit: 'kW', caption: t('results.overview.ratedPower', 'rated power'), energyLabel: t('results.overview.generated', 'Generated') };
+}
+
+/** Converters and generators: energy given out, and full-load hours, that energy over the capacity. */
+function capacitySpec(r: InstalledRow, results: CarrierResult[], t: Translate): CapacitySpec {
+  if (r.kwh > 0) return batterySpec(r, results, t);
+  const { unit, caption, energyLabel } = outputKind(r.family, t);
+  const main = `${formatNumber(r.kw, 1)} ${unit}`;
+  const delivered = flowTotal(results, r.family, 'supply');
+  const values = { label: energyLabel, energy: formatCarrierEnergy(delivered, 'power', 1), capacity: main, hours: formatNumber(delivered / r.kw, 0) };
+  return {
+    main, caption, energyLabel, energy: values.energy,
+    useLabel: t('results.overview.fullLoadHours', 'Full-load hours'),
+    use: `${values.hours} h`,
+    info: t('results.overview.fullLoadInfo', 'Values cover the run period, summed over all buildings.\n{{label}}: energy this equipment gave out over the run, {{energy}}.\nFull-load hours = {{label}} ÷ capacity = {{energy}} ÷ {{capacity}} = {{hours}} h.', values),
+  };
+}
+
+/** Batteries: energy discharged, and equivalent full cycles, energy charged over the energy capacity. */
+function batterySpec(r: InstalledRow, results: CarrierResult[], t: Translate): CapacitySpec {
+  const main = `${formatNumber(r.kwh, 1)} kWh`;
+  const charged = flowTotal(results, 'batteryIn', 'use');
+  const discharged = flowTotal(results, 'batteryOut', 'supply');
+  const values = {
+    capacity: main,
+    charged: formatCarrierEnergy(charged, 'power', 1),
+    discharged: formatCarrierEnergy(discharged, 'power', 1),
+    cycles: formatNumber(charged / r.kwh, 0),
+    roundTrip: charged > 0 ? `${formatNumber(discharged / charged * 100, 0)}%` : '-',
+  };
+  return {
+    main,
+    caption: t('results.overview.batteryPower', 'up to {{power}}', { power: `${formatNumber(r.kw, 1)} kW` }),
+    energyLabel: t('results.overview.discharged', 'Discharged'),
+    energy: values.discharged,
+    useLabel: t('results.overview.fullCycles', 'Full cycles'),
+    use: values.cycles,
+    info: t('results.overview.batteryInfo', 'Values cover the run period, summed over all buildings.\nDischarged: electricity the batteries gave out over the run, {{discharged}}.\nEnergy cycled: electricity charged into the batteries over the run, {{charged}}.\nFull cycles = energy charged ÷ energy capacity = {{charged}} ÷ {{capacity}} = {{cycles}}.\nRound trip efficiency = energy discharged ÷ energy charged = {{roundTrip}}.', values),
+  };
+}
+
+/** Label and value on one line of a capacity card. */
+function SpecRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="relative inline-block ml-1">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={t('results.charts.systemPerformance')}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className="absolute z-[100] top-full left-0 translate-y-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('results.charts.systemPerformance')}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              {t('results.charts.systemPerformanceDesc')}
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.metrics.selfSufficiency')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.selfSufficiencyDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.gridDependency')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.gridDependencyDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.capacityUtilization')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.capacityUtilizationDesc')}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="flex items-baseline justify-between gap-2 py-1">
+      <dt className="truncate text-muted-foreground">{label}</dt>
+      <dd className="whitespace-nowrap tabular-nums text-foreground">{value}</dd>
     </div>
   );
-};
+}
 
-
-const TechnologyCapacityTooltip = () => {
+/**
+ * Installed capacities of the run, one spec card per technology: as configured in
+ * operate mode, as chosen by the optimiser in plan mode.
+ */
+function InstalledCard({ energyCap, mode, results }: { energyCap: EnergyCapRecord[]; mode?: 'plan' | 'operate'; results: CarrierResult[] }) {
   const { t } = useTranslation();
-  const [show, setShow] = useState(false);
-
+  const dark = useIsDarkMode();
+  const rows = installedCapacities(energyCap);
+  const buildings = (n: number) => n === 1 ? t('results.overview.oneBuilding', '1 building') : t('results.overview.buildingCount', '{{count}} buildings', { count: n });
   return (
-    <div className="relative inline-block ml-1">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={t('results.charts.technologyCapacity')}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className="absolute z-[100] top-full left-0 translate-y-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('results.charts.technologyCapacity')}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mt-1">
-                {t('results.charts.technologyCapacityDesc', 'Overview of the energy system size and its utilization efficiency.')}
+    <div className={CHART_CARD_CLASS}>
+      <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+        <Sun className="h-4 w-4 text-primary" />
+        {t('results.overview.installed', 'Installed capacities')}
+        <span className="text-xs font-normal text-muted-foreground">{t('results.overview.totalsAcrossBuildings', 'totals across buildings')}</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+          {mode === 'operate' ? t('results.overview.configured', 'Configured') : t('results.overview.optimised', 'Optimised')}
+        </span>
+      </h3>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2">
+        {rows.map((r) => {
+          const spec = capacitySpec(r, results, t);
+          const name = flowLabel(r.family, 'power', t);
+          return (
+            <div key={r.family} className="flex min-w-0 flex-col rounded-lg border border-border/60 px-3 py-2">
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: getTechColor(r.family, 0, dark) }} />
+                <span className="truncate text-muted-foreground">{name}</span>
+                <ChartInfoTooltip title={name} description={spec.info} />
               </div>
+              <div className="mt-1 whitespace-nowrap text-base font-semibold tabular-nums text-foreground">{spec.main}</div>
+              <div className="mb-2 text-xs text-muted-foreground">{spec.caption} · {buildings(r.units)}</div>
+              <dl className="mt-auto divide-y divide-border/60 border-t border-border/60 text-xs">
+                <SpecRow label={spec.energyLabel} value={spec.energy} />
+                <SpecRow label={spec.useLabel} value={spec.use} />
+              </dl>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-start gap-2.5">
-                <div className="w-3 h-3 rounded-[3px] bg-gray-400 dark:bg-gray-500 flex-shrink-0 mt-0.5"></div>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.installedCapacity', 'Installed Capacity (Bars)')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-                    {t('results.charts.installedCapacityDesc', 'The maximum potential power output of the hardware, measured in kW or MW. Represented by the height of the bars on the left axis.')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-3 border-t-2 border-dashed border-[#8b5cf6] mt-1.5 flex-shrink-0"></div>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.capacityFactor', 'Capacity Factor')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-                    {t('results.charts.capacityFactorTooltipDesc', 'The percentage of the installed capacity that is actually utilized on average over the year. For example, a 15% capacity factor means the technology produced 15% of its theoretical maximum potential output. Represented by the purple line on the right axis.')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
+      {rows.length === 0 && <p className="text-xs text-muted-foreground">{t('results.overview.nothingInstalled', 'No equipment installed.')}</p>}
     </div>
   );
-};
-
-
-const CostDistributionTooltip = () => {
-  const { t } = useTranslation();
-  const [show, setShow] = useState(false);
-
-  return (
-    <div className="relative inline-block ml-1">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={t('results.charts.costDistribution')}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className="absolute z-[100] top-full left-0 translate-y-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('results.charts.costDistribution')}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              {t('results.charts.costDistributionDesc')}
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.capitalCosts')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.capitalCostsDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.lcoe')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.lcoeDesc')}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-const EnergyFlowTooltip = () => {
-  const { t } = useTranslation();
-  const [show, setShow] = useState(false);
-
-  return (
-    <div className="relative inline-block ml-1">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onClick={() => setShow(!show)}
-        className="cursor-pointer bg-transparent border-0 p-0 inline-flex"
-        aria-label={t('results.charts.energyFlow')}
-      >
-        <Info className="w-4 h-4 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-200" />
-      </button>
-
-      {show && (
-        <div className="absolute z-[100] bottom-full left-0 -translate-y-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4">
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('results.charts.energyFlowAggregated')}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              {t('results.charts.energyFlowDesc')}
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.sources')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.sourcesDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.energySystem')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.energySystemDesc')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-1"></span>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('results.charts.demand')}</span>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('results.charts.demandDesc')}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
-              {t('results.charts.energyFlowNote')}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface SummaryData {
-  self_sufficiency_rate: number;
-  grid_dependency_rate: number;
-  total_cost_eur: number;
-  /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
-  lcoe_eur_mwh: number;
 }
 
 interface OverviewPanelProps {
-  summary: SummaryData | null;
-  capacityData: ReturnType<typeof transformToCapacityData>;
-  costBreakdown: ReturnType<typeof transformToCostBreakdown>;
-  energyFlow: ReturnType<typeof transformToEnergyFlow>;
-  avgCapacityFactor: number;
-  simulationPeriod?: {
-    from_date: string;
-    to_date: string;
-  } | null;
+  modelId: number | null;
+  carriers: string[];
+  /** Carrier picked in the results toggle; '' is electricity. */
+  carrier: string;
+  gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
+  energyCap: EnergyCapRecord[];
+  mode?: 'plan' | 'operate';
+  /** First and last day of the run, as ISO dates. */
+  period?: { from: string; to: string };
+  /** Cost the optimiser minimised over the run; shown for plan-mode runs. */
+  objective?: number;
 }
 
-const OverviewPanel = ({ summary, capacityData, costBreakdown, energyFlow, avgCapacityFactor, simulationPeriod }: OverviewPanelProps) => {
+/** The selected carrier over the run and what is installed, stacked full width. */
+const OverviewPanel = ({ modelId, carriers, carrier, gridPrices, energyCap, mode, period, objective }: OverviewPanelProps) => {
   const { t } = useTranslation();
+  const { results, loading } = useSystemFlows(modelId, carriers);
+  const summary = results.find((r) => r.carrier === (carrier || 'power'));
+  const power = results.find((r) => r.carrier === 'power');
+  const heatPumpElectricity = power?.flows.filter((f) => f.side === 'use' && f.key.includes('heat_pump')).reduce((sum, f) => sum + f.totalKwh, 0);
 
-  const periodInfo = useMemo(() => {
-    const hoursInYear = 8760;
-    const fromDateObj = simulationPeriod?.from_date ? new Date(simulationPeriod.from_date) : null;
-    const toDateObj = simulationPeriod?.to_date ? new Date(simulationPeriod.to_date) : null;
-    let timesteps = hoursInYear;
-    if (fromDateObj && toDateObj && !isNaN(fromDateObj.getTime()) && !isNaN(toDateObj.getTime())) {
-      const diffMs = toDateObj.getTime() - fromDateObj.getTime();
-      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
-    }
-    const days = Math.round((timesteps / 24) * 10) / 10;
-    const isPartialYear = timesteps < hoursInYear * 0.95;
-    return { days, isPartialYear };
-  }, [simulationPeriod]);
+  if (loading) {
+    return <PanelLoadingState label={t('results.energy.loadingTimeSeries', 'Loading energy time series...')} />;
+  }
 
   return (
-    <div className="md-stagger p-4 space-y-4">
-      {/* Performance Gauges */}
-      {summary && (
-        <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" />
-            {t('results.charts.systemPerformance')}
-            <SystemPerformanceTooltip />
-          </h3>
-          <PerformanceGauges
-            selfConsumption={summary.self_sufficiency_rate}
-            gridDependency={summary.grid_dependency_rate}
-            capacityUtilization={avgCapacityFactor}
-            co2Reduction={Math.min(100, summary.self_sufficiency_rate * 100)}
-            height={150}
-          />
-        </div>
-      )}
+    <div className="md-stagger space-y-4 p-4">
+      {carrier === HEATING_COOLING
+        ? <ThermalSummary results={results} />
+        : summary && <EnergySummary flows={summary.flows} carrier={summary.carrier} hours={summary.timesteps.length} period={period} gridPrices={gridPrices}
+          objective={mode === 'operate' ? undefined : objective}
+          heatPumpElectricityKwh={heatPumpElectricity} />}
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {capacityData.length > 0 && (
-          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              {t('results.charts.technologyCapacity')}
-              <TechnologyCapacityTooltip />
-            </h3>
-            <ErrorBoundary label="Technology Capacity">
-              <TechnologyCapacityBar data={capacityData} height={320} />
-            </ErrorBoundary>
-          </div>
-        )}
+      <InstalledCard energyCap={energyCap} mode={mode} results={results} />
 
-        {costBreakdown.length > 0 && (
-          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-primary" />
-              {t('results.charts.costDistribution')}
-              <CostDistributionTooltip />
-            </h3>
-            <ErrorBoundary label="Cost Analysis">
-              <CostAnalysisChart
-                data={costBreakdown}
-                totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_mwh}
-                height={320}
-                isPartialYear={periodInfo.isPartialYear}
-                simulationDays={periodInfo.days}
-              />
-            </ErrorBoundary>
-          </div>
-        )}
-      </div>
-
-      {/* Energy Flow */}
-      {energyFlow.nodes.length > 2 && energyFlow.links.length > 0 && (
-        <div className={CHART_CARD_CLASS}>
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Network className="w-4 h-4 text-primary" />
-            {t('results.charts.energyFlow')}
-            <EnergyFlowTooltip />
-          </h3>
-          <ErrorBoundary label="Energy Flow">
-            <EnergyFlowSankey data={energyFlow} height={280} title="" />
-          </ErrorBoundary>
-        </div>
-      )}
     </div>
   );
 };

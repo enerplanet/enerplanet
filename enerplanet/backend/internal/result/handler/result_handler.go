@@ -211,45 +211,6 @@ func (h *ResultHandler) GetCarrierTimeSeries(c *gin.Context) {
 	httputil.SuccessResponse(c, response)
 }
 
-// GetSystemTimeSeries returns system-level data pre-aggregated to reduce payload:
-// - system_balance: daily average (same SystemBalanceRecord shape)
-// - unmet_demand: daily sum (same UnmetDemandRecord shape)
-// - resource_con: total per tech (same ResourceConRecord shape)
-// - line_flows / trafo_flows: raw rows (already small per model)
-func (h *ResultHandler) GetSystemTimeSeries(c *gin.Context) {
-	userCtx, ok := httputil.GetUserContext(c)
-	if !ok {
-		return
-	}
-
-	modelID := c.Param("id")
-
-	model, ok := h.fetchModelByID(c, modelID)
-	if !ok {
-		return
-	}
-
-	if !h.userHasModelAccess(c, model, userCtx) {
-		return
-	}
-
-	modelIDUint := parseUint(modelID)
-
-	response := gin.H{}
-	response["system_balance"] = h.store.GetDailySystemBalance(modelIDUint)
-	response["unmet_demand"] = h.store.GetDailyUnmetDemand(modelIDUint)
-	response["resource_con"] = h.store.GetResourceConTotals(modelIDUint)
-
-	if lineFlows, err := h.store.GetLineFlows(modelIDUint); err == nil {
-		response["line_flows"] = lineFlows
-	}
-	if trafoFlows, err := h.store.GetTransformerFlows(modelIDUint); err == nil {
-		response["trafo_flows"] = trafoFlows
-	}
-
-	httputil.SuccessResponse(c, response)
-}
-
 // GetLocationTimeSeries returns hourly energy data (production/consumption) for a specific location
 func (h *ResultHandler) GetLocationTimeSeries(c *gin.Context) {
 	userCtx, ok := httputil.GetUserContext(c)
@@ -298,6 +259,12 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	modelIDUint := parseUint(modelID)
 
+	// Resolve the PyPSA leg's own bundle directory up front: the section
+	// readers below (convergence, transformer loading, line ratings) read its
+	// files from disk, and the pypsa leg records its own extract dir on its run
+	// row — never the Calliope model_results bundle.
+	extractDir := h.pypsaExtractedPath(modelIDUint)
+
 	// Declare what this result actually contains before returning any data: the
 	// UI hides the sections a source cannot provide (and must not render an
 	// empty state that reads as a clean bill of health). The mapping lives in
@@ -336,7 +303,6 @@ func (h *ResultHandler) GetPyPSAResults(c *gin.Context) {
 
 	response["locations"] = h.store.GetPyPSALocations(modelIDUint)
 
-	extractDir := h.latestExtractedPath(modelIDUint)
 	if extractDir != "" {
 		if convergence, err := readPyPSAConvergenceSummary(extractDir); err == nil && convergence != nil {
 			response["convergence"] = convergence

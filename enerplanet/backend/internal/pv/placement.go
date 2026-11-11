@@ -22,6 +22,8 @@ type Array struct {
 	AreaSqm     float64  `json:"area"`
 	UsableShare float64  `json:"usable_share"`
 	CapacityKW  *float64 `json:"capacity_kw,omitempty"`
+	// ProductID names the building's copy of the product on this array; empty uses the building's product.
+	ProductID string `json:"product_id,omitempty"`
 }
 
 // MaxCapacityKW is the capacity of modules on the usable area.

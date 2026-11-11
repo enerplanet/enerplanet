@@ -1,6 +1,8 @@
-import React from "react";
-import { LucideIcon } from "lucide-react";
-import { Button, Tooltip, TooltipTrigger, TooltipContent } from "@spatialhub/ui";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import { Loader2, LucideIcon, MoreHorizontal } from "lucide-react";
+import { Button, Tooltip, TooltipTrigger, TooltipContent, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@spatialhub/ui";
+import { useTranslation } from "@spatialhub/i18n";
 import { cn } from "@/lib/utils";
 
 type ActionVariant = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info' | 'purple';
@@ -14,6 +16,10 @@ export interface ActionConfig {
 	onClick: () => void;
 	show?: boolean;
 	disabled?: boolean;
+	/** Swap the icon for a spinner and block clicks: the action is in flight. */
+	loading?: boolean;
+	/** List the action in the "more actions" menu instead of as an icon. */
+	menu?: boolean;
 	className?: string;
 }
 
@@ -47,9 +53,68 @@ const ICON_SIZES: Record<ActionSize, string> = {
 	large: "h-[22px] w-[22px]",
 };
 
+/** The "more actions" button and the menu of the actions it holds. */
+const MoreActionsMenu: React.FC<{ actions: ActionConfig[]; size: ActionSize }> = ({ actions, size }) => {
+	const { t } = useTranslation();
+	const label = t("common.modelActions.moreActions");
+	const [open, setOpen] = useState(false);
+	return (
+		<DropdownMenu onOpenChange={setOpen}>
+			{/* Dims the page while the menu is open, as the rail menus do (AppLayout). Portalled to
+			    the body so an animated table row cannot become its containing block. */}
+			{open &&
+				createPortal(
+					<div
+						aria-hidden="true"
+						className="pointer-events-none fixed inset-0 z-[51] bg-black/20 animate-in fade-in duration-200 motion-reduce:animate-none dark:bg-black/40"
+					/>,
+					document.body
+				)}
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<DropdownMenuTrigger asChild>
+						{/* A plain button: the menu anchors to the trigger's ref, which the UI library's Button drops. */}
+						<button
+							type="button"
+							aria-label={label}
+							onClick={(e) => e.stopPropagation()}
+							className={cn("inline-flex items-center justify-center rounded-md", SIZE_STYLES[size], VARIANT_STYLES.secondary, "transition-colors duration-200")}
+						>
+							<MoreHorizontal className={ICON_SIZES[size]} />
+						</button>
+					</DropdownMenuTrigger>
+				</TooltipTrigger>
+				<TooltipContent>
+					<p>{label}</p>
+				</TooltipContent>
+			</Tooltip>
+			<DropdownMenuContent align="end" className="z-[52] max-w-72 rounded-xl border-border bg-card shadow-xl">
+				{actions.map((action) => {
+					const Icon = action.icon;
+					return (
+						<DropdownMenuItem
+							key={action.key}
+							disabled={action.disabled || action.loading}
+							onClick={(e) => {
+								e.stopPropagation();
+								action.onClick();
+							}}
+							className={cn("cursor-pointer", action.variant === "danger" && "text-red-700 focus:text-red-700 dark:text-red-400")}
+						>
+							<Icon className="h-4 w-4" />
+							{action.tooltip}
+						</DropdownMenuItem>
+					);
+				})}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+};
+
 const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "horizontal", size = "small", className = "" }) => {
-	// Filter actions that should be shown
 	const visibleActions = actions.filter((action) => action.show !== false);
+	const inlineActions = visibleActions.filter((action) => !action.menu);
+	const menuActions = visibleActions.filter((action) => action.menu);
 
 	if (visibleActions.length === 0) {
 		return null;
@@ -59,16 +124,18 @@ const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "
 
 	return (
 		<div className={containerClasses}>
-			{visibleActions.map((action) => {
+			{inlineActions.map((action) => {
 				const variant = action.variant || "default";
 				const Icon = action.icon;
-				
+				const busy = action.loading === true;
+
 				const button = (
 					<Button
 						variant="ghost"
 						size="icon"
 						aria-label={action.tooltip}
-						disabled={action.disabled}
+						aria-busy={busy || undefined}
+						disabled={action.disabled || busy}
 						onClick={(e) => {
 							e.stopPropagation();
 							action.onClick();
@@ -77,11 +144,13 @@ const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "
 							SIZE_STYLES[size],
 							VARIANT_STYLES[variant],
 							"transition-colors duration-200",
-							action.disabled && "opacity-50 cursor-not-allowed",
+							(action.disabled || busy) && "opacity-50 cursor-not-allowed",
 							action.className
 						)}
 					>
-						<Icon className={ICON_SIZES[size]} />
+						{busy
+							? <Loader2 className={cn(ICON_SIZES[size], "animate-spin")} />
+							: <Icon className={ICON_SIZES[size]} />}
 					</Button>
 				);
 				
@@ -99,6 +168,7 @@ const ModelActionGroup: React.FC<ModelActionGroupProps> = ({ actions, layout = "
 					</Tooltip>
 				);
 			})}
+			{menuActions.length > 0 && <MoreActionsMenu actions={menuActions} size={size} />}
 		</div>
 	);
 };

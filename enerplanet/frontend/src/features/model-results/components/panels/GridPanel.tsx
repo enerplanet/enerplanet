@@ -29,7 +29,7 @@ const BusDetailsTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -76,7 +76,7 @@ const VoltageProfileTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}
@@ -125,7 +125,7 @@ const PowerFlowTooltip = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative inline-block ml-1">
+    <div className="relative inline-flex ml-1">
       <button
         type="button"
         onMouseEnter={() => setShow(true)}

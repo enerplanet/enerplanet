@@ -10,4 +10,17 @@ initI18n({ storageKey: "enerplanet_language" });
 
 installChunkLoadRecovery();
 
+const htmlElement = document.documentElement;
+htmlElement.setAttribute("translate", "no");
+htmlElement.classList.add("notranslate");
+
+let metaTag = document.querySelector('meta[name="google"]');
+if (!metaTag) {
+  metaTag = document.createElement("meta");
+  metaTag.setAttribute("name", "google");
+  document.head.appendChild(metaTag);
+}
+
+metaTag.setAttribute("content", "notranslate");
+
 createRoot(document.getElementById("root")!).render(<App />);

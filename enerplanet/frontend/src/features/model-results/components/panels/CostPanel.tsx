@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { TrendingUp, Layers, Gauge, PieChart, Clock, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { TrendingUp, Layers, Gauge, PieChart, Clock, PlugZap } from 'lucide-react';
 import { PanelEmptyState, CHART_CARD_CLASS } from '../ui/PanelStates';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
@@ -10,9 +10,12 @@ import {
 } from '@/features/simulation-charts/model-results';
 import { useTranslation } from '@spatialhub/i18n';
 import type { StructuredModelResults } from '@/features/model-results/types';
-import { transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { feedInIncome, netCost, transformStructuredCostBreakdown } from '@/features/configurator/utils/costUtils';
+import { getTechGroup } from '@/features/configurator/utils/transformUtils';
 import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import { ViewTabs, type ChartView } from '../ui/ViewTabs';
 import { energyKwhFromCost } from '../../lcoeUnits';
+import { splitGridPurchase } from '../../costSplit';
 
 
 const COST_TECH_I18N_KEYS: Record<string, string> = {
@@ -25,25 +28,15 @@ const COST_TECH_I18N_KEYS: Record<string, string> = {
   battery_storage: 'results.techNames.batteryStorage',
   geothermal_supply: 'results.techNames.geothermal',
   transformer_supply: 'results.techNames.gridElectricity',
+  grid_trafo_import: 'results.techNames.gridElectricity',
   power_transmission: 'results.techNames.powerLines',
   water_supply: 'results.techNames.hydroPower',
   households_supply: 'results.techNames.householdSupply',
   non_households_supply: 'results.techNames.nonHouseholdSupply',
 };
 
-/**
- * Normalize tech key: strip location suffixes like "power_transmission:Trafo_300" → "power_transmission"
- */
-function normalizeTechKey(tech: string): string {
-  const colonIdx = tech.indexOf(':');
-  if (colonIdx > 0) {
-    return tech.substring(0, colonIdx);
-  }
-  return tech;
-}
-
 function getTechLabel(tech: string, t: (key: string) => string): string {
-  const normalized = normalizeTechKey(tech);
+  const normalized = getTechGroup(tech);
   const i18nKey = COST_TECH_I18N_KEYS[normalized];
   return i18nKey
     ? t(i18nKey)
@@ -62,10 +55,16 @@ interface CostPanelProps {
     to_date: string;
     timestep_count: number;
   } | null;
+  /** Run mode; LCOE is shown for plan runs only. */
+  mode?: 'plan' | 'operate';
 }
 
-const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelProps) => {
+type CostView = 'distribution' | 'summary' | 'lcoe' | 'investment';
+
+const CostPanel = ({ structuredResults, summary, simulationPeriod, mode }: CostPanelProps) => {
   const { t } = useTranslation();
+  const [view, setView] = useState<CostView>('distribution');
+  const plan = mode !== 'operate';
 
   // Calculate simulation period details — always derived from model from_date / to_date
   const periodInfo = useMemo(() => {
@@ -75,8 +74,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
     let timesteps = hoursInYear;
     if (fromDateObj && toDateObj && !isNaN(fromDateObj.getTime()) && !isNaN(toDateObj.getTime())) {
+      // to_date is the run's last day at midnight, and the run includes that day.
       const diffMs = toDateObj.getTime() - fromDateObj.getTime();
-      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+      timesteps = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)) + 24);
     }
 
     const days = Math.round((timesteps / 24) * 10) / 10;
@@ -100,7 +100,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     if (!structuredResults?.model_levelised_cost?.length) return [];
     const byTech: Record<string, { sum: number; count: number }> = {};
     structuredResults.model_levelised_cost.forEach(r => {
-      const tech = normalizeTechKey(r.techs);
+      const tech = getTechGroup(r.techs);
       if (LCOE_EXCLUDED_TECHS.has(tech)) return;
       if (!byTech[tech]) byTech[tech] = { sum: 0, count: 0 };
       byTech[tech].sum += r.value;
@@ -111,11 +111,11 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     const costByTech: Record<string, number> = {};
     const investByTech: Record<string, number> = {};
     structuredResults.cost?.forEach((c: any) => {
-      const tech = normalizeTechKey(c.techs || '');
+      const tech = getTechGroup(c.techs || '');
       costByTech[tech] = (costByTech[tech] || 0) + Math.abs(c.value);
     });
     structuredResults.cost_investment?.forEach((c: any) => {
-      const tech = normalizeTechKey(c.techs || '');
+      const tech = getTechGroup(c.techs || '');
       investByTech[tech] = (investByTech[tech] || 0) + Math.abs(c.value);
     });
 
@@ -155,15 +155,15 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
     const investByTech: Record<string, number> = {};
 
     structuredResults.cost.forEach(c => {
-      const tech = normalizeTechKey(c.techs);
-      totalByTech[tech] = (totalByTech[tech] || 0) + Math.abs(c.value);
+      const tech = getTechGroup(c.techs);
+      totalByTech[tech] = (totalByTech[tech] || 0) + c.value;
     });
     structuredResults.cost_investment?.forEach(c => {
-      const tech = normalizeTechKey(c.techs);
+      const tech = getTechGroup(c.techs);
       investByTech[tech] = (investByTech[tech] || 0) + Math.abs(c.value);
     });
 
-    return Object.entries(totalByTech)
+    const rows = Object.entries(totalByTech)
       .filter(([_, total]) => total > 0.01)
       .map(([tech, total]) => ({
         tech,
@@ -171,14 +171,14 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
         investment: investByTech[tech] || 0,
         variable: Math.max(0, total - (investByTech[tech] || 0)),
       }));
-  }, [structuredResults?.cost, structuredResults?.cost_investment, t]);
+    return splitGridPurchase(rows, structuredResults.con_aggregates, t);
+  }, [structuredResults?.cost, structuredResults?.cost_investment, structuredResults?.con_aggregates, t]);
 
   // System cost summary
   const systemCostSummary = useMemo(() => {
     if (!structuredResults?.cost?.length) return null;
-    let totalCost = 0;
+    const totalCost = netCost(structuredResults.cost);
     let investmentCost = 0;
-    structuredResults.cost.forEach(c => { totalCost += Math.abs(c.value); });
     structuredResults.cost_investment?.forEach(c => { investmentCost += Math.abs(c.value); });
     return {
       totalCost,
@@ -190,57 +190,57 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
 
   const hasData = costBreakdown.length > 0 || lcoeData.length > 0 || investmentData.length > 0;
 
+  const icon = 'h-4 w-4 text-primary';
+  const views: ChartView<CostView>[] = [
+    ...(costBreakdown.length > 0 ? [{ id: 'distribution' as const, icon: <PieChart className={icon} />, name: t('results.charts.costDistribution'), kind: t('results.costInfo.distributionKind', 'Donut chart, cost by technology') }] : []),
+    ...(systemCostSummary && systemCostSummary.totalCost > 0 ? [{ id: 'summary' as const, icon: <Gauge className={icon} />, name: t('results.charts.systemCostSummary'), kind: t('results.costInfo.summaryKind', 'Donut chart, investment and operating') }] : []),
+    ...(plan && lcoeData.length > 0 ? [{ id: 'lcoe' as const, icon: <TrendingUp className={icon} />, name: t('results.charts.lcoeComparison'), kind: t('results.costInfo.lcoeKind', 'Bar chart, cost per MWh by technology') }] : []),
+    ...(investmentData.length > 0 ? [{ id: 'investment' as const, icon: <Layers className={icon} />, name: t('results.charts.investmentVsOperating'), kind: t('results.costInfo.investmentKind', 'Stacked bars, cost by technology') }] : []),
+  ];
+  const active = views.some((v) => v.id === view) ? view : views[0]?.id;
+
+
   if (!hasData) {
     return <PanelEmptyState icon={PieChart} title={t('results.chartLabels.noCostData')} />;
   }
 
   return (
     <div className="md-stagger p-4 space-y-4">
-      {/* Simulation period info banner */}
       {periodInfo.isPartialYear && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex items-start gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-          <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
-            <p className="font-medium flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              {t('results.chartLabels.simulationPeriod')}: {periodInfo.days} {t('results.chartLabels.days')} ({periodInfo.timesteps} {t('results.chartLabels.hours')})
-              {periodInfo.fromDate && periodInfo.toDate && (
-                <span className="text-amber-600 dark:text-amber-400 font-normal">
-                  ({periodInfo.fromDate} — {periodInfo.toDate})
-                </span>
-              )}
-            </p>
-            <p>{t('results.costInfo.simulationPeriodNote', { days: periodInfo.days.toString(), hours: periodInfo.timesteps.toString() })}</p>
-          </div>
-        </div>
+        <p className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          {periodInfo.fromDate && periodInfo.toDate
+            ? t('results.costInfo.partialYearRange', 'Costs cover {{days}} days ({{from}} to {{to}}), not a full year.', { days: periodInfo.days, from: periodInfo.fromDate, to: periodInfo.toDate })
+            : t('results.costInfo.partialYear', 'Costs cover {{days}} days, not a full year.', { days: periodInfo.days })}
+        </p>
       )}
 
-      {/* Top row: Cost Distribution + System Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {costBreakdown.length > 0 && (
-          <div className={`lg:col-span-2 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-primary" />
-              {t('results.charts.costDistribution')}
-              {periodInfo.isPartialYear && (
-                <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
-                  {t('results.costInfo.simulationPeriodShort', { days: periodInfo.days.toString() })}
-                </span>
-              )}
+      {structuredResults?.grid_prices && (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <PlugZap className="w-3.5 h-3.5" />
+          {t('gridPrices.usedInRun', {
+            import: structuredResults.grid_prices.import_ct_per_kwh,
+            export: structuredResults.grid_prices.export_ct_per_kwh,
+          })}
+        </p>
+      )}
+
+      <div className={CHART_CARD_CLASS}>
+        <ViewTabs views={views} value={active} onChange={setView} />
+        {active === 'distribution' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.costDistribution')}
                 description={t('results.costInfo.costBreakdownTooltip')}
-                items={[
-                  { color: '#6b7280', label: t('results.chartLabels.opex'), description: t('results.costInfo.runningCostDesc') },
-                  { color: '#f59e0b', label: t('results.chartLabels.capex'), description: t('results.costInfo.equipmentCostDesc') },
-                ]}
               />
             </h3>
             <ErrorBoundary label="Cost Analysis">
               <CostAnalysisChart
                 data={costBreakdown}
                 totalCost={summary?.total_cost_eur}
-                lcoe={summary?.lcoe_eur_mwh}
+                lcoe={plan ? summary?.lcoe_eur_mwh : undefined}
+                income={structuredResults ? feedInIncome(structuredResults) : undefined}
                 height={320}
                 isPartialYear={periodInfo.isPartialYear}
                 simulationDays={periodInfo.days}
@@ -249,11 +249,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
           </div>
         )}
 
-        {systemCostSummary && systemCostSummary.totalCost > 0 && (
-          <div className={`lg:col-span-1 ${CHART_CARD_CLASS}`}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Gauge className="w-4 h-4 text-primary" />
-              {t('results.charts.systemCostSummary')}
+        {active === 'summary' && systemCostSummary && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.systemCostSummary')}
                 description={t('results.costInfo.systemCostSummaryDesc')}
@@ -265,7 +263,7 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
             </h3>
             <ErrorBoundary label="System Cost Summary">
               <SystemCostSummaryChart
-                systemLCOE={systemLCOE}
+                systemLCOE={plan ? systemLCOE : undefined}
                 totalCost={systemCostSummary.totalCost}
                 investmentCost={systemCostSummary.investmentCost}
                 variableCost={systemCostSummary.variableCost}
@@ -277,15 +275,10 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
             </ErrorBoundary>
           </div>
         )}
-      </div>
 
-      {/* Bottom row: LCOE Comparison + Investment Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {lcoeData.length > 0 && (
-          <div className={CHART_CARD_CLASS}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              {t('results.charts.lcoeComparison')}
+        {active === 'lcoe' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.lcoeComparison')}
                 description={t('results.costInfo.lcoeComparisonDesc')}
@@ -297,11 +290,9 @@ const CostPanel = ({ structuredResults, summary, simulationPeriod }: CostPanelPr
           </div>
         )}
 
-        {investmentData.length > 0 && (
-          <div className={CHART_CARD_CLASS}>
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" />
-              {t('results.charts.investmentVsOperating')}
+        {active === 'investment' && (
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
               <ChartInfoTooltip
                 title={t('results.charts.investmentVsOperating')}
                 description={t('results.costInfo.investmentBreakdownDesc')}

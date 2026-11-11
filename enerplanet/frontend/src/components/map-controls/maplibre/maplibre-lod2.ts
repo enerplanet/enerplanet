@@ -9,6 +9,7 @@ export const LOD2_LAYER_ID = 'lod2-buildings';
 const ROOF_COLOR = 0xb4664a;
 const WALL_COLOR = 0xe6e0d6;
 const EDGE_COLOR = 0x4b4b4b;
+const HOVER_COLOR = 0x3b82f6;
 export const PV_COLOR = 0x1f3a5f;
 export const MARKER_COLOR: Record<TechMarker, number> = { heat: 0xea580c, storage: 0x7c3aed };
 // Metres: the stem above the roof, the ball on it, and the gap between two balls.
@@ -18,6 +19,15 @@ const MARKER_GAP = 5;
 
 /** A point in the layer's frame: metres east, north and up from the origin. */
 type Local = [number, number, number];
+
+/** Triangle positions for one merged mesh, with the osm_id of the building each triangle belongs to. */
+interface MeshBuffer { positions: number[]; owners: string[] }
+
+/** Appends one building's triangles, nine numbers each, to a mesh buffer. */
+function addTriangles(buffer: MeshBuffer, positions: number[], osmId: string): void {
+  buffer.positions.push(...positions);
+  for (let i = 0; i < positions.length; i += 9) buffer.owners.push(osmId);
+}
 
 /**
  * Splits a planar polygon (outer ring then holes, in the local frame) into
@@ -63,6 +73,12 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
   private readonly camera = new THREE.Camera();
   private readonly buildings = new THREE.Group();
   private origin: maplibregl.MercatorCoordinate | null = null;
+  /** Each building's triangle positions, for its hover highlight. */
+  private readonly triangles = new Map<string, number[]>();
+  private readonly meshes: THREE.Mesh[] = [];
+  private readonly raycaster = new THREE.Raycaster();
+  private highlight: THREE.Mesh | null = null;
+  private hovered: string | null = null;
 
   constructor() {
     this.scene.add(new THREE.AmbientLight(0xffffff, 1.6));
@@ -102,13 +118,14 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     }
     this.origin = maplibregl.MercatorCoordinate.fromLngLat([first[0], first[1]], 0);
     const metre = this.origin.meterInMercatorCoordinateUnits();
-    const roofs: number[] = [];
-    const walls: number[] = [];
-    const panels: number[] = [];
+    const roofs: MeshBuffer = { positions: [], owners: [] };
+    const walls: MeshBuffer = { positions: [], owners: [] };
+    const panels: MeshBuffer = { positions: [], owners: [] };
     for (const [osmId, surfaces] of byOsmId) {
       const pv = pvByOsmId.get(osmId);
       const base = Math.min(...surfaces.flatMap((s) => s.rings.flatMap((r) => r.map((p) => p[2] ?? 0))));
       const points: Local[] = [];
+      const own: number[] = [];
       for (const surface of surfaces) {
         const rings = surface.rings.map((ring) => ring.map((p): Local => {
           const m = maplibregl.MercatorCoordinate.fromLngLat([p[0], p[1]], 0);
@@ -117,19 +134,23 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
         }));
         points.push(...rings.flat());
         const target = pv?.has(surface.id) ? panels : surface.roof ? roofs : walls;
-        target.push(...triangulatePlanar(rings).flat());
+        const tris = triangulatePlanar(rings).flat();
+        addTriangles(target, tris, osmId);
+        own.push(...tris);
       }
+      this.triangles.set(osmId, own);
       const markers = markersByOsmId.get(osmId);
       if (markers) this.addMarkers(points, markers);
     }
     this.addMesh(roofs, ROOF_COLOR);
     this.addMesh(walls, WALL_COLOR);
     this.addMesh(panels, PV_COLOR);
+    this.showHighlight();
     this.map?.triggerRepaint();
   }
 
   render(_gl: WebGL2RenderingContext | WebGLRenderingContext, args: maplibregl.CustomRenderMethodInput): void {
-    if (!this.renderer || !this.origin || this.buildings.children.length === 0) return;
+    if (!this.origin) return;
     const metre = this.origin.meterInMercatorCoordinateUnits();
     const toMercator = new THREE.Matrix4()
       .makeTranslation(this.origin.x, this.origin.y, 0)
@@ -137,16 +158,63 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.camera.projectionMatrix = new THREE.Matrix4()
       .fromArray(args.defaultProjectionData.mainMatrix as unknown as number[])
       .multiply(toMercator);
+    if (!this.renderer || this.buildings.children.length === 0) return;
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
   }
 
-  private addMesh(positions: number[], color: number): void {
-    if (positions.length === 0) return;
+  /**
+   * The osm_id of the building drawn at a point of the map canvas, given in
+   * clip coordinates (-1 to 1, y up), or null over no building. Uses the
+   * projection of the last frame drawn.
+   */
+  pick(x: number, y: number): string | null {
+    if (!this.origin || this.meshes.length === 0) return null;
+    const toLocal = this.camera.projectionMatrix.clone().invert();
+    const near = new THREE.Vector3(x, y, -1).applyMatrix4(toLocal);
+    const far = new THREE.Vector3(x, y, 1).applyMatrix4(toLocal);
+    this.raycaster.set(near, far.sub(near).normalize());
+    const hit = this.raycaster.intersectObjects(this.meshes, false)[0];
+    return hit?.faceIndex == null ? null : (hit.object.userData.owners as string[])[hit.faceIndex] ?? null;
+  }
+
+  /** Tints the building with this osm_id, or none for null. */
+  setHovered(osmId: string | null): void {
+    if (osmId === this.hovered) return;
+    this.hovered = osmId;
+    this.showHighlight();
+    this.map?.triggerRepaint();
+  }
+
+  private showHighlight(): void {
+    if (this.highlight) {
+      this.buildings.remove(this.highlight);
+      this.highlight.geometry.dispose();
+      (this.highlight.material as THREE.Material).dispose();
+      this.highlight = null;
+    }
+    const positions = this.hovered ? this.triangles.get(this.hovered) : undefined;
+    if (!positions?.length) return;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    // The polygon offset draws the tint over the building's own faces instead of fighting them for depth.
+    const material = new THREE.MeshBasicMaterial({
+      color: HOVER_COLOR, transparent: true, opacity: 0.45, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+    });
+    this.highlight = new THREE.Mesh(geometry, material);
+    this.buildings.add(this.highlight);
+  }
+
+  private addMesh(buffer: MeshBuffer, color: number): void {
+    if (buffer.positions.length === 0) return;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffer.positions, 3));
     geometry.computeVertexNormals();
-    this.buildings.add(new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })));
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide }));
+    mesh.userData.owners = buffer.owners;
+    this.meshes.push(mesh);
+    this.buildings.add(mesh);
     this.buildings.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 20), new THREE.LineBasicMaterial({ color: EDGE_COLOR })));
   }
 
@@ -169,6 +237,9 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
   }
 
   private clear(): void {
+    this.triangles.clear();
+    this.meshes.length = 0;
+    this.highlight = null;
     for (const child of [...this.buildings.children]) {
       this.buildings.remove(child);
       const object = child as THREE.Mesh | THREE.LineSegments;

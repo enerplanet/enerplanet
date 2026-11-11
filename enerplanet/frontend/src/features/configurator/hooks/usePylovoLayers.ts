@@ -27,6 +27,7 @@ import { buildFClassDetails, type FClassDetail } from "@/features/configurator/h
 import { collectTransformerIds, normalizeGridLineAssignments, setFeatureColorIndex } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
 import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import type { BuildingPv, PvArray } from "@/features/configurator/building-config/usePvMode";
+import type { PvProductCopy } from "@/features/configurator/building-config/pvProducts";
 import type { BuildingTechs } from "@/features/configurator/building-config/buildingTechnologies";
 
 // Local aliases matching original useAreaSelect.ts
@@ -73,7 +74,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     }));
     setAvailableRegions(regionsForLegend);
     availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = [];
-    const boundaryRegions = response.regions.filter(r => r.boundary && r.region?.name).map(r => ({
+    const boundaryRegions = response.regions.filter(r => r.boundary && r.has_3d && r.region?.name).map(r => ({
       boundary: r.boundary!, name: r.region!.name, gridCount: r.grid_count,
       countryCode: r.region?.country_code || r.country_code, stateCode: r.region?.state_code || r.state_code,
     }));
@@ -232,14 +233,18 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
   /** The building's PV technology, or null when it has none. */
   const buildingPv = useCallback((osmId: string): BuildingPv | null => {
     const tech = findBuilding(osmId)?.get('techs')?.pv_supply;
-    return tech ? { typeLabel: tech.alias, arrays: tech.arrays ?? null } : null;
+    return tech
+      ? { typeLabel: tech.alias, arrays: tech.arrays ?? null, productId: tech.product, constraints: tech.constraints, products: tech.products }
+      : null;
   }, [findBuilding]);
-  /** Stores the arrays chosen in PV mode on the building's PV technology. */
-  const storePvArrays = useCallback((osmId: string, arrays: PvArray[]) => {
+  /** Stores the arrays chosen in PV mode, and the copies of the products they name, on the building's PV technology. */
+  const storePvArrays = useCallback((osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>) => {
     const feature = findBuilding(osmId);
     const techs = feature?.get('techs');
     if (!feature || !techs?.pv_supply) return;
-    feature.set('techs', { ...techs, pv_supply: { ...techs.pv_supply, arrays } });
+    const { products: _replaced, ...pvSupply } = techs.pv_supply;
+    const copies = Object.keys(products).length > 0 ? { products } : {};
+    feature.set('techs', { ...techs, pv_supply: { ...pvSupply, arrays, ...copies } });
   }, [findBuilding]);
   /** The centre of the building's map feature as WGS84 [lon, lat], or null when it is not on the map. */
   const buildingLocation = useCallback((osmId: string): [number, number] | null => {

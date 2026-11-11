@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import technologyService, { type Technology } from './services/technologyService';
-import { asBuildingTechnology, defaultConstraints, defaultProduct, loadCatalogue, productsOfType } from './catalogue';
+import { asBuildingTechnology, defaultConstraints, defaultProduct, findProducts, loadCatalogue, productsOfType } from './catalogue';
 
 vi.mock('./services/technologyService', () => ({ default: { getAll: vi.fn() } }));
 
@@ -27,6 +27,17 @@ describe('catalogue', () => {
     expect(defaultProduct(catalogue, 'gas_boiler')?.key).toBe('gas_boiler__condensing_25kw');
     expect(defaultProduct(catalogue, 'pv_supply')?.key).toBe('pv_supply');
     expect(defaultProduct(catalogue, 'battery_storage')).toBeUndefined();
+  });
+
+  it('finds products by name or manufacturer, in alphabetical order', () => {
+    const pv = [
+      { ...product('pv_b', 'pv_supply'), alias: 'Mono 430 W', manufacturer: 'Sunrow' },
+      { ...product('pv_a', 'pv_supply'), alias: 'bifacial 410 W' },
+      { ...product('pv_c', 'pv_supply'), alias: 'Glass 400 W' },
+    ];
+    expect(findProducts(pv, '').map((p) => p.alias)).toEqual(['bifacial 410 W', 'Glass 400 W', 'Mono 430 W']);
+    expect(findProducts(pv, ' SUNROW ').map((p) => p.key)).toEqual(['pv_b']);
+    expect(findProducts(pv, '40').map((p) => p.key)).toEqual(['pv_c']);
   });
 
   it('stores a product on a building under its type, naming the product', () => {

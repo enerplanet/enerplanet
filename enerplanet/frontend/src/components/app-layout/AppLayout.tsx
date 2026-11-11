@@ -6,6 +6,7 @@ import { useOnboarding } from "@/features/onboarding/hooks/useOnboarding";
 import { closeNotificationStream } from "@/features/notifications/hooks/useNotificationsQuery";
 import { ToastStack } from "@/features/notifications/ToastStack";
 import { PrivacyConsentGate } from "@/features/privacy-controls";
+import LanguageSettings from "@/features/settings/LanguageSettings";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { useTranslation } from "@spatialhub/i18n";
 
@@ -13,15 +14,16 @@ import {
   LogOut,
   Settings,
   Shield,
+  Languages,
   BookOpen,
   GraduationCap,
   MessageSquareText,
   LayoutDashboard,
-  MapPinHouse,
   GitCompareArrows,
   LayoutGrid,
   LucideIcon,
   Cpu,
+  ChevronLeft,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -66,12 +68,15 @@ interface UserMenuItem {
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  /** Prevents the dropdown from closing on click (for items that open an in-menu panel). */
+  keepOpen?: boolean;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user } = useAuth();
   const [bellOpen, setBellOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showLangPicker, setShowLangPicker] = useState(false);
   // A rail menu sits outside the rail, so the rail stays expanded while one is open.
   const railMenuOpen = bellOpen || profileOpen;
   const navigate = useNavigate();
@@ -135,14 +140,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         dataTour: "simulations",
       },
       {
-        path: "/app/locations",
-        icon: MapPinHouse,
-        title: t("locations.title"),
-        color: "#ef4444",
-        bgColor: "#fee2e2",
-        dataTour: "locations",
-      },
-      {
         path: "/app/simulation-reports",
         icon: GitCompareArrows,
         title: t("common.sidebar.simulationReports"),
@@ -173,6 +170,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         icon: Shield,
         label: t("common.menu.privacyTerms"),
         onClick: navigationHandlers.legal,
+      },
+      {
+        icon: Languages,
+        label: t("settings.language.title"),
+        onClick: () => setShowLangPicker(true),
+        keepOpen: true,
       },
       {
         icon: Settings,
@@ -219,7 +222,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Widens over the page, not beside it, so the content and the map keep their size. */}
         <aside
           data-expanded={railMenuOpen}
-          className="group/rail fixed left-0 bottom-0 z-[51] w-[var(--sidebar-width)] overflow-hidden border-r border-border bg-card shadow-lg transition-[width] duration-200 top-[var(--topbar-height)] hover:w-60 hover:delay-150 has-[[data-rail-expand]:focus-visible]:w-60 data-[expanded=true]:w-60 motion-reduce:transition-none"
+          className="group/rail fixed left-0 bottom-0 z-[51] w-[var(--sidebar-width)] overflow-hidden border-r border-border bg-card shadow-lg transition-[width] duration-200 top-[var(--topbar-height)] hover:w-56 hover:delay-150 has-[[data-rail-expand]:focus-visible]:w-56 data-[expanded=true]:w-56 motion-reduce:transition-none"
         >
           <div className="flex flex-col gap-2 px-[0.875rem] py-4">
             <a
@@ -300,7 +303,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 menu opens to the right of them. */}
             <Authorized>
               <div className="flex items-center" data-tour="profile">
-                <DropdownMenu onOpenChange={setProfileOpen}>
+                <DropdownMenu
+                  onOpenChange={(open) => {
+                    setProfileOpen(open);
+                    if (!open) setShowLangPicker(false);
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
@@ -315,26 +323,43 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       <span className={`ml-2 ${RAIL_LABEL} text-foreground`}>{user?.name || user?.email}</span>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={24}>
-                    <DropdownMenuItem className="cursor-pointer" onClick={handleSmartRestartTour}>
-                      <GraduationCap className="w-4 h-4" />
-                      {t("common.tooltips.restartTour")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => navigationHandlers.feedback()}>
-                      <MessageSquareText className="w-4 h-4" />
-                      {t("common.tooltips.feedback")}
-                    </DropdownMenuItem>
-                    <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
-                    {userMenuItems.map((item) => (
-                      <DropdownMenuItem
-                        key={item.label}
-                        className="cursor-pointer"
-                        onClick={item.onClick}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {item.label}
-                      </DropdownMenuItem>
-                    ))}
+                  {/* The bell menu's 24 px offset, plus the theme button slot (3rem, 54 px at the 18 px root) beside the trigger. */}
+                  <DropdownMenuContent className="w-52 z-[60]" side="right" align="end" sideOffset={78}>
+                    {showLangPicker ? (
+                      <>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => setShowLangPicker(false)}>
+                          <ChevronLeft className="w-4 h-4" />
+                          {t("settings.language.title")}
+                        </DropdownMenuItem>
+                        <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+                        <div className="px-2 py-1.5" onKeyDown={(e) => e.stopPropagation()}>
+                          <LanguageSettings />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem className="cursor-pointer" onClick={handleSmartRestartTour}>
+                          <GraduationCap className="w-4 h-4" />
+                          {t("common.tooltips.restartTour")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => navigationHandlers.feedback()}>
+                          <MessageSquareText className="w-4 h-4" />
+                          {t("common.tooltips.feedback")}
+                        </DropdownMenuItem>
+                        <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+                        {userMenuItems.map((item) => (
+                          <DropdownMenuItem
+                            key={item.label}
+                            className="cursor-pointer"
+                            onClick={item.onClick}
+                            onSelect={item.keepOpen ? (e) => e.preventDefault() : undefined}
+                          >
+                            <item.icon className="w-4 h-4" />
+                            {item.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 {/* Sun/moon theme button, revealed with the rail and gone while it is collapsed. */}

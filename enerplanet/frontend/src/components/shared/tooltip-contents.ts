@@ -1,6 +1,5 @@
 // Tooltip keys for translation lookup
 export const TOOLTIP_KEYS = {
-  privateBuildings: 'tooltips.privateBuildings',
   simulateEV: 'tooltips.simulateEV',
   gridConstrained: 'tooltips.gridConstrained',
   buildingEnrichment: 'tooltips.buildingEnrichment',
@@ -41,11 +40,6 @@ export type TooltipKey = keyof typeof TOOLTIP_KEYS;
 
 // Fallback content (English) - used when translations are not available
 export const TOOLTIP_CONTENTS = {
-  privateBuildings: {
-    title: 'My Custom Buildings',
-    description: 'Include your private custom buildings in the grid calculation. These are buildings you have created and saved to your account.',
-    example: 'You can also exclude individual buildings by clicking on them on the map.'
-  },
   simulateEV: {
     title: 'Simulate EV Hosting Capacity',
     description: 'Calculate the Electric Vehicle hosting capacity for each transformer in the selected area. This determines how many EV chargers (11 kW Level 2) can be connected before reaching grid constraints. The calculation considers transformer thermal limits, voltage drop, and cable capacity based on the deterministic method from Umoh et al. (Energies 2023).',

@@ -17,6 +17,7 @@ import (
 	"spatialhub_backend/internal/buem"
 	"spatialhub_backend/internal/city2tabula"
 	"spatialhub_backend/internal/contenthash"
+	"spatialhub_backend/internal/demand"
 	"spatialhub_backend/internal/ignis"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
@@ -45,6 +46,15 @@ type demandProfileStore interface {
 	SaveResolved(modelID uint, osmID string, p demandprofile.ResolvedProfile) error
 	SaveFailed(modelID uint, osmID, reason string) error
 	SaveShared(modelID uint, osmID, standing string) error
+	SaveUse(modelID uint, osmID string, u demandprofile.Use) error
+}
+
+// resolvedWays is what a run needs of a resolution beyond the stored series:
+// the further ways (see buemRun.further) and the ways that are not heated
+// (see resolveBuildingUse), neither of which has a heat series.
+type resolvedWays struct {
+	further   map[string]string
+	notHeated map[string]bool
 }
 
 // DemandResolver gives each building of a model its BuEM hourly series:
@@ -119,63 +129,69 @@ func storeModelPV(ctx context.Context, db *gorm.DB, pvr PVResolver, modelID uint
 }
 
 // Resolve resolves and links the series of every building of model modelID
-// and returns its further ways (see buemRun.further), which have no series of
-// their own because their building's heat is resolved under its best way.
-func (r DemandResolver) Resolve(ctx context.Context, modelID uint) (map[string]string, error) {
+// and returns the ways that have no heat series by design.
+func (r DemandResolver) Resolve(ctx context.Context, modelID uint) (resolvedWays, error) {
 	log := logger.ForComponent("job:resolve_demand_profiles")
 
 	var model commonModels.Model
 	if err := r.DB.First(&model, modelID).Error; err != nil {
-		return nil, fmt.Errorf("failed to fetch model %d: %w", modelID, err)
+		return resolvedWays{}, fmt.Errorf("failed to fetch model %d: %w", modelID, err)
 	}
 
 	if ModelHeatSource(model.Config) == HeatSourceEstimate {
 		log.Debugf("model %d: heatSource=estimate, no demand profiles to resolve", modelID)
-		return nil, nil
+		return resolvedWays{}, nil
 	}
 
 	calcPayload, err := buildCalculationPayload(&model)
 	if err != nil {
 		log.Debugf("model %d: cannot build calculation payload, nothing to resolve: %v", modelID, err)
-		return nil, nil
+		return resolvedWays{}, nil
 	}
 
 	osmIDs := buildingOSMIDs(calcPayload.Topology)
 	if len(osmIDs) == 0 {
 		log.Debugf("model %d: no buildings in topology, nothing to resolve", modelID)
-		return nil, nil
+		return resolvedWays{}, nil
 	}
 
 	refurbLevel := modelRefurbishmentLevel(model.Config)
 	if err := r.Profiles.ResetForRun(modelID, osmIDs, string(refurbLevel)); err != nil {
-		return nil, fmt.Errorf("failed to reset demand profile rows for model %d: %w", modelID, err)
+		return resolvedWays{}, fmt.Errorf("failed to reset demand profile rows for model %d: %w", modelID, err)
 	}
 	revision, err := contenthash.Of(model.Config)
 	if err != nil {
-		return nil, fmt.Errorf("hash config of model %d: %w", modelID, err)
+		return resolvedWays{}, fmt.Errorf("hash config of model %d: %w", modelID, err)
 	}
 	run := prepareBuemRun(ctx, log, r.C2T, r.C2TRuns, r.Weather, r.WeatherProvider, r.Ignis, model, calcPayload, refurbLevel)
 	saveFailures(log, r.Profiles, modelID, run.unresolved)
+	ways := resolvedWays{further: run.further, notHeated: saveUses(log, r.Profiles, modelID, run.uses)}
 	for osmID, standing := range run.further {
 		if err := r.Profiles.SaveShared(modelID, osmID, standing); err != nil {
 			log.Errorf("model %d osm_id=%s: failed to record it as shared: %v", modelID, osmID, err)
 		}
 	}
 	if len(run.buildings) == 0 {
-		return run.further, nil
+		return ways, nil
 	}
 	if r.BuemVersion == "" {
 		log.Errorf("model %d: BUEM_VERSION is not configured, BuEM results cannot be keyed", modelID)
 		saveFailures(log, r.Profiles, modelID, allFailed(run.buildings, "BUEM_VERSION is not configured on the backend"))
-		return run.further, nil
+		return ways, nil
 	}
-	return run.further, resolveAndLink(ctx, log, r.DB, modelID, revision, run, calcPayload, r.BuemVersion, r.BuEM, r.Profiles, r.Series)
+	return ways, resolveAndLink(ctx, log, r.DB, modelID, revision, run, calcPayload, r.BuemVersion, r.BuEM, r.Profiles, r.Series)
 }
 
 // resolveAndLink stores every building's series, then links them and fills
 // the demand profile rows, unless the model changed while BuEM ran: a newer
 // run then links its own results, and these stay stored for reuse.
 func resolveAndLink(ctx context.Context, log *logrus.Entry, db *gorm.DB, modelID uint, revision string, run buemRun, p payload.CalculationPayload, buemVersion string, runner groupRunner, profileStore demandProfileStore, store seriesStore) error {
+	demand.StartProgress(modelID)
+	defer demand.EndProgress(modelID)
+	run.onComputed = func(id string) {
+		way, _, _ := strings.Cut(id, partSeparator)
+		demand.MarkComputed(modelID, way)
+	}
 	outcome, err := resolveSeries(ctx, log, run, p.Resolution, p.ModelID, buemVersion, store, runner)
 	if err != nil {
 		log.Warnf("model %d: resolving series failed, marking every building failed: %v", modelID, err)
@@ -243,6 +259,20 @@ func allFailed(buildings []buem.Building, reason string) map[string]string {
 		failed[way] = reason
 	}
 	return failed
+}
+
+// saveUses records each way's use and returns the ways that are not heated.
+func saveUses(log *logrus.Entry, profileStore demandProfileStore, modelID uint, uses map[string]buildingUse) map[string]bool {
+	notHeated := map[string]bool{}
+	for osmID, u := range uses {
+		if !u.heated {
+			notHeated[osmID] = true
+		}
+		if err := profileStore.SaveUse(modelID, osmID, demandprofile.Use{Type: u.useType, Source: u.source, NotHeatedReason: u.reason}); err != nil {
+			log.Errorf("model %d osm_id=%s: failed to record its use: %v", modelID, osmID, err)
+		}
+	}
+	return notHeated
 }
 
 func saveFailures(log *logrus.Entry, profileStore demandProfileStore, modelID uint, failed map[string]string) {

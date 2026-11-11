@@ -82,6 +82,19 @@ func TestGetPointWeather_UpstreamRejectionSurfacesWeatherMessage(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no servable archive for cosmo-rea6 in 2099")
+	assert.ErrorIs(t, err, ErrRejected)
+}
+
+// A weather-serve timeout may pass on a repeat, so it is not a rejection.
+func TestGetPointWeather_TimeoutIsNotARejection(t *testing.T) {
+	status := `{"state":"failed","error":{"code":"target_timeout","message":"target weather-point: read timeout"}}`
+	tc, _ := fakeTentacron(t, status)
+
+	_, err := NewClient(tc).GetPointWeather(context.Background(), 53.15, 8.80, Period{Year: 2018}, "cosmo-rea6")
+
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrRejected)
+	assert.Contains(t, err.Error(), "weather-serve timed out")
 }
 
 func TestGetPointWeather_InfraFaultReturnedUnchanged(t *testing.T) {

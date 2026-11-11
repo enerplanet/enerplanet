@@ -5,7 +5,8 @@ import { defaults as defaultControls } from "ol/control";
 import { Map as OlMap, View } from "ol";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
-import { fromLonLat, toLonLat } from "ol/proj";
+import { fromLonLat, toLonLat, transformExtent } from "ol/proj";
+import { centreTarget } from "@/features/interactive-map/utils/mapFocus";
 import VectorSource from "ol/source/Vector";
 import Draw from "ol/interaction/Draw";
 import { MAP_ZOOM } from "@/features/interactive-map/utils/mapUtils";
@@ -222,9 +223,17 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
 
 	const centerMap = useCallback(() => {
 		if (!map) return;
-		const savedCenter = fromLonLat([mapLocation.longitude, mapLocation.latitude]);
+		const target = centreTarget(useMapStore.getState().focusArea, mapLocation);
+		if (target.kind === 'area') {
+			map.getView().fit(transformExtent(target.extent, 'EPSG:4326', 'EPSG:3857'), {
+				padding: [80, 80, 80, 80],
+				maxZoom: 18,
+				duration: 1000,
+			});
+			return;
+		}
 		map.getView().animate({
-			center: savedCenter,
+			center: fromLonLat(target.lonLat),
 			zoom: MAP_ZOOM.LOCATION,
 			duration: 1000,
 		});

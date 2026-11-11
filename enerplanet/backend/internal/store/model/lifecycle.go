@@ -70,6 +70,7 @@ func (s *Store) MarkFailed(ctx context.Context, modelID uint, reason string, now
 		result := tx.Model(&commonModels.Model{}).
 			Where("id = ? AND status IN ?", modelID, []string{
 				commonModels.ModelStatusQueue,
+				commonModels.ModelStatusBuildings,
 				commonModels.ModelStatusRunning,
 			}).
 			Updates(map[string]interface{}{
@@ -125,6 +126,7 @@ func (s *Store) ListActiveModels(ctx context.Context) ([]contracts.ActiveModel, 
 		Select("id AS model_id, webservice_id, status, calculation_started_at").
 		Where("status IN ?", []string{
 			commonModels.ModelStatusQueue,
+			commonModels.ModelStatusBuildings,
 			commonModels.ModelStatusRunning,
 		}).
 		Order("id ASC").

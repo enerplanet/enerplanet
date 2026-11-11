@@ -377,32 +377,126 @@ func (w *memeTimeSeriesWriter) streamCapacityFactor() error {
 }
 
 // results_systemwide_capacity_factor.csv -> results_model_capacity_factor
+//
+// A plan export has one row per tech and carrier, stored as given. An operate
+// export repeats each rolling window's factor on every timestep, and Calliope
+// computes that factor over the window's horizon, so the mean of the rows
+// drifts from the run's. For a tech with a size, an operate factor is its
+// output over the run divided by size x hours; one without (lines) keeps the mean.
 func (w *memeTimeSeriesWriter) streamModelCapacityFactor() error {
-	batch := make([]models.ResultsModelCapacityFactor, 0, memeStreamBatchSize)
+	rows, order, err := w.readSystemwideCapacityFactor()
+	if err != nil {
+		return err
+	}
+	flows, sizes, err := w.readOperateFlows(rows)
+	if err != nil {
+		return err
+	}
+	groups := map[cfKey]*cfGroup{}
+	var groupOrder []cfKey
+	for _, raw := range order {
+		tech, _ := normMemeTech(raw.tech, "", w.parents)
+		if tech == "" {
+			continue
+		}
+		k := cfKey{tech, normMemeCarrier(raw.carrier)}
+		if groups[k] == nil {
+			groups[k] = &cfGroup{fromFlows: true}
+			groupOrder = append(groupOrder, k)
+		}
+		groups[k].add(rows[raw], flows[raw], sizes[raw.tech])
+	}
+	batch := make([]models.ResultsModelCapacityFactor, 0, len(groupOrder))
+	for _, k := range groupOrder {
+		batch = append(batch, models.ResultsModelCapacityFactor{ModelID: w.modelID, Carrier: k.carrier, Techs: k.tech, Value: groups[k].value()})
+	}
+	return flushMemeBatch(w.tx, &batch, "results_model_capacity_factor")
+}
+
+type cfKey struct{ tech, carrier string }
+
+// cfRows sums the factor rows of one tech and carrier.
+type cfRows struct {
+	sum   float64
+	count int
+}
+
+// cfGroup is one stored factor, from the raw techs that normalise to it.
+type cfGroup struct {
+	rowSum, output, sizeHours float64
+	rowCount                  int
+	fromFlows                 bool
+}
+
+// add takes one raw tech's rows; the group uses flows only if every raw tech
+// has operate rows, an output and a size.
+func (g *cfGroup) add(r *cfRows, output, sizeMW float64) {
+	g.rowSum += r.sum
+	g.rowCount += r.count
+	if r.count < 2 || sizeMW <= 0 {
+		g.fromFlows = false
+		return
+	}
+	g.output += output
+	g.sizeHours += sizeMW * float64(r.count)
+}
+
+func (g *cfGroup) value() float64 {
+	if g.fromFlows && g.sizeHours > 0 {
+		return g.output / g.sizeHours
+	}
+	return g.rowSum / float64(g.rowCount)
+}
+
+// readSystemwideCapacityFactor sums the factor rows per raw tech and carrier, in file order.
+func (w *memeTimeSeriesWriter) readSystemwideCapacityFactor() (map[cfKey]*cfRows, []cfKey, error) {
+	rows := map[cfKey]*cfRows{}
+	var order []cfKey
 	err := readMemeCSV(w.csvDir, "results_systemwide_capacity_factor.csv", func(cols map[string]int, row []string) error {
 		value, ok := memeFloat(row, cols, "systemwide_capacity_factor")
 		if !ok {
 			return nil
 		}
-		tech, _ := normMemeTech(memeString(row, cols, "techs"), "", w.parents)
-		if tech == "" {
-			return nil
+		k := cfKey{memeString(row, cols, "techs"), memeString(row, cols, "carriers")}
+		if rows[k] == nil {
+			rows[k] = &cfRows{}
+			order = append(order, k)
 		}
-		batch = append(batch, models.ResultsModelCapacityFactor{
-			ModelID: w.modelID,
-			Carrier: normMemeCarrier(memeString(row, cols, "carriers")),
-			Techs:   tech,
-			Value:   value,
-		})
-		if len(batch) >= memeStreamBatchSize {
-			return flushMemeBatch(w.tx, &batch, "results_model_capacity_factor")
+		rows[k].sum += value
+		rows[k].count++
+		return nil
+	})
+	return rows, order, err
+}
+
+// readOperateFlows returns each raw tech and carrier's output over the run and
+// each raw tech's size, both in MW, when the factor rows come from an operate
+// export; a plan export needs neither and reads no files.
+func (w *memeTimeSeriesWriter) readOperateFlows(rows map[cfKey]*cfRows) (map[cfKey]float64, map[string]float64, error) {
+	flows, sizes := map[cfKey]float64{}, map[string]float64{}
+	operate := false
+	for _, r := range rows {
+		operate = operate || r.count > 1
+	}
+	if !operate {
+		return flows, sizes, nil
+	}
+	err := readMemeCSV(w.csvDir, "results_flow_out.csv", func(cols map[string]int, row []string) error {
+		if value, ok := memeFloat(row, cols, "flow_out"); ok {
+			flows[cfKey{memeString(row, cols, "techs"), memeString(row, cols, "carriers")}] += value
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	return flushMemeBatch(w.tx, &batch, "results_model_capacity_factor")
+	err = readMemeCSV(w.csvDir, "inputs_flow_cap.csv", func(cols map[string]int, row []string) error {
+		if value, ok := memeFloat(row, cols, "flow_cap"); ok {
+			sizes[memeString(row, cols, "techs")] += value
+		}
+		return nil
+	})
+	return flows, sizes, err
 }
 
 // results_systemwide_levelised_cost.csv -> results_model_levelised_cost

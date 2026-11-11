@@ -5,15 +5,15 @@ import { unsizedTechs } from "./operateSizes";
 const tech = (values: Record<string, unknown>) => ({ constraints: Object.entries(values).map(([key, value]) => ({ key, value })) });
 
 describe("unsizedTechs", () => {
-  it("lists heat technologies and batteries without a finite size", () => {
+  it("lists batteries and air conditioners without a finite size, not heat technologies", () => {
     expect(unsizedTechs({
       air_source_heat_pump: tech({ cont_energy_cap_max: "INF", cont_energy_eff: 3.3 }),
       battery_storage: tech({ cont_energy_cap_max: 10, cont_storage_cap_max: "inf" }),
       gas_boiler: tech({}),
+      air_conditioner: tech({ cont_energy_cap_max: "INF" }),
     })).toEqual([
-      { techKey: "air_source_heat_pump", fields: ["cont_energy_cap_max"] },
       { techKey: "battery_storage", fields: ["cont_storage_cap_max"] },
-      { techKey: "gas_boiler", fields: ["cont_energy_cap_max"] },
+      { techKey: "air_conditioner", fields: ["cont_energy_cap_max"] },
     ]);
   });
 

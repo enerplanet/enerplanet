@@ -1,10 +1,12 @@
 package jobs
 
 import (
-	"database/sql/driver"
 	"archive/zip"
+	"bytes"
 	"context"
+	"database/sql/driver"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,13 +41,22 @@ func (f *fakeCoatiRunner) Convert(_ context.Context, resultFile, frameworkID str
 	}
 	// Minimal single-location, single-tech document by default.
 	return []byte(`{
-	  "schema_version":"1.0","framework":"calliope","framework_version":"0.7.0.dev7",
-	  "success":true,"termination_condition":"optimal","objective":1234.5,
-	  "coordinates":{"n1":[48.8,12.9]},
-	  "capacities":{"n1::battery":12.0},
-	  "storage_capacities":{"n1::battery":52.0},
-	  "costs_by_location":{"n1":{"battery":786.0}}
-	}`), nil
+  "schema_version":"1.0","framework":"calliope","framework_version":"0.7.0.dev7",
+  "success":true,"termination_condition":"optimal","objective":1234.5,
+  "coordinates":{"n1":[48.8,12.9]},
+  "capacities":{"n1::battery":12.0},
+  "storage_capacities":{"n1::battery":52.0},
+  "costs_by_location":{"n1":{"battery":786.0}}
+}`), nil
+}
+
+// ConvertReader satisfies resultservice.CoatiRunner's streaming half.
+func (f *fakeCoatiRunner) ConvertReader(ctx context.Context, resultFile, frameworkID string) (io.ReadCloser, error) {
+	raw, err := f.Convert(ctx, resultFile, frameworkID)
+	if err != nil {
+		return nil, err
+	}
+	return io.NopCloser(bytes.NewReader(raw)), nil
 }
 
 // fakeIngestRuns is an in-memory memeRunStore recording the handler's status
@@ -240,7 +251,7 @@ func TestHandleIngestMemeResult_failureNamesTheStage(t *testing.T) {
 	db, mock := newStatusMockDB(t)
 	mock.ExpectExec(`UPDATE "models" SET .*"results".*WHERE id = .* AND status IN .*`).
 		WithArgs(sqlmock.AnyArg(), containsArg("Simulation finished; reading the results failed: "), "",
-			"failed", sqlmock.AnyArg(), 7, "queue", "running", "processing").
+			"failed", sqlmock.AnyArg(), 7, "queue", "buildings", "running", "processing").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err := HandleIngestMemeResult(context.Background(), ingestTask(t, zipPath), db, &fakeIngestRuns{}, failRunner)

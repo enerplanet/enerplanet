@@ -1,4 +1,4 @@
-// The rail widens from --sidebar-width to w-60 on hover (after a short delay),
+// The rail widens from --sidebar-width to w-56 on hover (after a short delay),
 // on keyboard focus of a page link (data-rail-expand), and while one of its menus
 // is open (data-expanded). The menu triggers are left out: a closing menu hands
 // focus back to its trigger, which Chrome then matches as :focus-visible.

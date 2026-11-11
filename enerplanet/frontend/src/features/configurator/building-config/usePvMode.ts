@@ -4,19 +4,20 @@
  * The arrays are EnerPlanET's; the view only renders them.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  DEFAULT_PV_MODULE,
   type PvMode,
   type PvMounting,
   type PvOrientation,
   type PvSurface,
   type SurfacePolygon,
+  type TechnologyProduct,
 } from '@thd-spatial-ai/building-configurator';
 
 import axios from '@/lib/axios';
 
 import { arrayWithLayout, bestFitArrays } from './pvBestFit';
+import { copyOfProduct, moduleOf, productCopies, type PvProductCopy } from './pvProducts';
 
 /**
  * One PV array on a surface, as stored in techs.pv_supply.arrays. tilt and
@@ -35,6 +36,8 @@ export interface PvArray {
   orientation?: PvOrientation;
   modules?: number;
   capacity_kw?: number;
+  /** The product on this surface, a key of BuildingPv.products. Absent: the building's product. */
+  product_id?: string;
 }
 
 export interface PvSurfaceRow extends PvArray {
@@ -72,6 +75,12 @@ export interface BuildingPv {
   typeLabel: string;
   /** null while placement is automatic, which uses the qualifying roofs. */
   arrays: PvArray[] | null;
+  /** The catalogue product the building's PV was added with. */
+  productId?: string;
+  /** The building's own PV parameters. */
+  constraints?: PvProductCopy['constraints'];
+  /** The building's copy of each product its arrays name, by product id. */
+  products?: Record<string, PvProductCopy>;
 }
 
 // Matches the backend's pv.KWPerSqm.
@@ -117,44 +126,86 @@ function stateOf(row: PvSurfaceRow, installed: boolean): PvSurface['state'] {
  * Returns the PV mode to pass to Building3DView once the surfaces are loaded,
  * and whether loading them failed; nothing is loaded while building is null.
  * onArrays receives every change as the building's full list of arrays, each
- * laid out on its surface's polygon where the view's geometry has one.
+ * laid out with its product's module on its surface's polygon where the view's
+ * geometry has one, and the copies of the products they name.
  */
 export function usePvMode(
   osmId: string,
   country: string | null,
   building: BuildingPv | null,
   notice: string,
-  onArrays: (arrays: PvArray[]) => void,
+  onArrays: (arrays: PvArray[], products: Record<string, PvProductCopy>) => void,
   shownObjectId: string | null,
   t: (key: string, options?: Record<string, unknown>) => string,
   polygons: readonly SurfacePolygon[] | null,
+  onRemove?: () => void,
+  catalogue?: TechnologyProduct[],
 ): { pv: PvMode | undefined; failed: boolean } {
-  const [arrays, setArrays] = useState<PvArray[] | null>(building?.arrays ?? null);
+  const stored = building?.arrays ?? null;
+  const [arrays, setArrays] = useState<PvArray[] | null>(stored);
+  // PV added or removed while the view is open replaces the arrays held here.
+  const [seen, setSeen] = useState(stored);
+  if (stored !== seen) {
+    setSeen(stored);
+    setArrays(stored);
+  }
   const active = building !== null;
   const { rows, failed } = usePvSurfaceRows(osmId, country, active);
 
+  const productId = building?.productId;
+  const buildingConstraints = building?.constraints;
+  const storedCopies = building?.products;
+  const buildingModule = useMemo(() => moduleOf(buildingConstraints), [buildingConstraints]);
+  const moduleFor = useCallback((id: string | undefined) => {
+    if (!id) return buildingModule;
+    const product = catalogue?.find((p) => p.id === id);
+    return moduleOf((storedCopies?.[id] ?? (product && copyOfProduct(product)))?.constraints);
+  }, [buildingModule, storedCopies, catalogue]);
+
   // A building still on automatic placement shows the best fit; the first change stores it.
   const installed = useMemo(
-    () => arrays ?? bestFitArrays(rows ?? [], polygons ?? [], DEFAULT_USABLE_SHARE, DEFAULT_PV_MODULE),
-    [arrays, rows, polygons],
+    () => arrays ?? bestFitArrays(rows ?? [], polygons ?? [], DEFAULT_USABLE_SHARE, buildingModule),
+    [arrays, rows, polygons, buildingModule],
   );
   const polygonById = useMemo(() => new Map((polygons ?? []).map((p) => [p.id, p])), [polygons]);
   const laidOut = useCallback(
-    (array: PvArray) => arrayWithLayout(array, polygonById.get(array.surface_id), DEFAULT_PV_MODULE),
-    [polygonById],
+    (array: PvArray) => arrayWithLayout(array, polygonById.get(array.surface_id), moduleFor(array.product_id)),
+    [polygonById, moduleFor],
   );
 
+  // The view can call two callbacks in one event (assign, then toggle); the second must see the first's result.
+  const latest = useRef(installed);
+  latest.current = installed;
+  // Hosts pass new callbacks on every render; a new pv object would make the view lay out every surface again.
+  const host = useRef({ onArrays, onRemove, storedCopies, catalogue });
+  host.current = { onArrays, onRemove, storedCopies, catalogue };
+
   const change = useCallback((next: PvArray[]) => {
+    latest.current = next;
     setArrays(next);
-    onArrays(next);
-  }, [onArrays]);
+    const { onArrays: store, storedCopies: stored, catalogue: products } = host.current;
+    store(next, productCopies(next, stored, products));
+  }, []);
+  const hasRemove = onRemove !== undefined;
+  const remove = useMemo(() => (hasRemove ? () => host.current.onRemove?.() : undefined), [hasRemove]);
 
   const onToggle = useCallback((surfaceId: string, on: boolean) => {
     const row = rows?.find((r) => r.surface_id === surfaceId);
     if (!row) return;
-    const others = installed.filter((a) => a.surface_id !== surfaceId);
-    change(on ? [...others, laidOut(toArray(row))] : others);
-  }, [rows, installed, change, laidOut]);
+    const current = latest.current;
+    const existing = current.find((a) => a.surface_id === surfaceId);
+    const others = current.filter((a) => a.surface_id !== surfaceId);
+    change(on ? [...others, existing ?? laidOut(toArray(row))] : others);
+  }, [rows, change, laidOut]);
+
+  const onAssignProduct = useCallback((surfaceId: string, id: string) => {
+    const row = rows?.find((r) => r.surface_id === surfaceId);
+    if (!row) return;
+    const current = latest.current;
+    const array = current.find((a) => a.surface_id === surfaceId) ?? toArray(row);
+    const others = current.filter((a) => a.surface_id !== surfaceId);
+    change([...others, laidOut({ ...array, product_id: id })]);
+  }, [rows, change, laidOut]);
 
   const onShareChange = useCallback((surfaceId: string, usableShare: number) => {
     change(installed.map((a) => (a.surface_id === surfaceId ? laidOut({ ...a, usable_share: usableShare }) : a)));
@@ -182,10 +233,17 @@ export function usePvMode(
         tilt: row.tilt,
         azimuth: row.azimuth,
         area: row.area,
+        productId: array?.product_id,
       };
     }
-    return { surfaces, notice, typeLabel, onToggle, onShareChange, onMountingChange, module: DEFAULT_PV_MODULE };
-  }, [active, rows, installed, notice, typeLabel, onToggle, onShareChange, onMountingChange, shownObjectId, t]);
+    const products = catalogue ? { catalogue, productId, onAssignProduct } : {};
+    return {
+      surfaces, notice, typeLabel, onToggle, onShareChange, onMountingChange, module: buildingModule, onRemove: remove, ...products,
+    };
+  }, [
+    active, rows, installed, notice, typeLabel, onToggle, onShareChange, onMountingChange, shownObjectId, t,
+    buildingModule, remove, catalogue, productId, onAssignProduct,
+  ]);
 
   return { pv, failed };
 }

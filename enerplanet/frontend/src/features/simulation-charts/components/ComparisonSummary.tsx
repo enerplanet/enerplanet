@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { ArrowDown, ArrowUp, Minus, Zap, TrendingUp, DollarSign, Leaf } from 'lucide-react';
+import { ArrowDown, ArrowUp, Minus, Zap, TrendingUp, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@spatialhub/i18n';
 import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
@@ -17,7 +17,6 @@ interface SummaryData {
   total_cost_eur: number;
   /** Stored levelised cost, EUR/MWh (see lcoeUnits). */
   lcoe_eur_mwh: number;
-  co2_savings_kg: number;
 }
 
 interface ComparisonSummaryProps {
@@ -25,7 +24,11 @@ interface ComparisonSummaryProps {
   data2: SummaryData;
   /** Carrier both sides were fetched for — drives units and the metric set. */
   carrier?: string;
+  /** Grid electricity prices each run used, ct/kWh; absent for older runs. */
+  gridPrices?: [GridPrices | undefined, GridPrices | undefined];
 }
+
+type GridPrices = { import_ct_per_kwh: number; export_ct_per_kwh: number };
 
 const FLOATING_POINT_EPSILON = 1e-6;
 
@@ -43,7 +46,6 @@ const CARD_STYLES: Record<string, {
   demand: { icon: Zap },
   sufficiency: { icon: TrendingUp },
   cost: { icon: DollarSign },
-  co2: { icon: Leaf },
 };
 
 const MetricCard: FC<{
@@ -116,7 +118,7 @@ const MetricCard: FC<{
   );
 };
 
-export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, carrier }) => {
+export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, carrier, gridPrices }) => {
   const { t } = useTranslation();
 
   const baselineLabel = t('simulationComparison.summary.baseline');
@@ -124,8 +126,7 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
   const generation = isGenerationCarrier(carrier);
   const { energyUnit, powerUnit } = carrierDisplay(carrier);
 
-  // Self-sufficiency and the (renewable-derived) CO₂ figure only exist for a
-  // generating carrier. A heat comparison shows peak demand instead.
+  // Self-sufficiency only exists for a generating carrier. A heat comparison shows peak demand instead.
   const generationCards = generation ? (
     <MetricCard
       label={t('simulationComparison.metrics.selfSufficiency')}
@@ -192,22 +193,15 @@ export const ComparisonSummary: FC<ComparisonSummaryProps> = ({ data1, data2, ca
             return formatNumber(v, 0);
           }}
         />
-        {generation && (
-          <MetricCard
-            label={t('simulationComparison.metrics.co2Savings')}
-            value1={data1.co2_savings_kg}
-            value2={data2.co2_savings_kg}
-            unit="kg"
-            baselineLabel={baselineLabel}
-            comparisonLabel={comparisonLabel}
-            styleKey="co2"
-            format={(v) => {
-              if (v >= 1000) return `${formatNumber(v / 1000, 1)}t`;
-              return formatNumber(v, 0);
-            }}
-          />
-        )}
       </div>
+      {gridPrices && (gridPrices[0] || gridPrices[1]) && (
+        <p className="text-xs text-muted-foreground">
+          {t('gridPrices.compared', {
+            baseline: gridPrices[0] ? t('gridPrices.pair', { import: gridPrices[0].import_ct_per_kwh, export: gridPrices[0].export_ct_per_kwh }) : t('gridPrices.notRecorded'),
+            comparison: gridPrices[1] ? t('gridPrices.pair', { import: gridPrices[1].import_ct_per_kwh, export: gridPrices[1].export_ct_per_kwh }) : t('gridPrices.notRecorded'),
+          })}
+        </p>
+      )}
     </div>
   );
 };

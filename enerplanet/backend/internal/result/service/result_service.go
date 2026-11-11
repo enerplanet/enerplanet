@@ -16,11 +16,20 @@ import (
 )
 
 type ResultService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	coatiRunner CoatiRunner
 }
 
 func NewResultService(db *gorm.DB) *ResultService {
 	return &ResultService{db: db}
+}
+
+// WithCoatiRunner injects the Coati transport the isolated PyPSA leg uses
+// (Route 2: the native power-flow reader). Without it the ingest defaults to
+// the subprocess transport, like the Calliope/MEME leg.
+func (s *ResultService) WithCoatiRunner(runner CoatiRunner) *ResultService {
+	s.coatiRunner = runner
+	return s
 }
 func (s *ResultService) ProcessModelResult(ctx context.Context, modelID uint, userID, zipPath string, pypsaEnabled bool) (result *commonModels.ModelResult, retErr error) {
 	log := logger.ForComponent("result")

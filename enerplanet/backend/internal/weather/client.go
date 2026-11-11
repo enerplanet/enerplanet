@@ -7,7 +7,9 @@ package weather
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"spatialhub_backend/internal/tentacron"
 )
@@ -145,6 +147,12 @@ func (c *Client) Archives(ctx context.Context) (map[string]Archive, error) {
 	return archives, nil
 }
 
+// pointTimeout bounds one point request. It outlasts TentaCron's own retries of
+// the weather-point target (5 attempts of up to 45 s each, the first uncached
+// point running a slow reconstruction), so the backend does not abandon a
+// request TentaCron would still answer.
+const pointTimeout = 5 * time.Minute
+
 // point queries weather-serve with selector "use_case" or "variables".
 func (c *Client) point(ctx context.Context, lat, lon float64, period Period, provider, selector, value string) (json.RawMessage, error) {
 	payload := map[string]any{
@@ -160,32 +168,31 @@ func (c *Client) point(ctx context.Context, lat, lon float64, period Period, pro
 		payload["year"] = period.Year
 	}
 	var raw json.RawMessage
-	if err := c.tc.Do(ctx, targetPoint, payload, &raw); err != nil {
+	if err := c.tc.DoTimeout(ctx, targetPoint, payload, &raw, pointTimeout); err != nil {
 		return nil, asWeatherError(err)
 	}
 	return raw, nil
 }
 
-// weatherRejectionCodes are the TentaCron error codes that mean weather-serve
-// itself declined the call: bad coordinates or an unknown provider (400), a
-// missing API key (401), an unknown location (404), no servable archive for
-// the year (422 archive_not_servable), weather-serve not configured (503), or
-// a weather-serve timeout. All permanent. run_buem logs and proceeds without
-// weather whatever the cause; this only trims the log line to weather-serve's
-// own message.
-var weatherRejectionCodes = map[string]bool{
-	"target_error":   true,
-	"target_timeout": true,
-}
+// ErrRejected marks weather-serve declining the call (TentaCron code
+// target_error): bad coordinates or an unknown provider (400), a missing API
+// key (401), an unknown location (404), no servable archive for the year (422)
+// or weather-serve not configured (503). Repeating the call does not help.
+var ErrRejected = errors.New("weather-serve rejected the request")
 
-// asWeatherError flattens a weather-serve rejection to a plain error carrying
-// weather-serve's own message. Anything else (unknown_target, invalid_payload,
+// asWeatherError flattens a weather-serve rejection or timeout to a plain
+// error carrying weather-serve's own message; only a rejection wraps
+// ErrRejected. Anything else (unknown_target, invalid_payload,
 // max_attempts_exceeded, internal - all backend or infrastructure faults) is
 // returned unchanged.
 func asWeatherError(err error) error {
 	te, ok := tentacron.AsTargetError(err)
-	if !ok || !weatherRejectionCodes[te.Code] {
+	switch {
+	case ok && te.Code == "target_error":
+		return fmt.Errorf("%w: %s", ErrRejected, te.UpstreamMessage())
+	case ok && te.Code == "target_timeout":
+		return fmt.Errorf("weather-serve timed out: %s", te.UpstreamMessage())
+	default:
 		return err
 	}
-	return fmt.Errorf("weather-serve rejected the request: %s", te.UpstreamMessage())
 }

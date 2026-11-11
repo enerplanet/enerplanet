@@ -368,7 +368,7 @@ func setupGinEngine(cfg *config.Config, log *logrus.Logger) *gin.Engine {
 	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", headerContentType, headerAccept, "Authorization", "X-Requested-With", "X-CSRF-Token"},
-		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Retry-After"},
 		AllowCredentials: true,
 	}
 
@@ -635,7 +635,7 @@ func configurePublicAPI(r *gin.Engine, cfg *config.Config, deps *AppDependencies
 	// Public Pylovo routes (no authentication required)
 	regionStore := region.NewStore(db)
 	pylovoInstanceStore := pylovoinstance.NewStore(db)
-	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore)
+	pylovoHandler := pylovo.NewPylovoHandler(cfg.PylovoServiceURL, regionStore, pylovoInstanceStore, deps.City2TabulaClient)
 	api.GET("/v1/pylovo/boundary", pylovoHandler.GetBoundary)
 	api.GET("/v1/pylovo/boundary/regions", pylovoHandler.GetSupportedRegions)
 	api.GET("/v1/pylovo/boundary/available", pylovoHandler.GetAvailableRegions)
@@ -718,7 +718,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	registerWeatherRoutes(protectedAPI, weatherHandler)
 
 	pylovoInstanceStore := pylovoinstance.NewStore(deps.DB)
-	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore)
+	pylovoHandler := pylovo.NewPylovoHandler(deps.Cfg.PylovoServiceURL, region.NewStore(deps.DB), pylovoInstanceStore, deps.City2TabulaClient)
 	registerPylovoRoutes(protectedAPI, pylovoHandler)
 	registerSiteRoutes(protectedAPI, pylovo.NewSiteHandler(pylovoHandler, geo.NewNominatimResolver(deps.DB), deps.City2TabulaClient, modelstore.NewStore(deps.DB)))
 
@@ -788,6 +788,9 @@ func registerSettingsRoutes(api *gin.RouterGroup, handler *settingshandler.Setti
 	api.GET(routeSettings+"/model-limits/me", handler.GetMyModelLimit)
 	api.PUT(routeSettings+"/model-limits", handler.UpdateModelLimits)
 	api.PUT(routeSettings+"/model-limit", handler.UpdateModelLimit)
+	// Grid electricity prices per country
+	api.GET(routeSettings+"/grid-prices", handler.GetGridPrices)
+	api.PUT(routeSettings+"/grid-prices", handler.UpdateGridPrice)
 }
 
 func registerFeedbackRoutes(api *gin.RouterGroup, handler *feedback.FeedbackHandler) {
@@ -916,7 +919,6 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
-	api.GET(routeModelByID+"/results/system-timeseries", resultHandler.GetSystemTimeSeries)
 	api.GET(routeModelByID+"/results/location/:location", resultHandler.GetLocationTimeSeries)
 	api.GET(routeModelByID+"/results/pypsa", resultHandler.GetPyPSAResults)
 	api.GET(routeModelByID+"/download", resultHandler.DownloadModelResult)
@@ -1044,6 +1046,7 @@ func registerSiteRoutes(api *gin.RouterGroup, handler *pylovo.SiteHandler) {
 	sites.GET("/:id/grid", handler.GetSiteGrid)
 	sites.GET("/:id/transformers", handler.GetSiteTransformers)
 	sites.PUT("/:id/transformers", handler.PutSiteTransformers)
+	sites.PATCH("/:id/buildings", handler.PatchSiteBuildings)
 }
 
 // registerIgnisRoutes registers the frontend heat-demand form's ignis lookups.

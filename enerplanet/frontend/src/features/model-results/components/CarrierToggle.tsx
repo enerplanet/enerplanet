@@ -1,6 +1,6 @@
-import { Flame, Fuel, Zap } from 'lucide-react';
+import { Flame, Fuel, Snowflake, Thermometer, Zap } from 'lucide-react';
 import { useTranslation } from '@spatialhub/i18n';
-import { carrierDisplay, normalizeCarrier } from '../carrierUnits';
+import { carrierDisplay, HEATING_COOLING, normalizeCarrier } from '../carrierUnits';
 
 interface CarrierToggleProps {
   /** Carriers present in the results (raw labels from backend). */
@@ -36,6 +36,8 @@ export const CarrierToggle = ({ carriers, activeCarrier, onSelect }: CarrierTogg
     const display = carrierDisplay(carrier);
     if (display.generation) return { Icon: Zap, className: 'text-primary' };
     if (display.kind === 'volume') return { Icon: Fuel, className: 'text-amber-600 dark:text-amber-400' };
+    if (carrier === HEATING_COOLING) return { Icon: Thermometer, className: 'text-orange-500' };
+    if (normalizeCarrier(carrier) === 'cooling') return { Icon: Snowflake, className: 'text-cyan-500' };
     return { Icon: Flame, className: 'text-orange-500' };
   };
 

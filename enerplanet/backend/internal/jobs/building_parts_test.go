@@ -54,7 +54,7 @@ func TestBuildingsForBuem_runsEveryBuildingOfAWay(t *testing.T) {
 	}
 	topology := []interface{}{rowNode("1001832407", nil), rowNode("555", nil)}
 
-	buildings, resolved, unresolved := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
+	buildings, resolved, unresolved := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
 
 	assert.ElementsMatch(t, []string{"1001832407#DEBY_large", "1001832407#DEBY_small", "555"}, ids(buildings))
 	assert.Len(t, resolved, 3)
@@ -70,7 +70,7 @@ func TestBuildingsForBuem_customisedBlockReplacesTheLargestOnly(t *testing.T) {
 	stored := map[string]interface{}{"building": map[string]interface{}{"building_type": "TH", "A_ref": map[string]interface{}{"value": 150, "unit": "m2"}}}
 	topology := []interface{}{rowNode("1001832407", map[string]interface{}{"buem": stored})}
 
-	buildings, resolved, _ := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
+	buildings, resolved, _ := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
 
 	require.Len(t, buildings, 2)
 	assert.True(t, resolved["1001832407#DEBY_large"].Customised)
@@ -88,7 +88,7 @@ func TestFoldPartFailures_failsTheWholeWay(t *testing.T) {
 	}
 	parts := partIDs(envelopes)
 	topology := []interface{}{rowNode("1001832407", nil)}
-	buildings, resolved, unresolved := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
+	buildings, resolved, unresolved := buildingsForBuem(context.Background(), rowUValues, "germany", topology, envelopes, nil, nil, ignis.RefurbishmentExisting, cookingSettings{Carrier: CookingElectric})
 
 	buildings = foldPartFailures(parts, buildings, resolved, unresolved)
 

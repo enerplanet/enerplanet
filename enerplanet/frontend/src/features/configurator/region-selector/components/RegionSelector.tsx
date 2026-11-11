@@ -269,7 +269,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
             >
                 <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                    <span className={`truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
+                    <span className={`min-w-0 break-words ${isSelected ? 'font-semibold' : 'font-medium'}`}>
                         {region.name}
                     </span>
                     {matchedPostcode && (

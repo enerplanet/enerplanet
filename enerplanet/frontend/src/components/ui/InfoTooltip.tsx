@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, useCallback, type CSSProperties, type FC, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, type CSSProperties, type FC, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { TOOLTIP_CONTENTS, TOOLTIP_KEYS, type TooltipKey } from '@/components/shared/tooltip-contents';
 import { useTranslation } from '@spatialhub/i18n';
 
 interface TooltipContent {
 	title: string;
-	description: string;
+	description: ReactNode;
 	example?: string;
 	image?: string;
 }
@@ -22,9 +22,41 @@ const TOOLTIP_WIDTH_PX = 320;
 const TOOLTIP_HEIGHT_ESTIMATE_PX = 220;
 const TOOLTIP_MARGIN_PX = 8;
 const TOOLTIP_GAP_PX = 10;
-const TOOLTIP_MAX_WIDTH_CLASS = 'max-w-[calc(100vw-16px)]';
+const TOOLTIP_MAX_SIZE_CLASS = 'max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] overflow-y-auto';
+// Long enough to move the pointer across the gap from the icon onto the card.
+const CLOSE_DELAY_MS = 150;
+// Hover must rest on the icon this long, so a pointer passing over it on its way elsewhere opens nothing.
+const OPEN_DELAY_MS = 300;
+// Matches duration-200 in FADE: a closing card stays mounted until its fade-out ends.
+const FADE_MS = 200;
+const FADE = 'transition-opacity duration-200 starting:opacity-0 motion-reduce:transition-none';
+
+/** Closes the card that is open now; opening another card calls it first, so only one card shows. */
+let closeOpenCard: (() => void) | null = null;
 
 type TooltipPosition = 'top' | 'bottom' | 'left' | 'right' | typeof FIXED_RIGHT | typeof FIXED_LEFT | typeof FIXED_LEFT_ANCHORED | typeof FIXED_RIGHT_ANCHORED;
+
+type Box = { top: number; left: number; right: number; height: number };
+
+/**
+ * Where an anchored card goes: beside the icon, vertically centred on it, but moved so the whole
+ * card stays inside the viewport. `top` is the card's centre; `left` is its right edge when the
+ * card opens to the left of the icon, its left edge otherwise (see the -translate classes).
+ */
+export function anchoredPlacement(
+	icon: Box,
+	card: { width: number; height: number },
+	viewport: { width: number; height: number },
+	side: 'left' | 'right',
+): { top: number; left: number } {
+	const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+	const halfHeight = Math.min(card.height, viewport.height - TOOLTIP_MARGIN_PX * 2) / 2;
+	const top = clamp(icon.top + icon.height / 2, TOOLTIP_MARGIN_PX + halfHeight, viewport.height - TOOLTIP_MARGIN_PX - halfHeight);
+	const left = side === 'left'
+		? Math.max(icon.left - TOOLTIP_GAP_PX, TOOLTIP_MARGIN_PX + card.width)
+		: Math.min(icon.right + TOOLTIP_GAP_PX, viewport.width - TOOLTIP_MARGIN_PX - card.width);
+	return { top, left };
+}
 
 interface InfoTooltipProps {
 	content: TooltipContent;
@@ -45,6 +77,80 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 	const [anchoredStyle, setAnchoredStyle] = useState<{ top: number; left: number } | null>(null);
 	const [floatingStyle, setFloatingStyle] = useState<CSSProperties | null>(null);
 	const [resolvedFloatingPosition, setResolvedFloatingPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
+	const closeTimer = useRef<number | undefined>(undefined);
+	const openTimer = useRef<number | undefined>(undefined);
+	const [rendered, setRendered] = useState(false);
+	const pointerOnCard = useRef(false);
+	// Pressed inside: the card stays open until Escape or a press outside it.
+	const [pinned, setPinned] = useState(false);
+
+	// The card stays open while the pointer is on it, so its text can be selected.
+	const scheduleClose = useCallback(() => {
+		window.clearTimeout(closeTimer.current);
+		if (pinned) return;
+		closeTimer.current = window.setTimeout(() => {
+			if (!pointerOnCard.current) setShowTooltip(false);
+		}, CLOSE_DELAY_MS);
+	}, [pinned]);
+
+	useEffect(() => () => {
+		window.clearTimeout(closeTimer.current);
+		window.clearTimeout(openTimer.current);
+	}, []);
+
+	const close = useCallback(() => {
+		setShowTooltip(false);
+		setPinned(false);
+		pointerOnCard.current = false;
+	}, []);
+
+	useEffect(() => {
+		if (showTooltip) {
+			setRendered(true);
+			return;
+		}
+		const id = window.setTimeout(() => setRendered(false), FADE_MS);
+		return () => window.clearTimeout(id);
+	}, [showTooltip]);
+
+	useEffect(() => {
+		if (!showTooltip) return;
+		closeOpenCard?.();
+		closeOpenCard = close;
+		return () => {
+			if (closeOpenCard === close) closeOpenCard = null;
+		};
+	}, [showTooltip, close]);
+
+	useEffect(() => {
+		if (!pinned || !showTooltip) return;
+		const swallow = (e: Event) => {
+			e.stopPropagation();
+			e.preventDefault();
+		};
+		// The press that closes the card must not reach what lies under it, such as the map.
+		const onPointerDown = (e: PointerEvent) => {
+			const target = e.target as Node;
+			if (tooltipRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+			swallow(e);
+			window.addEventListener('click', swallow, { capture: true, once: true });
+			window.addEventListener('pointerup', () => setTimeout(() => window.removeEventListener('click', swallow, true)), { once: true });
+			close();
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') close();
+		};
+		const endSelect = () => document.body.classList.remove('select-none');
+		window.addEventListener('pointerdown', onPointerDown, true);
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('mouseup', endSelect);
+		return () => {
+			window.removeEventListener('pointerdown', onPointerDown, true);
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('mouseup', endSelect);
+			endSelect();
+		};
+	}, [pinned, showTooltip, close]);
 	
 	const isFixedMode =
 		position === FIXED_RIGHT ||
@@ -60,21 +166,19 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const computeAnchoredPosition = useCallback(() => {
 		if (!triggerRef.current) return;
-		const rect = triggerRef.current.getBoundingClientRect();
-		const gap = TOOLTIP_GAP_PX;
-		const top = rect.top + rect.height / 2;
-		let left = 0;
-		// The left-anchored tooltip is placed by its right edge (-translate-x-full), since
-		// its rendered width follows the root font size rather than TOOLTIP_WIDTH_PX.
-		if (position === FIXED_LEFT_ANCHORED) {
-			left = rect.left - gap;
-		} else {
-			left = rect.right + gap;
-		}
-		setAnchoredStyle({ top, left });
+		// The card's rendered size follows the root font size, so it is measured rather than taken
+		// from TOOLTIP_WIDTH_PX; before the first render the estimates stand in.
+		const card = tooltipRef.current?.getBoundingClientRect();
+		setAnchoredStyle(anchoredPlacement(
+			triggerRef.current.getBoundingClientRect(),
+			{ width: card?.width ?? TOOLTIP_WIDTH_PX, height: card?.height ?? TOOLTIP_HEIGHT_ESTIMATE_PX },
+			{ width: window.innerWidth, height: window.innerHeight },
+			position === FIXED_LEFT_ANCHORED ? 'left' : 'right',
+		));
 	}, [position]);
 
-	useEffect(() => {
+	// Before paint, so the card measured on its first render never shows off-screen.
+	useLayoutEffect(() => {
 		if (!isAnchored || !showTooltip) return;
 		computeAnchoredPosition();
 		const onScrollOrResize = () => computeAnchoredPosition();
@@ -94,7 +198,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		let nextPosition: 'top' | 'bottom' | 'left' | 'right' = position as 'top' | 'bottom' | 'left' | 'right';
 		const vw = window.innerWidth;
 		const vh = window.innerHeight;
-		const tooltipWidth = Math.min(TOOLTIP_WIDTH_PX, Math.max(TOOLTIP_WIDTH_PX / 2, vw - (TOOLTIP_MARGIN_PX * 2)));
+		const tooltipWidth = tooltipRect?.width ?? Math.min(TOOLTIP_WIDTH_PX, Math.max(TOOLTIP_WIDTH_PX / 2, vw - (TOOLTIP_MARGIN_PX * 2)));
 		const tooltipHeight = Math.min(
 			tooltipRect?.height ?? TOOLTIP_HEIGHT_ESTIMATE_PX,
 			Math.max(TOOLTIP_HEIGHT_ESTIMATE_PX / 2, vh - (TOOLTIP_MARGIN_PX * 2))
@@ -144,7 +248,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 		setFloatingStyle({ top, left });
 	}, [position, isPortalFloating]);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (!isPortalFloating || !showTooltip) return;
 		computeFloatingPosition();
 		const onScrollOrResize = () => computeFloatingPosition();
@@ -198,9 +302,9 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 
 	const getTooltipClasses = () => {
 		if (isFixedMode || isPortalFloating) {
-			return `pointer-events-none w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+			return `select-text w-80 ${TOOLTIP_MAX_SIZE_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 		}
-		return `pointer-events-none absolute z-[100] w-80 ${TOOLTIP_MAX_WIDTH_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
+		return `select-text absolute z-[100] w-80 ${TOOLTIP_MAX_SIZE_CLASS} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl p-4 ${getPositionClasses()}`;
 	};
 
 	return (
@@ -210,19 +314,22 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 				role="button"
 				tabIndex={0}
 				onMouseEnter={() => {
-					setShowTooltip(true);
-					if (isAnchored) computeAnchoredPosition();
-					if (isPortalFloating) computeFloatingPosition();
+					window.clearTimeout(closeTimer.current);
+					openTimer.current = window.setTimeout(() => setShowTooltip(true), OPEN_DELAY_MS);
 				}}
-				onMouseLeave={() => setShowTooltip(false)}
+				onMouseLeave={() => {
+					window.clearTimeout(openTimer.current);
+					scheduleClose();
+				}}
 				onFocus={() => {
 					setShowTooltip(true);
 					if (isAnchored) computeAnchoredPosition();
 					if (isPortalFloating) computeFloatingPosition();
 				}}
-				onBlur={() => setShowTooltip(false)}
+				onBlur={scheduleClose}
 				onClick={(e) => {
 					e.stopPropagation();
+					setPinned(false);
 					setShowTooltip((prev) => !prev);
 					if (isAnchored) computeAnchoredPosition();
 					if (isPortalFloating) computeFloatingPosition();
@@ -231,6 +338,7 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
 						e.stopPropagation();
+						setPinned(false);
 						setShowTooltip((prev) => !prev);
 						if (isAnchored) computeAnchoredPosition();
 						if (isPortalFloating) computeFloatingPosition();
@@ -242,11 +350,24 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 				{children}
 			</span>
 
-			{showTooltip && (() => {
+			{(showTooltip || rendered) && (() => {
 				const tooltipEl = (
 					<div
 						ref={tooltipRef}
-						className={getTooltipClasses()}
+						className={`${getTooltipClasses()} ${FADE} ${showTooltip ? '' : 'pointer-events-none opacity-0'}`}
+						onMouseEnter={() => {
+							pointerOnCard.current = true;
+							window.clearTimeout(closeTimer.current);
+						}}
+						onMouseLeave={() => {
+							pointerOnCard.current = false;
+							scheduleClose();
+						}}
+						onMouseDown={() => {
+							setPinned(true);
+							// Keeps a drag that leaves the card from selecting the page behind it.
+							document.body.classList.add('select-none');
+						}}
 						style={
 							isAnchored && anchoredStyle
 								? { top: anchoredStyle.top, left: anchoredStyle.left }
@@ -271,7 +392,15 @@ const InfoTooltip: FC<InfoTooltipProps> = ({
 						</div>
 					</div>
 				);
-				return (isAnchored || isPortalFloating) ? createPortal(tooltipEl, document.body) : tooltipEl;
+				if (!isAnchored && !isPortalFloating) return tooltipEl;
+				// Dims the page so the card stands out; it takes no pointer events, so hover and outside presses still reach the page.
+				return createPortal(
+					<>
+						<div aria-hidden className={`pointer-events-none fixed inset-0 z-[9998] bg-black/20 dark:bg-black/40 ${FADE} ${showTooltip ? '' : 'opacity-0'}`} />
+						{tooltipEl}
+					</>,
+					document.body,
+				);
 			})()}
 		</div>
 	);
@@ -285,7 +414,7 @@ const INFO_GLYPH = (
 );
 
 /** An info icon whose tooltip shows the given, already translated, title and description. */
-export const TextInfoIcon: FC<{ title: string; description: string; position?: TooltipPosition }> = ({ title, description, position = 'top' }) => (
+export const TextInfoIcon: FC<{ title: string; description: ReactNode; position?: TooltipPosition }> = ({ title, description, position = 'top' }) => (
 	<InfoTooltip content={{ title, description }} position={position}>
 		{INFO_GLYPH}
 	</InfoTooltip>

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"spatialhub_backend/internal/tentacron"
 )
@@ -25,6 +26,7 @@ const (
 	targetCoverage   = "c2t-coverage"
 	targetGeometry   = "c2t-geometry"
 	targetSurfaces   = "c2t-surfaces"
+	targetDatasets   = "c2t-datasets"
 )
 
 // ErrRunNotFound is returned by GetRunStatus when City2TABULA has no run with
@@ -134,7 +136,12 @@ type Building struct {
 	// FunctionCode is the source building's CityGML function, such as the
 	// ALKIS code 31001_1000; null where the dataset has none (City2TABULA
 	// 0.11.3 and later).
-	FunctionCode      *string   `json:"function_code,omitempty"`
+	FunctionCode *string `json:"function_code,omitempty"`
+	// UseType is FunctionCode mapped to City2TABULA's use vocabulary
+	// (residential, ancillary, agriculture, industry, other, ...); null where
+	// the code says nothing about use. Residential is whether it has dwellings.
+	UseType           *string   `json:"use_type,omitempty"`
+	Residential       *bool     `json:"residential,omitempty"`
 	MinHeight         *float64  `json:"min_height,omitempty"`
 	MaxHeight         *float64  `json:"max_height,omitempty"`
 	RoomHeight        *float64  `json:"room_height,omitempty"`
@@ -535,4 +542,26 @@ func (c *Client) GetSurfacesInBBox(ctx context.Context, country string, bbox Bbo
 		return SurfacesPage{}, asC2TError(err)
 	}
 	return page, nil
+}
+
+// DatasetFootprints returns the 3D data footprints (GeoJSON geometries in
+// EPSG:4326) of every dataset City2TABULA holds, keyed by its country name.
+// The first call reads every file header of a dataset and can take minutes.
+func (c *Client) DatasetFootprints(ctx context.Context) (map[string][]json.RawMessage, error) {
+	var body struct {
+		Datasets []struct {
+			Country   string          `json:"country"`
+			Footprint json.RawMessage `json:"footprint"`
+		} `json:"datasets"`
+	}
+	if err := c.tc.DoTimeout(ctx, targetDatasets, map[string]any{"footprint": true}, &body, 15*time.Minute); err != nil {
+		return nil, asC2TError(err)
+	}
+	footprints := map[string][]json.RawMessage{}
+	for _, d := range body.Datasets {
+		if len(d.Footprint) > 0 && string(d.Footprint) != "null" {
+			footprints[d.Country] = append(footprints[d.Country], d.Footprint)
+		}
+	}
+	return footprints, nil
 }

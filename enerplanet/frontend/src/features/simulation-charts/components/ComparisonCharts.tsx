@@ -3,13 +3,28 @@ import ReactECharts from 'echarts-for-react';
 import { StructuredModelResults, CostRecord } from '@/features/model-results/types';
 import { carrierDisplay, isGenerationCarrier } from '@/features/model-results/carrierUnits';
 import { lcoeToCtkwh } from '@/features/model-results/lcoeUnits';
+import { installedCapacities, modelSelfSufficiency, systemFlowLabel } from '@/features/model-results/buildingFlows';
+import { useSystemFlows } from '@/features/model-results/hooks/useSystemFlows';
+import { BuildingSankey } from '@/features/model-results/components/panels/BuildingDetailPanel';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors } from '../pypsa/chartUtils';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
+/** One compared run, for its own energy flow diagram. */
+export interface ComparedRun {
+  role: string;
+  modelId: number;
+  title: string;
+  from: string;
+  to: string;
+  carriers: string[];
+}
+
 interface ComparisonChartsProps {
   results1: StructuredModelResults;
   results2: StructuredModelResults;
+  /** Baseline then comparison; each gets its own energy flow, scaled to its own run. */
+  runs: ComparedRun[];
   /** Carrier both sides were fetched for — drives units and chart availability. */
   carrier?: string;
 }
@@ -20,9 +35,14 @@ const TECH_KEYS = {
   biomass: 'biomass',
   geothermal: 'geothermal',
   storage: 'storage',
+  heatPump: 'heatPump',
+  airConditioner: 'airConditioner',
   grid: 'grid',
   other: 'other',
 } as const;
+
+/** English labels for categories the locale files do not name. */
+const TECH_DEFAULTS: Record<string, string> = { heatPump: 'Heat pump', airConditioner: 'Air conditioner' };
 
 const BASELINE_COLOR = '#3B82F6';
 const COMPARISON_COLOR = '#F59E0B';
@@ -34,6 +54,8 @@ const COLORS: Record<string, string> = {
   biomass: '#84CC16',
   geothermal: '#EF4444',
   storage: '#8B5CF6',
+  heatPump: '#0072B2',
+  airConditioner: '#56B4E9',
   grid: '#6B7280',
   other: '#9CA3AF',
 };
@@ -56,10 +78,6 @@ const normalizeTech = (raw: string): string => {
   return (raw || '').toLowerCase().split(':')[0].trim();
 };
 
-const isDemandOrTransmissionTech = (tech: string): boolean => {
-  return tech.includes('demand') || tech.includes('transmission');
-};
-
 const isMonetaryCost = (costType?: string): boolean => {
   const normalized = (costType || '').toLowerCase();
   if (!normalized) return true;
@@ -72,30 +90,30 @@ const isMonetaryCost = (costType?: string): boolean => {
   return true;
 };
 
-const mapTechCategory = (rawTech: string): string => {
+export const mapTechCategory = (rawTech: string): string => {
   const tech = normalizeTech(rawTech);
   if (tech.includes('pv') || tech.includes('solar')) return TECH_KEYS.solar;
   if (tech.includes('wind')) return TECH_KEYS.wind;
   if (tech.includes('biomass')) return TECH_KEYS.biomass;
   if (tech.includes('geothermal')) return TECH_KEYS.geothermal;
   if (tech.includes('battery') || tech.includes('storage')) return TECH_KEYS.storage;
-  if (tech.includes('transformer') || tech.includes('grid_import') || tech.includes('grid import') || tech.includes('grid_connection') || tech.includes('grid connection')) {
-    return TECH_KEYS.grid;
-  }
+  if (tech.includes('heat_pump')) return TECH_KEYS.heatPump;
+  if (tech.includes('air_conditioner')) return TECH_KEYS.airConditioner;
+  // grid_trafo_<id>_import and _export are the grid connection's buy and sell rows.
+  if (tech.includes('transformer') || tech.includes('grid')) return TECH_KEYS.grid;
   return TECH_KEYS.other;
 };
 
+/** Installed equipment per category, as on the results page: kW of power, kWh of battery storage. */
 const getInstalledCapacityMix = (results: StructuredModelResults) => {
-  const mix: Record<string, number> = {};
-
-  results.energy_cap?.forEach((ec) => {
-    const tech = normalizeTech(ec.tech);
-    if (isDemandOrTransmissionTech(tech)) return;
-
-    const category = mapTechCategory(tech);
-    mix[category] = (mix[category] || 0) + Math.abs(ec.value);
-  });
-
+  const mix: Record<string, { kw: number; kwh: number }> = {};
+  for (const row of installedCapacities(results.energy_cap ?? [])) {
+    const category = mapTechCategory(row.family);
+    const entry = mix[category] ?? { kw: 0, kwh: 0 };
+    entry.kw += row.kw;
+    entry.kwh += row.kwh;
+    mix[category] = entry;
+  }
   return mix;
 };
 
@@ -105,7 +123,7 @@ const getCostBreakdown = (results: StructuredModelResults) => {
   results.cost?.forEach((c: CostRecord) => {
     if (!isMonetaryCost(c.costs)) return;
     const category = mapTechCategory(c.techs || '');
-    costs[category] = (costs[category] || 0) + Math.abs(c.value);
+    costs[category] = (costs[category] || 0) + c.value;
   });
 
   return costs;
@@ -123,49 +141,46 @@ const getInvestmentBreakdown = (results: StructuredModelResults) => {
   return inv;
 };
 
-const getLcoeByTech = (results: StructuredModelResults) => {
-  const lcoeMap = new Map<string, { sum: number; count: number }>();
+/** Output of one technology over the run on a carrier, from that carrier's aggregates. */
+const outputOf = (results: StructuredModelResults, tech: string, carrier: string): number => {
+  const rows = results.carrier_summaries?.[carrier]?.prod_aggregates ?? results.prod_aggregates ?? [];
+  const name = normalizeTech(tech);
+  return rows.filter((r) => normalizeTech(r.techs) === name).reduce((sum, r) => sum + Math.abs(r.total), 0);
+};
 
-  results.model_levelised_cost?.forEach((row) => {
-    if (!isMonetaryCost(row.costs)) return;
-    const category = mapTechCategory(row.techs || '');
-    if (category === TECH_KEYS.other) return;
-
-    const current = lcoeMap.get(category) || { sum: 0, count: 0 };
-    current.sum += Math.abs(row.value);
-    current.count += 1;
-    lcoeMap.set(category, current);
-  });
-
+/**
+ * Per-category mean of per-unit values, weighted by each unit's output, so a
+ * category reads as its fleet total (output-weighted cost, total full-load share).
+ */
+const weightedByCategory = (rows: { tech: string; value: number; weight: number }[]) => {
+  const sums = new Map<string, { value: number; weight: number }>();
+  for (const { tech, value, weight } of rows) {
+    const category = mapTechCategory(tech);
+    const entry = sums.get(category) ?? { value: 0, weight: 0 };
+    entry.value += value * weight;
+    entry.weight += weight;
+    sums.set(category, entry);
+  }
   const result: Record<string, number> = {};
-  lcoeMap.forEach((value, key) => {
-    if (value.count > 0) {
-      result[key] = value.sum / value.count;
-    }
-  });
-
+  sums.forEach(({ value, weight }, key) => { if (weight > 0) result[key] = value / weight; });
   return result;
 };
 
-const getCapacityFactorByTech = (results: StructuredModelResults) => {
-  const cf: Record<string, number> = {};
-
-  results.model_capacity_factor?.forEach((row) => {
-    const category = mapTechCategory(row.techs || '');
-    if (category === TECH_KEYS.other || category === TECH_KEYS.grid || category === TECH_KEYS.storage) return;
-    cf[category] = Math.abs(row.value) * 100;
-  });
-
-  return cf;
+const getLcoeByTech = (results: StructuredModelResults) => {
+  const rows = (results.model_levelised_cost ?? [])
+    .filter((row) => isMonetaryCost(row.costs) && mapTechCategory(row.techs || '') !== TECH_KEYS.other)
+    .map((row) => ({ tech: row.techs, value: Math.abs(row.value), weight: outputOf(results, row.techs, row.carrier) }));
+  return weightedByCategory(rows);
 };
 
-const extractTotalCost = (results: StructuredModelResults): number => {
-  let total = 0;
-  results.cost?.forEach((c) => {
-    if (!isMonetaryCost(c.costs)) return;
-    total += Math.abs(c.value);
-  });
-  return total;
+const NO_CAPACITY_FACTOR = new Set<string>([TECH_KEYS.other, TECH_KEYS.grid, TECH_KEYS.storage]);
+
+/** Full-load share per category: output over capacity times hours, summed over the category's units. */
+export const getCapacityFactorByTech = (results: StructuredModelResults) => {
+  const rows = (results.model_capacity_factor ?? [])
+    .filter((row) => !NO_CAPACITY_FACTOR.has(mapTechCategory(row.techs || '')))
+    .map((row) => ({ tech: row.techs, value: Math.abs(row.value) * 100, weight: outputOf(results, row.techs, row.carrier) / Math.max(Math.abs(row.value), 1e-9) }));
+  return weightedByCategory(rows);
 };
 
 const extractTotalLcoe = (results: StructuredModelResults): number | null => {
@@ -184,41 +199,29 @@ interface ComparisonMetrics {
   renewableProduction: number;
   totalConsumption: number;
   gridImport: number;
-  peakDemand: number;
-  totalCost: number;
+  gridExport: number;
+  batteryLosses: number;
   selfSufficiency: number;
-  gridDependency: number;
   lcoe: number;
 }
 
-const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics => {
-  const renewableProduction = Math.abs(results.renewable_production || 0);
-  const totalConsumption = Math.abs(results.sum_consumption || 0);
-  const gridImport = Math.abs(results.grid_import || 0);
-  const totalCost = extractTotalCost(results);
-  const peakDemand = Math.abs(results.peak_demand || 0);
+/** Total of the aggregate rows whose technology matches. */
+const aggregateTotal = (rows: { techs: string; total: number }[] | undefined, pattern: RegExp): number =>
+  (rows ?? []).filter((r) => pattern.test(r.techs)).reduce((sum, r) => sum + Math.abs(r.total), 0);
 
+const calculateMetrics = (results: StructuredModelResults): ComparisonMetrics => {
   const lcoeFromStructured = extractTotalLcoe(results);
   // No stored levelised cost => 0 = "not reported". Do not derive one from
   // cost ÷ renewable energy: that is not an LCOE and reads as authoritative.
-
-  const selfSufficiency = totalConsumption > 0
-    ? normalizeMetricValue(Math.min(100, (renewableProduction / totalConsumption) * 100))
-    : 0;
-
-  const totalSupply = renewableProduction + gridImport;
-  const gridDependency = totalSupply > 0
-    ? normalizeMetricValue((gridImport / totalSupply) * 100)
-    : 100;
-
+  const charged = aggregateTotal(results.con_aggregates, /battery|storage/);
+  const discharged = aggregateTotal(results.prod_aggregates, /battery|storage/);
   return {
-    renewableProduction,
-    totalConsumption,
-    gridImport,
-    peakDemand,
-    totalCost,
-    selfSufficiency,
-    gridDependency,
+    renewableProduction: Math.abs(results.renewable_production || 0),
+    totalConsumption: Math.abs(results.sum_consumption || 0),
+    gridImport: Math.abs(results.grid_import || 0),
+    gridExport: aggregateTotal(results.con_aggregates, /export/),
+    batteryLosses: Math.max(charged - discharged, 0),
+    selfSufficiency: normalizeMetricValue(modelSelfSufficiency(results) * 100),
     lcoe: lcoeFromStructured ?? 0,
   };
 };
@@ -242,7 +245,28 @@ const ChartCard: FC<{ children: ReactNode }> = ({ children }) => (
   </div>
 );
 
-export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2, carrier }) => {
+/** A run's energy flow from its model flows, the same diagram as on its results page. */
+const RunEnergyFlow: FC<{ run: ComparedRun }> = ({ run }) => {
+  const { t } = useTranslation();
+  const { results, loading } = useSystemFlows(run.modelId, run.carriers);
+  const date = (iso: string) => new Date(iso).toLocaleDateString();
+  return (
+    <ChartCard>
+      <h3 className="mb-3 flex flex-wrap items-baseline gap-2 text-sm font-semibold text-foreground">
+        {run.role}
+        <span className="font-normal">{run.title}</span>
+        <span className="text-xs font-normal text-muted-foreground">{date(run.from)} to {date(run.to)}</span>
+      </h3>
+      <div className="h-[420px]">
+        {loading || results.length === 0
+          ? <p className="text-sm text-muted-foreground">{t('results.energy.loadingTimeSeries', 'Loading energy time series...')}</p>
+          : <BuildingSankey results={results} t={t} label={systemFlowLabel} compact />}
+      </div>
+    </ChartCard>
+  );
+};
+
+export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2, runs, carrier }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
   // Supply-vs-demand compares generation with load: only meaningful for a
@@ -256,15 +280,26 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
   const baselineLabel = t('simulationComparison.baseline');
   const comparisonLabel = t('simulationComparison.comparison');
 
-  const translateTech = useCallback((key: string): string => t(`simulationComparison.technologies.${key}`, key), [t]);
+  const translateTech = useCallback((key: string): string => t(`simulationComparison.technologies.${key}`, TECH_DEFAULTS[key] ?? key), [t]);
 
   const energyCoverageOption = useMemo(() => {
-    const selfSuffKey = t('simulationComparison.metrics.selfSufficiency', 'Self-Sufficiency');
-
+    const supplied = t('results.energy.supplied', 'Supplied');
+    const used = t('results.energy.used', 'Used');
+    const bar = (name: string, stack: string, color: string, data: number[]) => ({
+      name, stack, type: 'bar' as const, barWidth: '28%', itemStyle: { color, borderColor: themeColors.tooltipBg, borderWidth: 1 }, data,
+    });
+    // Each run gets a supplied bar and a used bar; the two are equal when the run balances.
+    const series = [
+      bar(t('results.energy.flow.pv', 'Solar PV'), supplied, '#E69F00', [metrics1.renewableProduction, metrics2.renewableProduction]),
+      bar(t('results.energy.flow.gridImport', 'Grid import'), supplied, '#6B7280', [metrics1.gridImport, metrics2.gridImport]),
+      bar(t('simulationComparison.charts.usedOnSite', 'Used on site'), used, '#0072B2', [metrics1.totalConsumption, metrics2.totalConsumption]),
+      bar(t('results.energy.flow.gridExport', 'Grid export'), used, '#009E73', [metrics1.gridExport, metrics2.gridExport]),
+      bar(t('results.energy.flow.batteryLosses', 'Battery losses'), used, '#A1A1AA', [metrics1.batteryLosses, metrics2.batteryLosses]),
+    ];
     return {
       title: {
-        text: t('simulationComparison.charts.energySupplyDemandCoverage', 'Energy Supply vs Demand'),
-        subtext: t('simulationComparison.charts.renewableGridDemand', 'Renewable + Grid supply compared to demand'),
+        text: t('simulationComparison.charts.suppliedAndUsed', 'Electricity supplied and used'),
+        subtext: t('simulationComparison.charts.suppliedAndUsedSub', 'Left bar supplied, right bar used, over each run ({{unit}})', { unit: energyUnit }),
         left: 'left',
         textStyle: { fontSize: 14, fontWeight: 600, color: themeColors.text },
         subtextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -278,92 +313,27 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         borderColor: themeColors.tooltipBorder,
         textStyle: { color: themeColors.text },
         formatter: (params: any[]) => {
-          const label = params[0]?.axisValue;
-          let html = `<strong style="color: ${themeColors.text}">${label}</strong><br/>`;
-          params.forEach((p) => {
-            const unit = p.seriesName === selfSuffKey ? '%' : energyUnit;
-            const val = unit === '%' ? formatNumber(p.value, 1) : formatShortNumber(p.value, 1);
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${val} ${unit}</span><br/>`;
-          });
+          let html = `<strong style="color: ${themeColors.text}">${params[0]?.axisValue}</strong>`;
+          for (const stack of [supplied, used]) {
+            const rows = params.filter((p) => series[p.seriesIndex]?.stack === stack);
+            const total = rows.reduce((sum, p) => sum + (p.value || 0), 0);
+            html += `<br/><strong style="color: ${themeColors.text}">${stack}: ${formatShortNumber(total, 1)} ${energyUnit}</strong>`;
+            rows.forEach((p) => {
+              html += `<br/><span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatShortNumber(p.value, 1)} ${energyUnit}</span>`;
+            });
+          }
           return html;
         },
       },
-      legend: {
-        bottom: 0,
-        data: [
-          t('simulationComparison.metrics.renewableGen', 'Renewable'),
-          t('simulationComparison.metrics.gridImport', 'Grid Import'),
-          t('simulationComparison.metrics.totalDemand', 'Demand'),
-          selfSuffKey,
-        ],
-        textStyle: { color: themeColors.textMuted, fontSize: 11 },
+      legend: { bottom: 0, textStyle: { color: themeColors.textMuted, fontSize: 11 } },
+      grid: { left: '3%', right: '4%', bottom: '16%', top: '18%', containLabel: true },
+      xAxis: { type: 'category' as const, data: [baselineLabel, comparisonLabel], axisLabel: { color: themeColors.textSubtle } },
+      yAxis: {
+        type: 'value' as const,
+        splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
+        axisLabel: { color: themeColors.textSubtle, formatter: (value: number) => formatShortNumber(value) },
       },
-      grid: { left: '3%', right: '5%', bottom: '16%', top: '22%', containLabel: true },
-      xAxis: {
-        type: 'category' as const,
-        data: [baselineLabel, comparisonLabel],
-        axisLabel: { color: themeColors.textSubtle },
-      },
-      yAxis: [
-        {
-          type: 'value' as const,
-          name: energyUnit,
-          nameTextStyle: { color: themeColors.textMuted, fontSize: 10, padding: [0, 0, 0, 30] },
-          nameLocation: 'end' as const,
-          splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
-          axisLabel: {
-            color: themeColors.textSubtle,
-            formatter: (value: number) => formatShortNumber(value),
-          },
-        },
-        {
-          type: 'value' as const,
-          name: '%',
-          max: 100,
-          nameTextStyle: { color: themeColors.textMuted, fontSize: 10, padding: [0, 30, 0, 0] },
-          nameLocation: 'end' as const,
-          splitLine: { show: false },
-          axisLabel: { color: themeColors.textSubtle, formatter: (value: number) => formatPercentValue(value, 0) },
-        },
-      ],
-      series: [
-        {
-          name: t('simulationComparison.metrics.renewableGen', 'Renewable'),
-          type: 'bar' as const,
-          stack: 'supply',
-          barWidth: '34%',
-          itemStyle: { color: '#22C55E', borderRadius: [4, 4, 0, 0] },
-          data: [metrics1.renewableProduction, metrics2.renewableProduction],
-        },
-        {
-          name: t('simulationComparison.metrics.gridImport', 'Grid Import'),
-          type: 'bar' as const,
-          stack: 'supply',
-          barWidth: '34%',
-          itemStyle: { color: '#6B7280', borderRadius: [4, 4, 0, 0] },
-          data: [metrics1.gridImport, metrics2.gridImport],
-        },
-        {
-          name: t('simulationComparison.metrics.totalDemand', 'Demand'),
-          type: 'line' as const,
-          yAxisIndex: 0,
-          symbol: 'circle',
-          symbolSize: 8,
-          lineStyle: { width: 2, color: '#EF4444' },
-          itemStyle: { color: '#EF4444' },
-          data: [metrics1.totalConsumption, metrics2.totalConsumption],
-        },
-        {
-          name: selfSuffKey,
-          type: 'line' as const,
-          yAxisIndex: 1,
-          symbol: 'diamond',
-          symbolSize: 8,
-          lineStyle: { width: 2, type: 'dashed' as const, color: '#0EA5E9' },
-          itemStyle: { color: '#0EA5E9' },
-          data: [metrics1.selfSufficiency, metrics2.selfSufficiency],
-        },
-      ],
+      series,
     };
   }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors, energyUnit]);
 
@@ -371,15 +341,16 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
     const cap1 = getInstalledCapacityMix(results1);
     const cap2 = getInstalledCapacityMix(results2);
 
+    const kw = (mix: typeof cap1, key: string) => mix[key]?.kw ?? 0;
     const allKeys = Array.from(new Set([...Object.keys(cap1), ...Object.keys(cap2)]))
-      .sort((a, b) => ((cap1[b] || 0) + (cap2[b] || 0)) - ((cap1[a] || 0) + (cap2[a] || 0)));
+      .sort((a, b) => (kw(cap1, b) + kw(cap2, b)) - (kw(cap1, a) + kw(cap2, a)));
 
     const translated = allKeys.map(translateTech);
 
     return {
       title: {
         text: t('simulationComparison.charts.installedCapacityByTechnology', 'Installed Capacity by Technology'),
-        subtext: t('simulationComparison.charts.sideBySideComparison', 'Side-by-side comparison'),
+        subtext: t('simulationComparison.charts.installedPower', 'Rated power in kW; battery storage in kWh on hover'),
         left: 'left',
         textStyle: { fontSize: 14, fontWeight: 600, color: themeColors.text },
         subtextStyle: { fontSize: 11, color: themeColors.textMuted },
@@ -393,9 +364,12 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
         textStyle: { color: themeColors.text },
         formatter: (params: any[]) => {
           const tech = params[0]?.axisValue;
+          const key = allKeys[params[0]?.dataIndex];
           let html = `<strong style="color: ${themeColors.text}">${tech}</strong><br/>`;
           params.forEach((p) => {
-            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatNumber(p.value, 1)} kW</span><br/>`;
+            const kwh = (p.seriesIndex === 0 ? cap1 : cap2)[key]?.kwh ?? 0;
+            const storage = kwh > 0 ? `, ${formatNumber(kwh, 1)} kWh` : '';
+            html += `<span style="color:${p.color}">●</span> <span style="color: ${themeColors.text}">${p.seriesName}: ${formatNumber(p.value, 1)} kW${storage}</span><br/>`;
           });
           return html;
         },
@@ -409,7 +383,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       xAxis: {
         type: 'category' as const,
         data: translated,
-        axisLabel: { fontSize: 10, rotate: 28, color: themeColors.textSubtle },
+        axisLabel: { fontSize: 11, color: themeColors.textSubtle },
       },
       yAxis: {
         type: 'value' as const,
@@ -425,14 +399,14 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
           type: 'bar' as const,
           barWidth: '35%',
           itemStyle: { color: BASELINE_COLOR, borderRadius: [4, 4, 0, 0] },
-          data: allKeys.map((key) => cap1[key] || 0),
+          data: allKeys.map((key) => kw(cap1, key)),
         },
         {
           name: comparisonLabel,
           type: 'bar' as const,
           barWidth: '35%',
           itemStyle: { color: COMPARISON_COLOR, borderRadius: [4, 4, 0, 0] },
-          data: allKeys.map((key) => cap2[key] || 0),
+          data: allKeys.map((key) => kw(cap2, key)),
         },
       ],
     };
@@ -786,8 +760,6 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       xAxis: { type: 'category' as const, data: allKeys.map(translateTech), axisLabel: { color: themeColors.textSubtle, fontSize: 11 } },
       yAxis: {
         type: 'value' as const,
-        name: 'ct/kWh',
-        nameTextStyle: { color: themeColors.textMuted, fontSize: 10 },
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
         axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${formatNumber(v, 0)}` },
       },
@@ -847,8 +819,6 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       yAxis: {
         type: 'value' as const,
         max: 100,
-        name: '%',
-        nameTextStyle: { color: themeColors.textMuted, fontSize: 10 },
         splitLine: { lineStyle: { type: 'dashed' as const, color: themeColors.gridLine } },
         axisLabel: { color: themeColors.textSubtle, formatter: (v: number) => `${formatNumber(v, 0)}%` },
       },
@@ -870,95 +840,6 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       ],
     };
   }, [results1, results2, t, baselineLabel, comparisonLabel, translateTech, themeColors]);
-
-  const sankeyOption = useMemo(() => {
-    const buildFlow = (metrics: ComparisonMetrics, label: string) => {
-      const renewableNode = `${t('simulationComparison.metrics.renewableGen', 'Renewable')} (${label})`;
-      const gridNode = `${t('simulationComparison.metrics.gridImport', 'Grid Import')} (${label})`;
-      const supplyNode = `${t('simulationComparison.charts.totalSupply', 'Total Supply')} (${label})`;
-      const demandNode = `${t('simulationComparison.metrics.totalDemand', 'Demand')} (${label})`;
-      const surplusNode = `${t('simulationComparison.charts.surplus', 'Surplus')} (${label})`;
-      const deficitNode = `${t('simulationComparison.charts.deficit', 'Deficit')} (${label})`;
-
-      const nodes = [
-        { name: renewableNode },
-        { name: gridNode },
-        { name: supplyNode },
-        { name: demandNode },
-      ];
-
-      const links: { source: string; target: string; value: number }[] = [
-        { source: renewableNode, target: supplyNode, value: Math.round(metrics.renewableProduction) },
-        { source: gridNode, target: supplyNode, value: Math.round(metrics.gridImport) },
-      ];
-
-      const supply = metrics.renewableProduction + metrics.gridImport;
-      const demand = metrics.totalConsumption;
-
-      links.push({
-        source: supplyNode,
-        target: demandNode,
-        value: Math.round(Math.min(supply, demand)),
-      });
-
-      if (supply > demand) {
-        nodes.push({ name: surplusNode });
-        links.push({ source: supplyNode, target: surplusNode, value: Math.round(supply - demand) });
-      }
-
-      if (demand > supply) {
-        nodes.push({ name: deficitNode });
-        links.push({ source: deficitNode, target: demandNode, value: Math.round(demand - supply) });
-      }
-
-      return { nodes, links };
-    };
-
-    const flow1 = buildFlow(metrics1, baselineLabel);
-    const flow2 = buildFlow(metrics2, comparisonLabel);
-
-    return {
-      title: {
-        text: t('simulationComparison.charts.energyFlowSankey', 'Energy Flow Comparison'),
-        subtext: t('simulationComparison.charts.energyBalanceByScenario', 'Renewable + Grid supply to demand by scenario'),
-        left: 'left',
-        textStyle: { fontSize: 14, fontWeight: 600, color: themeColors.text },
-        subtextStyle: { fontSize: 11, color: themeColors.textMuted },
-      },
-      tooltip: {
-        trigger: 'item' as const,
-        confine: true,
-        backgroundColor: themeColors.tooltipBg,
-        borderColor: themeColors.tooltipBorder,
-        textStyle: { color: themeColors.text },
-        formatter: (params: any) => {
-          if (params.dataType === 'edge') {
-            return `<span style="color: ${themeColors.text}">${params.data.source} → ${params.data.target}: ${formatShortNumber(params.data.value, 1)} kWh</span>`;
-          }
-          return `<strong style="color: ${themeColors.text}">${params.name}</strong>`;
-        },
-      },
-      series: [
-        {
-          type: 'sankey' as const,
-          top: 60,
-          bottom: 40,
-          left: 20,
-          right: 120,
-          nodeGap: 14,
-          nodeWidth: 12,
-          data: [...flow1.nodes, ...flow2.nodes],
-          links: [...flow1.links, ...flow2.links],
-          orient: 'horizontal' as const,
-          nodeAlign: 'justify' as const,
-          lineStyle: { color: 'gradient' as const, curveness: 0.5, opacity: 0.4 },
-          itemStyle: { borderWidth: 1, borderColor: themeColors.gridLine },
-          label: { color: themeColors.text, fontSize: 10, overflow: 'truncate' as const, width: 140 },
-          emphasis: { focus: 'adjacency' as const },
-        },
-      ],
-    };
-  }, [metrics1, metrics2, t, baselineLabel, comparisonLabel, themeColors]);
 
   const hasInvestmentData = (results1.cost_investment?.length || 0) > 0 || (results2.cost_investment?.length || 0) > 0;
   const hasLcoeData = (results1.model_levelised_cost?.length || 0) > 0 || (results2.model_levelised_cost?.length || 0) > 0;
@@ -1028,9 +909,7 @@ export const ComparisonCharts: FC<ComparisonChartsProps> = ({ results1, results2
       <SectionHeader>
         {t('simulationComparison.charts.energyFlowSection', 'Energy Flow')}
       </SectionHeader>
-      <ChartCard>
-        <ReactECharts option={sankeyOption} style={{ height: '450px' }} />
-      </ChartCard>
+      {runs.map((run) => <RunEnergyFlow key={run.role} run={run} />)}
     </div>
   );
 };

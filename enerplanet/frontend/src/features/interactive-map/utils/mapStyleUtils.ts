@@ -252,6 +252,10 @@ function sharedTechIconStyle(key: string, make: () => Style): Style {
 /** Rounds a zoom-dependent size to a step, so nearby zoom levels share styles. */
 const step = (value: number, size: number) => Math.round(value / size) * size;
 
+/** The technologies to draw an icon for: PV placed on no surface is left out, as it runs as no PV. */
+export const iconTechKeys = (techs: Record<string, { arrays?: unknown[] } | undefined>): string[] =>
+    Object.keys(techs).filter((key) => !(key === 'pv_supply' && techs[key]?.arrays?.length === 0));
+
 // Helper to add tech indicator icons to a feature's styles
 function addTechIconStyles(
     styles: Style[],
@@ -261,9 +265,10 @@ function addTechIconStyles(
     baseZIndex: number = 1001
 ): void {
     const techs = feature.get('techs');
-    if (!techs || typeof techs !== 'object' || Object.keys(techs).length === 0) return;
+    if (!techs || typeof techs !== 'object') return;
 
-    const techKeys = Object.keys(techs);
+    const techKeys = iconTechKeys(techs);
+    if (techKeys.length === 0) return;
     const numTechs = techKeys.length;
     if (!feature.getGeometry()) return;
 

@@ -123,13 +123,13 @@ func (p *TaskProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	case jobs.TypeTriggerCity2TabulaRun:
 		return jobs.HandleTriggerCity2TabulaRun(ctx, t, p.db, p.city2tabulaClient, p.c2tRuns)
 	case jobs.TypeDispatchMeme:
-		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient), p.memeMaxMemoryMB)
+		return jobs.HandleDispatchMeme(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.demandResolver(), seriesstore.NewStore(p.db), p.pvResolver(), jobs.NewGridPriceStore(p.db), p.resultZipStore, jobs.NewAsynqIngestMemeEnqueuer(p.asynqClient), p.memeMaxMemoryMB)
 	case jobs.TypeIngestMemeResult:
 		return jobs.HandleIngestMemeResult(ctx, t, p.db, p.memeRuns, p.coatiRunner)
 	case jobs.TypeDispatchMemePyPSA:
 		return jobs.HandleDispatchMemePyPSA(ctx, t, p.db, p.tentacronClient, p.memeRuns, p.resultZipStore, jobs.NewDBCalliopeCSVLocator(p.db), jobs.NewAsynqIngestMemePyPSAEnqueuer(p.asynqClient))
 	case jobs.TypeIngestMemePyPSAResult:
-		return jobs.HandleIngestMemePyPSAResult(ctx, t, p.db, p.memeRuns, resultservice.NewResultServicePyPSAIngester(resultservice.NewResultService(p.db)))
+		return jobs.HandleIngestMemePyPSAResult(ctx, t, p.db, p.memeRuns, resultservice.NewResultServicePyPSAIngester(resultservice.NewResultService(p.db).WithCoatiRunner(p.coatiRunner)))
 	case jobs.TypeDomainEvent:
 		return jobs.HandleDomainEvent(ctx, t)
 	default:

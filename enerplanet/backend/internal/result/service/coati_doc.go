@@ -41,6 +41,13 @@ type CoatiResultsDocument struct {
 
 	Warnings []string        `json:"warnings"`
 	Metadata json.RawMessage `json:"metadata"`
+
+	// Details carries the framework-specific extras Coati reports (schema
+	// 1.1+). The PyPSA leg reads details["power_flow"] — the native power-flow
+	// reader's per-snapshot convergence record, per-bus voltage and per-branch
+	// loading (see pypsa_ingest_coati.go). Kept raw: the contents are shaped
+	// by the framework, and the R2 ingest types only the key it consumes.
+	Details map[string]json.RawMessage `json:"details"`
 }
 
 // CoatiTechMetadata is one entry of the document's tech_metadata map.

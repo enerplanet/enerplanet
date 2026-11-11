@@ -10,7 +10,7 @@
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /** The run stages a failure is recorded in (results.failed_stage), by the status the run had. */
-const FAILED_STAGES = new Set(["queue", "running", "processing"]);
+const FAILED_STAGES = new Set(["queue", "buildings", "running", "processing"]);
 
 export interface FailureMessage {
   title: string;

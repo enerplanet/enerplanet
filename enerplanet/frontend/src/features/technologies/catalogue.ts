@@ -18,6 +18,14 @@ export const defaultProduct = (products: Technology[], type: string): Technology
 export const productsOfType = (products: Technology[], type: string): Technology[] =>
   products.filter((p) => productType(p) === type).sort((a, b) => Number(b.key === type) - Number(a.key === type));
 
+/** The products whose name or manufacturer contains query, in alphabetical order of name. */
+export const findProducts = (products: Technology[], query: string): Technology[] => {
+  const q = query.trim().toLowerCase();
+  return products
+    .filter((p) => !q || `${p.alias} ${p.manufacturer ?? ""}`.toLowerCase().includes(q))
+    .sort((a, b) => a.alias.localeCompare(b.alias, undefined, { sensitivity: "base" }));
+};
+
 /** The product as a building stores it: keyed by its type, naming the product. */
 export const asBuildingTechnology = (product: Technology): Technology => ({
   ...product,

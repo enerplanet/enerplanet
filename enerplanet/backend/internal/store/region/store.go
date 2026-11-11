@@ -7,6 +7,8 @@ import (
 
 	"spatialhub_backend/internal/models"
 
+	"github.com/lib/pq"
+
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -221,6 +223,39 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 		return nil
 	})
 }
+
+// ApplyCoverage cuts each region's boundary to the 3D footprints of its
+// country and marks it has_3d where they overlap. footprints is keyed by the
+// City2TABULA country name, e.g. "germany" for Germany.
+func (rs *Store) ApplyCoverage(footprints map[string][]json.RawMessage) error {
+	return rs.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("UPDATE cached_regions SET has3_d = false").Error; err != nil {
+			return fmt.Errorf("reset has_3d: %w", err)
+		}
+		for country, geoms := range footprints {
+			list := make([]string, len(geoms))
+			for i, g := range geoms {
+				list[i] = string(g)
+			}
+			if err := tx.Exec(coverageSQL, pq.Array(list), country).Error; err != nil {
+				return fmt.Errorf("apply 3D coverage for %s: %w", country, err)
+			}
+		}
+		return nil
+	})
+}
+
+const coverageSQL = `
+WITH f AS (
+	SELECT ST_Union(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(g), 4326))) AS geom FROM unnest(?::text[]) AS g
+), r AS (
+	SELECT c.id, ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(c.boundary->>'geometry'), 4326)), f.geom), 3) AS geom
+	FROM cached_regions c, f
+	WHERE replace(lower(c.country), ' ', '_') = ? AND c.boundary->'geometry' IS NOT NULL
+)
+UPDATE cached_regions c
+SET has3_d = true, boundary = jsonb_set(c.boundary, '{geometry}', ST_AsGeoJSON(r.geom)::jsonb)
+FROM r WHERE c.id = r.id AND NOT ST_IsEmpty(r.geom)`
 
 // BuildAvailableRegionsResponse builds the API response from cached regions
 func BuildAvailableRegionsResponse(regions []models.CachedRegion) ([]byte, error) {

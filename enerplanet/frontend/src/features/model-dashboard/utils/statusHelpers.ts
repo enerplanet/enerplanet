@@ -7,6 +7,7 @@ export const getStatusColor = (status: ModelStatus): StatusColor => {
 	const colorMap: Record<ModelStatus, StatusColor> = {
 		draft: "default",
 		queue: "default",
+		buildings: "primary",
 		calculating: "primary",
 		running: "primary",
 		processing: "secondary",
@@ -27,6 +28,7 @@ export const getModelStatusColor = (status: ModelStatus): string => {
 		completed: "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200 hover:from-green-200 hover:to-emerald-200 shadow-sm",
 		published: "bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border-purple-200 hover:from-purple-200 hover:to-indigo-200 shadow-sm",
 		queue: "bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border-yellow-200 hover:from-yellow-200 hover:to-amber-200 shadow-sm animate-pulse",
+		buildings: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-200 hover:from-blue-200 hover:to-cyan-200 shadow-sm animate-pulse",
 		calculating: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-200 hover:from-blue-200 hover:to-cyan-200 shadow-sm animate-pulse",
 		running: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-200 hover:from-blue-200 hover:to-cyan-200 shadow-sm animate-pulse",
 		processing: "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-200 hover:from-blue-200 hover:to-cyan-200 shadow-sm animate-pulse",
@@ -39,14 +41,18 @@ export const getModelStatusColor = (status: ModelStatus): string => {
 };
 
 export const isActiveStatus = (status: ModelStatus): boolean => {
-	return status === "queue" || status === "running" || status === "calculating" || status === "processing";
+	return status === "queue" || status === "buildings" || status === "running" || status === "calculating" || status === "processing";
 };
+
+/** The label key of a run's model step: a plan run sizes the technologies, an operate run only dispatches them. */
+export const runningLabelKey = (config?: Record<string, unknown>): string =>
+	config?.mode === "operate" ? "modelStatus.running" : "modelStatus.optimising";
 
 /**
  * Check if a model is in a processing state and should be disabled
  */
 export const isModelDisabled = (status: ModelStatus): boolean => {
-	return status === "running" || status === "queue" || status === "calculating" || status === "processing";
+	return status === "running" || status === "queue" || status === "buildings" || status === "calculating" || status === "processing";
 };
 
 /**

@@ -216,6 +216,8 @@ export interface ModelResults {
   energy_cap: EnergyCap[];
   sum_production: number;
   sum_consumption: number;
+  /** Cost the optimiser minimised over the run, EUR; written by the Coati ingest. */
+  objective?: number;
   timestep_count?: number;
   prod_aggregates?: Record<string, number>;
   con_aggregates?: Record<string, number>;
@@ -278,6 +280,8 @@ export interface StructuredModelResults {
    * ("power", "heat", possibly "thermal") — do not assume the set.
    */
   carrier_summaries?: Record<string, CarrierSummary>;
+  /** Grid electricity prices the latest run used, ct/kWh; absent for older runs. */
+  grid_prices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
   carrier_prod?: CarrierProdRecord[];
   carrier_con?: CarrierConRecord[];
   system_balance?: SystemBalanceRecord[];
@@ -312,6 +316,8 @@ interface ModelConfig {
   transformers?: GeoJSONFeatureCollection;
   grids?: unknown[];
   pypsa?: Record<string, unknown>;
+  /** "plan" sizes the technologies at least cost, "operate" only dispatches them; absent means plan. */
+  mode?: 'plan' | 'operate';
 }
 
 export interface ModelInfo {

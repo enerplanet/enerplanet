@@ -26,8 +26,8 @@ type liveModelTasks interface {
 	LiveModelIDs() (map[uint]bool, error)
 }
 
-// FailOrphanedRuns marks as failed every model left in queue, running or
-// processing whose task no longer exists, so it can be run again: a MEME or
+// FailOrphanedRuns marks as failed every model left in queue, buildings, running
+// or processing whose task no longer exists, so it can be run again: a MEME or
 // BuEM task is not retried, and one that dies with the backend leaves its
 // model in that status for good. A model of the legacy webservice path
 // (webservice_id set) waits for a callback with no task and is left alone.
@@ -36,6 +36,7 @@ func FailOrphanedRuns(db *gorm.DB, live liveModelTasks, now time.Time) ([]uint, 
 	err := db.Model(&commonModels.Model{}).
 		Where("status IN ?", []string{
 			commonModels.ModelStatusQueue,
+			commonModels.ModelStatusBuildings,
 			commonModels.ModelStatusRunning,
 			commonModels.ModelStatusProcessing,
 		}).

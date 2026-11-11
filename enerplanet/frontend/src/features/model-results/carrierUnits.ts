@@ -40,6 +40,8 @@ export const CARRIER_LABELS: Record<string, string> = {
   electricity: 'results.carrier.electricity',
   heat: 'results.carrier.heat',
   thermal: 'results.carrier.heat',
+  cooling: 'results.carrier.cooling',
+  heating_cooling: 'results.carrier.heatingCooling',
   gas: 'results.carrier.gas',
   natural_gas: 'results.carrier.gas',
   methane: 'results.carrier.gas',
@@ -81,12 +83,35 @@ const CARRIER_DISPLAY: Record<string, CarrierDisplay> = {
   electricity: ELECTRICITY,
   heat: HEAT,
   thermal: HEAT,
+  cooling: { ...HEAT, labelKey: 'results.carrier.cooling' },
+  heating_cooling: { ...HEAT, labelKey: 'results.carrier.heatingCooling' },
   gas: VOLUMETRIC,
   natural_gas: VOLUMETRIC,
   methane: VOLUMETRIC,
   oil: { ...VOLUMETRIC, labelKey: 'results.carrier.oil' },
   liquid_fuel: { ...VOLUMETRIC, labelKey: 'results.carrier.oil' },
 };
+
+/** The carriers that keep the indoor temperature comfortable, in display order. */
+export const THERMAL_CARRIERS = ['heat', 'cooling'];
+
+/** Toggle entry that shows the thermal carriers together; no backend carrier has this name. */
+export const HEATING_COOLING = 'heating_cooling';
+
+/** The run's carriers as the toggle lists them: heat and cooling become one Heating and cooling entry. */
+export function toggleCarriers(carriers: string[]): string[] {
+  const out: string[] = [];
+  for (const c of carriers) {
+    const entry = THERMAL_CARRIERS.includes(normalizeCarrier(c)) ? HEATING_COOLING : c;
+    if (!out.includes(entry)) out.push(entry);
+  }
+  return out;
+}
+
+/** The thermal carriers present in a run, heat first. */
+export function thermalCarriers(carriers: string[]): string[] {
+  return THERMAL_CARRIERS.filter((c) => carriers.some((r) => normalizeCarrier(r) === c));
+}
 
 /** Backend default carrier when no `?carrier=` filter is sent. */
 export const DEFAULT_CARRIER = 'power';
@@ -145,14 +170,14 @@ function formatVolume(value: number, unit: string, digits: number): string {
 }
 
 /** Time-integrated quantity in the carrier's own unit (kWh / MWh / m³). */
-export function formatCarrierEnergy(value: number, carrier?: string | null): string {
+export function formatCarrierEnergy(value: number, carrier?: string | null, digits = 2): string {
   const { kind, energyUnit } = carrierDisplay(carrier);
   if (kind === 'volume') return formatVolume(value, energyUnit, 1);
 
   if (!Number.isFinite(value)) return `0 ${energyUnit}`;
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, 2)} GWh`;
-  if (abs >= 1_000) return `${formatNumber(value / 1_000, 2)} MWh`;
+  if (abs >= 1_000_000) return `${formatNumber(value / 1_000_000, digits)} GWh`;
+  if (abs >= 1_000) return `${formatNumber(value / 1_000, digits)} MWh`;
   return `${formatNumber(value, 1)} ${energyUnit}`;
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -19,6 +20,12 @@ type CoatiRunner interface {
 	// bytes. frameworkID is the Coati framework identifier (e.g.
 	// CoatiFrameworkCalliope07); the id is a claim Coati itself validates.
 	Convert(ctx context.Context, resultFile, frameworkID string) ([]byte, error)
+
+	// ConvertReader starts Coati over resultFile and returns a reader over its
+	// results-document JSON. It lets a caller that decodes the document anyway
+	// stream it instead of buffering it whole. The caller MUST Close the reader;
+	// Close reports a non-zero exit as an error.
+	ConvertReader(ctx context.Context, resultFile, frameworkID string) (io.ReadCloser, error)
 }
 
 const (
@@ -75,22 +82,78 @@ func (r SubprocessCoatiRunner) bin() (string, error) {
 // Convert runs `coati convert <resultFile> - <frameworkID>` and returns the
 // results-document JSON on stdout.
 func (r SubprocessCoatiRunner) Convert(ctx context.Context, resultFile, frameworkID string) ([]byte, error) {
-	bin, err := r.bin()
+	rc, err := r.ConvertReader(ctx, resultFile, frameworkID)
 	if err != nil {
 		return nil, err
 	}
-
-	// OUTPUT "-" writes the document to stdout, avoiding a temp output file.
-	// A failed conversion exits non-zero (1) and leaves nothing to read.
-	cmd := exec.CommandContext(ctx, bin, "convert", resultFile, "-", frameworkID)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("coati convert %q (framework %q): %w: %s", resultFile, frameworkID, err, stderr.String())
+	out, readErr := io.ReadAll(rc)
+	// Close (Wait) BEFORE deciding: a non-zero exit must surface even when the
+	// process wrote partial output first.
+	closeErr := rc.Close()
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	if readErr != nil {
+		return nil, fmt.Errorf("coati convert %q: read output: %w", resultFile, readErr)
 	}
 	if len(bytes.TrimSpace(out)) == 0 {
 		return nil, fmt.Errorf("coati convert %q produced empty output", resultFile)
 	}
 	return out, nil
+}
+
+// ConvertReader starts `coati convert <resultFile> - <frameworkID>` (OUTPUT "-"
+// writes the document to stdout, avoiding a temp output file) and returns a
+// reader over its stdout. The caller MUST Close it: Close drains the stream,
+// waits for the process and reports a non-zero exit (with coati's stderr) as an
+// error — so a failed conversion is always surfaced. Streaming lets a large
+// document be decoded as it arrives instead of buffered whole.
+func (r SubprocessCoatiRunner) ConvertReader(ctx context.Context, resultFile, frameworkID string) (io.ReadCloser, error) {
+	bin, err := r.bin()
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	cmd := exec.CommandContext(ctx, bin, "convert", resultFile, "-", frameworkID)
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("coati convert %q: stdout pipe: %w", resultFile, err)
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("coati convert %q (framework %q): %w", resultFile, frameworkID, err)
+	}
+	return &coatiProcess{cmd: cmd, stdout: stdout, stderr: stderr, resultFile: resultFile, frameworkID: frameworkID}, nil
+}
+
+// coatiProcess is a running `coati convert`: the stdout stream plus the process
+// handle needed to reap it. Close is idempotent.
+type coatiProcess struct {
+	cmd         *exec.Cmd
+	stdout      io.ReadCloser
+	stderr      *bytes.Buffer
+	resultFile  string
+	frameworkID string
+	closed      bool
+}
+
+func (p *coatiProcess) Read(b []byte) (int, error) { return p.stdout.Read(b) }
+
+// Close drains any unread stdout and waits for the process. A non-zero exit
+// (a failed conversion, e.g. a mismatched framework id) is returned with the
+// process's stderr so the caller sees why.
+func (p *coatiProcess) Close() error {
+	if p.closed {
+		return nil
+	}
+	p.closed = true
+	_, _ = io.Copy(io.Discard, p.stdout) // drain so Wait cannot block on a full pipe
+	err := p.cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("coati convert %q (framework %q): %w: %s", p.resultFile, p.frameworkID, err, p.stderr.String())
+	}
+	return nil
 }

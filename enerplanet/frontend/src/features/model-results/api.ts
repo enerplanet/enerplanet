@@ -1,6 +1,6 @@
 import axios from 'axios';
 import api from '@/lib/axios';
-import { ModelInfo, ModelResults, StructuredModelResults, CarrierProdRecord, CarrierConRecord, CapacityFactorRecord, EnergyCapRecord, CostRecord, SystemBalanceRecord, UnmetDemandRecord, ResourceConRecord, LineFlowRecord, TransformerFlowRecord } from './types';
+import { ModelInfo, ModelResults, StructuredModelResults, CarrierProdRecord, CarrierConRecord, CapacityFactorRecord, EnergyCapRecord, CostRecord, TransformerFlowRecord } from './types';
 import type { ResultSource, Capabilities } from '@/config/resultCapabilities';
 
 export async function fetchModelWithResults(modelId: number, signal?: AbortSignal): Promise<ModelInfo | null> {
@@ -186,30 +186,6 @@ export async function fetchCarrierTimeSeries(
   } catch (error) {
     if (axios.isCancel(error)) return null;
     console.error('Failed to fetch carrier time series:', error);
-    return null;
-  }
-}
-
-
-interface SystemTimeSeriesData {
-  system_balance: SystemBalanceRecord[];
-  unmet_demand: UnmetDemandRecord[];
-  resource_con: ResourceConRecord[];
-  line_flows: LineFlowRecord[];
-  trafo_flows: TransformerFlowRecord[];
-}
-
-export async function fetchSystemTimeSeries(modelId: number, signal?: AbortSignal): Promise<SystemTimeSeriesData | null> {
-  try {
-    const response = await api.get(`/models/${modelId}/results/system-timeseries`, { signal });
-
-    if (response.data?.success && response.data?.data) {
-      return response.data.data as SystemTimeSeriesData;
-    }
-    return null;
-  } catch (error) {
-    if (axios.isCancel(error)) return null;
-    console.error('Failed to fetch system time series:', error);
     return null;
   }
 }

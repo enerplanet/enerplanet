@@ -41,7 +41,9 @@ import { useMapResize, useMapLibre3DHandlers } from "@/features/configurator/hoo
 import { useTransformerActions } from "@/features/configurator/hooks/useTransformerActions";
 import { useTechDialogFlow } from "@/features/configurator/hooks/useTechDialogFlow";
 import { useHeatResolution } from "@/features/configurator/hooks/useHeatResolution";
-import { useModelStore } from "@/features/configurator/store/modelStore";
+import { selectGridStale, useModelStore } from "@/features/configurator/store/modelStore";
+import { exclusionChanges } from "@/features/configurator/utils/siteExclusions";
+import { collectBuildingsFromLayers } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { AreaImportError, areaToGeoJSON, readAreaFile } from "@/features/configurator/utils/areaGeoJSON";
 import { downloadBlob } from "@/utils/fileDownload";
 import { useOperateSizes, type OperateIssue } from "@/features/configurator/hooks/useOperateSizes";
@@ -59,7 +61,8 @@ import {
 import { MapOverlays } from "./components/MapOverlays";
 import { View3dBanner } from "./components/View3dBanner";
 import { GridStatsBadge } from "./components/GridStatsBadge";
-import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { cn } from "@/lib/utils";
 import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
@@ -77,10 +80,12 @@ import { MapInteractionBanners } from "./components/MapInteractionBanners";
 import { LargeModelWarning } from "./components/LargeModelWarning";
 import { AreaLimitWarning } from "./components/AreaLimitWarning";
 import { useModelDemandProfiles } from "@/features/configurator/building-config/modelDemandProfiles";
+import { applyNotHeated } from "@/features/configurator/utils/heatResolution";
 import { TransformerCursorOverlay } from "./components/TransformerCursorOverlay";
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 import { hasUnsavedChanges } from "@/features/configurator/hooks/useAreaSelect/helpers/modelSettings";
+import { useMapFocusArea } from "@/features/interactive-map/hooks/useMapFocusArea";
 
 
 interface AreaSelectProps {
@@ -232,8 +237,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   useAreaPreparation();
 
   const runMode = useModelStore((s) => s.runMode);
-  const gridStale = useModelStore((s) => s.gridStale);
+  const gridStale = useModelStore(selectGridStale);
   const setGridStale = useModelStore((s) => s.setGridStale);
+  const setExclusionsChanged = useModelStore((s) => s.setExclusionsChanged);
   const operateIssues = useOperateSizes(pylovoLayers.pylovoLayersRef, runMode, pylovoLayers.pylovoGridData);
   const fixOperateIssue = useCallback((issue: OperateIssue, techKey: string) => {
     const extent = issue.feature.getGeometry()?.getExtent();
@@ -258,6 +264,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
       maxZoom: 14,
     });
   }, [map, defaultRegion, editMode]);
+
+  useMapFocusArea(state.allPolygons);
 
   // Unsaved changes guard, skipped when navigating due to session expiry.
   const isDirty = hasUnsavedChanges(editMode, state.isModified, state.allPolygons.length);
@@ -361,13 +369,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     });
   };
 
-  const markModified = useCallback(() => setIsModified(true), [setIsModified]);
+  // A site grid is generated without its disabled buildings, so disabling or
+  // enabling one leaves the grid out of date until Regenerate grid.
+  const checkExclusions = useCallback(() => {
+    const grid = pylovoLayers.pylovoGridData;
+    const changes = siteScope(grid) ? exclusionChanges(grid?.buildings?.features ?? [], collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current)) : [];
+    setExclusionsChanged(changes.length > 0);
+  }, [pylovoLayers.pylovoGridData, pylovoLayers.pylovoLayersRef, setExclusionsChanged]);
+  useEffect(checkExclusions, [checkExclusions]);
+  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); }, [setIsModified, checkExclusions]);
   const buildingSelection = useBuildingSelection({
     map,
     pylovoLayersRef: pylovoLayers.pylovoLayersRef,
     isDrawing: state.isDrawing,
     cornerUnderPointerRef,
-    onBuildingsChanged: markModified,
+    onBuildingsChanged,
   });
   const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
 
@@ -516,6 +532,24 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     existingModelId,
     `${state.isSaving}|${openBuildingId ?? ""}|${analysisKey}`
   );
+  // A completed analysis gives each building its use, and takes the heat
+  // supply off the ones it found not heated.
+  useEffect(() => {
+    if (analysisProgress?.status !== "completed") return;
+    const buildings = collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current);
+    const notHeated = new Set<string>();
+    for (const f of buildings) {
+      const profile = demandProfiles.get(String(f.get("osm_id")));
+      if (profile?.use_type && f.get("use_type") !== profile.use_type) f.set("use_type", profile.use_type);
+      if (profile?.status === "not_heated") notHeated.add(profile.osm_id);
+    }
+    const dropped = applyNotHeated(buildings, notHeated);
+    if (dropped > 0) {
+      setIsModified(true);
+      notification.showSuccess(t("gridNotifications.heatRemovedNotHeated", { count: dropped }));
+    }
+  }, [analysisProgress?.status, demandProfiles, pylovoLayers.pylovoLayersRef, setIsModified, notification, t]);
+
   const handleAnalyseBuildings = useCallback(async () => {
     setIsStartingAnalysis(true);
     try {
@@ -626,22 +660,32 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
-            {!isMapLibre3D && (
-              <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
-                <WorkflowBar
-                  polygonCount={state.allPolygons.length}
-                  isGeneratingGrid={state.isGeneratingGrid}
-                  hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                  siteMode={siteMode}
-                  hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-                />
+            {/* One row, so the workflow bar centres between the map controls (left 4rem) and the grid panel and
+                never runs into either. Without the panel, pr-12 keeps the bar on the map centre. */}
+            <div
+              className={cn("pointer-events-none absolute left-16 top-4 z-30 flex items-start gap-4", gridResultIds.length === 0 && "pr-12")}
+              style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
+            >
+              <div className="flex min-w-0 flex-1 justify-center">
+                {!isMapLibre3D && (
+                  <div className="pointer-events-auto">
+                    <WorkflowBar
+                      polygonCount={state.allPolygons.length}
+                      isGeneratingGrid={state.isGeneratingGrid}
+                      hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                      siteMode={siteMode}
+                      hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                      gridStale={gridStale}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {gridResultIds.length > 0 && (
-              <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
-                <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
-              </div>
-            )}
+              {gridResultIds.length > 0 && (
+                <div className="md-fade-in pointer-events-auto w-60 shrink-0 xl:w-72">
+                  <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
+                </div>
+              )}
+            </div>
             {map && isMapLibre3D && (
               <MapLibre3DOverlay
                 olMap={map}
@@ -676,7 +720,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               deleteHintKey={deleteHint}
               mapRef={mapRef}
               isDraggingTech={!!techOperations.draggingTech}
-              isGeneratingGrid={state.isGeneratingGrid}
               simulateEV={simulateEV}
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
@@ -724,8 +767,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             normalizedWorkspaceId={normalizedWorkspaceId}
             onWorkspaceChange={handleWorkspaceChange}
             onOpenCreateWorkspace={() => setIsCreateWsOpen(true)}
-            includePrivateBuildings={state.includePrivateBuildings}
-            onTogglePrivateBuildings={actions.setIncludePrivateBuildings}
             siteMode={siteMode}
             onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
@@ -837,13 +878,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onHouseholdSizeChange={buildingDemand.handleHouseholdSizeChange}
         onRecalculateDemand={buildingDemand.handleRecalculateDemand}
         onAddTech={techDialogFlow.handleAddTechFromDialog}
-        isExcluded={(() => {
-          const osmId = mapInteractions.selectedBuilding?.osmId;
-          if (!osmId) return false;
-          const numId = typeof osmId === "number" ? osmId : Number.parseInt(String(osmId), 10);
-          return numId < 0 && state.excludedBuildingIds.has(Math.abs(numId));
-        })()}
-        onToggleExclude={actions.toggleBuildingExclusion}
         onSave={() => setIsModified(true)}
       />
 
@@ -853,7 +887,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
-        onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        onPvArrays={(osmId, arrays, products) => { pylovoLayers.storePvArrays(osmId, arrays, products); setIsModified(true); }}
         techsFor={pylovoLayers.buildingTechs}
         locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
@@ -888,6 +922,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         open={techOperations.techDialogOpen && techOperations.techDialogStep === "pick"}
         type={techOperations.selectedTechForDialog?.key ?? null}
         current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
+        product={techOperations.selectedTechForDialog?.product}
         applyToAll={techOperations.isAddingTechToAll}
         onPick={(product, usableShare) => {
           const tech = asBuildingTechnology(product);

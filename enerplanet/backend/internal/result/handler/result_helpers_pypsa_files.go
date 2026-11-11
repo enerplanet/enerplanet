@@ -2,14 +2,18 @@ package result
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"io"
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	backendModels "spatialhub_backend/internal/models"
 )
 
 type pypsaConvergenceSummary struct {
@@ -45,7 +49,29 @@ func (h *ResultHandler) latestExtractedPath(modelID uint) string {
 	return results[0].ExtractedPath
 }
 
+// pypsaExtractedPath returns the PyPSA leg's OWN bundle directory: the isolated
+// PyPSA zip is unpacked into its own model_<id>_<ts>/ folder and never gets a
+// model_results row, but the ingest records that folder on the pypsa run row.
+// Falls back to the newest model_results bundle (the Calliope one) only when the
+// leg recorded no path — a legacy bundle — so the section readers never silently
+// read the Calliope bundle for a PyPSA result.
+func (h *ResultHandler) pypsaExtractedPath(modelID uint) string {
+	if path, err := h.store.GetLegExtractedPath(modelID, backendModels.MemeLegPyPSA); err == nil && path != "" {
+		return path
+	}
+	return h.latestExtractedPath(modelID)
+}
+
 func readPyPSAConvergenceSummary(extractDir string) (*pypsaConvergenceSummary, error) {
+	// MEME main's power_flow/ export (convergence.csv + summary.json) carries
+	// the verdict for full-grid-pf bundles; the legacy convergence_stats.csv
+	// path below stays the fallback for old csv_sim_* bundles.
+	if pfDir, err := findPyPSAPowerFlowDir(extractDir); err == nil {
+		if summary, err := readPowerFlowConvergenceSummary(pfDir); err == nil {
+			return summary, nil
+		}
+	}
+
 	file, err := os.Open(filepath.Join(extractDir, "pypsa_output", "convergence_stats.csv"))
 	if err != nil {
 		return nil, err
@@ -168,6 +194,14 @@ func readPyPSACurtailment(extractDir string) ([]pypsaCurtailmentPoint, error) {
 }
 
 func readPyPSATransformerLoading(extractDir string) ([]pypsaTransformerLoadingPoint, error) {
+	// MEME main's power_flow/ export carries transformers-p0/p1/q0/q1.csv with
+	// the s/s_nom loading ratio; full-grid-pf bundles have no csv_sim_* tree.
+	if pfDir, err := findPyPSAPowerFlowDir(extractDir); err == nil {
+		if points, err := readPowerFlowTransformerLoading(pfDir); err == nil && len(points) > 0 {
+			return points, nil
+		}
+	}
+
 	csvDir, err := findPyPSACSVDir(extractDir)
 	if err != nil {
 		return nil, err
@@ -425,6 +459,8 @@ func parsePyPSATimestamp(raw string) (time.Time, bool) {
 		"2006-01-02 15:04:05",
 		time.RFC3339,
 		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02",
 	}
 	for _, layout := range layouts {
 		if parsed, err := time.Parse(layout, strings.TrimSpace(raw)); err == nil {
@@ -463,6 +499,14 @@ var standardLineTypeINom = map[string]float64{
 // readPyPSALineRatings reads lines.csv and computes s_nom (kVA) for each line
 // using the cable type's i_nom rating and the line's v_nom.
 func readPyPSALineRatings(extractDir string) (map[string]float64, error) {
+	// MEME main's power_flow/ export carries lines-p0/p1/q0/q1.csv + the
+	// s/s_nom loading ratio; full-grid-pf bundles have no lines.csv.
+	if pfDir, err := findPyPSAPowerFlowDir(extractDir); err == nil {
+		if ratings, err := readPowerFlowLineRatings(pfDir); err == nil && len(ratings) > 0 {
+			return ratings, nil
+		}
+	}
+
 	csvDir, err := findPyPSACSVDir(extractDir)
 	if err != nil {
 		return nil, err
@@ -521,4 +565,347 @@ func readPyPSALineRatings(extractDir string) (map[string]float64, error) {
 	}
 
 	return ratings, nil
+}
+
+// ---------------------------------------------------------------------------
+// MEME main's power_flow/ layout (full-grid-pf bundles)
+//
+// MEME main (the canonical "power_flow" mode) exports output/power_flow/{...}
+// next to network.nc instead of the legacy pypsa_output/csv_sim_* tree:
+//   convergence.csv            first column = snapshot label, then per-snapshot
+//                              "converged" bool and "iterations"
+//   summary.json               {method, slack, slack_bus, snapshots, ...}
+//   lines-p0/p1/q0/q1/loading.csv, transformers-p0/p1/q0/q1/loading.csv
+//                              snapshots down, components across, first column
+//                              the snapshot label; *_loading.csv are unitless
+//                              s/s_nom ratios (NOT percents).
+// The legacy readers above keep serving old bundles unchanged; the functions
+// below consume the canonical layout, keeping the same wire types/units
+// (p/q MW/MVAr -> kW/kVAr x1000, ratings kVA, convergence snapshot counts).
+// ---------------------------------------------------------------------------
+
+// findPyPSAPowerFlowDir returns the MEME-main power_flow/ export directory: a
+// directory named exactly "power_flow" carrying the MEME marker files
+// (convergence.csv or summary.json) that the legacy csv_sim_*/pypsa_output
+// layouts never contain. A path under a "pypsa" segment (the multi-target
+// layout files/pypsa/run_<i>/output/power_flow) is preferred so a bundle
+// holding several legs is not misread.
+func findPyPSAPowerFlowDir(extractDir string) (string, error) {
+	var first, preferred string
+	_ = filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || !d.IsDir() || d.Name() != "power_flow" {
+			return nil
+		}
+		if !hasPowerFlowMarker(path) {
+			return nil
+		}
+		if first == "" {
+			first = path
+		}
+		if strings.Contains(strings.ToLower(path), "pypsa") {
+			preferred = path
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if preferred != "" {
+		return preferred, nil
+	}
+	if first != "" {
+		return first, nil
+	}
+	return "", os.ErrNotExist
+}
+
+// hasPowerFlowMarker reports whether the directory holds one of the files MEME
+// main always writes into power_flow/.
+func hasPowerFlowMarker(pfDir string) bool {
+	for _, name := range []string{"convergence.csv", "summary.json"} {
+		if _, err := os.Stat(filepath.Join(pfDir, name)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// pypsaPowerFlowTable is one MEME power_flow table: the snapshot labels (the
+// first column, written with index_label="snapshot") and the per-component
+// numeric series behind them. Row order is identical across tables — every one
+// is written from the same snapshot index. Values the CSV cannot parse
+// (diverged snapshots are NaN cells) stay NaN so the callers' guards handle
+// them explicitly.
+type pypsaPowerFlowTable struct {
+	labels []string
+	order  []string
+	values map[string][]float64
+}
+
+// readPyPSAPowerFlowTable reads one MEME power_flow table (snapshots down,
+// components across) into labels + per-component series.
+func readPyPSAPowerFlowTable(pfDir, name string) (*pypsaPowerFlowTable, error) {
+	file, err := os.Open(filepath.Join(pfDir, name))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	header, err := reader.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	tbl := &pypsaPowerFlowTable{values: make(map[string][]float64, len(header)-1)}
+	series := make([][]float64, len(header)-1)
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(row) > 0 {
+			tbl.labels = append(tbl.labels, strings.TrimSpace(row[0]))
+		}
+		for i := 1; i < len(row) && i-1 < len(series); i++ {
+			series[i-1] = append(series[i-1], parseFloatDefault(readColumn(row, i), math.NaN()))
+		}
+	}
+	for i := 1; i < len(header); i++ {
+		name := strings.TrimSpace(header[i])
+		if name == "" {
+			continue
+		}
+		tbl.order = append(tbl.order, name)
+		tbl.values[name] = series[i-1]
+	}
+	return tbl, nil
+}
+
+// readPowerFlowConvergenceSummary reads the power-flow verdict from the MEME
+// power_flow/ export: summary.json's aggregate counts (its "snapshots" key is
+// the total — the legacy name "total_snapshots" does not exist there),
+// falling back to counting the per-snapshot convergence.csv rows. The legacy
+// validation_issues/lpf_max_mismatch/pf_attempt fields have no equivalent in
+// the new layout and stay empty/zero.
+func readPowerFlowConvergenceSummary(pfDir string) (*pypsaConvergenceSummary, error) {
+	if raw, err := os.ReadFile(filepath.Join(pfDir, "summary.json")); err == nil {
+		var summary struct {
+			Snapshots          int `json:"snapshots"`
+			ConvergedSnapshots int `json:"converged_snapshots"`
+		}
+		if jsonErr := json.Unmarshal(raw, &summary); jsonErr == nil && summary.Snapshots > 0 {
+			return &pypsaConvergenceSummary{
+				ConvergedSnapshots: summary.ConvergedSnapshots,
+				TotalSnapshots:     summary.Snapshots,
+			}, nil
+		}
+	}
+
+	file, err := os.Open(filepath.Join(pfDir, "convergence.csv"))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	header, err := reader.Read()
+	if err != nil {
+		return nil, err
+	}
+	convIdx := indexOfColumn(header, "converged")
+
+	summary := &pypsaConvergenceSummary{}
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		summary.TotalSnapshots++
+		if convIdx >= 0 && convIdx < len(row) && csvBoolTrue(readColumn(row, convIdx)) {
+			summary.ConvergedSnapshots++
+		}
+	}
+	if summary.TotalSnapshots == 0 {
+		return nil, errors.New("convergence.csv has no snapshot rows")
+	}
+	return summary, nil
+}
+
+// csvBoolTrue reports whether a cell reads as a boolean true. pandas writes
+// Python bools (True/False); accept 1/0 as well.
+func csvBoolTrue(raw string) bool {
+	if v, err := strconv.ParseBool(strings.TrimSpace(raw)); err == nil {
+		return v
+	}
+	return parseFloatDefault(raw, 0) == 1
+}
+
+// finiteOrZero maps NaN/±Inf (a diverged snapshot's cells) to 0 so the
+// section stays JSON-serializable — encoding/json rejects non-finite floats.
+func finiteOrZero(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
+}
+
+// valueAtSeries returns series[i], 0 when out of range (a missing table or a
+// ragged row reads as no value).
+func valueAtSeries(series []float64, i int) float64 {
+	if i < 0 || i >= len(series) {
+		return 0
+	}
+	return series[i]
+}
+
+// medianFloat returns the median of the estimates — each should approximate
+// the same constant — or 0 when there are none.
+func medianFloat(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sorted := append([]float64(nil), values...)
+	sort.Float64s(sorted)
+	return sorted[len(sorted)/2]
+}
+
+// powerFlowBranchRatings derives each branch's s_nom (MVA) from its flow
+// tables and the MEME loading ratio. MEME computes
+// loading = max(|s0|, |s1|) / s_nom, so s_nom = max(|s0|, |s1|) / loading —
+// exact up to float noise on every snapshot that carries flow. The reactive
+// end counts only when the q0/q1 tables exist (MEME includes q in the loading
+// only when the network has reactive data). A branch that never carries flow
+// (loading 0) yields no estimate -> s_nom 0. Values are NaN-safe: a
+// diverged snapshot's NaN cells fail the magnitude guards and are skipped.
+func powerFlowBranchRatings(pfDir, prefix string) (map[string]float64, error) {
+	p0, err := readPyPSAPowerFlowTable(pfDir, prefix+"-p0.csv")
+	if err != nil {
+		return nil, err
+	}
+	loading, err := readPyPSAPowerFlowTable(pfDir, prefix+"-loading.csv")
+	if err != nil {
+		return nil, err
+	}
+	p1, _ := readPyPSAPowerFlowTable(pfDir, prefix+"-p1.csv")
+	q0, _ := readPyPSAPowerFlowTable(pfDir, prefix+"-q0.csv")
+	q1, _ := readPyPSAPowerFlowTable(pfDir, prefix+"-q1.csv")
+
+	branches := append([]string(nil), p0.order...)
+	estimates := make(map[string][]float64, len(branches))
+	n := len(p0.labels)
+	for _, name := range branches {
+		p0s := p0.values[name]
+		var p1s, q0s, q1s []float64
+		if p1 != nil {
+			p1s = p1.values[name]
+		}
+		if q0 != nil {
+			q0s = q0.values[name]
+		}
+		if q1 != nil {
+			q1s = q1.values[name]
+		}
+		loads := loading.values[name]
+		var est []float64
+		for i := 0; i < n; i++ {
+			p0v := valueAtSeries(p0s, i)
+			p1v := valueAtSeries(p1s, i)
+			s0 := math.Abs(p0v)
+			s1 := math.Abs(p1v)
+			if q0 != nil {
+				s0 = math.Hypot(p0v, valueAtSeries(q0s, i))
+			}
+			if q1 != nil {
+				s1 = math.Hypot(p1v, valueAtSeries(q1s, i))
+			}
+			s := math.Max(s0, s1)
+			load := valueAtSeries(loads, i)
+			if s > 1e-9 && load > 1e-9 {
+				est = append(est, s/load)
+			}
+		}
+		estimates[name] = est
+	}
+
+	ratings := make(map[string]float64, len(branches))
+	for _, name := range branches {
+		ratings[name] = medianFloat(estimates[name])
+	}
+	return ratings, nil
+}
+
+// readPowerFlowTransformerLoading reads the transformer flows
+// (transformers-p0/p1/q0/q1.csv, MW/MVAr -> kW/kVAr x1000) with the
+// s_nom (kVA) derived from the s/s_nom loading ratio. Timestamps come from the
+// tables' own snapshot labels (MEME main has no csv_web/snapshots-t.csv); a
+// snapshot whose label does not parse is dropped for the whole row, keeping
+// the p/q/loading series aligned.
+func readPowerFlowTransformerLoading(pfDir string) ([]pypsaTransformerLoadingPoint, error) {
+	ratings, err := powerFlowBranchRatings(pfDir, "transformers")
+	if err != nil {
+		return nil, err
+	}
+	p0, err := readPyPSAPowerFlowTable(pfDir, "transformers-p0.csv")
+	if err != nil {
+		return nil, err
+	}
+	p1, _ := readPyPSAPowerFlowTable(pfDir, "transformers-p1.csv")
+	q0, _ := readPyPSAPowerFlowTable(pfDir, "transformers-q0.csv")
+	q1, _ := readPyPSAPowerFlowTable(pfDir, "transformers-q1.csv")
+
+	points := make([]pypsaTransformerLoadingPoint, 0, len(p0.order)*len(p0.labels))
+	for i, label := range p0.labels {
+		timestamp, ok := parsePyPSATimestamp(label)
+		if !ok {
+			continue // unparseable snapshot label: drop this row entirely
+		}
+		for _, name := range p0.order {
+			p0v := valueAtSeries(p0.values[name], i)
+			p1v := 0.0
+			if p1 != nil {
+				p1v = valueAtSeries(p1.values[name], i)
+			}
+			var q0v, q1v float64
+			if q0 != nil {
+				q0v = valueAtSeries(q0.values[name], i)
+			}
+			if q1 != nil {
+				q1v = valueAtSeries(q1.values[name], i)
+			}
+			points = append(points, pypsaTransformerLoadingPoint{
+				Transformer: name,
+				Timestep:    timestamp,
+				P0:          finiteOrZero(p0v) * 1000,
+				P1:          finiteOrZero(p1v) * 1000,
+				Q0:          finiteOrZero(q0v) * 1000,
+				Q1:          finiteOrZero(q1v) * 1000,
+				SNomKVA:     ratings[name] * 1000,
+			})
+		}
+	}
+	return points, nil
+}
+
+// readPowerFlowLineRatings derives the line ratings (name -> kVA) from the
+// lines-*.csv flow tables and the s/s_nom loading ratio, mirroring
+// readPyPSALineRatings's contract for the legacy layout. A line that never
+// carries flow yields no rating and is skipped (the legacy reader likewise
+// skips lines whose cable type is unknown).
+func readPowerFlowLineRatings(pfDir string) (map[string]float64, error) {
+	ratings, err := powerFlowBranchRatings(pfDir, "lines")
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]float64, len(ratings))
+	for name, sNomMVA := range ratings {
+		if sNomMVA > 0 {
+			out[name] = sNomMVA * 1000
+		}
+	}
+	return out, nil
 }

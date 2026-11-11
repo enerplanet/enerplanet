@@ -274,3 +274,48 @@ func TestSetPVArraysFixesALaidOutArrayOnlyInOperate(t *testing.T) {
 	assert.Equal(t, 3.0, entry(operate)["cont_energy_cap_max"])
 	assert.Equal(t, 3.0, entry(operate)["cont_energy_cap_min"])
 }
+
+// An array with a product of its own is simulated and costed with it; one
+// without, or naming a product the building has no copy of, uses the building's.
+func TestPVArraysUseTheirOwnProduct(t *testing.T) {
+	b := &pvBuilding{osmID: "4", techs: map[string]interface{}{"pv_supply": map[string]interface{}{}},
+		module: map[string]interface{}{"losses": 0.1, "module_type": 1.0, "cost_energy_cap": 1100.0, "cont_lifetime": 25.0},
+		products: map[string]map[string]interface{}{
+			"facade": {"losses": 0.2, "module_type": 2.0, "cost_energy_cap": 900.0},
+		},
+		arrays: []pv.Array{
+			{SurfaceID: "roof", AreaSqm: 30, UsableShare: 0.8},
+			{SurfaceID: "wall", AreaSqm: 20, UsableShare: 0.8, ProductID: "facade"},
+			{SurfaceID: "gone", AreaSqm: 10, UsableShare: 0.8, ProductID: "deleted"},
+		}}
+
+	refs := pvArrayRefs([]*pvBuilding{b})
+	require.Len(t, refs, 3)
+	assert.Equal(t, 0.1, refs[0].request.Losses)
+	assert.Equal(t, "premium", refs[0].request.ModuleType)
+	assert.Equal(t, 0.2, refs[1].request.Losses)
+	assert.Equal(t, "thin_film", refs[1].request.ModuleType)
+	assert.Equal(t, 0.1, refs[2].request.Losses)
+
+	setPVArrays(b, nil, seriesWindow{}, false)
+	entries := b.techs["pv_arrays"].([]interface{})
+	roof, wall, gone := entries[0].(map[string]interface{}), entries[1].(map[string]interface{}), entries[2].(map[string]interface{})
+	assert.Equal(t, 1100.0, roof["cost_energy_cap"])
+	assert.Equal(t, 900.0, wall["cost_energy_cap"])
+	assert.Equal(t, 0.2, wall["losses"])
+	assert.Equal(t, 25.0, wall["cont_lifetime"], "a parameter the product lacks comes from the building")
+	assert.Equal(t, 1100.0, gone["cost_energy_cap"])
+}
+
+// The building's product copies reach the arrays from the payload.
+func TestPVBuildingsReadProductCopies(t *testing.T) {
+	feature := pvFeature("5", 12.9, 48.8, 100, map[string]interface{}{
+		"products": map[string]interface{}{"facade": map[string]interface{}{"cost_energy_cap": 900.0}},
+		"arrays":   []interface{}{map[string]interface{}{"surface_id": "wall", "area": 20.0, "usable_share": 0.8, "product_id": "facade"}},
+	})
+
+	buildings := pvBuildings([]interface{}{map[string]interface{}{"from": feature}})
+	require.Len(t, buildings, 1)
+	assert.Equal(t, "facade", buildings[0].arrays[0].ProductID)
+	assert.Equal(t, 900.0, buildings[0].products["facade"]["cost_energy_cap"])
+}

@@ -30,6 +30,19 @@ func TestExtractAndTransformTechs_fillsMissingTechnologyParameters(t *testing.T)
 	assert.Equal(t, map[string]interface{}{"cont_energy_cap_max": 8.0}, techs["pv_supply"], "a technology without defaults is unchanged")
 }
 
+// The catalogue stores an unbounded capacity as null, and a product placed from
+// it keeps that null; T1K needs a number or "inf".
+func TestExtractAndTransformTechs_nullCapacityIsUnbounded(t *testing.T) {
+	props := map[string]interface{}{"techs": map[string]interface{}{
+		"air_source_heat_pump": map[string]interface{}{"constraints": []interface{}{
+			map[string]interface{}{"key": "cont_energy_cap_max", "value": nil},
+		}},
+	}}
+
+	techs := extractAndTransformTechs(props).(map[string]interface{})
+	assert.Equal(t, "inf", techs["air_source_heat_pump"].(map[string]interface{})["cont_energy_cap_max"])
+}
+
 func TestDefaultTechnology_isACopy(t *testing.T) {
 	gas := DefaultTechnology("gas_supply")
 	assert.Equal(t, 0.04, gas["cost_om_con"])
@@ -77,4 +90,26 @@ func TestExtractAndTransformTechs_keepsPVArrays(t *testing.T) {
 	pv := extractAndTransformTechs(props).(map[string]interface{})["pv_supply"].(map[string]interface{})
 	assert.Equal(t, 575.0, pv["cost_energy_cap"])
 	assert.Equal(t, arrays, pv["arrays"])
+}
+
+// A PV building keeps a copy of every product its arrays use; each copy
+// reaches the payload flattened like the building's own constraints.
+func TestExtractAndTransformTechs_flattensPVProductCopies(t *testing.T) {
+	props := map[string]interface{}{"techs": map[string]interface{}{
+		"pv_supply": map[string]interface{}{
+			"constraints": []interface{}{map[string]interface{}{"key": "cost_energy_cap", "value": 1100.0}},
+			"products": map[string]interface{}{
+				"facade": map[string]interface{}{"alias": "Facade 400 W", "constraints": []interface{}{
+					map[string]interface{}{"key": "cost_energy_cap", "value": 900.0},
+					map[string]interface{}{"key": "module_type", "value": 2.0},
+				}},
+			},
+		},
+	}}
+
+	pvSupply := extractAndTransformTechs(props).(map[string]interface{})["pv_supply"].(map[string]interface{})
+	assert.Equal(t, 1100.0, pvSupply["cost_energy_cap"])
+	assert.Equal(t, map[string]interface{}{
+		"facade": map[string]interface{}{"cost_energy_cap": 900.0, "module_type": 2.0},
+	}, pvSupply["products"])
 }

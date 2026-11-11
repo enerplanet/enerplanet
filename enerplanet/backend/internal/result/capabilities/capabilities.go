@@ -5,7 +5,6 @@
 // whichever ingest path produced the parsed results. The capability set is
 // derived from the source here, so the mapping has exactly one definition and a
 // new, more capable source needs no change in any consumer.
-//
 package capabilities
 
 // Source identifies the pipeline that produced a model's parsed results.
@@ -24,7 +23,9 @@ const (
 	SourceMeme Source = "meme"
 
 	// SourceFullGridPF is the isolated MEME `meme-pypsa` power-flow leg
-	// (IngestPyPSAResult). Coverage matches SourceLegacy.
+	// (IngestPyPSAResult). Coverage matches SourceLegacy except curtailment:
+	// the power_flow/ output carries no available-vs-actual pair (the dispatch
+	// is fixed input), so curtailment cannot be derived.
 	SourceFullGridPF Source = "full-grid-pf"
 )
 
@@ -61,7 +62,7 @@ type Capabilities struct {
 // models carry a source, so an empty one means "nothing parsed yet".
 func For(s Source) Capabilities {
 	switch s {
-	case SourceLegacy, SourceFullGridPF:
+	case SourceLegacy:
 		return Capabilities{
 			Convergence:  true,
 			Voltage:      true,
@@ -70,6 +71,20 @@ func For(s Source) Capabilities {
 			LineLoading:  true,
 			Curtailment:  true,
 			Losses:       true,
+		}
+	case SourceFullGridPF:
+		return Capabilities{
+			Convergence:  true,
+			Voltage:      true,
+			Power:        true,
+			Transformers: true,
+			LineLoading:  true,
+			// Unlike legacy, the power_flow/ output has no available-vs-actual
+			// pair and the dispatch is fixed input, so curtailment cannot be
+			// derived; claiming it made the Grid render a meaningless empty
+			// section under a green bill of health.
+			Curtailment: false,
+			Losses:      true,
 		}
 	case SourceMeme:
 		return Capabilities{

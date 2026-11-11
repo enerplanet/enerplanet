@@ -8,6 +8,7 @@ package memerun
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -33,12 +34,13 @@ func (s *Store) Save(modelID uint, runID, status string) error {
 }
 
 // SaveLeg records runID as the model's leg MEME TentaCron job, replacing an
-// earlier one for that leg.
+// earlier one for that leg. It clears the grid prices of the earlier run; the
+// dispatch records the new run's prices after this.
 func (s *Store) SaveLeg(modelID uint, leg, runID, status string) error {
 	row := models.ModelMemeRun{ModelID: modelID, Leg: leg, RunID: runID, Status: status}
 	return s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "model_id"}, {Name: "leg"}},
-		DoUpdates: clause.AssignmentColumns([]string{"run_id", "status", "error", "updated_at"}),
+		DoUpdates: clause.AssignmentColumns([]string{"run_id", "status", "error", "grid_import_ct_per_kwh", "grid_export_ct_per_kwh", "updated_at"}),
 	}).Create(&row).Error
 }
 
@@ -79,4 +81,58 @@ func (s *Store) GetLeg(modelID uint, leg string) (*models.ModelMemeRun, error) {
 		return nil, err
 	}
 	return &row, nil
+}
+
+// DeleteLeg drops the model's leg run record. Used to invalidate a derived leg
+// (the PyPSA power-flow add-on) when the leg it was derived from (Calliope) is
+// re-dispatched: the old power flow no longer matches the new base results, so
+// the record must go and the dashboard must offer the leg again.
+func (s *Store) DeleteLeg(modelID uint, leg string) error {
+	return s.db.Where("model_id = ? AND leg = ?", modelID, leg).
+		Delete(&models.ModelMemeRun{}).Error
+}
+
+// MarkLegPending records that the leg has been REQUESTED but not yet dispatched.
+// The row exists from the click so the dashboard can show the action as
+// in-flight immediately instead of waiting for the worker to pick the task up
+// (a window in which a user could fire the request twice). It clears the run id
+// — the previous solve's TentaCron job must not be resumed — so callers must
+// refuse to mark a leg that is already pending/running.
+func (s *Store) MarkLegPending(modelID uint, leg string) error {
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "model_id"}, {Name: "leg"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"run_id":     "",
+			"status":     models.MemeRunStatusPending,
+			"error":      nil,
+			"updated_at": time.Now(),
+		}),
+	}).Create(&models.ModelMemeRun{
+		ModelID: modelID,
+		Leg:     leg,
+		Status:  models.MemeRunStatusPending,
+	}).Error
+}
+
+// MarkLegFailed upserts the leg's run record to a terminal 'failed' status with
+// errMsg, preserving an already-recorded run_id (a row recorded 'running' keeps
+// its TentaCron job id). It is the writer for a failure that happens BEFORE a
+// submit — a bundle/CSV/slack error — when no row exists yet, so the leg's
+// failure is visible (and the dashboard renders the action red).
+func (s *Store) MarkLegFailed(modelID uint, leg, errMsg string) error {
+	msg := errMsg
+	row := models.ModelMemeRun{
+		ModelID: modelID,
+		Leg:     leg,
+		Status:  models.MemeRunStatusFailed,
+		Error:   &msg,
+	}
+	return s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "model_id"}, {Name: "leg"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"status":     models.MemeRunStatusFailed,
+			"error":      msg,
+			"updated_at": time.Now(),
+		}),
+	}).Create(&row).Error
 }

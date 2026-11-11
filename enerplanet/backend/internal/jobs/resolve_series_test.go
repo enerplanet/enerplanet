@@ -210,3 +210,14 @@ func TestLinkSeries_CustomisedBuildingsLinkAsUser(t *testing.T) {
 	assert.Equal(t, map[string]string{"b00": "default", "b01": "user"}, sources)
 	assert.Len(t, store.links, 4, "two series per building")
 }
+
+func TestResolveSeries_ReportsEachStoredResultAsItArrives(t *testing.T) {
+	var computed []string
+	run := testRun(5)
+	run.onComputed = func(id string) { computed = append(computed, id) }
+	runner := &fakeRunner{version: "6.10.0", errorFor: map[string]bool{"b03": true}}
+
+	_, err := resolveSeries(context.Background(), quiet, run, 60, "7", "6.10.0", newMemStore(), runner)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"b00", "b01", "b02", "b04"}, computed, "a failed building is not computed")
+}

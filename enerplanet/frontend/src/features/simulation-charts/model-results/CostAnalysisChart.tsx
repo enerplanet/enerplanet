@@ -3,11 +3,12 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
-import { getTechColor } from '@/constants/tech-colors';
+import { getTechColor, resultFill } from '@/constants/tech-colors';
 import { formatLcoeCtkwh } from '@/features/model-results/lcoeUnits';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface CostItem {
+  tech?: string;
   category: string;
   value: number;
   color?: string;
@@ -23,6 +24,8 @@ interface CostAnalysisChartProps {
   height?: number;
   isPartialYear?: boolean;
   simulationDays?: number;
+  /** Feed-in revenue, already subtracted from totalCost. */
+  income?: number;
 }
 
 const formatShare = (value: number, total: number, decimals = 1): string => {
@@ -39,17 +42,20 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
   height = 280,
   isPartialYear,
   simulationDays,
+  income,
 }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
   const isDark = useIsDarkMode();
 
   const option: EChartsOption = useMemo(() => {
-    const total = totalCost || data.reduce((sum, d) => sum + Math.abs(d.value), 0);
+    // Shares are of gross cost; the centre shows the net total after feed-in income.
+    const shareBase = data.reduce((sum, d) => sum + Math.abs(d.value), 0);
+    const total = totalCost ?? shareBase;
     const pieData = data.map((d, idx) => ({
       name: d.category,
       value: Math.abs(d.value),
-      itemStyle: { color: d.color || getTechColor(d.category, idx) },
+      itemStyle: { color: (d.tech && resultFill(d.tech, isDark)) || d.color || getTechColor(d.category, idx) },
       locationCount: d.locationCount,
       investmentCost: d.investmentCost,
       variableCost: d.variableCost,
@@ -67,7 +73,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
         padding: [12, 16],
         textStyle: { color: themeColors.text, fontSize: 12 },
         formatter: (params: any) => {
-          const pct = formatShare(params.value, total, 1);
+          const pct = formatShare(params.value, shareBase, 1);
           const rowStyle = `display: flex; justify-content: space-between; gap: 24px; line-height: 1.8;`;
           const labelStyle = `color: ${themeColors.textMuted}; font-size: 11px;`;
           const valueStyle = `font-weight: 600; color: ${themeColors.text}; font-size: 11px;`;
@@ -137,6 +143,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
       legend: {
         type: 'scroll',
         orient: 'horizontal',
+        data: pieData.map(d => d.name),
         bottom: '0%',
         left: 'center',
         itemWidth: 12,
@@ -146,7 +153,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
         formatter: (name: string) => {
           const item = data.find(d => d.category === name);
           if (item) {
-            const pct = formatShare(item.value, total, 0);
+            const pct = formatShare(item.value, shareBase, 0);
             return `${name} (${pct})`;
           }
           return name;
@@ -241,10 +248,17 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
   }
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: '100%' }}
-      opts={{ renderer: 'canvas' }}
-    />
+    <>
+      <ReactECharts
+        option={option}
+        style={{ height, width: '100%' }}
+        opts={{ renderer: 'canvas' }}
+      />
+      {income != null && income > 0.01 && (
+        <p className="mt-1 text-center text-xs text-muted-foreground">
+          {t('results.costInfo.feedInIncome', { amount: formatCurrency(income, 0) })}
+        </p>
+      )}
+    </>
   );
 };

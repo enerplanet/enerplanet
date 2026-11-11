@@ -3,7 +3,6 @@ import { DEFAULT_WEATHER, type WeatherSettings } from "@/features/configurator/h
 import type { PylovoGridData, AdvancedParametersState } from "@/features/configurator/types/area-select";
 import { getDefaultAdvancedParameters } from "@/features/configurator/constants/area-select-params";
 import type { Technology } from "@/features/technologies/services/technologyService";
-import type { CustomLocation } from "@/features/locations/services/customLocationService";
 
 // ──────────────────────────────────────────────
 // Types
@@ -24,6 +23,14 @@ export type AssignStep = "select-buildings" | "select-transformer";
 export type CookingCarrier = "electric" | "gas";
 /** "plan" sizes every technology; "operate" keeps each at its maximum and optimises only the dispatch. */
 export type RunMode = "plan" | "operate";
+
+/** A model's own grid electricity prices, ct/kWh; null where the country default applies. */
+export interface ElectricityPrices {
+  import_ct_per_kwh: number | null;
+  export_ct_per_kwh: number | null;
+}
+
+const NO_OWN_PRICES: ElectricityPrices = { import_ct_per_kwh: null, export_ct_per_kwh: null };
 
 export interface ModelStore {
   // ── Active mode (unified) ──
@@ -75,6 +82,9 @@ export interface ModelStore {
   /** Saved as config.mode. */
   runMode: RunMode;
   setRunMode: (mode: RunMode) => void;
+  /** Saved as config.electricity_prices. */
+  electricityPrices: ElectricityPrices;
+  setElectricityPrices: (prices: ElectricityPrices) => void;
   /** Saved as config.weatherProvider and config.weatherScenario or config.weatherYear. */
   weather: WeatherSettings;
   setWeather: (weather: WeatherSettings) => void;
@@ -92,6 +102,9 @@ export interface ModelStore {
   /** The area or the stations changed since the shown grid was generated; Regenerate grid brings it up to date. */
   gridStale: boolean;
   setGridStale: (v: boolean) => void;
+  /** Buildings were disabled or enabled since the shown site grid was generated without the disabled ones. */
+  exclusionsChanged: boolean;
+  setExclusionsChanged: (v: boolean) => void;
 
   // ── Unsaved changes ──
   isModified: boolean;
@@ -109,11 +122,6 @@ export interface ModelStore {
   resetAdvancedParams: () => void;
 
   // ── Building filters ──
-  includePrivateBuildings: boolean;
-  setIncludePrivateBuildings: (v: boolean) => void;
-  excludedBuildingIds: Set<number>;
-  toggleBuildingExclusion: (id: number) => void;
-  clearExcludedBuildings: () => void;
   /** osm_ids picked with Ctrl+click, for acting on several buildings at once. */
   selectedBuildingIds: Set<string>;
   toggleBuildingSelection: (osmId: string) => void;
@@ -155,12 +163,6 @@ export interface ModelStore {
   setIsAddingTechToAll: (v: boolean) => void;
   appliedTechKeys: string[];
   setAppliedTechKeys: (v: string[] | ((prev: string[]) => string[])) => void;
-
-  // ── Custom locations ──
-  customLocations: CustomLocation[];
-  setCustomLocations: (v: CustomLocation[]) => void;
-  customLocationsInPolygon: CustomLocation[];
-  setCustomLocationsInPolygon: (v: CustomLocation[]) => void;
 
   // ── Region / boundary ──
   regionBoundary: { name: string; boundary: GeoJSON.Feature } | null;
@@ -230,19 +232,19 @@ const getInitialState = () => ({
   resolution: 60,
   cookingCarrier: "electric" as CookingCarrier,
   runMode: "plan" as RunMode,
+  electricityPrices: NO_OWN_PRICES,
   weather: DEFAULT_WEATHER,
   siteMode: false,
   isSaving: false,
   isLoadingModel: false,
   isGeneratingGrid: false,
   gridStale: false,
+  exclusionsChanged: false,
   isModified: false,
   showUnsavedDialog: false,
   showAreaSelectTour: false,
   showAdvancedParams: false,
   advancedParams: getDefaultAdvancedParameters(),
-  includePrivateBuildings: true,
-  excludedBuildingIds: new Set<number>(),
   selectedBuildingIds: new Set<string>(),
   transformerDialogOpen: false,
   selectedTransformer: null,
@@ -260,8 +262,6 @@ const getInitialState = () => ({
   selectedBuildingForTech: null,
   isAddingTechToAll: false,
   appliedTechKeys: [] as string[],
-  customLocations: [],
-  customLocationsInPolygon: [],
   regionBoundary: null as { name: string; boundary: GeoJSON.Feature } | null,
   availableRegions: [],
   showBoundary: true,
@@ -323,6 +323,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setCookingCarrier: (carrier) => set({ cookingCarrier: carrier }),
   runMode: "plan",
   setRunMode: (mode) => set({ runMode: mode }),
+  electricityPrices: NO_OWN_PRICES,
+  setElectricityPrices: (prices) => set({ electricityPrices: prices }),
   weather: DEFAULT_WEATHER,
   setWeather: (weather) => set({ weather }),
   siteMode: false,
@@ -337,6 +339,8 @@ export const useModelStore = create<ModelStore>((set) => ({
   setIsGeneratingGrid: (v) => set({ isGeneratingGrid: v }),
   gridStale: false,
   setGridStale: (v) => set({ gridStale: v }),
+  exclusionsChanged: false,
+  setExclusionsChanged: (v) => set({ exclusionsChanged: v }),
 
   // ── Unsaved changes ──
   isModified: false,
@@ -354,17 +358,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   resetAdvancedParams: () => set({ advancedParams: getDefaultAdvancedParameters() }),
 
   // ── Building filters ──
-  includePrivateBuildings: true,
-  setIncludePrivateBuildings: (v) => set({ includePrivateBuildings: v }),
-  excludedBuildingIds: new Set(),
-  toggleBuildingExclusion: (id) =>
-    set((s) => {
-      const next = new Set(s.excludedBuildingIds);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return { excludedBuildingIds: next };
-    }),
-  clearExcludedBuildings: () => set({ excludedBuildingIds: new Set() }),
   selectedBuildingIds: new Set(),
   toggleBuildingSelection: (osmId) =>
     set((s) => {
@@ -422,12 +415,6 @@ export const useModelStore = create<ModelStore>((set) => ({
       appliedTechKeys: typeof v === "function" ? v(s.appliedTechKeys) : v,
     })),
 
-  // ── Custom locations ──
-  customLocations: [],
-  setCustomLocations: (v) => set({ customLocations: v }),
-  customLocationsInPolygon: [],
-  setCustomLocationsInPolygon: (v) => set({ customLocationsInPolygon: v }),
-
   // ── Region / boundary ──
   regionBoundary: null,
   setRegionBoundary: (v) => set({ regionBoundary: v }),
@@ -465,3 +452,6 @@ export const useModelStore = create<ModelStore>((set) => ({
   // ── Reset ──
   reset: () => set(() => getInitialState()),
 }));
+
+/** Whether the shown grid is out of date, so Regenerate grid is offered and saving waits for it. */
+export const selectGridStale = (s: ModelStore): boolean => s.gridStale || s.exclusionsChanged;
