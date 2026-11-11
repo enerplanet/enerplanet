@@ -1,0 +1,27 @@
+/**
+ * Typed failures of the write boundary (`Plan.md` §12).
+ *
+ * A rejected write must never leave the store half-changed: the engine validates every
+ * commit *before* a transaction exists, so these errors always mean "nothing happened".
+ */
+
+/** Why a write was refused. */
+export type PortWriteRejection =
+  /** The module did not declare the port in its `params`. */
+  | "undeclared"
+  /** The module would blind-overwrite a value it never read (anti-clobber). */
+  | "clobber";
+
+export class PortWriteRejected extends Error {
+  readonly moduleId: string;
+  readonly port: string;
+  readonly reason: PortWriteRejection;
+
+  constructor(moduleId: string, port: string, reason: PortWriteRejection) {
+    super(`[model-builder] module "${moduleId}" cannot write port "${port}": ${reason}`);
+    this.name = "PortWriteRejected";
+    this.moduleId = moduleId;
+    this.port = port;
+    this.reason = reason;
+  }
+}
