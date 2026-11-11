@@ -27,13 +27,6 @@ jobs:
   i18n-check:
     runs-on: ubuntu-latest
     steps:
-      # Submodules (libs, platform-core, infrastructure) may be private repos;
-      # the deploy pipeline needs a PAT (SUBMODULE_TOKEN) for them. Use the same
-      # secret here when it is configured, otherwise fall back to GITHUB_TOKEN.
-      - name: Allow PAT access to submodules
-        if: ${{ secrets.SUBMODULE_TOKEN != '' }}
-        run: git config --global --add url."https://${{ secrets.SUBMODULE_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
       - uses: actions/checkout@v4
         with:
           submodules: recursive
