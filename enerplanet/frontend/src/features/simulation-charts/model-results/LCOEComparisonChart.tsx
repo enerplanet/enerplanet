@@ -36,7 +36,7 @@ export const LCOEComparisonChart: FC<LCOEComparisonChartProps> = ({
     const sorted = [...data].sort((a, b) => a.lcoe - b.lcoe);
     const labels = sorted.map(d => d.label);
     const values = sorted.map(d => lcoeToCtkwh(d.lcoe)); // EUR/MWh -> ct/kWh
-    const colors = sorted.map(d => getTechColor(d.tech));
+    const colors = sorted.map(d => getTechColor(d.tech, 0, isDark));
 
     const fmtEur = (v: number) => formatCurrency(v);
     const fmtEnergy = (kwh: number) => {

@@ -6,10 +6,11 @@ import {
   carrierDisplay,
   carrierEnergyAxis,
   formatCarrierEnergy,
+  normalizeCarrier,
 } from '@/features/model-results/carrierUnits';
 import { useTranslation } from '@spatialhub/i18n';
-import { useThemeColors } from '../pypsa/chartUtils';
-import { getTechColor } from '@/constants/tech-colors';
+import { useIsDarkMode, useThemeColors } from '../pypsa/chartUtils';
+import { getTechColor, resultFill } from '@/constants/tech-colors';
 import { flowLabel } from '@/features/model-results/buildingFlows';
 import { formatNumber } from '@/utils/formatNumber';
 
@@ -52,12 +53,14 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
 }) => {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const isDark = useIsDarkMode();
   const isGeneration = carrierDisplay(carrier).generation;
 
   const chartData = useMemo(() => {
     // Input data is now already aggregated by date (daily totals) from the backend
     const dailyProd = new Map<string, Map<string, number>>();
-    const dailyCon = new Map<string, number>();
+    // Use per carrier, so heating and cooling shown together keep their own demand series.
+    const dailyCon = new Map<string, Map<string, number>>();
     const dailyGridImport = new Map<string, number>();
     const dailyGridExport = new Map<string, number>();
     const dailyDischarge = new Map<string, number>();
@@ -70,6 +73,8 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
       return lower.includes('transformer') || lower.includes('grid_import') || lower.includes('grid import');
     };
     const isStorage = (tech: string): boolean => /battery|storage/i.test(tech);
+    const recordCarriers = [...new Set([...production, ...consumption].map(r => normalizeCarrier(r.carrier || carrier)))];
+    const multi = recordCarriers.length > 1;
 
     production.forEach(p => {
       const techs = p.techs || '';
@@ -84,7 +89,8 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
 
       if (!dailyProd.has(date)) dailyProd.set(date, new Map());
       const dayMap = dailyProd.get(date)!;
-      dayMap.set(family, (dayMap.get(family) || 0) + Math.abs(p.value));
+      const key = multi ? `${normalizeCarrier(p.carrier)}:${family}` : family;
+      dayMap.set(key, (dayMap.get(key) || 0) + Math.abs(p.value));
     });
 
     consumption.forEach(c => {
@@ -92,10 +98,13 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
       const date = c.timestep.substring(0, 10);
       if (c.techs.toLowerCase().includes('export')) return add(dailyGridExport, date, c.value);
       if (isStorage(c.techs)) return add(dailyCharge, date, c.value);
-      add(dailyCon, date, c.value);
+      const own = normalizeCarrier(c.carrier || carrier);
+      if (!dailyCon.has(own)) dailyCon.set(own, new Map());
+      add(dailyCon.get(own)!, date, c.value);
     });
 
-    const dates = Array.from(new Set([...dailyProd.keys(), ...dailyCon.keys(), ...dailyGridImport.keys()])).sort((a, b) => a.localeCompare(b));
+    const conDates = [...dailyCon.values()].flatMap(m => [...m.keys()]);
+    const dates = Array.from(new Set([...dailyProd.keys(), ...conDates, ...dailyGridImport.keys()])).sort((a, b) => a.localeCompare(b));
 
     const techSet = new Set<string>();
     dailyProd.forEach(dayMap => dayMap.forEach((_, tech) => techSet.add(tech)));
@@ -107,10 +116,16 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
         const dayMap = dailyProd.get(date);
         return normalizeEnergyValue(dayMap ? (dayMap.get(tech) || 0) : 0);
       }),
-      color: getTechColor(tech),
+      color: getTechColor(tech, 0, isDark),
     }));
 
     const byDate = (map: Map<string, number>) => dates.map(date => normalizeEnergyValue(map.get(date) || 0));
+    const conSeries = [...dailyCon].map(([own, map]) => ({
+      id: `consumption:${own}`,
+      name: multi ? flowLabel('demand', own, t) : t('results.energy.consumption'),
+      color: resultFill('demand', isDark, own) ?? '#ef4444',
+      data: byDate(map),
+    }));
 
     return {
       dates,
@@ -119,20 +134,23 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
       gridExportData: byDate(dailyGridExport),
       dischargeData: byDate(dailyDischarge),
       chargeData: byDate(dailyCharge),
-      conData: byDate(dailyCon),
+      conSeries,
+      conData: dates.map((_, i) => conSeries.reduce((sum, s) => sum + s.data[i], 0)),
     };
-  }, [production, consumption, carrier, t]);
+  }, [production, consumption, carrier, t, isDark]);
 
   const option: EChartsOption = useMemo(() => {
-    const { dates, prodSeries, gridImportData, gridExportData, dischargeData, chargeData, conData } = chartData;
+    const { dates, prodSeries, gridImportData, gridExportData, dischargeData, chargeData, conSeries, conData } = chartData;
 
     if (dates.length === 0) return {};
 
     const hasBattery = dischargeData.some(v => v > 0) || chargeData.some(v => v > 0);
     const hasExport = gridExportData.some(v => v > 0);
-    const batteryColor = getTechColor('battery storage');
-    const chargeColor = '#d8c0e8';
-    const exportColor = '#0d9488';
+    const batteryColor = resultFill('battery', isDark)!;
+    const chargeColor = batteryColor;
+    const exportColor = resultFill('lineOut', isDark)!;
+    const importColor = resultFill('lineIn', isDark)!;
+    const hasImport = gridImportData.some(v => v > 0);
 
     const row = (marker: string, label: string, value: number, valueStyle = 'font-weight: 500;') =>
       `<div style="display: flex; justify-content: space-between; gap: 20px; margin: 2px 0; color: ${themeColors.text};">
@@ -197,12 +215,13 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
 
           if (gridImportData[i] > 0.1 || gridExportData[i] > 0.1) {
             html += heading(t('results.energy.grid'), themeColors.textMuted);
-            html += row(dot('#94a3b8'), t('results.energy.fromGrid'), gridImportData[i]);
+            html += row(dot(importColor), t('results.energy.fromGrid'), gridImportData[i]);
             if (hasExport) html += row(dot(exportColor), t('results.chartLabels.gridExport'), gridExportData[i]);
           }
 
           html += heading(t('results.energy.consumption'), '#dc2626');
-          html += row(dot('#ef4444'), t('results.energy.totalDemand'), conData[i], 'font-weight: 600; color: #dc2626;');
+          conSeries.forEach(s => { html += row(dot(s.color), s.name, s.data[i], conSeries.length > 1 ? undefined : 'font-weight: 600;'); });
+          if (conSeries.length > 1) html += row('', t('results.energy.totalDemand'), conData[i], 'font-weight: 600;');
 
           // Self-sufficiency is the share of use not bought from the grid; it
           // is only meaningful for a generating carrier, not for a heat load.
@@ -272,13 +291,13 @@ export const EnergyBalanceChart: FC<EnergyBalanceChartProps> = ({
       series: [
         ...prodSeries.map(s => positiveBar(s.name, s.name, s.color, s.data)),
         ...(hasBattery ? [positiveBar('discharge', t('results.energy.batteryDischarging'), batteryColor, dischargeData)] : []),
-        positiveBar('gridImport', t('results.energy.gridImport'), '#94a3b8', gridImportData),
-        negativeBar('consumption', t('results.energy.consumption'), '#ef4444', conData),
+        ...(hasImport ? [positiveBar('gridImport', t('results.energy.gridImport'), importColor, gridImportData)] : []),
+        ...conSeries.map(s => negativeBar(s.id, s.name, s.color, s.data)),
         ...(hasBattery ? [negativeBar('charge', t('results.energy.batteryCharging'), chargeColor, chargeData)] : []),
         ...(hasExport ? [negativeBar('gridExport', t('results.chartLabels.gridExport'), exportColor, gridExportData)] : []),
       ],
     };
-  }, [chartData, t, themeColors, carrier, isGeneration]);
+  }, [chartData, t, themeColors, carrier, isGeneration, isDark]);
 
   if (chartData.dates.length === 0) {
     return (

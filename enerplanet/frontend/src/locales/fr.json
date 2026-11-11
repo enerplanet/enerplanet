@@ -908,8 +908,6 @@
       "hours": "heures"
     },
     "costInfo": {
-      "simulationPeriodNote": "Les coûts affichés portent sur la période simulée de {{days}} jours ({{hours}} heures). Pour les coûts annuels complets, lancez une simulation sur 1 an (8 760 heures).",
-      "simulationPeriodShort": "Période de simulation de {{days}} jours",
       "costBreakdownTooltip": "Chaque secteur est une technologie ou un achat, dans la couleur indiquée par la légende sous le graphique. L’électricité achetée au réseau est un coût d’exploitation : ce qui a été consommé sur la période simulée. Les équipements comme les pompes à chaleur, panneaux solaires et batteries sont un coût d’achat réparti sur leur durée de vie ; seule la part de la période simulée compte. Dans les simulations courtes, les coûts d’exploitation paraissent donc proportionnellement plus grands.",
       "annualProjection": "Estimation annuelle : {{value}}",
       "equipmentCostNote": "Le coût d'équipement est réparti sur sa durée de vie ; seule la part de cette période de simulation est affichée.",
@@ -1925,7 +1923,6 @@
     },
     "sections": {
       "grid": "Réseau",
-      "model": "Modèle",
       "energySystem": "Système énergétique"
     },
     "analysis": {
@@ -2701,7 +2698,7 @@
       "comparison": "Comparaison"
     },
     "metrics": {
-      "demandBaseline": "Demande (Référence)",
+      "demand": "Demande",
       "renewableGen": "Génération renouvelable",
       "gridImport": "Import réseau",
       "selfSufficiency": "Autosuffisance",

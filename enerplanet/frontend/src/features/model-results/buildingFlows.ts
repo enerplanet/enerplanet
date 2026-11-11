@@ -1,4 +1,4 @@
-import { getTechColor } from '@/constants/tech-colors';
+import { getTechColor, resultFill } from '@/constants/tech-colors';
 import type { CarrierProdRecord, CarrierConRecord, EnergyCapRecord, StructuredModelResults } from './types';
 import { THERMAL_CARRIERS } from './carrierUnits';
 
@@ -17,20 +17,8 @@ export interface BuildingFlow {
   hourly: number[];
 }
 
-/** Colour of each carrier's end-use demand, so electricity and heat demand differ in one Sankey. */
-const DEMAND_COLORS: Record<string, string> = {
-  power: '#f2876f',
-  heat: '#e11d48',
-  cooling: '#06b6d4',
-  gas: '#a16207',
-};
-
-const FIXED_COLORS: Record<string, string> = {
-  lineIn: '#94a3b8',
-  lineOut: '#0d9488',
-  batteryIn: '#d8c0e8',
-  batteryOut: '#a870c8',
-};
+/** Gas demand, the one end use outside the results palette. */
+const GAS_DEMAND_COLOR = '#a16207';
 
 const IS_STORAGE = /battery|storage/;
 const IS_LINE = /transmission|transformer_supply|grid_trafo_import|export/;
@@ -76,7 +64,8 @@ export function summariseFlows(
       const kind = classifyFlow(r.techs, side);
       let flow = byKey.get(kind.key);
       if (!flow) {
-        const color = kind.key === 'demand' ? DEMAND_COLORS[carrier] ?? DEMAND_COLORS.power : FIXED_COLORS[kind.key] ?? getTechColor(kind.key);
+        // Light-theme colour; charts swap in the dark one through useResultColors.
+        const color = resultFill(kind.key, false, carrier) ?? (kind.key === 'demand' ? GAS_DEMAND_COLOR : getTechColor(kind.key));
         flow = { ...kind, color, totalKwh: 0, peakKw: 0, hourly: new Array(timesteps.length).fill(0) };
         byKey.set(kind.key, flow);
       }
@@ -168,36 +157,6 @@ export function allocateFlows(flows: BuildingFlow[]): FlowLink[] {
   return [...totals.values()];
 }
 
-/**
- * Heat each heat pump takes from the air or ground: its heat output minus its
- * electricity input, from flows of all carriers at one node.
- */
-export function ambientHeat(flows: BuildingFlow[]): { key: string; kwh: number }[] {
-  const pumps = (side: FlowSide) => flows.filter((f) => f.side === side && f.key.includes('heat_pump'));
-  const input = new Map(pumps('use').map((f) => [f.key, f.totalKwh]));
-  return pumps('supply')
-    .filter((f) => input.has(f.key))
-    .map((f) => ({ key: f.key, kwh: f.totalKwh - input.get(f.key)! }))
-    .filter((a) => a.kwh > 0.5);
-}
-
-/**
- * Energy each converter loses: what it takes in minus what it gives out, from
- * flows of all carriers at one node, e.g. the tenth of its gas a 90% boiler loses.
- */
-export function conversionLosses(flows: BuildingFlow[]): { key: string; kwh: number }[] {
-  const total = (side: FlowSide) => {
-    const sums = new Map<string, number>();
-    for (const f of flows) if (f.side === side) sums.set(f.key, (sums.get(f.key) ?? 0) + f.totalKwh);
-    return sums;
-  };
-  const input = total('use');
-  return [...total('supply')]
-    .filter(([key]) => input.has(key))
-    .map(([key, out]) => ({ key, kwh: input.get(key)! - out }))
-    .filter((l) => l.kwh > 0.5);
-}
-
 /** One carrier's flows at a node or for the whole model. */
 export interface CarrierResult {
   carrier: string;
@@ -243,22 +202,29 @@ export function thermalFigures(results: CarrierResult[]) {
   };
 }
 
-/**
- * Heating and cooling demand on one timeline, one flow per carrier keyed like thermalFlows.
- * Side is supply so a stacked chart draws the demand above zero.
- */
-export function thermalDemand(results: CarrierResult[]): { timesteps: string[]; flows: BuildingFlow[] } {
-  const thermal = results.filter((r) => THERMAL_CARRIERS.includes(r.carrier));
-  const timesteps = [...new Set(thermal.flatMap((r) => r.timesteps))].sort();
+/** Several carriers' flows on one timeline; each key is prefixed with its carrier, as in thermalFlows. */
+export function combineCarriers(results: CarrierResult[]): { timesteps: string[]; flows: BuildingFlow[] } {
+  const timesteps = [...new Set(results.flatMap((r) => r.timesteps))].sort();
   const index = new Map(timesteps.map((ts, i) => [ts, i]));
-  const flows = thermal.flatMap((r) => {
-    const demand = r.flows.find((f) => f.key === 'demand');
-    if (!demand) return [];
+  const flows = results.flatMap((r) => r.flows.map((f) => {
     const hourly = new Array(timesteps.length).fill(0);
-    r.timesteps.forEach((ts, i) => { hourly[index.get(ts)!] = demand.hourly[i]; });
-    return [{ ...demand, key: `${r.carrier}:demand`, side: 'supply' as const, hourly }];
-  });
+    r.timesteps.forEach((ts, i) => { hourly[index.get(ts)!] = f.hourly[i]; });
+    return { ...f, key: `${r.carrier}:${f.key}`, hourly };
+  }));
   return { timesteps, flows };
+}
+
+/**
+ * The flows with the battery as storage rather than a source: charging and discharging
+ * become one use, 'batteryLoss', of energy charged minus energy discharged. It is a run
+ * total with no hourly series.
+ */
+export function netBattery(flows: BuildingFlow[]): BuildingFlow[] {
+  const charged = flows.find((f) => f.key === 'batteryIn');
+  const discharged = flows.find((f) => f.key === 'batteryOut')?.totalKwh ?? 0;
+  const rest = flows.filter((f) => f.key !== 'batteryIn' && f.key !== 'batteryOut');
+  if (!charged || charged.totalKwh <= discharged) return rest;
+  return [...rest, { key: 'batteryLoss', side: 'use', color: charged.color, totalKwh: charged.totalKwh - discharged, peakKw: 0, hourly: [] }];
 }
 
 type Translate = (key: string, fallback: string) => string;
@@ -275,6 +241,7 @@ const FLOW_LABELS: Record<string, [string, string]> = {
   lineOut: ['results.buildingDetail.flow.lineOut', 'To the street line'],
   batteryIn: ['results.buildingDetail.flow.batteryIn', 'Battery charging'],
   batteryOut: ['results.buildingDetail.flow.batteryOut', 'Battery discharging'],
+  batteryLoss: ['results.buildingDetail.flow.batteryLoss', 'Battery losses'],
   pv_supply: ['results.buildingDetail.flow.pv', 'Solar PV'],
   air_source_heat_pump: ['results.buildingDetail.flow.heatPump', 'Heat pump'],
   air_conditioner: ['results.buildingDetail.flow.airConditioner', 'Air conditioner'],

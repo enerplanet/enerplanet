@@ -920,8 +920,6 @@
     },
     "costInfo": {
       "feedInIncome": "Net of {{amount}} income from electricity sold to the grid.",
-      "simulationPeriodNote": "Costs shown are for the simulated period of {{days}} days ({{hours}} hours). To see full annual costs, run a 1-year simulation (8,760 hours).",
-      "simulationPeriodShort": "{{days}}-day simulation period",
       "costBreakdownTooltip": "Each slice is one technology or purchase, in the colour shown in the legend below the chart. Grid electricity bought is a running cost: what was used in the simulated period. Equipment such as heat pumps, solar panels and batteries is a purchase cost spread over its lifetime, so only the share for the simulated period counts. In short simulations, running costs therefore appear proportionally larger.",
       "annualProjection": "Estimated annual: {{value}}",
       "equipmentCostNote": "Equipment cost is spread over its lifetime, showing only the share for this simulation period.",
@@ -1950,7 +1948,6 @@
     },
     "sections": {
       "grid": "Grid",
-      "model": "Model",
       "energySystem": "Energy system"
     },
     "analysis": {
@@ -2727,7 +2724,7 @@
       "comparison": "Comparison"
     },
     "metrics": {
-      "demandBaseline": "Demand (Baseline)",
+      "demand": "Demand",
       "renewableGen": "Renewable Gen.",
       "gridImport": "Grid Import",
       "selfSufficiency": "Self-Sufficiency",

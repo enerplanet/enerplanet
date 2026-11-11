@@ -47,6 +47,7 @@ import { SCENARIO_DATE_YEAR, isScenario } from "@/features/configurator/hooks/us
 import type { AreaSelectState, AreaSelectActions } from "@/features/configurator/types/area-select";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import type { AnalysisProgress } from "@/features/configurator/building-config/modelDemandProfiles";
+import { useNotification } from "@/features/notifications/hooks/useNotification";
 
 interface SidebarPanelProps {
   state: AreaSelectState;
@@ -101,10 +102,10 @@ const YearCheckNote: FC<{ year: number; onKeep: () => void }> = ({ year, onKeep 
   );
 };
 
-/** A titled group of settings, set off from the group above by a line. */
-const PanelSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
+/** A group of settings, set off from the group above by a line; the first group needs no title. */
+const PanelSection: FC<{ title?: string; children: ReactNode }> = ({ title, children }) => (
   <section className="space-y-3 border-t border-border py-4 first:border-t-0 first:pt-0">
-    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
+    {title && <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>}
     {children}
   </section>
 );
@@ -342,17 +343,22 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
   const [searchParams] = useSearchParams();
   const buildingOpen = searchParams.has("building");
 
+  const { showWarning } = useNotification();
+
   // Ctrl+S / Cmd+S saves without leaving the page. The browser's own save is always
   // suppressed here; an open building configurator keeps the shortcut to itself.
+  // A held key repeats keydown, so only the first press can show the blocked notice.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "s") return;
       e.preventDefault();
-      if (canSave && !buildingOpen) actions.handleQuickSave();
+      if (buildingOpen || e.repeat) return;
+      if (canSave) actions.handleQuickSave();
+      else if (saveBlockedReason) showWarning(saveBlockedReason);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canSave, buildingOpen, actions]);
+  }, [canSave, buildingOpen, actions, saveBlockedReason, showWarning]);
 
   return (
     <div className="md-scope md-rise relative h-full w-full border-l border-border bg-background dark:bg-gray-800 flex flex-col">
@@ -371,8 +377,8 @@ export const SidebarPanel: FC<SidebarPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-4 px-3">
-        <PanelSection title={t("simulation.sections.model")}>
+      <div className="flex-1 overflow-y-auto pt-3 pb-4 px-3">
+        <PanelSection>
           <SettingsBox>
             <div className="relative" data-tour="model-name">
               <label

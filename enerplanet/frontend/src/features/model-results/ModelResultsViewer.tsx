@@ -664,13 +664,15 @@ export const ModelResultsViewer = () => {
             gridPrices={structuredResults?.grid_prices}
             energyCap={structuredResults?.energy_cap ?? []}
             mode={model?.config?.mode}
+            period={model ? { from: model.from_date, to: model.to_date } : undefined}
+            objective={model?.results?.objective}
           />
         );
       case 'energy':
         if (carrier === HEATING_COOLING) {
-          return thermalCarriers(availableCarriers).map((c) => <EnergyPanel key={c} structuredResults={structuredResults} modelId={modelId} carrier={c} />);
+          return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} carriers={thermalCarriers(availableCarriers)} runCarriers={availableCarriers} />;
         }
-        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} />;
+        return <EnergyPanel structuredResults={structuredResults} modelId={modelId} carrier={carrier} runCarriers={availableCarriers} />;
       case 'cost':
         return (
           <CostPanel

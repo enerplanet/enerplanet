@@ -21,6 +21,8 @@ const COST_TECH_I18N_KEYS: Record<string, string> = {
 };
 
 export interface CostBreakdownItem {
+  /** Technology group, which picks the results palette colour per theme. */
+  tech?: string;
   category: string;
   value: number;
   color: string;
@@ -90,6 +92,7 @@ export function transformStructuredCostBreakdown(structured: StructuredModelResu
         : tech.replaceAll('_', ' ').replaceAll(/\b\w/g, c => c.toUpperCase());
       const invest = investByTech[tech] || 0;
       return {
+        tech,
         category,
         value,
         color: getTechColor(tech, colorIdx++),

@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useThemeColors } from '@/features/simulation-charts/pypsa/chartUtils';
 import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from '../../carrierUnits';
 import type { BuildingFlow } from '../../buildingFlows';
+import { useResultColors } from '../../hooks/useResultColors';
 import { formatNumber } from '@/utils/formatNumber';
 
 export type ProfileResolution = 'monthly' | 'daily' | 'typical';
@@ -15,6 +16,13 @@ const SEASON_MONTHS: Record<Season, string[] | null> = {
   summer: ['06', '07', '08'],
   year: null,
 };
+
+/** Winter, else summer, else the whole year: the first season with an hour in the run. */
+export function firstSeason(timesteps: string[]): Season {
+  const has = (s: Season) => timesteps.some((ts) => SEASON_MONTHS[s]!.includes(ts.slice(5, 7)));
+  if (has('winter')) return 'winter';
+  return has('summer') ? 'summer' : 'year';
+}
 
 interface BuildingProfileChartProps {
   timesteps: string[];
@@ -61,6 +69,7 @@ function axisLabel(bucket: string, resolution: ProfileResolution): string {
 /** Energy at one building as stacked bars: supplies above zero, uses below. Same style as the Energy tab. */
 export function BuildingProfileChart({ timesteps, flows, carrier, label, resolution, season, emptyText }: BuildingProfileChartProps) {
   const colors = useThemeColors();
+  const palette = useResultColors();
   const display = carrierDisplay(carrier);
 
   const option = useMemo<EChartsOption>(() => {
@@ -107,12 +116,12 @@ export function BuildingProfileChart({ timesteps, flows, carrier, label, resolut
         type: 'bar' as const,
         stack: flow.side,
         barMaxWidth: 28,
-        itemStyle: { color: flow.color },
+        itemStyle: { color: palette.fill(flow, carrier) },
         emphasis: { focus: 'series' as const },
         data: buckets.map((b) => (flow.side === 'supply' ? 1 : -1) * (values.get(b) ?? 0)),
       })),
     };
-  }, [timesteps, flows, carrier, label, resolution, season, emptyText, display, colors]);
+  }, [timesteps, flows, carrier, label, resolution, season, emptyText, display, colors, palette]);
 
   return <ReactECharts option={option} style={{ height: '100%', width: '100%' }} notMerge />;
 }

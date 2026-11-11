@@ -651,8 +651,6 @@
       "hours": "hodin"
     },
     "costInfo": {
-      "simulationPeriodNote": "Zobrazené náklady platí pro simulované období {{days}} dní ({{hours}} hodin). Pro celoroční náklady spusťte roční simulaci (8 760 hodin).",
-      "simulationPeriodShort": "Období simulace {{days}} dní",
       "costBreakdownTooltip": "Každá výseč je jedna technologie nebo nákup, v barvě z legendy pod grafem. Nakoupená elektřina ze sítě je provozní náklad: co se spotřebovalo v simulovaném období. Zařízení jako tepelná čerpadla, solární panely a baterie jsou pořizovací náklady rozložené na dobu životnosti, započítá se jen podíl za simulované období. V krátkých simulacích proto provozní náklady vypadají poměrně větší.",
       "annualProjection": "Odhad za rok: {{value}}",
       "equipmentCostNote": "Náklady na zařízení jsou rozloženy na jeho životnost; zobrazen je jen podíl za toto období simulace.",
@@ -1680,7 +1678,6 @@
     },
     "sections": {
       "grid": "Síť",
-      "model": "Model",
       "energySystem": "Energetický systém"
     },
     "analysis": {
@@ -2348,7 +2345,7 @@
       "comparison": "Porovnání"
     },
     "metrics": {
-      "demandBaseline": "Poptávka (Základní)",
+      "demand": "Poptávka",
       "renewableGen": "Obnovitelná výroba",
       "gridImport": "Import ze sítě",
       "selfSufficiency": "Soběstačnost",

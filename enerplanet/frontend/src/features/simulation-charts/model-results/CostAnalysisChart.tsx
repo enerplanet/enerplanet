@@ -3,11 +3,12 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useTranslation } from '@spatialhub/i18n';
 import { useThemeColors, useIsDarkMode } from '../pypsa/chartUtils';
-import { getTechColor } from '@/constants/tech-colors';
+import { getTechColor, resultFill } from '@/constants/tech-colors';
 import { formatLcoeCtkwh } from '@/features/model-results/lcoeUnits';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
 
 interface CostItem {
+  tech?: string;
   category: string;
   value: number;
   color?: string;
@@ -54,7 +55,7 @@ export const CostAnalysisChart: FC<CostAnalysisChartProps> = ({
     const pieData = data.map((d, idx) => ({
       name: d.category,
       value: Math.abs(d.value),
-      itemStyle: { color: d.color || getTechColor(d.category, idx) },
+      itemStyle: { color: (d.tech && resultFill(d.tech, isDark)) || d.color || getTechColor(d.category, idx) },
       locationCount: d.locationCount,
       investmentCost: d.investmentCost,
       variableCost: d.variableCost,

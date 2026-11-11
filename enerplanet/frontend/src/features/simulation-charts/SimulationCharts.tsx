@@ -335,10 +335,7 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
               .filter(m => String(m.id) !== excludeId)
               .map((model) => (
                 <SelectItem key={model.id} value={String(model.id)}>
-                  <span className="flex items-center justify-between w-full gap-2">
-                    <span className="truncate">{model.title}</span>
-                    <span className="text-xs text-muted-foreground">{new Date(model.created_at).toLocaleDateString()}</span>
-                  </span>
+                  <span className="truncate">{model.title}</span>
                 </SelectItem>
               ))
           )}
@@ -429,13 +426,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                 )}
               </div>
               <div className="flex gap-2 mt-1.5">
-                <div className="w-1/3 min-w-[120px]">
+                <div className="shrink-0">
                   <WorkspaceSelector
                     activeWorkspace={workspace1}
                     onWorkspaceChange={setWorkspace1}
                   />
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   {renderModelSelect(availableModels1, selectedModelId1, setSelectedModelId1, t('simulationComparison.selectBaselineModel'), selectedModelId2)}
                 </div>
               </div>
@@ -459,13 +456,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                 )}
               </div>
               <div className="flex gap-2 mt-1.5">
-                <div className="w-1/3 min-w-[120px]">
+                <div className="shrink-0">
                   <WorkspaceSelector
                     activeWorkspace={workspace2}
                     onWorkspaceChange={setWorkspace2}
                   />
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <div className="flex gap-1">
                     {renderModelSelect(availableModels2, selectedModelId2, setSelectedModelId2, t('simulationComparison.selectComparisonModel'), selectedModelId1)}
                     {selectedModelId2 && (
@@ -490,11 +487,13 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
           // Generation / import / self-sufficiency only describe a generating
           // carrier; a heat comparison has none of them.
           const generation = isGenerationCarrier(carrier);
+          const pair = (format: (s: NonNullable<typeof summary1>) => string) => `${format(summary1)} \u2192 ${format(summary2)}`;
+          const hint = t('simulationComparison.metrics.pairHint', 'Baseline \u2192 comparison');
           const generationItems = generation
             ? [
-                { label: t('simulationComparison.metrics.renewableGen'), value: formatEnergy(summary1.renewable_production_kwh, carrier) },
-                { label: t('simulationComparison.metrics.gridImport'), value: formatEnergy(summary1.grid_import_kwh, carrier) },
-                { label: t('simulationComparison.metrics.selfSufficiency'), value: formatPercent(summary1.self_sufficiency_rate * 100) },
+                { label: t('simulationComparison.metrics.renewableGen'), value: pair((s) => formatEnergy(s.renewable_production_kwh, carrier)), hint },
+                { label: t('simulationComparison.metrics.gridImport'), value: pair((s) => formatEnergy(s.grid_import_kwh, carrier)), hint },
+                { label: t('simulationComparison.metrics.selfSufficiency'), value: pair((s) => formatPercent(s.self_sufficiency_rate * 100)), hint },
               ]
             : [];
           return (
@@ -502,13 +501,10 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
               <StatsStrip
                 className="md-fade-in"
                 items={[
-                  { label: t('simulationComparison.metrics.demandBaseline'), value: formatEnergy(summary1.total_demand_kwh, carrier) },
+                  { label: t('simulationComparison.metrics.demand', 'Demand'), value: pair((s) => formatEnergy(s.total_demand_kwh, carrier)), hint },
                   ...generationItems,
-                  { label: t('simulationComparison.metrics.peakDemand'), value: formatPower(summary1.peak_demand_kw, carrier) },
-                  {
-                    label: t('simulationComparison.metrics.totalCost'),
-                    value: formatCurrency(summary1.total_cost_eur, 0),
-                  },
+                  { label: t('simulationComparison.metrics.peakDemand'), value: pair((s) => formatPower(s.peak_demand_kw, carrier)), hint },
+                  { label: t('simulationComparison.metrics.totalCost'), value: pair((s) => formatCurrency(s.total_cost_eur, 0)), hint },
                 ]}
               />
             </div>
@@ -604,6 +600,10 @@ export const SimulationCharts: FC<SimulationChartsProps> = ({ modelId: propModel
                   <ComparisonCharts
                     results1={structuredResults1}
                     results2={structuredResults2}
+                    runs={[
+                      { role: t('simulationComparison.baseline'), modelId: model1.id, title: model1.title, from: model1.from_date, to: model1.to_date, carriers: carriers1 },
+                      { role: t('simulationComparison.comparison'), modelId: model2.id, title: model2.title, from: model2.from_date, to: model2.to_date, carriers: carriers2 },
+                    ]}
                     carrier={carrier}
                   />
                 </div>
