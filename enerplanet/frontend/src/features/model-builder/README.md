@@ -39,15 +39,17 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `store.ts` | the projection + the append-only transaction log + the undo/redo cursor (one write path) |
 | `engine.ts` | runs a module as one workflow node, enforces the write boundary, seals transactions |
 | `invalidator.ts` | stages the cascade: the affected closure, minus what cannot be pruned |
+| `fingerprint.ts` | stable value fingerprints — key order must not matter, array order must |
+| `influence.ts` | the influence-honesty prober: verifies a module's `affect` instead of trusting it |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) |
 
-Implemented so far, all green: **T1–T7 and T14–T16** (one sealed transaction per action;
+Implemented so far, all green: **T1–T8 and T14–T16** (one sealed transaction per action;
 undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits exactly;
 the discard tail; redo re-derives the cascade; undo skips auto work and lands on the interactive
 boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade as affected
-closure ∩ present ∩ not-superseded). Not written yet: the influence-honesty prober (T8), gating
-(T10–T12), the flow position + re-run/elision (T20), the artefact (T18), branching + the prompt
-(T17/T19) and the save node (T13).
+closure ∩ present ∩ not-superseded; influence honesty verified per module). Not written yet:
+gating (T10–T12), the flow position + re-run/elision (T20), the artefact (T18), branching + the
+prompt (T17/T19) and the save node (T13).
 
 ## Commands
 
