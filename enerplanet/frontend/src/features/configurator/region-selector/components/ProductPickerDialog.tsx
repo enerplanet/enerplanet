@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "@spatialhub/i18n";
 import type { Technology } from "@/features/technologies/services/technologyService";
 import { findProducts, loadCatalogue, productsOfType } from "@/features/technologies/catalogue";
+import { productFacts } from "./ProductCategory";
 import { DEFAULT_USABLE_SHARE } from "@/features/configurator/building-config/usePvMode";
 
 interface ProductPickerDialogProps {
@@ -20,6 +21,8 @@ interface ProductPickerDialogProps {
   type: string | null;
   /** The product the building already uses, preselected. */
   current?: string;
+  /** The product dragged or added from the drawer; only it is offered. */
+  product?: string;
   applyToAll: boolean;
   /** usableShare is set for PV applied to all buildings: the share of each roof its panels may cover. */
   onPick: (product: Technology, usableShare?: number) => void;
@@ -27,17 +30,20 @@ interface ProductPickerDialogProps {
   onClose: () => void;
 }
 
-const constraintValue = (product: Technology, key: string): number | undefined => {
-  const value = product.constraints.find((c) => c.key === key)?.default_value;
-  return typeof value === "number" ? value : undefined;
-};
+/** The products of the type to choose from: only the given product when one is given. */
+export const offeredProducts = (all: Technology[], type: string, product?: string): Technology[] =>
+  productsOfType(all, type).filter((p) => !product || p.key === product);
 
 /**
- * Lists the catalogue products of one technology type to choose from; a type's
- * only product is applied without asking, except PV for all buildings, which
- * asks for the usable roof share.
+ * Whether a product is applied without asking: a type's only product, or PV on
+ * one building, which keeps its current product or gets the type's default.
+ * PV for all buildings always asks, for the usable roof share.
  */
-export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, current, applyToAll, onPick, onDefineOwn, onClose }) => {
+export const appliesDefault = (type: string, count: number, applyToAll: boolean): boolean =>
+  count > 0 && !(applyToAll && type === "pv_supply") && (count === 1 || type === "pv_supply");
+
+/** Lists the catalogue products of one technology type to choose from, unless appliesDefault. */
+export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, current, product, applyToAll, onPick, onDefineOwn, onClose }) => {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Technology[] | null>(null);
   const [selected, setSelected] = useState<string | undefined>(current);
@@ -52,10 +58,10 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
     let cancelled = false;
     loadCatalogue().then((all) => {
       if (cancelled) return;
-      const ofType = productsOfType(all, type);
+      const ofType = offeredProducts(all, type, product);
       setSharePercent(DEFAULT_USABLE_SHARE * 100);
-      if (ofType.length === 1 && !asksShare) {
-        onPick(ofType[0]);
+      if (appliesDefault(type, ofType.length, applyToAll)) {
+        onPick(ofType.find((p) => p.key === current) ?? ofType[0]);
         return;
       }
       setProducts(ofType);
@@ -65,7 +71,7 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onPick is a new function every render
-  }, [open, type, current, asksShare]);
+  }, [open, type, current, product, asksShare]);
 
   // A product the search hides cannot be applied.
   const shown = findProducts(products ?? [], query);
@@ -84,25 +90,23 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("common.search")}
-            aria-label={t("common.search")}
-            className="w-full rounded-md border border-border bg-background pl-8 pr-2 py-1.5 text-sm text-foreground outline-none focus:border-primary"
-          />
-        </div>
+        {products.length > 1 && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("common.search")}
+              aria-label={t("common.search")}
+              className="w-full rounded-md border border-border bg-background pl-8 pr-2 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+            />
+          </div>
+        )}
 
         <div className="max-h-[55dvh] overflow-auto border-y border-border py-2">
           {shown.length === 0 && <p className="px-3 py-2.5 text-sm text-muted-foreground">{t("technologies.noSearchResults")}</p>}
           {shown.map((product) => {
-            // A PV product's yield comes from its module type, not cont_energy_eff.
-            const efficiency = type === "pv_supply" ? undefined : constraintValue(product, "cont_energy_eff");
-            const cost = constraintValue(product, "cost_energy_cap");
-            const lifetime = constraintValue(product, "cont_lifetime");
             return (
               <label
                 key={product.key}
@@ -117,15 +121,7 @@ export const ProductPickerDialog: FC<ProductPickerDialogProps> = ({ open, type, 
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{product.alias}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {[
-                      efficiency !== undefined && t("technologies.products.efficiency", { value: efficiency }),
-                      cost !== undefined && t("technologies.products.cost", { value: Math.round(cost) }),
-                      lifetime !== undefined && t("technologies.products.lifetime", { value: lifetime }),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{productFacts(product, type ?? "", t)}</p>
                   {(product.manufacturer || product.source) && (
                     <p className="text-[10px] text-muted-foreground/80 truncate">
                       {[product.manufacturer, product.source].filter(Boolean).join(" · ")}

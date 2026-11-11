@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Speicher-Entladetiefe",
       "cont_storage_initial": "Anfänglicher Speicherstand",
       "cont_storage_loss": "Speicherverlustrate",
-      "cost_energy_cap": "Kosten der Energiekapazität",
+      "cost_energy_cap": "Investitionskosten",
       "cost_export": "Exportkosten",
       "cost_interest_rate": "Zinssatz",
       "cost_om_annual": "Jährliche B&W-Kosten",
@@ -249,6 +249,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Weitere Aktionen",
       "viewResults": "Ergebnisse anzeigen",
       "downloadResults": "Ergebnisse herunterladen",
       "downloadFailed": "Download fehlgeschlagen: {{reason}}",
@@ -260,7 +261,9 @@
       "delete": "Löschen",
       "cannotDelete": "Löschen nicht möglich - nur der Eigentümer oder ein Experte kann löschen",
       "runWithMeme": "Mit Calliope ausführen",
-      "runPypsaOnMeme": "Leistungsfluss ausführen (PyPSA)"
+      "runPypsaOnMeme": "Leistungsfluss ausführen (PyPSA)",
+      "runPypsaFailed": "Leistungsfluss fehlgeschlagen — zum Wiederholen klicken",
+      "runPypsaRunning": "Lastflussberechnung läuft…"
     },
     "pagination": {
       "showing": "Zeige",
@@ -560,7 +563,9 @@
       "heat": "Wärme",
       "gas": "Gas",
       "oil": "Öl",
-      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen"
+      "toggleItemHint": "Ergebnisse für diesen Energieträger anzeigen",
+      "cooling": "Kühlung",
+      "heatingCooling": "Heizen und Kühlen"
     },
     "selectModel": "Modell auswählen",
     "completedSimulations": "Abgeschlossene Simulationen",
@@ -614,13 +619,16 @@
       "renewableGen": "Erneuerbare Erzeug.",
       "gridImport": "Netzimport",
       "selfSufficiency": "Autarkie",
-      "selfSufficiencyDesc": "% des Bedarfs durch Erneuerbare",
+      "selfSufficiencyDesc": "Anteil des verbrauchten Stroms, der nicht aus dem Netz kam.\nAutarkiegrad = 1 − Netzbezug ÷ Stromverbrauch\n(Luthander et al., 2015)",
       "peakDemand": "Spitzenbedarf",
       "totalCost": "Gesamtkosten",
+      "totalCostAllEnergy": "Gesamtkosten, alle Energieträger",
       "over": "über",
       "from": "aus",
       "installed": "installiert",
-      "equipmentAndRunning": "Anschaffung + Laufende Kosten"
+      "equipmentAndRunning": "Anschaffung + Laufende Kosten",
+      "peakHeating": "Spitzenlast Heizen",
+      "peakCooling": "Spitzenlast Kühlen"
     },
     "powerFlow": {
       "converged": "Konvergiert",
@@ -666,7 +674,7 @@
     "charts": {
       "systemPerformance": "Systemleistung",
       "systemPerformanceDesc": "Wichtige Leistungskennzahlen, die zeigen, wie effizient das Energiesystem arbeitet.",
-      "selfSufficiencyDesc": "% des Bedarfs durch lokale Erzeugung gedeckt",
+      "selfSufficiencyDesc": "Anteil des verbrauchten Stroms, der nicht aus dem Netz kam.\nAutarkiegrad = 1 − Netzbezug ÷ Stromverbrauch\n(Luthander et al., 2015)",
       "gridDependency": "Netzabhängigkeit",
       "gridDependencyDesc": "% des Bedarfs aus dem Netz importiert",
       "capacityUtilization": "Kapazitätsauslastung",
@@ -705,14 +713,17 @@
       "production": "Erzeugung",
       "productionDesc": "Energie erzeugt durch Solar, Wind und andere Quellen",
       "consumption": "Verbrauch",
-      "consumptionDesc": "Energie genutzt durch Lasten, Speicherladung und Netzexport",
+      "consumptionDesc": "In den Gebäuden genutzte Energie. Batterieladung und Netzexport werden getrennt gezeigt.",
       "renewableProduction": "Erneuerbare Erzeugung",
       "totalRenewable": "Gesamte Erneuerbare",
       "gridImport": "Netzimport",
       "fromGrid": "Vom Netz",
       "totalDemand": "Gesamtbedarf",
       "selfSufficiency": "Eigenversorgungsgrad",
-      "netBalance": "Nettobilanz",
+      "grid": "Netz",
+      "battery": "Batterie",
+      "batteryCharging": "Batterie laden",
+      "batteryDischarging": "Batterie entladen",
       "energyKwh": "Energie (kWh)",
       "energy": "Energie",
       "netKwh": "Netto (kWh)",
@@ -882,6 +893,8 @@
       "noEnergyFlowData": "Keine Energieflussdaten verfügbar",
       "gridImport": "Netzimport",
       "gridExport": "Netzexport",
+      "gridForHeating": "Netzstrom: Heizen und Kühlen",
+      "gridForOtherUse": "Netzstrom: übrige Nutzung",
       "energySystem": "Energiesystem",
       "household": "Haushalt",
       "industry": "Industrie",
@@ -907,16 +920,14 @@
     },
     "costInfo": {
       "feedInIncome": "Abzüglich {{amount}} Einnahmen aus ins Netz eingespeistem Strom.",
-      "simulationPeriodNote": "Die angezeigten Kosten gelten für den simulierten Zeitraum von {{days}} Tagen ({{hours}} Stunden). Für vollständige Jahreskosten führen Sie eine 1-Jahres-Simulation (8.760 Stunden) durch.",
-      "simulationPeriodShort": "{{days}}-Tage Simulationszeitraum",
-      "costBreakdownTooltip": "Die Kosten beziehen sich nur auf den simulierten Zeitraum, nicht auf ein ganzes Jahr. Anschaffungskosten werden über die Lebensdauer der Anlage verteilt, während laufende Kosten (z.B. Strombezug aus dem Netz) den tatsächlichen Verbrauch im Zeitraum widerspiegeln. Bei kurzen Simulationen erscheinen Technologien mit hohen laufenden Kosten proportional größer.",
+      "costBreakdownTooltip": "Jedes Segment ist eine Technologie oder ein Einkauf, in der Farbe aus der Legende unter dem Diagramm. Bezogener Netzstrom ist ein laufender Kostenpunkt: was im simulierten Zeitraum verbraucht wurde. Anlagen wie Wärmepumpen, Solarmodule und Batterien sind Anschaffungskosten, die über ihre Lebensdauer verteilt werden; es zählt nur der Anteil für den simulierten Zeitraum. In kurzen Simulationen erscheinen laufende Kosten daher anteilig größer.",
       "annualProjection": "Geschätzte Jahreskosten: {{value}}",
       "equipmentCostNote": "Die Anschaffungskosten werden über die Lebensdauer verteilt — hier nur der Anteil für den Simulationszeitraum.",
       "equipmentCostDesc": "Solarmodule, Batterien und andere Hardware. Die Anschaffungskosten werden über die Lebensdauer verteilt (z.B. 25 Jahre für Solar).",
       "runningCostDesc": "Strom aus dem Netz, Wartung und andere laufende Kosten, die vom Verbrauch abhängen.",
       "systemCostSummaryDesc": "Zeigt die durchschnittlichen Energiekosten (ct/kWh) und wie sich die Gesamtkosten auf Anschaffung und laufende Kosten aufteilen. Niedrigere ct/kWh bedeuten günstigere Energie.",
       "lcoeComparisonDesc": "Vergleicht die Energiekosten jeder Quelle in ct/kWh. Solar und Wind haben niedrige Kosten, da Sonnenlicht und Wind kostenlos sind — man zahlt nur für die Anlage. Die gestrichelte Linie zeigt den Systemdurchschnitt.",
-      "investmentBreakdownDesc": "Zeigt die Kosten jeder Technologie, aufgeteilt in Anschaffung (einmalig, über Lebensdauer verteilt) und laufende Kosten (Netzstrom, Wartung). Erneuerbare haben meist nur Anschaffungskosten."
+      "investmentBreakdownDesc": "Zeigt die Kosten jeder Technologie, aufgeteilt in Anschaffung (einmalig, über Lebensdauer verteilt) und laufende Kosten (Netzstrom, Wartung). Erneuerbare haben meist nur Anschaffungskosten. Der Netzstrom ist nach dem Anteil jeder Nutzung am Stromverbrauch aufgeteilt."
     },
     "buildingDetail": {
       "building": "Gebäude",
@@ -953,6 +964,23 @@
       "gridIndependence": "Netzunabhängigkeit",
       "capacityFactor": "Kapazitätsfaktor",
       "co2Reduction": "CO₂-Reduktion"
+    },
+    "thermal": {
+      "title": "Heizen und Kühlen im Zeitraum",
+      "info": "Summen für Heizen und Kühlen im Zeitraum über alle Gebäude. Wärme und Kälte sind im Modell getrennt: Wärme kann keinen Kältebedarf decken, daher hat jede ihre eigene Anlage.",
+      "demand": "Bedarf Heizen und Kühlen",
+      "overRun": "im Zeitraum",
+      "demandInfo": "Energie, die im Zeitraum nötig ist, um die Gebäude angenehm temperiert zu halten: Raumwärme, Warmwasser und Kühlung, über alle Gebäude summiert.",
+      "heatingShare": "Anteil Heizen",
+      "heatingSub": "{{energy}} Raumwärme und Warmwasser",
+      "heatingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Raumwärme und Warmwasser entfiel.",
+      "coolingShare": "Anteil Kühlen",
+      "coolingSub": "{{energy}} Kühlung",
+      "coolingShareInfo": "Anteil des Bedarfs für Heizen und Kühlen, der auf Kühlung entfiel.",
+      "electricity": "Verbrauchter Strom",
+      "electricitySub": "durch Wärmepumpen und Klimageräte",
+      "electricityInfo": "Strom, den die Anlagen für Heizen und Kühlen im Zeitraum bezogen haben. Der Rest der Wärme und Kälte kam kostenlos aus Außenluft oder Erdreich.",
+      "noDemand": "Kein Bedarf für Heizen oder Kühlen in diesem Lauf."
     }
   },
   "auth": {
@@ -1103,7 +1131,6 @@
     "loadingModels": "Modelle werden geladen...",
     "loadingWorkspaceDescription": "Bitte warten Sie, während wir Ihre Arbeitsbereichseinstellungen initialisieren.",
     "loadingModelsDescription": "Bitte warten Sie, während wir Ihre Energiebewertungsmodelle abrufen.",
-    "selectWorkspace": "Wählen oder erstellen Sie einen Arbeitsbereich",
     "refreshModels": "Modellliste aktualisieren",
     "share": "Teilen",
     "shareDescription": "\"{{title}}\" mit einem anderen Benutzer teilen",
@@ -1695,7 +1722,8 @@
     "mode": {
       "label": "Modus",
       "simple": "Einfach",
-      "advanced": "Erweitert"
+      "advanced": "Erweitert",
+      "simpleHint": "In der <advanced>erweiterten</advanced> Ansicht stehen weitere Optionen zur Verfügung."
     },
     "modelName": "Modellname",
     "modelNamePlaceholder": "Geben Sie einen Namen für Ihre Energiesimulation ein",
@@ -1920,7 +1948,6 @@
     },
     "sections": {
       "grid": "Netz",
-      "model": "Modell",
       "energySystem": "Energiesystem"
     },
     "analysis": {
@@ -2058,6 +2085,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Einfacher & erweiterter Modus",
+        "description": "Dieser Umschalter wechselt zwischen der einfachen Ansicht mit dem Wesentlichen und der erweiterten Ansicht mit zusätzlichen Optionen wie Wetter und Strompreisen.",
+        "tip": "Die einfache Ansicht reicht für die meisten Modelle – wechseln Sie für mehr zu Erweitert."
+      },
       "welcome": {
         "title": "Energiesimulations-Leitfaden",
         "description": "Willkommen! Diese Tour führt Sie durch die Erstellung einer Energiesimulation für Ihre gewählte Region.",
@@ -2302,7 +2334,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} Jahre",
       "defineOwn": "Eigenes definieren",
-      "count": "Produkte: {{count}}"
+      "search": "Produkte suchen",
+      "sort": "Produkte sortieren",
+      "sortName": "Name",
+      "sortCost": "Investitionskosten"
     },
     "title": "Technologien",
     "subtitle": "Energietechnologien für Ihre Simulationen",
@@ -2673,6 +2708,8 @@
     "hideMaps": "Karten ausblenden",
     "showMaps": "Karten anzeigen",
     "exportPdf": "PDF exportieren",
+    "generateReport": "Bericht erstellen",
+    "reportComingSoon": "Die Berichterstellung wird mit einem kommenden Update verfügbar.",
     "locationMaps": "Standortkarten",
     "performanceComparison": "Leistungsvergleich",
     "loading": "Simulationsdaten werden geladen...",
@@ -2686,7 +2723,7 @@
       "comparison": "Vergleich"
     },
     "metrics": {
-      "demandBaseline": "Bedarf (Basislinie)",
+      "demand": "Bedarf",
       "renewableGen": "Erneuerbare Erzeugung",
       "gridImport": "Netzimport",
       "selfSufficiency": "Autarkie",

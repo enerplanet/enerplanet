@@ -261,3 +261,79 @@ func TestStreamMemeTimeSeries_MissingDirSkips(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "does-not-exist", "csv")
 	require.NoError(t, streamMemeTimeSeries(db, 7, missing, map[string]string{}))
 }
+
+// TestStreamModelCapacityFactor_OperateRowsAveraged covers an operate-mode
+// export, where each rolling window repeats its own capacity factor on every
+// hour: one row per tech and carrier must remain, holding the mean.
+func TestStreamModelCapacityFactor_OperateRowsAveraged(t *testing.T) {
+	dir := t.TempDir()
+	writeMemeCSV(t, dir, "results_systemwide_capacity_factor.csv",
+		"timesteps,techs,carriers,systemwide_capacity_factor\n"+
+			"2023-06-21 00:00:00,pv_supply_1,electricity,0.1\n"+
+			"2023-06-21 01:00:00,pv_supply_1,electricity,0.1\n"+
+			"2023-06-21 12:00:00,pv_supply_1,electricity,0.3\n"+
+			"2023-06-21 13:00:00,pv_supply_1,electricity,0.3\n"+
+			"2023-06-21 00:00:00,pv_supply_1,heat,0\n")
+
+	conn, mock, err := sqlmock.New(
+		sqlmock.QueryMatcherOption(sqlmock.QueryMatcherFunc(func(_, _ string) error { return nil })),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+	capture := &sqlCaptureWriter{}
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: conn}), &gorm.Config{
+		SkipDefaultTransaction: true,
+		Logger:                 gormlogger.New(capture, gormlogger.Config{LogLevel: gormlogger.Info, Colorful: false}),
+	})
+	require.NoError(t, err)
+	mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
+
+	w := &memeTimeSeriesWriter{tx: db, modelID: 7, csvDir: dir, parents: map[string]string{"pv_supply_1": "supply"}}
+	require.NoError(t, w.streamModelCapacityFactor())
+	require.NoError(t, mock.ExpectationsWereMet())
+
+	mcf := sqlLineFor(t, capture.String(), "results_model_capacity_factor")
+	require.Equal(t, 2, strings.Count(mcf, "pv_supply_1"), "one row per carrier: %s", mcf)
+	require.Contains(t, mcf, "0.2")
+	require.NotContains(t, mcf, "0.3")
+}
+
+func TestStreamModelCapacityFactor_OperateFromFlows(t *testing.T) {
+	dir := t.TempDir()
+	writeMemeCSV(t, dir, "results_systemwide_capacity_factor.csv",
+		"timesteps,techs,carriers,systemwide_capacity_factor\n"+
+			"2023-01-01 00:00:00,battery_storage_1,electricity,0.1\n"+
+			"2023-01-01 01:00:00,battery_storage_1,electricity,0.1\n"+
+			"2023-01-01 02:00:00,battery_storage_1,electricity,0.3\n"+
+			"2023-01-01 03:00:00,battery_storage_1,electricity,0.3\n"+
+			"2023-01-01 00:00:00,lv_0,electricity,0.07\n"+
+			"2023-01-01 01:00:00,lv_0,electricity,0.09\n")
+	// 0.01 MW out in one of four hours from a 0.01 MW battery: a factor of 0.25.
+	writeMemeCSV(t, dir, "results_flow_out.csv",
+		"nodes,techs,carriers,timesteps,flow_out\n"+
+			"n1,battery_storage_1,electricity,2023-01-01 00:00:00,0.004\n"+
+			"n1,battery_storage_1,electricity,2023-01-01 02:00:00,0.006\n"+
+			"n1,lv_0,electricity,2023-01-01 00:00:00,0.5\n")
+	writeMemeCSV(t, dir, "inputs_flow_cap.csv", "techs,flow_cap\nbattery_storage_1,0.01\n")
+
+	conn, mock, err := sqlmock.New(
+		sqlmock.QueryMatcherOption(sqlmock.QueryMatcherFunc(func(_, _ string) error { return nil })),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+	capture := &sqlCaptureWriter{}
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: conn}), &gorm.Config{
+		SkipDefaultTransaction: true,
+		Logger:                 gormlogger.New(capture, gormlogger.Config{LogLevel: gormlogger.Info, Colorful: false}),
+	})
+	require.NoError(t, err)
+	mock.ExpectQuery("").WillReturnRows(sqlmock.NewRows(nil))
+
+	w := &memeTimeSeriesWriter{tx: db, modelID: 7, csvDir: dir, parents: map[string]string{"battery_storage_1": "storage", "lv_0": "transmission"}}
+	require.NoError(t, w.streamModelCapacityFactor())
+	require.NoError(t, mock.ExpectationsWereMet())
+
+	mcf := sqlLineFor(t, capture.String(), "results_model_capacity_factor")
+	require.Contains(t, mcf, "'battery_storage_1',0.25,", "battery factor from its flows: %s", mcf)
+	require.Contains(t, mcf, "0.08", "a line without a size keeps the mean: %s", mcf)
+}

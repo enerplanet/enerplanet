@@ -2,6 +2,7 @@ package result
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -116,6 +117,27 @@ func (s *Store) GetModelResults(modelID uint) ([]commonModels.ModelResult, error
 		return nil, err
 	}
 	return results, nil
+}
+
+// GetLegExtractedPath returns the directory the leg's result bundle was
+// extracted into (model_meme_runs.extracted_path), or "" when the leg recorded
+// none. The GET /results/pypsa disk readers use it to find the PyPSA bundle
+// instead of falling back to the Calliope one.
+func (s *Store) GetLegExtractedPath(modelID uint, leg string) (string, error) {
+	var row struct {
+		ExtractedPath string `gorm:"column:extracted_path"`
+	}
+	err := s.db.Model(&backendModels.ModelMemeRun{}).
+		Select("extracted_path").
+		Where("model_id = ? AND leg = ?", modelID, leg).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return row.ExtractedPath, nil
 }
 
 // GetResultByID fetches a result by primary key with its Model preloaded.
@@ -291,8 +313,8 @@ func (s *Store) GetUsedGridPrices(modelID uint) (interface{}, error) {
 
 // TechAggregate holds a tech-level aggregation row.
 type TechAggregate struct {
-	Techs string  `gorm:"column:techs"`
-	Total float64 `gorm:"column:total"`
+	Techs string  `gorm:"column:techs" json:"techs"`
+	Total float64 `gorm:"column:total" json:"total"`
 }
 
 // resolveCarrier returns the carrier to query, defaulting to "power" if not specified.
@@ -367,6 +389,11 @@ func (s *Store) GetCarrierConTimestepCount(modelID uint, carrier ...string) int6
 // Carrier time-series (aggregated)
 // ---------------------------------------------------------------------------
 
+// techGroupSQL maps a per-building tech id to its technology, so a series is
+// summed over buildings, lines and transformers: pv_supply_3_1 -> pv_supply,
+// power_transmission:lv_8 -> power_transmission, n12_demand -> power_demand.
+const techGroupSQL = `regexp_replace(regexp_replace(regexp_replace(techs, ':.*$', ''), '^n[0-9]+_demand$', carrier || '_demand'), '_[0-9]+(?=_|$)', '', 'g')`
+
 // CarrierAggRow is the shape returned by the carrier time-series endpoint.
 type CarrierAggRow struct {
 	ModelID  uint      `json:"model_id"`
@@ -381,9 +408,9 @@ func (s *Store) GetCarrierProdTimeSeries(modelID uint, carrier ...string) []Carr
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
-		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, timestep").
+		Group("model_id, carrier, " + techGroupSQL + ", timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -394,9 +421,9 @@ func (s *Store) GetCarrierConTimeSeries(modelID uint, carrier ...string) []Carri
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
-		Select("model_id, carrier, techs, timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, timestep").
+		Group("model_id, carrier, " + techGroupSQL + ", timestep").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -407,9 +434,9 @@ func (s *Store) GetDailyCarrierProdTimeSeries(modelID uint, carrier ...string) [
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierProd{}).
-		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, DATE(timestep)").
+		Group("model_id, carrier, " + techGroupSQL + ", DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -420,9 +447,9 @@ func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []
 	zeroTime := time.Time{}
 	var rows []CarrierAggRow
 	s.db.Model(&backendModels.ResultsCarrierCon{}).
-		Select("model_id, carrier, techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
+		Select("model_id, carrier, "+techGroupSQL+" as techs, DATE(timestep) as timestep, SUM(ABS(value)) as value").
 		Where("model_id = ? AND carrier = ? AND timestep > ?", modelID, carrierVal, zeroTime).
-		Group("model_id, carrier, techs, DATE(timestep)").
+		Group("model_id, carrier, " + techGroupSQL + ", DATE(timestep)").
 		Order("timestep ASC").
 		Find(&rows)
 	return rows
@@ -431,63 +458,6 @@ func (s *Store) GetDailyCarrierConTimeSeries(modelID uint, carrier ...string) []
 // ---------------------------------------------------------------------------
 // System time-series
 // ---------------------------------------------------------------------------
-
-// BalanceDailyRow is the shape for daily-aggregated system balance / unmet demand.
-type BalanceDailyRow struct {
-	ModelID  uint      `json:"model_id"`
-	Carrier  string    `json:"carrier"`
-	Location string    `json:"location"`
-	Timestep time.Time `gorm:"column:timestep" json:"timestep"`
-	Value    float64   `json:"value"`
-}
-
-func (s *Store) GetDailySystemBalance(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsSystemBalance{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, AVG(value) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetDailyUnmetDemand(modelID uint) []BalanceDailyRow {
-	var rows []BalanceDailyRow
-	s.db.Model(&backendModels.ResultsUnmetDemand{}).
-		Select("model_id, carrier, 'all' as location, DATE(timestep) as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, carrier, DATE(timestep)").
-		Order("timestep ASC").
-		Find(&rows)
-	return rows
-}
-
-// ResourceTotalRow is the shape for resource consumption totals.
-type ResourceTotalRow struct {
-	ModelID  uint    `json:"model_id"`
-	Location string  `json:"location"`
-	Tech     string  `json:"tech"`
-	Timestep string  `json:"timestep"`
-	Value    float64 `json:"value"`
-}
-
-func (s *Store) GetResourceConTotals(modelID uint) []ResourceTotalRow {
-	var rows []ResourceTotalRow
-	s.db.Model(&backendModels.ResultsResourceCon{}).
-		Select("model_id, 'all' as location, tech, '' as timestep, SUM(ABS(value)) as value").
-		Where("model_id = ?", modelID).
-		Group("model_id, tech").
-		Order("value DESC").
-		Find(&rows)
-	return rows
-}
-
-func (s *Store) GetLineFlows(modelID uint) ([]backendModels.ResultsLineFlow, error) {
-	var items []backendModels.ResultsLineFlow
-	err := s.db.Where("model_id = ?", modelID).Find(&items).Error
-	return items, err
-}
 
 func (s *Store) GetTransformerFlows(modelID uint) ([]backendModels.ResultsTransformerFlow, error) {
 	var items []backendModels.ResultsTransformerFlow
@@ -620,14 +590,14 @@ func (s *Store) GetLocationPyPSAPower(modelID uint, location string) ([]backendM
 
 // CarrierSummary holds the computed carrier summary fields.
 type CarrierSummary struct {
-	SumProduction       float64
-	SumConsumption      float64
-	RenewableProduction float64
-	GridImport          float64
-	PeakDemand          float64
-	TimestepCount       int64
-	ProdAggregates      []TechAggregate
-	ConAggregates       []TechAggregate
+	SumProduction       float64         `json:"sum_production"`
+	SumConsumption      float64         `json:"sum_consumption"`
+	RenewableProduction float64         `json:"renewable_production"`
+	GridImport          float64         `json:"grid_import"`
+	PeakDemand          float64         `json:"peak_demand"`
+	TimestepCount       int64           `json:"timestep_count"`
+	ProdAggregates      []TechAggregate `json:"prod_aggregates"`
+	ConAggregates       []TechAggregate `json:"con_aggregates"`
 }
 
 // GetCarrierSummary returns carrier summary for a specific carrier (defaults to "power").

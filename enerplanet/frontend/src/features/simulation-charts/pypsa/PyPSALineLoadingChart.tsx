@@ -80,20 +80,19 @@ export const PyPSALineLoadingChart = ({
       },
       grid: {
         left: 170, // Increased to fit the line names e.g., "Trafo_1542_mv_Trafo..."
-        right: 40,
+        right: 80, // room for the value label of the longest bar
         top: 40,
-        bottom: 25,
+        bottom: 40,
       },
       xAxis: {
         type: 'value',
-        name: utilizationOnly
-          ? '% of rating'
-          : displayItems.some(item => item.peakLoadingPercent !== undefined)
-            ? 'Peak flow'
-            : 'kVA',
+        nameLocation: 'middle',
+        nameGap: 22,
+        name: !utilizationOnly && displayItems.some(item => item.peakLoadingPercent !== undefined) ? 'Peak flow (kVA)' : 'kVA',
         axisLabel: {
           color: themeColors.textMuted,
-          formatter: (value: number) => formatKva(value),
+          hideOverlap: true,
+          formatter: (value: number) => formatNumber(value, 0),
         },
         splitLine: createSplitLineStyle(),
       },
@@ -102,6 +101,8 @@ export const PyPSALineLoadingChart = ({
         data: displayItems.map(item => item.name),
         axisLabel: {
           color: themeColors.textMuted,
+          interval: 0,
+          fontSize: 10,
           formatter: (value: string) => (value.length > 25 ? `${value.slice(0, 25)}...` : value),
         },
       },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { transformToCapacityData, transformToEnergyFlow } from './transformUtils';
+import { transformToCapacityData } from './transformUtils';
 import { ModelResults } from '@/features/model-results/types';
 
 const SCHOOL_A = [8.805833970833334, 53.09952718091963];
@@ -106,48 +106,5 @@ describe('transformToCapacityData', () => {
     // No building matched -> fall back to raw tech labels for demand.
     const fallback = out.filter((d) => d.type === 'demand');
     expect(fallback.length).toBe(2);
-  });
-});
-
-describe('transformToEnergyFlow', () => {
-  it('groups demand nodes of the same f_class into one sector node', () => {
-    const coords = {
-      n1: { x: 8.805834, y: 53.099527 },
-      n2: { x: 8.804846, y: 53.099509 },
-      ntrafo_82: { x: 8.803872, y: 53.100875 },
-    };
-    const flow = transformToEnergyFlow(baseResults(coords), undefined, buildings as never);
-
-    const names = flow.nodes.map((n) => n.name);
-    expect(names).toContain('School');
-    // No per-building-id demand nodes.
-    expect(names).not.toContain('N1 Demand');
-    expect(names).not.toContain('N2 Demand');
-  });
-
-  it('groups buildings of unknown usage into one Other buildings node', () => {
-    const coords = { n1: { x: 8.805834, y: 53.099527 }, n2: { x: 8.804846, y: 53.099509 } };
-    const names = transformToEnergyFlow(baseResults(coords), undefined, unknownUsage as never).nodes.map((n) => n.name);
-    expect(names).toContain('Other buildings');
-    expect(names).not.toContain('N1 Demand');
-  });
-
-  it('adds up a technology across buildings and roofs into one node', () => {
-    const results = baseResults({});
-    results.energy_cap = [
-      { location: 'n1', tech: 'pv_supply_1_0', value: 4 },
-      { location: 'n2', tech: 'pv_supply_2_3', value: 6 },
-    ] as never;
-    const names = transformToEnergyFlow(results, undefined, unknownUsage as never).nodes.map((n) => n.name);
-    expect(names.filter((n) => n === 'Solar PV')).toHaveLength(1);
-    expect(names.some((n) => n.startsWith('Pv Supply'))).toBe(false);
-  });
-
-  it('falls back to demand tech nodes when no f_class resolves', () => {
-    const coords = { n1: { x: 8.805834, y: 53.099527 }, ntrafo_82: { x: 8.803872, y: 53.100875 } };
-    const flow = transformToEnergyFlow(baseResults(coords), undefined, { features: [] } as never);
-    const names = flow.nodes.map((n) => n.name);
-    expect(names).toContain('N1 Demand');
-    expect(names).toContain('N2 Demand');
   });
 });

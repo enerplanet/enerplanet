@@ -1,0 +1,351 @@
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Gauge } from 'lucide-react';
+import { useTranslation } from '@spatialhub/i18n';
+import { formatCurrency, formatNumber } from '@/utils/formatNumber';
+import { CHART_CARD_CLASS } from '../ui/PanelStates';
+import ChartInfoTooltip from '../ui/ChartInfoTooltip';
+import { carrierDisplay, carrierLabelKey, formatCarrierEnergy } from '../../carrierUnits';
+import { useResultColors } from '../../hooks/useResultColors';
+import { useIsDarkMode } from '@/features/simulation-charts/pypsa/chartUtils';
+import { resultFill } from '@/constants/tech-colors';
+import { heatFigures, netBattery, selfSufficiency, systemFlowLabel, type BuildingFlow } from '../../buildingFlows';
+import { FULL_YEAR_HOURS } from './BuildingDetailPanel';
+
+/** A headline figure: label, value and one supporting line; anything longer goes in `info`. */
+export type TileData = { label: string; value: string; sub: ReactNode; info: string; extra?: ReactNode };
+
+/** One headline figure in the energy summary. */
+export const Tile = ({ label, value, sub, info, extra }: TileData) => (
+  <div className="min-w-0 rounded-lg bg-muted/50 px-3 py-2.5">
+    <div className="flex items-center text-xs text-muted-foreground">
+      <span className="truncate">{label}</span>
+      <ChartInfoTooltip title={label} description={info} />
+    </div>
+    <div className="truncate whitespace-nowrap text-xl font-semibold tabular-nums text-foreground">{value}</div>
+    {extra}
+    <div className="truncate whitespace-nowrap text-xs text-muted-foreground">{sub}</div>
+  </div>
+);
+
+/** Energy in the unit `reference` would use, so every value in one legend shares a unit. */
+function energyAtScaleOf(kwh: number, reference: number, carrier: string): string {
+  const { kind, energyUnit } = carrierDisplay(carrier);
+  if (kind === 'volume') return formatCarrierEnergy(kwh, carrier, 1);
+  const [divisor, unit] = reference >= 1_000_000 ? [1_000_000, 'GWh'] : reference >= 1_000 ? [1_000, 'MWh'] : [1, energyUnit];
+  const value = kwh / divisor;
+  return value > 0 && value < 0.05 ? `<0.1 ${unit}` : `${formatNumber(value, 1)} ${unit}`;
+}
+
+const SHORT_LABELS: Record<string, [string, string]> = {
+  pv_supply: ['results.energy.short.pv', 'Solar PV'],
+  lineIn: ['results.energy.short.gridImport', 'Grid import'],
+  air_source_heat_pump: ['results.energy.short.heatPump', 'Heat pump'],
+  demand: ['results.energy.short.appliances', 'Appliances'],
+  lineOut: ['results.energy.short.export', 'Export'],
+};
+
+/** Power with one decimal, switching to MW from 1,000 kW. */
+const formatPower1 = (kw: number, unit: string) =>
+  kw >= 1_000 ? `${formatNumber(kw / 1_000, 1)} MW` : `${formatNumber(kw, 1)} ${unit}`;
+
+/** Bar segment showing its share when the text fits, blank when it does not. */
+const Segment = ({ text, label, share, color, textColor, active, onActivate, onRelease, onToggle }: {
+  text: string; label: string; share: number; color: string; textColor: string; active: boolean;
+  onActivate: () => void; onRelease: () => void; onToggle: () => void;
+}) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [fits, setFits] = useState(true);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = el.querySelector<HTMLElement>('[data-measure]')!;
+    // 16 px is the segment's horizontal padding (px-2).
+    const fit = () => setFits(measure.offsetWidth + 16 <= el.clientWidth);
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text]);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={label}
+      onMouseEnter={onActivate}
+      onMouseLeave={onRelease}
+      onBlur={onRelease}
+      onClick={onToggle}
+      style={{ width: `${share * 100}%`, backgroundColor: color, color: textColor }}
+      className={`relative flex items-center overflow-hidden whitespace-nowrap px-2 text-xs tabular-nums ${active ? 'brightness-110' : ''}`}
+    >
+      <span data-measure className="invisible absolute">{text}</span>
+      {fits ? text : ''}
+    </button>
+  );
+};
+
+/**
+ * One stacked bar with its own legend; segment widths are shares of the balanced total.
+ * The legend uses short names and one decimal; hovering or tapping shows the full name, two decimals and the peak.
+ */
+export const FlowBar = ({ title, flows, total, carrier, label, shortLabel }: {
+  title: string; flows: BuildingFlow[]; total: number; carrier: string;
+  label: (key: string) => string; shortLabel: (key: string) => string;
+}) => {
+  const { t } = useTranslation();
+  const [active, setActive] = useState<string | null>(null);
+  const colors = useResultColors();
+  const { powerUnit } = carrierDisplay(carrier);
+  const share = (f: BuildingFlow) => f.totalKwh / total;
+  const percent = (f: BuildingFlow) => `${formatNumber(share(f) * 100, 1)}%`;
+  const energy = (f: BuildingFlow) => formatCarrierEnergy(f.totalKwh, carrier);
+
+  const index = flows.findIndex((f) => f.key === active);
+  const selected = flows[index];
+  const start = flows.slice(0, index).reduce((sum, f) => sum + share(f), 0);
+  const centre = selected ? (start + share(selected) / 2) * 100 : 0;
+  const shift = centre < 20 ? '0%' : centre > 80 ? '-100%' : '-50%';
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-8 w-16 shrink-0 items-center text-xs text-muted-foreground">{title}</div>
+      <div className="min-w-0 flex-1">
+        <div className="relative">
+          <div className="flex h-8 overflow-hidden rounded-md">
+            {flows.map((f) => (
+              <Segment
+                key={f.key}
+                text={percent(f)}
+                label={`${label(f.key)} ${energy(f)} · ${percent(f)}`}
+                share={share(f)}
+                color={colors.fill(f, carrier)}
+                textColor={colors.text(f, carrier)}
+                active={f.key === active}
+                onActivate={() => setActive(f.key)}
+                onRelease={() => setActive(null)}
+                onToggle={() => setActive((k) => (k === f.key ? null : f.key))}
+              />
+            ))}
+          </div>
+          {selected && (
+            <div
+              role="tooltip"
+              style={{ left: `${centre}%`, transform: `translateX(${shift})` }}
+              className="pointer-events-none absolute bottom-full z-50 mb-1.5 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-lg"
+            >
+              <div className="font-medium">{label(selected.key)}</div>
+              <div className="tabular-nums text-muted-foreground">{energy(selected)} · {t('results.energy.shareOfTotal', '{{share}} of {{total}}', { share: percent(selected), total: formatCarrierEnergy(total, carrier, 1) })}</div>
+              {/* Battery losses are a run total with no hourly series, so no peak. */}
+              {selected.hourly.length > 0 && <div className="tabular-nums text-muted-foreground">{t('results.energy.peak', 'peak')} {formatPower1(selected.peakKw, powerUnit)}</div>}
+            </div>
+          )}
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {flows.map((f) => (
+            <span key={f.key} className="flex items-center gap-1.5 whitespace-nowrap">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: colors.fill(f, carrier) }} />
+              {shortLabel(f.key)}
+              <span className="tabular-nums text-foreground">{energyAtScaleOf(f.totalKwh, total, carrier)}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
+
+/** Headline figures of the heat summary: peak demand, the heat pumps' share and their seasonal COP. */
+function heatTiles(flows: BuildingFlow[], energy: (kwh: number) => string, powerUnit: string, heatPumpElectricityKwh: number | undefined, t: Translate): TileData[] {
+  const tiles: TileData[] = [];
+  const demand = flows.find((f) => f.key === 'demand');
+  const { heatPumpShare, boilerKwh, seasonalCop } = heatFigures(flows, heatPumpElectricityKwh);
+  if (demand) tiles.push({
+    label: t('results.energy.peakHeatDemand', 'Peak heat demand'),
+    value: formatPower1(demand.peakKw, powerUnit),
+    sub: t('results.energy.heatUsed', '{{energy}} used', { energy: energy(demand.totalKwh) }),
+    info: t('results.energy.peakHeatDemandInfo', 'Highest hourly space heating and hot water demand over the run, summed over all buildings.'),
+  });
+  if (heatPumpShare !== null) tiles.push({
+    label: t('results.energy.heatPumpShare', 'Heat pump share'),
+    value: `${formatNumber(heatPumpShare * 100, 1)}%`,
+    sub: boilerKwh > 0 ? t('results.energy.fromBoilers', '{{energy}} from boilers', { energy: energy(boilerKwh) }) : t('results.energy.ofHeatSupplied', 'of the heat supplied'),
+    info: t('results.energy.heatPumpShareInfo', 'Share of the heat supplied over the run that came from heat pumps.'),
+  });
+  if (seasonalCop !== null && heatPumpElectricityKwh) tiles.push({
+    label: t('results.energy.seasonalCop', 'Heat pump seasonal COP'),
+    value: formatNumber(seasonalCop, 2),
+    sub: t('results.energy.electricityIn', '{{energy}} electricity in', { energy: formatCarrierEnergy(heatPumpElectricityKwh, 'power', 1) }),
+    info: t('results.energy.seasonalCopInfo', 'Heat the heat pumps delivered over the run divided by the electricity they drew.'),
+  });
+  return tiles;
+}
+
+/** Two-segment bar under the total cost: grid cost, then investment and fixed costs. */
+const CostSplit = ({ grid, other }: { grid: number; other: number }) => {
+  const dark = useIsDarkMode();
+  const gridShare = Math.max(grid, 0) / Math.max(Math.max(grid, 0) + Math.max(other, 0), 1e-9);
+  return (
+    <div className="my-1 flex h-1.5 overflow-hidden rounded-full bg-muted">
+      <div style={{ width: `${gridShare * 100}%`, backgroundColor: resultFill('lineIn', dark) }} />
+      <div className="flex-1 bg-primary" />
+    </div>
+  );
+};
+
+/** A dot in a CostSplit segment colour, so the caption reads as the bar's legend. */
+const Dot = ({ className, color }: { className?: string; color?: string }) => (
+  <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${className ?? ''}`} style={color ? { backgroundColor: color } : undefined} />
+);
+
+/**
+ * The one cost tile. Plan mode: the total the optimiser minimised, split into grid cost and
+ * investment and fixed costs. Operate mode: the net grid cost. Both cover the run period,
+ * scaled to a year only for a full-year run.
+ */
+function CostTile({ importKwh, exportKwh, prices, hours, period, objective }: {
+  importKwh: number; exportKwh: number; prices: { import_ct_per_kwh: number; export_ct_per_kwh: number };
+  hours: number; period: EnergySummaryProps['period']; objective: number | undefined;
+}) {
+  const { t } = useTranslation();
+  const dark = useIsDarkMode();
+  const fullYear = hours >= FULL_YEAR_HOURS;
+  const scale = fullYear ? 8760 / hours : 1;
+  const bought = importKwh * prices.import_ct_per_kwh / 100;
+  const sold = exportKwh * prices.export_ct_per_kwh / 100;
+  const day = (iso: string) => new Date(iso).toLocaleDateString();
+  const runPeriod = period ? t('results.energy.runPeriod', '{{from}} to {{to}}', { from: day(period.from), to: day(period.to) }) : t('results.energy.overRun', 'over the run');
+  const values = {
+    bought: formatCurrency(bought * scale, 0), sold: formatCurrency(sold * scale, 0), period: runPeriod,
+    imp: formatNumber(prices.import_ct_per_kwh, 1), exp: formatNumber(prices.export_ct_per_kwh, 1),
+  };
+  if (objective === undefined) return (
+    <Tile
+      label={t('results.energy.netGridCost', 'Net grid cost')}
+      value={formatCurrency((bought - sold) * scale, 0)}
+      sub={fullYear ? t('results.energy.perYear', 'per year') : runPeriod}
+      info={fullYear
+        ? t('results.energy.netGridCostYearInfo', '{{bought}} of grid electricity bought at {{imp}} ct/kWh, minus {{sold}} earned on export at {{exp}} ct/kWh, scaled from the run to one year.', values)
+        : t('results.energy.netGridCostRunInfo', 'Over the run, {{period}}: {{bought}} of grid electricity bought at {{imp}} ct/kWh, minus {{sold}} earned on export at {{exp}} ct/kWh. The run is shorter than a year, so the cost is not scaled to one.', values)}
+    />
+  );
+  const grid = bought - sold;
+  const split = { total: formatCurrency(objective, 0), grid: formatCurrency(grid, 0), other: formatCurrency(objective - grid, 0), period: runPeriod };
+  return (
+    <Tile
+      label={fullYear
+        ? t('results.energy.totalCostYear', 'Total cost per year')
+        : t('results.energy.totalCostDays', 'Total cost, {{days}} days', { days: Math.round(hours / 24) })}
+      value={split.total}
+      extra={<CostSplit grid={grid} other={objective - grid} />}
+      sub={<>
+        <Dot color={resultFill('lineIn', dark)} />{t('results.energy.costGrid', '{{grid}} grid', split)}
+        <Dot className="ml-2 bg-primary" />{t('results.energy.costInvestment', '{{other}} investment', split)}
+      </>}
+      info={t('results.energy.systemCostInfo', 'Cost of the whole system over the run, {{period}}, as minimised by the optimiser (its objective), summed over all buildings.\nGrid: {{grid}}, electricity bought minus export earnings.\nInvestment and fixed: {{other}}, the equipment investment annualised and scaled to the run period, plus fixed operating costs for the same period. It is the total minus the grid cost.', split)}
+    />
+  );
+}
+
+interface EnergySummaryProps {
+  flows: BuildingFlow[];
+  carrier: string;
+  /** Hours in the run; a run of at least FULL_YEAR_HOURS shows its grid cost per year. */
+  hours: number;
+  /** First and last day of the run, as ISO dates. */
+  period?: { from: string; to: string };
+  gridPrices?: { import_ct_per_kwh: number; export_ct_per_kwh: number };
+  /** Cost the optimiser minimised over the run (plan mode only). */
+  objective?: number;
+  /** Electricity the heat pumps drew over the run; gives the seasonal COP in the heat summary. */
+  heatPumpElectricityKwh?: number;
+}
+
+/** Totals of every supply and use over the run, summed over all buildings. */
+const EnergySummary = ({ flows, carrier, hours, period, gridPrices, objective, heatPumpElectricityKwh }: EnergySummaryProps) => {
+  const { t } = useTranslation();
+  if (flows.length === 0) return null;
+  const label = (key: string) => systemFlowLabel(key, carrier || 'power', t);
+  const isHeat = carrierLabelKey(carrier) === 'results.carrier.heat';
+  // The short demand label names appliances, which only fits electricity.
+  const shortLabel = (key: string) => (SHORT_LABELS[key] && !(isHeat && key === 'demand') ? t(...SHORT_LABELS[key]) : label(key));
+
+  const find = (key: string) => flows.find((f) => f.key === key);
+  const total = (key: string) => find(key)?.totalKwh ?? 0;
+  const energy = (kwh: number) => formatCarrierEnergy(kwh, carrier, 1);
+  const { powerUnit } = carrierDisplay(carrier);
+  const net = netBattery(flows);
+  const supplies = net.filter((f) => f.side === 'supply');
+  // Technologies (heat pump) before appliances, so the bar reads converters, demand, battery, grid.
+  const usesLast = ['demand', 'batteryLoss', 'lineOut'];
+  const uses = [
+    ...net.filter((f) => f.side === 'use' && !usesLast.includes(f.key)),
+    ...usesLast.map((key) => net.find((f) => f.key === key)).filter((f): f is BuildingFlow => f?.side === 'use'),
+  ];
+  const balanced = supplies.reduce((sum, f) => sum + f.totalKwh, 0);
+  const onSite = flows.filter((f) => f.side === 'use' && f.key !== 'lineOut' && f.key !== 'batteryIn').reduce((sum, f) => sum + f.totalKwh, 0);
+  const pv = total('pv_supply');
+  const sufficiency = selfSufficiency(flows);
+  const gridIn = find('lineIn');
+
+  const tiles: TileData[] = isHeat ? heatTiles(flows, energy, powerUnit, heatPumpElectricityKwh, t) : [];
+  if (pv > 0 && sufficiency !== null) tiles.push({
+    label: t('results.energy.selfSufficiencyLabel', 'Self-sufficiency'),
+    value: `${formatNumber(sufficiency * 100, 1)}%`,
+    sub: t('results.energy.ofUsed', 'of {{energy}} used', { energy: energy(onSite) }),
+    info: t('results.metrics.selfSufficiencyDesc', 'Share of the electricity used that did not come from the grid.\nSelf-sufficiency = 1 − grid import ÷ electricity used\n(Luthander et al., 2015)'),
+  });
+  if (pv > 0) tiles.push({
+    label: t('results.energy.pvOnSite', 'PV used on site'),
+    value: `${formatNumber(Math.max(0, 1 - total('lineOut') / pv) * 100, 1)}%`,
+    sub: t('results.energy.exported', '{{energy}} exported', { energy: energy(total('lineOut')) }),
+    info: t('results.energy.pvOnSiteShareInfo', 'Share of PV generation that is not exported to the grid. {{share}} of the {{pv}} generated was exported.', { share: `${formatNumber(Math.min(1, total('lineOut') / pv) * 100, 1)}%`, pv: energy(pv) }),
+  });
+  if (gridIn) tiles.push({
+    label: t('results.energy.peakGridImport', 'Peak grid import'),
+    value: formatPower1(gridIn.peakKw, powerUnit),
+    sub: t('results.energy.imported', '{{energy}} imported', { energy: energy(gridIn.totalKwh) }),
+    info: t('results.energy.peakGridImportInfo', 'Highest hourly power drawn from the grid at the transformer over the run.'),
+  });
+  const costTile = gridIn && gridPrices && hours > 0
+    ? <CostTile key="cost" importKwh={gridIn.totalKwh} exportKwh={total('lineOut')} prices={gridPrices} hours={hours} period={period} objective={objective} />
+    : null;
+
+  const title = t('results.energy.keyResults', 'Key results');
+  const carrierName = t(carrierLabelKey(carrier) ?? carrier, carrier);
+
+  return (
+    <div className={CHART_CARD_CLASS}>
+      <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+        <Gauge className="h-4 w-4 text-primary" />
+        {title}
+        <ChartInfoTooltip
+          title={title}
+          description={isHeat
+            ? t('results.energy.heatSummaryInfo', 'Heat totals over the whole run period, summed over all buildings.')
+            : t('results.energy.summaryInfo', 'Totals over the whole run period, summed over all buildings. Flows on the lines between buildings are left out; grid import and export are at the transformer. The battery stores energy rather than supplying it, so the bars show only its losses: energy charged minus energy discharged.')}
+        />
+      </h3>
+      {(tiles.length > 0 || costTile) && (
+        // One row from lg up; the cost tile is wider so its two amounts fit on one line.
+        <div
+          className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-[var(--tile-cols)]"
+          style={{ '--tile-cols': `repeat(${tiles.length}, minmax(0, 1fr))${costTile ? ' minmax(0, 1.6fr)' : ''}` } as CSSProperties}
+        >
+          {tiles.map((tile) => <Tile key={tile.label} {...tile} />)}
+          {costTile}
+        </div>
+      )}
+      <p className="mb-2 text-xs text-muted-foreground">
+        {t('results.energy.balancedCaption', '{{carrier}} · {{energy}} balanced', { carrier: carrierName, energy: energy(balanced) })}
+      </p>
+      <div className="space-y-3">
+        <FlowBar title={t('results.energy.supplied', 'Supplied')} flows={supplies} total={balanced} carrier={carrier} label={label} shortLabel={shortLabel} />
+        <FlowBar title={t('results.energy.used', 'Used')} flows={uses} total={balanced} carrier={carrier} label={label} shortLabel={shortLabel} />
+      </div>
+    </div>
+  );
+};
+
+export default EnergySummary;

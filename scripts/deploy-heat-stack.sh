@@ -141,7 +141,7 @@ for var in TENTACRON_REPO TENTACRON_DIR TENTACRON_BRANCH TENTACRON_PORT \
            IGNIS_REPO IGNIS_DIR IGNIS_BRANCH IGNIS_IMAGE_TAG \
            CITY2TABULA_REPO CITY2TABULA_DIR CITY2TABULA_BRANCH CITY2TABULA_IMAGE_TAG \
            WEATHER_REPO WEATHER_DIR WEATHER_BRANCH WEATHER_IMAGE_TAG \
-           PV_SERVICE_REPO PV_SERVICE_DIR PV_SERVICE_BRANCH \
+           PV_SERVICE_REPO PV_SERVICE_DIR PV_SERVICE_BRANCH PV_SERVICE_IMAGE_TAG \
            PYLOVO_REPO PYLOVO_DIR PYLOVO_BRANCH; do
   [ -n "${!var:-}" ] || die "$REPOS_CONF sets no $var"
 done
@@ -153,7 +153,6 @@ export WEATHER_API_KEYS="$WEATHER_API_KEY"
 # Services without a published release are built; the per-prefix tag keeps the
 # local build from replacing a pulled release image of the same name.
 export RELEASE_IMAGE="ghcr.io/enerplanet/tentacron:$PREFIX-build"
-export PV_SERVICE_IMAGE_TAG="$PREFIX-build"
 
 DEPS_DIR="$REPO_ROOT/dependencies"  # every service checkout lives here
 LOAD_SH="$REPO_ROOT/fixtures/load.sh"
@@ -436,7 +435,7 @@ SERVICES=(
   "WEATHER      weather       pull"
   "BUEM         buem-gateway  pull"
   "MEME         meme          build"
-  "PV_SERVICE   pysam-pv      build"
+  "PV_SERVICE   pysam-pv      pull"
   "TENTACRON    tentacron     build"
 )
 

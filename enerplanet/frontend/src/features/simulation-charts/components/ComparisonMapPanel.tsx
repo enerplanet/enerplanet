@@ -108,6 +108,9 @@ const SingleMap: FC<SingleMapProps> = ({ model, label, color, accentClasses, map
       polygonLayerRef.current = polygonLayer;
     }
 
+    // The model area is what the user drew; the grid reaches far beyond it.
+    const focusFeatures = [...allFeatures];
+
     // Load grid layers (buildings, transformers, lines)
     const config = model.config as Record<string, unknown> | undefined;
     if (config) {
@@ -119,7 +122,7 @@ const SingleMap: FC<SingleMapProps> = ({ model, label, color, accentClasses, map
     // Fit view to features
     if (allFeatures.length > 0) {
       setTimeout(() => {
-        fitToFeatures(map, allFeatures, { duration: 500, padding: [30, 30, 30, 30] });
+        fitToFeatures(map, focusFeatures.length > 0 ? focusFeatures : allFeatures, { duration: 500, padding: [30, 30, 30, 30] });
       }, 100);
     }
 
@@ -157,22 +160,17 @@ const SingleMap: FC<SingleMapProps> = ({ model, label, color, accentClasses, map
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const allFeatures: Feature<Geometry>[] = [];
+    const focusFeatures = polygonLayerRef.current?.getSource()?.getFeatures() ?? [];
+    const allFeatures: Feature<Geometry>[] = [...focusFeatures];
     layersRef.current.forEach(layer => {
       const source = layer.getSource();
       if (source) {
         allFeatures.push(...source.getFeatures());
       }
     });
-    if (polygonLayerRef.current) {
-      const source = polygonLayerRef.current.getSource();
-      if (source) {
-        allFeatures.push(...source.getFeatures());
-      }
-    }
 
     if (allFeatures.length > 0) {
-      fitToFeatures(map, allFeatures, { duration: 500, padding: [30, 30, 30, 30] });
+      fitToFeatures(map, focusFeatures.length > 0 ? focusFeatures : allFeatures, { duration: 500, padding: [30, 30, 30, 30] });
     }
   }, []);
 

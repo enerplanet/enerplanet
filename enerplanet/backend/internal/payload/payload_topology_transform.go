@@ -464,7 +464,22 @@ func transformTechObject(techObj map[string]interface{}) map[string]interface{} 
 	if arrays, ok := techObj["arrays"].([]interface{}); ok {
 		result["arrays"] = arrays
 	}
+	if products, ok := techObj["products"].(map[string]interface{}); ok {
+		result["products"] = flattenProducts(products)
+	}
 	return result
+}
+
+// flattenProducts flattens the constraints of each product copy a PV building
+// keeps for its arrays, by product id.
+func flattenProducts(products map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(products))
+	for id, p := range products {
+		product, _ := p.(map[string]interface{})
+		constraints, _ := product["constraints"].([]interface{})
+		out[id] = extractConstraintsFromArray(constraints)
+	}
+	return out
 }
 
 func extractAndTransformTechs(bProps map[string]interface{}) interface{} {

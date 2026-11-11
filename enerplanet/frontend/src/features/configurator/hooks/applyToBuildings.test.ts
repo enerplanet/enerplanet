@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Feature } from "ol";
 import { Point } from "ol/geom";
-import { applyToBuildings, techKeysInUse } from "./useTechDragDrop";
+import { applyToBuildings, dropTargets, productsInUse, removeProduct } from "./useTechDragDrop";
 
 const building = (props: Record<string, unknown>) => new Feature({ geometry: new Point([0, 0]), feature_type: "building", ...props });
 const boiler = { alias: "Gas boiler", constraints: [] };
@@ -38,8 +38,48 @@ describe("applyToBuildings", () => {
   });
 });
 
-describe("techKeysInUse", () => {
+describe("productsInUse", () => {
   it("lists a technology that only some buildings have", () => {
-    expect(techKeysInUse(buildings()).sort()).toEqual(["air_source_heat_pump", "battery_storage", "pv_supply"]);
+    expect(productsInUse(buildings()).sort()).toEqual(["air_source_heat_pump", "battery_storage", "pv_supply"]);
+  });
+
+  it("lists the product a building names, not its type", () => {
+    const facade = building({ techs: { pv_supply: { alias: "Facade 400 W", product: "pv_facade_400" } } });
+    expect(productsInUse([facade, ...buildings()]).sort()).toEqual(["air_source_heat_pump", "battery_storage", "pv_facade_400", "pv_supply"]);
+  });
+});
+
+describe("removeProduct", () => {
+  it("removes the product only from the buildings that carry it", () => {
+    const facade = building({ techs: { pv_supply: { alias: "Facade 400 W", product: "pv_facade_400" } } });
+    const all = [facade, ...buildings()];
+    expect(removeProduct(all, { key: "pv_supply", product: "pv_facade_400" })).toBe(1);
+    expect(facade.get("techs")).toEqual({});
+    expect(all[1].get("techs").pv_supply).toBeDefined();
+  });
+
+  it("removes the type's default product from buildings that name no product", () => {
+    const all = buildings();
+    expect(removeProduct(all, { key: "pv_supply", product: "pv_supply" })).toBe(1);
+    expect(all[0].get("techs").pv_supply).toBeUndefined();
+  });
+});
+
+describe("dropTargets", () => {
+  const grid = () => ["1", "2", "3"].map((osm_id) => building({ osm_id, techs: {} }));
+
+  it("targets every selected building when the drop lands on one of them", () => {
+    const all = grid();
+    expect(dropTargets(all[0], new Set(["1", "3"]), all)).toEqual([all[0], all[2]]);
+  });
+
+  it("targets only the dropped building when it is not selected", () => {
+    const all = grid();
+    expect(dropTargets(all[1], new Set(["1", "3"]), all)).toEqual([all[1]]);
+  });
+
+  it("targets only the dropped building when nothing is selected", () => {
+    const all = grid();
+    expect(dropTargets(all[0], new Set(), all)).toEqual([all[0]]);
   });
 });

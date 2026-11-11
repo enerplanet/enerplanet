@@ -357,6 +357,15 @@ tentacron: tentacron-network
 .PHONY: ignis
 ignis: tentacron-network
 	@cd dependencies/$(IGNIS_DIR)/environment && HOST_PORT=$(IGNIS_PORT) IGNIS_IMAGE_TAG=$(IGNIS_IMAGE_TAG) docker compose up -d --pull always --no-build
+	@# The api reaches its database by the compose service name `db`, which only
+	@# resolves on the project's own default network (ignis_default). A container
+	@# left over from an earlier run can be missing that attachment - it then
+	@# crash-loops on "lookup db ... server misbehaving", and `compose up` does
+	@# not recreate an existing container to fix it, so every later setup run
+	@# inherits the broken container. Reattach it. Stop first: connecting a
+	@# container that is mid-restart fails with "network sandbox ... not found".
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' ignis-api-1 | grep -q '"ignis_default"' || \
+		{ docker stop ignis-api-1 >/dev/null 2>&1; docker network connect ignis_default ignis-api-1; docker start ignis-api-1 >/dev/null 2>&1; }
 	@echo "$(GREEN)Ignis up on http://localhost:$(IGNIS_PORT), on 'tentacron-net'$(NC)"
 
 .PHONY: buem
@@ -367,6 +376,13 @@ buem: tentacron-network
 .PHONY: meme
 meme: tentacron-network
 	@cd dependencies/$(MEME_DIR)/environment && HOST_PORT=$(MEME_PORT) docker compose --env-file .env.dev -f docker-compose.yml up -d --build api
+	@# meme's compose file does not declare tentacron-net, so the api lands only
+	@# on its own default network and TentaCron cannot resolve the `meme` host
+	@# its targets post to (meme-calliope/meme-pypsa: http://meme:8080/...),
+	@# failing every run with "lookup meme ... server misbehaving". Attach it
+	@# with the alias those targets use, as the city2tabula target does.
+	@docker inspect -f '{{json .NetworkSettings.Networks}}' meme-env-api-1 | grep -q '"tentacron-net"' || \
+		docker network connect --alias meme tentacron-net meme-env-api-1
 	@echo "$(GREEN)MEME up on http://localhost:$(MEME_PORT), on 'tentacron-net'$(NC)"
 
 # weather and city2tabula pull rather than build: both publish an image, and

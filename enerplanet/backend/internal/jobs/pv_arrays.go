@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"time"
 
@@ -71,6 +72,21 @@ type pvBuilding struct {
 	located  bool
 	area     float64
 	arrays   []pv.Array
+	// products are the settings of the products the arrays name, by product id.
+	products map[string]map[string]interface{}
+}
+
+// settings returns the module settings of array a: its product's, each one the
+// product lacks from the building's. An array naming no product, or one the
+// building has no copy of, uses the building's.
+func (b *pvBuilding) settings(a pv.Array) map[string]interface{} {
+	product, ok := b.products[a.ProductID]
+	if !ok {
+		return b.module
+	}
+	out := maps.Clone(b.module)
+	maps.Copy(out, product)
+	return out
 }
 
 // moduleTypes is indexed by the PV template's module_type option.
@@ -155,12 +171,13 @@ func pvArrayRefs(buildings []*pvBuilding) []*pvArrayRef {
 				part = fmt.Sprintf("array-%d", j)
 			}
 			seen[part] = true
+			m := b.settings(a)
 			refs = append(refs, &pvArrayRef{building: b, surfaceID: a.SurfaceID, part: part, request: pv.ArrayRequest{
 				ID: fmt.Sprintf("%s/%d", b.osmID, j), Tilt: a.Tilt, Azimuth: a.Azimuth,
-				Losses:             numberOr(b.module["losses"], 0.14),
-				DCACRatio:          numberOr(b.module["dc_ac_ratio"], 1.1),
-				InverterEfficiency: numberOr(b.module["inv_eff"], 0.96),
-				ModuleType:         moduleType(b.module["module_type"]),
+				Losses:             numberOr(m["losses"], 0.14),
+				DCACRatio:          numberOr(m["dc_ac_ratio"], 1.1),
+				InverterEfficiency: numberOr(m["inv_eff"], 0.96),
+				ModuleType:         moduleType(m["module_type"]),
 			}})
 		}
 	}
@@ -362,6 +379,7 @@ func pvBuildings(topology []interface{}) []*pvBuilding {
 			b.lon, b.lat, b.located = coords[0], coords[1], true
 		}
 		b.arrays = storedArrays(module)
+		b.products = storedProducts(module)
 		out = append(out, b)
 	}
 	return out
@@ -382,6 +400,18 @@ func storedArrays(module map[string]interface{}) []pv.Array {
 		return nil
 	}
 	return arrays
+}
+
+// storedProducts decodes pv_supply.products, the settings of each product copy.
+func storedProducts(module map[string]interface{}) map[string]map[string]interface{} {
+	raw, _ := module["products"].(map[string]interface{})
+	out := make(map[string]map[string]interface{}, len(raw))
+	for id, p := range raw {
+		if settings, ok := p.(map[string]interface{}); ok {
+			out[id] = settings
+		}
+	}
+	return out
 }
 
 // featureCoordinates returns a Point feature's [lon, lat]; a centroid the
@@ -453,9 +483,10 @@ func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow, f
 	}
 	entries := make([]interface{}, len(b.arrays))
 	for j, a := range b.arrays {
+		m := b.settings(a)
 		entry := map[string]interface{}{
 			"surface_id": a.SurfaceID, "tilt": a.Tilt, "azimuth": a.Azimuth,
-			"losses":              numberOr(b.module["losses"], 0.14),
+			"losses":              numberOr(m["losses"], 0.14),
 			"cont_energy_cap_max": math.Round(a.MaxCapacityKW()*1000) / 1000,
 			"profile":             pvWindow(profiles[fmt.Sprintf("%s/%d", b.osmID, j)], w),
 		}
@@ -466,7 +497,7 @@ func setPVArrays(b *pvBuilding, profiles map[string][]float32, w seriesWindow, f
 			}
 		}
 		for _, k := range pvCarriedKeys {
-			if v, ok := b.module[k]; ok {
+			if v, ok := m[k]; ok {
 				entry[k] = v
 			}
 		}

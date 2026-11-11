@@ -216,6 +216,8 @@ export interface ModelResults {
   energy_cap: EnergyCap[];
   sum_production: number;
   sum_consumption: number;
+  /** Cost the optimiser minimised over the run, EUR; written by the Coati ingest. */
+  objective?: number;
   timestep_count?: number;
   prod_aggregates?: Record<string, number>;
   con_aggregates?: Record<string, number>;
@@ -314,6 +316,8 @@ interface ModelConfig {
   transformers?: GeoJSONFeatureCollection;
   grids?: unknown[];
   pypsa?: Record<string, unknown>;
+  /** "plan" sizes the technologies at least cost, "operate" only dispatches them; absent means plan. */
+  mode?: 'plan' | 'operate';
 }
 
 export interface ModelInfo {

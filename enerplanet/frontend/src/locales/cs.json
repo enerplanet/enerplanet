@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Hloubka vybití úložiště",
       "cont_storage_initial": "Počáteční úroveň úložiště",
       "cont_storage_loss": "Míra ztrát úložiště",
-      "cost_energy_cap": "Náklady na energetickou kapacitu",
+      "cost_energy_cap": "Investiční náklady",
       "cost_export": "Náklady na export",
       "cost_interest_rate": "Úroková sazba",
       "cost_om_annual": "Roční náklady na provoz a údržbu",
@@ -182,6 +182,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Další akce",
       "viewResults": "Zobrazit Výsledky",
       "downloadResults": "Stáhnout Výsledky",
       "downloadFailed": "Stažení se nezdařilo: {{reason}}",
@@ -193,7 +194,9 @@
       "delete": "Smazat",
       "cannotDelete": "Nelze smazat - pouze vlastník nebo expert může smazat",
       "runWithMeme": "Spustit s Calliope",
-      "runPypsaOnMeme": "Spustit tok výkonu (PyPSA)"
+      "runPypsaOnMeme": "Spustit tok výkonu (PyPSA)",
+      "runPypsaFailed": "Tok výkonu selhal — kliknutím opakujete",
+      "runPypsaRunning": "Výpočet toků probíhá…"
     },
     "pagination": {
       "showing": "Zobrazeno",
@@ -296,7 +299,9 @@
       "heat": "Teplo",
       "gas": "Plyn",
       "oil": "Olej",
-      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie"
+      "toggleItemHint": "Zobrazit výsledky pro tento nosič energie",
+      "cooling": "Chlazení",
+      "heatingCooling": "Vytápění a chlazení"
     },
     "selectModel": "Vybrat Model",
     "completedSimulations": "Dokončené Simulace",
@@ -357,10 +362,13 @@
       "selfSufficiencyDesc": "% spotřeby pokryté obnovitelnými zdroji",
       "peakDemand": "Špičková Spotřeba",
       "totalCost": "Celkové Náklady",
+      "totalCostAllEnergy": "Celkové náklady, všechny energie",
       "over": "za",
       "from": "z",
       "installed": "instalovaných",
-      "equipmentAndRunning": "Vybavení + Provozní náklady"
+      "equipmentAndRunning": "Vybavení + Provozní náklady",
+      "peakHeating": "Špička vytápění",
+      "peakCooling": "Špička chlazení"
     },
     "techNames": {
       "solarPv": "Solární FV",
@@ -437,14 +445,17 @@
       "production": "Výroba",
       "productionDesc": "Energie vyrobená solárními, větrnými a dalšími zdroji",
       "consumption": "Spotřeba",
-      "consumptionDesc": "Energie využitá zátěžemi, nabíjením úložiště a exportem do sítě",
+      "consumptionDesc": "Energie spotřebovaná v budovách. Nabíjení baterie a export do sítě jsou zobrazeny zvlášť.",
       "renewableProduction": "Obnovitelná Výroba",
       "totalRenewable": "Celkem Obnovitelná",
       "gridImport": "Import ze Sítě",
       "fromGrid": "Ze Sítě",
       "totalDemand": "Celková Poptávka",
       "selfSufficiency": "Soběstačnost",
-      "netBalance": "Čistá Bilance",
+      "grid": "Síť",
+      "battery": "Baterie",
+      "batteryCharging": "Nabíjení baterie",
+      "batteryDischarging": "Vybíjení baterie",
       "energyKwh": "Energie (kWh)",
       "energy": "Energie",
       "netKwh": "Netto (kWh)",
@@ -614,6 +625,8 @@
       "noEnergyFlowData": "Nejsou k dispozici žádná data toku energie",
       "gridImport": "Import ze Sítě",
       "gridExport": "Export do Sítě",
+      "gridForHeating": "Elektřina ze sítě: vytápění a chlazení",
+      "gridForOtherUse": "Elektřina ze sítě: ostatní spotřeba",
       "energySystem": "Energetický Systém",
       "household": "Domácnost",
       "industry": "Průmysl",
@@ -638,16 +651,14 @@
       "hours": "hodin"
     },
     "costInfo": {
-      "simulationPeriodNote": "Zobrazené náklady platí pro simulované období {{days}} dní ({{hours}} hodin). Pro celoroční náklady spusťte roční simulaci (8 760 hodin).",
-      "simulationPeriodShort": "Období simulace {{days}} dní",
-      "costBreakdownTooltip": "Zobrazené náklady pokrývají jen simulované období, ne celý rok. Náklady na zařízení jsou rozloženy na jeho životnost, provozní náklady (např. nákup elektřiny ze sítě) odpovídají skutečné spotřebě v daném období. V krátkých simulacích proto technologie s vysokými provozními náklady vypadají poměrně větší.",
+      "costBreakdownTooltip": "Každá výseč je jedna technologie nebo nákup, v barvě z legendy pod grafem. Nakoupená elektřina ze sítě je provozní náklad: co se spotřebovalo v simulovaném období. Zařízení jako tepelná čerpadla, solární panely a baterie jsou pořizovací náklady rozložené na dobu životnosti, započítá se jen podíl za simulované období. V krátkých simulacích proto provozní náklady vypadají poměrně větší.",
       "annualProjection": "Odhad za rok: {{value}}",
       "equipmentCostNote": "Náklady na zařízení jsou rozloženy na jeho životnost; zobrazen je jen podíl za toto období simulace.",
       "equipmentCostDesc": "Solární panely, baterie a další zařízení. Pořizovací cena je rozložena na životnost zařízení (např. 25 let u fotovoltaiky).",
       "runningCostDesc": "Elektřina nakoupená ze sítě, údržba a další průběžné výdaje závislé na spotřebě.",
       "systemCostSummaryDesc": "Ukazuje průměrnou cenu energie (ct/kWh) a rozdělení celkových nákladů na zařízení a provoz. Nižší ct/kWh znamená celkově levnější energii.",
       "lcoeComparisonDesc": "Porovnává cenu energie z jednotlivých zdrojů v ct/kWh. Slunce a vítr jsou levné, protože sluneční svit a vítr nic nestojí; platíte jen za zařízení. Přerušovaná čára ukazuje průměr celého systému.",
-      "investmentBreakdownDesc": "Ukazuje náklady jednotlivých technologií rozdělené na zařízení (jednorázový nákup rozložený na životnost) a provoz (elektřina ze sítě, údržba). Obnovitelné zdroje mají obvykle jen náklady na zařízení."
+      "investmentBreakdownDesc": "Ukazuje náklady jednotlivých technologií rozdělené na zařízení (jednorázový nákup rozložený na životnost) a provoz (elektřina ze sítě, údržba). Obnovitelné zdroje mají obvykle jen náklady na zařízení. Elektřina ze sítě je rozdělena podle podílu spotřeby každého využití."
     },
     "buildingDetail": {
       "building": "Budova",
@@ -692,6 +703,23 @@
       "notConvergedTitle": "Tok výkonu nekonvergoval",
       "convergedDescription": "Výpočet elektrického toku výkonu úspěšně nalezl stabilní řešení. Hodnoty napětí a výkonu v síti jsou fyzikálně platné.",
       "notConvergedDescription": "Výpočet toku výkonu nemohl najít stabilní řešení v limitu iterací. Výsledky mohou být nepřesné nebo neúplné."
+    },
+    "thermal": {
+      "title": "Vytápění a chlazení za období",
+      "info": "Součty vytápění a chlazení za období přes všechny budovy. Teplo a chlad jsou v modelu oddělené: teplo nemůže pokrýt potřebu chlazení, proto má každé své vlastní zařízení.",
+      "demand": "Potřeba vytápění a chlazení",
+      "overRun": "za období",
+      "demandInfo": "Energie potřebná za období k udržení příjemné teploty v budovách: vytápění, teplá voda a chlazení, sečteno přes všechny budovy.",
+      "heatingShare": "Podíl vytápění",
+      "heatingSub": "{{energy}} vytápění a teplá voda",
+      "heatingShareInfo": "Podíl potřeby vytápění a chlazení připadající na vytápění a teplou vodu.",
+      "coolingShare": "Podíl chlazení",
+      "coolingSub": "{{energy}} chlazení",
+      "coolingShareInfo": "Podíl potřeby vytápění a chlazení připadající na chlazení.",
+      "electricity": "Spotřebovaná elektřina",
+      "electricitySub": "tepelnými čerpadly a klimatizacemi",
+      "electricityInfo": "Elektřina, kterou zařízení pro vytápění a chlazení odebrala za období. Zbytek tepla a chladu pocházel bezplatně z venkovního vzduchu nebo země.",
+      "noDemand": "V tomto běhu není žádná potřeba vytápění ani chlazení."
     }
   },
   "auth": {
@@ -840,7 +868,6 @@
     "loadingModels": "Načítání modelů...",
     "loadingWorkspaceDescription": "Prosím počkejte, inicializujeme vaše preference pracovního prostoru.",
     "loadingModelsDescription": "Prosím počkejte, načítáme vaše modely energetického hodnocení.",
-    "selectWorkspace": "Vyberte nebo vytvořte pracovní prostor",
     "refreshModels": "Obnovit seznam modelů",
     "share": "Sdílet",
     "shareDescription": "Sdílet \"{{title}}\" s jiným uživatelem",
@@ -1449,7 +1476,8 @@
     "mode": {
       "label": "Režim",
       "simple": "Jednoduchý",
-      "advanced": "Pokročilý"
+      "advanced": "Pokročilý",
+      "simpleHint": "Další možnosti jsou k dispozici v <advanced>pokročilém</advanced> zobrazení."
     },
     "modelName": "Název modelu",
     "modelNamePlaceholder": "Zadejte název pro vaši energetickou simulaci",
@@ -1650,7 +1678,6 @@
     },
     "sections": {
       "grid": "Síť",
-      "model": "Model",
       "energySystem": "Energetický systém"
     },
     "analysis": {
@@ -1792,6 +1819,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Jednoduchý a pokročilý režim",
+        "description": "Tento přepínač přepíná mezi jednoduchým zobrazením s tím nejdůležitějším a pokročilým zobrazením s dalšími možnostmi, jako je počasí a ceny energie.",
+        "tip": "Jednoduché zobrazení stačí pro většinu modelů — přepněte na pokročilé, pokud potřebujete více."
+      },
       "welcome": {
         "title": "Průvodce Energetickou Simulací",
         "description": "Vítejte! Tato prohlídka vás provede vytvořením energetické simulace pro vámi zvolenou oblast.",
@@ -1924,7 +1956,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} let",
       "defineOwn": "Definovat vlastní",
-      "count": "Produkty: {{count}}"
+      "search": "Hledat produkty",
+      "sort": "Seřadit produkty",
+      "sortName": "Název",
+      "sortCost": "Investiční náklady"
     },
     "title": "Technologie",
     "subtitle": "Energetické technologie pro vaše simulace",
@@ -2295,6 +2330,8 @@
     "hideMaps": "Skrýt mapy",
     "showMaps": "Zobrazit mapy",
     "exportPdf": "Exportovat PDF",
+    "generateReport": "Vytvořit zprávu",
+    "reportComingSoon": "Vytváření zpráv bude dostupné v některé z příštích aktualizací.",
     "locationMaps": "Mapy lokalit",
     "performanceComparison": "Porovnání výkonu",
     "loading": "Načítání dat simulace...",
@@ -2308,7 +2345,7 @@
       "comparison": "Porovnání"
     },
     "metrics": {
-      "demandBaseline": "Poptávka (Základní)",
+      "demand": "Poptávka",
       "renewableGen": "Obnovitelná výroba",
       "gridImport": "Import ze sítě",
       "selfSufficiency": "Soběstačnost",

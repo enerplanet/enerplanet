@@ -61,7 +61,8 @@ import {
 import { MapOverlays } from "./components/MapOverlays";
 import { View3dBanner } from "./components/View3dBanner";
 import { GridStatsBadge } from "./components/GridStatsBadge";
-import { MAP_TOP_CENTRE, WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
+import { cn } from "@/lib/utils";
 import { ShortcutsMenu } from "@/components/map-controls/ShortcutsMenu";
 import { MapHeader } from "./components/MapHeader";
 import { SidebarPanel } from "./components/SidebarPanel";
@@ -659,23 +660,32 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onDragOver={techOperations.handleMapDragOver}
         mapOverlays={
           <>
-            {!isMapLibre3D && (
-              <div className="absolute top-4 z-30 -translate-x-1/2" style={MAP_TOP_CENTRE}>
-                <WorkflowBar
-                  polygonCount={state.allPolygons.length}
-                  isGeneratingGrid={state.isGeneratingGrid}
-                  hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                  siteMode={siteMode}
-                  hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-                  gridStale={gridStale}
-                />
+            {/* One row, so the workflow bar centres between the map controls (left 4rem) and the grid panel and
+                never runs into either. Without the panel, pr-12 keeps the bar on the map centre. */}
+            <div
+              className={cn("pointer-events-none absolute left-16 top-4 z-30 flex items-start gap-4", gridResultIds.length === 0 && "pr-12")}
+              style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
+            >
+              <div className="flex min-w-0 flex-1 justify-center">
+                {!isMapLibre3D && (
+                  <div className="pointer-events-auto">
+                    <WorkflowBar
+                      polygonCount={state.allPolygons.length}
+                      isGeneratingGrid={state.isGeneratingGrid}
+                      hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                      siteMode={siteMode}
+                      hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                      gridStale={gridStale}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {gridResultIds.length > 0 && (
-              <div className="md-fade-in absolute top-4 z-30 w-60 xl:w-72" style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}>
-                <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
-              </div>
-            )}
+              {gridResultIds.length > 0 && (
+                <div className="md-fade-in pointer-events-auto w-60 shrink-0 xl:w-72">
+                  <GridStatsBadge gridResultIds={gridResultIds} buildingOsmIds={buildingOsmIdsInPolygon} />
+                </div>
+              )}
+            </div>
             {map && isMapLibre3D && (
               <MapLibre3DOverlay
                 olMap={map}
@@ -877,7 +887,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
-        onPvArrays={(osmId, arrays) => { pylovoLayers.storePvArrays(osmId, arrays); setIsModified(true); }}
+        onPvArrays={(osmId, arrays, products) => { pylovoLayers.storePvArrays(osmId, arrays, products); setIsModified(true); }}
         techsFor={pylovoLayers.buildingTechs}
         locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}
@@ -912,6 +922,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         open={techOperations.techDialogOpen && techOperations.techDialogStep === "pick"}
         type={techOperations.selectedTechForDialog?.key ?? null}
         current={techOperations.selectedBuildingForTech?.get("techs")?.[techOperations.selectedTechForDialog?.key ?? ""]?.product}
+        product={techOperations.selectedTechForDialog?.product}
         applyToAll={techOperations.isAddingTechToAll}
         onPick={(product, usableShare) => {
           const tech = asBuildingTechnology(product);

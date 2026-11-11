@@ -195,7 +195,10 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
                         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                     </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('workspace.selectWorkspace')}</TooltipContent>
+                <TooltipContent>
+                    {!isLoading && <div className="font-medium">{getWorkspaceDisplayName(selectedWorkspace)}</div>}
+                    <div className="opacity-70">{t('workspace.selectWorkspace')}</div>
+                </TooltipContent>
             </Tooltip>
 
             {/* Dropdown */}
@@ -253,7 +256,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
                                             {/* Workspace info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`text-sm truncate ${isSelected ? 'font-semibold' : 'font-medium'}`}>
+                                                    <span className={`text-sm truncate ${isSelected ? 'font-semibold' : 'font-medium'}`} title={workspace.is_default ? t('workspace.defaultWorkspace') : workspace.name}>
                                                         {workspace.is_default ? t('workspace.defaultWorkspace') : workspace.name}
                                                     </span>
                                                     

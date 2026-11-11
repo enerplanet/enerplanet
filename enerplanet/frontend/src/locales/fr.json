@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Profondeur de décharge du stockage",
       "cont_storage_initial": "Niveau de stockage initial",
       "cont_storage_loss": "Taux de perte de stockage",
-      "cost_energy_cap": "Coût de capacité énergétique",
+      "cost_energy_cap": "Coût d'investissement",
       "cost_export": "Coût d'exportation",
       "cost_interest_rate": "Taux d'intérêt",
       "cost_om_annual": "Coûts annuels d'E&M",
@@ -248,6 +248,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Plus d'actions",
       "viewResults": "Voir les Résultats",
       "downloadResults": "Télécharger les Résultats",
       "downloadFailed": "Échec du téléchargement : {{reason}}",
@@ -259,7 +260,9 @@
       "delete": "Supprimer",
       "cannotDelete": "Suppression impossible - seul le propriétaire ou un expert peut supprimer",
       "runWithMeme": "Exécuter avec Calliope",
-      "runPypsaOnMeme": "Exécuter l'écoulement de puissance (PyPSA)"
+      "runPypsaOnMeme": "Exécuter l'écoulement de puissance (PyPSA)",
+      "runPypsaFailed": "L'écoulement de puissance a échoué — cliquez pour réessayer",
+      "runPypsaRunning": "Calcul de flux en cours…"
     },
     "pagination": {
       "showing": "Affichage de",
@@ -557,7 +560,9 @@
       "heat": "Chaleur",
       "gas": "Gaz",
       "oil": "Fioul",
-      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique"
+      "toggleItemHint": "Afficher les résultats de ce vecteur énergétique",
+      "cooling": "Refroidissement",
+      "heatingCooling": "Chauffage et refroidissement"
     },
     "selectModel": "Sélectionner un Modèle",
     "completedSimulations": "Simulations Terminées",
@@ -614,10 +619,13 @@
       "selfSufficiencyDesc": "% de la demande couverte par les renouvelables",
       "peakDemand": "Demande de Pointe",
       "totalCost": "Coût Total",
+      "totalCostAllEnergy": "Coût total, toutes énergies",
       "over": "sur",
       "from": "de",
       "installed": "installés",
-      "equipmentAndRunning": "Équipement + Coûts de fonctionnement"
+      "equipmentAndRunning": "Équipement + Coûts de fonctionnement",
+      "peakHeating": "Pointe de chauffage",
+      "peakCooling": "Pointe de refroidissement"
     },
     "techNames": {
       "solarPv": "Solaire PV",
@@ -694,14 +702,17 @@
       "production": "Production",
       "productionDesc": "Énergie générée par le solaire, l'éolien et d'autres sources",
       "consumption": "Consommation",
-      "consumptionDesc": "Énergie utilisée par les charges, le stockage et l'export réseau",
+      "consumptionDesc": "Énergie utilisée dans les bâtiments. La charge de la batterie et l'export vers le réseau sont affichés à part.",
       "renewableProduction": "Production Renouvelable",
       "totalRenewable": "Total Renouvelable",
       "gridImport": "Import Réseau",
       "fromGrid": "Du Réseau",
       "totalDemand": "Demande Totale",
       "selfSufficiency": "Autosuffisance",
-      "netBalance": "Bilan Net",
+      "grid": "Réseau",
+      "battery": "Batterie",
+      "batteryCharging": "Charge de la batterie",
+      "batteryDischarging": "Décharge de la batterie",
       "energyKwh": "Énergie (kWh)",
       "energy": "Énergie",
       "netKwh": "Net (kWh)",
@@ -871,6 +882,8 @@
       "noEnergyFlowData": "Aucune donnée de flux d'énergie disponible",
       "gridImport": "Import Réseau",
       "gridExport": "Export Réseau",
+      "gridForHeating": "Électricité du réseau : chauffage et refroidissement",
+      "gridForOtherUse": "Électricité du réseau : autres usages",
       "energySystem": "Système Énergétique",
       "household": "Ménage",
       "industry": "Industrie",
@@ -895,16 +908,14 @@
       "hours": "heures"
     },
     "costInfo": {
-      "simulationPeriodNote": "Les coûts affichés portent sur la période simulée de {{days}} jours ({{hours}} heures). Pour les coûts annuels complets, lancez une simulation sur 1 an (8 760 heures).",
-      "simulationPeriodShort": "Période de simulation de {{days}} jours",
-      "costBreakdownTooltip": "Les coûts affichés couvrent uniquement la période simulée, pas une année entière. Les coûts d'équipement sont répartis sur leur durée de vie, tandis que les coûts d'exploitation (p. ex. l'achat d'électricité au réseau) reflètent l'usage réel sur la période. Dans les simulations courtes, les technologies à coûts d'exploitation élevés paraissent donc proportionnellement plus importantes.",
+      "costBreakdownTooltip": "Chaque secteur est une technologie ou un achat, dans la couleur indiquée par la légende sous le graphique. L’électricité achetée au réseau est un coût d’exploitation : ce qui a été consommé sur la période simulée. Les équipements comme les pompes à chaleur, panneaux solaires et batteries sont un coût d’achat réparti sur leur durée de vie ; seule la part de la période simulée compte. Dans les simulations courtes, les coûts d’exploitation paraissent donc proportionnellement plus grands.",
       "annualProjection": "Estimation annuelle : {{value}}",
       "equipmentCostNote": "Le coût d'équipement est réparti sur sa durée de vie ; seule la part de cette période de simulation est affichée.",
       "equipmentCostDesc": "Panneaux solaires, batteries et autres équipements. Le coût d'achat est réparti sur la durée de vie de l'équipement (p. ex. 25 ans pour le solaire).",
       "runningCostDesc": "Électricité achetée au réseau, maintenance et autres dépenses courantes qui dépendent de l'usage.",
       "systemCostSummaryDesc": "Montre le coût moyen de l'énergie (ct/kWh) et la répartition des coûts totaux entre équipement et exploitation. Moins de ct/kWh signifie une énergie globalement moins chère.",
       "lcoeComparisonDesc": "Compare le coût de l'énergie de chaque source en ct/kWh. Le solaire et l'éolien sont peu coûteux car le soleil et le vent sont gratuits ; seul l'équipement est payé. La ligne pointillée indique la moyenne du système.",
-      "investmentBreakdownDesc": "Montre le coût de chaque technologie, réparti entre équipement (achat unique étalé sur la durée de vie) et exploitation (électricité du réseau, maintenance). Les renouvelables n'ont généralement que des coûts d'équipement."
+      "investmentBreakdownDesc": "Montre le coût de chaque technologie, réparti entre équipement (achat unique étalé sur la durée de vie) et exploitation (électricité du réseau, maintenance). Les renouvelables n'ont généralement que des coûts d'équipement. L'électricité du réseau est répartie selon la part de consommation de chaque usage."
     },
     "buildingDetail": {
       "building": "Bâtiment",
@@ -949,6 +960,23 @@
       "notConvergedTitle": "Le flux de puissance n'a pas convergé",
       "convergedDescription": "Le calcul du flux de puissance électrique a trouvé avec succès une solution stable. Les valeurs de tension et de puissance à travers le réseau sont physiquement valides.",
       "notConvergedDescription": "Le calcul du flux de puissance n'a pas pu trouver une solution stable dans la limite d'itération. Les résultats peuvent être inexacts ou incomplets."
+    },
+    "thermal": {
+      "title": "Chauffage et refroidissement sur la période",
+      "info": "Totaux de chauffage et de refroidissement sur la période, additionnés pour tous les bâtiments. Chaleur et froid sont séparés dans le modèle : la chaleur ne peut pas couvrir un besoin de froid, chacun a donc son propre équipement.",
+      "demand": "Besoin de chauffage et de refroidissement",
+      "overRun": "sur la période",
+      "demandInfo": "Énergie nécessaire sur la période pour maintenir les bâtiments à une température confortable : chauffage, eau chaude et refroidissement, additionnés pour tous les bâtiments.",
+      "heatingShare": "Part du chauffage",
+      "heatingSub": "{{energy}} chauffage et eau chaude",
+      "heatingShareInfo": "Part du besoin de chauffage et de refroidissement due au chauffage et à l’eau chaude.",
+      "coolingShare": "Part du refroidissement",
+      "coolingSub": "{{energy}} refroidissement",
+      "coolingShareInfo": "Part du besoin de chauffage et de refroidissement due au refroidissement.",
+      "electricity": "Électricité consommée",
+      "electricitySub": "par les pompes à chaleur et climatiseurs",
+      "electricityInfo": "Électricité consommée par les équipements de chauffage et de refroidissement sur la période. Le reste de la chaleur et du froid provenait gratuitement de l’air extérieur ou du sol.",
+      "noDemand": "Aucun besoin de chauffage ni de refroidissement dans ce calcul."
     }
   },
   "auth": {
@@ -1099,7 +1127,6 @@
     "loadingModels": "Chargement des modèles...",
     "loadingWorkspaceDescription": "Veuillez patienter pendant l'initialisation de vos préférences d'espace de travail.",
     "loadingModelsDescription": "Veuillez patienter pendant le chargement de vos modèles d'évaluation énergétique.",
-    "selectWorkspace": "Sélectionnez ou créez un espace de travail",
     "refreshModels": "Actualiser la liste des modèles",
     "share": "Partager",
     "shareDescription": "Partager \"{{title}}\" avec un autre utilisateur",
@@ -1694,7 +1721,8 @@
     "mode": {
       "label": "Mode",
       "simple": "Simple",
-      "advanced": "Avancé"
+      "advanced": "Avancé",
+      "simpleHint": "D'autres options sont disponibles dans la vue <advanced>avancée</advanced>."
     },
     "modelName": "Nom du modèle",
     "modelNamePlaceholder": "Entrez un nom pour votre simulation énergétique",
@@ -1895,7 +1923,6 @@
     },
     "sections": {
       "grid": "Réseau",
-      "model": "Modèle",
       "energySystem": "Système énergétique"
     },
     "analysis": {
@@ -2033,6 +2060,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Mode simple & avancé",
+        "description": "Cet interrupteur permet de basculer entre la vue simple, avec l'essentiel, et la vue avancée, avec des options supplémentaires comme la météo et les prix de l'électricité.",
+        "tip": "La vue simple suffit pour la plupart des modèles — passez en avancé pour plus d'options."
+      },
       "welcome": {
         "title": "Guide de Simulation Énergétique",
         "description": "Bienvenue ! Ce tour vous guidera dans la création d'une simulation énergétique pour votre région choisie.",
@@ -2277,7 +2309,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} ans",
       "defineOwn": "Définir le mien",
-      "count": "Produits : {{count}}"
+      "search": "Rechercher des produits",
+      "sort": "Trier les produits",
+      "sortName": "Nom",
+      "sortCost": "Coût d'investissement"
     },
     "title": "Technologies",
     "subtitle": "Technologies énergétiques pour vos simulations",
@@ -2648,6 +2683,8 @@
     "hideMaps": "Masquer les cartes",
     "showMaps": "Afficher les cartes",
     "exportPdf": "Exporter PDF",
+    "generateReport": "Générer le rapport",
+    "reportComingSoon": "La génération de rapports sera disponible dans une prochaine mise à jour.",
     "locationMaps": "Cartes de localisation",
     "performanceComparison": "Comparaison des performances",
     "loading": "Chargement des données de simulation...",
@@ -2661,7 +2698,7 @@
       "comparison": "Comparaison"
     },
     "metrics": {
-      "demandBaseline": "Demande (Référence)",
+      "demand": "Demande",
       "renewableGen": "Génération renouvelable",
       "gridImport": "Import réseau",
       "selfSufficiency": "Autosuffisance",

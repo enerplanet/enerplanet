@@ -90,6 +90,9 @@ export interface Model {
 
   results?: Record<string, unknown>;
 
+  // MEME PyPSA power-flow leg status ('' = never ran, 'completed' = done).
+  pypsa_leg_status?: string;
+
   // External
   session_id?: number;
   callback_url?: string;

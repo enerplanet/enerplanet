@@ -52,6 +52,21 @@ const useAreaSelectSteps = (): Step[] => {
       placement: "left",
     },
     {
+      target: '[data-tour="simple-advanced-toggle"]',
+      content: (
+        <TourStepContent>
+          <TourStepHeader icon={TourIcons.settings("w-4 h-4 text-background")} title={t('tour.areaSelect.modeToggle.title')} />
+          <TourDescription>
+            {t('tour.areaSelect.modeToggle.description')}
+          </TourDescription>
+          <TourTipBox icon={TourIcons.info("w-4 h-4 text-muted-foreground")} variant="compact">
+            {t('tour.areaSelect.modeToggle.tip')}
+          </TourTipBox>
+        </TourStepContent>
+      ),
+      placement: "left",
+    },
+    {
       target: '[data-tour="date-range"]',
       content: (
         <TourStepContent>

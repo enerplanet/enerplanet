@@ -52,14 +52,14 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible, isDrawing);
 
   // 2. Data layers
-  const { footprintOnly } = useMapLibreLayers(mapRef, {
+  const { footprintOnly, lod2LayerRef } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
     transformersGeoJSON, availableBoundaryGeoJSON, selectedBoundaryFeature, showBoundary, polygonCoordinates,
     selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
   }, mapReady);
 
   // 3. Click/hover interactions (forwarded from OL events to MapLibre queryRenderedFeatures)
-  useMapLibreInteractions(mapRef, olMap, visible, {
+  useMapLibreInteractions(mapRef, lod2LayerRef, olMap, visible, {
     onBuildingClick, onTransformerClick, onBuildingHover,
     onTransformerHover, onMvLineHover, onMapClick,
   });

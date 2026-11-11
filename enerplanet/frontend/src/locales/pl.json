@@ -15,7 +15,7 @@
       "cont_storage_discharge_depth": "Głębokość rozładowania magazynu",
       "cont_storage_initial": "Początkowy poziom magazynowania",
       "cont_storage_loss": "Wskaźnik strat magazynowania",
-      "cost_energy_cap": "Koszt mocy energetycznej",
+      "cost_energy_cap": "Koszt inwestycji",
       "cost_export": "Koszt eksportu",
       "cost_interest_rate": "Stopa procentowa",
       "cost_om_annual": "Roczne koszty O&M",
@@ -182,6 +182,7 @@
       "adminPanel": "Admin Panel"
     },
     "modelActions": {
+      "moreActions": "Więcej akcji",
       "viewResults": "Zobacz Wyniki",
       "downloadResults": "Pobierz Wyniki",
       "downloadFailed": "Pobieranie nie powiodło się: {{reason}}",
@@ -193,7 +194,9 @@
       "delete": "Usuń",
       "cannotDelete": "Nie można usunąć - tylko właściciel lub ekspert może usunąć",
       "runWithMeme": "Uruchom z Calliope",
-      "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)"
+      "runPypsaOnMeme": "Uruchom przepływ mocy (PyPSA)",
+      "runPypsaFailed": "Przepływ mocy nie powiódł się — kliknij, aby ponowić",
+      "runPypsaRunning": "Obliczanie przepływu mocy…"
     },
     "pagination": {
       "showing": "Wyświetlanie",
@@ -296,7 +299,9 @@
       "heat": "Ciepło",
       "gas": "Gaz",
       "oil": "Olej",
-      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii"
+      "toggleItemHint": "Pokaż wyniki dla tego nośnika energii",
+      "cooling": "Chłodzenie",
+      "heatingCooling": "Ogrzewanie i chłodzenie"
     },
     "selectModel": "Wybierz Model",
     "completedSimulations": "Ukończone Symulacje",
@@ -357,10 +362,13 @@
       "selfSufficiencyDesc": "% zapotrzebowania pokrytego przez OZE",
       "peakDemand": "Szczytowe Zapotrzebowanie",
       "totalCost": "Całkowity Koszt",
+      "totalCostAllEnergy": "Całkowity koszt, wszystkie nośniki",
       "over": "w ciągu",
       "from": "z",
       "installed": "zainstalowanych",
-      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji"
+      "equipmentAndRunning": "Sprzęt + Koszty eksploatacji",
+      "peakHeating": "Szczyt ogrzewania",
+      "peakCooling": "Szczyt chłodzenia"
     },
     "techNames": {
       "solarPv": "Solar PV",
@@ -437,14 +445,17 @@
       "production": "Produkcja",
       "productionDesc": "Energia wytwarzana przez instalacje solarne, wiatrowe i inne źródła",
       "consumption": "Zużycie",
-      "consumptionDesc": "Energia wykorzystywana przez odbiorniki, ładowanie magazynów i eksport do sieci",
+      "consumptionDesc": "Energia zużyta w budynkach. Ładowanie baterii i eksport do sieci są pokazane osobno.",
       "renewableProduction": "Produkcja Odnawialna",
       "totalRenewable": "Całkowita Odnawialna",
       "gridImport": "Import z Sieci",
       "fromGrid": "Z Sieci",
       "totalDemand": "Całkowite Zapotrzebowanie",
       "selfSufficiency": "Samowystarczalność",
-      "netBalance": "Bilans Netto",
+      "grid": "Sieć",
+      "battery": "Bateria",
+      "batteryCharging": "Ładowanie baterii",
+      "batteryDischarging": "Rozładowanie baterii",
       "energyKwh": "Energia (kWh)",
       "energy": "Energia",
       "netKwh": "Netto (kWh)",
@@ -614,6 +625,8 @@
       "noEnergyFlowData": "Brak dostępnych danych przepływu energii",
       "gridImport": "Import z Sieci",
       "gridExport": "Eksport do Sieci",
+      "gridForHeating": "Prąd z sieci: ogrzewanie i chłodzenie",
+      "gridForOtherUse": "Prąd z sieci: pozostałe zużycie",
       "energySystem": "System Energetyczny",
       "household": "Gospodarstwo Domowe",
       "industry": "Przemysł",
@@ -638,16 +651,14 @@
       "hours": "godzin"
     },
     "costInfo": {
-      "simulationPeriodNote": "Pokazane koszty dotyczą symulowanego okresu {{days}} dni ({{hours}} godzin). Aby zobaczyć pełne koszty roczne, uruchom symulację roczną (8760 godzin).",
-      "simulationPeriodShort": "Okres symulacji: {{days}} dni",
-      "costBreakdownTooltip": "Pokazane koszty dotyczą tylko symulowanego okresu, a nie całego roku. Koszty urządzeń są rozłożone na okres ich eksploatacji, a koszty eksploatacji (np. zakup energii z sieci) odzwierciedlają rzeczywiste zużycie w tym okresie. W krótkich symulacjach technologie o wysokich kosztach eksploatacji wydają się więc proporcjonalnie większe.",
+      "costBreakdownTooltip": "Każdy wycinek to jedna technologia lub zakup, w kolorze z legendy pod wykresem. Energia kupiona z sieci to koszt bieżący: to, co zużyto w symulowanym okresie. Urządzenia takie jak pompy ciepła, panele słoneczne i baterie to koszt zakupu rozłożony na okres eksploatacji, więc liczy się tylko część przypadająca na symulowany okres. W krótkich symulacjach koszty bieżące wydają się więc proporcjonalnie większe.",
       "annualProjection": "Szacunek roczny: {{value}}",
       "equipmentCostNote": "Koszt urządzeń jest rozłożony na okres eksploatacji; pokazano tylko część przypadającą na ten okres symulacji.",
       "equipmentCostDesc": "Panele słoneczne, baterie i inne urządzenia. Koszt zakupu jest rozłożony na okres eksploatacji (np. 25 lat dla fotowoltaiki).",
       "runningCostDesc": "Energia kupiona z sieci, konserwacja i inne bieżące wydatki zależne od zużycia.",
       "systemCostSummaryDesc": "Pokazuje średni koszt energii (ct/kWh) oraz podział kosztów całkowitych na urządzenia i eksploatację. Niższa wartość ct/kWh oznacza ogólnie tańszą energię.",
       "lcoeComparisonDesc": "Porównuje koszt energii z każdego źródła w ct/kWh. Energia słoneczna i wiatrowa jest tania, bo słońce i wiatr są darmowe; płaci się tylko za urządzenia. Linia przerywana pokazuje średnią dla całego systemu.",
-      "investmentBreakdownDesc": "Pokazuje koszt każdej technologii z podziałem na urządzenia (jednorazowy zakup rozłożony na okres eksploatacji) i eksploatację (energia z sieci, konserwacja). Źródła odnawialne mają zwykle tylko koszty urządzeń."
+      "investmentBreakdownDesc": "Pokazuje koszt każdej technologii z podziałem na urządzenia (jednorazowy zakup rozłożony na okres eksploatacji) i eksploatację (energia z sieci, konserwacja). Źródła odnawialne mają zwykle tylko koszty urządzeń. Prąd z sieci jest podzielony według udziału każdego zastosowania w zużyciu."
     },
     "buildingDetail": {
       "building": "Budynek",
@@ -692,6 +703,23 @@
       "notConvergedTitle": "Przepływ mocy niezbieżny",
       "convergedDescription": "Obliczenia przepływu mocy elektrycznej pomyślnie znalazły stabilne rozwiązanie. Wartości napięcia i mocy w sieci są fizycznie prawidłowe.",
       "notConvergedDescription": "Obliczenia przepływu mocy nie znalazły stabilnego rozwiązania w limicie iteracji. Wyniki mogą być niedokładne lub niekompletne."
+    },
+    "thermal": {
+      "title": "Ogrzewanie i chłodzenie w okresie",
+      "info": "Sumy ogrzewania i chłodzenia w okresie dla wszystkich budynków. Ciepło i chłód są w modelu rozdzielone: ciepło nie pokryje zapotrzebowania na chłód, więc każde ma własne urządzenia.",
+      "demand": "Zapotrzebowanie na ogrzewanie i chłodzenie",
+      "overRun": "w okresie",
+      "demandInfo": "Energia potrzebna w okresie, by utrzymać w budynkach komfortową temperaturę: ogrzewanie, ciepła woda i chłodzenie, zsumowane dla wszystkich budynków.",
+      "heatingShare": "Udział ogrzewania",
+      "heatingSub": "{{energy}} ogrzewanie i ciepła woda",
+      "heatingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na ogrzewanie i ciepłą wodę.",
+      "coolingShare": "Udział chłodzenia",
+      "coolingSub": "{{energy}} chłodzenie",
+      "coolingShareInfo": "Udział zapotrzebowania na ogrzewanie i chłodzenie przypadający na chłodzenie.",
+      "electricity": "Zużyta energia elektryczna",
+      "electricitySub": "przez pompy ciepła i klimatyzatory",
+      "electricityInfo": "Energia elektryczna pobrana przez urządzenia grzewcze i chłodzące w okresie. Reszta ciepła i chłodu pochodziła bezpłatnie z powietrza zewnętrznego lub gruntu.",
+      "noDemand": "Brak zapotrzebowania na ogrzewanie i chłodzenie w tym przebiegu."
     }
   },
   "auth": {
@@ -841,7 +869,6 @@
     "loadingModels": "Ładowanie modeli...",
     "loadingWorkspaceDescription": "Proszę czekać, inicjalizujemy preferencje przestrzeni roboczej.",
     "loadingModelsDescription": "Proszę czekać, pobieramy modele oceny energetycznej.",
-    "selectWorkspace": "Wybierz lub utwórz przestrzeń roboczą",
     "refreshModels": "Odśwież listę modeli",
     "share": "Udostępnij",
     "shareDescription": "Udostępnij \"{{title}}\" innemu użytkownikowi",
@@ -1449,7 +1476,8 @@
     "mode": {
       "label": "Tryb",
       "simple": "Prosty",
-      "advanced": "Zaawansowany"
+      "advanced": "Zaawansowany",
+      "simpleHint": "Więcej opcji jest dostępnych w widoku <advanced>zaawansowanym</advanced>."
     },
     "modelName": "Nazwa modelu",
     "modelNamePlaceholder": "Wprowadź nazwę dla swojej symulacji energetycznej",
@@ -1650,7 +1678,6 @@
     },
     "sections": {
       "grid": "Sieć",
-      "model": "Model",
       "energySystem": "System energetyczny"
     },
     "analysis": {
@@ -1792,6 +1819,11 @@
       }
     },
     "areaSelect": {
+      "modeToggle": {
+        "title": "Tryb prosty i zaawansowany",
+        "description": "Ten przełącznik zmienia widok między prostym, z najważniejszymi opcjami, a zaawansowanym, z dodatkowymi opcjami, takimi jak pogoda i ceny energii.",
+        "tip": "Widok prosty wystarcza dla większości modeli — przełącz na zaawansowany, gdy potrzebujesz więcej."
+      },
       "welcome": {
         "title": "Przewodnik Symulacji Energetycznej",
         "description": "Witamy! Ta wycieczka przeprowadzi Cię przez tworzenie symulacji energetycznej dla wybranego regionu.",
@@ -1924,7 +1956,10 @@
       "cost": "{{value}} EUR/kW",
       "lifetime": "{{value}} lat",
       "defineOwn": "Zdefiniuj własny",
-      "count": "Produkty: {{count}}"
+      "search": "Szukaj produktów",
+      "sort": "Sortuj produkty",
+      "sortName": "Nazwa",
+      "sortCost": "Koszt inwestycji"
     },
     "title": "Technologie",
     "subtitle": "Technologie energetyczne do symulacji",
@@ -2295,6 +2330,8 @@
     "hideMaps": "Ukryj mapy",
     "showMaps": "Pokaż mapy",
     "exportPdf": "Eksportuj PDF",
+    "generateReport": "Generuj raport",
+    "reportComingSoon": "Generowanie raportów będzie dostępne w jednej z kolejnych aktualizacji.",
     "locationMaps": "Mapy lokalizacji",
     "performanceComparison": "Porównanie wydajności",
     "loading": "Ładowanie danych symulacji...",
@@ -2308,7 +2345,7 @@
       "comparison": "Porównanie"
     },
     "metrics": {
-      "demandBaseline": "Zapotrzebowanie (Linia bazowa)",
+      "demand": "Zapotrzebowanie",
       "renewableGen": "Generacja odnawialna",
       "gridImport": "Import z sieci",
       "selfSufficiency": "Samowystarczalność",

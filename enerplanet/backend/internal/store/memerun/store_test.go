@@ -44,7 +44,7 @@ func TestStore_SaveLegIsolatesLeg(t *testing.T) {
 	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
 		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
 	mock.ExpectExec(upsert).
-		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(int64(7), models.MemeLegPyPSA, "job-pypsa", "running", nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
@@ -74,6 +74,7 @@ func TestStore_GetNoRecordReturnsNil(t *testing.T) {
 	assert.Nil(t, rec, "no recorded run must come back as nil, not an error")
 }
 
+// TestStore_UpdateStatusSetsError covers the Calliope-leg status writer.
 func TestStore_UpdateStatusSetsError(t *testing.T) {
 	db, mock := newMockDB(t)
 	mock.ExpectBegin()
@@ -82,6 +83,58 @@ func TestStore_UpdateStatusSetsError(t *testing.T) {
 	mock.ExpectCommit()
 
 	require.NoError(t, NewStore(db).UpdateStatus(7, "failed", "boom"))
+}
+
+// TestStore_DeleteLegScopesToModelAndLeg guards the derived-leg invalidation:
+// the DELETE must be keyed to (model_id, leg) so clearing the PyPSA leg can
+// never touch the Calliope leg's row.
+func TestStore_DeleteLegScopesToModelAndLeg(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	mock.ExpectExec(`DELETE FROM "model_meme_runs" WHERE model_id = \$1 AND leg = \$2`).
+		WithArgs(int64(7), models.MemeLegPyPSA).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).DeleteLeg(7, models.MemeLegPyPSA))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestStore_MarkLegFailedUpsertsPreservingRunID guards the pre-submit failure
+// writer: it upserts a terminal 'failed' row with the error, never clobbering an
+// already-recorded run id.
+func TestStore_MarkLegFailedUpsertsPreservingRunID(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
+		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
+	mock.ExpectExec(upsert).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).MarkLegFailed(7, models.MemeLegPyPSA, "bundle not found"))
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestStore_MarkLegPendingRecordsRequestAndClearsRunID guards the request-path
+// writer: it upserts 'pending' with an EMPTY run id (the previous solve's job
+// must not be resumed) and clears any stale error.
+func TestStore_MarkLegPendingRecordsRequestAndClearsRunID(t *testing.T) {
+	db, mock := newMockDB(t)
+	mock.ExpectBegin()
+	upsert := regexp.QuoteMeta(`INSERT INTO "model_meme_runs" ("model_id","leg",`) + `.*` +
+		regexp.QuoteMeta(`ON CONFLICT ("model_id","leg") DO UPDATE`)
+	mock.ExpectExec(upsert).
+		WithArgs(
+			// the INSERT: model_id, leg, run_id, status, error, grid prices, extracted_path, created_at, updated_at
+			int64(7), models.MemeLegPyPSA, "", models.MemeRunStatusPending, nil, nil, nil, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			// the ON CONFLICT assignment values, in gorm's key order: error, run_id, status, updated_at
+			nil, "", models.MemeRunStatusPending, sqlmock.AnyArg(),
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	require.NoError(t, NewStore(db).MarkLegPending(7, models.MemeLegPyPSA))
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 // TestMigrationTableName guards the migration file so a rename does not

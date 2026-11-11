@@ -29,7 +29,7 @@ func TestForwardToPylovo_cancelledClientIsNotAServerError(t *testing.T) {
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/pylovo/transformer-sizes", nil).WithContext(ctx)
 
-	NewPylovoHandler(pylovo.URL, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
+	NewPylovoHandler(pylovo.URL, nil, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
 
 	if got := c.Writer.Status(); got != 499 {
 		t.Fatalf("status = %d, want 499 (client closed request) for a cancelled client request", got)
@@ -52,7 +52,7 @@ func TestForwardToPylovo_pylovoTimeoutIsAServerError(t *testing.T) {
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/pylovo/transformer-sizes", nil)
 
-	NewPylovoHandler(pylovo.URL, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
+	NewPylovoHandler(pylovo.URL, nil, nil, nil).forwardToPylovo(c, http.MethodGet, "/transformer-sizes", nil)
 
 	if got := c.Writer.Status(); got != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500 when pylovo times out", got)
@@ -93,7 +93,7 @@ func serveGenerateGrid(t *testing.T, body string) (*httptest.ResponseRecorder, [
 	t.Cleanup(pylovo.Close)
 	r := gin.New()
 	r.Use(func(c *gin.Context) { c.Set("user_id", "owner") }) // the auth middleware does this in production
-	r.POST("/generate-grid", NewPylovoHandler(pylovo.URL, nil, nil).GenerateGrid)
+	r.POST("/generate-grid", NewPylovoHandler(pylovo.URL, nil, nil, nil).GenerateGrid)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/generate-grid", strings.NewReader(body)))
 	return rec, received
@@ -141,7 +141,7 @@ func TestCountBuildings_forwardsValidatedAreaOnly(t *testing.T) {
 	}))
 	t.Cleanup(pylovo.Close)
 	r := gin.New()
-	r.POST("/building-count", NewPylovoHandler(pylovo.URL, nil, nil).CountBuildings)
+	r.POST("/building-count", NewPylovoHandler(pylovo.URL, nil, nil, nil).CountBuildings)
 	serve := func(body string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/building-count", strings.NewReader(body)))

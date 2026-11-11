@@ -13,6 +13,7 @@ import (
 	"spatialhub_backend/internal/meme"
 	"spatialhub_backend/internal/models"
 	"spatialhub_backend/internal/payload"
+	"spatialhub_backend/internal/store/memerun"
 	modelstore "spatialhub_backend/internal/store/model"
 	tentacronclient "spatialhub_backend/internal/tentacron"
 
@@ -241,6 +242,18 @@ func HandleDispatchMeme(
 	target := p.Target
 	if target == "" {
 		target = memeTargetCalliopeOnly
+	}
+	// A re-dispatched Calliope leg invalidates any recorded PyPSA leg: the old
+	// power flow was derived from the PREVIOUS Calliope results, so it must not
+	// stay shown against the new ones — and the dashboard must offer the
+	// "Run power flow" action again (populatePyPSALegStatus keys off this row).
+	// The pypsa leg is a derived add-on with no independent value once its base
+	// moved, so the row is dropped. Best-effort: a failure to clear it must not
+	// fail the Calliope dispatch.
+	if target == memeTargetCalliopeOnly {
+		if err := memerun.NewStore(db).DeleteLeg(p.ModelID, models.MemeLegPyPSA); err != nil {
+			log.Errorf("model %d: failed to clear the pypsa leg on calliope re-dispatch: %v", p.ModelID, err)
+		}
 	}
 	switch {
 	case rec == nil || models.MemeRunFinished(rec.Status):

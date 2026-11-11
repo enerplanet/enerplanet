@@ -1,6 +1,7 @@
 import { StructuredModelResults } from '@/features/model-results/types';
 import { i18n } from '@spatialhub/i18n';
 import { getTechColor } from '@/constants/tech-colors';
+import { getTechGroup } from './transformUtils';
 
 const COST_TECH_I18N_KEYS: Record<string, string> = {
   pv_supply: 'results.techNames.solarPv',
@@ -12,26 +13,16 @@ const COST_TECH_I18N_KEYS: Record<string, string> = {
   battery_storage: 'results.techNames.batteryStorage',
   geothermal_supply: 'results.techNames.geothermal',
   transformer_supply: 'results.techNames.gridElectricity',
+  grid_trafo_import: 'results.techNames.gridElectricity',
   power_transmission: 'results.techNames.powerLines',
   water_supply: 'results.techNames.hydroPower',
   households_supply: 'results.techNames.householdSupply',
   non_households_supply: 'results.techNames.nonHouseholdSupply',
 };
 
-/**
- * Normalize tech key: strip location suffixes like "power_transmission:Trafo_300" → "power_transmission"
- * This aggregates all line segments into one "Power Lines" entry.
- */
-function normalizeTechKey(tech: string): string {
-  // Techs with `:` suffix are location-specific variants (e.g. power_transmission:ID_1)
-  const colonIdx = tech.indexOf(':');
-  if (colonIdx > 0) {
-    return tech.substring(0, colonIdx);
-  }
-  return tech;
-}
-
 export interface CostBreakdownItem {
+  /** Technology group, which picks the results palette colour per theme. */
+  tech?: string;
   category: string;
   value: number;
   color: string;
@@ -52,7 +43,7 @@ export function netCost(rows: { value: number }[] | undefined): number {
 function costByTech(structured: StructuredModelResults): Record<string, number> {
   const totals: Record<string, number> = {};
   structured.cost?.forEach((c: any) => {
-    const tech = normalizeTechKey(c.techs || 'Other');
+    const tech = getTechGroup(c.techs || 'Other');
     totals[tech] = (totals[tech] || 0) + c.value;
   });
   return totals;
@@ -73,7 +64,7 @@ export function transformStructuredCostBreakdown(structured: StructuredModelResu
   const investByTech: Record<string, number> = {};
 
   structured.cost?.forEach((c: any) => {
-    const tech = normalizeTechKey(c.techs || 'Other');
+    const tech = getTechGroup(c.techs || 'Other');
     locationsByTech[tech] ??= new Set();
     if (c.from_location) {
       locationsByTech[tech].add(c.from_location);
@@ -82,7 +73,7 @@ export function transformStructuredCostBreakdown(structured: StructuredModelResu
 
   // Track investment costs separately (also normalized)
   structured.cost_investment?.forEach((c: any) => {
-    const tech = normalizeTechKey(c.techs || 'Other');
+    const tech = getTechGroup(c.techs || 'Other');
     if (!investByTech[tech]) {
       investByTech[tech] = 0;
     }
@@ -101,6 +92,7 @@ export function transformStructuredCostBreakdown(structured: StructuredModelResu
         : tech.replaceAll('_', ' ').replaceAll(/\b\w/g, c => c.toUpperCase());
       const invest = investByTech[tech] || 0;
       return {
+        tech,
         category,
         value,
         color: getTechColor(tech, colorIdx++),

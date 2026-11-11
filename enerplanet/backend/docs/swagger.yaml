@@ -641,6 +641,9 @@ definitions:
         items:
           $ref: '#/definitions/spatialhub_backend_internal_api_contracts.BuildingDemandProfile'
         type: array
+      computed:
+        example: 4
+        type: integer
       failed:
         example: 2
         type: integer
