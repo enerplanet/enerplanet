@@ -8,7 +8,7 @@ require (
 	github.com/enerplanet/T1K v0.1.1-0.20261101183609-db5951e848ae
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/hibiken/asynq v0.25.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.17.0
