@@ -11,15 +11,15 @@ pylovo:
     country: DE
     state: bremen
     grids: {"28215": 40, "28217": 6, "28219": 14}
-  - name: Köln centre (release-check test data)
+  - name: Köln centre (test data)
     country: DE
     state: nordrhein_westfalen
     grids: {"50674": 55, "50676": 91, "50677": 46, "50678": 74, "50931": 117, "50937": 83, "50939": 43, "50968": 137, "50969": 75}
-  - name: Deggendorf and Plattling (release-check test data)
+  - name: Deggendorf and Plattling (test data)
     country: DE
     state: bayern
     grids: {"94447": 155, "94469": 342}
-  - name: Mönchweiler (release-check test data)
+  - name: Mönchweiler (test data)
     country: DE
     state: baden_wuerttemberg
     grids: {"78087": 22}
