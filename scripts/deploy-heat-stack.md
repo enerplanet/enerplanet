@@ -12,6 +12,7 @@ the app container — is **not** part of this stack.
 scripts/deploy-heat-stack.sh --prefix sim2 up        # deploy
 scripts/deploy-heat-stack.sh --prefix sim2 render    # generate + validate, deploy nothing
 scripts/deploy-heat-stack.sh --prefix sim2 fixtures  # (re)load the fixture sets
+scripts/deploy-heat-stack.sh --prefix sim2 check     # compare the stack with scripts/regions.yaml
 scripts/deploy-heat-stack.sh --prefix sim2 status
 scripts/deploy-heat-stack.sh --prefix sim2 down
 ```
@@ -125,7 +126,7 @@ host, such as a test prefix.
 
 The default. Generates the override files, clones or updates the service
 checkouts at their pins, pulls the published images, builds the rest, starts
-everything, then loads the fixtures. It ends with:
+everything, loads the fixtures, then runs [`check`](#check). It ends with:
 
 ```
 Heat stack up under prefix 'sim2'
@@ -209,6 +210,39 @@ service tag):
 ```bash
 scripts/deploy-heat-stack.sh --prefix sim2 --fixtures-dir /data/fixtures-pinned fixtures
 ```
+
+### `check`
+
+Compares the running stack with [`scripts/regions.yaml`](regions.yaml), the
+data production must hold, and exits non-zero on any gap. `up` and `fixtures`
+run it last.
+
+| Section | Listed as | Fails when |
+|---|---|---|
+| `pylovo` | region: country, state, postcode to grid count | a postcode is missing from `/boundary/available`, or its state holds fewer grids than its entries add up to |
+| `3d` | City2TABULA dataset id | the id is missing from `GET /api/v1/datasets` |
+| `weather` | weather-serve point query: provider plus `year` or `scenario` | the query fails at the centre of any state listed under `pylovo` |
+
+A postcode PyLovo holds but the file does not list is printed as a `note`, not
+a failure.
+
+```
+$ scripts/deploy-heat-stack.sh --prefix sim2 check
+==> checking the stack against scripts/regions.yaml
+FAIL  pylovo Heeten: postcodes ['8111'] missing in NL overijssel
+FAIL  pylovo NL overijssel: 0 grids, regions.yaml lists 30
+94 postcodes, 7 3D datasets, 2 weather archives checked; 2 failures
+err  the stack is missing data scripts/regions.yaml lists
+```
+
+The check runs in a throwaway container, `<prefix>-regions-check`, made from the
+PyLovo API image and attached to both private networks. It waits up to five
+minutes for a service that is not reachable yet.
+
+!!! warning "Adding or regenerating a region"
+    Add a region to `scripts/regions.yaml` in the same change that loads it,
+    with the grid counts of the package that was loaded. A regenerated region
+    keeps its entry; update the counts to the new package.
 
 ### `down`
 
