@@ -55,6 +55,8 @@ export interface StoreOptions {
 }
 
 export interface Store {
+  /** The projection the session started from — the base `replay()` needs. */
+  readonly initial: Readonly<ModelData>;
   /** Current projection. Read-only to everyone; rebuild it instead of mutating it. */
   readonly data: Readonly<ModelData>;
   /** Every sealed transaction, oldest first. Never rewritten — even by undo. */
@@ -92,6 +94,10 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
   let cursor = 0;
 
   return {
+    get initial(): Readonly<ModelData> {
+      return initial;
+    },
+
     get data(): Readonly<ModelData> {
       return data;
     },

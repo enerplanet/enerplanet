@@ -27,7 +27,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 |---|---|
 | `Plan.md` | the architecture and its four invariants (single store, one reducer, sealed influence-aware cascade, vector-keyed ports) |
 | `Modules.md` | the module contract, the port catalog, the module catalog |
-| `spec/core.md` | the core contract written as failing-first atomic tests (T1–T13) — the thing being implemented |
+| `spec/core.md` | the core contract written as failing-first atomic tests (T1–T13, T20) — the thing being implemented |
 
 ## `core/` — the React-free core
 
@@ -42,17 +42,21 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `fingerprint.ts` | stable value fingerprints — key order must not matter, array order must |
 | `flow.ts` | gating: the available-set, the palette, and the validator — one predicate, applied twice |
 | `influence.ts` | the influence-honesty prober: verifies a module's `affect` instead of trusting it |
+| `replay.ts` | rebuild a projection from the log — the artefact's recovery path, and history's side of elision |
+| `position.ts` | the flow's derived state: `done` / `stale` / `pending`, and where the session sits in it |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
-Implemented so far, all green: **T1–T8, T10–T11, T14–T16 and T21** (one sealed transaction per
-action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
+Implemented so far, all green: **T1–T8, T10–T11, T14–T16, T20 and T21** (one sealed transaction
+per action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
 exactly; the discard tail; redo re-derives the cascade; undo skips auto work and lands on the
 interactive boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade
 as affected closure ∩ present ∩ not-superseded; influence honesty verified per module; gating by
 available-set with the builder and the validator sharing one predicate; and the runtime store
-gate that refuses a node whose required ports are absent). Not written yet: the flow position +
-re-run/elision + loopback (T20, T12), the artefact (T18), branching + the prompt (T17/T19) and
-the save node (T13).
+gate that refuses a node whose required ports are absent). T20 covers the jump transaction and
+the derived position — a jump's discarded values ride in its own `cascade`, and the session's
+position is read off `(projection, log, cursor)` rather than stored, so undo repositions the
+flow for free. Not written yet: re-run + elision (T20's last slice, with T12's loopback), the
+artefact (T18), branching + the prompt (T17/T19) and the save node (T13).
 
 ## Commands
 
