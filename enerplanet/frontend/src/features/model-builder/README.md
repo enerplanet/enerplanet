@@ -46,9 +46,10 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `position.ts` | the flow's derived state: `done` / `stale` / `pending`, and where the session sits in it |
 | `rerun.ts` | jump mechanics — the narrowed discard, the re-armed target, and the tail walk |
 | `artefact.ts` | what persists a session: the projection, the log, the cursor, and the fingerprint that keeps them honest |
+| `branch.ts` | "New Model" — full-duplex branching off the cursor, leaving the source untouched |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
-Implemented so far, all green: **T1–T8, T10–T11, T14–T16, T20 and T21** (one sealed transaction
+Implemented so far, all green: **T1–T8, T10–T11, T14–T18, T20 and T21** (one sealed transaction
 per action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
 exactly; the discard tail; redo re-derives the cascade; undo skips auto work and lands on the
 interactive boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade
@@ -60,8 +61,10 @@ position is read off `(projection, log, cursor)` rather than stored — so undo 
 for free — and walking the tail re-runs only the nodes the jump actually invalidated, eliding the
 rest. T18 makes a session persistable: the artefact carries the projection, the log, the cursor and
 a fingerprint of the projection, so a load is instant (no replay) while undo and redo still work,
-and replay stays the recovery path rather than the load path. Not written yet: branching + the
-prompt (T17/T19) and the save node (T13).
+and replay stays the recovery path rather than the load path. T17 branches a session full-duplex: a
+copy of the state at the cursor and of the log prefix, plus the pending edit as the branch's own
+first transaction, while the source keeps its log, cursor and redo tail exactly as they were. Not
+written yet: the prompt (T19) and the save node (T13).
 
 ## Commands
 
