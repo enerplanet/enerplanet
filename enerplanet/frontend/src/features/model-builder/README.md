@@ -40,16 +40,19 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `engine.ts` | runs a module as one workflow node, enforces the write boundary, seals transactions |
 | `invalidator.ts` | stages the cascade: the affected closure, minus what cannot be pruned |
 | `fingerprint.ts` | stable value fingerprints — key order must not matter, array order must |
+| `flow.ts` | gating: the available-set, the palette, and the validator — one predicate, applied twice |
 | `influence.ts` | the influence-honesty prober: verifies a module's `affect` instead of trusting it |
-| `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) |
+| `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
-Implemented so far, all green: **T1–T8 and T14–T16** (one sealed transaction per action;
-undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits exactly;
-the discard tail; redo re-derives the cascade; undo skips auto work and lands on the interactive
-boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade as affected
-closure ∩ present ∩ not-superseded; influence honesty verified per module). Not written yet:
-gating (T10–T12), the flow position + re-run/elision (T20), the artefact (T18), branching + the
-prompt (T17/T19) and the save node (T13).
+Implemented so far, all green: **T1–T8, T10–T11, T14–T16 and T21** (one sealed transaction per
+action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
+exactly; the discard tail; redo re-derives the cascade; undo skips auto work and lands on the
+interactive boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade
+as affected closure ∩ present ∩ not-superseded; influence honesty verified per module; gating by
+available-set with the builder and the validator sharing one predicate; and the runtime store
+gate that refuses a node whose required ports are absent). Not written yet: the flow position +
+re-run/elision + loopback (T20, T12), the artefact (T18), branching + the prompt (T17/T19) and
+the save node (T13).
 
 ## Commands
 

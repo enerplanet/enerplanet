@@ -11,8 +11,8 @@
  */
 
 import { portPath, type DiffOp, type Transaction } from "./diff";
-import { PortWriteRejected } from "./errors";
-import type { Module, ModuleCtx, NodeRef } from "./module";
+import { MissingRequiredPorts, PortWriteRejected } from "./errors";
+import { requiredPorts, type Module, type ModuleCtx, type NodeRef } from "./module";
 import type { ModelData, PortKey } from "./ports";
 import type { Store } from "./store";
 
@@ -36,6 +36,11 @@ export interface Engine {
 export function createEngine(store: Store): Engine {
   return {
     async runModule(module, node) {
+      // The store is the runtime truth (T21): the available-set the palette used may have been
+      // optimistic, so never let a node run against a position the flow never satisfied.
+      const missing = requiredPorts(module).filter((port) => store.data[port] === undefined);
+      if (missing.length > 0) throw new MissingRequiredPorts(module.id, missing);
+
       const declared = new Set<PortKey>(module.params.map((param) => param.port));
       const consumed = new Set<PortKey>();
       let pending = new Map<PortKey, unknown>();

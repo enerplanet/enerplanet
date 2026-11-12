@@ -33,11 +33,13 @@ export function seed(overrides: Partial<ModelData> = {}): ModelData {
 }
 
 /** Runs a promise expected to reject and returns the rejection for inspection. */
-export async function captureError(promise: Promise<unknown>): Promise<PortWriteRejected> {
+export async function captureError<T extends Error = PortWriteRejected>(
+  promise: Promise<unknown>,
+): Promise<T> {
   try {
     await promise;
   } catch (err) {
-    return err as PortWriteRejected;
+    return err as T;
   }
   throw new Error("expected the call to reject, but it resolved");
 }

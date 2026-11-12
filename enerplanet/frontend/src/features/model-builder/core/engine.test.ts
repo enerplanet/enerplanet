@@ -10,7 +10,7 @@ import { describe, it, expect } from "vitest";
 import { createStore } from "./store";
 import { createEngine } from "./engine";
 import { defineModule } from "./module";
-import { PortWriteRejected } from "./errors";
+import { MissingRequiredPorts, PortWriteRejected } from "./errors";
 import { building, captureError, fc, seed } from "./fixtures";
 
 // ── T1 ──────────────────────────────────────────────────────────────────────
@@ -228,5 +228,50 @@ describe("T16 — seal granularity is a module declaration", () => {
     store.undo();
     expect(store.data.resolution).toBe(60);
     expect(store.data.modelName).toBe("Contract fixture");
+  });
+});
+
+// ── T21 ─────────────────────────────────────────────────────────────────────
+
+describe("T21 — a node runs only when its required ports exist in the store", () => {
+  const NODE_ID = "needs-region";
+
+  /** Gated on `region`, which the plain seed does not have. */
+  function gatedModule() {
+    return defineModule({
+      id: NODE_ID,
+      params: [{ port: "region", required: true }, { port: "transformers" }],
+      affect: {},
+      layout: [],
+      run: (ctx) => {
+        ctx.commit({ transformers: fc() });
+      },
+      validate: () => [],
+    });
+  }
+
+  it("refuses the run when a required port is missing, writing nothing", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    const error = await captureError<MissingRequiredPorts>(
+      engine.runModule(gatedModule(), { id: NODE_ID }),
+    );
+
+    expect(error).toBeInstanceOf(MissingRequiredPorts);
+    expect(error.moduleId).toBe(NODE_ID);
+    expect(error.missing).toEqual(["region"]);
+    expect(store.log).toHaveLength(0);
+    expect(store.data.transformers).toBeUndefined();
+  });
+
+  it("runs once the store satisfies the requirement", async () => {
+    const store = createStore(seed({ region: { country: "DE", state: "BW" } }));
+    const engine = createEngine(store);
+
+    await engine.runModule(gatedModule(), { id: NODE_ID });
+
+    expect(store.data.transformers).toEqual(fc());
+    expect(store.log).toHaveLength(1);
   });
 });
