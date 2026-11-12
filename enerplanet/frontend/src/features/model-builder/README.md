@@ -44,6 +44,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `influence.ts` | the influence-honesty prober: verifies a module's `affect` instead of trusting it |
 | `replay.ts` | rebuild a projection from the log — the artefact's recovery path, and history's side of elision |
 | `position.ts` | the flow's derived state: `done` / `stale` / `pending`, and where the session sits in it |
+| `rerun.ts` | jump mechanics — the narrowed discard, the re-armed target, and the tail walk |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
 Implemented so far, all green: **T1–T8, T10–T11, T14–T16, T20 and T21** (one sealed transaction
@@ -52,11 +53,12 @@ exactly; the discard tail; redo re-derives the cascade; undo skips auto work and
 interactive boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade
 as affected closure ∩ present ∩ not-superseded; influence honesty verified per module; gating by
 available-set with the builder and the validator sharing one predicate; and the runtime store
-gate that refuses a node whose required ports are absent). T20 covers the jump transaction and
-the derived position — a jump's discarded values ride in its own `cascade`, and the session's
-position is read off `(projection, log, cursor)` rather than stored, so undo repositions the
-flow for free. Not written yet: re-run + elision (T20's last slice, with T12's loopback), the
-artefact (T18), branching + the prompt (T17/T19) and the save node (T13).
+gate that refuses a node whose required ports are absent). T20 covers the jump transaction, the
+derived position and the re-run: a jump's discarded values ride in its own `cascade`, the session's
+position is read off `(projection, log, cursor)` rather than stored — so undo repositions the flow
+for free — and walking the tail re-runs only the nodes the jump actually invalidated, eliding the
+rest. Not written yet: the artefact (T18), branching + the prompt (T17/T19) and the save node
+(T13).
 
 ## Commands
 

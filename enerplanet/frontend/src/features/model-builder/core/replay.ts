@@ -37,14 +37,28 @@ export function replayBefore(initial: ModelData, log: readonly Transaction[], re
   return replay(initial, log, revision - 1);
 }
 
-/** The node's most recent transaction in the applied prefix, if any. */
-export function lastTransactionOf(
+/** The node's most recent **action** in the applied prefix — jumps don't count. */
+export function lastActionOf(
   log: readonly Transaction[],
   nodeId: string,
   cursor: number,
 ): Transaction | undefined {
   for (let index = Math.min(cursor, log.length) - 1; index >= 0; index -= 1) {
-    if (log[index].nodeId === nodeId) return log[index];
+    const transaction = log[index];
+    if (transaction.nodeId === nodeId && transaction.kind !== "jump") return transaction;
+  }
+  return undefined;
+}
+
+/** The most recent jump that moved the session *to* this node, if any. */
+export function lastJumpTo(
+  log: readonly Transaction[],
+  nodeId: string,
+  cursor: number,
+): Transaction | undefined {
+  for (let index = Math.min(cursor, log.length) - 1; index >= 0; index -= 1) {
+    const transaction = log[index];
+    if (transaction.kind === "jump" && transaction.jump?.to === nodeId) return transaction;
   }
   return undefined;
 }

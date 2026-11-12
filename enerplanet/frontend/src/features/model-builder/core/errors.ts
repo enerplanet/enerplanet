@@ -13,7 +13,6 @@ export type PortWriteRejection =
   | "undeclared"
   /** The module would blind-overwrite a value it never read (anti-clobber). */
   | "clobber";
-
 export class PortWriteRejected extends Error {
   readonly moduleId: string;
   readonly port: string;
@@ -47,5 +46,22 @@ export class MissingRequiredPorts extends Error {
     this.name = "MissingRequiredPorts";
     this.moduleId = moduleId;
     this.missing = [...missing];
+  }
+}
+
+/**
+ * A jump was asked for a node that is not behind the current position.
+ *
+ * Going *forward* is not a jump. The flow walks forward by running nodes, so the session reaches
+ * a later node by running it — never by declaring itself there. A jump is therefore always a move
+ * back (T20, T12), and the guard runs before anything is sealed, so a refused jump writes nothing.
+ */
+export class JumpNotBackwards extends Error {
+  readonly target: string;
+
+  constructor(target: string) {
+    super(`[model-builder] cannot jump to node "${target}": a jump only moves back`);
+    this.name = "JumpNotBackwards";
+    this.target = target;
   }
 }

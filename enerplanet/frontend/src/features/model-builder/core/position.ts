@@ -22,7 +22,7 @@
 import type { Flow, ModuleRegistry } from "./flow";
 import { requiredPorts, type Module } from "./module";
 import type { PortKey } from "./ports";
-import { writtenPortsOf } from "./replay";
+import { lastActionOf, lastJumpTo, writtenPortsOf } from "./replay";
 import type { Store } from "./store";
 
 /** The three states derivable from history — the rest of `NodeState` is session or runtime. */
@@ -55,23 +55,28 @@ export function positionReport(
     const module: Module | undefined = registry[node.moduleId];
     const blocked = module === undefined ? [] : missingFromStore(module, store);
 
-    // What it actually wrote — the log's word, not the module's declaration. Scanning every
-    // transaction of the node matters: a jump stamps the target with an empty primary.
-    const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
-    const touched = store.log
-      .slice(0, Math.min(store.cursor, store.log.length))
-      .some((transaction) => transaction.nodeId === node.id);
+    const transaction = lastActionOf(store.log, node.id, store.cursor);
+    const jump = lastJumpTo(store.log, node.id, store.cursor);
 
-    if (!touched) {
+    if (transaction === undefined && jump === undefined) {
       return { nodeId: node.id, moduleId: node.moduleId, state: "pending", pruned: [], blocked };
     }
 
+    // A jump that lands here re-arms the node: the session is *meant* to be back at it, so its
+    // earlier work cannot count as done — even when the jump had nothing to discard, which is
+    // exactly what makes the zero-diff jump (a bare re-save) mean anything.
+    const rearmed =
+      jump !== undefined && (transaction === undefined || jump.revision > transaction.revision);
+
+    const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);
 
     // A node that ran but wrote nothing can never be called done — the one hole in deriving
     // state from history, recorded as open in the spec.
     const state: DerivedState =
-      written.length === 0 || pruned.length > 0 || blocked.length > 0 ? "stale" : "done";
+      rearmed || written.length === 0 || pruned.length > 0 || blocked.length > 0
+        ? "stale"
+        : "done";
 
     return { nodeId: node.id, moduleId: node.moduleId, state, pruned, blocked };
   });
