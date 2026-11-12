@@ -55,7 +55,15 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | file | what it holds |
 |---|---|
 | `gateway.ts` | the adapter interface this feature owns. **Call A** (`createModel` / `updateModel`) is the legacy payload; **Call B** (`saveSession` / `loadSession`) is the session artefact. The legacy side-effects of a create — finalising draft transformers, claiming the draft's series — live behind `createModel`, so the save logic never grows a legacy special case. |
+| `httpGateway.ts` | the real adapter: the gateway bound to the backend over `@/lib/axios` (the app-wide, CSRF-aware client — not another feature's service module). The client is injectable so the endpoint paths and payload keys are pinned in tests. |
 | `saveModel.ts` | the two-call save (T13): the legacy payload built from the ports, the flow-derived status, and a partial save reported rather than thrown away. |
+| `saveNode.ts` | the `model-save` **node**: declares the whole persisted surface, requires `coordinates` (the backend resolves the country from them), and seals the save as one transaction. A refusal throws, so nothing is sealed. |
+
+## `load/` — opening a session
+
+| file | what it holds |
+|---|---|
+| `loader.ts` | the Loader (`Plan.md` §9): the artefact comes back from its own call, `fromArtefact` adopts the stored projection **without replaying**, and the flow is reattached **by reference** — returning the re-derived position and node states, which is what T18 asks for. A model with no session is `{ kind: "none" }`, an answer rather than an error. |
 
 The payload shape is pinned against `.local/ModularThesis/prototypes/sk-node-workflow/integration/saveService.ts`, a verbatim extraction of the legacy `saveAreaData` — that extraction is the oracle `save/saveModel.test.ts` checks against. Two deliberate differences: the config is **never absent** (an unfinished flow sends `{}` rather than `undefined`, because Call A requires one and a half-built model should look unfinished), and the status comes from the flow (`incomplete` / `draft` / `modified`) instead of a fingerprint comparison.
 
@@ -79,8 +87,11 @@ the payload that saves the current model without sealing it — so a failed save
 session exactly as cancel would. T13 saves a session in two calls, A first: the legacy payload (whose
 shape is pinned against the extracted legacy `saveAreaData`), then the artefact through the isolated
 session API — with `incomplete` while the flow is unfinished and a failed second call reported rather
-than losing the model that was just created. Left: the http adapter that binds the gateway to the real
-services, the `model-load` module, the module catalog, and the UI as a thin binding.
+than losing the model that was just created. Its framing is closed: the adapter interface plus the real
+`httpGateway`, the `model-save` node, and the Loader that opens a session and reattaches the flow by
+reference. Left: adopting a legacy model's `config` into a builder session (the Loader's `none` case —
+deliberately undecided, it needs the inverse of the save payload mapping), the module catalog, and the
+UI shell as a thin binding.
 
 ## Commands
 
