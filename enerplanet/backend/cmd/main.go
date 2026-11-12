@@ -40,6 +40,7 @@ import (
 	"spatialhub_backend/internal/jobs"
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
+	modelsession "spatialhub_backend/internal/model/session"
 	opentechdb "spatialhub_backend/internal/opentechdb"
 	"spatialhub_backend/internal/pv"
 	resulthandler "spatialhub_backend/internal/result/handler"
@@ -48,6 +49,7 @@ import (
 	apitokenstore "spatialhub_backend/internal/store/apitoken"
 	feedbackstore "spatialhub_backend/internal/store/feedback"
 	modelstore "spatialhub_backend/internal/store/model"
+	modelsessionstore "spatialhub_backend/internal/store/modelsession"
 	pylovoinstance "spatialhub_backend/internal/store/pylovo_instance"
 	region "spatialhub_backend/internal/store/region"
 	seriesstore "spatialhub_backend/internal/store/series"
@@ -65,6 +67,7 @@ import (
 	platformconfig "platform.local/platform/config"
 	platformdatabase "platform.local/platform/database"
 	platformemail "platform.local/platform/email"
+	platformkeycloak "platform.local/platform/keycloak"
 	platformlogger "platform.local/platform/logger"
 	platformproxy "platform.local/platform/proxy"
 	platformsecurity "platform.local/platform/security"
@@ -163,7 +166,7 @@ func main() {
 	// process inside the running container.
 	if len(os.Args) > 1 && os.Args[1] == "--health-check" {
 		healthy := false
-		if resp, err := httpcheckclient.New(fmt.Sprintf("http://127.0.0.1:%s", cfg.AppPort), httpcheckclient.WithTimeout(5 * time.Second)).DoBytes(context.Background(), "GET", "/api/health", nil, nil); err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+		if resp, err := httpcheckclient.New(fmt.Sprintf("http://127.0.0.1:%s", cfg.AppPort), httpcheckclient.WithTimeout(5*time.Second)).DoBytes(context.Background(), "GET", "/api/health", nil, nil); err == nil && resp != nil && resp.StatusCode == http.StatusOK {
 			healthy = true
 		} else if err != nil {
 			log.Printf("health check probe error: %v", err)
@@ -711,6 +714,17 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	resultHandler := resulthandler.NewResultHandler(deps.DB, deps.NotificationService, deps.WebserviceClient, deps.Cfg.CallbackSecret, deps.AsynqClient)
 	registerModelRoutes(protectedAPI, modelHandler, resultHandler)
 
+	// The modular builder's session API. Its own store and its own routes; what it shares with the
+	// legacy model API is only the model lookup and the access rule (the same keycloak client the
+	// model handler builds, and the same service it consults), so the two cannot disagree about who
+	// may touch a model — while the session's format stays free to change on its own.
+	modelSessionHandler := modelsession.NewHandler(
+		deps.DB,
+		platformkeycloak.NewClient(deps.Cfg.Auth.BaseURL, deps.Cfg.Auth.Realm, deps.AdminTokenProvider),
+		modelsessionstore.NewStore(deps.DB),
+	)
+	registerModelSessionRoutes(protectedAPI, modelSessionHandler)
+
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
@@ -928,6 +942,14 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.POST(routeModelByID+"/run-meme-pypsa", modelHandler.StartMemePyPSACalculation)
 	api.GET("/results/:id", resultHandler.GetResult)
 	api.GET("/results/:id/layer", resultHandler.GetResultLayer)
+}
+
+// registerModelSessionRoutes wires the modular builder's session API. Kept as its own registration
+// so the isolation is explicit: these routes and their handler can change shape without touching a
+// legacy model route, and a legacy change cannot collide with them.
+func registerModelSessionRoutes(api *gin.RouterGroup, handler *modelsession.Handler) {
+	api.PUT(routeModelByID+"/session", handler.PutModelSession)
+	api.GET(routeModelByID+"/session", handler.GetModelSession)
 }
 
 func registerInternalModelLifecycleRoutes(api *gin.RouterGroup, handler *modelhandler.LifecycleHandler) {
