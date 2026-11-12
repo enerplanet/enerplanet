@@ -12,15 +12,29 @@ export type DiffOp =
   | { op: "replace"; path: string; prev: unknown; next: unknown }
   | { op: "remove"; path: string; prev: unknown };
 
+/** Why a transaction exists. */
+export type TransactionKind =
+  /** A change to the model, produced by running a module. */
+  | "action"
+  /** A position move inside the immutable flow (`Plan.md` §7) — the target's outputs are
+   *  pruned structurally, and everything it discarded rides in `cascade`. */
+  | "jump";
+
+/** Where a jump came from and where it went — node ids within the one immutable flow. */
+export interface JumpRef {
+  from: string;
+  to: string;
+}
+
 /**
  * One sealed action. `revision` is 1-based and monotonically increasing; the log is
  * append-only, so a revision identifies an entry for the lifetime of the session.
  */
 export interface Transaction {
   readonly revision: number;
-  /** The action's own diff. */
+  /** The action's own diff. Empty for a jump — moving the position changes no value. */
   readonly primary: readonly DiffOp[];
-  /** Downstream values the action invalidated (empty until the invalidator exists). */
+  /** Downstream values the action invalidated, or a jump discarded. */
   readonly cascade: readonly DiffOp[];
   /** Workflow node that produced it, when known. */
   readonly nodeId?: string;
@@ -31,6 +45,15 @@ export interface Transaction {
    * transactions it may skip when undoing (T14).
    */
   readonly auto?: boolean;
+  /**
+   * `"jump"` for a position move, `"action"` (or absent) for a change.
+   *
+   * A jump that prunes nothing is the one documented **zero-diff transaction**: the intent is
+   * itself what is being recorded, which is the deliberate exception to "a no-op seals nothing".
+   */
+  readonly kind?: TransactionKind;
+  /** Set with `kind: "jump"`. */
+  readonly jump?: JumpRef;
 }
 
 /** JSON-pointer path of a top-level port, e.g. `"/buildings"`. */

@@ -29,6 +29,12 @@ function rename(from: string, to: string): DiffOp {
 /** The name `seed()` starts with; T5 renames it repeatedly. */
 const INITIAL_NAME = "Contract fixture";
 
+// Constants for the values this file keeps quoting: jump node ids and two port paths.
+const BUILDINGS_PATH = "/buildings";
+const TRANSFORMERS_PATH = "/transformers";
+const NODE_GRID = "grid-generation";
+const NODE_SAVE = "model-save";
+
 // ── T4 ──────────────────────────────────────────────────────────────────────
 
 describe("T4 — undo restores pruned downstream edits exactly", () => {
@@ -38,8 +44,8 @@ describe("T4 — undo restores pruned downstream edits exactly", () => {
     const store = createStore(seed({ buildings: userEdited, transformers: priorTransformers }));
 
     const transaction = store.applyTransaction([COORDINATES_EDIT], [
-      { op: "remove", path: "/buildings", prev: userEdited },
-      { op: "remove", path: "/transformers", prev: priorTransformers },
+      { op: "remove", path: BUILDINGS_PATH, prev: userEdited },
+      { op: "remove", path: TRANSFORMERS_PATH, prev: priorTransformers },
     ]);
 
     expect(transaction.revision).toBe(1);
@@ -110,7 +116,7 @@ describe("T6 — redo recomputes the cascade instead of replaying it", () => {
     });
 
     store.applyTransaction([COORDINATES_EDIT], [
-      { op: "remove", path: "/buildings", prev: staleBuildings },
+      { op: "remove", path: BUILDINGS_PATH, prev: staleBuildings },
     ]);
     expect(store.data.buildings).toBeUndefined();
 
@@ -264,5 +270,78 @@ describe("T15 — undo alone never produces writes", () => {
     expect(store.log).toHaveLength(logLength); // undo wrote nothing…
     expect(autoRuns).toBe(1); // …and the auto module was never re-run
     expect(store.data.grids).toBeUndefined();
+  });
+});
+
+// ── T20a ────────────────────────────────────────────────────────────────────
+
+describe("T20a — a jump is a transaction, and it records what it discarded", () => {
+  const DISCARDED = fc([building("b1")]);
+  const discardsBuildings: DiffOp[] = [{ op: "remove", path: BUILDINGS_PATH, prev: DISCARDED }];
+
+  it("seals where it went and what it pruned into one entry", () => {
+    const store = createStore(seed({ buildings: DISCARDED, transformers: fc() }));
+
+    const jump = store.applyTransaction(
+      [],
+      [...discardsBuildings, { op: "remove", path: TRANSFORMERS_PATH, prev: fc() }],
+      { node: { id: "area-edit" }, kind: "jump", jump: { from: NODE_SAVE, to: "area-edit" } },
+    );
+
+    expect(jump.kind).toBe("jump");
+    expect(jump.jump).toEqual({ from: NODE_SAVE, to: "area-edit" });
+    expect(jump.nodeId).toBe("area-edit");
+    expect(jump.primary).toEqual([]); // a move changes no value of its own…
+    expect(jump.cascade).toHaveLength(2); // …but it does discard
+    expect(store.data.buildings).toBeUndefined();
+    expect(store.log).toHaveLength(1);
+  });
+
+  it("allows a jump that discards nothing — the one documented zero-diff transaction", () => {
+    const store = createStore(seed());
+
+    const jump = store.applyTransaction([], [], {
+      kind: "jump",
+      jump: { from: NODE_GRID, to: "model-start" },
+    });
+
+    expect(store.log).toHaveLength(1);
+    expect(jump.kind).toBe("jump");
+    expect(jump.jump).toEqual({ from: NODE_GRID, to: "model-start" });
+    expect(jump.primary).toEqual([]);
+    expect(jump.cascade).toEqual([]);
+  });
+
+  it("undoes like any other transaction — the discarded values come back", () => {
+    const store = createStore(seed({ buildings: DISCARDED }));
+    store.applyTransaction([], discardsBuildings, {
+      kind: "jump",
+      jump: { from: NODE_SAVE, to: NODE_GRID },
+    });
+    expect(store.data.buildings).toBeUndefined();
+
+    const report = store.undo();
+
+    expect(report?.transactions).toBe(1);
+    expect(store.data.buildings).toEqual(DISCARDED);
+    expect(store.cursor).toBe(0);
+  });
+
+  it("leaves an ordinary action unmarked", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+    const module = defineModule({
+      id: "plain-producer",
+      params: [{ port: "transformers" }],
+      affect: {},
+      layout: [],
+      run: (ctx) => ctx.commit({ transformers: fc() }),
+      validate: () => [],
+    });
+
+    await engine.runModule(module, { id: "plain-producer" });
+
+    expect(store.log[0].kind).toBeUndefined();
+    expect(store.log[0].jump).toBeUndefined();
   });
 });

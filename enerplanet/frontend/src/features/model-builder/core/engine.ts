@@ -59,7 +59,7 @@ export function createEngine(store: Store): Engine {
           );
         }
         pending = new Map();
-        if (primary.length > 0) sealed = store.applyTransaction(primary, [], node);
+        if (primary.length > 0) sealed = store.applyTransaction(primary, [], { node });
       };
 
       const ctx: ModuleCtx = {

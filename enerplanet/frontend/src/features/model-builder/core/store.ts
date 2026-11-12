@@ -13,7 +13,14 @@
  * primary diff and re-derives the cascade against the current projection.
  */
 
-import { applyDiffs, invertDiffs, type DiffOp, type Transaction } from "./diff";
+import {
+  applyDiffs,
+  invertDiffs,
+  type DiffOp,
+  type JumpRef,
+  type Transaction,
+  type TransactionKind,
+} from "./diff";
 import type { NodeRef } from "./module";
 import type { ModelData } from "./ports";
 
@@ -23,6 +30,16 @@ export interface UndoReport {
   transactions: number;
   /** Their nodes, in the order they were unwound (undo) or re-applied (redo). */
   nodeIds: string[];
+}
+
+/** Everything a seal carries beyond its diff. */
+export interface SealOptions {
+  /** The workflow node this transaction belongs to. */
+  node?: NodeRef;
+  /** `"jump"` marks a position move rather than a change. */
+  kind?: TransactionKind;
+  /** Set with `kind: "jump"` — where the session came from and where it went. */
+  jump?: JumpRef;
 }
 
 export interface StoreOptions {
@@ -47,15 +64,15 @@ export interface Store {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   /**
-   * Seal a transaction: abandon any redo tail, apply it to the projection, append it to
-   * the log, and move the cursor onto it.
+   * Seal a transaction: abandon any redo tail, apply it to the projection, append it to the
+   * log, and move the cursor onto it.
    *
    * This is the engine's write path — modules reach the store only through a `ModuleCtx`.
    */
   applyTransaction(
     primary: readonly DiffOp[],
     cascade?: readonly DiffOp[],
-    node?: NodeRef,
+    options?: SealOptions,
   ): Transaction;
   /**
    * Step back to the previous **interactive boundary** (T14): over the trailing step, and
@@ -95,7 +112,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       return cursor < log.length;
     },
 
-    applyTransaction(primary, cascade = [], node): Transaction {
+    applyTransaction(primary, cascade = [], options = {}): Transaction {
       // An action is only valid from the current revision: editing after an undo abandons
       // the redo tail. The dropped entries leave the log untouched — they simply stop
       // being part of it (`Plan.md` §4).
@@ -106,12 +123,15 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       if (primary.length > 0) data = applyDiffs(data, primary);
       if (cascade.length > 0) data = applyDiffs(data, cascade);
 
+      const { node, kind, jump } = options;
       const transaction: Transaction = Object.freeze({
         revision,
         primary: Object.freeze([...primary]),
         cascade: Object.freeze([...cascade]),
         ...(node === undefined ? {} : { nodeId: node.id }),
         ...(node?.auto === true ? { auto: true } : {}),
+        ...(kind === undefined ? {} : { kind }),
+        ...(jump === undefined ? {} : { jump: Object.freeze({ ...jump }) }),
       });
 
       log.push(transaction);
