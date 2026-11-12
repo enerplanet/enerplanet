@@ -47,9 +47,10 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `rerun.ts` | jump mechanics — the narrowed discard, the re-armed target, and the tail walk |
 | `artefact.ts` | what persists a session: the projection, the log, the cursor, and the fingerprint that keeps them honest |
 | `branch.ts` | "New Model" — full-duplex branching off the cursor, leaving the source untouched |
+| `prompt.ts` | the edit-while-behind decision: three outcomes, no fourth path, and the payload that saves without sealing |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
-Implemented so far, all green: **T1–T8, T10–T11, T14–T18, T20 and T21** (one sealed transaction
+Implemented so far, all green: **T1–T8, T10–T11, T14–T21** (one sealed transaction
 per action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
 exactly; the discard tail; redo re-derives the cascade; undo skips auto work and lands on the
 interactive boundary; undo alone never writes; per-commit vs at-completion sealing; the cascade
@@ -63,8 +64,11 @@ rest. T18 makes a session persistable: the artefact carries the projection, the 
 a fingerprint of the projection, so a load is instant (no replay) while undo and redo still work,
 and replay stays the recovery path rather than the load path. T17 branches a session full-duplex: a
 copy of the state at the cursor and of the log prefix, plus the pending edit as the branch's own
-first transaction, while the source keeps its log, cursor and redo tail exactly as they were. Not
-written yet: the prompt (T19) and the save node (T13).
+first transaction, while the source keeps its log, cursor and redo tail exactly as they were. T19
+resolves the edit-while-behind prompt with exactly three outcomes and no fourth path, and supplies
+the payload that saves the current model without sealing it — so a failed save or copy leaves the
+session exactly as cancel would. Left: the save node (T13), then the module catalog and the UI as a
+thin binding.
 
 ## Commands
 
