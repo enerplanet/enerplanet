@@ -52,6 +52,20 @@ export interface StoreOptions {
    * will then construct the store with the real implementation.
    */
   deriveCascade?: (primary: readonly DiffOp[], data: Readonly<ModelData>) => DiffOp[];
+  /**
+   * Open an existing session instead of a fresh one (T18): the projection at `cursor` together
+   * with the log it came from, taken on faith.
+   *
+   * This is the artefact's **fast path** — the projection is used as given, with no replay, which
+   * is what makes a load instant. The store does not check that the projection really is
+   * `replay(initial, log, cursor)`; that consistency is the artefact loader's job, and replaying
+   * here would defeat the point.
+   */
+  restore?: {
+    projection: ModelData;
+    log: readonly Transaction[];
+    cursor: number;
+  };
 }
 
 export interface Store {
@@ -89,9 +103,10 @@ export interface Store {
 
 export function createStore(initial: ModelData = {}, options: StoreOptions = {}): Store {
   const deriveCascade = options.deriveCascade ?? ((): DiffOp[] => []);
-  let data: ModelData = initial;
-  const log: Transaction[] = [];
-  let cursor = 0;
+  const restore = options.restore;
+  let data: ModelData = restore === undefined ? initial : restore.projection;
+  const log: Transaction[] = restore === undefined ? [] : [...restore.log];
+  let cursor = restore === undefined ? 0 : restore.cursor;
 
   return {
     get initial(): Readonly<ModelData> {

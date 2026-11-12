@@ -45,6 +45,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `replay.ts` | rebuild a projection from the log — the artefact's recovery path, and history's side of elision |
 | `position.ts` | the flow's derived state: `done` / `stale` / `pending`, and where the session sits in it |
 | `rerun.ts` | jump mechanics — the narrowed discard, the re-armed target, and the tail walk |
+| `artefact.ts` | what persists a session: the projection, the log, the cursor, and the fingerprint that keeps them honest |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
 Implemented so far, all green: **T1–T8, T10–T11, T14–T16, T20 and T21** (one sealed transaction
@@ -57,8 +58,10 @@ gate that refuses a node whose required ports are absent). T20 covers the jump t
 derived position and the re-run: a jump's discarded values ride in its own `cascade`, the session's
 position is read off `(projection, log, cursor)` rather than stored — so undo repositions the flow
 for free — and walking the tail re-runs only the nodes the jump actually invalidated, eliding the
-rest. Not written yet: the artefact (T18), branching + the prompt (T17/T19) and the save node
-(T13).
+rest. T18 makes a session persistable: the artefact carries the projection, the log, the cursor and
+a fingerprint of the projection, so a load is instant (no replay) while undo and redo still work,
+and replay stays the recovery path rather than the load path. Not written yet: branching + the
+prompt (T17/T19) and the save node (T13).
 
 ## Commands
 
