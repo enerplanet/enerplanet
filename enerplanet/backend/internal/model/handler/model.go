@@ -11,6 +11,7 @@ import (
 	"spatialhub_backend/internal/cache"
 	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/jobs"
+	backendmodels "spatialhub_backend/internal/models"
 	resultservice "spatialhub_backend/internal/result/service"
 	"spatialhub_backend/internal/store/demandprofile"
 	modelstore "spatialhub_backend/internal/store/model"
@@ -146,6 +147,11 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		ParentModelID *uint           `json:"parent_model_id"`
 		IsCopy        *bool           `json:"is_copy"`
 		IsActive      *bool           `json:"is_active"`
+		// Status is optional and narrow: the modular builder creates a model before its flow has
+		// finished (`incomplete`), everything else creates a `draft`. Only those two are accepted —
+		// a client does not get to invent a status, and the run paths are the ones that refuse an
+		// unfinished model.
+		Status *string `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -197,13 +203,24 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		return
 	}
 
+	createStatus := models.ModelStatusDraft
+	if req.Status != nil && *req.Status != "" {
+		switch *req.Status {
+		case models.ModelStatusDraft, backendmodels.ModelStatusIncomplete:
+			createStatus = *req.Status
+		default:
+			httputil.BadRequest(c, `status must be "`+models.ModelStatusDraft+`" or "`+backendmodels.ModelStatusIncomplete+`"`)
+			return
+		}
+	}
+
 	model := models.Model{
 		UserID:        userCtx.UserID,
 		UserEmail:     userCtx.Email,
 		WorkspaceID:   req.WorkspaceID,
 		Title:         req.Title,
 		Description:   req.Description,
-		Status:        models.ModelStatusDraft,
+		Status:        createStatus,
 		Region:        req.Region,
 		Country:       &resolvedCountry,
 		Resolution:    req.Resolution,
@@ -820,6 +837,8 @@ func (h *ModelHandler) StartCalculation(c *gin.Context) {
 			httputil.Conflict(c, "Model calculation already in progress")
 		case strings.Contains(msg, "country"):
 			httputil.BadRequest(c, msg)
+		case strings.Contains(msg, "incomplete"):
+			httputil.BadRequest(c, "This model is still being built and cannot be run yet")
 		case strings.Contains(msg, "webservice"):
 			httputil.BadGateway(c, "Calculation webservice error")
 		default:
@@ -866,6 +885,8 @@ func (h *ModelHandler) StartMemeCalculation(c *gin.Context) {
 			httputil.Conflict(c, "Model calculation already in progress")
 		case strings.Contains(msg, "country"):
 			httputil.BadRequest(c, msg)
+		case strings.Contains(msg, "incomplete"):
+			httputil.BadRequest(c, "This model is still being built and cannot be run yet")
 		default:
 			httputil.InternalError(c, "Failed to start calculation")
 		}
@@ -902,6 +923,8 @@ func (h *ModelHandler) StartMemePyPSACalculation(c *gin.Context) {
 			httputil.BadRequest(c, msg)
 		case strings.Contains(msg, "country"):
 			httputil.BadRequest(c, msg)
+		case strings.Contains(msg, "incomplete"):
+			httputil.BadRequest(c, "This model is still being built and cannot be run yet")
 		default:
 			httputil.InternalError(c, "Failed to start calculation")
 		}
