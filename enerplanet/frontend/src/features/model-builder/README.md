@@ -50,6 +50,15 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `prompt.ts` | the edit-while-behind decision: three outcomes, no fourth path, and the payload that saves without sealing |
 | `errors.ts` | `PortWriteRejected` (`undeclared` / `clobber`) and `MissingRequiredPorts` |
 
+## `save/` — the backend seam and the save node
+
+| file | what it holds |
+|---|---|
+| `gateway.ts` | the adapter interface this feature owns. **Call A** (`createModel` / `updateModel`) is the legacy payload; **Call B** (`saveSession` / `loadSession`) is the session artefact. The legacy side-effects of a create — finalising draft transformers, claiming the draft's series — live behind `createModel`, so the save logic never grows a legacy special case. |
+| `saveModel.ts` | the two-call save (T13): the legacy payload built from the ports, the flow-derived status, and a partial save reported rather than thrown away. |
+
+The payload shape is pinned against `.local/ModularThesis/prototypes/sk-node-workflow/integration/saveService.ts`, a verbatim extraction of the legacy `saveAreaData` — that extraction is the oracle `save/saveModel.test.ts` checks against. Two deliberate differences: the config is **never absent** (an unfinished flow sends `{}` rather than `undefined`, because Call A requires one and a half-built model should look unfinished), and the status comes from the flow (`incomplete` / `draft` / `modified`) instead of a fingerprint comparison.
+
 Implemented so far, all green: **T1–T8, T10–T11, T14–T21** (one sealed transaction
 per action; undeclared-port writes rejected; anti-clobber; undo restores pruned downstream edits
 exactly; the discard tail; redo re-derives the cascade; undo skips auto work and lands on the
@@ -67,8 +76,11 @@ copy of the state at the cursor and of the log prefix, plus the pending edit as 
 first transaction, while the source keeps its log, cursor and redo tail exactly as they were. T19
 resolves the edit-while-behind prompt with exactly three outcomes and no fourth path, and supplies
 the payload that saves the current model without sealing it — so a failed save or copy leaves the
-session exactly as cancel would. Left: the save node (T13), then the module catalog and the UI as a
-thin binding.
+session exactly as cancel would. T13 saves a session in two calls, A first: the legacy payload (whose
+shape is pinned against the extracted legacy `saveAreaData`), then the artefact through the isolated
+session API — with `incomplete` while the flow is unfinished and a failed second call reported rather
+than losing the model that was just created. Left: the http adapter that binds the gateway to the real
+services, the `model-load` module, the module catalog, and the UI as a thin binding.
 
 ## Commands
 
