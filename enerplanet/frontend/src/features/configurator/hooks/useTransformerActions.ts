@@ -64,7 +64,7 @@ export const useTransformerActions = ({
         await refreshGrid();
       } catch (error: any) {
         console.error("Failed to delete transformer:", error);
-        notification.showError(error?.message || "Failed to delete transformer");
+        notification.showError(error?.response?.data?.error || error?.message || "Failed to delete transformer");
       }
     },
     [notification, refreshGrid, previewSiteStation, userId, existingModelId, draftId]

@@ -364,7 +364,9 @@ export const useMoveTransformerMode = ({
         }
       } catch (error) {
         console.error("Failed to move transformer:", error);
-        notificationRef.current.showError(tRef.current("transformer.movingFailed"));
+        notificationRef.current.showError(
+          (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? tRef.current("transformer.movingFailed")
+        );
       } finally {
         setActiveMode(null);
         setTransformerToMove(null);
