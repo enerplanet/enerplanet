@@ -127,6 +127,8 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     const results = new Map<number, any>();
     try {
       for (const gid of Array.from(gridResultIds)) {
+        // A station added since generation is shown under a negative placeholder id and has no grid until the site is regenerated.
+        if (gid <= 0) continue;
         try { const r = await pylovoService.runPowerFlow(gid, loadScaling, buildingsByGrid.get(gid), siteScope(pylovoGridData)); if (r.converged || (r.results?.lines?.length ?? 0) > 0) results.set(gid, r); } catch { /* skip */ }
       }
       setPowerFlowResults(results);
