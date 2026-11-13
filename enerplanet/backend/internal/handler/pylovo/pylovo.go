@@ -33,8 +33,7 @@ import (
 type RegionCacheStore interface {
 	GetAllCachedRegions() ([]models.CachedRegion, error)
 	GetEnabledCachedRegions() ([]models.CachedRegion, error)
-	UpsertRegionsFromAPI(responseBody []byte) error
-	ApplyCoverage(footprints map[string][]json.RawMessage) error
+	RefreshRegions(responseBody []byte, footprints map[string][]json.RawMessage) error
 	DeleteCachedRegion(id uint) error
 	ToggleCachedRegion(id uint, enabled bool) error
 }
@@ -717,21 +716,17 @@ func (h *PylovoHandler) refreshRegionCache() {
 	h.cacheRegions(ctx, body)
 }
 
-// cacheRegions stores PyLovo's /boundary/available response and marks the
-// regions that overlap City2TABULA's 3D datasets.
+// cacheRegions stores PyLovo's /boundary/available response with the regions
+// that overlap City2TABULA's 3D datasets marked. Without the footprints it
+// keeps the cache as it is: storing the regions alone clears every 3D mark.
 func (h *PylovoHandler) cacheRegions(ctx context.Context, body []byte) {
-	if err := h.regionStore.UpsertRegionsFromAPI(body); err != nil {
-		logger.Logger.Warnf("Failed to update region cache: %v", err)
-		return
-	}
-
 	footprints, err := h.c2t.DatasetFootprints(ctx)
 	if err != nil {
-		logger.Logger.Warnf("Region cache: 3D footprints unavailable, coverage not applied: %v", err)
+		logger.Logger.Warnf("Region cache not refreshed, 3D footprints unavailable: %v", err)
 		return
 	}
-	if err := h.regionStore.ApplyCoverage(footprints); err != nil {
-		logger.Logger.Warnf("Failed to apply 3D coverage to region cache: %v", err)
+	if err := h.regionStore.RefreshRegions(body, footprints); err != nil {
+		logger.Logger.Warnf("Failed to refresh region cache: %v", err)
 	}
 }
 
