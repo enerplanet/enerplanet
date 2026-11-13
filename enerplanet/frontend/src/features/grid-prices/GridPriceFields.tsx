@@ -1,18 +1,24 @@
-import type { FC } from "react";
+import { useMemo, type FC } from "react";
 import { RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@spatialhub/i18n";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { useModelStore, type ElectricityPrices } from "@/features/configurator/store/modelStore";
 import { FALLBACK_COUNTRY, defaultFor, fetchGridPrices, gridPriceError, countryPrices, type GridPrice } from "./api";
+import { countryAt, gridCentre } from "./regionCountry";
 
 const INPUT_CLASS = "w-20 px-2 py-1 text-sm text-right bg-card border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 
-/** The country the model's region lies in, once the region boundary is known. */
+/**
+ * The country the model's grid lies in: from the listed regions' bounding boxes, else
+ * from the region boundary, which depends on an outside geocoding service.
+ */
 function useRegionCountry(): string | undefined {
   const regionName = useModelStore((s) => s.regionBoundary?.name);
   const regions = useModelStore((s) => s.availableRegions);
-  return regions.find((r) => r.name === regionName)?.country;
+  const buildings = useModelStore((s) => s.pylovoGridData?.buildings);
+  const centre = useMemo(() => gridCentre(buildings), [buildings]);
+  return (centre && countryAt(regions, centre)) ?? regions.find((r) => r.name === regionName)?.country;
 }
 
 /**
