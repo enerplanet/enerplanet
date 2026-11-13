@@ -1,0 +1,98 @@
+# Data the production heat stack must hold. Models are built on these regions,
+# so a redeploy or a regeneration that drops one breaks them.
+# scripts/check-regions.py checks a running stack against this file; see
+# scripts/deploy-heat-stack.md#check.
+
+# PyLovo regions: postcode -> grid count of the package that was loaded.
+# A deploy fails when a postcode is missing or its state holds fewer grids
+# than its entries add up to.
+pylovo:
+  - name: Bremen (fixture)
+    country: DE
+    state: bremen
+    grids: {"28215": 40, "28217": 6, "28219": 14}
+  - name: Köln centre (test data)
+    country: DE
+    state: nordrhein_westfalen
+    grids: {"50674": 55, "50676": 91, "50677": 46, "50678": 74, "50931": 117, "50937": 83, "50939": 43, "50968": 137, "50969": 75}
+  - name: Deggendorf and Plattling (test data)
+    country: DE
+    state: bayern
+    grids: {"94447": 155, "94469": 342}
+  - name: Mönchweiler (test data)
+    country: DE
+    state: baden_wuerttemberg
+    grids: {"78087": 22}
+  - name: Loenen
+    country: NL
+    state: gelderland
+    grids: {"7371": 44}
+  - name: Klarenbeek
+    country: NL
+    state: gelderland
+    grids: {"7381": 40, "7382": 46}
+  - name: Heeten
+    country: NL
+    state: overijssel
+    grids: {"8111": 30}
+  - name: Köln A
+    country: DE
+    state: nordrhein_westfalen
+    grids: {"50667": 77, "50672": 32, "50735": 183, "50765": 83, "50823": 83, "50829": 118, "50933": 74, "50997": 124, "51063": 105, "51069": 79, "51107": 76, "51145": 64}
+  - name: Köln B
+    country: DE
+    state: nordrhein_westfalen
+    grids: {"50668": 50, "50679": 111, "50737": 72, "50767": 39, "50825": 90, "50858": 93, "50935": 41, "50999": 45, "51065": 66, "51103": 102, "51109": 89, "51147": 126}
+  - name: Köln C
+    country: DE
+    state: nordrhein_westfalen
+    grids: {"50670": 60, "50733": 86, "50739": 76, "50769": 123, "50827": 87, "50859": 69, "50996": 45, "51061": 101, "51067": 81, "51105": 107, "51143": 64, "51149": 107}
+  - name: Landshut
+    country: DE
+    state: bayern
+    grids: {"84028": 71, "84030": 144, "84032": 96, "84034": 113, "84036": 140}
+  - name: Passau
+    country: DE
+    state: bayern
+    grids: {"94032": 118, "94034": 105, "94036": 127}
+  - name: Regensburg
+    country: DE
+    state: bayern
+    grids: {"93047": 87, "93049": 128, "93051": 92, "93053": 189, "93055": 290, "93057": 94, "93059": 111}
+  - name: Wien A
+    country: AT
+    state: wien
+    grids: {"1020": 412, "1030": 424, "1040": 128, "1050": 147, "1060": 108, "1100": 597, "1120": 291}
+  - name: Wien B
+    country: AT
+    state: wien
+    grids: {"1110": 524, "1130": 248, "1140": 355, "1150": 209, "1160": 294, "1170": 191, "1180": 186, "1190": 324}
+  - name: Wien C
+    country: AT
+    state: wien
+    grids: {"1200": 214, "1210": 673, "1220": 890, "1230": 627}
+  - name: Wien D
+    country: AT
+    state: wien
+    grids: {"1010": 195, "1070": 127, "1080": 87, "1090": 200}
+  - name: Brno 60200 (fixture)
+    country: CZ
+    state: jihomoravsky
+    grids: {"60200": 33}
+
+# City2TABULA dataset ids, as GET /api/v1/datasets lists them.
+3d:
+  - nl-3dbag-lod2
+  - de-bavaria-lod2
+  - de-nrw-lod2
+  - de-bw-lod2
+  - de-bremen-lod2
+  - at-vienna-lod2
+  - cz-brno-lod2
+
+# Weather archives, queried at the centre of every PyLovo state above.
+# Each entry is the query weather-serve's /v1/weather/point takes: provider
+# plus year or scenario.
+weather:
+  - {provider: merra-2, scenario: p50}
+  - {provider: cosmo-rea6, year: 2018}
