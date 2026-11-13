@@ -412,15 +412,16 @@ func (h *PylovoHandler) forwardToPylovo(c *gin.Context, method string, path stri
 		return
 	}
 
+	if status >= http.StatusBadRequest {
+		logger.Logger.Errorf("Pylovo (%s %s) responded with status %d: %s", method, path, status, string(body))
+		forwardPylovoError(c, status, body)
+		return
+	}
+
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Logger.Warnf("Failed to parse JSON response: %s", string(body))
 		httputil.InternalError(c, "Failed to parse response from Pylovo service")
-		return
-	}
-
-	if status >= http.StatusBadRequest {
-		forwardPylovoError(c, status, body)
 		return
 	}
 
