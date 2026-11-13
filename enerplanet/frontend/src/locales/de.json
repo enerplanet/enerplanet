@@ -2851,7 +2851,9 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Transformatoren können nur innerhalb des ausgewählten Gebiets platziert werden",
-    "onlyNearPolygon": "Transformatoren können bis zu 200 m außerhalb des ausgewählten Gebiets platziert werden"
+    "onlyNearPolygon": "Transformatoren können bis zu 200 m außerhalb des ausgewählten Gebiets platziert werden",
+    "movingSuccess": "Transformator erfolgreich verschoben",
+    "movingFailed": "Transformator konnte nicht verschoben werden"
   },
   "buildingConfig": {
     "backToMap": "Zurück zur Karte",

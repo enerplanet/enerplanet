@@ -1703,7 +1703,11 @@
       },
       "fieldNeeded": "La simulación necesita aquí un tamaño finito",
       "moreFieldsNeeded": "Campos que necesitan un tamaño: {{count}}",
-      "examples": "Responde a preguntas como:"
+      "examples": "Responde a preguntas como:",
+      "planQuestion1": "¿Qué tamaño deben tener los paneles solares y las baterías colocados para el menor coste total?",
+      "planQuestion2": "Donde un edificio tiene más de una opción de calefacción, ¿cuánto calor debe aportar cada una?",
+      "operateQuestion1": "¿Cuánto cuesta un año con los sistemas tal como se han introducido?",
+      "operateQuestion2": "¿Cuánta electricidad siguen comprando los edificios a la red con estos sistemas?"
     },
     "siteMode": {
       "label": "Red personalizada",
@@ -2848,7 +2852,9 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Los transformadores solo se pueden colocar dentro del área seleccionada",
-    "onlyNearPolygon": "Los transformadores se pueden colocar hasta 200 m fuera del área seleccionada"
+    "onlyNearPolygon": "Los transformadores se pueden colocar hasta 200 m fuera del área seleccionada",
+    "movingSuccess": "Transformador movido exitosamente",
+    "movingFailed": "Error al mover el transformador"
   },
   "buildingConfig": {
     "backToMap": "Volver al mapa",

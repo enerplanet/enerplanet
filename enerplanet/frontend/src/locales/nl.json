@@ -1442,7 +1442,11 @@
       },
       "fieldNeeded": "De simulatie heeft hier een eindige grootte nodig",
       "moreFieldsNeeded": "Velden die een grootte nodig hebben: {{count}}",
-      "examples": "Beantwoordt vragen zoals:"
+      "examples": "Beantwoordt vragen zoals:",
+      "planQuestion1": "Hoe groot moeten de geplaatste zonnepanelen en batterijen zijn voor de laagste totale kosten?",
+      "planQuestion2": "Hoeveel warmte moet elke verwarmingsoptie leveren waar een gebouw er meer dan één heeft?",
+      "operateQuestion1": "Wat kost een jaar met de systemen zoals ingevoerd?",
+      "operateQuestion2": "Hoeveel elektriciteit kopen de gebouwen met deze systemen nog van het net?"
     },
     "siteMode": {
       "label": "Eigen net",
@@ -2847,7 +2851,9 @@
   },
   "transformer": {
     "onlyInsidePolygon": "Transformatoren kunnen alleen binnen het geselecteerde gebied worden geplaatst",
-    "onlyNearPolygon": "Transformatoren kunnen tot 200 m buiten het geselecteerde gebied worden geplaatst"
+    "onlyNearPolygon": "Transformatoren kunnen tot 200 m buiten het geselecteerde gebied worden geplaatst",
+    "movingSuccess": "Transformator succesvol verplaatst",
+    "movingFailed": "Verplaatsen transformator mislukt"
   },
   "buildingConfig": {
     "backToMap": "Terug naar de kaart",
