@@ -1,65 +1,46 @@
-import type { FC } from "react";
+import { useMemo, type FC } from "react";
 import { RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "@spatialhub/i18n";
 import { TextInfoIcon } from "@/components/ui/InfoTooltip";
 import { useModelStore, type ElectricityPrices } from "@/features/configurator/store/modelStore";
-import { FALLBACK_COUNTRY, defaultFor, fetchGridPrices, gridPriceError, countryPrices, type GridPrice } from "./api";
+import { FALLBACK_COUNTRY, defaultFor, fetchGridPrices, gridPriceError } from "./api";
+import { countryAt, gridCentre } from "./regionCountry";
 
 const INPUT_CLASS = "w-20 px-2 py-1 text-sm text-right bg-card border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 
-/** The country the model's region lies in, once the region boundary is known. */
+/**
+ * The country the model's grid lies in: from the listed regions' bounding boxes, else
+ * from the region boundary, which depends on an outside geocoding service.
+ */
 function useRegionCountry(): string | undefined {
   const regionName = useModelStore((s) => s.regionBoundary?.name);
   const regions = useModelStore((s) => s.availableRegions);
-  return regions.find((r) => r.name === regionName)?.country;
+  const buildings = useModelStore((s) => s.pylovoGridData?.buildings);
+  const centre = useMemo(() => gridCentre(buildings), [buildings]);
+  return (centre && countryAt(regions, centre)) ?? regions.find((r) => r.name === regionName)?.country;
 }
 
 /**
- * Each country's own defaults and their sources; the hint below the fields names the
- * fallback when it applies. Mounted on open, so it refreshes the fields' copy.
+ * What the two prices mean, and the default of the grid's country with its source once
+ * the country is known. Mounted on open, so it refreshes the fields' copy.
  */
 const GridPriceDefaults: FC<{ country: string | undefined }> = ({ country }) => {
   const { t } = useTranslation();
   const { data: defaults = [] } = useQuery({ queryKey: ["grid-prices"], queryFn: fetchGridPrices, staleTime: 0 });
-  const own = country ? defaultFor(defaults, country)?.country : undefined;
-  const rows = countryPrices(defaults);
-  const name = (row: GridPrice) => row.country.replace(/_/g, " ");
+  const def = country ? defaultFor(defaults, country) : undefined;
   return (
     <>
       <p>{t("gridPrices.modelHint")}</p>
-      {rows.length > 0 && (
-        <table className="mt-2 w-full text-left">
-          <thead>
-            <tr>
-              <th className="pr-2 font-medium">{t("gridPrices.country")}</th>
-              <th className="pr-2 text-right font-medium">{t("gridPrices.purchase")}</th>
-              <th className="text-right font-medium">{t("gridPrices.feedIn")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.country} className={row.country === own ? "font-semibold text-gray-900 dark:text-gray-100" : undefined}>
-                <td className="pr-2 capitalize">{name(row)}</td>
-                <td className="pr-2 text-right tabular-nums">{row.import_ct_per_kwh}</td>
-                <td className="text-right tabular-nums">{row.export_ct_per_kwh}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {rows.some((row) => row.source) && (
-        <>
-          <p className="mt-2 font-medium">{t("gridPrices.sources")}</p>
-          <ul className="space-y-1.5">
-            {rows.filter((row) => row.source).map((row) => (
-              <li key={row.country}>
-                <p className="capitalize font-medium text-gray-900 dark:text-gray-100">{name(row)}</p>
-                <p className="whitespace-pre-line">{row.source}</p>
-              </li>
-            ))}
-          </ul>
-        </>
+      {def && (
+        <div className="mt-2 space-y-0.5">
+          <p className="font-medium capitalize text-gray-900 dark:text-gray-100">
+            {def.country === FALLBACK_COUNTRY ? t("gridPrices.otherCountries") : def.country.replace(/_/g, " ")}
+          </p>
+          <p>{t("gridPrices.purchase")}: <span className="tabular-nums">{def.import_ct_per_kwh}</span> ct/kWh</p>
+          <p>{t("gridPrices.feedIn")}: <span className="tabular-nums">{def.export_ct_per_kwh}</span> ct/kWh</p>
+          {def.source && <p className="mt-1 whitespace-pre-line">{def.source}</p>}
+        </div>
       )}
     </>
   );
@@ -116,15 +97,7 @@ export const GridPriceFields: FC = () => {
       </div>
       {field("import_ct_per_kwh", t("gridPrices.purchase"), def?.import_ct_per_kwh)}
       {field("export_ct_per_kwh", t("gridPrices.feedIn"), def?.export_ct_per_kwh)}
-      <p className="text-xs text-muted-foreground">
-        {def
-          ? t(def.country === FALLBACK_COUNTRY ? "gridPrices.fallbackDefault" : "gridPrices.countryDefault", {
-              country: country ?? "",
-              import: def.import_ct_per_kwh,
-              export: def.export_ct_per_kwh,
-            }) + (def.source ? ` ${t("gridPrices.sourceLabel", { source: def.source })}` : "")
-          : t("gridPrices.defaultUnknown")}
-      </p>
+      {!def && <p className="text-xs text-muted-foreground">{t("gridPrices.defaultUnknown")}</p>}
       {errorKey && <p className="text-xs text-red-600 dark:text-red-400">{t(errorKey)}</p>}
     </div>
   );

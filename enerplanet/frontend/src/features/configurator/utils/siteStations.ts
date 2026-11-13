@@ -30,18 +30,24 @@ const positionKey = (coordinates: number[]): string => coordinates.map(c => c.to
  * buildings are left without one.
  */
 export const stationsFromGrid = (stored: SiteStation[], grid: PylovoGridData, editedSinceGeneration = false): Map<string, SiteStation> => {
+    const features = grid.transformers?.features ?? [];
     const byId = new Map(stored.map(s => [s.transformer_id, s]));
     // A generated station an earlier edit already stored, before the site was
-    // regenerated, is found by its position, so it is not stored twice.
-    const byPosition = new Map(stored.map(s => [positionKey(s.geom.coordinates), s]));
+    // regenerated, is found by its position, so it is not stored twice. A stored
+    // station the grid links by id is left out: a regeneration can place a new
+    // station on the same spot, and pylovo rejects a station sent twice.
+    const linked = new Set(features.map(f => f.properties?.site_transformer_id as number | null));
+    const byPosition = new Map(stored.filter(s => !linked.has(s.transformer_id)).map(s => [positionKey(s.geom.coordinates), s]));
     const stations = new Map<string, SiteStation>();
-    for (const feature of grid.transformers?.features ?? []) {
+    for (const feature of features) {
         const props = (feature.properties ?? {}) as Record<string, unknown>;
         const position = positionKey((feature.geometry as unknown as GeoJSON.Point).coordinates ?? []);
-        const storedStation = byId.get(props.site_transformer_id as number)
-            ?? (props.site_transformer_id == null ? byPosition.get(position) : undefined);
+        const storedStation = props.site_transformer_id != null
+            ? byId.get(props.site_transformer_id as number)
+            : byPosition.get(position);
         if (storedStation) {
             byId.delete(storedStation.transformer_id);
+            byPosition.delete(positionKey(storedStation.geom.coordinates));
             stations.set(String(props.grid_result_id), { ...storedStation, assigned_building_ids: [...storedStation.assigned_building_ids] });
             continue;
         }

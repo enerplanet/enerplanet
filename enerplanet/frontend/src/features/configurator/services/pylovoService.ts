@@ -499,33 +499,6 @@ export const pylovoService = {
         return response.data?.data?.jobs || [];
     },
 
-    getBoundary: async (lat: number, lon: number, adminLevel: number = 4): Promise<{
-        status: string;
-        region?: {
-            name: string;
-            admin_level: number;
-            country?: string;
-            country_code?: string;
-            osm_id?: number;
-        };
-        boundary?: GeoJSON.Feature;
-        message?: string;
-    }> => {
-        const response = await axios.get<{ data: {
-            status: string;
-            region?: {
-                name: string;
-                admin_level: number;
-                country?: string;
-                country_code?: string;
-                osm_id?: number;
-            };
-            boundary?: GeoJSON.Feature;
-            message?: string;
-        } }>(`/v1/pylovo/boundary?lat=${lat}&lon=${lon}&admin_level=${adminLevel}`);
-        return response.data?.data || { status: 'error', message: 'No response' };
-    },
-
     getSupportedRegions: async (): Promise<{
         regions: Record<string, {
             name: string;

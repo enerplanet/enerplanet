@@ -61,6 +61,26 @@ func TestForwardToPylovo_pylovoTimeoutIsAServerError(t *testing.T) {
 
 // Custom locations are private to their owner, so a grid request never asks
 // pylovo for other users' public buildings, whatever the client sends.
+// pylovo answers an unhandled exception with a plain-text 500, which is an
+// upstream failure to report as such, not a malformed success.
+func TestForwardToPylovo_plainTextErrorReportsStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	pylovo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}))
+	defer pylovo.Close()
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/pylovo/power-flow", nil)
+
+	NewPylovoHandler(pylovo.URL, nil, nil, nil).forwardToPylovo(c, http.MethodPost, "/power-flow", []byte(`{}`))
+
+	if !strings.Contains(rec.Body.String(), "Pylovo service responded with 500") {
+		t.Fatalf("body = %s, want the upstream status reported", rec.Body.String())
+	}
+}
+
 func TestCopyBuildingFilterOptions_dropsPublicBuildings(t *testing.T) {
 	src := map[string]interface{}{
 		"include_public_buildings":  true,

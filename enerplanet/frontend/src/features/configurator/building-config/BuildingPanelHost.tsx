@@ -235,6 +235,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   );
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
   const [pickingTech, setPickingTech] = useState(false);
+  // Adding PV swaps the view for a loading notice, so the view mounts again and must reopen on Technologies.
+  const [techAdded, setTechAdded] = useState(false);
   const openTechPicker = useCallback(() => setPickingTech(true), []);
   const { technologies } = useBuildingTechnologies(techs, storeTechs, onAddTech ? openTechPicker : undefined);
   // The host does not render again when PV is removed, so the view stops showing it here until PV is added again.
@@ -295,7 +297,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
         attribution={credits.length > 0 ? <Credits credits={credits} /> : undefined}
         pv={pvMode.pv}
         technologies={technologies}
-        defaultTab={forPv ? 'technologies' : undefined}
+        defaultTab={forPv || techAdded ? 'technologies' : undefined}
         mode={mode}
         onModeChange={setMode}
         language={i18n.language}
@@ -314,6 +316,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
               onPick={(tech) => {
                 setPickingTech(false);
                 setPvRemoved(false);
+                setTechAdded(true);
                 onAddTech?.(osmId, tech);
               }}
             />

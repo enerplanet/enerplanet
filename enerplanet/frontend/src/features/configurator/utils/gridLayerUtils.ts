@@ -319,11 +319,9 @@ export const loadBoundaryLayer = (
   regionName?: string
 ): VectorLayer<VectorSource> => {
   // Remove existing boundary layer
-  map.getLayers().forEach((layer) => {
-    if (layer.get('name') === 'boundary') {
-      map.removeLayer(layer);
-    }
-  });
+  map.getLayers().getArray()
+    .filter(layer => layer.get('name') === 'boundary')
+    .forEach(layer => map.removeLayer(layer));
 
   const geojsonFormat = new GeoJSON();
   const dataProjection = getDataProjection({ features: [boundaryFeature] });
