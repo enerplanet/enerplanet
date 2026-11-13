@@ -11,6 +11,7 @@ import { getCenter } from "ol/extent";
 import { withStationAt } from "@/features/configurator/utils/siteStations";
 import { pylovoService, siteScope } from "@/features/configurator/services/pylovoService";
 import { useAvailableRegions } from "@/features/configurator/hooks/useAvailableRegions";
+import { regionAt } from "@/features/configurator/utils/regionAt";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 import { toFiniteNumber } from "@/features/configurator/utils/parsing";
@@ -83,25 +84,24 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     return () => { availableBoundaryLayersRef.current.forEach(layer => map.removeLayer(layer)); availableBoundaryLayersRef.current = []; };
   }, [map, showBoundary, regionsResponse]);
 
-  const fetchBoundaryForGrid = useCallback(async (buildings: GeoJSON.FeatureCollection) => {
-    if (!map || !showBoundary) return;
+  // The region the grid lies in, taken from the region list rather than a geocoder.
+  const gridBuildings = pylovoGridData?.buildings;
+  useEffect(() => {
+    if (!map || !showBoundary || !regionsResponse || !gridBuildings?.features?.length) return;
     const coords: [number, number][] = [];
-    buildings.features.forEach(feature => {
+    (gridBuildings as GeoJSON.FeatureCollection).features.forEach(feature => {
       if (feature.geometry.type === 'Point') coords.push(feature.geometry.coordinates as [number, number]);
       else if (feature.geometry.type === 'Polygon' && feature.geometry.coordinates[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0] as [number, number]);
       else if (feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates[0]?.[0]?.length > 0) coords.push(feature.geometry.coordinates[0][0][0] as [number, number]);
     });
     if (coords.length === 0) return;
-    const centroidLon = coords.reduce((s, c) => s + c[0], 0) / coords.length;
-    const centroidLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-    try {
-      const br = await pylovoService.getBoundary(centroidLat, centroidLon, 4);
-      if (br.status === 'success' && br.boundary && br.region) {
-        setRegionBoundary({ name: br.region.name, boundary: br.boundary });
-        if (map) boundaryLayerRef.current = loadBoundaryLayer(map, br.boundary, br.region.name);
-      }
-    } catch { /* non-critical */ }
-  }, [map, showBoundary]);
+    const mean: [number, number] = [coords.reduce((s, c) => s + c[0], 0) / coords.length, coords.reduce((s, c) => s + c[1], 0) / coords.length];
+    const centre = getDataProjection(gridBuildings) === 'EPSG:3857' ? toLonLat(mean) as [number, number] : mean;
+    const found = regionAt(regionsResponse.regions, centre);
+    if (!found?.region || !found.boundary) return;
+    setRegionBoundary({ name: found.region.name, boundary: found.boundary });
+    boundaryLayerRef.current = loadBoundaryLayer(map, found.boundary, found.region.name);
+  }, [map, showBoundary, regionsResponse, gridBuildings]);
 
   const createPylovoLayer = useCallback((geojson: any, featureType: string, zIndex: number, styleFunc: (f: Feature<Geometry>) => void, colorMap?: Map<number, number>) => {
     if (!map || !geojson?.features?.length) return null;
@@ -189,7 +189,6 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       feats.forEach((f: Feature<Geometry>) => { f.set('feature_type', 'transformer'); setFeatureColorIndex(f, colorMap); }); src.addFeatures(feats);
       createTransformerLayers(src).forEach(layer => { map.addLayer(layer); pylovoLayersRef.current.push(layer); });
     }
-    if (showBoundary && nd.buildings?.features?.length) fetchBoundaryForGrid(nd.buildings as GeoJSON.FeatureCollection);
 
     // One-time "how to add heat techs" prompt after a new model's first grid.
     // Not in edit mode: the prompted flag is not persisted, so it would reopen
@@ -198,7 +197,7 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
     if (!editMode && (nd.buildings?.features?.length ?? 0) > 0 && !storeState.heatBootstrapPrompted) {
       storeState.setHeatBootstrapOpen(true);
     }
-  }, [map, editMode, showBoundary, fetchBoundaryForGrid, createPylovoLayer]);
+  }, [map, editMode, showBoundary, createPylovoLayer]);
 
   // Auto-run power flow debounce
   const lastGridDataRef = useRef(''); const pendingGridDataRef = useRef(''); const pfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
