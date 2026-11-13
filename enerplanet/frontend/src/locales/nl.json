@@ -2903,9 +2903,6 @@
     "resetToDefault": "Landstandaard gebruiken",
     "modelTitle": "Netstroomprijzen",
     "modelHint": "Wat dit model betaalt voor stroom van het net en ontvangt voor teruggeleverd overschot, in ct/kWh. Laat een veld leeg voor de landstandaard.",
-    "countryDefault": "Standaard voor {{country}}: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
-    "fallbackDefault": "Geen standaard voor {{country}}; de standaard voor andere landen geldt: {{import}} ct/kWh afname, {{export}} ct/kWh teruglevering.",
-    "sourceLabel": "Bron: {{source}}",
     "defaultUnknown": "De landstandaard geldt zodra de regio bekend is.",
     "usedInRun": "Netstroom in deze run: afgenomen tegen {{import}} ct/kWh, teruggeleverd tegen {{export}} ct/kWh.",
     "compared": "Netstroomprijzen: basis {{baseline}}, vergelijking {{comparison}}.",
@@ -2915,8 +2912,7 @@
       "importPositive": "De afnameprijs moet boven 0 liggen.",
       "exportNegative": "De terugleververgoeding mag niet negatief zijn.",
       "exportAboveImport": "De terugleververgoeding mag niet boven de afnameprijs liggen."
-    },
-    "sources": "Bronnen"
+    }
   },
   "apiTokens": {
     "create": "Nieuw token aanmaken",

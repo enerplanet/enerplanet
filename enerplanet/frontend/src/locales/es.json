@@ -2904,9 +2904,6 @@
     "resetToDefault": "Usar el valor predeterminado del país",
     "modelTitle": "Precios de la electricidad de red",
     "modelHint": "Lo que este modelo paga por la electricidad de la red y recibe por el excedente inyectado, en ct/kWh. Deje un campo vacío para usar el valor predeterminado del país.",
-    "countryDefault": "Predeterminado para {{country}}: compra {{import}} ct/kWh, venta {{export}} ct/kWh.",
-    "fallbackDefault": "Sin valor predeterminado para {{country}}; se aplica el de otros países: compra {{import}} ct/kWh, venta {{export}} ct/kWh.",
-    "sourceLabel": "Fuente: {{source}}",
     "defaultUnknown": "El valor predeterminado del país se aplica cuando se conoce la región.",
     "usedInRun": "Electricidad de red en esta ejecución: comprada a {{import}} ct/kWh, vendida a {{export}} ct/kWh.",
     "compared": "Precios de la electricidad de red: base {{baseline}}, comparación {{comparison}}.",
@@ -2916,8 +2913,7 @@
       "importPositive": "El precio de compra debe ser mayor que 0.",
       "exportNegative": "La tarifa de inyección no puede ser negativa.",
       "exportAboveImport": "La tarifa de inyección no puede superar el precio de compra."
-    },
-    "sources": "Fuentes"
+    }
   },
   "apiTokens": {
     "create": "Crear nuevo token",
