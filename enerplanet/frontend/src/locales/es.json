@@ -2965,7 +2965,24 @@
       "reset": "Reiniciar sesión",
       "noModules": "Todavía no hay módulos registrados.",
       "noMap": "Todavía no hay cargado un módulo de mapa base.",
-      "layers": "Capas añadidas: {{count}}"
+      "layers": "Capas añadidas: {{count}}",
+      "noNode": "Este flujo de trabajo no tiene ningún paso aquí.",
+      "mode": "modo",
+      "modeWorkflow": "flujo de trabajo"
+    },
+    "bar": {
+      "prior": "anterior",
+      "current": "actual",
+      "next": "siguiente",
+      "complete": "flujo completado",
+      "testMode": "modo de prueba"
+    },
+    "ledger": {
+      "history": "historial",
+      "empty": "todavía nada",
+      "discarded": "descartado",
+      "jump": "salto",
+      "auto": "auto"
     },
     "example": {
       "title": "Módulo de ejemplo",

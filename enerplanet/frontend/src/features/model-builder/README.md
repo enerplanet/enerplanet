@@ -59,13 +59,21 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `saveModel.ts` | the two-call save (T13): the legacy payload built from the ports, the flow-derived status, and a partial save reported rather than thrown away. |
 | `saveNode.ts` | the `model-save` **node**: declares the whole persisted surface, requires `coordinates` (the backend resolves the country from them), and seals the save as one transaction. A refusal throws, so nothing is sealed. |
 
-## `shell/` — the prototyping shell
+## `shell/` — the frame
 
 | file | what it holds |
 |---|---|
-| `contract.ts` | what the shell needs from a module and what a module may ask for: `BuilderModule` (core contract + UI + mock), `ModuleViewProps`, `MapService`. `Region` is re-exported from the core, never redefined. |
-| `moduleRegistry.ts` | the modules the shell hosts — listed **manually, on purpose**. Building modules one at a time in isolation is the point; linking them into a flow comes once the set is complete. |
-| `BuilderShell.tsx` | the region frame (`sidebar` / `map` / `bottom` / `overlay`), the scratch session (a store seeded from the active module's `mock`), the map-host stub, and a dev-only module picker. |
+| `contract.ts` | the shell's front door to the core's contracts; re-exports only, so nothing in `shell/` reaches into the core by a drifting path |
+| `moduleRegistry.ts` | the modules available to a workflow — listed **manually, on purpose**, and read by `toWorkflow` to build the core's registry |
+| `workflow.ts` | turns a workflow definition (untrusted) into what the core takes: `Flow`, `ModuleRegistry`, seed ports. Refuses anything unwalkable |
+| `workflow.dev.json` | the dev workflow itself: a seed and one node. Static now; hosted later, which changes one binding |
+| `frameMode.ts` | which module the frame shows and what its session starts from: **workflow** mode (the node the session sits on, seeded from the flow) or **test mode** (one module, on its own test data, no position) |
+| `barState.ts` | the workflow bar's state — prior / current / next, derived from `(flow, registry, store)` |
+| `WorkflowBar.tsx` | the top band: workflow label, the three framing steps, a completion chip, and the dev-only mode select + Reset |
+| `ledgerState.ts` | the ledger bar's state — the log with the cursor, newest first, each entry marked applied or discarded. No discard *structure*: the tail beyond the cursor is it |
+| `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
+| `BuilderShell.tsx` | the region frame (`sidebar` / `map` / `bottom` / `overlay`), composed from the module's declaration; re-seeds its session when the mode changes |
+| `useStoreVersion.ts` | the host's subscription to the store: the store announces every applied change, this re-renders |
 
 `/app/modelbuilder`, behind the `modelbuilder` runtime flag (Settings → Experimental — the sidebar entry is gated in the render path, so a toggle adds and removes it live).
 

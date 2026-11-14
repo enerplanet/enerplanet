@@ -176,12 +176,17 @@ Nothing here touches the app: no vite, no backend, no build. The module's `tscon
 app's compiler settings on purpose, so **green here means green in the app** — the stricter of the two
 would be a lie in one direction or the other.
 
-The app still runs everything the module does: `shell/moduleRegistry.ts` imports the module, the app's
-test run picks up its tests, and `/app/modelbuilder` (flag: Settings → Experimental → *Model Builder*)
-mounts it in the shell on a scratch store seeded from its `mock`, with a dev picker in the header and
-*Reset* to restart the session. Commits land in the real store and the real log, so undo, the write
-boundary and the cascade behave exactly as they will in the flow. The only missing piece is the flow
-itself — the shell picks a module manually instead of following a chain of nodes.
+The app still runs everything the module does: `shell/moduleRegistry.ts` registers the module, the app's
+test run picks up its tests, and the dev workflow places it. `/app/modelbuilder` (flag: Settings →
+Experimental → *Model Builder*) is now **workflow-driven**: the session starts from the workflow's seed, the
+module on screen is the node the session sits on, and running it advances the position, which the workflow
+bar shows.
+
+The frame shows the module its **mode** names, and nothing else — that is the only dead end. In *workflow
+mode* the module on screen is the node the session sits on, so it has to be placed by the dev workflow first.
+In *test mode* the frame shows one module on its own, seeded from its own **test data**, with no workflow and
+no position at all — which is how a module's UI is seen before it is wired into anything. The dev-only mode
+select in the bar switches between them, and *Reset* re-seeds the session either way.
 
 Nothing in the isolated shell talks to the backend. A module's I/O goes through the gateway this feature
 owns (`../save/gateway.ts`), so a module that needs a backend call takes it as a dependency from the host

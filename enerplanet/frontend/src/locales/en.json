@@ -2968,7 +2968,24 @@
       "reset": "Reset session",
       "noModules": "No modules are registered yet.",
       "noMap": "No basemap provider module is loaded yet.",
-      "layers": "Layers added: {{count}}"
+      "layers": "Layers added: {{count}}",
+      "noNode": "This workflow has no node here.",
+      "mode": "mode",
+      "modeWorkflow": "workflow"
+    },
+    "bar": {
+      "prior": "prior",
+      "current": "current",
+      "next": "next",
+      "complete": "flow complete",
+      "testMode": "test mode"
+    },
+    "ledger": {
+      "history": "history",
+      "empty": "nothing yet",
+      "discarded": "discarded",
+      "jump": "jump",
+      "auto": "auto"
     },
     "example": {
       "title": "Example module",

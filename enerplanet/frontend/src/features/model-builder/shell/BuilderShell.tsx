@@ -1,31 +1,38 @@
 /**
- * The Model Builder shell (`Plan.md` §8) — the frame modules mount into.
+ * The Model Builder frame (`Plan.md` §8, `spec/frame.md`) — the host a module mounts into.
  *
- * This is the **prototyping** shell: it hosts one module at a time, from the manual registry, on a
- * scratch store seeded with that module's mock data. That is what lets modules be built one at a
- * time and in isolation, before any workflow exists; linking them into a flow comes later, and the
- * region frame below is the part that survives that change.
+ * The frame runs in one of two **modes** (`frameMode.ts`), and everything else follows from which:
  *
- * What the shell owns:
- * - the **regions** (`sidebar`, `map`, `bottom`, `overlay`) and how the page is composed — a module
- *   only names the regions it wants, it never lays out the page;
- * - the **scratch session** — one store per active module, seeded from its `mock`, reset on switch.
- *   The store is not reactive, so a commit is followed by a nudge (`setRevision`) to re-render;
- * - the **map host** (stub): a `MapService` plus the plain statement that no baselayer *provider*
- *   module is loaded yet. The provider is swappable by design, which is why nothing here names a map
- *   library.
+ * - **workflow** — the session starts from the workflow's seed, the module on screen is the node the session
+ *   sits on, and running it advances the position. This is the real thing.
+ * - **test mode** — one module on its own, seeded from its own test data, with no workflow and no position.
+ *   This is how a module is developed and *seen* before it is placed in anything, and it is why the frame
+ *   needs a mode at all rather than always following the flow.
  *
- * Known gap, deliberate: a module that declares `overlay` gets it rendered. Real full-screen views
- * need a visibility signal from the module (or the node's state) — worth deciding when the first
- * module actually needs an overlay, rather than inventing the mechanism now.
+ * What the frame owns:
+ * - the **workflow bar** (its own component) and the **slots** — `sidebar`, `map`, `bottom`, `overlay` —
+ *   composed here, so a module never lays out the page;
+ * - the **session**: one store plus an engine over it, re-seeded whenever the mode changes. Whichever mode it
+ *   is, the store is the only state a module has, and what it starts from is what the mode says;
+ * - the **map host** (stub): a `MapService` plus the plain statement that no baselayer *provider* module is
+ *   loaded yet. The provider is swappable by design, which is why nothing here names a map library.
+ *
+ * The frame keeps no position of its own: what to show is derived (`frameView`), and so is the bar
+ * (`barState`). `useStoreVersion` is what tells it the store moved. A broken workflow definition throws
+ * rather than rendering an empty frame — it is configuration, and a silent catch would bury a config error.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
+import type { ModelData } from "@model-builder/core";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
-import { MODULES } from "./moduleRegistry";
 import { useStoreVersion } from "./useStoreVersion";
+import { WorkflowBar } from "./WorkflowBar";
+import { LedgerBar } from "./LedgerBar";
+import { MODULES } from "./moduleRegistry";
+import { frameView, type FrameMode } from "./frameMode";
+import { devWorkflow } from "./workflow";
 import type { BuilderModule, MapService, ModuleViewProps, OverlayControl, Region } from "./contract";
 
 interface Session {
@@ -33,15 +40,15 @@ interface Session {
   engine: Engine;
 }
 
-/** A scratch session for isolated development: the module's mock data is the seed. */
-function sessionFor(entry: BuilderModule): Session {
-  const store = createStore({ ...(entry.mock ?? {}) });
+/** A session over whatever the current mode says the data is: the flow's seed, or a module's test data. */
+function sessionFor(seed: Readonly<ModelData>): Session {
+  const store = createStore({ ...seed });
   return { store, engine: createEngine(store) };
 }
 
 /**
- * The map host's stub. It records the layers a module adds — enough to prove the seam and to see a
- * module's layers appear — and says plainly that no baselayer provider is loaded yet.
+ * The map host's stub. It records the layers a module adds — enough to prove the seam and to see a module's
+ * layers appear — and says plainly that no baselayer provider is loaded yet.
  */
 function useMapStub(): { map: MapService; layers: readonly string[] } {
   const [layers, setLayers] = useState<readonly string[]>([]);
@@ -62,40 +69,55 @@ function useMapStub(): { map: MapService; layers: readonly string[] } {
 
 export const BuilderShell: React.FC = () => {
   const { t } = useTranslation();
-  const [activeId, setActiveId] = useState<string>(MODULES[0]?.module.id ?? "");
-  const [session, setSession] = useState<Session | null>(null);
+  const workflow = useMemo(() => devWorkflow(), []);
+  const moduleIds = useMemo(() => MODULES.map((entry) => entry.module.id), []);
+  const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
+  // Workflow mode is the default, so the first session is seeded from the flow.
+  const [session, setSession] = useState<Session>(() => sessionFor(workflow.initial));
   const [error, setError] = useState<string | null>(null);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { map, layers } = useMapStub();
-  // The frame reads the store; the store tells it when it changed, so no nudge is needed at the call
-  // sites that used to poke a revision counter by hand.
-  useStoreVersion(session?.store);
+  // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
+  useStoreVersion(session.store);
 
-  const active = MODULES.find((entry) => entry.module.id === activeId);
-
-  // Switching modules starts a fresh scratch session — a module is developed against its own inputs.
-  useEffect(() => {
-    const entry = MODULES.find((candidate) => candidate.module.id === activeId);
-    setSession(entry ? sessionFor(entry) : null);
-    setError(null);
-    setOverlayOpen(false);
-  }, [activeId]);
+  // What the mode says to show, and what a session should start from. The seed is taken from here rather than
+  // from the mode branch directly, so "which module" and "which data" cannot disagree.
+  const view = frameView(mode, workflow, MODULES, session.store);
 
   const run = async (): Promise<void> => {
-    if (active === undefined || session === null) return;
+    const entry = view.entry;
+    if (entry === undefined) return;
     try {
-      await session.engine.runModule(active.module, { id: active.module.id });
+      // In a workflow the transaction is stamped with the *node* id — history names positions, and a module
+      // can be placed more than once. In test mode there is no position, so nothing is stamped.
+      await session.engine.runModule(
+        entry.module,
+        view.nodeId === undefined ? undefined : { id: view.nodeId },
+      );
       setError(null);
     } catch (thrown) {
-      // A rejected write, a missing required port, a save refusal: all of them mean nothing was
-      // sealed, and all of them are exactly what a module developer needs to see.
+      // A rejected write, a missing required port, a save refusal: all of them mean nothing was sealed, and
+      // all of them are exactly what a module developer needs to see.
       setError(thrown instanceof Error ? thrown.message : String(thrown));
     }
   };
 
-  // The overlay slot's open/closed state lives here, not in a module: the host owns the chrome — the
-  // scrim, the centring, the Escape handling — and a module asks for it through `OverlayControl`. Like
-  // the map, this is transient *view* state: nothing about it is committed to the store.
+  /**
+   * Move the frame to a mode, re-seeding the session for it. Reset is the same call with the current mode: a
+   * fresh session for wherever we already are. Dev-only until undo exists, since it is the only way back to a
+   * position that has not run.
+   */
+  const switchTo = (target: FrameMode): void => {
+    const next = frameView(target, workflow, MODULES, session.store);
+    setMode(target);
+    setSession(sessionFor(next.seed));
+    setError(null);
+    setOverlayOpen(false);
+  };
+
+  // The overlay slot's open/closed state lives here, not in a module: the host owns the chrome — the scrim,
+  // the centring, the Escape handling — and a module asks for it through `OverlayControl`. Like the map, this
+  // is transient *view* state: nothing about it is committed to the store.
   const overlay = useMemo<OverlayControl>(
     () => ({
       get isOpen(): boolean {
@@ -117,22 +139,35 @@ export const BuilderShell: React.FC = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [overlayOpen]);
 
-  if (active === undefined || session === null) {
+  if (view.entry === undefined) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noModules")}</p>
+      <div className="flex h-full min-h-0 flex-col bg-background">
+        <WorkflowBar
+          workflow={workflow}
+          store={session.store}
+          mode={mode}
+          moduleIds={moduleIds}
+          onModeChange={switchTo}
+          onReset={() => switchTo(mode)}
+        />
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+          <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noNode")}</p>
+        </div>
+
+        <LedgerBar store={session.store} />
       </div>
     );
   }
 
+  const active: BuilderModule = view.entry;
   const View = active.Component;
   const data = session.store.data;
   const inRegion = (region: Region): boolean => active.module.layout.includes(region);
 
-  // One props object per render, built from the declaration: `map` and `overlay` are present only when
-  // the module actually declared that region — which is what the contract promises.
+  // One props object per render, built from the declaration: `map` and `overlay` are present only when the
+  // module actually declared that region — which is what the contract promises.
   const viewProps = (region: Region): ModuleViewProps => ({
-    nodeId: active.module.id,
+    nodeId: view.labelId,
     region,
     data,
     run,
@@ -142,46 +177,14 @@ export const BuilderShell: React.FC = () => {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-background">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4">
-        <div>
-          <h1 className="text-2xl font-bold">{t("modelBuilder.shell.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.subtitle")}</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {import.meta.env.DEV && (
-            <>
-              <label className="text-sm text-muted-foreground" htmlFor="builder-module">
-                {t("modelBuilder.shell.module")}
-              </label>
-              <select
-                id="builder-module"
-                value={activeId}
-                onChange={(event) => setActiveId(event.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              >
-                {MODULES.map((entry) => (
-                  <option key={entry.module.id} value={entry.module.id}>
-                    {entry.module.id}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              setSession(sessionFor(active));
-              setError(null);
-              setOverlayOpen(false);
-            }}
-            className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            {t("modelBuilder.shell.reset")}
-          </button>
-        </div>
-      </header>
+      <WorkflowBar
+        workflow={workflow}
+        store={session.store}
+        mode={mode}
+        moduleIds={moduleIds}
+        onModeChange={switchTo}
+        onReset={() => switchTo(mode)}
+      />
 
       <div className="flex min-h-0 flex-1">
         {inRegion("sidebar") && (
@@ -212,6 +215,8 @@ export const BuilderShell: React.FC = () => {
           )}
         </div>
       </div>
+
+      <LedgerBar store={session.store} />
 
       {inRegion("overlay") && overlayOpen && (
         <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">

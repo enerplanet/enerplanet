@@ -2968,7 +2968,24 @@
       "reset": "Sitzung zurücksetzen",
       "noModules": "Es sind noch keine Module registriert.",
       "noMap": "Es ist noch kein Basiskarten-Modul geladen.",
-      "layers": "Hinzugefügte Ebenen: {{count}}"
+      "layers": "Hinzugefügte Ebenen: {{count}}",
+      "noNode": "Dieser Workflow hat hier keinen Schritt.",
+      "mode": "Modus",
+      "modeWorkflow": "Workflow"
+    },
+    "bar": {
+      "prior": "vorher",
+      "current": "aktuell",
+      "next": "danach",
+      "complete": "Workflow abgeschlossen",
+      "testMode": "Testmodus"
+    },
+    "ledger": {
+      "history": "Verlauf",
+      "empty": "noch nichts",
+      "discarded": "verworfen",
+      "jump": "Sprung",
+      "auto": "auto"
     },
     "example": {
       "title": "Beispielmodul",

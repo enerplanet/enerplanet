@@ -52,7 +52,12 @@ export interface OverlayControl {
 
 /** What a module's UI is handed on every render. */
 export interface ModuleViewProps {
-  /** The node's id — stamp it on anything this module commits. */
+  /**
+   * The id of the node this render belongs to — stamp it on anything the module commits.
+   *
+   * In **test mode** there is no node: the frame is showing one module on its own, so this is the module id,
+   * and it is a label rather than something to stamp.
+   */
   nodeId: string;
   /** Which region this render is for: the module renders once per region it declared. */
   region: Region;

@@ -2964,7 +2964,24 @@
       "reset": "Sessie opnieuw starten",
       "noModules": "Er zijn nog geen modules geregistreerd.",
       "noMap": "Er is nog geen basiskaart-provider geladen.",
-      "layers": "Toegevoegde lagen: {{count}}"
+      "layers": "Toegevoegde lagen: {{count}}",
+      "noNode": "Deze workflow heeft hier geen stap.",
+      "mode": "modus",
+      "modeWorkflow": "workflow"
+    },
+    "bar": {
+      "prior": "vorige",
+      "current": "huidige",
+      "next": "volgende",
+      "complete": "workflow voltooid",
+      "testMode": "testmodus"
+    },
+    "ledger": {
+      "history": "geschiedenis",
+      "empty": "nog niets",
+      "discarded": "verworpen",
+      "jump": "sprong",
+      "auto": "auto"
     },
     "example": {
       "title": "Voorbeeldmodule",
