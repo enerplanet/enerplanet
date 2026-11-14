@@ -8,13 +8,15 @@
  * It replaces the name/date/resolution/region portion of the legacy flow
  * (`configurator/hooks/useAreaSelect/helpers/modelSettings.ts` + `SidebarPanel.tsx` + `RegionSelector.tsx`).
  * Region selection is **entered here** — there is no separate `region-select` module (`modules/model-start.md`)
- * — and choosing a region immediately frames the map, which is this module's one interaction with the map host.
+ * — and the map **follows the region the model holds**: applying frames the region just committed, and so do
+ * loading a model and undoing a change, because all three move the same stored value.
  *
  * Two regions, on purpose (most modules want two or three — declare what you use):
  *
  *   sidebar   the form: name, period, resolution, region. One gesture, one commit.
- *   map       what this module does to the map: frame the chosen region. The baselayer itself is the
- *             `map-provider` module's business, never this one's.
+ *   map       what this module does to the map: frame the chosen region, as an effect on the store. It renders
+ *             nothing — the framing *is* the work. The baselayer itself is the `map-provider` module's
+ *             business, never this one's.
  *
  * `seal: "per-commit"` — the fields are independent, so a partial state is one this module stands behind
  * (`spec/core.md` T16), and the form still hands over everything it owns in a single `commit()`.
@@ -225,42 +227,21 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     setTypedRegion(null);
   }, [nodeId]);
 
-  // ── map: what this module does to the map. The baselayer belongs to `map-provider`; this region frames the
-  //    chosen region and says so, nothing more.
-  if (region === "map") {
-    const frame = (): void => {
-      if (selected === undefined) return;
-      map?.fitTo(boundsGeometry(selected.bounds));
-    };
+  // The map follows the region the **model holds** — not the select, and not a button. Framing is an effect on
+  // the stored region rather than a click, so applying frames the map, and so do loading a model and undoing:
+  // they are the same promise. Only the `map` region is handed the service, hence the guard.
+  //
+  // `selected` is a reference into `REGIONS`, so its identity is stable and this fires when the region changes —
+  // not on every render.
+  useEffect(() => {
+    if (region !== "map" || map === undefined || selected === undefined) return;
+    map.fitTo(boundsGeometry(selected.bounds));
+  }, [region, map, selected]);
 
-    return (
-      // A floating card over the real map — see the example module for why it is narrow and opts back into
-      // pointer events.
-      <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
-        <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.model-start.map.title")}</h3>
-        <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.model-start.map.hint")}</p>
-
-        <p className="shrink-0 text-sm">
-          {selected === undefined ? (
-            <span className="text-amber-600 dark:text-amber-400">
-              {t("modelBuilder.model-start.map.noRegion")}
-            </span>
-          ) : (
-            <span className="font-medium">{selected.label}</span>
-          )}
-        </p>
-
-        <button
-          type="button"
-          onClick={frame}
-          disabled={selected === undefined}
-          className="self-start rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {t("modelBuilder.model-start.map.frame")}
-        </button>
-      </div>
-    );
-  }
+  // ── map: what this module does to the map. The baselayer belongs to `map-provider`, and framing the chosen
+  //    region is the whole of this module's work here — it happens in the effect above. So there is nothing to
+  //    render: a card here would sit over the map it just framed and hide the result.
+  if (region === "map") return null;
 
   // ── sidebar: the form. One gesture, one commit: everything the form owns is handed over together.
   const apply = (): void => {
@@ -276,7 +257,8 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     });
 
     void run().finally(() => {
-      // The store's values take over again, and the map follows the region the model now holds.
+      // The store's values take over again. The map needs no call here: the `map` region watches the stored
+      // region and frames when it moves — which is exactly what this commit does.
       setTypedName(null);
       setTypedFrom(null);
       setTypedTo(null);
