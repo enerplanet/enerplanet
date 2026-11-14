@@ -2987,6 +2987,11 @@
       "jump": "jump",
       "auto": "auto"
     },
+    "steps": {
+      "title": "steps",
+      "blocked": "needs {{ports}}",
+      "pruned": "lost {{ports}}"
+    },
     "example": {
       "title": "Example module",
       "description": "A working example and the template: it reads the mock from the store, commits through the engine, and renders into three regions.",

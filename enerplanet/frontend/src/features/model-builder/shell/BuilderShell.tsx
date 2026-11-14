@@ -9,17 +9,23 @@
  *   This is how a module is developed and *seen* before it is placed in anything, and it is why the frame
  *   needs a mode at all rather than always following the flow.
  *
+ * The layout is a row: the **module column** (workflow bar, the slots, the ledger bar) and, beside it, the
+ * **steps panel** — a sibling, not a child, so it keeps its full height while the module area shrinks. That
+ * also scopes the overlay to the module column, which is what the spec asks for: an overlay must not cover
+ * the chrome you need to get out of it.
+ *
  * What the frame owns:
- * - the **workflow bar** (its own component) and the **slots** — `sidebar`, `map`, `bottom`, `overlay` —
- *   composed here, so a module never lays out the page;
+ * - the **workflow bar** and the **ledger bar** (their own components) and the **slots** — `sidebar`, `map`,
+ *   `bottom`, `overlay` — composed here, so a module never lays out the page;
  * - the **session**: one store plus an engine over it, re-seeded whenever the mode changes. Whichever mode it
  *   is, the store is the only state a module has, and what it starts from is what the mode says;
  * - the **map host** (stub): a `MapService` plus the plain statement that no baselayer *provider* module is
  *   loaded yet. The provider is swappable by design, which is why nothing here names a map library.
  *
- * The frame keeps no position of its own: what to show is derived (`frameView`), and so is the bar
- * (`barState`). `useStoreVersion` is what tells it the store moved. A broken workflow definition throws
- * rather than rendering an empty frame — it is configuration, and a silent catch would bury a config error.
+ * The frame keeps no position of its own: what to show is derived (`frameView`), and so are the bars
+ * (`barState`, `ledgerState`) and the panel (`stepsState`). `useStoreVersion` is what tells it the store
+ * moved. A broken workflow definition throws rather than rendering an empty frame — it is configuration, and
+ * a silent catch would bury a config error.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -30,6 +36,7 @@ import { createStore, type Store } from "../core/store";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
+import { StepsPanel } from "./StepsPanel";
 import { MODULES } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
 import { devWorkflow } from "./workflow";
@@ -139,22 +146,38 @@ export const BuilderShell: React.FC = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [overlayOpen]);
 
+  /**
+   * The panel renders in both branches of the shell — it describes the workflow, which exists whether or not a
+   * step is up — but **not in test mode**: there is no position then, and the store on screen is a scratch one
+   * with no history, so every step would read "pending" about a session that is not the flow's. That is the
+   * same lie the workflow bar refuses to tell when it shows a test-mode chip instead of steps.
+   */
+  const stepsPanel =
+    mode.kind === "test" ? null : (
+      <StepsPanel flow={workflow.flow} registry={workflow.registry} store={session.store} />
+    );
+
   if (view.entry === undefined) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-background">
-        <WorkflowBar
-          workflow={workflow}
-          store={session.store}
-          mode={mode}
-          moduleIds={moduleIds}
-          onModeChange={switchTo}
-          onReset={() => switchTo(mode)}
-        />
-        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noNode")}</p>
+      <div className="flex h-full min-h-0 bg-background">
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <WorkflowBar
+            workflow={workflow}
+            store={session.store}
+            mode={mode}
+            moduleIds={moduleIds}
+            onModeChange={switchTo}
+            onReset={() => switchTo(mode)}
+          />
+
+          <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+            <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noNode")}</p>
+          </div>
+
+          <LedgerBar store={session.store} />
         </div>
 
-        <LedgerBar store={session.store} />
+        {stepsPanel}
       </div>
     );
   }
@@ -176,61 +199,66 @@ export const BuilderShell: React.FC = () => {
   });
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-background">
-      <WorkflowBar
-        workflow={workflow}
-        store={session.store}
-        mode={mode}
-        moduleIds={moduleIds}
-        onModeChange={switchTo}
-        onReset={() => switchTo(mode)}
-      />
+    <div className="flex h-full min-h-0 bg-background">
+      {/* The module column: everything the module's declaration composes, plus the frame's own bars. */}
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <WorkflowBar
+          workflow={workflow}
+          store={session.store}
+          mode={mode}
+          moduleIds={moduleIds}
+          onModeChange={switchTo}
+          onReset={() => switchTo(mode)}
+        />
 
-      <div className="flex min-h-0 flex-1">
-        {inRegion("sidebar") && (
-          <aside className="w-80 shrink-0 overflow-auto border-r border-border bg-card p-6">
-            <View {...viewProps("sidebar")} />
-          </aside>
-        )}
-
-        <div className="flex min-h-0 flex-1 flex-col">
-          {inRegion("map") && (
-            <section className="min-h-0 flex-1 overflow-auto bg-muted/30 p-6">
-              <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noMap")}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("modelBuilder.shell.layers", "Layers added: {{count}}", {
-                  count: layers.length,
-                })}
-              </p>
-              <div className="mt-4">
-                <View {...viewProps("map")} />
-              </div>
-            </section>
+        <div className="flex min-h-0 flex-1">
+          {inRegion("sidebar") && (
+            <aside className="w-80 shrink-0 overflow-auto border-r border-border bg-card p-6">
+              <View {...viewProps("sidebar")} />
+            </aside>
           )}
 
-          {inRegion("bottom") && (
-            <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
-              <View {...viewProps("bottom")} />
-            </footer>
-          )}
-        </div>
-      </div>
+          <div className="flex min-h-0 flex-1 flex-col">
+            {inRegion("map") && (
+              <section className="min-h-0 flex-1 overflow-auto bg-muted/30 p-6">
+                <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noMap")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("modelBuilder.shell.layers", "Layers added: {{count}}", {
+                    count: layers.length,
+                  })}
+                </p>
+                <div className="mt-4">
+                  <View {...viewProps("map")} />
+                </div>
+              </section>
+            )}
 
-      <LedgerBar store={session.store} />
-
-      {inRegion("overlay") && overlayOpen && (
-        <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
-          <div className="max-h-full w-full max-w-2xl overflow-auto rounded-lg border border-border bg-card p-6 shadow-lg">
-            <View {...viewProps("overlay")} />
+            {inRegion("bottom") && (
+              <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
+                <View {...viewProps("bottom")} />
+              </footer>
+            )}
           </div>
         </div>
-      )}
 
-      {error !== null && (
-        <div className="relative z-50 shrink-0 border-t border-destructive/40 bg-destructive/10 px-6 py-2 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+        <LedgerBar store={session.store} />
+
+        {inRegion("overlay") && overlayOpen && (
+          <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
+            <div className="max-h-full w-full max-w-2xl overflow-auto rounded-lg border border-border bg-card p-6 shadow-lg">
+              <View {...viewProps("overlay")} />
+            </div>
+          </div>
+        )}
+
+        {error !== null && (
+          <div className="relative z-50 shrink-0 border-t border-destructive/40 bg-destructive/10 px-6 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+      </div>
+
+      {stepsPanel}
     </div>
   );
 };

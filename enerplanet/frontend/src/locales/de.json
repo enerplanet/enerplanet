@@ -2987,6 +2987,11 @@
       "jump": "Sprung",
       "auto": "auto"
     },
+    "steps": {
+      "title": "Schritte",
+      "blocked": "braucht {{ports}}",
+      "pruned": "verloren: {{ports}}"
+    },
     "example": {
       "title": "Beispielmodul",
       "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest die Mock-Daten aus dem Store, committet über die Engine und rendert in drei Regionen.",

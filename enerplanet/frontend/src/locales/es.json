@@ -2984,6 +2984,11 @@
       "jump": "salto",
       "auto": "auto"
     },
+    "steps": {
+      "title": "pasos",
+      "blocked": "necesita {{ports}}",
+      "pruned": "perdido: {{ports}}"
+    },
     "example": {
       "title": "Módulo de ejemplo",
       "description": "Un ejemplo funcional y la plantilla: lee los datos simulados del store, confirma a través del motor y renderiza en tres regiones.",

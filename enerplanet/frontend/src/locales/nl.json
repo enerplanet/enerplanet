@@ -2983,6 +2983,11 @@
       "jump": "sprong",
       "auto": "auto"
     },
+    "steps": {
+      "title": "stappen",
+      "blocked": "heeft {{ports}} nodig",
+      "pruned": "verloren: {{ports}}"
+    },
     "example": {
       "title": "Voorbeeldmodule",
       "description": "Een werkend voorbeeld en tegelijk de template: leest de mock-data uit de store, committeert via de engine en rendert in drie regio's.",

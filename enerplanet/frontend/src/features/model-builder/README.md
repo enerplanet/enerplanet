@@ -72,6 +72,8 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `WorkflowBar.tsx` | the top band: workflow label, the three framing steps, a completion chip, and the dev-only mode select + Reset |
 | `ledgerState.ts` | the ledger bar's state — the log with the cursor, newest first, each entry marked applied or discarded. No discard *structure*: the tail beyond the cursor is it |
 | `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
+| `stepsState.ts` | the steps panel's state — every step's derived state, which one is current, and the *reason* behind a step that is not done (`pruned`, `blocked`) |
+| `StepsPanel.tsx` | the right-hand band, a **sibling** of the module column so it keeps full height: a state-dot rail collapsed by default, labels and reasons when expanded to ⅓ |
 | `BuilderShell.tsx` | the region frame (`sidebar` / `map` / `bottom` / `overlay`), composed from the module's declaration; re-seeds its session when the mode changes |
 | `useStoreVersion.ts` | the host's subscription to the store: the store announces every applied change, this re-renders |
 
