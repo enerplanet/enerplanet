@@ -4,13 +4,14 @@
  * Written failing first.
  */
 import { describe, it, expect } from "vitest";
-import { createSaveNode, SaveRefused } from "./saveNode";
+import { createSaveNode, missingPorts, SaveRefused } from "./saveNode";
 import type { LegacyModelPayload, ModelGateway } from "./gateway";
 import type { WorkflowRef } from "../core/artefact";
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { createStore } from "../core/store";
 import { createEngine } from "../core/engine";
 import { requiredPorts } from "../core/module";
+import { runInScratch } from "../core/testSupport";
 import { seed } from "../core/fixtures";
 
 const WORKFLOW: WorkflowRef = { id: "wf-core", version: 3 };
@@ -86,5 +87,63 @@ describe("createSaveNode", () => {
     await expect(createEngine(store).runModule(node, { id: NODE_ID })).rejects.toBeInstanceOf(SaveRefused);
     expect(payloads).toEqual([]); // nothing was sent
     expect(store.log).toEqual([]); // and nothing was sealed
+  });
+});
+
+describe("the completeness gate", () => {
+  it("names every persisted port the store does not hold, in the order to fix them", () => {
+    // `seed()` carries the identity, the period, the area and an **empty** `buildings` collection — a port that
+    // is present counts as present, whatever it holds. What is absent is the rest of the grid.
+    const store = createStore(seed({ coordinates: [RING] }));
+
+    expect(missingPorts(store.data).map((issue) => issue.port)).toEqual([
+      "transformers",
+      "lines",
+      "mvLines",
+      "grids",
+    ]);
+  });
+
+  it("reports the same verdict through the node's validate()", async () => {
+    const store = createStore(seed({ coordinates: [RING] }));
+    const node = createSaveNode({ gateway: gateway([]), store, workflow: WORKFLOW, flow: FLOW, registry });
+
+    const { issues } = await runInScratch({ module: node, mock: seed({ coordinates: [RING] }) });
+
+    expect(issues.map((issue) => issue.port)).toEqual([
+      "transformers",
+      "lines",
+      "mvLines",
+      "grids",
+    ]);
+  });
+
+  it("says nothing when the model is whole", () => {
+    const store = createStore(
+      seed({
+        coordinates: [RING],
+        buildings: { type: "FeatureCollection", features: [] },
+        transformers: { type: "FeatureCollection", features: [] },
+        lines: { type: "FeatureCollection", features: [] },
+        mvLines: { type: "FeatureCollection", features: [] },
+        grids: [],
+      }),
+    );
+
+    expect(missingPorts(store.data)).toEqual([]);
+  });
+
+  it("is a verdict, not a veto: an unfinished model still saves, as incomplete", async () => {
+    // §6's split, pinned. The legacy refusal (no name, no period, no area) is what stops a save outright;
+    // a missing *grid* is reported so the user knows what is left, while the model round-trips as `incomplete`.
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING] }));
+    const node = createSaveNode({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry });
+
+    await createEngine(store).runModule(node, { id: NODE_ID });
+
+    expect(missingPorts(store.data).length).toBeGreaterThan(0);
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].status).toBe("incomplete");
   });
 });

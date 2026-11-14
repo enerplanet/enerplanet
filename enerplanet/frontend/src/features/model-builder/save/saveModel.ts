@@ -2,10 +2,17 @@
  * The save node's logic (case T13) — the two-call split, and the legacy payload built from the store.
  *
  * The payload shape is not invented here: `.local/ModularThesis/prototypes/sk-node-workflow/
- * integration/saveService.ts` is a verbatim extraction of the legacy `saveAreaData`, and
- * `buildSaveConfig` / `buildModelPayload` reproduce it key for key. That extraction is the oracle the
- * tests check against — parity is the whole reason this code exists, so it is pinned rather than
- * approximated.
+ * integration/saveService.ts` is a verbatim extraction of the legacy `saveAreaData`
+ * (`configurator/hooks/useAreaSelect.ts:370-404`), and `buildSaveConfig` / `buildModelPayload` reproduce it
+ * key for key. That extraction is the oracle the tests check against — parity is the whole reason this code
+ * exists, so it is pinned rather than approximated.
+ *
+ * One respect in which the oracle is *not* the original, worth knowing before trusting the comparison blindly:
+ * the extraction curates `config` to the ports the store holds, while the legacy spread the whole `pylovoData`
+ * object — so `meta` and `boundary` travelled on the real wire and do not here. `modules/model-save.md` carries
+ * the full parity audit, including the config keys the legacy writes and this builder does not yet
+ * (`weather*`, `cookingCarrier`, `mode`, `electricity_prices`, `site`), each blocked on a port that does not
+ * exist yet.
  *
  * Two deliberate differences from the legacy original:
  *

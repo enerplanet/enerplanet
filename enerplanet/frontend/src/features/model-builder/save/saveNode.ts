@@ -16,7 +16,9 @@
 import type { WorkflowRef } from "../core/artefact";
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { defineModule, type Module } from "../core/module";
+import type { ModelData, PortKey } from "../core/ports";
 import type { Store } from "../core/store";
+import type { ValidationIssue } from "../core/module";
 import type { ModelGateway } from "./gateway";
 import { saveModel, type SaveRefusal } from "./saveModel";
 
@@ -25,6 +27,44 @@ const REFUSAL_REASONS: Record<SaveRefusal, string> = {
   "missing-dates": "the assessment period is not set",
   "missing-coordinates": "no area has been drawn",
 };
+
+/**
+ * Every port this node *persists*, in the order a modeller would fix them — identity, period, area, grid.
+ *
+ * This is the completeness gate's list, and it is deliberately wider than the hard refusal below. `validate()`
+ * is a *verdict for the UI* ("ready to save" vs "missing: X, Y"): an unfinished model is still saveable as
+ * `incomplete` (§6), so a missing grid must be reported, never treated as a veto.
+ *
+ * Three things are absent on purpose:
+ * - `workspaceId` / `userId` are the *session's* identity, not something the form collects or the user can fix
+ *   — the host seeds them and the backend resolves the caller from the session, so reporting them would be noise.
+ * - `advancedParams` has sane defaults and nothing upstream produces it (`Modules.md` §4: it "must not gate the
+ *   terminal node").
+ * - `modelId` / `draftId` belong to the create/edit path, not to completeness.
+ */
+const PERSISTED: readonly { port: PortKey; message: string }[] = [
+  { port: "modelName", message: "The model has no name." },
+  { port: "fromDate", message: "The assessment period has no start date." },
+  { port: "toDate", message: "The assessment period has no end date." },
+  { port: "resolution", message: "The model has no resolution." },
+  { port: "coordinates", message: "No area has been drawn." },
+  { port: "buildings", message: "The grid has no buildings." },
+  { port: "transformers", message: "The grid has no transformers." },
+  { port: "lines", message: "The grid has no low-voltage lines." },
+  { port: "mvLines", message: "The grid has no medium-voltage lines." },
+  { port: "grids", message: "The grid has no summary." },
+];
+
+/**
+ * What the model is still missing before it can be run — the spec's "ready-to-save vs *missing: X, Y*"
+ * (`model-save.md`), and the literal expression of the data-awareness requirement.
+ */
+export function missingPorts(data: Readonly<ModelData>): ValidationIssue[] {
+  return PERSISTED.filter((entry) => data[entry.port] === undefined).map(({ port, message }) => ({
+    port,
+    message,
+  }));
+}
 
 /** Thrown when the flow cannot be saved yet. The engine seals no transaction when a run throws. */
 export class SaveRefused extends Error {
@@ -99,6 +139,6 @@ export function createSaveNode(options: SaveNodeOptions): Module {
       });
     },
 
-    validate: () => [],
+    validate: (ctx) => missingPorts(ctx.store),
   });
 }
