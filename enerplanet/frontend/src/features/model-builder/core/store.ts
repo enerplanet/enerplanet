@@ -2,9 +2,10 @@
  * The store — the current model projection plus the append-only transaction log
  * (`Plan.md` §3/§4).
  *
- * The store is dumb on purpose: it holds `data`, the `log` and a `cursor` into it, and
- * exposes exactly one way in — `applyTransaction`, the *only* path that can change the
- * projection. It carries no business logic: validation, cascade computation and the
+ * The store is dumb on purpose: it holds `data`, the `log` and a `cursor` into it. Three mutators reach
+ * the projection — sealing (`applyTransaction`), `undo`, `redo` — and all three end at the single
+ * `install` chokepoint below, which is also where listeners are told that a change happened. Nothing else
+ * can change the projection. It carries no business logic: validation, cascade computation and the
  * redo recomputation all live above it or are injected (see `StoreOptions.deriveCascade`).
  *
  * Undo/redo are a cursor over the log, never a rewrite of it: the log stays immutable, so
@@ -21,6 +22,7 @@ import {
   type Transaction,
   type TransactionKind,
 } from "./diff";
+import { ReentrantStoreWrite } from "./errors";
 import type { NodeRef } from "./module";
 import type { ModelData } from "./ports";
 
@@ -80,6 +82,26 @@ export interface Store {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   /**
+   * A **change token**: it increments on *every* applied change, including one that leaves the projection
+   * referentially identical — a zero-diff jump moves the position while writing nothing.
+   *
+   * A host subscribes to this rather than to `data`'s identity, for exactly that reason. (Not to be
+   * confused with a `Transaction.revision`, which is that transaction's own sequence number in the log.)
+   */
+  readonly version: number;
+  /**
+   * Register a listener called **after every applied change** — a seal, an undo, a redo — with the new
+   * projection already in place. Returns the unsubscribe.
+   *
+   * This exists at the `install` chokepoint rather than on the transaction path for a specific reason:
+   * `undo()` and `redo()` change the projection *without sealing anything* (they invert and re-apply
+   * transactions already in the log), so a listener wired to the seal would stay silent exactly while the
+   * user navigates history — which is when the frame most needs to hear (`spec/frame.md` §7).
+   *
+   * A listener re-reads; it must never write.
+   */
+  subscribe(listener: () => void): () => void;
+  /**
    * Seal a transaction: abandon any redo tail, apply it to the projection, append it to the
    * log, and move the cursor onto it.
    *
@@ -108,6 +130,36 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
   const log: Transaction[] = restore === undefined ? [] : [...restore.log];
   let cursor = restore === undefined ? 0 : restore.cursor;
 
+  const listeners = new Set<() => void>();
+  let version = 0;
+  let notifying = false;
+
+  /**
+   * The **one** place the applied projection moves: `data` and `cursor` are assigned nowhere else, so
+   * "no change without a notification" is structural rather than a convention (`spec/frame.md` §7).
+   * Every mutator — seal, undo, redo — ends here, and a multi-step undo notifies once, because one
+   * gesture is one change.
+   */
+  const install = (nextData: ModelData, nextCursor: number): void => {
+    // Notification is not re-entry — and the guard comes first, so a refused write changes nothing.
+    if (notifying) throw new ReentrantStoreWrite();
+
+    data = nextData;
+    cursor = nextCursor;
+    version += 1;
+
+    notifying = true;
+    try {
+      // Over a copy: a listener may subscribe or unsubscribe while it runs, and that must not disturb
+      // the listeners still to be called.
+      for (const listener of [...listeners]) listener();
+    } finally {
+      // Reset even when a listener threw, or one misbehaving listener would leave the store permanently
+      // unable to install anything.
+      notifying = false;
+    }
+  };
+
   return {
     get initial(): Readonly<ModelData> {
       return initial;
@@ -133,6 +185,17 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       return cursor < log.length;
     },
 
+    get version(): number {
+      return version;
+    },
+
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+
     applyTransaction(primary, cascade = [], options = {}): Transaction {
       // An action is only valid from the current revision: editing after an undo abandons
       // the redo tail. The dropped entries leave the log untouched — they simply stop
@@ -141,8 +204,9 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
       const revision = log.length + 1;
 
-      if (primary.length > 0) data = applyDiffs(data, primary);
-      if (cascade.length > 0) data = applyDiffs(data, cascade);
+      let nextData = data;
+      if (primary.length > 0) nextData = applyDiffs(nextData, primary);
+      if (cascade.length > 0) nextData = applyDiffs(nextData, cascade);
 
       const { node, kind, jump } = options;
       const transaction: Transaction = Object.freeze({
@@ -156,7 +220,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       });
 
       log.push(transaction);
-      cursor = log.length;
+      install(nextData, log.length);
       return transaction;
     },
 
@@ -165,21 +229,24 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
       const unwound: string[] = [];
       let transactions = 0;
+      let nextData = data;
+      let nextCursor = cursor;
 
       // One step back, then keep going while the cursor would rest on (or immediately
       // after) an auto node's work — the cursor only ever rests on an interactive
       // boundary (T14).
       do {
-        const transaction = log[cursor - 1];
+        const transaction = log[nextCursor - 1];
         // One combined inverse, reverse-ordered: the cascade is undone before the primary
         // change, so every port lands back on its pre-value — the user's own downstream
         // edits included.
-        data = applyDiffs(data, invertDiffs([...transaction.primary, ...transaction.cascade]));
-        cursor -= 1;
+        nextData = applyDiffs(nextData, invertDiffs([...transaction.primary, ...transaction.cascade]));
+        nextCursor -= 1;
         transactions += 1;
         if (transaction.nodeId !== undefined) unwound.push(transaction.nodeId);
-      } while (cursor > 0 && log[cursor - 1].auto === true);
+      } while (nextCursor > 0 && log[nextCursor - 1].auto === true);
 
+      install(nextData, nextCursor);
       return { transactions, nodeIds: unwound };
     },
 
@@ -188,19 +255,22 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
       const applied: string[] = [];
       let transactions = 0;
+      let nextData = data;
+      let nextCursor = cursor;
 
       do {
-        const transaction = log[cursor];
-        data = applyDiffs(data, transaction.primary);
+        const transaction = log[nextCursor];
+        nextData = applyDiffs(nextData, transaction.primary);
 
-        const cascade = deriveCascade(transaction.primary, data);
-        if (cascade.length > 0) data = applyDiffs(data, cascade);
+        const cascade = deriveCascade(transaction.primary, nextData);
+        if (cascade.length > 0) nextData = applyDiffs(nextData, cascade);
 
-        cursor += 1;
+        nextCursor += 1;
         transactions += 1;
         if (transaction.nodeId !== undefined) applied.push(transaction.nodeId);
-      } while (cursor < log.length && log[cursor - 1].auto === true);
+      } while (nextCursor < log.length && log[nextCursor - 1].auto === true);
 
+      install(nextData, nextCursor);
       return { transactions, nodeIds: applied };
     },
   };

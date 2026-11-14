@@ -50,6 +50,23 @@ export class MissingRequiredPorts extends Error {
 }
 
 /**
+ * A listener tried to write to the store from inside a notification.
+ *
+ * **Notification is not re-entry**: a listener re-reads the projection, and may never change it. This is
+ * enforced rather than merely documented because a writing listener *recurses* — the store notifies again
+ * from inside its own notification, so a single user action can become an unbounded chain.
+ *
+ * The guard is checked before anything is installed, so a refused write changes nothing, exactly like the
+ * rest of the write boundary.
+ */
+export class ReentrantStoreWrite extends Error {
+  constructor() {
+    super("[model-builder] the store changed from inside a notification: a listener must never write");
+    this.name = "ReentrantStoreWrite";
+  }
+}
+
+/**
  * A jump was asked for a node that is not behind the current position.
  *
  * Going *forward* is not a jump. The flow walks forward by running nodes, so the session reaches
