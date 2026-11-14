@@ -17,6 +17,7 @@ export type {
   LayerOptions,
   MapClick,
   MapFeature,
+  MapHost,
   MapService,
   ModuleViewProps,
   OverlayControl,

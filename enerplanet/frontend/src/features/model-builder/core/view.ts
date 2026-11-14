@@ -32,7 +32,7 @@ export interface MapFeature {
   /** The feature's own data, as the provider holds it. Read-only: the provider owns it, not the consumer. */
   readonly properties: Readonly<Record<string, unknown>>;
   /** Its geometry as GeoJSON — absent when the provider has no geometry for it. */
-  readonly geometry?: GeoJSON.GeoJsonObject;
+  readonly geometry?: GeoJSON.Geometry;
 }
 
 /** What the map publishes when the user clicks, so a listener can react to it. */
@@ -95,7 +95,7 @@ export interface MapService {
    * GeoJSON. A feature's **properties travel with it** and come back on `onElementClick` — that is the
    * "connected data" the map is for.
    */
-  addFeatures(id: string, data: GeoJSON.GeoJsonObject | MapFeature): void;
+  addFeatures(id: string, data: GeoJSON.GeoJSON | MapFeature): void;
   /**
    * Empty a layer without removing it. *Not in the A–H list*: a module redraws its result layer whenever the
    * store changes, and without this it could only ever append.
@@ -126,7 +126,25 @@ export interface MapService {
    * Frame this geometry (GeoJSON). *Not in the A–H list*: `model-start` already frames the chosen region with
    * it, and a provider that cannot move its camera is not a camera.
    */
-  fitTo(geometry: GeoJSON.GeoJsonObject): void;
+  fitTo(geometry: GeoJSON.GeoJSON): void;
+}
+
+/**
+ * What the frame mounts for the map (`modules/map-provider.md`).
+ *
+ * A **host module** is not a workflow node and has no place in a flow: the frame loads it once, because the
+ * map is always there, and hands every module's `map` region the service out of it. The provider is swappable
+ * by design, and this is the seam that makes it so — the frame knows only this shape, never MapLibre or
+ * OpenLayers.
+ *
+ * The service is **stable from creation**, before the canvas has rendered anything: a module that creates a
+ * layer on its first render is not racing the map.
+ */
+export interface MapHost {
+  /** The canvas, and nothing else — the frame hands it the slot, and it fills it. */
+  readonly Canvas: ComponentType;
+  /** The service every module's `map` region is handed. */
+  readonly service: MapService;
 }
 
 /**

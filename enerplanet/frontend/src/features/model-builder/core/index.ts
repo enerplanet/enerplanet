@@ -27,3 +27,4 @@ export * from "./artefact";
 export * from "./branch";
 export * from "./prompt";
 export * from "./testSupport";
+export * from "./mapStack";
