@@ -2970,6 +2970,27 @@
       "mode": "modo",
       "modeWorkflow": "flujo de trabajo"
     },
+    "grid-generation": {
+      "title": "La red sintética",
+      "description": "Genera edificios, transformadores y cables a partir del área dibujada.",
+      "generate": "Generar red",
+      "regenerate": "Regenerar red",
+      "generating": "Generando…",
+      "lossConfirm": "Reemplazar de todos modos",
+      "loss": "Volver a generar reemplaza esta red y descarta el trabajo de demanda y tecnologías construido sobre ella.",
+      "failed": "No se pudo generar la red: {{reason}}",
+      "bottom": {
+        "none": "Aún no hay red.",
+        "buildings": "edificios",
+        "transformers": "transformadores",
+        "cables": "cables",
+        "mvCables": "cables MT"
+      },
+      "map": {
+        "title": "La red",
+        "empty": "Genere una red para verla aquí."
+      }
+    },
     "map-provider": {
       "start": "Inicio",
       "clickToClose": "Clic para cerrar"
@@ -3013,13 +3034,7 @@
       "regionLabel": "Región",
       "regionNone": "elegir una región",
       "apply": "Aplicar",
-      "rulesHint": "Este es el nodo de entrada: no requiere nada, y todo lo posterior lee lo que él siembra.",
-      "map": {
-        "title": "Región en el mapa",
-        "hint": "Elegir una región la encuadra. El mapa base pertenece al módulo map-provider.",
-        "noRegion": "aún sin región elegida",
-        "frame": "Encuadrar"
-      }
+      "rulesHint": "Este es el nodo de entrada: no requiere nada, y todo lo posterior lee lo que él siembra."
     },
     "save": {
       "refused": "no se envió nada: {{reason}}"

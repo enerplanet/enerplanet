@@ -2973,6 +2973,27 @@
       "mode": "mode",
       "modeWorkflow": "workflow"
     },
+    "grid-generation": {
+      "title": "The synthetic grid",
+      "description": "Generate buildings, transformers and cables from the drawn area.",
+      "generate": "Generate grid",
+      "regenerate": "Regenerate grid",
+      "generating": "Generating…",
+      "lossConfirm": "Replace it anyway",
+      "loss": "Generating again replaces this grid and discards the demand and technology work built on it.",
+      "failed": "The grid could not be generated: {{reason}}",
+      "bottom": {
+        "none": "No grid yet.",
+        "buildings": "buildings",
+        "transformers": "transformers",
+        "cables": "cables",
+        "mvCables": "MV cables"
+      },
+      "map": {
+        "title": "The grid",
+        "empty": "Generate a grid to see it here."
+      }
+    },
     "map-provider": {
       "start": "Start",
       "clickToClose": "Click to close"
@@ -3016,13 +3037,7 @@
       "regionLabel": "Region",
       "regionNone": "choose a region",
       "apply": "Apply",
-      "rulesHint": "This is the entry node: it requires nothing, and everything downstream reads what it seeds.",
-      "map": {
-        "title": "Region on the map",
-        "hint": "Choosing a region frames it. The basemap itself belongs to the map-provider module.",
-        "noRegion": "no region chosen yet",
-        "frame": "Frame it"
-      }
+      "rulesHint": "This is the entry node: it requires nothing, and everything downstream reads what it seeds."
     },
     "save": {
       "refused": "nothing was sent: {{reason}}"

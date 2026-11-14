@@ -18,11 +18,14 @@ import mapProvider, { createMapHost } from "../modules/map-provider";
 
 import areaDraw from "../modules/area-draw";
 
+import gridGeneration from "../modules/grid-generation";
+
 export const MODULES: readonly BuilderModule[] = [
   example,
   modelStart,
   mapProvider,
   areaDraw,
+  gridGeneration,
 ];
 
 /**

@@ -2969,6 +2969,27 @@
       "mode": "modus",
       "modeWorkflow": "workflow"
     },
+    "grid-generation": {
+      "title": "Het synthetische net",
+      "description": "Genereert gebouwen, transformatoren en kabels uit het getekende gebied.",
+      "generate": "Net genereren",
+      "regenerate": "Net opnieuw genereren",
+      "generating": "Bezig met genereren…",
+      "lossConfirm": "Toch vervangen",
+      "loss": "Opnieuw genereren vervangt dit net en gooit het daarop gebouwde vraag- en technologiewerk weg.",
+      "failed": "Het net kon niet worden gegenereerd: {{reason}}",
+      "bottom": {
+        "none": "Nog geen net.",
+        "buildings": "gebouwen",
+        "transformers": "transformatoren",
+        "cables": "kabels",
+        "mvCables": "MS-kabels"
+      },
+      "map": {
+        "title": "Het net",
+        "empty": "Genereer een net om het hier te zien."
+      }
+    },
     "map-provider": {
       "start": "Start",
       "clickToClose": "Klik om te sluiten"
@@ -3012,13 +3033,7 @@
       "regionLabel": "Regio",
       "regionNone": "kies een regio",
       "apply": "Toepassen",
-      "rulesHint": "Dit is het ingangsknooppunt: het vereist niets, en alles daarna leest wat het aanlegt.",
-      "map": {
-        "title": "Regio op de kaart",
-        "hint": "Een gekozen regio wordt in beeld gebracht. De basiskaart zelf hoort bij de map-provider-module.",
-        "noRegion": "nog geen regio gekozen",
-        "frame": "In beeld brengen"
-      }
+      "rulesHint": "Dit is het ingangsknooppunt: het vereist niets, en alles daarna leest wat het aanlegt."
     },
     "save": {
       "refused": "niets verzonden: {{reason}}"

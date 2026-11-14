@@ -38,6 +38,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
+import { setGridEngine } from "../modules/grid-generation";
+import { pylovoGridEngine } from "./gridEngine";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
@@ -70,6 +72,13 @@ export const BuilderShell: React.FC = () => {
   // Built once for the frame's lifetime: the map host is the frame's, not a module's, and re-creating it would
   // tear the map down and bring it back.
   const host = useMemo(() => MAP_PROVIDER.createHost(), []);
+
+  // The frame's side of a module's provider slot. `grid-generation` declares that it *has* a grid engine and
+  // never learns which one; installing it is the host's job, exactly as mounting the map host is. An effect
+  // rather than a module-scope side effect, so importing the registry never has side effects of its own.
+  useEffect(() => {
+    setGridEngine(pylovoGridEngine);
+  }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
