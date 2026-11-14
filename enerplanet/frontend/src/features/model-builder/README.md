@@ -59,6 +59,42 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `saveModel.ts` | the two-call save (T13): the legacy payload built from the ports, the flow-derived status, and a partial save reported rather than thrown away. |
 | `saveNode.ts` | the `model-save` **node**: declares the whole persisted surface, requires `coordinates` (the backend resolves the country from them), and seals the save as one transaction. A refusal throws, so nothing is sealed. |
 
+## `shell/` — the prototyping shell
+
+| file | what it holds |
+|---|---|
+| `contract.ts` | what the shell needs from a module and what a module may ask for: `BuilderModule` (core contract + UI + mock), `ModuleViewProps`, `MapService`. `Region` is re-exported from the core, never redefined. |
+| `moduleRegistry.ts` | the modules the shell hosts — listed **manually, on purpose**. Building modules one at a time in isolation is the point; linking them into a flow comes once the set is complete. |
+| `BuilderShell.tsx` | the region frame (`sidebar` / `map` / `bottom` / `overlay`), the scratch session (a store seeded from the active module's `mock`), the map-host stub, and a dev-only module picker. |
+
+`/app/modelbuilder`, behind the `modelbuilder` runtime flag (Settings → Experimental — the sidebar entry is gated in the render path, so a toggle adds and removes it live).
+
+## `core/` — a package, not a folder
+
+`core/` is **`@model-builder/core`**: its own `package.json`, its own tsconfig, its own vitest config, and
+its own install. It holds the contract (ports, the module contract, the view contract), the store, the
+engine and the history primitives, and it imports nothing from this app — that is what lets a module
+depend on it, and only on it, from a workspace of its own.
+
+The app declares it as a `file:` dependency (`"@model-builder/core": "file:./src/features/model-builder/core"`),
+the same mechanism already used for `@spatialhub/*`, so npm symlinks it into `node_modules` and both vite
+and tsc resolve the specifier with no alias config.
+
+```bash
+cd src/features/model-builder/core && npm install && npm run verify   # standalone: typecheck + tests
+```
+
+## `modules/` — one workspace per module
+
+`modules/README.md` is the developer guide: the two packages a module depends on, the contract, the rules
+the core *checks* (declared ports, anti-clobber, `required`, verified `affect`), the regions, how to add a
+module, how to test one, and how to work on one without the app. `example/` is the reference shape and the
+proof the shell wiring works end to end — and it is a workspace in its own right:
+
+```bash
+cd src/features/model-builder/modules/example && npm install && npm run verify
+```
+
 ## `load/` — opening a session
 
 | file | what it holds |
@@ -89,9 +125,9 @@ shape is pinned against the extracted legacy `saveAreaData`), then the artefact 
 session API — with `incomplete` while the flow is unfinished and a failed second call reported rather
 than losing the model that was just created. Its framing is closed: the adapter interface plus the real
 `httpGateway`, the `model-save` node, and the Loader that opens a session and reattaches the flow by
-reference. Left: adopting a legacy model's `config` into a builder session (the Loader's `none` case —
-deliberately undecided, it needs the inverse of the save payload mapping), the module catalog, and the
-UI shell as a thin binding.
+reference. Left: the modules themselves (built one at a time in the shell, against mock data), the
+workflow link-up that replaces the shell's manual picker, and adopting a legacy model's `config` into
+a builder session.
 
 ## Commands
 

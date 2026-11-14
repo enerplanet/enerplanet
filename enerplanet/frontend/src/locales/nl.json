@@ -2955,5 +2955,41 @@
     "subtitle": "Beheer API-toegangstokens voor",
     "title": "API-tokens",
     "usageHint": "Gebruik het token vanuit elke app: Authorization: Bearer <token>. Alleen-lezen tokens kunnen modellen opvragen en resultaten downloaden met de rechten van deze gebruiker."
+  },
+  "modelBuilder": {
+    "shell": {
+      "title": "Model Builder",
+      "subtitle": "Modulevoorbeeld — één module tegelijk, met mock-data",
+      "module": "Module",
+      "reset": "Sessie opnieuw starten",
+      "noModules": "Er zijn nog geen modules geregistreerd.",
+      "noMap": "Er is nog geen basiskaart-provider geladen.",
+      "layers": "Toegevoegde lagen: {{count}}"
+    },
+    "example": {
+      "title": "Voorbeeldmodule",
+      "description": "Een werkend voorbeeld en tegelijk de template: leest de mock-data uit de store, committeert via de engine en rendert in drie regio's.",
+      "nameLabel": "Modelnaam",
+      "apply": "Naam toepassen",
+      "rulesHint": "Deze module declareert precies de poorten die hij aanraakt. De store is zijn enige staat, en run() is het enige schrijfpad.",
+      "status": "{{node}}: “{{name}}”, resolutie {{resolution}}",
+      "map": {
+        "title": "Kaartregio",
+        "hint": "De kaart is een tijdelijke interactieservice, geen modelstaat — wat bewaard moet blijven, wordt in de store gecommitteerd.",
+        "addLayer": "Een demolag toevoegen"
+      },
+      "review": "Controleren voor het opslaan",
+      "overlay": {
+        "title": "Klaar om op te slaan?",
+        "hint": "Wat de save-node zou zien: de gedeclareerde poorten van deze module en het oordeel van validate().",
+        "close": "Sluiten",
+        "complete": "validate() is tevreden — er ontbreekt niets.",
+        "issue": "{{port}}: {{message}}",
+        "shellHint": "Escape sluit dit paneel. De host bezit de omlijsting van de overlay — de verduistering, de centrering, de uitweg."
+      }
+    },
+    "dashboard": {
+      "newModel": "Nieuw model (experimenteel)"
+    }
   }
 }

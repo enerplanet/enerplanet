@@ -2959,5 +2959,41 @@
     "subtitle": "Manage API access tokens for",
     "title": "API Tokens",
     "usageHint": "Use the token from any app: Authorization: Bearer <token>. Read-only tokens can list models and download results with this user's permissions."
+  },
+  "modelBuilder": {
+    "shell": {
+      "title": "Model Builder",
+      "subtitle": "Module preview — one module at a time, on mock data",
+      "module": "Module",
+      "reset": "Reset session",
+      "noModules": "No modules are registered yet.",
+      "noMap": "No basemap provider module is loaded yet.",
+      "layers": "Layers added: {{count}}"
+    },
+    "example": {
+      "title": "Example module",
+      "description": "A working example and the template: it reads the mock from the store, commits through the engine, and renders into three regions.",
+      "nameLabel": "Model name",
+      "apply": "Apply the name",
+      "rulesHint": "This module declares exactly the ports it touches. The store is the only state it has, and run() is the only write path.",
+      "status": "{{node}}: “{{name}}”, resolution {{resolution}}",
+      "map": {
+        "title": "Map region",
+        "hint": "The map is a transient interaction service, not model state — anything worth keeping gets committed to the store.",
+        "addLayer": "Add a demo layer"
+      },
+      "review": "Review before saving",
+      "overlay": {
+        "title": "Ready to save?",
+        "hint": "What the save node would see: this module's declared ports, and the verdict of validate().",
+        "close": "Close",
+        "complete": "validate() is happy — nothing is missing.",
+        "issue": "{{port}}: {{message}}",
+        "shellHint": "Escape closes this panel. The host owns the overlay's chrome — the scrim, the centring, the way out."
+      }
+    },
+    "dashboard": {
+      "newModel": "New Model (experimental)"
+    }
   }
 }

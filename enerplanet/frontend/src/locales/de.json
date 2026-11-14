@@ -2959,5 +2959,41 @@
     "subtitle": "API-Zugriffstoken verwalten für",
     "title": "API-Token",
     "usageHint": "Verwenden Sie den Token aus jeder App: Authorization: Bearer <token>. Schreibgeschützte Token können Modelle auflisten und Ergebnisse mit den Berechtigungen dieses Benutzers herunterladen."
+  },
+  "modelBuilder": {
+    "shell": {
+      "title": "Model Builder",
+      "subtitle": "Modulvorschau — ein Modul nach dem anderen, mit Mock-Daten",
+      "module": "Modul",
+      "reset": "Sitzung zurücksetzen",
+      "noModules": "Es sind noch keine Module registriert.",
+      "noMap": "Es ist noch kein Basiskarten-Modul geladen.",
+      "layers": "Hinzugefügte Ebenen: {{count}}"
+    },
+    "example": {
+      "title": "Beispielmodul",
+      "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest die Mock-Daten aus dem Store, committet über die Engine und rendert in drei Regionen.",
+      "nameLabel": "Modellname",
+      "apply": "Namen übernehmen",
+      "rulesHint": "Dieses Modul deklariert genau die Ports, die es berührt. Der Store ist sein einziger Zustand, und run() ist der einzige Schreibweg.",
+      "status": "{{node}}: „{{name}}“, Auflösung {{resolution}}",
+      "map": {
+        "title": "Karten-Region",
+        "hint": "Die Karte ist ein flüchtiger Interaktionsdienst, kein Modellzustand — alles, was erhalten bleiben soll, wird in den Store committet.",
+        "addLayer": "Demo-Ebene hinzufügen"
+      },
+      "review": "Vor dem Speichern prüfen",
+      "overlay": {
+        "title": "Bereit zum Speichern?",
+        "hint": "Was der Save-Node sehen würde: die deklarierten Ports dieses Moduls und das Urteil von validate().",
+        "close": "Schließen",
+        "complete": "validate() ist zufrieden — es fehlt nichts.",
+        "issue": "{{port}}: {{message}}",
+        "shellHint": "Escape schließt dieses Panel. Den Rahmen des Overlays besitzt der Host — Abdunklung, Zentrierung und Ausweg."
+      }
+    },
+    "dashboard": {
+      "newModel": "Neues Modell (experimentell)"
+    }
   }
 }

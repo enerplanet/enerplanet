@@ -2956,5 +2956,41 @@
     "subtitle": "Gestionar tokens de acceso a la API de",
     "title": "Tokens de API",
     "usageHint": "Use el token desde cualquier aplicación: Authorization: Bearer <token>. Los tokens de solo lectura pueden listar modelos y descargar resultados con los permisos de este usuario."
+  },
+  "modelBuilder": {
+    "shell": {
+      "title": "Model Builder",
+      "subtitle": "Vista previa de módulos: un módulo a la vez, con datos simulados",
+      "module": "Módulo",
+      "reset": "Reiniciar sesión",
+      "noModules": "Todavía no hay módulos registrados.",
+      "noMap": "Todavía no hay cargado un módulo de mapa base.",
+      "layers": "Capas añadidas: {{count}}"
+    },
+    "example": {
+      "title": "Módulo de ejemplo",
+      "description": "Un ejemplo funcional y la plantilla: lee los datos simulados del store, confirma a través del motor y renderiza en tres regiones.",
+      "nameLabel": "Nombre del modelo",
+      "apply": "Aplicar el nombre",
+      "rulesHint": "Este módulo declara exactamente los puertos que toca. El store es su único estado y run() es la única vía de escritura.",
+      "status": "{{node}}: «{{name}}», resolución {{resolution}}",
+      "map": {
+        "title": "Región del mapa",
+        "hint": "El mapa es un servicio de interacción transitorio, no estado del modelo: lo que deba conservarse se confirma en el store.",
+        "addLayer": "Añadir una capa de demo"
+      },
+      "review": "Revisar antes de guardar",
+      "overlay": {
+        "title": "¿Listo para guardar?",
+        "hint": "Lo que vería el nodo de guardado: los puertos declarados de este módulo y el veredicto de validate().",
+        "close": "Cerrar",
+        "complete": "validate() está conforme: no falta nada.",
+        "issue": "{{port}}: {{message}}",
+        "shellHint": "Escape cierra este panel. El host es dueño del marco del overlay: el oscurecido, el centrado y la salida."
+      }
+    },
+    "dashboard": {
+      "newModel": "Nuevo modelo (experimental)"
+    }
   }
 }

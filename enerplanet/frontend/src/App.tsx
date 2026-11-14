@@ -17,12 +17,15 @@ const NotificationsPage = lazy(() => import("@/features/notifications/Notificati
 const AreaSelect = lazy(() => import("@/features/configurator/region-selector/AreaSelect").then(module => ({ default: module.AreaSelect })));
 const AssessmentViewer = lazy(() => import("@/features/assessment-viewer").then(module => ({ default: module.AssessmentViewer })));
 const ModelResultsViewer = lazy(() => import("@/features/model-results").then(module => ({ default: module.ModelResultsViewer })));
+// The Model Builder's shell: one module at a time, on mock data (see the feature's modules/README.md).
+const ModelBuilderShell = lazy(() => import("@/features/model-builder/shell/BuilderShell"));
 const TechnologiesPage = lazy(() => import("@/features/technologies/TechnologiesPage"));
 const SimulationCharts = lazy(() => import("@/features/simulation-charts").then(module => ({ default: module.SimulationCharts })));
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
 const LandingPage = lazy(() => import("./features/landing"));
 
 import { Authorized } from "@/middleware/authorized";
+import { FeatureFlagGate } from "@/features/settings/FeatureFlagGate";
 import { ProductTour } from "@/features/guided-tour/ProductTour";
 import NotificationProvider from "@/features/notifications/components/NotificationProvider";
 
@@ -82,6 +85,16 @@ const App: React.FC<AppProps> = () => {
                   <Route path="/app/assessment/:id" element={<AssessmentViewer />} />
                   <Route path="/app/model-results/:id" element={<ModelResultsViewer />} />
                   <Route path="/app/technologies" element={<TechnologiesPage />} />
+                  {/* Runtime-gated (Settings → Experimental): the gate is in the render path, so a
+                      toggle mounts and removes the route live, with no reload. */}
+                  <Route
+                    path="/app/modelbuilder"
+                    element={
+                      <FeatureFlagGate flag="modelbuilder">
+                        <ModelBuilderShell />
+                      </FeatureFlagGate>
+                    }
+                  />
                   <Route path="/app/simulation-reports" element={
                       <SimulationCharts />
                   } />
