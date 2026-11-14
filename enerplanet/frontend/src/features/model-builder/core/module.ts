@@ -11,6 +11,15 @@ import type { ModelData, PortKey } from "./ports";
 /** Layout regions a module's UI may mount into (`Plan.md` §8). */
 export type Region = "sidebar" | "bottom" | "overlay" | "map";
 
+/**
+ * The regions a host offers, in layout order.
+ *
+ * Declared here, next to `Region`, because `Module.layout` already names regions — a second copy of this
+ * list anywhere else would drift. The shell composes its page from it; a module author reads it to know
+ * what it may ask for.
+ */
+export const REGIONS: readonly Region[] = ["sidebar", "map", "bottom", "overlay"];
+
 /** Lifecycle of one workflow node (`Plan.md` §7). */
 export type NodeState = "pending" | "ready" | "active" | "done" | "skipped" | "stale" | "error";
 
