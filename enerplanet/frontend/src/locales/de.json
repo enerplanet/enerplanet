@@ -2973,6 +2973,38 @@
       "mode": "Modus",
       "modeWorkflow": "Workflow"
     },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Klicken zum Schließen"
+    },
+    "area-draw": {
+      "drawAnother": "Weiteres Gebiet zeichnen",
+      "drawnCount": "Gezeichnet: {{count}}",
+      "mapMissing": "Die Karte ist noch nicht bereit — bitte einen Moment warten.",
+      "ringTooSmall": "Dieses Polygon hatte keine Fläche, es wurde nichts übernommen.",
+      "title": "Modellgebiet",
+      "description": "Zeichnen Sie das Gebiet, in dem das Modell erstellt wird. Ein oder mehrere Polygone — alles Weitere wird darin erzeugt.",
+      "mapTitle": "Gebiet",
+      "mapHint": "Zeichnen Sie das Gebiet auf der Karte. Klicken setzt Eckpunkte; ein Klick auf die Startmarkierung schließt es, oder ein Rechtsklick. Escape bricht ab.",
+      "draw": "Gebiet zeichnen",
+      "drawing": "Zeichnen…",
+      "unapplied": "Dieses Gebiet ist noch nicht übernommen.",
+      "applied": "Das Gebiet ist übernommen.",
+      "polygons": "Gezeichnete Polygone",
+      "nothing": "Noch kein Polygon gezeichnet.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} Punkte",
+      "area": "{{area}} km²",
+      "total": "Gesamtfläche",
+      "apply": "Gebiet übernehmen",
+      "confirmApply": "Trotzdem übernehmen",
+      "confirmBody": "Beim Übernehmen dieses Gebiets wird das bestehende Netz ({{count}} Gebäude) und alles darauf Aufgebaute entfernt.",
+      "confirmCancel": "Aktuelles Gebiet behalten",
+      "undo": "Letztes zurücknehmen",
+      "clear": "Alles löschen",
+      "discard": "Änderungen verwerfen",
+      "rulesHint": "Netz, Bedarf und Technologien werden innerhalb dieses Gebiets erzeugt. Eine Änderung entfernt, was auf dem alten aufgebaut ist."
+    },
     "model-start": {
       "title": "Modellstart",
       "description": "Erstellt das Modell: Name, Zeitraum, Auflösung und die Region, in der gezeichnet wird.",

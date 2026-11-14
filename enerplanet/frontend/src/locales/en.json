@@ -2973,6 +2973,38 @@
       "mode": "mode",
       "modeWorkflow": "workflow"
     },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Click to close"
+    },
+    "area-draw": {
+      "drawAnother": "Draw another area",
+      "drawnCount": "Drawn: {{count}}",
+      "mapMissing": "The map is not ready yet — try again in a moment.",
+      "ringTooSmall": "That polygon had no area, so nothing was added.",
+      "title": "Model area",
+      "description": "Draw the area the model is built in. One or more polygons — everything else is generated inside them.",
+      "mapTitle": "Area",
+      "mapHint": "Draw the area on the map. Click to place corners; click the start marker to close it, or right-click. Escape cancels.",
+      "draw": "Draw area",
+      "drawing": "Drawing…",
+      "unapplied": "This area is not applied yet.",
+      "applied": "The area is applied.",
+      "polygons": "Drawn polygons",
+      "nothing": "No polygon drawn yet.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} points",
+      "area": "{{area}} km²",
+      "total": "Total area",
+      "apply": "Apply area",
+      "confirmApply": "Apply anyway",
+      "confirmBody": "Applying this area removes the existing grid ({{count}} buildings) and everything built on it.",
+      "confirmCancel": "Keep the current area",
+      "undo": "Undo last",
+      "clear": "Clear all",
+      "discard": "Discard changes",
+      "rulesHint": "The grid, the demand and the technologies are generated inside this area. Changing it removes what is built on the old one."
+    },
     "model-start": {
       "title": "Model start",
       "description": "Create the model: what it is called, the period it covers, its resolution, and the region it is drawn in.",

@@ -2969,6 +2969,38 @@
       "mode": "modus",
       "modeWorkflow": "workflow"
     },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Klik om te sluiten"
+    },
+    "area-draw": {
+      "drawAnother": "Nog een gebied tekenen",
+      "drawnCount": "Getekend: {{count}}",
+      "mapMissing": "De kaart is nog niet gereed — probeer het zo meteen opnieuw.",
+      "ringTooSmall": "Die polygoon had geen oppervlakte, dus er is niets toegevoegd.",
+      "title": "Modelgebied",
+      "description": "Teken het gebied waarin het model wordt gebouwd. Een of meer polygonen — al het overige wordt daarbinnen gegenereerd.",
+      "mapTitle": "Gebied",
+      "mapHint": "Teken het gebied op de kaart. Klik om hoekpunten te plaatsen; klik op de startmarkering om het te sluiten, of rechtsklik. Escape annuleert.",
+      "draw": "Gebied tekenen",
+      "drawing": "Tekenen…",
+      "unapplied": "Dit gebied is nog niet toegepast.",
+      "applied": "Het gebied is toegepast.",
+      "polygons": "Getekende polygonen",
+      "nothing": "Nog geen polygoon getekend.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} punten",
+      "area": "{{area}} km²",
+      "total": "Totale oppervlakte",
+      "apply": "Gebied toepassen",
+      "confirmApply": "Toch toepassen",
+      "confirmBody": "Dit gebied toepassen verwijdert het bestaande net ({{count}} gebouwen) en alles wat daarop is gebouwd.",
+      "confirmCancel": "Huidig gebied behouden",
+      "undo": "Laatste ongedaan maken",
+      "clear": "Alles wissen",
+      "discard": "Wijzigingen verwerpen",
+      "rulesHint": "Het net, de vraag en de technologieën worden binnen dit gebied gegenereerd. Het wijzigen ervan verwijdert wat op het oude is gebouwd."
+    },
     "model-start": {
       "title": "Modelstart",
       "description": "Maakt het model aan: de naam, de periode, de resolutie en de regio waarin wordt getekend.",

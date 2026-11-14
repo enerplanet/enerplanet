@@ -2970,6 +2970,38 @@
       "mode": "modo",
       "modeWorkflow": "flujo de trabajo"
     },
+    "map-provider": {
+      "start": "Inicio",
+      "clickToClose": "Clic para cerrar"
+    },
+    "area-draw": {
+      "drawAnother": "Dibujar otra área",
+      "drawnCount": "Dibujados: {{count}}",
+      "mapMissing": "El mapa aún no está listo; vuelva a intentarlo en un momento.",
+      "ringTooSmall": "Ese polígono no tenía área, así que no se añadió nada.",
+      "title": "Área del modelo",
+      "description": "Dibuje el área donde se construye el modelo. Uno o varios polígonos: todo lo demás se genera dentro de ellos.",
+      "mapTitle": "Área",
+      "mapHint": "Dibuje el área en el mapa. Clic para colocar vértices; clic en el marcador de inicio para cerrarla, o clic derecho. Escape cancela.",
+      "draw": "Dibujar área",
+      "drawing": "Dibujando…",
+      "unapplied": "Esta área aún no se ha aplicado.",
+      "applied": "El área está aplicada.",
+      "polygons": "Polígonos dibujados",
+      "nothing": "Todavía no hay ningún polígono.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} puntos",
+      "area": "{{area}} km²",
+      "total": "Área total",
+      "apply": "Aplicar área",
+      "confirmApply": "Aplicar de todos modos",
+      "confirmBody": "Aplicar esta área elimina la red existente ({{count}} edificios) y todo lo construido sobre ella.",
+      "confirmCancel": "Mantener el área actual",
+      "undo": "Deshacer último",
+      "clear": "Borrar todo",
+      "discard": "Descartar cambios",
+      "rulesHint": "La red, la demanda y las tecnologías se generan dentro de esta área. Cambiarla elimina lo construido sobre la anterior."
+    },
     "model-start": {
       "title": "Inicio del modelo",
       "description": "Crea el modelo: su nombre, el periodo que cubre, su resolución y la región en la que se dibuja.",

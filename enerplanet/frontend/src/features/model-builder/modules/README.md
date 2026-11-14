@@ -68,7 +68,7 @@ module that declares nothing is headless, which is how an `auto` node renders no
 | slot | what it is | what the module gets |
 |---|---|---|
 | `sidebar` | the primary panel: forms, settings, lists, a fixed `w-80` column on the left | — |
-| `map` | **the main centre area**, `flex-1`; named for the interactive map host it is meant to carry, but structurally it is simply the big region | `MapService` |
+| `map` | **the map host's slot** — the engine's canvas fills it and your controls render over it in a pass-through layer (see "Putting UI on the map") | `MapService` |
 | `bottom` | a footer bar across the content area: status, summaries, stats | — |
 | `overlay` | a full-screen panel above everything, opened and closed on demand | `OverlayControl` |
 
@@ -94,6 +94,44 @@ tilted camera over extruded data (the legacy's LOD2 buildings). Two things follo
 
 G/H are why named layers matter: MapLibre's own `moveLayer(id, beforeId)` and style-layer order *are* that list,
 so the provider hands it through rather than inventing a mapping.
+
+### A module renders once per region
+
+A module's `Component` is rendered **once for each region it declares** — two regions, two elements, two React
+instances, **two `useState`s**. That is harmless until two regions must agree on something: each would paint its
+own copy, whichever re-rendered last would win, and two effects would take turns clearing the same map layer.
+
+So anything two regions share belongs to the *module*, not to a render of it — the same reason `hold()` is
+module-level. `area-draw` keeps its draft in `draft.ts` and both regions subscribe with `useSyncExternalStore`,
+and its map effects are guarded to the `map` region so only one instance writes the layer.
+
+A module whose regions never share a value (a form in the sidebar, a status strip in `bottom`) needs none of
+this: `useState` is fine when only one region reads it. The rule bites exactly when a region reads a value
+another region writes.
+
+### Putting UI on the map
+
+A module puts UI over the map by **declaring the `map` region** — that region *is* the overlay. The frame renders
+the map host's canvas underneath and the module's element above it in a **pass-through layer**: the host's wrapper
+is `pointer-events-none`, so a panel never swallows a map click by accident, and anything that *should* take
+clicks opts in with `pointer-events-auto`.
+
+The floating-panel convention, as the example and `area-draw` do it — copy this:
+
+```tsx
+<div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto
+                rounded-lg border border-border bg-card/95 p-4 shadow-sm"> … </div>
+```
+
+`max-h-full` and `overflow-auto` because the frame hands over a bounded box and the module owns its overflow; the
+card background because a panel over a map is unreadable without one.
+
+For a **modal** over the whole module column — the map, the sidebar and the bars — declare `overlay` and call
+`OverlayControl.open()`. The host keeps the scrim, the centring and the Escape handling, and a declared overlay
+stays closed until the module asks for it.
+
+A module cannot style its *map layers* yet: `createLayer` has no style option, so every layer draws in the same
+fill, line and circle. A custom (non-GeoJSON) layer — the three.js/LoD2 case — is provider territory too.
 
 `OverlayControl` (`open()`, `close()`, `isOpen`) lets a module ask for the full-screen slot without owning
 its chrome. A declared overlay is **closed until the module opens it**, and the host keeps the scrim, the
