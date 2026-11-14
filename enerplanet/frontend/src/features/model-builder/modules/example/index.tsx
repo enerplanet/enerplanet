@@ -9,7 +9,7 @@
  * demonstration of the frame:
  *
  *   sidebar   the model form — the name and the resolution, committed together
- *   map       draw the area — click to place ring points, then commit the ring; uses `MapService`
+ *   map       draw the area — click to place ring points, then commit the ring, and put it on the map
  *   bottom    module status — every declared port and whether the store holds it
  *   overlay   the review — the declared ports with their values, the drawn area, and what is missing
  *
@@ -21,6 +21,11 @@
  * **Each region also calls `run()` itself**, with what it collected — it holds those values in the module's own
  * model and hands them over with `hold()`, keyed to the node they were collected for. See the notes on `hold`
  * and `seal`.
+ *
+ * The map region draws locally and then puts the result on the map: it **names a layer** (`createLayer`), empties
+ * it (`clearLayer`) and adds the ring (`addFeatures`) — create and place as two separate calls, which is the
+ * shape of the service. Drawing *from* the map (`requestPolygon`) and reacting to clicks (`onElementClick`) need
+ * a real renderer behind the service; they belong to `area-draw`, and `map-provider` is what makes them work.
  *
  * Scaffold a new one from it:
  *
@@ -47,8 +52,11 @@ type Ring = [number, number][];
 /** The resolutions a building model is usually drawn at, in minutes. */
 const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
 
-/** The layer id the map slot registers its ring under — a constant, so it can remove its own layer again. */
-const RING_LAYER = "example-ring";
+/**
+ * The layer this module puts its ring on. The **module names it** — that is the service's shape: the id is how
+ * this module finds its own layer again, how `getLayerOrder` talks about it, and nothing else has to agree on it.
+ */
+const AREA_LAYER = "example-area";
 
 /**
  * The module's own model: the values its regions have collected, and the node they were collected for.
@@ -185,13 +193,15 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
   // The frame can move the session to another node mid-edit — from the bar, while this form is half-filled.
   // Nothing collected on one node may reach another, so a node change drops the held values and clears what
   // was collected locally: the region shows the *store's* values again, and only a fresh hold can be
-  // committed from here.
+  // committed from here. The layer this module put on the map goes with it — `removeLayer` is idempotent,
+  // so this is safe even when there was nothing on the map to begin with.
   useEffect(() => {
+    map?.removeLayer(AREA_LAYER);
     hold(nodeId, {});
     setTypedName(null);
     setTypedResolution(null);
     setPoints([]);
-  }, [nodeId]);
+  }, [nodeId, map]);
 
   // ── bottom: module status. Intrinsic height on purpose — its box is a cap, so a strip that fits renders
   //    as a strip. Each port says whether the store actually holds it, by colour *and* by word.
@@ -215,8 +225,8 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
     );
   }
 
-  // ── map: draw the area. The drawing is local until it is committed, and what gets committed is the ring —
-  //    the map service never writes the store.
+  // ── map: draw the area locally, then put it on the map. What gets committed is the ring — the map service
+  //    never writes the store, and the layer is transient interaction state.
   if (region === "map") {
     const addPoint = (event: React.MouseEvent<SVGSVGElement>): void => {
       const box = event.currentTarget.getBoundingClientRect();
@@ -232,18 +242,24 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
 
     const commitRing = (): void => {
       const ring = asRing();
+      const area = { type: "Polygon" as const, coordinates: [ring] };
+
       hold(nodeId, { coordinates: [ring] });
-      // The map service holds transient interaction state: adding a layer and framing the area are the host's
-      // job, and neither is model state. Only `coordinates` is committed.
-      map?.removeLayer(RING_LAYER);
-      map?.addLayer(RING_LAYER, { type: "Polygon", coordinates: [ring] });
-      map?.fitTo({ type: "Polygon", coordinates: [ring] });
+
+      // Four separate calls, which is the shape of the service: name a layer, empty it, put the geometry on it,
+      // and say it is the one taking clicks. None of it is model state — the ring above is what was committed.
+      map?.createLayer(AREA_LAYER);
+      map?.clearLayer(AREA_LAYER);
+      map?.addFeatures(AREA_LAYER, area);
+      map?.setInteractiveLayer(AREA_LAYER);
+      map?.fitTo(area);
+
       void run().finally(() => setPoints([]));
     };
 
     const clear = (): void => {
       setPoints([]);
-      map?.removeLayer(RING_LAYER);
+      map?.clearLayer(AREA_LAYER);
     };
 
     return (

@@ -20,20 +20,113 @@ import type { Module, Region } from "./module";
 import type { ModelData } from "./ports";
 
 /**
- * The map service a module in the `map` region gets (`Plan.md` §8).
+ * A feature the map handed back: its geometry, and **the data connected to it**.
  *
- * The map is a **transient interaction service, not model state**: it holds render/interaction state
- * only, and anything a module must keep (a drawn polygon, a selection) is committed to the store as a
- * normal transaction instead. The map host never writes the store.
+ * This is the point of the map service. A consumer asks the map for a point, a polygon or a clicked element,
+ * and gets back the feature *and* whatever the provider holds for it. A bare coordinate would make a consumer
+ * go back to the map engine to look the feature up, which is exactly the dependency the provider exists to
+ * hide (`modules/map-provider.md`, "blackbox"). The geometry travels as GeoJSON so a module can commit it to
+ * the store without importing the map engine at all.
+ */
+export interface MapFeature {
+  /** The feature's own data, as the provider holds it. Read-only: the provider owns it, not the consumer. */
+  readonly properties: Readonly<Record<string, unknown>>;
+  /** Its geometry as GeoJSON — absent when the provider has no geometry for it. */
+  readonly geometry?: GeoJSON.GeoJsonObject;
+}
+
+/** What the map publishes when the user clicks, so a listener can react to it. */
+export interface MapClick {
+  /** Where they clicked, `[lon, lat]`. */
+  readonly coordinates: [number, number];
+  /** The element they hit — **absent when the click landed on empty map**, which is an answer, not an error. */
+  readonly feature?: MapFeature;
+}
+
+/** What a layer is created with. */
+export interface LayerOptions {
+  /** Whether this layer starts out accepting clicks. Only one layer is interactive at a time. */
+  readonly interactive?: boolean;
+}
+
+/**
+ * The map service a module in the `map` region gets (`Plan.md` §8, `modules/map-provider.md`).
+ *
+ * The map is a **transient interaction service, not model state**: it holds render/interaction state only, and
+ * anything a module must keep (a drawn polygon, a selection) is committed to the store as a normal transaction
+ * instead. The map host never writes the store.
+ *
+ * The shape of the work is **create, then place**: asking the map for geometry *returns* it and puts nothing on
+ * the map; the module then names a layer and adds what it created. Building something and showing it are two
+ * calls, so a module can commit what it built before it decides to draw it — or not draw it at all.
  */
 export interface MapService {
-  /** The baselayer provider this host is rendering, or `undefined` when none is loaded yet. */
-  readonly providerId?: string;
-  addLayer(id: string, layer: unknown): void;
+  // ── Creating geometry. Nothing is on the map yet; the result goes onto a layer with `addFeatures`.
+
+  /** **A** — let the user create a point, and return it. */
+  requestPoint(): Promise<MapFeature>;
+  /** **B** — let the user create a polygon (rings of `[lon, lat]`), and return it. */
+  requestPolygon(): Promise<MapFeature>;
+
+  // ── Reacting to the user.
+
+  /**
+   * **C** — subscribe to clicks on the map. `undefined` is passed when the click missed every interactive
+   * layer, so a module can react to both "they picked this element" and "they clicked the map".
+   *
+   * Returns the **unsubscribe**: a listener outliving the module that registered it is a leak, and this is the
+   * handle that stops it.
+   */
+  onElementClick(listener: (click: MapClick) => void): () => void;
+
+  // ── Layers. A module **names its own layer** — the id is how it finds it again, and how `getLayerOrder`
+  //    talks about it.
+
+  /** **D** — create the layer with this id, or adopt the one that already has it (idempotent). */
+  createLayer(id: string, options?: LayerOptions): void;
+  /**
+   * Remove the layer entirely. *Not in the A–H list, but not omittable*: a module that leaves must be able to
+   * take its layer with it, and a provider is expected to drop what a departed module left behind anyway.
+   * **Idempotent** — removing a layer that is not there does nothing, so a cleanup path can always call it.
+   */
   removeLayer(id: string): void;
-  fitTo(geometry: unknown): void;
-  requestPoint(): Promise<[number, number]>;
-  requestPolygon(): Promise<[number, number][][]>;
+  /**
+   * **E** — add geometry to a layer: a `MapFeature` straight from `requestPoint`/`requestPolygon`, or any
+   * GeoJSON. A feature's **properties travel with it** and come back on `onElementClick` — that is the
+   * "connected data" the map is for.
+   */
+  addFeatures(id: string, data: GeoJSON.GeoJsonObject | MapFeature): void;
+  /**
+   * Empty a layer without removing it. *Not in the A–H list*: a module redraws its result layer whenever the
+   * store changes, and without this it could only ever append.
+   */
+  clearLayer(id: string): void;
+
+  /**
+   * **F** — which layer is up front and accepts clicks; `null` for none.
+   *
+   * The designated layer renders in front of the others, and **the stored order is left alone** — so
+   * designating another layer, or none, puts the stack back exactly as it was, which is what "initial order is
+   * preserved" means.
+   */
+  setInteractiveLayer(id: string | null): void;
+
+  /** **G** — the layer order, bottom to top, as a plain array of ids. */
+  getLayerOrder(): readonly string[];
+  /**
+   * **H** — put the layers in this order: hand back what `getLayerOrder` returned, reordered.
+   *
+   * Strict on purpose — the list must name every layer exactly once. A module that wants to move one layer
+   * reorders the list it just read, and a list naming a layer the host does not have is a bug worth hearing
+   * about rather than a silently ignored call.
+   */
+  setLayerOrder(order: readonly string[]): void;
+
+  /**
+   * Frame this geometry (GeoJSON). *Not in the A–H list*: `model-start` already frames the chosen region with
+   * it, and a provider that cannot move its camera is not a camera.
+   */
+  fitTo(geometry: GeoJSON.GeoJsonObject): void;
 }
 
 /**

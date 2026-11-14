@@ -61,22 +61,65 @@ function sessionFor(seed: Readonly<ModelData>): Session {
 }
 
 /**
- * The map host's stub. It records the layers a module adds — enough to prove the seam and to see a module's
- * layers appear — and says plainly that no baselayer provider is loaded yet.
+ * The **stub** map host: it keeps the bookkeeping a real host keeps — which layers exist, in what order, which
+ * one is up front — and refuses the geometry requests, because nothing here can render or hit-test a map. The
+ * `map-provider` module replaces it; this exists only so the frame runs before that module lands.
  */
 function useMapStub(): { map: MapService; layers: readonly string[] } {
   const [layers, setLayers] = useState<readonly string[]>([]);
 
-  const map = useMemo<MapService>(
-    () => ({
-      addLayer: (id) => setLayers((current) => (current.includes(id) ? current : [...current, id])),
-      removeLayer: (id) => setLayers((current) => current.filter((existing) => existing !== id)),
+  const map = useMemo<MapService>(() => {
+    // The host's own model of the stack: created layers append, `setLayerOrder` rewrites it, and the
+    // interactive one never touches it — that is what keeps "initial order is preserved" true.
+    const order: string[] = [];
+    let interactive: string | null = null;
+    const noProvider = (): Promise<never> =>
+      Promise.reject(new Error("no basemap provider module is loaded yet"));
+    const publish = (): void => setLayers([...order]);
+
+    return {
+      requestPoint: noProvider,
+      requestPolygon: noProvider,
+
+      // Nothing here can hit-test, so a listener is accepted and never called — which is the honest stub.
+      onElementClick: () => () => undefined,
+
+      createLayer: (id, options) => {
+        if (!order.includes(id)) order.push(id);
+        if (options?.interactive === true) interactive = id;
+        publish();
+      },
+      removeLayer: (id) => {
+        const at = order.indexOf(id);
+        if (at !== -1) order.splice(at, 1);
+        if (interactive === id) interactive = null;
+        publish();
+      },
+      addFeatures: () => undefined,
+      clearLayer: () => undefined,
+
+      setInteractiveLayer: (id) => {
+        interactive = id !== null && order.includes(id) ? id : null;
+        publish();
+      },
+
+      getLayerOrder: () => [...order],
+      setLayerOrder: (next) => {
+        // Strict, as the contract says: a list naming a layer the host does not have is a bug worth hearing.
+        for (const id of next) {
+          if (!order.includes(id)) throw new Error(`unknown layer in layer order: ${id}`);
+        }
+        if (next.length !== order.length) {
+          throw new Error("a layer order must name every layer exactly once");
+        }
+        order.length = 0;
+        order.push(...next);
+        publish();
+      },
+
       fitTo: () => undefined,
-      requestPoint: () => Promise.reject(new Error("no baselayer provider module is loaded")),
-      requestPolygon: () => Promise.reject(new Error("no baselayer provider module is loaded")),
-    }),
-    [],
-  );
+    };
+  }, []);
 
   return { map, layers };
 }

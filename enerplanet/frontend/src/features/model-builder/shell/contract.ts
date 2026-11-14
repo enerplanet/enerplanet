@@ -12,4 +12,12 @@
 
 export { REGIONS } from "../core/module";
 export type { Region, NodeState, Module } from "../core/module";
-export type { BuilderModule, MapService, ModuleViewProps, OverlayControl } from "../core/view";
+export type {
+  BuilderModule,
+  LayerOptions,
+  MapClick,
+  MapFeature,
+  MapService,
+  ModuleViewProps,
+  OverlayControl,
+} from "../core/view";

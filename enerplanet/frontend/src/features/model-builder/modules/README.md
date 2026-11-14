@@ -72,10 +72,28 @@ module that declares nothing is headless, which is how an `auto` node renders no
 | `bottom` | a footer bar across the content area: status, summaries, stats | — |
 | `overlay` | a full-screen panel above everything, opened and closed on demand | `OverlayControl` |
 
-The `map` region's `MapService` — `addLayer`/`removeLayer`, `fitTo`, `requestPoint`/`requestPolygon` — is
+The `map` region's `MapService` — the A–H surface: `requestPoint`/`requestPolygon` (create geometry and return
+it), `onElementClick`, `createLayer`/`removeLayer`/`addFeatures`/`clearLayer`, `setInteractiveLayer`,
+`getLayerOrder`/`setLayerOrder`, `fitTo` — is
 a transient interaction service, **not model state**: it holds render/interaction state only, and anything
 a module must keep (a drawn polygon, a selection) is committed to the store as a normal transaction. The
 map host never writes the store.
+
+### The engine is MapLibre
+
+The provider renders with **MapLibre only**, 2D and 3D from one engine: a raster/vector basemap, and 3D as a
+tilted camera over extruded data (the legacy's LOD2 buildings). Two things follow:
+
+- **Nothing about the engine reaches a module.** A module never imports `maplibre-gl`; it talks to `MapService`
+  and gets GeoJSON back — which is what keeps the provider replaceable.
+- **OpenLayers is not gone from the app.** The legacy configurator and six other features (`polygon-drawer`,
+  `assessment-viewer`, `settings/MapPointPicker`, `simulation-charts/ComparisonMapPanel`, `model-results`,
+  `interactive-map` utils) still run on it, including the multi-CRS area import in
+  `configurator/utils/areaGeoJSON.ts`. It leaves with the legacy, at parity; the Model Builder does not depend
+  on it either way.
+
+G/H are why named layers matter: MapLibre's own `moveLayer(id, beforeId)` and style-layer order *are* that list,
+so the provider hands it through rather than inventing a mapping.
 
 `OverlayControl` (`open()`, `close()`, `isOpen`) lets a module ask for the full-screen slot without owning
 its chrome. A declared overlay is **closed until the module opens it**, and the host keeps the scrim, the
@@ -174,10 +192,14 @@ workspace, where its own `package.json` can carry `react`, RTL and jsdom without
 ## Working on a module without the app
 
 ```bash
-cd modules/example
-npm install          # links @model-builder/core and the module's tools into ./node_modules
-npm run verify       # typecheck + test, both standalone
-npm run test:watch   # the loop you actually want
+# One install covers the app AND every module: the modules are npm workspaces of the frontend, so their
+# dependencies are declared in their own package.json and installed here, hoisted and deduped.
+cd ../..                     # enerplanet/frontend
+npm install
+
+cd src/features/model-builder/modules/example
+npm run verify               # typecheck + test, both standalone
+npm run test:watch           # the loop you actually want
 ```
 
 **Test mode.** Running a module on its own — here or in the shell's module preview — puts it in *test
