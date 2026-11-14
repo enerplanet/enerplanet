@@ -1,0 +1,8 @@
+{
+  "id": "dev-flow",
+  "label": "Development flow",
+  "seed": "testdata/dev-flow.json",
+  "nodes": [
+    { "id": "example", "moduleId": "example", "label": "Example module" }
+  ]
+}

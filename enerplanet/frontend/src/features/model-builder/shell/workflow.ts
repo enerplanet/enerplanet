@@ -1,0 +1,133 @@
+/**
+ * The dev workflow — static configuration now, a backend resource later (`spec/frame.md` §5).
+ *
+ * A workflow is an ordered list of nodes, and every part of the frame reads it: the workflow bar shows
+ * where the session is, the steps panel shows every step's state, and `position.ts` derives both from
+ * `(flow, registry, store)`. So the source's job is narrow and worth keeping pure: turn *untrusted*
+ * configuration into exactly what the core already takes — a `Flow`, a `ModuleRegistry` and the seed ports
+ * — and refuse a definition that could not be walked.
+ *
+ * `toWorkflow` is deliberately separate from the two `import`s below. The shape can then be exercised
+ * without a fixture on disk, and moving to a hosted workflow changes one binding (`devWorkflow` becomes an
+ * `await fetch`), not this logic.
+ *
+ * On the JSON `import` rather than the app's `fetch`-from-public idiom: a *definition* is configuration
+ * the frame needs before it can render anything, so a synchronous import avoids a loading state it would
+ * otherwise have to invent. The seed is data and may well move to that idiom when it grows.
+ */
+
+import devFlowDefinition from "./workflow.dev.json";
+import devSeed from "./testdata/dev-flow.json";
+import type { Flow, FlowNode, ModuleRegistry, SeedPorts } from "../core/flow";
+import type { Module } from "../core/module";
+import type { ModelData, PortKey } from "../core/ports";
+import { MODULES } from "./moduleRegistry";
+import type { BuilderModule } from "./contract";
+
+/** A workflow as the frame needs it: where to walk, what to walk it with, and where the data starts. */
+export interface Workflow {
+  id: string;
+  label: string;
+  flow: Flow;
+  registry: ModuleRegistry;
+  /** Ports that exist before any node runs — the seed's own surface, which is what gates the first node. */
+  seeds: SeedPorts;
+  /** The projection the session starts from. */
+  initial: ModelData;
+  /**
+   * The seed file the definition names. Recorded rather than used, so the name is checkable against what
+   * is actually loaded — the two must not drift.
+   */
+  seedFile: string;
+}
+
+/**
+ * Build a workflow from a definition, the modules it may place, and the seed.
+ *
+ * Refuses, rather than half-working later: a definition with no id, one that places nothing, a node whose
+ * module nobody declared, and two nodes sharing an id — the last because a node id is how history names a
+ * position, so a duplicate makes the log ambiguous.
+ */
+export function toWorkflow(
+  definition: unknown,
+  entries: readonly BuilderModule[],
+  seed: Readonly<ModelData>,
+): Workflow {
+  const raw = asRecord(definition);
+
+  const id = asString(raw.id)?.trim();
+  if (id === undefined || id.length === 0) {
+    throw new Error("[model-builder] the workflow has no id");
+  }
+
+  const registry: Record<string, Module> = {};
+  for (const entry of entries) registry[entry.module.id] = entry.module;
+
+  if (!Array.isArray(raw.nodes) || raw.nodes.length === 0) {
+    throw new Error(`[model-builder] workflow "${id}" places no nodes`);
+  }
+
+  const flow: FlowNode[] = [];
+  const seen = new Set<string>();
+
+  raw.nodes.forEach((candidate, index) => {
+    const node = asRecord(candidate);
+    const nodeId = asString(node.id);
+
+    if (nodeId === undefined) {
+      throw new Error(`[model-builder] workflow "${id}" node ${index} has no id`);
+    }
+    if (seen.has(nodeId)) {
+      throw new Error(
+        `[model-builder] workflow "${id}" has a duplicate node id "${nodeId}" — a node id is how history names a position`,
+      );
+    }
+    seen.add(nodeId);
+
+    const moduleId = asString(node.moduleId);
+    if (moduleId === undefined || registry[moduleId] === undefined) {
+      throw new Error(
+        `[model-builder] workflow "${id}" node "${nodeId}": moduleId "${moduleId}" is not declared`,
+      );
+    }
+
+    const label = asString(node.label);
+    const auto = typeof node.auto === "boolean" ? node.auto : undefined;
+
+    flow.push({
+      id: nodeId,
+      moduleId,
+      ...(label === undefined ? {} : { label }),
+      ...(auto === undefined ? {} : { auto }),
+    });
+  });
+
+  return {
+    id,
+    label: asString(raw.label) ?? id,
+    flow,
+    registry,
+    seeds: Object.keys(seed) as PortKey[],
+    initial: { ...seed },
+    seedFile: asString(raw.seed) ?? "",
+  };
+}
+
+/**
+ * The workflow the frame loads.
+ *
+ * Two bindings, on purpose: the definition and its seed. Both are static today; the day the workflow is
+ * hosted, this function fetches and everything above it is unchanged.
+ */
+export function devWorkflow(): Workflow {
+  return toWorkflow(devFlowDefinition, MODULES, devSeed);
+}
+
+/** Narrowing, because a definition arrives as `unknown` the moment it stops being a local import. */
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
