@@ -2999,15 +2999,21 @@
     },
     "example": {
       "title": "Módulo de ejemplo",
-      "description": "Un ejemplo funcional y la plantilla: lee los datos simulados del store, confirma a través del motor y renderiza en tres regiones.",
+      "description": "Un ejemplo funcional y la plantilla: lee sus entradas del store, confirma a través del motor y renderiza en las cuatro regiones.",
       "nameLabel": "Nombre del modelo",
+      "resolutionLabel": "Paso temporal",
+      "resolutionUnit": "{{minutes}} min",
       "apply": "Aplicar el nombre",
       "rulesHint": "Este módulo declara exactamente los puertos que toca. El store es su único estado y run() es la única vía de escritura.",
-      "status": "{{node}}: «{{name}}», resolución {{resolution}}",
+      "bottom": {
+        "notSet": "sin definir"
+      },
       "map": {
         "title": "Región del mapa",
         "hint": "El mapa es un servicio de interacción transitorio, no estado del modelo: lo que deba conservarse se confirma en el store.",
-        "addLayer": "Añadir una capa de demo"
+        "useRing": "Usar esta área",
+        "clear": "Limpiar",
+        "points": "{{count}} puntos"
       },
       "review": "Revisar antes de guardar",
       "overlay": {
@@ -3016,6 +3022,10 @@
         "close": "Cerrar",
         "complete": "validate() está conforme: no falta nada.",
         "issue": "{{port}}: {{message}}",
+        "required": "obligatorio",
+        "area": "Área",
+        "areaNone": "aún no dibujada",
+        "areaDrawn": "{{rings}} anillo(s), {{points}} punto(s)",
         "shellHint": "Escape cierra este panel. El host es dueño del marco del overlay: el oscurecido, el centrado y la salida."
       }
     },

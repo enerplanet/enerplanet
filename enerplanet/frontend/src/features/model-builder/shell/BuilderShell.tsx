@@ -16,7 +16,10 @@
  *
  * What the frame owns:
  * - the **workflow bar** and the **ledger bar** (their own components) and the **slots** — `sidebar`, `map`,
- *   `bottom`, `overlay` — composed here, so a module never lays out the page;
+ *   `bottom`, `overlay` — composed here, so a module never lays out the page. Each slot is a **bounded box**,
+ *   per §4 of the spec: the host gives the box and does *not* scroll a module's content on its behalf. The
+ *   module owns its overflow, or its content is clipped — visibly, which is the point: the README calls silent
+ *   overflow a bug, and a host that scrolled for the module would be hiding it.
  * - the **session**: one store plus an engine over it, re-seeded whenever the mode changes. Whichever mode it
  *   is, the store is the only state a module has, and what it starts from is what the mode says;
  * - the **gateway and the save**: the bar renders the button, this file does the I/O, because the frame is
@@ -261,29 +264,32 @@ export const BuilderShell: React.FC = () => {
         {bar}
 
         <div className="flex min-h-0 flex-1">
+          {/* Bounded box: fixed 20rem, full content height. The module owns what happens inside it. */}
           {inRegion("sidebar") && (
-            <aside className="w-80 shrink-0 overflow-auto border-r border-border bg-card p-6">
+            <aside className="w-80 shrink-0 overflow-hidden border-r border-border bg-card p-6">
               <View {...viewProps("sidebar")} />
             </aside>
           )}
 
           <div className="flex min-h-0 flex-1 flex-col">
+            {/* Bounded box: the main area, given to the map host. The module layers into it. */}
             {inRegion("map") && (
-              <section className="min-h-0 flex-1 overflow-auto bg-muted/30 p-6">
-                <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noMap")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/30 p-6">
+                <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.shell.noMap")}</p>
+                <p className="mt-1 shrink-0 text-xs text-muted-foreground">
                   {t("modelBuilder.shell.layers", "Layers added: {{count}}", {
                     count: layers.length,
                   })}
                 </p>
-                <div className="mt-4">
+                <div className="mt-4 min-h-0 flex-1">
                   <View {...viewProps("map")} />
                 </div>
               </section>
             )}
 
+            {/* Bounded box: intrinsic height, capped at ¼ of the content area — a cap, not a quota. */}
             {inRegion("bottom") && (
-              <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
+              <footer className="max-h-[25%] shrink-0 overflow-hidden border-t border-border bg-card px-6 py-3">
                 <View {...viewProps("bottom")} />
               </footer>
             )}
@@ -292,9 +298,10 @@ export const BuilderShell: React.FC = () => {
 
         <LedgerBar store={session.store} />
 
+        {/* Scoped to the module column — the chrome you need to leave it is never covered. */}
         {inRegion("overlay") && overlayOpen && (
           <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
-            <div className="max-h-full w-full max-w-2xl overflow-auto rounded-lg border border-border bg-card p-6 shadow-lg">
+            <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
               <View {...viewProps("overlay")} />
             </div>
           </div>

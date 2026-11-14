@@ -3002,15 +3002,21 @@
     },
     "example": {
       "title": "Beispielmodul",
-      "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest die Mock-Daten aus dem Store, committet über die Engine und rendert in drei Regionen.",
+      "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest seine Eingaben aus dem Store, committet über die Engine und rendert in alle vier Regionen.",
       "nameLabel": "Modellname",
+      "resolutionLabel": "Zeitschritt",
+      "resolutionUnit": "{{minutes}} min",
       "apply": "Namen übernehmen",
       "rulesHint": "Dieses Modul deklariert genau die Ports, die es berührt. Der Store ist sein einziger Zustand, und run() ist der einzige Schreibweg.",
-      "status": "{{node}}: „{{name}}“, Auflösung {{resolution}}",
+      "bottom": {
+        "notSet": "nicht gesetzt"
+      },
       "map": {
         "title": "Karten-Region",
         "hint": "Die Karte ist ein flüchtiger Interaktionsdienst, kein Modellzustand — alles, was erhalten bleiben soll, wird in den Store committet.",
-        "addLayer": "Demo-Ebene hinzufügen"
+        "useRing": "Diesen Bereich verwenden",
+        "clear": "Leeren",
+        "points": "{{count}} Punkte"
       },
       "review": "Vor dem Speichern prüfen",
       "overlay": {
@@ -3019,6 +3025,10 @@
         "close": "Schließen",
         "complete": "validate() ist zufrieden — es fehlt nichts.",
         "issue": "{{port}}: {{message}}",
+        "required": "erforderlich",
+        "area": "Fläche",
+        "areaNone": "noch nicht gezeichnet",
+        "areaDrawn": "{{rings}} Ring(e), {{points}} Punkt(e)",
         "shellHint": "Escape schließt dieses Panel. Den Rahmen des Overlays besitzt der Host — Abdunklung, Zentrierung und Ausweg."
       }
     },

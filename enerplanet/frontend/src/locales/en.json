@@ -3002,15 +3002,21 @@
     },
     "example": {
       "title": "Example module",
-      "description": "A working example and the template: it reads the mock from the store, commits through the engine, and renders into three regions.",
+      "description": "A working example and the template: reads its inputs from the store, commits through the engine, and renders into all four regions.",
       "nameLabel": "Model name",
+      "resolutionLabel": "Timestep",
+      "resolutionUnit": "{{minutes}} min",
       "apply": "Apply the name",
       "rulesHint": "This module declares exactly the ports it touches. The store is the only state it has, and run() is the only write path.",
-      "status": "{{node}}: “{{name}}”, resolution {{resolution}}",
+      "bottom": {
+        "notSet": "not set"
+      },
       "map": {
         "title": "Map region",
         "hint": "The map is a transient interaction service, not model state — anything worth keeping gets committed to the store.",
-        "addLayer": "Add a demo layer"
+        "useRing": "Use this area",
+        "clear": "Clear",
+        "points": "{{count}} points"
       },
       "review": "Review before saving",
       "overlay": {
@@ -3019,6 +3025,10 @@
         "close": "Close",
         "complete": "validate() is happy — nothing is missing.",
         "issue": "{{port}}: {{message}}",
+        "required": "required",
+        "area": "Area",
+        "areaNone": "not drawn yet",
+        "areaDrawn": "{{rings}} ring(s), {{points}} point(s)",
         "shellHint": "Escape closes this panel. The host owns the overlay's chrome — the scrim, the centring, the way out."
       }
     },

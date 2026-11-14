@@ -16,7 +16,7 @@
 import { describe, it, expect } from "vitest";
 import { barState } from "./barState";
 import { toWorkflow, type Workflow } from "./workflow";
-import example from "../modules/example";
+import example, { hold } from "../modules/example";
 import { createEngine } from "../core/engine";
 import { jumpTo } from "../core/rerun";
 import { portPath, type DiffOp } from "../core/diff";
@@ -67,6 +67,9 @@ describe("the bar derives the session's position", () => {
     const workflow = workflowOf(TWO_NODES);
     const store = createStore(workflow.initial);
 
+    // The example takes the values its regions collect through `hold()` (see the note on it), so driving it
+    // for real means filling them the way a region does. A bare run commits nothing, by design.
+    hold("first", { modelName: "  Bar fixture  " });
     await createEngine(store).runModule(example.module, { id: "first" });
 
     const bar = barState(workflow.flow, workflow.registry, store);

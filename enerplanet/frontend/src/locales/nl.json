@@ -2998,15 +2998,21 @@
     },
     "example": {
       "title": "Voorbeeldmodule",
-      "description": "Een werkend voorbeeld en tegelijk de template: leest de mock-data uit de store, committeert via de engine en rendert in drie regio's.",
+      "description": "Een werkend voorbeeld en tegelijk de template: leest zijn invoer uit de store, committeert via de engine en rendert in alle vier regio's.",
       "nameLabel": "Modelnaam",
+      "resolutionLabel": "Tijdstap",
+      "resolutionUnit": "{{minutes}} min",
       "apply": "Naam toepassen",
       "rulesHint": "Deze module declareert precies de poorten die hij aanraakt. De store is zijn enige staat, en run() is het enige schrijfpad.",
-      "status": "{{node}}: “{{name}}”, resolutie {{resolution}}",
+      "bottom": {
+        "notSet": "niet gezet"
+      },
       "map": {
         "title": "Kaartregio",
         "hint": "De kaart is een tijdelijke interactieservice, geen modelstaat — wat bewaard moet blijven, wordt in de store gecommitteerd.",
-        "addLayer": "Een demolag toevoegen"
+        "useRing": "Dit gebied gebruiken",
+        "clear": "Wissen",
+        "points": "{{count}} punten"
       },
       "review": "Controleren voor het opslaan",
       "overlay": {
@@ -3015,6 +3021,10 @@
         "close": "Sluiten",
         "complete": "validate() is tevreden — er ontbreekt niets.",
         "issue": "{{port}}: {{message}}",
+        "required": "vereist",
+        "area": "Gebied",
+        "areaNone": "nog niet getekend",
+        "areaDrawn": "{{rings}} ring(en), {{points}} punt(en)",
         "shellHint": "Escape sluit dit paneel. De host bezit de omlijsting van de overlay — de verduistering, de centrering, de uitweg."
       }
     },

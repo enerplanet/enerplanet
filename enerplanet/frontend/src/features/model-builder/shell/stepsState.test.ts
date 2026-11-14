@@ -19,7 +19,7 @@ import { stepsState } from "./stepsState";
 import { toWorkflow } from "./workflow";
 import { portPath, type DiffOp } from "../core/diff";
 import { createStore } from "../core/store";
-import example from "../modules/example";
+import example, { hold } from "../modules/example";
 import type { BuilderModule } from "./contract";
 
 /** Needs a port nothing in this workflow produces — the case `blocked` exists for. */
@@ -73,6 +73,9 @@ describe("the steps panel reads the whole workflow", () => {
   it("after the first step runs: it is done, and the second takes over as current", async () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
+    // The example takes the values its regions collect through `hold()` (see the note on it), so a test that
+    // wants a real transaction fills them the way a region does — a bare run commits nothing by design.
+    hold("first", { modelName: "  Steps fixture  " });
     const { createEngine } = await import("../core/engine");
     await createEngine(store).runModule(example.module, { id: "first" });
 

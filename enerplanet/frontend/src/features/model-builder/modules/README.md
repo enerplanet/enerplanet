@@ -54,13 +54,14 @@ see what the boundary actually refuses.
 module that declares nothing is headless, which is how an `auto` node renders nothing. The frame:
 
 ```
-┌ header (host-owned: title · dev picker · Reset) ─┐
+┌ header (host-owned: title · prior/current/next · undo/redo/save · dev mode select) ┐
 ├──────────┬───────────────────────────────────────┤
 │ sidebar  │ map        ← the main area (flex-1)   │
 │ w-80     ├───────────────────────────────────────┤
-│          │ bottom     ← footer bar               │
+│          │ bottom     ← footer bar, capped at ¼ │
 └──────────┴───────────────────────────────────────┘
-   overlay  ← absolute inset-0, above all of it
+   overlay  ← scoped to the content area, above all of it
+   steps panel (host-owned, the frame's right-hand band)
    error strip (host-owned, only when something throws)
 ```
 
@@ -103,13 +104,27 @@ two or three — declare what you actually use.
 The module's `bottom` slot is the *only* thing called "bottom": the host's own bars (a workflow bar at the
 top, a ledger bar at the very bottom) are frame chrome and no module renders into them.
 
-## Known gap: a form value has nowhere to go
+## Where a module's work comes from, and how it lands: `seal`
 
-`run()` takes no arguments, and the store is the only state a module has — so a value typed into a
-module's UI cannot reach the run that is supposed to commit it. `example/` works around it with a
-file-scoped draft slot, which is fine while the host shows one module at a time and is *not* fine forever.
-When the first real form module lands, decide between widening `run()`/`ModuleCtx` with an input and
-letting a module own a factory-made session. Both are small; choosing is the work.
+A module's UI collects values that only `run()` can commit, so the module holds them and `run()` commits them —
+that is the module's own model, and it is the whole design, not a hole in it. The value never travels *through*
+the contract: the module's internal state is its own business, and what crosses the boundary is the ports it
+declares.
+
+**How often those commits land is the module's declaration** (`spec/core.md` T16, `Plan.md` §5):
+
+| `seal` | what lands | right when |
+|---|---|---|
+| `"per-commit"` | one **atomic** transaction per `commit()` — two commits in one `run()` append two entries, each with its own sealed cascade | the writes are **independent** fields, as in settings: a partial state is still one the module stands behind, and it buys field-level undo |
+| `"at-completion"` *(default)* | **one** transaction for the whole `run()`, so the module sees the pre-state throughout and any rejection means nothing happened | the writes are **interdependent** — `grid-generation` writes buildings + transformers + lines + grids from one drawn area, where undoing one of those leaves a store violating the module's own guarantee |
+
+Atomicity is a property of the *transaction* either way; only the group differs. Granularity is the module's
+call because whether its writes are independent is a module property, not an engine one.
+
+`example/` declares `per-commit`, and makes **one** `commit()` per gesture, so its atomicity is visible without
+the log getting noisy. Its tests fill the module's own values the way its regions do and then run the real
+engine; `runInScratch` covers the other half — that the declaration is consistent, and that a run does not
+throw.
 
 ## Adding a module
 
@@ -196,4 +211,4 @@ rather than reaching for another feature's service.
 
 | module | status |
 |---|---|
-| `example` | the template. Handles the model name (a real, if small, job), renders into three regions, and carries the tests that document the contract. Scaffold from it; do not delete it. |
+| `example` | the template. Handles the model name (a real, if small, job), renders into **all four** regions and owns each region's overflow (so the slot conventions are shown, not just described), and carries the tests that document the contract. Scaffold from it; do not delete it. |

@@ -6,6 +6,10 @@
  * (`runInScratch`, through the real engine). Everything below the last test also documents the rules
  * the core enforces, by trying to break them.
  *
+ * The behaviour cases hand the module values through `hold()` — the same door its regions use — and then run
+ * the real engine. There is no test-only path into the module: the values a UI collects are the module's own
+ * model, and `hold` is how they are handed over.
+ *
  * Written failing first.
  */
 import { describe, it, expect } from "vitest";
@@ -20,18 +24,27 @@ import {
   runInScratch,
   type BuilderModule,
 } from "@model-builder/core";
-import example from "./index";
+import example, { hold } from "./index";
+
+/** The node these cases run as — the module's own id, which is what a host uses in test mode. */
+const NODE = example.module.id;
+
+/**
+ * The module's own test data, read back rather than retyped — so this file cannot drift from the mock it is
+ * asserting against, and the padded/trimmed pair below stays meaningful if the mock ever changes.
+ */
+const MOCK_NAME = String(example.mock?.modelName);
 
 describe("the example module's declaration", () => {
   it("is consistent with the contract", () => {
     expect(contractIssues(example)).toEqual([]);
   });
 
-  it("declares the ports it actually writes, and requires the one it depends on", () => {
+  it("declares exactly the ports it writes, and requires the one it depends on", () => {
     const declared = example.module.params.map((param) => param.port);
 
-    expect(declared).toContain("modelName"); // written by run()
-    expect(declared).toContain("resolution"); // read by the UI, seeded by the mock
+    // Nothing declared "just in case": every one of these is written by run(), from a region's interface.
+    expect([...declared].sort()).toEqual(["coordinates", "modelName", "resolution"]);
     expect(example.module.params.filter((param) => param.required === true).map((p) => p.port)).toEqual([
       "resolution",
     ]);
@@ -42,28 +55,107 @@ describe("the example module's declaration", () => {
     // frame is used, so it must not quietly stop covering a slot the host has grown.
     expect([...example.module.layout].sort()).toEqual([...REGIONS].sort());
   });
+
+  it("declares how its work reaches the log: per-commit, because its ports are independent", () => {
+    // One atomic transaction per `commit()` (`spec/core.md` T16). A module whose writes must land together
+    // would leave `seal` at the default, `at-completion`, and commit once.
+    expect(example.module.seal).toBe("per-commit");
+  });
 });
 
 describe("the example module's behaviour", () => {
-  it("normalises the model name and leaves a readable store behind", async () => {
-    const { store, error, issues } = await runInScratch(example);
-
-    expect(error).toBeUndefined();
-    expect(store.data.modelName).toBe("Example fixture"); // the mock's padding was trimmed
-    expect(issues).toEqual([]);
-    expect(store.log).toHaveLength(1);
-    expect(store.log[0].nodeId).toBe("example");
-  });
-
-  it("can run twice — the re-read licences the rewrite", async () => {
+  it("writes what the form collected — two ports in one run", async () => {
     const store = createStore({ ...example.mock });
     const engine = createEngine(store);
 
-    await engine.runModule(example.module, { id: "example" });
-    // The second run reads the name before writing it, which is what keeps anti-clobber quiet. It
-    // changes nothing, though — and a run that changes nothing seals no transaction, by design.
-    await expect(engine.runModule(example.module, { id: "example" })).resolves.toBeUndefined();
+    hold(NODE, { modelName: "  Karlsruhe  ", resolution: 15 });
+    await engine.runModule(example.module, { id: NODE });
+
+    expect(store.data.modelName).toBe("Karlsruhe"); // trimmed on the way in
+    expect(store.data.resolution).toBe(15);
+
+    // One gesture, one transaction — carrying both ports.
     expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary.map((op) => op.path).sort()).toEqual(["/modelName", "/resolution"]);
+  });
+
+  it("writes the drawn area through the same run — a third port", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    hold(NODE, { coordinates: [[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]] });
+    await engine.runModule(example.module, { id: NODE });
+
+    expect(store.data.coordinates).toEqual([[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]]);
+    expect(store.log).toHaveLength(1);
+  });
+
+  it("accumulates holds for the same node — a gesture may arrive in parts", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    hold(NODE, { modelName: "Karlsruhe" });
+    hold(NODE, { resolution: 15 });
+    await engine.runModule(example.module, { id: NODE });
+
+    expect(store.data.modelName).toBe("Karlsruhe");
+    expect(store.data.resolution).toBe(15);
+    expect(store.log).toHaveLength(1);
+  });
+
+  it("drops what another node collected — a hold belongs to the node it is for", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    // The frame can move the session mid-edit. The second hold is for a different node, so the first node's
+    // value is dropped — not merged, and never committed against a node that did not collect it.
+    hold("an-earlier-node", { modelName: "  Wrong node  " });
+    hold(NODE);
+    await engine.runModule(example.module, { id: NODE });
+
+    expect(store.log).toHaveLength(0);
+    expect(store.data.modelName).toBe(MOCK_NAME);
+  });
+
+  it("can run twice with different values — the re-read licences the rewrite", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    hold(NODE, { modelName: "First" });
+    await engine.runModule(example.module, { id: NODE });
+    hold(NODE, { modelName: "Second" });
+    await engine.runModule(example.module, { id: NODE });
+
+    // A blind second write would be rejected as `clobber`. Two transactions is the proof that run() read
+    // the port before overwriting it.
+    expect(store.data.modelName).toBe("Second");
+    expect(store.log).toHaveLength(2);
+  });
+
+  it("seals nothing when the hold would change nothing", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    // The mock's name is padded, so committing it trims to a value the store does not hold yet: a real change.
+    hold(NODE, { modelName: MOCK_NAME });
+    await engine.runModule(example.module, { id: NODE });
+    expect(store.log).toHaveLength(1);
+
+    // The same value again — already trimmed this time: nothing differs, so no transaction is sealed.
+    hold(NODE, { modelName: MOCK_NAME.trim() });
+    await expect(engine.runModule(example.module, { id: NODE })).resolves.toBeUndefined();
+    expect(store.log).toHaveLength(1);
+  });
+
+  it("does nothing at all when no region collected anything", async () => {
+    const store = createStore({ ...example.mock });
+    const engine = createEngine(store);
+
+    // A bare run: a region that called run() with nothing held — a button pressed with no edit behind it.
+    await engine.runModule(example.module, { id: NODE });
+
+    expect(store.log).toHaveLength(0);
+    expect(store.data.modelName).toBe(MOCK_NAME);
   });
 
   it("reports what is missing rather than pretending the model is complete", async () => {
