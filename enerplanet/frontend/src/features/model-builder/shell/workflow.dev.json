@@ -4,6 +4,8 @@
   "label": "Development flow",
   "seed": "testdata/dev-flow.json",
   "nodes": [
-    { "id": "model-start", "moduleId": "model-start", "label": "Model start" }
+    { "id": "model-start", "moduleId": "model-start", "label": "Model start" },
+    { "id": "area-draw", "moduleId": "area-draw", "label": "Area draw" },
+    { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" }
   ]
 }

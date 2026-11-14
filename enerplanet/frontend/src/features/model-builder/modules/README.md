@@ -133,6 +133,23 @@ stays closed until the module asks for it.
 A module cannot style its *map layers* yet: `createLayer` has no style option, so every layer draws in the same
 fill, line and circle. A custom (non-GeoJSON) layer — the three.js/LoD2 case — is provider territory too.
 
+### Testing the flow
+
+`shell/workflow.dev.json` is the flow the frame walks in **workflow mode**: an ordered node list, no edges. It
+carries every step that is *built*, in the legacy order (`Modules.md` §5), and grows as each module lands — a
+node whose `moduleId` is not registered makes the loader throw, so the chain is always exactly what exists:
+
+    model-start  →  area-draw  →  grid-generation
+
+Each node's `required` ports must be satisfied by an earlier node or by the seed, and that is **tested**:
+`isValidFlow(flow, registry, seeds)` in `shell/workflow.test.ts` is the core's own gating, so a chain that cannot
+be walked fails the suite rather than the browser.
+
+To walk it: turn the `modelbuilder` flag on and open `/app/modelbuilder` in **workflow mode**. The workflow bar
+moves the session and the steps panel shows which step is done, current or pending. A node whose required ports
+are missing refuses to run, and `validate()` names what is missing — which is how the hand-off from one step to
+the next is checked without reading any code.
+
 `OverlayControl` (`open()`, `close()`, `isOpen`) lets a module ask for the full-screen slot without owning
 its chrome. A declared overlay is **closed until the module opens it**, and the host keeps the scrim, the
 centring and the Escape handling — so an overlay is a panel the module fills, not a full-screen div it
