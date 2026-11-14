@@ -12,6 +12,9 @@
 import type { BuilderModule } from "./contract";
 import example from "../modules/example";
 
+import modelStart from "../modules/model-start";
+
 export const MODULES: readonly BuilderModule[] = [
   example,
+  modelStart,
 ];

@@ -2969,6 +2969,25 @@
       "mode": "modus",
       "modeWorkflow": "workflow"
     },
+    "model-start": {
+      "title": "Modelstart",
+      "description": "Maakt het model aan: de naam, de periode, de resolutie en de regio waarin wordt getekend.",
+      "nameLabel": "Modelnaam",
+      "fromLabel": "Van",
+      "toLabel": "Tot",
+      "resolutionLabel": "Resolutie",
+      "resolutionUnit": "{{minutes}} min",
+      "regionLabel": "Regio",
+      "regionNone": "kies een regio",
+      "apply": "Toepassen",
+      "rulesHint": "Dit is het ingangsknooppunt: het vereist niets, en alles daarna leest wat het aanlegt.",
+      "map": {
+        "title": "Regio op de kaart",
+        "hint": "Een gekozen regio wordt in beeld gebracht. De basiskaart zelf hoort bij de map-provider-module.",
+        "noRegion": "nog geen regio gekozen",
+        "frame": "In beeld brengen"
+      }
+    },
     "save": {
       "refused": "niets verzonden: {{reason}}"
     },

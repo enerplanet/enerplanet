@@ -4,6 +4,6 @@
   "label": "Development flow",
   "seed": "testdata/dev-flow.json",
   "nodes": [
-    { "id": "example", "moduleId": "example", "label": "Example module" }
+    { "id": "model-start", "moduleId": "model-start", "label": "Model start" }
   ]
 }

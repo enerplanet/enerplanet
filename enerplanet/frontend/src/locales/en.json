@@ -2973,6 +2973,25 @@
       "mode": "mode",
       "modeWorkflow": "workflow"
     },
+    "model-start": {
+      "title": "Model start",
+      "description": "Create the model: what it is called, the period it covers, its resolution, and the region it is drawn in.",
+      "nameLabel": "Model name",
+      "fromLabel": "From",
+      "toLabel": "To",
+      "resolutionLabel": "Resolution",
+      "resolutionUnit": "{{minutes}} min",
+      "regionLabel": "Region",
+      "regionNone": "choose a region",
+      "apply": "Apply",
+      "rulesHint": "This is the entry node: it requires nothing, and everything downstream reads what it seeds.",
+      "map": {
+        "title": "Region on the map",
+        "hint": "Choosing a region frames it. The basemap itself belongs to the map-provider module.",
+        "noRegion": "no region chosen yet",
+        "frame": "Frame it"
+      }
+    },
     "save": {
       "refused": "nothing was sent: {{reason}}"
     },

@@ -2970,6 +2970,25 @@
       "mode": "modo",
       "modeWorkflow": "flujo de trabajo"
     },
+    "model-start": {
+      "title": "Inicio del modelo",
+      "description": "Crea el modelo: su nombre, el periodo que cubre, su resolución y la región en la que se dibuja.",
+      "nameLabel": "Nombre del modelo",
+      "fromLabel": "Desde",
+      "toLabel": "Hasta",
+      "resolutionLabel": "Resolución",
+      "resolutionUnit": "{{minutes}} min",
+      "regionLabel": "Región",
+      "regionNone": "elegir una región",
+      "apply": "Aplicar",
+      "rulesHint": "Este es el nodo de entrada: no requiere nada, y todo lo posterior lee lo que él siembra.",
+      "map": {
+        "title": "Región en el mapa",
+        "hint": "Elegir una región la encuadra. El mapa base pertenece al módulo map-provider.",
+        "noRegion": "aún sin región elegida",
+        "frame": "Encuadrar"
+      }
+    },
     "save": {
       "refused": "no se envió nada: {{reason}}"
     },

@@ -93,4 +93,4 @@ console.log(`  1. cd modules/${id} && npm install && npm test     # it is its ow
 console.log(`  2. fix the copied test — it still asserts the example's specifics`);
 console.log(`  3. add the locale keys under "${prefix}" to src/locales/{en,de,es,nl}.json`);
 console.log(`  4. npm run verify in the module, then from frontend/ the feature suite, tsc and i18n:check`);
-console.log(`  5. open /app/modelbuilder with the "modelbuilder" flag on and pick "${id}" in the dev picker`);
+console.log(`  5. open /app/modelbuilder with the "modelbuilder" flag on, and pick "${id}" in the bar's dev mode select`);

@@ -2973,6 +2973,25 @@
       "mode": "Modus",
       "modeWorkflow": "Workflow"
     },
+    "model-start": {
+      "title": "Modellstart",
+      "description": "Erstellt das Modell: Name, Zeitraum, Auflösung und die Region, in der gezeichnet wird.",
+      "nameLabel": "Modellname",
+      "fromLabel": "Von",
+      "toLabel": "Bis",
+      "resolutionLabel": "Auflösung",
+      "resolutionUnit": "{{minutes}} min",
+      "regionLabel": "Region",
+      "regionNone": "Region wählen",
+      "apply": "Übernehmen",
+      "rulesHint": "Dies ist der Einstiegsknoten: Er benötigt nichts, und alles Nachgelagerte liest, was er anlegt.",
+      "map": {
+        "title": "Region auf der Karte",
+        "hint": "Eine gewählte Region wird eingerahmt. Die Basiskarte selbst gehört zum map-provider-Modul.",
+        "noRegion": "noch keine Region gewählt",
+        "frame": "Einrahmen"
+      }
+    },
     "save": {
       "refused": "nichts gesendet: {{reason}}"
     },
