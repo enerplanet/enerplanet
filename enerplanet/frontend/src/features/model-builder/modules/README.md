@@ -96,7 +96,7 @@ two or three — declare what you actually use.
 
 | slot | the box you get |
 |---|---|
-| `sidebar` | full height of the content area, fixed 20rem wide, scrolls itself |
+| `sidebar` | full height of the content area, up to ⅓ of the content area wide (never narrower than 20rem) |
 | `map` | `flex-1`, `min-h-0` — the map host fills it, you layer into it |
 | `bottom` | intrinsic height, **capped at ¼ of the content area** (a cap, not a quota: a one-line status renders one line) |
 | `overlay` | scoped to the content area; the host renders the scrim and the card, you fill and scroll it |

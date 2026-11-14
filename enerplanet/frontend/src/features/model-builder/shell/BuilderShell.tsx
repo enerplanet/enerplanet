@@ -264,9 +264,10 @@ export const BuilderShell: React.FC = () => {
         {bar}
 
         <div className="flex min-h-0 flex-1">
-          {/* Bounded box: fixed 20rem, full content height. The module owns what happens inside it. */}
+          {/* Bounded box: up to ⅓ of the content area (never narrower than 20rem). The module owns what
+              happens inside it. */}
           {inRegion("sidebar") && (
-            <aside className="w-80 shrink-0 overflow-hidden border-r border-border bg-card p-6">
+            <aside className="w-1/3 min-w-[20rem] shrink-0 overflow-hidden border-r border-border bg-card p-6">
               <View {...viewProps("sidebar")} />
             </aside>
           )}
