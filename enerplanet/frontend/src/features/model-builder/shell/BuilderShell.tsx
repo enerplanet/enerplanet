@@ -19,13 +19,15 @@
  *   `bottom`, `overlay` — composed here, so a module never lays out the page;
  * - the **session**: one store plus an engine over it, re-seeded whenever the mode changes. Whichever mode it
  *   is, the store is the only state a module has, and what it starts from is what the mode says;
+ * - the **gateway and the save**: the bar renders the button, this file does the I/O, because the frame is
+ *   what knows which session is on screen;
  * - the **map host** (stub): a `MapService` plus the plain statement that no baselayer *provider* module is
  *   loaded yet. The provider is swappable by design, which is why nothing here names a map library.
  *
  * The frame keeps no position of its own: what to show is derived (`frameView`), and so are the bars
- * (`barState`, `ledgerState`) and the panel (`stepsState`). `useStoreVersion` is what tells it the store
- * moved. A broken workflow definition throws rather than rendering an empty frame — it is configuration, and
- * a silent catch would bury a config error.
+ * (`barState`, `ledgerState`), the panel (`stepsState`) and the save's status (`saveModel`). `useStoreVersion`
+ * is what tells it the store moved. A broken workflow definition throws rather than rendering an empty frame —
+ * it is configuration, and a silent catch would bury a config error.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -33,6 +35,8 @@ import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
+import { createHttpGateway } from "../save/httpGateway";
+import { saveSession } from "./actions";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
@@ -77,11 +81,14 @@ function useMapStub(): { map: MapService; layers: readonly string[] } {
 export const BuilderShell: React.FC = () => {
   const { t } = useTranslation();
   const workflow = useMemo(() => devWorkflow(), []);
+  const gateway = useMemo(() => createHttpGateway(), []);
   const moduleIds = useMemo(() => MODULES.map((entry) => entry.module.id), []);
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
   const [session, setSession] = useState<Session>(() => sessionFor(workflow.initial));
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { map, layers } = useMapStub();
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
@@ -110,15 +117,56 @@ export const BuilderShell: React.FC = () => {
   };
 
   /**
+   * The bar's save (`spec/frame.md` §6): Call A (the legacy payload) then Call B (the session artefact), with
+   * the status pinned to `incomplete`. *Finishing* a model — the real `model.json`, promoted to `draft` so a
+   * run accepts it — belongs to the save **node**, behind its completeness gate, not to this button.
+   *
+   * A refused save sends nothing and says so. A save whose Call B failed still saved the model, and the notice
+   * says exactly that rather than pretending the whole thing worked or throwing the model id away.
+   */
+  const save = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      const outcome = await saveSession(gateway, {
+        store: session.store,
+        flow: workflow.flow,
+        registry: workflow.registry,
+        workflow: workflow.ref,
+      });
+
+      if (!outcome.ok) {
+        setSaveNotice(undefined);
+        setError(
+          t("modelBuilder.save.refused", "nothing was sent: {{reason}}", { reason: outcome.reason }),
+        );
+        return;
+      }
+
+      setError(null);
+      setSaveNotice(
+        outcome.historySaved
+          ? t("modelBuilder.bar.saved", "saved · {{status}}", { status: outcome.status })
+          : t("modelBuilder.bar.savedPartial", "model saved, session not"),
+      );
+    } catch (thrown) {
+      setSaveNotice(undefined);
+      setError(thrown instanceof Error ? thrown.message : String(thrown));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
    * Move the frame to a mode, re-seeding the session for it. Reset is the same call with the current mode: a
-   * fresh session for wherever we already are. Dev-only until undo exists, since it is the only way back to a
-   * position that has not run.
+   * fresh session for wherever we already are. It is no longer the only way back to a position that has not
+   * run — undo is built now — but it is still how a scratch session is dropped and a node started over.
    */
   const switchTo = (target: FrameMode): void => {
     const next = frameView(target, workflow, MODULES, session.store);
     setMode(target);
     setSession(sessionFor(next.seed));
     setError(null);
+    setSaveNotice(undefined);
     setOverlayOpen(false);
   };
 
@@ -157,18 +205,26 @@ export const BuilderShell: React.FC = () => {
       <StepsPanel flow={workflow.flow} registry={workflow.registry} store={session.store} />
     );
 
+  /** Both branches get the same bar: with no node to show, the session still exists and can still be saved. */
+  const bar = (
+    <WorkflowBar
+      workflow={workflow}
+      store={session.store}
+      mode={mode}
+      moduleIds={moduleIds}
+      onModeChange={switchTo}
+      onReset={() => switchTo(mode)}
+      onSave={save}
+      saving={saving}
+      saveNotice={saveNotice}
+    />
+  );
+
   if (view.entry === undefined) {
     return (
       <div className="flex h-full min-h-0 bg-background">
         <div className="relative flex min-w-0 flex-1 flex-col">
-          <WorkflowBar
-            workflow={workflow}
-            store={session.store}
-            mode={mode}
-            moduleIds={moduleIds}
-            onModeChange={switchTo}
-            onReset={() => switchTo(mode)}
-          />
+          {bar}
 
           <div className="flex min-h-0 flex-1 items-center justify-center p-6">
             <p className="text-sm text-muted-foreground">{t("modelBuilder.shell.noNode")}</p>
@@ -202,14 +258,7 @@ export const BuilderShell: React.FC = () => {
     <div className="flex h-full min-h-0 bg-background">
       {/* The module column: everything the module's declaration composes, plus the frame's own bars. */}
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <WorkflowBar
-          workflow={workflow}
-          store={session.store}
-          mode={mode}
-          moduleIds={moduleIds}
-          onModeChange={switchTo}
-          onReset={() => switchTo(mode)}
-        />
+        {bar}
 
         <div className="flex min-h-0 flex-1">
           {inRegion("sidebar") && (

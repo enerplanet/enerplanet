@@ -78,6 +78,24 @@ describe("a workflow definition becomes what the core takes", () => {
   it("refuses a definition with no id", () => {
     expect(() => toWorkflow({ ...DEFINITION, id: "" }, ENTRIES, SEED)).toThrow(/has no id/);
   });
+
+  it("builds the reference a session artefact points at, from the definition's own id and version", () => {
+    const workflow = toWorkflow({ ...DEFINITION, version: 3 }, ENTRIES, SEED);
+
+    // The reference is a fact about the workflow, not a constant some caller invented — which is why the
+    // definition carries the version and this file builds the pair.
+    expect(workflow.ref).toEqual({ id: "dev-flow", version: 3 });
+  });
+
+  it("reads an absent version as 1 — v1 is the only version until flows are distributable", () => {
+    expect(toWorkflow(DEFINITION, ENTRIES, SEED).ref.version).toBe(1);
+  });
+
+  it("refuses a version that is present but not a real one", () => {
+    // Quietly reading a `0` or a string as "v1" would record a reference to a workflow that never existed.
+    expect(() => toWorkflow({ ...DEFINITION, version: 0 }, ENTRIES, SEED)).toThrow(/invalid version/);
+    expect(() => toWorkflow({ ...DEFINITION, version: "1" }, ENTRIES, SEED)).toThrow(/invalid version/);
+  });
 });
 
 describe("the dev workflow the shell actually loads", () => {

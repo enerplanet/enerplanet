@@ -2973,7 +2973,15 @@
       "mode": "Modus",
       "modeWorkflow": "Workflow"
     },
+    "save": {
+      "refused": "nichts gesendet: {{reason}}"
+    },
     "bar": {
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "save": "Speichern",
+      "saved": "gespeichert · {{status}}",
+      "savedPartial": "Modell gespeichert, Sitzung nicht",
       "prior": "vorher",
       "current": "aktuell",
       "next": "danach",

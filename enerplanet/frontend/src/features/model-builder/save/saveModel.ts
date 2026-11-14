@@ -125,6 +125,13 @@ export interface SaveRequest {
   workspaceId?: number;
   draftId?: string;
   userId?: string;
+  /**
+   * Pin the status instead of deriving it from completeness. The workflow bar's save pins `incomplete` (§6):
+   * an unfinished model still round-trips with its session, and *finishing* one — the real `model.json`,
+   * promoted to `draft` so that a run accepts it — belongs to the save node behind its completeness gate.
+   * Absent, the status is derived below, which is what that node's own path relies on.
+   */
+  status?: SaveStatus;
 }
 
 /**
@@ -144,7 +151,10 @@ export async function saveModel(
   if (refusal !== undefined) return { ok: false, reason: refusal };
 
   const complete = position(flow, registry, store).complete;
-  const status: SaveStatus = complete ? (request.modelId === undefined ? "draft" : "modified") : "incomplete";
+  // Pinned by the caller when the caller is the workflow bar; otherwise derived from completeness, which is
+  // the difference §6 draws between the bar's save and the save node's.
+  const status: SaveStatus =
+    request.status ?? (complete ? (request.modelId === undefined ? "draft" : "modified") : "incomplete");
 
   const payload = buildModelPayload(data, {
     workspaceId: request.workspaceId ?? data.workspaceId,

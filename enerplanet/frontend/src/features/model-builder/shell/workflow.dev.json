@@ -1,5 +1,6 @@
 {
   "id": "dev-flow",
+  "version": 1,
   "label": "Development flow",
   "seed": "testdata/dev-flow.json",
   "nodes": [

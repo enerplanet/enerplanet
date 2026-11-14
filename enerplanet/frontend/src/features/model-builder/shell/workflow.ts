@@ -18,6 +18,7 @@
 
 import devFlowDefinition from "./workflow.dev.json";
 import devSeed from "./testdata/dev-flow.json";
+import type { WorkflowRef } from "../core/artefact";
 import type { Flow, FlowNode, ModuleRegistry, SeedPorts } from "../core/flow";
 import type { Module } from "../core/module";
 import type { ModelData, PortKey } from "../core/ports";
@@ -39,14 +40,21 @@ export interface Workflow {
    * is actually loaded — the two must not drift.
    */
   seedFile: string;
+  /**
+   * What a session artefact points at instead of carrying a copy of the flow (`core/artefact.ts`). Built from
+   * the definition's own `id` and `version`, so the reference is a fact about the workflow rather than a
+   * constant some caller invented.
+   */
+  ref: WorkflowRef;
 }
 
 /**
  * Build a workflow from a definition, the modules it may place, and the seed.
  *
  * Refuses, rather than half-working later: a definition with no id, one that places nothing, a node whose
- * module nobody declared, and two nodes sharing an id — the last because a node id is how history names a
- * position, so a duplicate makes the log ambiguous.
+ * module nobody declared, two nodes sharing an id — the last because a node id is how history names a
+ * position, so a duplicate makes the log ambiguous — and a `version` that is present but not a real one,
+ * because a reference to a version that never existed is worse than no reference at all.
  */
 export function toWorkflow(
   definition: unknown,
@@ -102,6 +110,15 @@ export function toWorkflow(
     });
   });
 
+  // A version that is present must be a real one: silently reading a `0` or a string as "v1" would record a
+  // reference to a workflow that never existed. Absent means 1, because v1 is the only version there is until
+  // flows become distributable (`spec/frame.md` §5).
+  const rawVersion = raw.version;
+  if (rawVersion !== undefined && (!Number.isInteger(rawVersion) || (rawVersion as number) < 1)) {
+    throw new Error(`[model-builder] workflow "${id}" has an invalid version: ${String(rawVersion)}`);
+  }
+  const version = rawVersion === undefined ? 1 : (rawVersion as number);
+
   return {
     id,
     label: asString(raw.label) ?? id,
@@ -110,6 +127,7 @@ export function toWorkflow(
     seeds: Object.keys(seed) as PortKey[],
     initial: { ...seed },
     seedFile: asString(raw.seed) ?? "",
+    ref: { id, version },
   };
 }
 

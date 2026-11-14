@@ -2969,7 +2969,15 @@
       "mode": "modus",
       "modeWorkflow": "workflow"
     },
+    "save": {
+      "refused": "niets verzonden: {{reason}}"
+    },
     "bar": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw",
+      "save": "Opslaan",
+      "saved": "opgeslagen · {{status}}",
+      "savedPartial": "model opgeslagen, sessie niet",
       "prior": "vorige",
       "current": "huidige",
       "next": "volgende",

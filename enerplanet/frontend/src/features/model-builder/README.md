@@ -69,7 +69,8 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `workflow.dev.json` | the dev workflow itself: a seed and one node. Static now; hosted later, which changes one binding |
 | `frameMode.ts` | which module the frame shows and what its session starts from: **workflow** mode (the node the session sits on, seeded from the flow) or **test mode** (one module, on its own test data, no position) |
 | `barState.ts` | the workflow bar's state — prior / current / next, derived from `(flow, registry, store)` |
-| `WorkflowBar.tsx` | the top band: workflow label, the three framing steps, a completion chip, and the dev-only mode select + Reset |
+| `WorkflowBar.tsx` | the top band: workflow label, prior/current/next framing, a completion chip, **undo / redo / save**. A prior click is a module-wide undo, the next walks that tail back to the tip; each is a control only when it can actually move the session, and plain greyed text otherwise. Plus the dev-only mode select and Reset |
+| `actions.ts` | the bar's actions. Thin by design (§3.1: every control maps onto a core operation): `undo`/`redo` go straight to the store, `undoToNode` is the module-wide undo behind a prior click, `redoToTip` walks the tail back to the tip, and `saveSession` is the bar's save with the status pinned to `incomplete` |
 | `ledgerState.ts` | the ledger bar's state — the log with the cursor, newest first, each entry marked applied or discarded. No discard *structure*: the tail beyond the cursor is it |
 | `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
 | `stepsState.ts` | the steps panel's state — every step's derived state, which one is current, and the *reason* behind a step that is not done (`pruned`, `blocked`) |

@@ -2970,7 +2970,15 @@
       "mode": "modo",
       "modeWorkflow": "flujo de trabajo"
     },
+    "save": {
+      "refused": "no se envió nada: {{reason}}"
+    },
     "bar": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "save": "Guardar",
+      "saved": "guardado · {{status}}",
+      "savedPartial": "modelo guardado, sesión no",
       "prior": "anterior",
       "current": "actual",
       "next": "siguiente",
