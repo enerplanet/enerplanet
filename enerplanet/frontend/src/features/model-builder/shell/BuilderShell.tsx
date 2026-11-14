@@ -24,8 +24,10 @@
  *   is, the store is the only state a module has, and what it starts from is what the mode says;
  * - the **gateway and the save**: the bar renders the button, this file does the I/O, because the frame is
  *   what knows which session is on screen;
- * - the **map host** (stub): a `MapService` plus the plain statement that no baselayer *provider* module is
- *   loaded yet. The provider is swappable by design, which is why nothing here names a map library.
+ * - the **map host**: the canvas from the `map-provider` module (`MAP_PROVIDER`), and the `MapService` it
+ *   implements. The map is *always* there — it is not a node and no module's declaration turns it on or off —
+ *   so the frame mounts it once and hands its service to whatever module is on screen. Nothing here names a
+ *   map library: that is the whole point of the provider.
  *
  * The frame keeps no position of its own: what to show is derived (`frameView`), and so are the bars
  * (`barState`, `ledgerState`), the panel (`stepsState`) and the save's status (`saveModel`). `useStoreVersion`
@@ -44,10 +46,10 @@ import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
-import { MODULES } from "./moduleRegistry";
+import { MAP_PROVIDER, MODULES } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
 import { devWorkflow } from "./workflow";
-import type { BuilderModule, MapService, ModuleViewProps, OverlayControl, Region } from "./contract";
+import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
 
 interface Session {
   store: Store;
@@ -60,75 +62,15 @@ function sessionFor(seed: Readonly<ModelData>): Session {
   return { store, engine: createEngine(store) };
 }
 
-/**
- * The **stub** map host: it keeps the bookkeeping a real host keeps — which layers exist, in what order, which
- * one is up front — and refuses the geometry requests, because nothing here can render or hit-test a map. The
- * `map-provider` module replaces it; this exists only so the frame runs before that module lands.
- */
-function useMapStub(): { map: MapService; layers: readonly string[] } {
-  const [layers, setLayers] = useState<readonly string[]>([]);
-
-  const map = useMemo<MapService>(() => {
-    // The host's own model of the stack: created layers append, `setLayerOrder` rewrites it, and the
-    // interactive one never touches it — that is what keeps "initial order is preserved" true.
-    const order: string[] = [];
-    let interactive: string | null = null;
-    const noProvider = (): Promise<never> =>
-      Promise.reject(new Error("no basemap provider module is loaded yet"));
-    const publish = (): void => setLayers([...order]);
-
-    return {
-      requestPoint: noProvider,
-      requestPolygon: noProvider,
-
-      // Nothing here can hit-test, so a listener is accepted and never called — which is the honest stub.
-      onElementClick: () => () => undefined,
-
-      createLayer: (id, options) => {
-        if (!order.includes(id)) order.push(id);
-        if (options?.interactive === true) interactive = id;
-        publish();
-      },
-      removeLayer: (id) => {
-        const at = order.indexOf(id);
-        if (at !== -1) order.splice(at, 1);
-        if (interactive === id) interactive = null;
-        publish();
-      },
-      addFeatures: () => undefined,
-      clearLayer: () => undefined,
-
-      setInteractiveLayer: (id) => {
-        interactive = id !== null && order.includes(id) ? id : null;
-        publish();
-      },
-
-      getLayerOrder: () => [...order],
-      setLayerOrder: (next) => {
-        // Strict, as the contract says: a list naming a layer the host does not have is a bug worth hearing.
-        for (const id of next) {
-          if (!order.includes(id)) throw new Error(`unknown layer in layer order: ${id}`);
-        }
-        if (next.length !== order.length) {
-          throw new Error("a layer order must name every layer exactly once");
-        }
-        order.length = 0;
-        order.push(...next);
-        publish();
-      },
-
-      fitTo: () => undefined,
-    };
-  }, []);
-
-  return { map, layers };
-}
-
 export const BuilderShell: React.FC = () => {
   const { t } = useTranslation();
   const workflow = useMemo(() => devWorkflow(), []);
   const gateway = useMemo(() => createHttpGateway(), []);
   const moduleIds = useMemo(() => MODULES.map((entry) => entry.module.id), []);
+  // Built once for the frame's lifetime: the map host is the frame's, not a module's, and re-creating it would
+  // tear the map down and bring it back.
+  const host = useMemo(() => MAP_PROVIDER.createHost(), []);
+  const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
   const [session, setSession] = useState<Session>(() => sessionFor(workflow.initial));
@@ -136,7 +78,6 @@ export const BuilderShell: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
   const [overlayOpen, setOverlayOpen] = useState(false);
-  const { map, layers } = useMapStub();
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
   useStoreVersion(session.store);
 
@@ -316,20 +257,20 @@ export const BuilderShell: React.FC = () => {
           )}
 
           <div className="flex min-h-0 flex-1 flex-col">
-            {/* Bounded box: the main area, given to the map host. The module layers into it. */}
-            {inRegion("map") && (
-              <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/30 p-6">
-                <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.shell.noMap")}</p>
-                <p className="mt-1 shrink-0 text-xs text-muted-foreground">
-                  {t("modelBuilder.shell.layers", "Layers added: {{count}}", {
-                    count: layers.length,
-                  })}
-                </p>
-                <div className="mt-4 min-h-0 flex-1">
+            {/* The map is always here — the host fills the box, and a module's `map` region layers its
+                controls on top. That layer is **pass-through**, so a module's panel never swallows a map
+                click by accident; a control that wants clicks opts in with `pointer-events-auto`. */}
+            <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/30">
+              <div className="absolute inset-0">
+                <host.Canvas />
+              </div>
+
+              {inRegion("map") && (
+                <div className="pointer-events-none relative z-10 min-h-0 flex-1 overflow-hidden p-6">
                   <View {...viewProps("map")} />
                 </div>
-              </section>
-            )}
+              )}
+            </section>
 
             {/* Bounded box: intrinsic height, capped at ¼ of the content area — a cap, not a quota. */}
             {inRegion("bottom") && (

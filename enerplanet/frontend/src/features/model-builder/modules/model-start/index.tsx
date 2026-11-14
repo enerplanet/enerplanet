@@ -234,7 +234,9 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     };
 
     return (
-      <div className="flex h-full flex-col gap-3 overflow-auto">
+      // A floating card over the real map — see the example module for why it is narrow and opts back into
+      // pointer events.
+      <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
         <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.model-start.map.title")}</h3>
         <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.model-start.map.hint")}</p>
 

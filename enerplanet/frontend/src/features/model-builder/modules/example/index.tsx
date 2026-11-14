@@ -13,6 +13,12 @@
  *   bottom    module status — every declared port and whether the store holds it
  *   overlay   the review — the declared ports with their values, the drawn area, and what is missing
  *
+ * **Putting UI over the map** is what the `map` region is for: the frame renders the map host's canvas underneath
+ * and this region's element above it in a **pass-through** layer, so the map keeps taking clicks unless a control
+ * opts in with `pointer-events-auto` (`modules/README.md`, "Putting UI on the map"). The card in this region is
+ * that pattern; use `overlay` plus `OverlayControl.open()` instead when you want a modal over the whole module
+ * column.
+ *
  * **Each region owns its own overflow**, which is the rule the frame sets: the host hands over a bounded box
  * and never scrolls for you, so every region that can outgrow its box says what happens when it does. Here
  * the three that can grow carry `flex h-full flex-col overflow-auto`; `bottom` deliberately does not, because
@@ -263,7 +269,10 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
     };
 
     return (
-      <div className="flex h-full flex-col gap-3 overflow-auto">
+      // A floating card, not a full-box panel: this region sits *over* the real map, so it takes only the space
+      // it needs and opts back into pointer events (the host's layer is pass-through, so a panel can never
+      // swallow a map click by accident).
+      <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
         <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.example.map.title")}</h3>
         <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.example.map.hint")}</p>
 
