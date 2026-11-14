@@ -89,7 +89,8 @@ const prefix = `modelBuilder.${id}`;
 
 console.log(`created modules/${id}/ and registered it as "${camel}"\n`);
 console.log("next:");
-console.log(`  1. cd modules/${id} && npm install && npm test     # it is its own workspace`);
+console.log(`  1. npm install (at frontend/) — the modules are npm workspaces, so that covers yours`);
+console.log(`     then: cd modules/${id} && npm test`);
 console.log(`  2. fix the copied test — it still asserts the example's specifics`);
 console.log(`  3. add the locale keys under "${prefix}" to src/locales/{en,de,es,nl}.json`);
 console.log(`  4. npm run verify in the module, then from frontend/ the feature suite, tsc and i18n:check`);
