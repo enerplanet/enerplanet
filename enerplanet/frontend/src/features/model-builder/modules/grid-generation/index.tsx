@@ -42,16 +42,17 @@ export type { GridEngine, GridRequest, GridResult } from "./engine";
 const PRODUCED = ["buildings", "transformers", "lines", "mvLines", "grids"] as const;
 type ProducedPort = (typeof PRODUCED)[number];
 
-/** The layers the grid goes on. The module names them; nothing else has to agree on the ids.
+/** The layers the grid goes on. **Each is named after the port it holds** — the shared convention a module
+ *  relies on when it needs a layer it does not own (the building configurator subscribes to clicks on
+ *  `buildings`). The grid ids are a list, not geometry, so they have no layer at all.
  *
- * Ordered **bottom to top as written** (`setLayerOrder` below uses this order): buildings, then the cables,
- * then the transformers last so they read on top of the network they serve. */
+ *  Ordered **bottom to top as written** (`setLayerOrder` below uses this order): buildings, then the cables,
+ *  then the transformers last so they read on top of the network they serve. */
 const LAYERS: Readonly<Record<ProducedPort, string | null>> = {
-  buildings: "grid-generation-buildings",
-  lines: "grid-generation-cables",
-  mvLines: "grid-generation-mv-cables",
-  transformers: "grid-generation-transformers",
-  // The grid ids are a list, not geometry — there is nothing to draw for them.
+  buildings: "buildings",
+  lines: "lines",
+  mvLines: "mvLines",
+  transformers: "transformers",
   grids: null,
 };
 
