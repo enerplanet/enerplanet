@@ -35,6 +35,7 @@ import type { Flow, ModuleRegistry } from "../core/flow";
 import { position } from "../core/position";
 import type { ModelData } from "../core/ports";
 import type { Store } from "../core/store";
+import { foldBuildings } from "./fold";
 import type { LegacyModelPayload, ModelGateway, SaveStatus } from "./gateway";
 
 /** The legacy pypsa defaults, copied from the extracted legacy save. */
@@ -51,11 +52,23 @@ const PYPSA_DEFAULTS = {
  */
 export function buildSaveConfig(data: Readonly<ModelData>): Record<string, unknown> {
   const config: Record<string, unknown> = {};
-  if (data.buildings) config.buildings = data.buildings;
+
+  // The buildings go out **folded**: the store keeps demand and technologies as ports, the legacy keeps them on
+  // the features, and `config.buildings` is that same feature collection (`save/fold.ts`).
+  const buildings = foldBuildings(data.buildings, data.buildingParams, data.technologies);
+  if (buildings !== undefined) config.buildings = buildings;
+
   if (data.lines) config.lines = data.lines;
   if (data.mvLines) config.mv_lines = data.mvLines;
   if (data.transformers) config.transformers = data.transformers;
   if (data.grids) config.grids = data.grids;
+
+  // The weather, in the legacy's three keys — this is `applyWeatherToConfig`, which the legacy calls with the
+  // period's year. A recorded year wins over a scenario, and the archive is omitted when it is the default.
+  const weather = data.weatherSelection;
+  if (weather !== undefined && weather.provider !== null) config.weatherProvider = weather.provider;
+  if (weather?.choice === "year" && weather.year !== undefined) config.weatherYear = weather.year;
+  if (weather !== undefined && weather.choice !== "year") config.weatherScenario = weather.choice;
 
   // PyPSA is on unless a settings module turned it off (`pypsa_enabled === false`).
   const advanced = data.advancedParams;
@@ -97,7 +110,10 @@ export function buildModelPayload(
     title: (data.modelName ?? "").trim(),
     from_date: data.fromDate ?? "",
     to_date: data.toDate ?? "",
-    resolution: data.resolution ?? 60,
+    // Hard-coded to 60, because that is what the legacy does — its own comment says "only 60-minute steps are
+    // supported", so the store's `resolution` is a port the backend currently ignores. Reading it here would
+    // send a value the backend cannot honour and call it parity.
+    resolution: 60,
     ...(options.workspaceId === undefined ? {} : { workspace_id: options.workspaceId }),
     coordinates,
     config,

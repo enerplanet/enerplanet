@@ -8,20 +8,30 @@ Legend: 🚧 blocks a module · ❓ a real decision · 💭 smaller, worth confi
 
 ---
 
-## 1. 🚧 Where does the legacy's *analyse buildings* step live? (G1)
+## 1. 🚧 The *analyse* step — no longer a question about *if*, but about *where*
 
-The legacy has a step that resolves per-building demand profiles from the backend
-(`POST /models/{id}/analyse`, then polls). **Nothing in the new plan owns it** — the audit recorded it as G1,
-and `building-demand` needs its output.
+Read the two Go handlers (`model_analyse.go`, `model_demand_profiles.go`) to settle this, and the backend
+already decides most of it:
 
-Options I see:
+- **`POST /models/{id}/analyse`** enqueues an **asynq job** on the `buem` queue (30-min timeout, unique for
+  30 min, 3 retries) and returns **202 queued/running**. It **needs a saved model** — the doc says so
+  outright: *"Saving a model does not start it."*
+- **`GET /models/{id}/demand-profiles`** is the progress: `idle | resolving | completed`, plus per-building
+  `resolved | pending | failed | shared | not_heated`. A failed building carries its own `error_message`
+  (no envelope match, BuEM rejected it) — a per-building outcome, not an endpoint error.
+- **The two paths are mutually exclusive per model.** `/analyse` returns **409** when the model
+  *"uses the estimated heat demand, so there is nothing to analyse"* (`ModelHeatSource`). So a model picks
+  either the frontend estimate **or** a real heat source that gets analysed — never both.
+- Profiles are also written by **a simulation run**, not only by `/analyse`.
 
-- **(a)** A module of its own (`building-analysis`) that runs after `grid-generation` and adds the resolved
-  demand as a port. Clean, and it matches the legacy's step.
-- **(b)** Fold it into `building-demand`: that module triggers the analyse, waits, then writes its params.
+**So the question for you is only this:** in the workflow you have in mind, is the *estimate* the path (and
+the analysis simply never applies), or do you want the analysis exposed post-save as its own step with a
+progress UI?
 
-**(a)** is my recommendation — it keeps `building-demand` a pure editing module, and the analyse step is
-genuinely a backend round trip that can fail on its own.
+My recommendation: **build the estimate now** (it needs no saved model, so it belongs in the flow), and
+expose the analysis **after** it — as a post-save surface, since it cannot be a flow node while the save is
+the last node. It is a long job with per-building failures, so it wants its own progress UI rather than a
+blocking call.
 
 ## 2. ❓ The building configurator's layer id (blocks its `map` region)
 
