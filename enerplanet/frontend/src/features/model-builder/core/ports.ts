@@ -26,8 +26,33 @@ export interface BuildingParams {
   fClass?: string;
   yearlyKwh?: number;
   peakKw?: number;
+  /**
+   * Per-class breakdown, when one building carries several uses — the legacy's `fclass_details`.
+   *
+   * Faithful to the template rather than simplified: a building with a shop below and flats above has one
+   * demand figure *and* a decomposition, and the save writes both. An estimate fills a single entry; a
+   * user's edit splits it.
+   */
+  byClass?: readonly ClassDemand[];
+  /** Where the number came from. Anything not from an estimate is flagged as such in the UI. */
+  source?: DemandSource;
   [key: string]: unknown;
 }
+
+/** One class's share of a building's demand. */
+export interface ClassDemand {
+  fClass: string;
+  yearlyKwh: number;
+  peakKw: number;
+}
+
+/**
+ * Where a demand figure came from — the legacy's `heat_demand_estimated` flag, made explicit.
+ *
+ * `mirror` is the frontend's own heat estimate: a deliberate duplicate of the backend's TABULA-flavoured
+ * defaults, correct only because the backend is authoritative at run time and overrides it.
+ */
+export type DemandSource = "estimate" | "mirror" | "user";
 
 /**
  * One technology assigned to one building. `inputVector → outputVector` is what makes a

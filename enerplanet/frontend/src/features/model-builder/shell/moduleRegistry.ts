@@ -24,6 +24,8 @@ import modelSave from "../modules/model-save";
 
 import weather from "../modules/weather";
 
+import buildingDemand from "../modules/building-demand";
+
 export const MODULES: readonly BuilderModule[] = [
   example,
   modelStart,
@@ -32,6 +34,7 @@ export const MODULES: readonly BuilderModule[] = [
   gridGeneration,
   modelSave,
   weather,
+  buildingDemand,
 ];
 
 /**

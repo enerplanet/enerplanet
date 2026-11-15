@@ -3132,6 +3132,16 @@
       "yearHint": "Het gemeten weer van dit jaar wordt gebruikt, en de periode van het model volgt dat.",
       "archiveLabel": "Archief",
       "noFetchHint": "Hier worden geen weergegevens opgehaald — de config verwijst naar een dataset en de backend haalt de reeks op bij de run."
+    },
+    "building-demand": {
+      "title": "Gebouwvraag",
+      "description": "Vraag per gebouw voor elke energiedrager, op basis van de gebouwen van het net.",
+      "vector": "Drager",
+      "buildings": "Gebouwen",
+      "totalKwh": "Totaal kWh/a",
+      "sourceEstimate": "geschat door de energiedienst, één verzoek per gebouw",
+      "sourceMirror": "gespiegeld van gebouwklasse en oppervlak — tijdens de run is de backend leidend",
+      "autoHint": "Deze stap loopt vanzelf wanneer de flow vooruitgaat: hij leest de gebouwen, vraagt de dienst en legt de antwoorden vast. Hier is niets in te stellen."
     }
   }
 }

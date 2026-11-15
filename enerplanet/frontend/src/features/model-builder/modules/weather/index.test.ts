@@ -66,7 +66,7 @@ describe("weather's declaration", () => {
   it("declares the edges it actually has, leaving transitivity to the module that owns it", () => {
     // Invalidation is transitive (T7), so `building-demand` declares the step to `technologies`; writing that
     // far edge here would claim a coupling that belongs to another module.
-    expect([...weather.module.affect.weatherSelection!]).toEqual(["buildingParams"]);
+    expect([...weather.module.affect[SELECTION]!]).toEqual(["buildingParams"]);
     // The period edge is real and was found by the influence prober (T8), not by reading: a recorded year
     // comes from the period, so changing the period invalidates the selection.
     expect([...weather.module.affect.fromDate!]).toEqual([SELECTION]);

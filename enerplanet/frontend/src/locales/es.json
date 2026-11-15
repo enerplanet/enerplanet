@@ -3133,6 +3133,16 @@
       "yearHint": "Se usa el tiempo registrado de este año, y el periodo del modelo se ajusta a él.",
       "archiveLabel": "Archivo",
       "noFetchHint": "Aquí no se obtienen datos meteorológicos: la configuración referencia un conjunto y el backend recupera la serie al ejecutar."
+    },
+    "building-demand": {
+      "title": "Demanda de edificios",
+      "description": "Demanda por edificio para cada vector energético, a partir de los edificios de la red.",
+      "vector": "Vector",
+      "buildings": "Edificios",
+      "totalKwh": "Total kWh/a",
+      "sourceEstimate": "estimado por el servicio energético, una petición por edificio",
+      "sourceMirror": "reflejado de la clase y la superficie — el backend es la autoridad en ejecución",
+      "autoHint": "Este paso se ejecuta solo cuando el flujo avanza: lee los edificios, consulta el servicio y registra las respuestas. Aquí no hay nada que configurar."
     }
   }
 }

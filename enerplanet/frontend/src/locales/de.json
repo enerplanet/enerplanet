@@ -3136,6 +3136,16 @@
       "yearHint": "Das aufgezeichnete Wetter dieses Jahres wird verwendet, und die Modellperiode richtet sich danach.",
       "archiveLabel": "Archiv",
       "noFetchHint": "Hier werden keine Wetterdaten geladen — die Konfiguration verweist auf einen Datensatz, das Backend lädt die Zeitreihe beim Lauf."
+    },
+    "building-demand": {
+      "title": "Gebäudebedarf",
+      "description": "Bedarf je Gebäude und Energieträger, abgeleitet aus den Gebäuden des Netzes.",
+      "vector": "Träger",
+      "buildings": "Gebäude",
+      "totalKwh": "Summe kWh/a",
+      "sourceEstimate": "vom Energiedienst geschätzt, eine Anfrage je Gebäude",
+      "sourceMirror": "aus Gebäudeklasse und Fläche gespiegelt — zur Laufzeit ist das Backend maßgeblich",
+      "autoHint": "Dieser Schritt läuft von selbst, wenn der Ablauf vorangeht: er liest die Gebäude, fragt den Dienst und zeichnet die Antworten auf. Hier ist nichts einzustellen."
     }
   }
 }
