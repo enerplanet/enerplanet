@@ -3048,7 +3048,9 @@
       "current": "huidige",
       "next": "volgende",
       "complete": "workflow voltooid",
-      "testMode": "testmodus"
+      "testMode": "testmodus",
+      "continue": "Doorgaan",
+      "continuing": "Bezig…"
     },
     "ledger": {
       "history": "geschiedenis",
@@ -3142,6 +3144,18 @@
       "sourceEstimate": "geschat door de energiedienst, één verzoek per gebouw",
       "sourceMirror": "gespiegeld van gebouwklasse en oppervlak — tijdens de run is de backend leidend",
       "autoHint": "Deze stap loopt vanzelf wanneer de flow vooruitgaat: hij leest de gebouwen, vraagt de dienst en legt de antwoorden vast. Hier is niets in te stellen."
+    },
+    "technologies": {
+      "title": "Technologieën",
+      "description": "Waar elk gebouw door wordt voorzien. Een technologie plaatsen verandert niets aan de backend tot het model is opgeslagen en doorgerekend.",
+      "assigned": "{{assigned}} van {{total}} gebouwen",
+      "autoresolve": "Warmte automatisch aanvullen",
+      "autoresolveHint": "Kent elk gebouw met warmtevraag en nog zonder voorziening een passende warmtetechnologie toe. Die toewijzingen zijn als geschat gemarkeerd — een gok op gebouwklasse, die je mag overrulen.",
+      "assign": "Technologie toewijzen",
+      "assignAll": "Aan allemaal toewijzen",
+      "loading": "Catalogus wordt geladen…",
+      "unavailable": "De catalogus is niet bereikbaar; er kunnen geen technologieën worden toegewezen.",
+      "noSelectionHint": "Er wordt één technologie per type op alle gebouwen toegepast. Selectie per gebouw is er nog niet."
     }
   }
 }

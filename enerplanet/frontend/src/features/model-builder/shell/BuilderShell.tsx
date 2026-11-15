@@ -41,13 +41,15 @@ import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
 import { setDemandSource } from "../modules/building-demand";
+import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
 import { pylovoDemandSource } from "./demandSource";
+import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
-import { saveSession } from "./actions";
+import { continueStep, saveSession } from "./actions";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
@@ -91,6 +93,7 @@ export const BuilderShell: React.FC = () => {
     setGridEngine(pylovoGridEngine);
     setWeatherSource(backendWeatherSource);
     setDemandSource(pylovoDemandSource);
+    setCatalogueSource(backendCatalogueSource);
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
@@ -114,6 +117,8 @@ export const BuilderShell: React.FC = () => {
   }, [gateway, session, workflow]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** True while a forward walk is in flight, so the bar's Continue cannot be pressed twice. */
+  const [continuing, setContinuing] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
   const [overlayOpen, setOverlayOpen] = useState(false);
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
@@ -230,6 +235,27 @@ export const BuilderShell: React.FC = () => {
       <StepsPanel flow={workflow.flow} registry={workflow.registry} store={session.store} />
     );
 
+  /**
+   * The one forward action: run whatever the session sits on, and keep going through any auto node it lands on.
+   *
+   * This is what starts an auto node's work — T15 allows an auto run only as part of a forward action, never on
+   * a passive state change, which is why this is a button and not an effect watching the position.
+   */
+  const continueForward = (): void => {
+    setContinuing(true);
+    setError(null);
+    void continueStep({
+      flow: workflow.flow,
+      registry: workflow.registry,
+      store: session.store,
+      engine: session.engine,
+    })
+      .catch((thrown: unknown) =>
+        setError(thrown instanceof Error ? thrown.message : String(thrown)),
+      )
+      .finally(() => setContinuing(false));
+  };
+
   /** Both branches get the same bar: with no node to show, the session still exists and can still be saved. */
   const bar = (
     <WorkflowBar
@@ -242,6 +268,8 @@ export const BuilderShell: React.FC = () => {
       onSave={save}
       saving={saving}
       saveNotice={saveNotice}
+      onContinue={mode.kind === "workflow" ? continueForward : undefined}
+      continuing={continuing}
     />
   );
 

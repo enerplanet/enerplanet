@@ -17,6 +17,7 @@
 
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { position } from "../core/position";
+import type { Engine } from "../core/engine";
 import type { Store } from "../core/store";
 import type { WorkflowRef } from "../core/artefact";
 import { saveModel, type SaveOutcome } from "../save/saveModel";
@@ -30,6 +31,46 @@ export function redoToTip(store: Store): number {
     walked += 1;
   }
   return walked;
+}
+
+/**
+ * Walk forward one interactive step: run the node the session sits on, and keep going while the flow lands on
+ * an `auto` node.
+ *
+ * This is the **only forward action there is**, which is what makes it the thing that starts an auto node's
+ * work — T15 says an auto node runs as part of a forward action and never on a passive state change, and undo
+ * leaves an auto node's outputs pruned precisely because this is what re-runs them.
+ *
+ * It stops *after* an interactive node, because that is the next place a user can act. It never moves
+ * backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
+ *
+ * @returns the node ids it ran, in order — the shell says what happened rather than guessing.
+ */
+export async function continueStep(request: {
+  flow: Flow;
+  registry: ModuleRegistry;
+  store: Store;
+  engine: Engine;
+}): Promise<string[]> {
+  const { flow, registry, store, engine } = request;
+  const ran: string[] = [];
+
+  for (let guard = 0; guard <= flow.length; guard += 1) {
+    const at = position(flow, registry, store);
+    if (at.complete) break;
+
+    const node = flow[at.index];
+    const module = registry[node.moduleId];
+    if (module === undefined) break;
+
+    await engine.runModule(module, { id: node.id, ...(node.auto === true ? { auto: true } : {}) });
+    ran.push(node.id);
+
+    // An auto node is not a place anyone can act, so the walk continues past it. An interactive one is.
+    if (node.auto !== true) break;
+  }
+
+  return ran;
 }
 
 /**

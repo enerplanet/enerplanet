@@ -26,6 +26,8 @@ import weather from "../modules/weather";
 
 import buildingDemand from "../modules/building-demand";
 
+import technologies from "../modules/technologies";
+
 export const MODULES: readonly BuilderModule[] = [
   example,
   modelStart,
@@ -35,6 +37,7 @@ export const MODULES: readonly BuilderModule[] = [
   modelSave,
   weather,
   buildingDemand,
+  technologies,
 ];
 
 /**

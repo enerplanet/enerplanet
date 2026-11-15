@@ -98,6 +98,9 @@ interface Props {
   saving?: boolean;
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
+  /** The one forward action: run what the session sits on, walking through auto nodes. */
+  onContinue?: () => void;
+  continuing?: boolean;
 }
 
 export const WorkflowBar: React.FC<Props> = ({
@@ -110,6 +113,8 @@ export const WorkflowBar: React.FC<Props> = ({
   onSave,
   saving,
   saveNotice,
+  onContinue,
+  continuing,
 }) => {
   const { t } = useTranslation();
   const bar = barState(workflow.flow, workflow.registry, store);
@@ -146,6 +151,18 @@ export const WorkflowBar: React.FC<Props> = ({
                 {...(store.canRedo ? { onClick: () => redoToTip(store) } : {})}
               />
             </nav>
+
+            {/* The one forward action: run what the session sits on, and keep going through auto nodes. */}
+            {onContinue !== undefined && !bar.complete && (
+              <button
+                type="button"
+                onClick={onContinue}
+                disabled={continuing === true}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {continuing === true ? t("modelBuilder.bar.continuing") : t("modelBuilder.bar.continue")}
+              </button>
+            )}
 
             {bar.complete && (
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">

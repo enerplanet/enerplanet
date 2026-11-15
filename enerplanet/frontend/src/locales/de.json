@@ -3052,7 +3052,9 @@
       "current": "aktuell",
       "next": "danach",
       "complete": "Workflow abgeschlossen",
-      "testMode": "Testmodus"
+      "testMode": "Testmodus",
+      "continue": "Weiter",
+      "continuing": "Arbeitet…"
     },
     "ledger": {
       "history": "Verlauf",
@@ -3146,6 +3148,18 @@
       "sourceEstimate": "vom Energiedienst geschätzt, eine Anfrage je Gebäude",
       "sourceMirror": "aus Gebäudeklasse und Fläche gespiegelt — zur Laufzeit ist das Backend maßgeblich",
       "autoHint": "Dieser Schritt läuft von selbst, wenn der Ablauf vorangeht: er liest die Gebäude, fragt den Dienst und zeichnet die Antworten auf. Hier ist nichts einzustellen."
+    },
+    "technologies": {
+      "title": "Technologien",
+      "description": "Womit jedes Gebäude versorgt wird. Eine Technologie zu setzen ändert am Backend nichts, bis das Modell gespeichert und gerechnet wird.",
+      "assigned": "{{assigned}} von {{total}} Gebäuden",
+      "autoresolve": "Wärme automatisch ergänzen",
+      "autoresolveHint": "Weist jedem Gebäude mit Wärmebedarf und noch ohne Versorgung eine passende Wärmetechnologie zu. Diese Zuweisungen sind als geschätzt markiert — eine Vermutung nach Gebäudeklasse, die du überstimmen kannst.",
+      "assign": "Technologie zuweisen",
+      "assignAll": "Allen zuweisen",
+      "loading": "Katalog wird geladen…",
+      "unavailable": "Der Katalog ist nicht erreichbar; es können keine Technologien zugewiesen werden.",
+      "noSelectionHint": "Eine Technologie je Typ wird auf alle Gebäude angewendet. Eine Auswahl einzelner Gebäude gibt es noch nicht."
     }
   }
 }

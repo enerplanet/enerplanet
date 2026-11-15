@@ -3052,7 +3052,9 @@
       "current": "current",
       "next": "next",
       "complete": "flow complete",
-      "testMode": "test mode"
+      "testMode": "test mode",
+      "continue": "Continue",
+      "continuing": "Working…"
     },
     "ledger": {
       "history": "history",
@@ -3146,6 +3148,18 @@
       "sourceEstimate": "estimated by the energy service, one request per building",
       "sourceMirror": "mirrored from the building class and area — the backend is authoritative at run time",
       "autoHint": "This step runs on its own when the flow moves forward: it reads the buildings, asks the service, and records the answers. There is nothing to configure here."
+    },
+    "technologies": {
+      "title": "Technologies",
+      "description": "What each building is supplied by. Placing a technology changes nothing on the backend until the model is saved and run.",
+      "assigned": "{{assigned}} of {{total}} buildings",
+      "autoresolve": "Fill in heat automatically",
+      "autoresolveHint": "Assigns an expected-fit heat technology to every building with heat demand and no supply yet. Those assignments are marked as estimated — a guess by class, and yours to overrule.",
+      "assign": "Assign a technology",
+      "assignAll": "Assign to all",
+      "loading": "Loading the catalogue…",
+      "unavailable": "The catalogue is not reachable; no technologies can be assigned.",
+      "noSelectionHint": "One technology per type is applied to every building. Per-building selection is not available yet."
     }
   }
 }

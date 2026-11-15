@@ -3049,7 +3049,9 @@
       "current": "actual",
       "next": "siguiente",
       "complete": "flujo completado",
-      "testMode": "modo de prueba"
+      "testMode": "modo de prueba",
+      "continue": "Continuar",
+      "continuing": "Trabajando…"
     },
     "ledger": {
       "history": "historial",
@@ -3143,6 +3145,18 @@
       "sourceEstimate": "estimado por el servicio energético, una petición por edificio",
       "sourceMirror": "reflejado de la clase y la superficie — el backend es la autoridad en ejecución",
       "autoHint": "Este paso se ejecuta solo cuando el flujo avanza: lee los edificios, consulta el servicio y registra las respuestas. Aquí no hay nada que configurar."
+    },
+    "technologies": {
+      "title": "Tecnologías",
+      "description": "Con qué se abastece cada edificio. Colocar una tecnología no cambia nada en el backend hasta guardar y ejecutar el modelo.",
+      "assigned": "{{assigned}} de {{total}} edificios",
+      "autoresolve": "Completar la calefacción automáticamente",
+      "autoresolveHint": "Asigna una tecnología de calor adecuada a cada edificio con demanda de calor y sin suministro. Esas asignaciones se marcan como estimadas: una conjetura por clase, que puedes corregir.",
+      "assign": "Asignar una tecnología",
+      "assignAll": "Asignar a todos",
+      "loading": "Cargando el catálogo…",
+      "unavailable": "El catálogo no responde; no se pueden asignar tecnologías.",
+      "noSelectionHint": "Se aplica una tecnología por tipo a todos los edificios. La selección por edificio aún no está disponible."
     }
   }
 }

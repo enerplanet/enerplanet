@@ -63,7 +63,17 @@ export interface TechAssignment {
   inputVector?: EnergyVector;
   outputVector?: EnergyVector;
   params?: Record<string, unknown>;
+  /** Where the assignment came from — an autoplaced estimate is badged and overridable. */
+  source?: TechSource;
 }
+
+/**
+ * How a technology ended up on a building.
+ *
+ * `estimated` mirrors the legacy, which badges an expected-fit autoresolve as estimated precisely because it
+ * is provisional: the heuristic is review-flagged and the user is always allowed to disagree with it.
+ */
+export type TechSource = "catalogue" | "estimated" | "user";
 
 export interface RegionRef {
   country: string;
