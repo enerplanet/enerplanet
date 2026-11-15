@@ -135,6 +135,46 @@ export interface UnfoldedConfig {
   weatherSelection?: ModelData["weatherSelection"];
 }
 
+/** One feature's demand and technologies, as the store's ports hold them. */
+function readingsOf(feature: GeoJSON.Feature): {
+  id: string;
+  electricity?: BuildingParams;
+  heat?: BuildingParams;
+  technologies: TechAssignment[];
+} | undefined {
+  const id = idOf(feature);
+  if (id === undefined) return undefined;
+
+  const properties = (feature.properties ?? {}) as Record<string, unknown>;
+  const { electricity, heat } = paramsOf(properties);
+  const technologies = Array.isArray(properties.technologies)
+    ? properties.technologies
+        .map(unfoldTechnology)
+        .filter((entry): entry is TechAssignment => entry !== undefined)
+    : [];
+
+  return {
+    id,
+    ...(electricity === undefined ? {} : { electricity }),
+    ...(heat === undefined ? {} : { heat }),
+    technologies,
+  };
+}
+
+/** The demand ports, assembled — the two vectors that have legacy keys we know. */
+function paramsPorts(
+  electricity: Record<string, BuildingParams>,
+  heat: Record<string, BuildingParams>,
+): Pick<UnfoldedConfig, "buildingParams"> {
+  if (Object.keys(electricity).length === 0 && Object.keys(heat).length === 0) return {};
+  return {
+    buildingParams: {
+      ...(Object.keys(electricity).length === 0 ? {} : { [ELECTRICITY]: electricity }),
+      ...(Object.keys(heat).length === 0 ? {} : { [HEAT]: heat }),
+    },
+  };
+}
+
 /** The demand and technologies a config's buildings describe, keyed by id. */
 function buildingsOf(config: Record<string, unknown>): UnfoldedConfig {
   const buildings = config.buildings as GeoJSON.FeatureCollection | undefined;
@@ -145,34 +185,16 @@ function buildingsOf(config: Record<string, unknown>): UnfoldedConfig {
   const technologies: Record<string, TechAssignment[]> = {};
 
   for (const feature of buildings.features) {
-    const id = idOf(feature);
-    if (id === undefined) continue;
-
-    const properties = (feature.properties ?? {}) as Record<string, unknown>;
-    const { electricity: power, heat: warmth } = paramsOf(properties);
-    if (power !== undefined) electricity[id] = power;
-    if (warmth !== undefined) heat[id] = warmth;
-
-    const assignments = Array.isArray(properties.technologies)
-      ? properties.technologies
-          .map(unfoldTechnology)
-          .filter((entry): entry is TechAssignment => entry !== undefined)
-      : [];
-    if (assignments.length > 0) technologies[id] = assignments;
+    const reading = readingsOf(feature);
+    if (reading === undefined) continue;
+    if (reading.electricity !== undefined) electricity[reading.id] = reading.electricity;
+    if (reading.heat !== undefined) heat[reading.id] = reading.heat;
+    if (reading.technologies.length > 0) technologies[reading.id] = reading.technologies;
   }
-
-  const anyParams = Object.keys(electricity).length > 0 || Object.keys(heat).length > 0;
 
   return {
     buildings,
-    ...(anyParams
-      ? {
-          buildingParams: {
-            ...(Object.keys(electricity).length === 0 ? {} : { [ELECTRICITY]: electricity }),
-            ...(Object.keys(heat).length === 0 ? {} : { [HEAT]: heat }),
-          },
-        }
-      : {}),
+    ...paramsPorts(electricity, heat),
     ...(Object.keys(technologies).length === 0 ? {} : { technologies }),
   };
 }
