@@ -19,7 +19,14 @@
  * module.)
  */
 import { describe, expect, it } from "vitest";
-import { contractIssues, runInScratch, type Coordinates, type ModelData } from "@model-builder/core";
+import {
+  contractIssues,
+  createEngine,
+  createStore,
+  runInScratch,
+  type Coordinates,
+  type ModelData,
+} from "@model-builder/core";
 import gridGeneration, {
   needsConfirmation,
   setGridEngine,
@@ -181,6 +188,42 @@ describe("grid-generation's run", () => {
     });
 
     expect(issues.map((issue) => issue.port).sort()).toEqual(["coordinates"]);
+  });
+
+  it("reports an empty result as unfinished, not as a grid (T22)", async () => {
+    // The module's own half of the completeness rule. It *may* find nothing — an empty FeatureCollection is
+    // a fact the store is allowed to hold — but a model built on no buildings is not one this module stands
+    // behind. Reported rather than thrown, so the empty grid is still visible on the map and the reason is
+    // on screen; the node simply never reads as done, and the flow rests here.
+    const empty: GridResult = {
+      buildings: { type: "FeatureCollection", features: [] },
+      transformers: { type: "FeatureCollection", features: [] },
+      lines: { type: "FeatureCollection", features: [] },
+      mvLines: { type: "FeatureCollection", features: [] },
+      grids: { transformerCount: 0 },
+    };
+    setGridEngine(recordingEngine(empty));
+
+    const store = createStore({ ...DRAWN });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+
+    expect(store.data.buildings?.features).toHaveLength(0); // it did write — the result is real
+    // Asked *after* the run, which is when this judgement has anything to judge: the same call the position
+    // makes to decide whether the node has finished.
+    expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([
+      { port: "buildings", message: "The area yielded no buildings — nothing to model." },
+    ]);
+  });
+
+  it("asks for nothing once the grid holds buildings", async () => {
+    // The other side of the same rule: the gate must not fire on a healthy grid, or every node would read
+    // as unfinished forever and the flow could never complete.
+    setGridEngine(recordingEngine());
+
+    const store = createStore({ ...DRAWN });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+
+    expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([]);
   });
 });
 

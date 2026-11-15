@@ -69,7 +69,7 @@ export function setGridEngine(next: GridEngine): void {
   engine = next;
 }
 
-/** A grid needs somewhere to be generated in, and something to generate from. */
+/** A grid needs somewhere to be generated in, something to generate from — and a result worth keeping. */
 function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
@@ -79,6 +79,17 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   if (projection.region === undefined) {
     issues.push({ port: "region", message: "Choose the region the model sits in." });
   }
+
+  // The result, not only the inputs — this is the half of the completeness rule the module owns (T22). An
+  // area can legitimately yield no buildings, and an empty FeatureCollection is a fact the store is allowed
+  // to hold; what this module may not do is call that a *finished* grid, because everything downstream
+  // builds on buildings that are not there. Reported rather than thrown on purpose: the empty grid stays
+  // visible on the map, the reason is on screen, and the node never reads as done — so the flow rests here
+  // instead of walking on to demand and technologies.
+  if (projection.buildings !== undefined && projection.buildings.features.length === 0) {
+    issues.push({ port: "buildings", message: "The area yielded no buildings — nothing to model." });
+  }
+
   return issues;
 }
 
