@@ -8,6 +8,7 @@
     { "id": "area-draw", "moduleId": "area-draw", "label": "Area draw" },
     { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" },
     { "id": "weather", "moduleId": "weather", "label": "Weather" },
+    { "id": "building-demand", "moduleId": "building-demand", "label": "Building demand", "auto": true },
     { "id": "model-save", "moduleId": "model-save", "label": "Save model" }
   ]
 }

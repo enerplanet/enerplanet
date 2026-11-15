@@ -40,8 +40,10 @@ import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
+import { setDemandSource } from "../modules/building-demand";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
+import { pylovoDemandSource } from "./demandSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
@@ -88,6 +90,7 @@ export const BuilderShell: React.FC = () => {
   useEffect(() => {
     setGridEngine(pylovoGridEngine);
     setWeatherSource(backendWeatherSource);
+    setDemandSource(pylovoDemandSource);
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });

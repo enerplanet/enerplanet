@@ -38,6 +38,13 @@ import { useTranslation } from "@spatialhub/i18n";
 import { demandSource, type BuildingAttributes } from "./source";
 import { estimateYearlyHeatDemand } from "./heat";
 
+/**
+ * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
+ * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and
+ * `setWeatherSource`.
+ */
+export { setDemandSource } from "./source";
+
 /** The two vectors this module fills. The store's vector set is open (T9) — these are ours, not the limit. */
 const ELECTRICITY = "electricity";
 const HEAT = "heat";
