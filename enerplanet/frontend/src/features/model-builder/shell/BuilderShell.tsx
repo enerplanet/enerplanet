@@ -39,7 +39,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
+import { setWeatherSource } from "../modules/weather";
 import { pylovoGridEngine } from "./gridEngine";
+import { backendWeatherSource } from "./weatherSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
@@ -80,11 +82,12 @@ export const BuilderShell: React.FC = () => {
   // tear the map down and bring it back.
   const host = useMemo(() => MAP_PROVIDER.createHost(), []);
 
-  // The frame's side of a module's provider slot. `grid-generation` declares that it *has* a grid engine and
-  // never learns which one; installing it is the host's job, exactly as mounting the map host is. An effect
+  // The frame's side of the modules' provider slots. A module declares that it *has* an engine or a source and
+  // never learns which one; installing them is the host's job, exactly as mounting the map host is. An effect
   // rather than a module-scope side effect, so importing the registry never has side effects of its own.
   useEffect(() => {
     setGridEngine(pylovoGridEngine);
+    setWeatherSource(backendWeatherSource);
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
