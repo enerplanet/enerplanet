@@ -48,7 +48,7 @@ import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
-import { MAP_PROVIDER, MODULES } from "./moduleRegistry";
+import { MAP_PROVIDER, MODULES, bindModelSaveSession } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
 import { devWorkflow, type Workflow } from "./workflow";
 import { createInvalidator } from "../core/invalidate";
@@ -90,6 +90,22 @@ export const BuilderShell: React.FC = () => {
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
   const [session, setSession] = useState<Session>(() => sessionFor(workflow, workflow.initial));
+
+  // The save node's session, bound where the session itself lives. It reads the session when it *runs*, so
+  // binding at construction would hand it a session that has since been replaced — a mode switch builds a
+  // new one. Unbinding on the way out keeps a dead store from outliving its frame. Same shape as the engine
+  // above: the module declares the need, the host supplies it, and importing the registry stays side-effect
+  // free.
+  useEffect(() => {
+    bindModelSaveSession({
+      gateway,
+      store: session.store,
+      workflow: workflow.ref,
+      flow: workflow.flow,
+      registry: workflow.registry,
+    });
+    return () => bindModelSaveSession(null);
+  }, [gateway, session, workflow]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);

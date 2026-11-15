@@ -42,3 +42,16 @@ export const MAP_PROVIDER: { readonly id: string; readonly createHost: () => Map
   id: "map-provider",
   createHost: createMapHost,
 };
+
+/**
+ * How the frame hands the save node its session.
+ *
+ * The same shape as `MAP_PROVIDER` and `setGridEngine`, and for the same reason: the save node is *part of*
+ * the flow and the registry it saves, so it cannot be handed values at construction — it reads them when it
+ * runs. The frame binds the live session here, and the node stays a plain module that knows nothing about
+ * React, the store's lifetime, or how the workflow was built.
+ *
+ * Re-exported so the shell's knowledge of a module stays in this file: `BuilderShell` imports the seam, not
+ * the module.
+ */
+export { bindModelSaveSession } from "../modules/model-save";

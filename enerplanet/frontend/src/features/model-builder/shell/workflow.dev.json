@@ -6,6 +6,7 @@
   "nodes": [
     { "id": "model-start", "moduleId": "model-start", "label": "Model start" },
     { "id": "area-draw", "moduleId": "area-draw", "label": "Area draw" },
-    { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" }
+    { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" },
+    { "id": "model-save", "moduleId": "model-save", "label": "Save model" }
   ]
 }
