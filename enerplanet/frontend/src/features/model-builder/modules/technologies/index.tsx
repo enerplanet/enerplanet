@@ -137,6 +137,47 @@ export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   return [{ port: "technologies", message: `${wanted.length} building(s) have heat demand but no supply.` }];
 }
 
+/** Apply each collected type to every building — the "assign to all" gesture. */
+function applyToAll(
+  buildings: GeoJSON.FeatureCollection,
+  types: readonly string[],
+  next: Record<string, TechAssignment[]>,
+): void {
+  for (const type of types) {
+    const vectors = vectorsOfType(type);
+    if (vectors === undefined) continue;
+    for (const feature of buildings.features) {
+      const osmId = osmIdOf(feature);
+      if (osmId === undefined) continue;
+      next[osmId] = assign(next[osmId], { techId: type, ...vectors, source: "user" });
+    }
+  }
+}
+
+/**
+ * The expected-fit pass: heat for every building that has demand and nothing supplying it.
+ *
+ * A building whose heat demand is zero — a garage, or one the demand step found nothing for — resolves to
+ * nothing, so it is left alone rather than given a supply it does not need.
+ */
+function autoresolveHeat(
+  buildings: GeoJSON.FeatureCollection,
+  params: Readonly<ModelData>["buildingParams"],
+  next: Record<string, TechAssignment[]>,
+): void {
+  for (const feature of buildings.features) {
+    const osmId = osmIdOf(feature);
+    if (osmId === undefined || hasHeatSupply(next[osmId])) continue;
+
+    const fit = expectedFitTech(fClassOf(params, osmId, feature), params?.heat?.[osmId]?.yearlyKwh);
+    if (fit === undefined) continue;
+
+    const vectors = vectorsOfType(fit.techId);
+    if (vectors === undefined) continue;
+    next[osmId] = assign(next[osmId], { techId: fit.techId, ...vectors, source: "estimated" });
+  }
+}
+
 /**
  * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
  * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and
@@ -175,37 +216,12 @@ const module = defineModule({
 
     const next: Record<string, TechAssignment[]> = { ...current };
 
-    // 1. What the user asked for: one type applied to every building.
-    for (const type of collected.types) {
-      const vectors = vectorsOfType(type);
-      if (vectors === undefined) continue;
-      for (const feature of buildings.features) {
-        const osmId = osmIdOf(feature);
-        if (osmId === undefined) continue;
-        next[osmId] = assign(next[osmId], { techId: type, ...vectors, source: "user" });
-      }
-    }
+    // 1. What the user asked for, then 2. the expected-fit fill. Each pass is simpler than the run that
+    //    composes them, which is the only reason this stays readable.
+    applyToAll(buildings, collected.types, next);
 
-    // 2. The expected-fit autoresolve, for buildings with heat demand and nothing supplying it yet.
     const autoresolve = collected.autoresolve ?? advanced?.[AUTORESOLVE] === true;
-    if (autoresolve === true) {
-      for (const feature of buildings.features) {
-        const osmId = osmIdOf(feature);
-        if (osmId === undefined || hasHeatSupply(next[osmId])) continue;
-
-        const heatKwh = params.heat?.[osmId]?.yearlyKwh;
-        const fit = expectedFitTech(fClassOf(params, osmId, feature), heatKwh);
-        if (fit === undefined) continue;
-
-        const vectors = vectorsOfType(fit.techId);
-        if (vectors === undefined) continue;
-        next[osmId] = assign(next[osmId], {
-          techId: fit.techId,
-          ...vectors,
-          source: "estimated",
-        });
-      }
-    }
+    if (autoresolve === true) autoresolveHeat(buildings, params, next);
 
     // The toggle is a setting, so it lives in the settings port — read above, so this rewrite is licensed.
     const settings =
@@ -255,6 +271,36 @@ function useCatalogue(): { products: readonly CatalogueProduct[]; failed: boolea
 
   return { products, failed };
 }
+
+/** One catalogue type: what it converts, and the button that applies it to every building. */
+const TypeRow: React.FC<{
+  alias: string;
+  vectors: ReturnType<typeof vectorsOfType>;
+  busy: boolean;
+  assignLabel: string;
+  onAssign: () => void;
+}> = ({ alias, vectors, busy, assignLabel, onAssign }) => (
+  <li className="flex items-center justify-between gap-3">
+    <span className="min-w-0">
+      <span className="block truncate text-sm">{alias}</span>
+      {vectors !== undefined && (
+        <span className="block font-mono text-[0.65rem] text-muted-foreground">
+          {vectors.inputVector === undefined
+            ? vectors.outputVector
+            : `${vectors.inputVector} → ${vectors.outputVector}`}
+        </span>
+      )}
+    </span>
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onAssign}
+      className="shrink-0 rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {assignLabel}
+    </button>
+  </li>
+);
 
 const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
   const { t } = useTranslation();
@@ -329,33 +375,16 @@ const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
           </p>
         ) : (
           <ul className="min-h-0 space-y-1 overflow-auto">
-            {types.map((type) => {
-              const vectors = vectorsOfType(type);
-              const products_ = productsOfType(products, type);
-              const label = defaultProduct(products_, type)?.alias ?? type;
-              return (
-                <li key={type} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">{label}</span>
-                    {vectors !== undefined && (
-                      <span className="block font-mono text-[0.65rem] text-muted-foreground">
-                        {vectors.inputVector === undefined
-                          ? vectors.outputVector
-                          : `${vectors.inputVector} → ${vectors.outputVector}`}
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => assignEverywhere(type)}
-                    className="shrink-0 rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {t("modelBuilder.technologies.assignAll")}
-                  </button>
-                </li>
-              );
-            })}
+            {types.map((type) => (
+              <TypeRow
+                key={type}
+                alias={defaultProduct(productsOfType(products, type), type)?.alias ?? type}
+                vectors={vectorsOfType(type)}
+                busy={busy}
+                assignLabel={t("modelBuilder.technologies.assignAll")}
+                onAssign={() => assignEverywhere(type)}
+              />
+            ))}
           </ul>
         )}
       </div>

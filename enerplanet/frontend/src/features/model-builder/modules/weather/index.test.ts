@@ -27,15 +27,18 @@ const NODE = weather.module.id;
 /** The port this module writes, named once so the cases and the gate speak about the same thing. */
 const SELECTION = "weatherSelection";
 
+/** The period every case starts from, named once for the same reason. */
+const FROM_DATE = "2025-01-01";
+
 /** A projection holding just a selection — the shape the module's gate is asked about, and the one place
  *  this key is written. */
 function holding(selection: WeatherSelection): Partial<ModelData> {
-  return { weatherSelection: selection };
+  return { [SELECTION]: selection };
 }
 
 /** A period, and the selection the panel opens with — what a session holds by the time this node is reached. */
 const READY: Partial<ModelData> = {
-  fromDate: "2025-01-01",
+  fromDate: FROM_DATE,
   toDate: "2025-12-31",
   ...holding(DEFAULT_SELECTION),
 };
@@ -149,7 +152,7 @@ describe("weather's gate", () => {
     expect(issuesFor(holding(DEFAULT_SELECTION))).toEqual([]);
     expect(
       issuesFor({
-        fromDate: "2025-01-01",
+        fromDate: FROM_DATE,
         ...holding({ provider: null, choice: "year", year: 2025 }),
       }),
     ).toEqual([]);
@@ -168,7 +171,7 @@ describe("weather's gate", () => {
 
 describe("weather's helpers", () => {
   it("reads a year off an ISO date, and refuses what it cannot read", () => {
-    expect(yearOf("2025-01-01")).toBe(2025);
+    expect(yearOf(FROM_DATE)).toBe(2025);
     expect(yearOf("1999-12-31")).toBe(1999);
     expect(yearOf(undefined)).toBeUndefined();
     expect(yearOf("not-a-date")).toBeUndefined();

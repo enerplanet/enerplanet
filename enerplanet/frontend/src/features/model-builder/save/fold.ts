@@ -89,13 +89,11 @@ export function foldBuilding(
     if (details.length > 0) folded.fclass_details = details;
   }
 
-  if (heat !== undefined) {
-    if (heat.yearlyKwh !== undefined) {
-      folded.demand_heat = heat.yearlyKwh;
-      folded.yearly_heat_demand_kwh = heat.yearlyKwh;
-      // A mirrored figure is an estimate; a user's own entry is not. That is the whole meaning of the flag.
-      folded.heat_demand_estimated = heat.source === "mirror";
-    }
+  // A mirrored figure is an estimate; a user's own entry is not. That is the whole meaning of the flag.
+  if (heat !== undefined && heat.yearlyKwh !== undefined) {
+    folded.demand_heat = heat.yearlyKwh;
+    folded.yearly_heat_demand_kwh = heat.yearlyKwh;
+    folded.heat_demand_estimated = heat.source === "mirror";
   }
 
   if (techs !== undefined && techs.length > 0) {
