@@ -1,25 +1,49 @@
 /**
- * The `model-save` node (case T13) — what it seals, and what it refuses.
+ * The `model-save` node (case T13) — what it seals, what it refuses, and the status it earns.
  *
  * Written failing first.
+ *
+ * The flow here has a node *before* the save, and that is load-bearing: "the model is complete" is a
+ * statement about the *other* nodes, so a one-node flow would be complete before it started and could
+ * never tell a finished save from an unfinished one.
  */
 import { describe, it, expect } from "vitest";
 import { createSaveNode, missingPorts, SaveRefused } from "./saveNode";
 import type { LegacyModelPayload, ModelGateway } from "./gateway";
 import type { WorkflowRef } from "../core/artefact";
 import type { Flow, ModuleRegistry } from "../core/flow";
-import { createStore } from "../core/store";
+import { createStore, type Store } from "../core/store";
 import { createEngine } from "../core/engine";
-import { requiredPorts } from "../core/module";
+import { defineModule, requiredPorts, type Module } from "../core/module";
 import { runInScratch } from "../core/testSupport";
 import { seed } from "../core/fixtures";
 
 const WORKFLOW: WorkflowRef = { id: "wf-core", version: 3 };
+const UPSTREAM_ID = "start";
 const NODE_ID = "model-save";
-const FLOW: Flow = [{ id: NODE_ID, moduleId: NODE_ID }];
-const registry: ModuleRegistry = {};
 
 const RING: [number, number][] = [[8.6, 49.4], [8.7, 49.4], [8.7, 49.5], [8.6, 49.4]];
+
+/** An upstream node that writes the area — what makes "every other node is done" observable. */
+const upstream: Module = defineModule({
+  id: UPSTREAM_ID,
+  params: [{ port: "coordinates" }],
+  affect: {},
+  layout: [],
+  // Reads before it writes: the write boundary refuses a blind overwrite of a port the seed already
+  // holds, which is the same rule the real modules satisfy with `hold`/`read`.
+  run: (ctx) => {
+    ctx.read("coordinates");
+    ctx.commit({ coordinates: [RING] });
+  },
+  validate: () => [],
+});
+
+const FLOW: Flow = [
+  { id: UPSTREAM_ID, moduleId: UPSTREAM_ID },
+  { id: NODE_ID, moduleId: NODE_ID },
+];
+const registry: ModuleRegistry = { [UPSTREAM_ID]: upstream };
 
 function gateway(recorded: LegacyModelPayload[]): ModelGateway {
   return {
@@ -37,9 +61,20 @@ function gateway(recorded: LegacyModelPayload[]): ModelGateway {
   };
 }
 
+/** The node as the frame builds it: the flow and registry are getters, because it lives inside them. */
+function saveNodeFor(store: Store, payloads: LegacyModelPayload[] = []): Module {
+  return createSaveNode({
+    gateway: gateway(payloads),
+    store,
+    workflow: WORKFLOW,
+    flow: () => FLOW,
+    registry: () => registry,
+  });
+}
+
 describe("createSaveNode", () => {
   it("declares the whole persisted surface, and requires the drawn area", () => {
-    const node = createSaveNode({ gateway: gateway([]), store: createStore(), workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(createStore());
 
     expect(node.id).toBe(NODE_ID);
     expect(node.params.map((param) => param.port)).toContain("saveResult");
@@ -47,10 +82,19 @@ describe("createSaveNode", () => {
     expect(requiredPorts(node)).toEqual(["coordinates"]);
   });
 
+  it("binds to the session through getters, since it is part of the flow it is handed", () => {
+    // The workflow cannot be built in one pass: this node is a member of the registry and the flow it
+    // is given, so the factory takes getters and the frame fills them in after construction.
+    const node = saveNodeFor(createStore());
+
+    expect(FLOW.map((entry) => entry.moduleId)).toContain(node.id);
+    expect(registry[NODE_ID]).toBeUndefined(); // the frame registers the built node itself
+  });
+
   it("saves, then records the model id and the result in the store", async () => {
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING] }));
-    const node = createSaveNode({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(store, payloads);
 
     await createEngine(store).runModule(node, { id: NODE_ID });
 
@@ -67,7 +111,7 @@ describe("createSaveNode", () => {
     const store = createStore(
       seed({ coordinates: [RING], modelId: 12, saveResult: { modelId: 12, created: true } }),
     );
-    const node = createSaveNode({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(store, payloads);
 
     // The boundary refuses a blind overwrite, so the node has to read both ports first. A second run
     // is the case that proves it: on the first save they are absent.
@@ -82,11 +126,36 @@ describe("createSaveNode", () => {
   it("refuses a flow that cannot be saved yet, sealing nothing", async () => {
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [] })); // nothing drawn
-    const node = createSaveNode({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(store, payloads);
 
     await expect(createEngine(store).runModule(node, { id: NODE_ID })).rejects.toBeInstanceOf(SaveRefused);
     expect(payloads).toEqual([]); // nothing was sent
     expect(store.log).toEqual([]); // and nothing was sealed
+  });
+});
+
+describe("the status this node earns", () => {
+  it("promotes a finished flow to `draft`, so a run will accept it", async () => {
+    // The case the getters exist for. Deriving the status from `position().complete` read false here —
+    // this node *is* the unfinished one while it runs — so a finished model went out as `incomplete`
+    // and no run would take it.
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING] }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+
+    expect(payloads[0].status).toBe("draft");
+  });
+
+  it("saves a finished flow again as `modified`, not a second `draft`", async () => {
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING], modelId: 12 }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+
+    expect(payloads[0].status).toBe("modified");
   });
 });
 
@@ -106,7 +175,7 @@ describe("the completeness gate", () => {
 
   it("reports the same verdict through the node's validate()", async () => {
     const store = createStore(seed({ coordinates: [RING] }));
-    const node = createSaveNode({ gateway: gateway([]), store, workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(store);
 
     const { issues } = await runInScratch({ module: node, mock: seed({ coordinates: [RING] }) });
 
@@ -138,7 +207,7 @@ describe("the completeness gate", () => {
     // a missing *grid* is reported so the user knows what is left, while the model round-trips as `incomplete`.
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING] }));
-    const node = createSaveNode({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry });
+    const node = saveNodeFor(store, payloads);
 
     await createEngine(store).runModule(node, { id: NODE_ID });
 

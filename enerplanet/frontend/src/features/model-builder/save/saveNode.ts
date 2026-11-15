@@ -8,6 +8,11 @@
  * artefact that Call B writes is built from the log. Keeping that here rather than widening
  * `ModuleCtx` means no other module can see history either.
  *
+ * **The flow and the registry are getters, not values**, and that is not a stylistic choice: this node
+ * is *part of* both. The frame builds a workflow and this node has to close over the very structures it
+ * appears in, so the caller passes `() => …` and fills them in once the workflow exists — the same
+ * late-binding shape the map provider and the grid engine use, for the same reason.
+ *
  * A refusal (no name, no assessment period, no drawn area) throws `SaveRefused`: the engine then seals
  * nothing, and the shell shows why. `modelId` and `saveResult` are read before they are written,
  * because on a re-save they already exist and the write boundary refuses a blind overwrite.
@@ -16,10 +21,11 @@
 import type { WorkflowRef } from "../core/artefact";
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { defineModule, type Module } from "../core/module";
+import { nodeStates } from "../core/position";
 import type { ModelData, PortKey } from "../core/ports";
 import type { Store } from "../core/store";
 import type { ValidationIssue } from "../core/module";
-import type { ModelGateway } from "./gateway";
+import type { ModelGateway, SaveStatus } from "./gateway";
 import { saveModel, type SaveRefusal } from "./saveModel";
 
 const REFUSAL_REASONS: Record<SaveRefusal, string> = {
@@ -82,16 +88,22 @@ export interface SaveNodeOptions {
   /** The live session — see the file comment for why this node gets it. */
   store: Store;
   workflow: WorkflowRef;
-  /** Needed for the completeness decision: a finished flow saves as `draft`, not `incomplete`. */
-  flow: Flow;
-  registry: ModuleRegistry;
+  /**
+   * Needed for the completeness decision: a finished flow saves as `draft`, not `incomplete`.
+   * A getter, because this node appears in the flow it is handed.
+   */
+  flow: () => Flow;
+  /** Same reason as `flow`: the node is registered in the registry it is handed. */
+  registry: () => ModuleRegistry;
   /** The node's id in the flow. Defaults to `model-save`. */
   id?: string;
 }
 
 export function createSaveNode(options: SaveNodeOptions): Module {
+  const nodeId = options.id ?? "model-save";
+
   return defineModule({
-    id: options.id ?? "model-save",
+    id: nodeId,
     // The whole persisted surface, declared. `coordinates` is required because the backend resolves
     // the country from it and refuses a model without it — so the flow gate keeps this node
     // unplaceable, and the runtime gate keeps it un-runnable, until an area exists.
@@ -117,14 +129,20 @@ export function createSaveNode(options: SaveNodeOptions): Module {
     layout: [],
 
     run: async (ctx) => {
-      const outcome = await saveModel(options.gateway, {
-        store: options.store,
+      const { store, gateway } = options;
+      const flow = options.flow();
+      const registry = options.registry();
+      const modelId = store.data.modelId;
+
+      const outcome = await saveModel(gateway, {
+        store,
         workflow: options.workflow,
-        flow: options.flow,
-        registry: options.registry,
-        modelId: options.store.data.modelId,
-        draftId: options.store.data.draftId,
-        userId: options.store.data.userId,
+        flow,
+        registry,
+        modelId,
+        draftId: store.data.draftId,
+        userId: store.data.userId,
+        status: statusFor(flow, registry, store, nodeId, modelId),
       });
 
       if (!outcome.ok) throw new SaveRefused(outcome.reason);
@@ -141,4 +159,29 @@ export function createSaveNode(options: SaveNodeOptions): Module {
 
     validate: (ctx) => missingPorts(ctx.store),
   });
+}
+
+/**
+ * The status this save earns — and the reason it cannot simply be `position().complete`.
+ *
+ * `position` answers "the first node that is not done", and while this node runs it *is* that node, so
+ * `complete` reads false on every save and a finished model could never be promoted to `draft` — which
+ * is exactly what a run requires. The honest question is whether every **other** node is done.
+ *
+ * `incomplete` is what an unfinished model gets, and §6 lets it round-trip that way: the bar's save pins
+ * `incomplete` for the same reason. A complete first save is `draft`; a complete re-save is `modified`,
+ * since a model that has been through here once already exists.
+ */
+function statusFor(
+  flow: Flow,
+  registry: ModuleRegistry,
+  store: Store,
+  nodeId: string,
+  modelId: number | undefined,
+): SaveStatus {
+  const states = nodeStates(flow, registry, store);
+  const othersDone = flow.every((node) => node.id === nodeId || states[node.id] === "done");
+
+  if (!othersDone) return "incomplete";
+  return modelId === undefined ? "draft" : "modified";
 }
