@@ -1,9 +1,10 @@
 /**
  * The engine — runs a module and seals what it wrote as one transaction (`Plan.md` §6).
  *
- * Responsibilities kept deliberately narrow for now: build the module context, enforce
+ * Responsibilities kept deliberately narrow: build the module context, enforce
  * the write boundary (declared ports, anti-clobber), and hand the collected writes to the
- * store as a single sealed transaction. Gating, invalidation and history come next.
+ * store as a single sealed transaction — **omitting the cascade**, so the store's invalidator
+ * derives what the change affects (T7). Gating already happens here; history lives in the store.
  *
  * The transaction only exists *after* `run()` returns, which is what makes an action
  * atomic: a module sees the pre-state for the whole run, and any rejection means nothing
@@ -59,7 +60,9 @@ export function createEngine(store: Store): Engine {
           );
         }
         pending = new Map();
-        if (primary.length > 0) sealed = store.applyTransaction(primary, [], { node });
+        // No cascade passed: the store derives it from this change through the invalidator
+        // (T7), so the transaction's prunes are the change's real consequences.
+        if (primary.length > 0) sealed = store.applyTransaction(primary, undefined, { node });
       };
 
       const ctx: ModuleCtx = {

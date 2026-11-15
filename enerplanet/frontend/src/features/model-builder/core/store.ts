@@ -46,12 +46,14 @@ export interface SealOptions {
 
 export interface StoreOptions {
   /**
-   * The invalidation seam (`Plan.md` §5). Redo asks it to re-derive the cascade against
-   * the *current* projection instead of replaying the prunes the transaction stored, so
-   * redone work can never resurrect values the model no longer has.
+   * The invalidation seam (`Plan.md` §5, T7). Consulted at **two moments**, and the symmetry is
+   * the point: at **seal**, when a caller omits the cascade, so a module's change prunes exactly
+   * what it affects; and at **redo**, re-derived against the *current* projection rather than
+   * replaying the prunes the transaction stored, so redone work can never resurrect values the
+   * model no longer has.
    *
-   * Defaults to "nothing is invalidated" until the invalidator module lands; the engine
-   * will then construct the store with the real implementation.
+   * Defaults to "nothing is invalidated" for a store built without a flow around it (the core's
+   * own tests, mostly). The frame builds its store with `createInvalidator(flow, registry)`.
    */
   deriveCascade?: (primary: readonly DiffOp[], data: Readonly<ModelData>) => DiffOp[];
   /**
@@ -104,6 +106,10 @@ export interface Store {
   /**
    * Seal a transaction: abandon any redo tail, apply it to the projection, append it to the
    * log, and move the cursor onto it.
+   *
+   * **Omitting `cascade` derives it** through the invalidator seam below — that is how a change's
+   * consequences are pruned (T7). **Passing one uses it as given**, including `[]`, which is how a
+   * pure position move opts out: a jump changes nothing, so it may discard nothing.
    *
    * This is the engine's write path — modules reach the store only through a `ModuleCtx`.
    */
@@ -196,7 +202,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       };
     },
 
-    applyTransaction(primary, cascade = [], options = {}): Transaction {
+    applyTransaction(primary, cascade, options = {}): Transaction {
       // An action is only valid from the current revision: editing after an undo abandons
       // the redo tail. The dropped entries leave the log untouched — they simply stop
       // being part of it (`Plan.md` §4).
@@ -206,13 +212,17 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
       let nextData = data;
       if (primary.length > 0) nextData = applyDiffs(nextData, primary);
-      if (cascade.length > 0) nextData = applyDiffs(nextData, cascade);
+
+      // Omitted ⇒ ask the invalidator what this change affects (T7). Passed ⇒ use it as given:
+      // `[]` is a caller saying "this discards nothing", which is what a position move means.
+      const pruned = cascade ?? deriveCascade(primary, nextData);
+      if (pruned.length > 0) nextData = applyDiffs(nextData, pruned);
 
       const { node, kind, jump } = options;
       const transaction: Transaction = Object.freeze({
         revision,
         primary: Object.freeze([...primary]),
-        cascade: Object.freeze([...cascade]),
+        cascade: Object.freeze([...pruned]),
         ...(node === undefined ? {} : { nodeId: node.id }),
         ...(node?.auto === true ? { auto: true } : {}),
         ...(kind === undefined ? {} : { kind }),

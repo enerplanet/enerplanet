@@ -50,7 +50,8 @@ import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
 import { MAP_PROVIDER, MODULES } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
-import { devWorkflow } from "./workflow";
+import { devWorkflow, type Workflow } from "./workflow";
+import { createInvalidator } from "../core/invalidate";
 import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
 
 interface Session {
@@ -59,8 +60,14 @@ interface Session {
 }
 
 /** A session over whatever the current mode says the data is: the flow's seed, or a module's test data. */
-function sessionFor(seed: Readonly<ModelData>): Session {
-  const store = createStore({ ...seed });
+function sessionFor(workflow: Workflow, seed: Readonly<ModelData>): Session {
+  // The store is built **with** the invalidator, once, here — so every seal in this session prunes
+  // what the change affects (T7) without each call site having to remember to. A store built
+  // without it treats every cascade as empty, which is what the core's own tests rely on.
+  const store = createStore(
+    { ...seed },
+    { deriveCascade: createInvalidator(workflow.flow, workflow.registry) },
+  );
   return { store, engine: createEngine(store) };
 }
 
@@ -82,7 +89,7 @@ export const BuilderShell: React.FC = () => {
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
-  const [session, setSession] = useState<Session>(() => sessionFor(workflow.initial));
+  const [session, setSession] = useState<Session>(() => sessionFor(workflow, workflow.initial));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
@@ -160,7 +167,7 @@ export const BuilderShell: React.FC = () => {
   const switchTo = (target: FrameMode): void => {
     const next = frameView(target, workflow, MODULES, session.store);
     setMode(target);
-    setSession(sessionFor(next.seed));
+    setSession(sessionFor(workflow, next.seed));
     setError(null);
     setSaveNotice(undefined);
     setOverlayOpen(false);
