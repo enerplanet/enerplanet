@@ -17,6 +17,19 @@ import { requiredPorts, type Module, type ModuleCtx, type NodeRef } from "./modu
 import type { ModelData, PortKey } from "./ports";
 import type { Store } from "./store";
 
+/**
+ * Does this value carry nothing? (T22)
+ *
+ * Deliberately strict about *absences* and deliberately silent about *collections*: an empty string, `null`
+ * and `undefined` are a module declining to say anything, while `[]`, `{}` and a GeoJSON collection with no
+ * features are things a module may legitimately have to say — and only the module's own `validate()` can
+ * judge whether such a result is finished. `0` and `false` are values too, so they are never empty.
+ */
+function carriesNothing(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  return typeof value === "string" && value.trim().length === 0;
+}
+
 export interface Engine {
   /**
    * Run one module against the store as one workflow node.
@@ -78,6 +91,10 @@ export function createEngine(store: Store): Engine {
         commit(changes: Partial<ModelData>): void {
           for (const [port, next] of Object.entries(changes) as [PortKey, unknown][]) {
             if (!declared.has(port)) throw new PortWriteRejected(module.id, port, "undeclared");
+
+            // A module must not finish with an output it has not filled (T22). Refused here, at the
+            // boundary, so a module cannot store a hollow value and then claim `validate()` is satisfied.
+            if (carriesNothing(next)) throw new PortWriteRejected(module.id, port, "empty");
 
             const current = store.data[port];
             if (current !== undefined && !consumed.has(port)) {

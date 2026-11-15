@@ -12,7 +12,15 @@ export type PortWriteRejection =
   /** The module did not declare the port in its `params`. */
   | "undeclared"
   /** The module would blind-overwrite a value it never read (anti-clobber). */
-  | "clobber";
+  | "clobber"
+  /**
+   * The value carries nothing: an empty string, `null`, or `undefined` (T22).
+   *
+   * A zero-member collection is *not* empty here — "no transformers in this area" is a fact a module is
+   * entitled to record, and whether that result is finished is the module's own call in `validate()`.
+   * Removing a port is the invalidator's job, never a module's.
+   */
+  | "empty";
 export class PortWriteRejected extends Error {
   readonly moduleId: string;
   readonly port: string;

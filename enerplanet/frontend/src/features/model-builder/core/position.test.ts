@@ -160,7 +160,8 @@ describe("T20b — the position is derived from the log", () => {
 
   it("believes the log about what a node wrote, not its declaration", async () => {
     // Declares `lines` but never writes it: were done-ness derived from declarations, this
-    // node would read as stale forever.
+    // node would read as stale forever. Declarations are not promises — a module that writes less than
+    // it declares is fine, as long as its own `validate()` is satisfied with what it did produce.
     const LINES: PortKey = "lines";
     const declaresMore = defineModule({
       id: DECLARES_MORE,
@@ -184,5 +185,68 @@ describe("T20b — the position is derived from the log", () => {
 
     expect(store.data.lines).toBeUndefined();
     expect(positionReport(flow, local, store)[0]).toMatchObject({ state: "done", pruned: [] });
+  });
+});
+
+// ── T22 (a node finishes only when its own gate is satisfied) ───────────────
+
+describe("T22 — a node is done only when the module's own gate is satisfied", () => {
+  const PICKY = "picky-grid";
+
+  /**
+   * A module whose `validate()` is the real gate: it wrote *something*, but not enough to stand behind.
+   * This is the shape `grid-generation` has — an area can legitimately yield no buildings, and the module
+   * is the only thing that knows whether what it produced is finished.
+   */
+  function picky(buildings: readonly unknown[]) {
+    return defineModule({
+      id: PICKY,
+      params: [{ port: COORDINATES, required: true }, { port: BUILDINGS }],
+      affect: {},
+      layout: [],
+      run: (ctx) => {
+        ctx.read(BUILDINGS);
+        ctx.commit({ buildings: fc(buildings as never[]) });
+      },
+      validate: (ctx) =>
+        (ctx.store.buildings?.features.length ?? 0) > 0
+          ? []
+          : [{ port: BUILDINGS, message: "The area yielded no buildings." }],
+    });
+  }
+
+  it("reads a finished run as stale while the gate reports issues", async () => {
+    // Without this rule, "every node done" means "every node was visited" — and the model the save node
+    // promotes to `draft` would be one the flow only *walked past*. The node ran and sealed a transaction;
+    // it is still not done, so the position rests there.
+    const store = createStore(seed({ coordinates: [[[8.6, 49.4]]] }));
+    await createEngine(store).runModule(picky([]), { id: PICKY });
+
+    const flow = [{ id: PICKY, moduleId: PICKY }];
+    const local: ModuleRegistry = { [PICKY]: picky([]) };
+
+    expect(store.log).toHaveLength(1); // it did write
+    expect(nodeStates(flow, local, store)[PICKY]).toBe("stale");
+    expect(position(flow, local, store)).toMatchObject({ index: 0, complete: false });
+  });
+
+  it("reads the same node as done once the gate is satisfied", async () => {
+    const store = createStore(seed({ coordinates: [[[8.6, 49.4]]] }));
+    await createEngine(store).runModule(picky([building("b1")]), { id: PICKY });
+
+    const flow = [{ id: PICKY, moduleId: PICKY }];
+    const local: ModuleRegistry = { [PICKY]: picky([building("b1")]) };
+
+    expect(nodeStates(flow, local, store)[PICKY]).toBe("done");
+    expect(position(flow, local, store).complete).toBe(true);
+  });
+
+  it("treats a module with no gate as always satisfied", async () => {
+    // `validate` is optional: a module that makes no completeness claim is done when it ran. Silence is
+    // not an oversight here — it is the module saying it has nothing to check.
+    const store = createStore(seed());
+    await run(store, "start");
+
+    expect(positionReport(FLOW, registry, store)[0]).toMatchObject({ state: "done" });
   });
 });

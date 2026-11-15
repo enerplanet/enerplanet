@@ -231,7 +231,88 @@ describe("T16 — seal granularity is a module declaration", () => {
   });
 });
 
-// ── T21 ─────────────────────────────────────────────────────────────────────
+// ── T22 ─────────────────────────────────────────────────────────────────────
+
+describe("T22 — a write that carries nothing is refused", () => {
+  const NODE_ID = "writes-nothing";
+
+  /** One write, of whatever the case is about. */
+  function writing(changes: Record<string, unknown>) {
+    return defineModule({
+      id: NODE_ID,
+      params: [{ port: "modelName" }, { port: "transformers" }, { port: "grids" }],
+      affect: {},
+      layout: [],
+      run: (ctx) => ctx.commit(changes as never),
+      validate: () => [],
+    });
+  }
+
+  it("rejects an empty string, so a form cannot commit a name nobody typed", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    const error = await captureError<PortWriteRejected>(
+      engine.runModule(writing({ modelName: "   " }), { id: NODE_ID }),
+    );
+
+    expect(error).toBeInstanceOf(PortWriteRejected);
+    expect(error.port).toBe("modelName");
+    expect(error.reason).toBe("empty");
+    expect(store.log).toHaveLength(0);
+    expect(store.data.modelName).toBe("Contract fixture"); // untouched
+  });
+
+  it("rejects null, which is an absent value wearing a value's clothes", async () => {
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    const error = await captureError<PortWriteRejected>(
+      engine.runModule(writing({ transformers: null }), { id: NODE_ID }),
+    );
+
+    expect(error?.reason).toBe("empty");
+    expect(store.log).toHaveLength(0);
+  });
+
+  it("rejects undefined: clearing is the invalidator's job, never a module's", async () => {
+    // Only the cascade removes a port (T7), and it does so through a `remove` op carrying the previous
+    // value. A module that wants a port gone is really saying its work is not finished — which is what
+    // `validate()` is for.
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    const error = await captureError<PortWriteRejected>(
+      engine.runModule(writing({ transformers: undefined }), { id: NODE_ID }),
+    );
+
+    expect(error?.reason).toBe("empty");
+    expect(store.log).toHaveLength(0);
+  });
+
+  it("accepts a zero-member collection: an empty set is a fact, not an absence", async () => {
+    // The line this rule draws. "No transformers in this area" is an answer the module is entitled to
+    // give; whether that answer is *finished* is the module's own call in `validate()`, not the engine's.
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    await engine.runModule(writing({ transformers: fc(), grids: [] }), { id: NODE_ID });
+
+    expect(store.data.transformers).toEqual(fc());
+    expect(store.data.grids).toEqual([]);
+    expect(store.log).toHaveLength(1);
+  });
+
+  it("accepts zero and false, which are values", async () => {
+    // Worth pinning: `false` and `0` are answers, and a naive emptiness check would swallow them.
+    const store = createStore(seed());
+    const engine = createEngine(store);
+
+    await engine.runModule(writing({ grids: [{ count: 0, served: false }] }), { id: NODE_ID });
+
+    expect(store.data.grids).toEqual([{ count: 0, served: false }]);
+  });
+});
 
 describe("T21 — a node runs only when its required ports exist in the store", () => {
   const NODE_ID = "needs-region";

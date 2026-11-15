@@ -57,6 +57,19 @@ export interface ValidationIssue {
 }
 
 /**
+ * What a module's completeness gate is given: the projection, and nothing else.
+ *
+ * Narrower than `ModuleCtx` **on purpose** — the gate is asked outside a run (by the position, to decide
+ * whether a node has finished, and by the palette, to decide whether it *can*). A validator that could
+ * `commit` would be able to change the very state it is judging, and one that could `read` would silently
+ * license a rewrite it never performs. So it gets the store and no verbs.
+ */
+export interface ValidationCtx {
+  /** Current projection. Frozen in spirit: never mutate it — build new values instead. */
+  readonly store: Readonly<ModelData>;
+}
+
+/**
  * The context handed to a module's `run()`.
  *
  * `store` is for inspection only — a value is *consumed* by `read(port)`, and consuming
@@ -92,8 +105,24 @@ export interface Module {
   seal?: SealGranularity;
   /** Headless execution — how `auto` nodes run without rendering anything. */
   run?(ctx: ModuleCtx): void | Promise<void>;
-  /** Completeness / data gate (the save node turns this into "what's missing"). */
-  validate?(ctx: ModuleCtx): readonly ValidationIssue[];
+  /**
+   * The module's own completeness gate: **is the work finished, judged by the module itself** (T22).
+   *
+   * Two callers, and they are why this is not optional boilerplate:
+   *
+   * - a node that ran is only `done` while this reports no issues, so "every node is done" means the
+   *   model is whole rather than merely walked past;
+   * - the save node turns the same verdict into "what's missing" for the user.
+   *
+   * **A module must not finish with an output it has not filled.** If a run can legitimately produce
+   * nothing meaningful — an area that yields no buildings, a grid with no transformers — the module either
+   * says so here (and the node stays unfinished until it changes) or does not seal. What it must not do is
+   * write a hollow value and call it done; the engine refuses the obvious hollowness (empty strings, null,
+   * undefined) and this gate is where the rest of the judgement lives.
+   *
+   * Absent means "nothing to check", and such a node is done when it ran.
+   */
+  validate?(ctx: ValidationCtx): readonly ValidationIssue[];
 }
 
 /** Identity helper: keeps a module literal type-checked at its definition site. */

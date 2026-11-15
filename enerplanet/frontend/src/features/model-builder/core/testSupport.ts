@@ -104,7 +104,7 @@ export async function runInScratch(entry: ModuleUnderTest): Promise<{
 
   // `validate()` is a gate on what the node is about to work with, so it is asked *before* the run:
   // this is the verdict the flow and the save node act on ("what is missing").
-  const issues = entry.module.validate === undefined ? [] : validate(entry.module, store);
+  const issues = entry.module.validate?.({ store: store.data }) ?? [];
 
   let error: Error | undefined;
   try {
@@ -114,20 +114,4 @@ export async function runInScratch(entry: ModuleUnderTest): Promise<{
   }
 
   return { store, ...(error === undefined ? {} : { error }), issues };
-}
-
-/** `validate` wants a `ModuleCtx`; a read-only view of the store is all it may legitimately use. */
-function validate(module: Module, store: Store): readonly ValidationIssue[] {
-  return (
-    module.validate?.({
-      get store() {
-        return store.data;
-      },
-      read: <K extends PortKey>(port: K) => store.data[port],
-      commit: () => {
-        throw new Error("validate() may not commit");
-      },
-      state: "active",
-    }) ?? []
-  );
 }

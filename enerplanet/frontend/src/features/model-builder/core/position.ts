@@ -71,10 +71,15 @@ export function positionReport(
     const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);
 
+    // The module's own verdict on the store (T22). Asked here, not only at the save node, because this is
+    // what makes "every node is done" mean the model is *whole*: a node that ran without producing work it
+    // stands behind is not finished, so the position rests on it instead of walking past it.
+    const issues = module?.validate?.({ store: store.data }) ?? [];
+
     // A node that ran but wrote nothing can never be called done — the one hole in deriving
     // state from history, recorded as open in the spec.
     const state: DerivedState =
-      rearmed || written.length === 0 || pruned.length > 0 || blocked.length > 0
+      rearmed || written.length === 0 || pruned.length > 0 || blocked.length > 0 || issues.length > 0
         ? "stale"
         : "done";
 
