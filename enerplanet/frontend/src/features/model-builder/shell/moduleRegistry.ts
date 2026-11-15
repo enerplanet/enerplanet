@@ -20,12 +20,15 @@ import areaDraw from "../modules/area-draw";
 
 import gridGeneration from "../modules/grid-generation";
 
+import modelSave from "../modules/model-save";
+
 export const MODULES: readonly BuilderModule[] = [
   example,
   modelStart,
   mapProvider,
   areaDraw,
   gridGeneration,
+  modelSave,
 ];
 
 /**

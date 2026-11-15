@@ -3100,6 +3100,21 @@
     },
     "dashboard": {
       "newModel": "New Model (experimental)"
+    },
+    "model-save": {
+      "title": "Save model",
+      "description": "Saves the model and records the session, so it can be loaded again.",
+      "ready": "Everything the model needs is here.",
+      "saving": "Saving…",
+      "save": "Save model",
+      "saved": "Saved.",
+      "conversion": "model.json",
+      "required": "required",
+      "notSet": "not set",
+      "bottom": {
+        "ready": "ready to save",
+        "missing": "{{count}} missing"
+      }
     }
   }
 }

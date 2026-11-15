@@ -3,19 +3,21 @@
  * backend.
  *
  * The engine's contract is unchanged: the node reads and writes ports through its `ModuleCtx`, and a
- * throw seals nothing. What is unusual here is that the *work* is a save, so the factory is handed the
- * live `Store` as well as the gateway — a module context sees ports, not the transaction log, and the
- * artefact that Call B writes is built from the log. Keeping that here rather than widening
- * `ModuleCtx` means no other module can see history either.
+ * throw seals nothing. What is unusual here is that the *work* is a save, so the node is handed the
+ * **live session** as well as the gateway — a module context sees ports, not the transaction log, and the
+ * artefact that Call B writes is built from the log. Keeping that here rather than widening `ModuleCtx`
+ * means no other module can see history either.
  *
- * **The flow and the registry are getters, not values**, and that is not a stylistic choice: this node
- * is *part of* both. The frame builds a workflow and this node has to close over the very structures it
- * appears in, so the caller passes `() => …` and fills them in once the workflow exists — the same
- * late-binding shape the map provider and the grid engine use, for the same reason.
+ * **The session is a getter, and it may be absent.** This node is *part of* the flow and registry it
+ * needs, so there is no order in which a caller can hand it values: the workflow has to be built around
+ * the node, so the node is created first and reads the session when it runs — the same late binding the
+ * map provider and the grid engine use, for the same reason. `null` means the host has not bound a session
+ * yet: the node is still *declared* (so the flow validates and its `required` gate holds), but running it
+ * fails loudly rather than acting on a session that is not there.
  *
  * A refusal (no name, no assessment period, no drawn area) throws `SaveRefused`: the engine then seals
- * nothing, and the shell shows why. `modelId` and `saveResult` are read before they are written,
- * because on a re-save they already exist and the write boundary refuses a blind overwrite.
+ * nothing, and the shell shows why. `modelId` and `saveResult` are read before they are written, because on
+ * a re-save they already exist and the write boundary refuses a blind overwrite.
  */
 
 import type { WorkflowRef } from "../core/artefact";
@@ -33,6 +35,18 @@ const REFUSAL_REASONS: Record<SaveRefusal, string> = {
   "missing-dates": "the assessment period is not set",
   "missing-coordinates": "no area has been drawn",
 };
+
+/** Everything the node needs from the running host — one object, read when the node runs. */
+export interface SaveSession {
+  gateway: ModelGateway;
+  /** The live store: the projection to save, and the log the artefact is built from. */
+  store: Store;
+  /** The session's workflow reference — what the artefact points at instead of copying. */
+  workflow: WorkflowRef;
+  /** Needed for the completeness decision: a finished flow saves as `draft`, not `incomplete`. */
+  flow: Flow;
+  registry: ModuleRegistry;
+}
 
 /**
  * Every port this node *persists*, in the order a modeller would fix them — identity, period, area, grid.
@@ -83,18 +97,25 @@ export class SaveRefused extends Error {
   }
 }
 
+/**
+ * Thrown when the node runs before a host bound a session to it.
+ *
+ * This is the honest failure for a *declared but unbound* node: the flow is valid, the completeness gate
+ * works, and nothing has told the node where to save. Better a named error than a save against a session
+ * that does not exist.
+ */
+export class NoSessionBound extends Error {
+  constructor() {
+    super(
+      "[model-builder] model-save has no session bound — the host must bind one before this node can run",
+    );
+    this.name = "NoSessionBound";
+  }
+}
+
 export interface SaveNodeOptions {
-  gateway: ModelGateway;
-  /** The live session — see the file comment for why this node gets it. */
-  store: Store;
-  workflow: WorkflowRef;
-  /**
-   * Needed for the completeness decision: a finished flow saves as `draft`, not `incomplete`.
-   * A getter, because this node appears in the flow it is handed.
-   */
-  flow: () => Flow;
-  /** Same reason as `flow`: the node is registered in the registry it is handed. */
-  registry: () => ModuleRegistry;
+  /** The live session, read at run time. See the file comment for why it is a getter and may be null. */
+  session: () => SaveSession | null;
   /** The node's id in the flow. Defaults to `model-save`. */
   id?: string;
 }
@@ -104,6 +125,7 @@ export function createSaveNode(options: SaveNodeOptions): Module {
 
   return defineModule({
     id: nodeId,
+    name: "Model save",
     // The whole persisted surface, declared. `coordinates` is required because the backend resolves
     // the country from it and refuses a model without it — so the flow gate keeps this node
     // unplaceable, and the runtime gate keeps it un-runnable, until an area exists.
@@ -126,17 +148,23 @@ export function createSaveNode(options: SaveNodeOptions): Module {
       { port: "saveResult" },
     ],
     affect: {},
-    layout: [],
+    // The node *is* the module here, so the regions its UI mounts into are declared here too: the
+    // sidebar carries the verdict, the payload and the save action; the status strip carries one line.
+    layout: ["sidebar", "bottom"],
+    // Explicit rather than absent: the engine's default is `at-completion`, and a terminal node wants it
+    // said out loud. A model id recorded without its result is a state this node does not stand behind.
+    seal: "at-completion",
 
     run: async (ctx) => {
-      const { store, gateway } = options;
-      const flow = options.flow();
-      const registry = options.registry();
+      const session = options.session();
+      if (session === null) throw new NoSessionBound();
+
+      const { store, gateway, flow, registry } = session;
       const modelId = store.data.modelId;
 
       const outcome = await saveModel(gateway, {
         store,
-        workflow: options.workflow,
+        workflow: session.workflow,
         flow,
         registry,
         modelId,
@@ -165,8 +193,8 @@ export function createSaveNode(options: SaveNodeOptions): Module {
  * The status this save earns — and the reason it cannot simply be `position().complete`.
  *
  * `position` answers "the first node that is not done", and while this node runs it *is* that node, so
- * `complete` reads false on every save and a finished model could never be promoted to `draft` — which
- * is exactly what a run requires. The honest question is whether every **other** node is done.
+ * `complete` reads false on every save and a finished model could never be promoted to `draft` — which is
+ * exactly what a run requires. The honest question is whether every **other** node is done.
  *
  * `incomplete` is what an unfinished model gets, and §6 lets it round-trip that way: the bar's save pins
  * `incomplete` for the same reason. A complete first save is `draft`; a complete re-save is `modified`,

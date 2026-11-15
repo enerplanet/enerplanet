@@ -3100,6 +3100,21 @@
     },
     "dashboard": {
       "newModel": "Neues Modell (experimentell)"
+    },
+    "model-save": {
+      "title": "Modell speichern",
+      "description": "Speichert das Modell und die Sitzung, damit es erneut geladen werden kann.",
+      "ready": "Alles, was das Modell braucht, ist vorhanden.",
+      "saving": "Speichern…",
+      "save": "Modell speichern",
+      "saved": "Gespeichert.",
+      "conversion": "model.json",
+      "required": "erforderlich",
+      "notSet": "nicht gesetzt",
+      "bottom": {
+        "ready": "bereit zum Speichern",
+        "missing": "{{count}} fehlt"
+      }
     }
   }
 }

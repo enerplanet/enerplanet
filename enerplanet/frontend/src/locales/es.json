@@ -3097,6 +3097,21 @@
     },
     "dashboard": {
       "newModel": "Nuevo modelo (experimental)"
+    },
+    "model-save": {
+      "title": "Guardar modelo",
+      "description": "Guarda el modelo y la sesión, para poder cargarlo de nuevo.",
+      "ready": "Todo lo que el modelo necesita está aquí.",
+      "saving": "Guardando…",
+      "save": "Guardar modelo",
+      "saved": "Guardado.",
+      "conversion": "model.json",
+      "required": "obligatorio",
+      "notSet": "sin definir",
+      "bottom": {
+        "ready": "listo para guardar",
+        "missing": "faltan {{count}}"
+      }
     }
   }
 }

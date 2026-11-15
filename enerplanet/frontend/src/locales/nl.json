@@ -3096,6 +3096,21 @@
     },
     "dashboard": {
       "newModel": "Nieuw model (experimenteel)"
+    },
+    "model-save": {
+      "title": "Model opslaan",
+      "description": "Slaat het model en de sessie op, zodat het opnieuw geladen kan worden.",
+      "ready": "Alles wat het model nodig heeft is aanwezig.",
+      "saving": "Opslaan…",
+      "save": "Model opslaan",
+      "saved": "Opgeslagen.",
+      "conversion": "model.json",
+      "required": "verplicht",
+      "notSet": "niet ingesteld",
+      "bottom": {
+        "ready": "klaar om op te slaan",
+        "missing": "{{count}} ontbreekt"
+      }
     }
   }
 }

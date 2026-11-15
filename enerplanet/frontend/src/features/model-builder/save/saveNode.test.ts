@@ -61,14 +61,10 @@ function gateway(recorded: LegacyModelPayload[]): ModelGateway {
   };
 }
 
-/** The node as the frame builds it: the flow and registry are getters, because it lives inside them. */
+/** The node as the frame builds it: one session getter, because the node lives inside what it needs. */
 function saveNodeFor(store: Store, payloads: LegacyModelPayload[] = []): Module {
   return createSaveNode({
-    gateway: gateway(payloads),
-    store,
-    workflow: WORKFLOW,
-    flow: () => FLOW,
-    registry: () => registry,
+    session: () => ({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry }),
   });
 }
 
