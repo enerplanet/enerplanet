@@ -42,12 +42,15 @@ export type { GridEngine, GridRequest, GridResult } from "./engine";
 const PRODUCED = ["buildings", "transformers", "lines", "mvLines", "grids"] as const;
 type ProducedPort = (typeof PRODUCED)[number];
 
-/** The layers the grid goes on. The module names them; nothing else has to agree on the ids. */
+/** The layers the grid goes on. The module names them; nothing else has to agree on the ids.
+ *
+ * Ordered **bottom to top as written** (`setLayerOrder` below uses this order): buildings, then the cables,
+ * then the transformers last so they read on top of the network they serve. */
 const LAYERS: Readonly<Record<ProducedPort, string | null>> = {
   buildings: "grid-generation-buildings",
-  transformers: "grid-generation-transformers",
   lines: "grid-generation-cables",
   mvLines: "grid-generation-mv-cables",
+  transformers: "grid-generation-transformers",
   // The grid ids are a list, not geometry — there is nothing to draw for them.
   grids: null,
 };
