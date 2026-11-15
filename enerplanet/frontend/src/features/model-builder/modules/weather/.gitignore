@@ -1,0 +1,2 @@
+# A module's workspace is local to it — an install here is the module's own.
+node_modules/

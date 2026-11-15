@@ -3115,6 +3115,27 @@
         "ready": "bereit zum Speichern",
         "missing": "{{count}} fehlt"
       }
+    },
+    "weather": {
+      "title": "Wetter",
+      "description": "Welcher Wetterdatensatz für die Läufe des Modells verwendet wird. Die Zeitreihe selbst lädt das Backend zur Laufzeit.",
+      "modeLabel": "Wetter",
+      "modeScenario": "Typisch",
+      "modeYear": "Reales Jahr",
+      "scenarioLabel": "Solarjahr",
+      "scenario": {
+        "p10": "Niedrig (p10)",
+        "p50": "Typisch (p50)",
+        "p90": "Hoch (p90)"
+      },
+      "scenarioHint": "Ein Szenariojahr hat kein eigenes Kalenderjahr; die Modellperiode bestimmt die Daten.",
+      "yearLabel": "Jahr",
+      "yearsLoading": "Verfügbare Jahre werden geladen…",
+      "yearsUnavailable": "Der Wetterdienst antwortet nicht; die Jahresliste ist nicht verfügbar.",
+      "yearPlaceholder": "Jahr wählen",
+      "yearHint": "Das aufgezeichnete Wetter dieses Jahres wird verwendet, und die Modellperiode richtet sich danach.",
+      "archiveLabel": "Archiv",
+      "noFetchHint": "Hier werden keine Wetterdaten geladen — die Konfiguration verweist auf einen Datensatz, das Backend lädt die Zeitreihe beim Lauf."
     }
   }
 }

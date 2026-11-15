@@ -3112,6 +3112,27 @@
         "ready": "listo para guardar",
         "missing": "faltan {{count}}"
       }
+    },
+    "weather": {
+      "title": "Meteorología",
+      "description": "Qué conjunto de datos meteorológicos usan las ejecuciones del modelo. La serie la obtiene el backend en tiempo de ejecución.",
+      "modeLabel": "Meteorología",
+      "modeScenario": "Típico",
+      "modeYear": "Año registrado",
+      "scenarioLabel": "Año solar",
+      "scenario": {
+        "p10": "Bajo (p10)",
+        "p50": "Típico (p50)",
+        "p90": "Alto (p90)"
+      },
+      "scenarioHint": "Un año de escenario no tiene año natural propio; el periodo del modelo fija las fechas.",
+      "yearLabel": "Año",
+      "yearsLoading": "Cargando los años disponibles…",
+      "yearsUnavailable": "El servicio meteorológico no responde; la lista de años no está disponible.",
+      "yearPlaceholder": "Elige un año",
+      "yearHint": "Se usa el tiempo registrado de este año, y el periodo del modelo se ajusta a él.",
+      "archiveLabel": "Archivo",
+      "noFetchHint": "Aquí no se obtienen datos meteorológicos: la configuración referencia un conjunto y el backend recupera la serie al ejecutar."
     }
   }
 }

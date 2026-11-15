@@ -53,8 +53,34 @@ export interface RegionRef {
  */
 export type Coordinates = [number, number][][];
 
-/** Which backend weather dataset the model uses (`Modules.md` §5). */
-export type WeatherSelection = string;
+/**
+ * The weather a model's runs use (`Modules.md` §5, `modules/weather.md`).
+ *
+ * The shape is the legacy's, deliberately. Its `WeatherSettings` is `{ provider: string | null; choice }`
+ * and its `isScenario(weather)` is simply `choice !== "year"` — so an explicit `mode` field would be a
+ * second way to say something already said, and the spec's earlier `scenario | year` mode was that
+ * duplication. `WeatherChoice` is the choice itself, `year` meaning the period's recorded weather.
+ *
+ * `provider: null` means "the server's default archive", not "unset" — which is why a save omits the key
+ * rather than writing a default value. That is the legacy's own reading (`weatherFromConfig`), and a
+ * distinction worth keeping: the default archive can change server-side without rewriting anyone's model.
+ */
+export type WeatherChoice = "p50" | "p10" | "p90" | "year";
+
+export interface WeatherSelection {
+  /** The archive, or `null` for the server's default. */
+  provider: string | null;
+  /** `p50` typical / `p10` low / `p90` high solar, or `year` for the period's recorded weather. */
+  choice: WeatherChoice;
+  /**
+   * The resolved calendar year, filled when the choice is `year` and the period is known.
+   *
+   * Kept in the store rather than derived at save time, so what will be written is visible and testable
+   * here. A scenario has no calendar year of its own — the legacy pins scenario dates to a non-leap year
+   * so its 365-day series stays aligned — which is why this is absent for a scenario rather than defaulted.
+   */
+  year?: number;
+}
 
 /** The store's projection: the *current* model state (`Plan.md` §3). */
 export interface ModelData {
