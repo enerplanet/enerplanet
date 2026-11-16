@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useSyncExternalStore, type FC } from "react";
 
 import {
+  type BuilderModule,
   type MapClick,
   type MapService,
   type ModelData,
@@ -67,8 +68,11 @@ function setPicked(osmId: string | null): void {
   announce();
 }
 
-/** Hold what the view returned, for `run()` to commit. */
-function holdEdit(osmId: string, edit: BuildingEdit): void {
+/** Hold what the view returned, for `run()` to commit.
+ *
+ *  Exported for the module's own surfaces — the panel and the isolation tests — exactly as the technologies
+ *  module exports its `hold*` helpers. Nothing outside the module may use it. */
+export function holdEdit(osmId: string, edit: BuildingEdit): void {
   picked = { ...picked, pending: { osmId, edit } };
   announce();
 }
@@ -150,7 +154,7 @@ function applyEdit(
 }
 
 /** The completeness this module owns (T22): every building must have *something* — demand or a technology. */
-function issuesFor(store: Readonly<ModelData>): ValidationIssue[] {
+export function issuesFor(store: Readonly<ModelData>): ValidationIssue[] {
   for (const feature of buildingsOf(store)) {
     const id = idOf(feature);
     if (id === null) continue;
@@ -359,7 +363,31 @@ const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => 
   return null;
 };
 
-/** What the frame loads. */
-export const buildingConfiguratorModule = { module: contract, Component };
+/**
+ * What the frame loads.
+ *
+ * The `mock` is not decoration: the contract check **fails a module that cannot state the inputs it needs**,
+ * because such a module cannot be developed or tested on its own. This is the one place the buildings come from
+ * without a grid having produced them.
+ */
+export const buildingConfiguratorModule: BuilderModule = {
+  module: contract,
+  Component,
+  mock: {
+    buildings: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { osm_id: "b1", building_type: "residential", area_m2: 120 },
+          geometry: { type: "Point", coordinates: [8.6, 49.4] },
+        },
+      ],
+    },
+    buildingParams: {
+      electricity: { b1: { fClass: "residential", yearlyKwh: 12_000, peakKw: 4 } },
+    },
+  },
+};
 
 export default buildingConfiguratorModule;
