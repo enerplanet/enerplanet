@@ -14,12 +14,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
-import { Copy, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
+import { Copy, ExternalLink, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
 import { MODULES } from "../shell/moduleRegistry";
 import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
 import { workflowService } from "./service";
 import type { WorkflowDocument, WorkflowNodeDocument, WorkflowSummary } from "./types";
 import { WorkflowEditor } from "./WorkflowEditor";
+
+/**
+ * The example modules a developer copies to start a new module. The branch (`main`) is a placeholder to
+ * update if the path moves: the directory lands on `main` only once the change introducing it is merged,
+ * so this link 404s until then.
+ */
+const EXAMPLE_MODULES_URL =
+  "https://github.com/enerplanet/enerplanet/tree/main/enerplanet/frontend/src/features/model-builder/modules/examples";
 
 /** The editing session: the document on screen, and whether the server already has a row for it. */
 interface Editing {
@@ -187,6 +195,17 @@ const WorkflowsPage: React.FC = () => {
           <Plus className="h-4 w-4" />
           {t("modelBuilder.workflows.new", "New workflow")}
         </button>
+
+        <a
+          href={EXAMPLE_MODULES_URL}
+          target="_blank"
+          rel="noreferrer"
+          title={t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
+          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+        >
+          <ExternalLink className="h-4 w-4" />
+          {t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
+        </a>
       </header>
 
       {/* New: asks for a label; the id derives from it (plan §9). */}
