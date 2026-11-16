@@ -3041,8 +3041,6 @@
         "q3": "K3",
         "q4": "K4"
       },
-      "resolutionLabel": "Resolutie",
-      "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Regio",
       "regionNone": "kies een regio",
       "regionsLoading": "Regio's worden geladen…",

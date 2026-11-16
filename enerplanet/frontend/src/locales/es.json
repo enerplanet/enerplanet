@@ -3042,8 +3042,6 @@
         "q3": "T3",
         "q4": "T4"
       },
-      "resolutionLabel": "Resolución",
-      "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Región",
       "regionNone": "elegir una región",
       "regionsLoading": "Cargando regiones…",

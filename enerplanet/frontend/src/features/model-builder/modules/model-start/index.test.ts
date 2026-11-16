@@ -112,7 +112,9 @@ describe("model-start's behaviour", () => {
     expect(store.data.modelName).toBe(NAME.trim()); // trimmed on the way in
     expect(store.data.fromDate).toBe(FROM);
     expect(store.data.toDate).toBe(TO);
-    expect(store.data.resolution).toBe(15);
+    // A hold asking for 15 gets 60: only 60-minute steps are supported, and this node states the one value the
+    // system takes rather than offering a picker that would be overwritten on save.
+    expect(store.data.resolution).toBe(60);
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary.map((op) => op.path).sort()).toEqual([
@@ -160,6 +162,9 @@ describe("model-start's behaviour", () => {
     // after a jump has to be able to clear its re-arm without inventing an edit.
     const store = createStore({
       modelName: NAME.trim(),
+      // 60, because that is the one resolution this module accepts and it will otherwise correct the store — a
+      // write that is real work, not noise, and this test is about the run that has nothing to say.
+      resolution: 60,
       cookingCarrier: DEFAULT_COOKING_CARRIER,
       mode: DEFAULT_RUN_MODE,
       electricityPrices: NO_OWN_PRICES,
@@ -172,6 +177,33 @@ describe("model-start's behaviour", () => {
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(NAME.trim());
+  });
+
+  it("corrects a resolution the model already holds, instead of clobbering it", async () => {
+    // The store holds 15 and the module holds 60. Writing it is a *read-then-write*, which is what the engine's
+    // anti-clobber rule asks for — write a port the store already fills without reading it first and the whole
+    // run is refused with `clobber`, taking the region choice down with it.
+    const store = createStore({ resolution: 15 });
+    const engine = createEngine(store);
+
+    hold(NODE, { region: REGION });
+    await engine.runModule(modelStart.module, { id: NODE });
+
+    expect(store.data.resolution).toBe(60);
+    // And the region the user chose landed in the same transaction, rather than being lost to the refusal.
+    expect(store.data.region).toEqual(REGION);
+  });
+
+  it("leaves a resolution of 60 alone", async () => {
+    // Already correct is not a reason to write. The store still gets the three settings this module seeds, but
+    // `resolution` is not among the ports it touches.
+    const store = createStore({ resolution: 60 });
+    const engine = createEngine(store);
+
+    hold(NODE, {});
+    await engine.runModule(modelStart.module, { id: NODE });
+
+    expect(store.log[0].primary.map((op) => op.path)).not.toContain("/resolution");
   });
 
   it("reports what is missing on an empty store — a model that has not started", async () => {

@@ -13,8 +13,8 @@
  *
  * Two regions, on purpose (most modules want two or three — declare what you use):
  *
- *   sidebar   the form: name, period, resolution, region. The period parts and the region commit on a click
- *             (`weather`'s choices); name and resolution wait for Apply, which hands over everything it owns
+ *   sidebar   the form: name, period, region. The period parts and the region commit on a click
+ *             (`weather`'s choices); name waits for Apply, which hands over everything it owns
  *             at once.
  *   map       what this module does to the map: frame the chosen region, as an effect on the store. It renders
  *             nothing — the framing *is* the work. The baselayer itself is the `map-provider` module's
@@ -44,8 +44,15 @@ import { optionFor, optionsFor, regionKey, useRegions, type RegionOption } from 
 export { setRegionSource } from "./regions";
 export type { RegionOption, RegionSource } from "./regions";
 
-/** The resolutions a building model is usually drawn at, in minutes. */
-const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
+/**
+ * The model's resolution, in minutes — fixed, not chosen.
+ *
+ * Only 60-minute steps are supported; every other value is silently replaced on save. The legacy hardcodes the
+ * same number on the way out (`useAreaSelect.ts`: `resolution: 60`), so its dropdown — and ours, which mirrored
+ * it — was a control that could not do anything. Rather than show a picker that lies, this node states the one
+ * value the system supports and writes it. If the backend ever takes other steps, this becomes a port again.
+ */
+const RESOLUTION = 60;
 
 /**
  * The year a scenario's dates carry.
@@ -329,10 +336,11 @@ const module = defineModule({
       if (collected.toDate !== current) proposed.toDate = collected.toDate;
     }
 
-    if (collected.resolution !== undefined) {
-      const current = ctx.read("resolution");
-      if (collected.resolution !== current) proposed.resolution = collected.resolution;
-    }
+    // 60 is the only supported step, so this node states it rather than carrying whatever it finds: a store
+    // holding anything else is corrected. Written only when it differs, so re-applying an untouched form stays
+    // the zero-diff run it should be. See `RESOLUTION`.
+    const resolution = ctx.read("resolution");
+    if (resolution !== RESOLUTION) proposed.resolution = RESOLUTION;
 
     if (collected.region !== undefined) {
       ctx.read("region");
@@ -358,7 +366,6 @@ const module = defineModule({
 function onScreen(
   data: Readonly<ModelData>,
   typedName: string | null,
-  typedResolution: number | null,
   typedRegion: string | null,
   regions: readonly RegionOption[],
 ): Readonly<ModelData> {
@@ -366,7 +373,6 @@ function onScreen(
   return {
     ...data,
     ...(typedName === null ? {} : { modelName: typedName }),
-    ...(typedResolution === null ? {} : { resolution: typedResolution }),
     ...(chosen === undefined ? {} : { region: { country: chosen.country, state: chosen.state } }),
   };
 }
@@ -375,7 +381,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   const { t, i18n } = useTranslation();
   // What the user has collected since the last commit. Local on purpose: it is not state worth keeping.
   const [typedName, setTypedName] = useState<string | null>(null);
-  const [typedResolution, setTypedResolution] = useState<number | null>(null);
   const [typedRegion, setTypedRegion] = useState<string | null>(null);
 
   const { regions, loading, failed } = useRegions();
@@ -386,7 +391,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   useEffect(() => {
     hold(nodeId, {});
     setTypedName(null);
-    setTypedResolution(null);
     setTypedRegion(null);
   }, [nodeId]);
 
@@ -424,7 +428,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     const chosen = regions.find((candidate) => regionKey(candidate) === typedRegion);
     hold(nodeId, {
       ...(typedName === null ? {} : { modelName: typedName }),
-      ...(typedResolution === null ? {} : { resolution: typedResolution }),
       ...(chosen === undefined
         ? {}
         : { region: { country: chosen.country, state: chosen.state } satisfies RegionRef }),
@@ -434,7 +437,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
       // The store's values take over again. The map needs no call here: the `map` region watches the stored
       // region and frames when it moves — which is exactly what this commit does.
       setTypedName(null);
-      setTypedResolution(null);
       setTypedRegion(null);
     });
   };
@@ -482,7 +484,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
    * makes a model start" would drift, and the button would then disagree with the gate that decides whether
    * this node is finished.
    */
-  const pending = onScreen(data, typedName, typedResolution, typedRegion, regions);
+  const pending = onScreen(data, typedName, typedRegion, regions);
   const ready = issuesFor(pending).length === 0;
 
   return (
@@ -539,24 +541,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
             );
           })}
         </div>
-      </div>
-
-      <div className="shrink-0 space-y-2">
-        <label className="text-sm text-muted-foreground" htmlFor="model-start-resolution">
-          {t("modelBuilder.model-start.resolutionLabel")}
-        </label>
-        <select
-          id="model-start-resolution"
-          value={typedResolution ?? Number(data.resolution ?? 60)}
-          onChange={(event) => setTypedResolution(Number(event.target.value))}
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-        >
-          {RESOLUTIONS.map((minutes) => (
-            <option key={minutes} value={minutes}>
-              {t("modelBuilder.model-start.resolutionUnit", "{{minutes}} min", { minutes })}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="shrink-0 space-y-2">
