@@ -69,8 +69,9 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `workflow.dev.json` | the dev workflow itself: a seed and one node. Static now; hosted later, which changes one binding |
 | `frameMode.ts` | which module the frame shows and what its session starts from: **workflow** mode (the node the session sits on, seeded from the flow) or **test mode** (one module, on its own test data, no position) |
 | `barState.ts` | the workflow bar's state — prior / current / next, derived from `(flow, registry, store)` |
-| `WorkflowBar.tsx` | the top band: workflow label, prior/current/next framing, a completion chip, **Save** and **Continue**. A prior click is a position move — a jump back (`spec/core.md` §G); the next step is plain greyed text, because forward motion is `Continue` running the node. Plus the dev-only mode select and Reset |
-| `actions.ts` | the bar's actions. Thin by design (§3.1: every control maps onto a core operation): `moveToNode` is the pure position move behind a prior click — a `jump` with an empty cascade that discards nothing (§G), `continueStep` is the one forward action, and `saveSession` is the bar's save with the status pinned to `incomplete` |
+| `WorkflowBar.tsx` | the top band: workflow label, prior/current/next framing, a completion chip, and **Save**. A prior click is a position move — a jump back (`spec/core.md` §G); the next step is plain greyed text, and there is **no forward control** (a module advances by running itself; an auto node runs on arrival). Plus the dev-only mode select and Reset |
+| `actions.ts` | the bar's actions. Thin by design (§3.1: every control maps onto a core operation): `moveToNode` is the pure position move behind a prior click — a `jump` with an empty cascade that discards nothing (§G), `continueStep` is the "one interactive step" walk (**nothing calls it now** — the bar's Continue is gone and an auto node runs on arrival, `autoRun.ts`), and `saveSession` is the bar's save with the status pinned to `incomplete` |
+| `autoRun.ts` | the auto-node orchestration (T15): `autoRunFor` decides whether the `auto` node the session sits on should run now, reading **staleness as the invalidator sees it** (never ran, or outputs pruned — never a jump's re-arm); `createAutoGuard` claims a run once per `(node id, store change token)` so a re-render or StrictMode's double-invoke is not a second run |
 | `ledgerState.ts` | the ledger bar's state — the log with the cursor, newest first, each entry marked applied or discarded. No discard *structure*: the tail beyond the cursor is it |
 | `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
 | `stepsState.ts` | the steps panel's state — every step's derived state, which one is current, and the *reason* behind a step that is not done (`pruned`, `blocked`) |
@@ -164,10 +165,11 @@ npx eslint src/features/model-builder --ext .ts,.tsx
   is dropped, and a run that changed nothing seals no transaction.
 - **The cursor only rests on an interactive boundary.** Undo unwinds the trailing step *and*
   any auto node's work below it, and reports what it unwound (`{ transactions, nodeIds }`) so
-  the shell can say *"undid: power-flow (auto), area-edit"*. Auto nodes run **only as part of a
-  forward action** (activate / complete / redo) — never on a passive state change — because
-  otherwise undo would be a silent no-op: the auto node's deps look satisfied again and it
-  immediately re-runs. Both prototypes violated this (`runAutoNodes()` from `updateContext`).
+  the shell can say *"undid: power-flow (auto), area-edit"*. An auto node runs **on arrival** —
+  when the position lands on it and it is genuinely stale (never ran, or an input change pruned its
+  work) — and **not** again for a re-render or a jump's bare re-arm; a failed run stays put and offers
+  a manual re-run. The old rule ("only as part of a forward action") is superseded: an auto node's whole
+  point is to run without a button (T15).
 - **Seal granularity is the module's call.** `seal: "at-completion"` (default) seals one
   transaction for the whole `run()`; `seal: "per-commit"` seals one atomic transaction per
   `commit()`, which buys field-level undo for modules whose writes are independent

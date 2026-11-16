@@ -161,6 +161,24 @@ export interface OverlayControl {
   close(): void;
 }
 
+/**
+ * An **auto** node's own run state, handed to the module that renders it (T15, T23).
+ *
+ * An auto node has no forward action to press: the frame runs it **on arrival**, as soon as its inputs are
+ * present, and the position advances by itself once the run lands a finished node. This is how the module
+ * shows where that run is — a full-screen status, not a control the user drives — and where the one control it
+ * does offer lives: a **manual re-run**, and only on `error`. A failed run stays put rather than retrying on
+ * its own, so the retry is the user's decision.
+ */
+export interface AutoRunState {
+  /** `running` while the frame's run is in flight, `done` once it landed, `error` when it threw. */
+  state: "running" | "done" | "error";
+  /** The failure, when `state` is `error` — what the frame caught. */
+  message?: string;
+  /** Ask the frame to run this node again — the only affordance an auto node has, and only on `error`. */
+  rerun(): void;
+}
+
 /** What a module's UI is handed on every render. */
 export interface ModuleViewProps {
   /**
@@ -181,6 +199,8 @@ export interface ModuleViewProps {
   map?: MapService;
   /** Present only when the module declared the `overlay` region. */
   overlay?: OverlayControl;
+  /** Present only while the session sits on an `auto` node — the run's state and its manual retry. */
+  auto?: AutoRunState;
 }
 
 /** A module as a host loads it. */

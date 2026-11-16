@@ -3060,9 +3060,7 @@
       "current": "actual",
       "next": "siguiente",
       "complete": "flujo completado",
-      "testMode": "modo de prueba",
-      "continue": "Continuar",
-      "continuing": "Trabajando…"
+      "testMode": "modo de prueba"
     },
     "ledger": {
       "history": "historial",
@@ -3155,7 +3153,12 @@
       "totalKwh": "Total kWh/a",
       "sourceEstimate": "estimado por el servicio energético, una petición por edificio",
       "sourceMirror": "reflejado de la clase y la superficie — el backend es la autoridad en ejecución",
-      "autoHint": "Este paso se ejecuta solo cuando el flujo avanza: lee los edificios, consulta el servicio y registra las respuestas. Aquí no hay nada que configurar."
+      "autoHint": "Este paso se ejecuta solo en cuanto el flujo llega a él: lee los edificios, consulta el servicio y registra las respuestas. Aquí no hay nada que configurar.",
+      "running": "Estimando la demanda…",
+      "runningHint": "Se ejecuta solo: una petición por edificio.",
+      "done": "Demanda estimada",
+      "failed": "La estimación de la demanda falló",
+      "retry": "Ejecutar de nuevo"
     },
     "technologies": {
       "title": "Tecnologías",

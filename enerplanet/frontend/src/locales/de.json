@@ -3063,9 +3063,7 @@
       "current": "aktuell",
       "next": "danach",
       "complete": "Workflow abgeschlossen",
-      "testMode": "Testmodus",
-      "continue": "Weiter",
-      "continuing": "Arbeitet…"
+      "testMode": "Testmodus"
     },
     "ledger": {
       "history": "Verlauf",
@@ -3158,7 +3156,12 @@
       "totalKwh": "Summe kWh/a",
       "sourceEstimate": "vom Energiedienst geschätzt, eine Anfrage je Gebäude",
       "sourceMirror": "aus Gebäudeklasse und Fläche gespiegelt — zur Laufzeit ist das Backend maßgeblich",
-      "autoHint": "Dieser Schritt läuft von selbst, wenn der Ablauf vorangeht: er liest die Gebäude, fragt den Dienst und zeichnet die Antworten auf. Hier ist nichts einzustellen."
+      "autoHint": "Dieser Schritt läuft von selbst, sobald der Ablauf bei ihm ankommt: er liest die Gebäude, fragt den Dienst und zeichnet die Antworten auf. Hier ist nichts einzustellen.",
+      "running": "Bedarf wird geschätzt…",
+      "runningHint": "Läuft von selbst — eine Anfrage je Gebäude.",
+      "done": "Bedarf geschätzt",
+      "failed": "Die Bedarfsschätzung ist fehlgeschlagen",
+      "retry": "Erneut ausführen"
     },
     "technologies": {
       "title": "Technologien",

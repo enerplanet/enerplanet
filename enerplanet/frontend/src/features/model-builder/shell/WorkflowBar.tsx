@@ -11,7 +11,9 @@
  *
  * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
  * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving
- * there — forward motion is `Continue`, which runs the node the session sits on.
+ * there. There is **no forward control at all** — an interactive module advances by running itself (its own
+ * Apply), and an auto node runs on arrival with no button anywhere (`autoRun.ts`), so a bar button whose
+ * enabled-ness depended on node state would be the frame pretending to know something only the session knows.
  *
  * Jumping to *any* step is deferred (`optionals.md`): it would make every step a potential jump, and a jump
  * deserves the discard preview it ought to show before it commits.
@@ -91,9 +93,6 @@ interface Props {
   saving?: boolean;
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
-  /** The one forward action: run what the session sits on, walking through auto nodes. */
-  onContinue?: () => void;
-  continuing?: boolean;
 }
 
 export const WorkflowBar: React.FC<Props> = ({
@@ -106,8 +105,6 @@ export const WorkflowBar: React.FC<Props> = ({
   onSave,
   saving,
   saveNotice,
-  onContinue,
-  continuing,
 }) => {
   const { t } = useTranslation();
   const bar = barState(workflow.flow, workflow.registry, store);
@@ -137,21 +134,9 @@ export const WorkflowBar: React.FC<Props> = ({
                     })}
               />
               <Step label={t("modelBuilder.bar.current")} step={bar.current} />
-              {/* Next: always plain text — forward motion is the Continue button, which runs the node. */}
+              {/* Next: always plain text — there is no forward control; a module advances by running itself. */}
               <Step label={t("modelBuilder.bar.next")} step={bar.next} />
             </nav>
-
-            {/* The one forward action: run what the session sits on, and keep going through auto nodes. */}
-            {onContinue !== undefined && !bar.complete && (
-              <button
-                type="button"
-                onClick={onContinue}
-                disabled={continuing === true}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {continuing === true ? t("modelBuilder.bar.continuing") : t("modelBuilder.bar.continue")}
-              </button>
-            )}
 
             {bar.complete && (
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">

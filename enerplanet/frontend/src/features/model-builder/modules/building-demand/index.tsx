@@ -4,8 +4,9 @@
  * **This is a fetch, and a fetch is an auto job** (T23). It reads the buildings the grid node produced, turns
  * each into a request, and commits what came back. It gathers nothing of its own and holds no cursor: the
  * request is a pure function of the projection, so re-running it after an upstream change re-derives the same
- * calls. In a flow it is declared `auto`, which is why it has no button — there is nothing for a user to
- * decide here.
+ * calls. In a flow it is declared `auto`, so there is **no button anywhere**: the frame runs it the moment the
+ * session lands on it and advances by itself when it is done (`shell/autoRun.ts`), and this module's only UI
+ * concern is its full-screen state — in progress, done, or failed with a manual re-run.
  *
  * **Two vectors, two sources, deliberately different.**
  *
@@ -28,6 +29,7 @@
 
 import {
   defineModule,
+  type AutoRunState,
   type BuilderModule,
   type BuildingParams,
   type ModelData,
@@ -138,7 +140,7 @@ const module = defineModule({
   // belongs to the module that owns it, and T7's closure carries this one onward on its own.
   affect: { buildings: ["buildingParams"], weatherSelection: ["buildingParams"] },
 
-  layout: ["sidebar", "bottom"],
+  layout: ["overlay", "sidebar", "bottom"],
 
   run: async (ctx) => {
     const source = demandSource();
@@ -206,10 +208,63 @@ function totalsOf(params: Record<string, BuildingParams> | undefined): { count: 
   };
 }
 
-const Component: React.FC<ModuleViewProps> = ({ region, data }) => {
+/**
+ * The **full-screen state view** for an `auto` node — the only thing an auto node shows (`autoRun.ts`).
+ *
+ * There is no Continue button: the node runs on arrival and the flow advances by itself, so all this region
+ * has to say is where the run is. `error` is the one state with a control — the **manual re-run** — and even
+ * that does not advance on its own: a failed run stays put, so the retry is the user's decision.
+ */
+const OverlayRegion: React.FC<{ auto?: AutoRunState }> = ({ auto }) => {
+  const { t } = useTranslation();
+  // Test mode renders no overlay (none is forced open and there is no position), so there is nothing to show.
+  if (auto === undefined) return null;
+
+  if (auto.state === "error") {
+    return (
+      <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 text-center">
+        <p className="text-sm font-medium text-destructive">
+          {t("modelBuilder.building-demand.failed")}
+        </p>
+        {auto.message !== undefined && (
+          <p className="max-w-md text-xs text-muted-foreground">{auto.message}</p>
+        )}
+        <button
+          type="button"
+          onClick={auto.rerun}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+        >
+          {t("modelBuilder.building-demand.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  const done = auto.state === "done";
+  return (
+    <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 text-center">
+      <p
+        className={`text-sm font-medium ${
+          done ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+        }`}
+      >
+        {done ? t("modelBuilder.building-demand.done") : t("modelBuilder.building-demand.running")}
+      </p>
+      {!done && (
+        <p className="text-xs text-muted-foreground">
+          {t("modelBuilder.building-demand.runningHint")}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const Component: React.FC<ModuleViewProps> = ({ region, data, auto }) => {
   const { t } = useTranslation();
   const electricity = totalsOf(data.buildingParams?.[ELECTRICITY]);
   const heat = totalsOf(data.buildingParams?.[HEAT]);
+
+  if (region === "overlay") return <OverlayRegion auto={auto} />;
 
   if (region === "bottom") {
     return (

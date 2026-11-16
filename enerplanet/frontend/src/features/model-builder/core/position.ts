@@ -17,6 +17,11 @@
  * **position** = the first node that is not done. That is why a jump must prune its target's
  * outputs: without that the target would still read as done and the position would fall
  * straight forward again, making the jump a no-op.
+ *
+ * One exception, and it is deliberate: a **jump's re-arm does not apply to an `auto` node** (T15). There is
+ * nothing for a user to re-apply on a node that runs itself, and its work is either still valid or was pruned
+ * by an input change — which already reads stale through `pruned`. So a bare re-arm of an auto node leaves it
+ * `done` and the position passes over it, rather than resting on a node that no longer has a forward action.
  */
 
 import type { Flow, ModuleRegistry } from "./flow";
@@ -65,8 +70,16 @@ export function positionReport(
     // A jump that lands here re-arms the node: the session is *meant* to be back at it, so its
     // earlier work cannot count as done — even when the jump had nothing to discard, which is
     // exactly what makes the zero-diff jump (a bare re-save) mean anything.
+    //
+    // **Except an auto node**, which has nothing for a user to re-apply: its work is either still valid (so it
+    // reads done and the position moves on) or was pruned because an input changed, which *already* reads stale
+    // through `pruned` (T7). A bare re-arm is not an input change, so it must not force an auto node to run
+    // again (T15) — and not resting the position on it is what lets the session pass a re-armed auto node
+    // without the button it no longer has.
     const rearmed =
-      jump !== undefined && (transaction === undefined || jump.revision > transaction.revision);
+      node.auto !== true &&
+      jump !== undefined &&
+      (transaction === undefined || jump.revision > transaction.revision);
 
     const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);

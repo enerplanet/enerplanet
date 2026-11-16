@@ -35,7 +35,7 @@
  * it is configuration, and a silent catch would bury a config error.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
@@ -52,7 +52,8 @@ import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
-import { continueStep, saveSession } from "./actions";
+import { saveSession } from "./actions";
+import { autoRunFor, createAutoGuard } from "./autoRun";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
@@ -66,6 +67,13 @@ import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./c
 interface Session {
   store: Store;
   engine: Engine;
+}
+
+/** The auto node the session is on and where its run stands — what the module that shows it is handed. */
+interface AutoStatus {
+  id: string;
+  state: "running" | "done" | "error";
+  message?: string;
 }
 
 /** A session over whatever the current mode says the data is: the flow's seed, or a module's test data. */
@@ -128,8 +136,19 @@ export const BuilderShell: React.FC = () => {
   }, [gateway, session, workflow]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  /** True while a forward walk is in flight, so the bar's Continue cannot be pressed twice. */
-  const [continuing, setContinuing] = useState(false);
+  /**
+   * The auto node's run state, for the module that shows it (`ModuleViewProps.auto`). The position rests on one
+   * auto node at a time, so a single value is enough — keyed by node id, so an entry for the node the session
+   * just left cannot leak onto the next one.
+   */
+  const [autoStatus, setAutoStatus] = useState<AutoStatus | null>(null);
+  /**
+   * The idempotency guard for the auto run (`autoRun.ts`). A ref, not state: it must survive a re-render and
+   * React's StrictMode double-invoke without being a reason to render, and it must be the same object across
+   * the two invocations of the effect. Its key is the node id plus the store's change token, so a re-render is
+   * not a second run while an input change is.
+   */
+  const autoGuard = useRef(createAutoGuard());
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
   const [overlayOpen, setOverlayOpen] = useState(false);
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
@@ -247,25 +266,46 @@ export const BuilderShell: React.FC = () => {
     );
 
   /**
-   * The one forward action: run whatever the session sits on, and keep going through any auto node it lands on.
-   *
-   * This is what starts an auto node's work — T15 allows an auto run only as part of a forward action, never on
-   * a passive state change, which is why this is a button and not an effect watching the position.
+   * Run an auto node and reflect it in `autoStatus` — `running` while it is in flight, `done` when it lands,
+   * `error` (with the message, and the manual re-run the module then offers) when it throws. `auto` is stamped
+   * on the transaction: it is a property of the **node**, not the module (T14).
    */
-  const continueForward = (): void => {
-    setContinuing(true);
-    setError(null);
-    void continueStep({
-      flow: workflow.flow,
-      registry: workflow.registry,
-      store: session.store,
-      engine: session.engine,
-    })
-      .catch((thrown: unknown) =>
-        setError(thrown instanceof Error ? thrown.message : String(thrown)),
-      )
-      .finally(() => setContinuing(false));
-  };
+  const launchAuto = useCallback(
+    (nodeId: string, module: BuilderModule["module"]): void => {
+      setError(null);
+      setAutoStatus({ id: nodeId, state: "running" });
+      void session.engine
+        .runModule(module, { id: nodeId, auto: true })
+        .then(() =>
+          setAutoStatus((current) =>
+            current?.id === nodeId ? { id: nodeId, state: "done" } : current,
+          ),
+        )
+        .catch((thrown: unknown) => {
+          const message = thrown instanceof Error ? thrown.message : String(thrown);
+          setError(message);
+          setAutoStatus({ id: nodeId, state: "error", message });
+        });
+    },
+    [session.engine],
+  );
+
+  /**
+   * The auto-run: the session runs the `auto` node it lands on, **once**, and the position advances by itself
+   * when the run lands a finished node (position is derived, so a completed node stops being the first that is
+   * not done). The guard, keyed by node id + the store's change token, is what makes a re-render — or
+   * StrictMode's double-invoke — not a second run, while an input change (a new token) is.
+   *
+   * It only applies in workflow mode: test mode has no position, so there is nothing to arrive at.
+   */
+  const storeVersion = session.store.version;
+  useEffect(() => {
+    if (mode.kind !== "workflow") return;
+    const plan = autoRunFor(workflow.flow, workflow.registry, session.store);
+    if (plan === undefined) return;
+    if (!autoGuard.current.claim(plan)) return;
+    launchAuto(plan.id, plan.module);
+  }, [launchAuto, mode.kind, session.store, storeVersion, workflow]);
 
   /** Both branches get the same bar: with no node to show, the session still exists and can still be saved. */
   const bar = (
@@ -279,8 +319,6 @@ export const BuilderShell: React.FC = () => {
       onSave={save}
       saving={saving}
       saveNotice={saveNotice}
-      onContinue={mode.kind === "workflow" ? continueForward : undefined}
-      continuing={continuing}
     />
   );
 
@@ -307,6 +345,19 @@ export const BuilderShell: React.FC = () => {
   const data = session.store.data;
   const inRegion = (region: Region): boolean => active.module.layout.includes(region);
 
+  // The auto node's run state, handed to its render — and only an auto node's. Before the frame's first status
+  // lands it reads `running`, which is the honest thing to show between arrival and the effect. `error` is the
+  // one state that offers the manual re-run, and it re-runs the node on screen.
+  const here = autoStatus !== null && autoStatus.id === view.nodeId ? autoStatus : undefined;
+  const auto: ModuleViewProps["auto"] =
+    view.auto !== true
+      ? undefined
+      : {
+          state: here?.state ?? "running",
+          ...(here?.message === undefined ? {} : { message: here.message }),
+          rerun: () => launchAuto(view.nodeId ?? "", active.module),
+        };
+
   // One props object per render, built from the declaration: `map` and `overlay` are present only when the
   // module actually declared that region — which is what the contract promises.
   const viewProps = (region: Region): ModuleViewProps => ({
@@ -316,6 +367,7 @@ export const BuilderShell: React.FC = () => {
     run,
     ...(inRegion("map") ? { map } : {}),
     ...(inRegion("overlay") ? { overlay } : {}),
+    ...(auto === undefined ? {} : { auto }),
   });
 
   return (
@@ -360,14 +412,23 @@ export const BuilderShell: React.FC = () => {
 
         <LedgerBar store={session.store} />
 
-        {/* Scoped to the module column — the chrome you need to leave it is never covered. */}
-        {inRegion("overlay") && overlayOpen && (
-          <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
-            <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
+        {/* Scoped to the module column — the chrome you need to leave it is never covered. An **auto** node
+            forces this slot open: it is where the node shows its own run state, since it has no forward action
+            to press (`autoRun.ts`). An auto node gets the slot *full-bleed* — a loading indicator that takes the
+            screen — while a module-opened overlay (a click) keeps the host's centred card. */}
+        {inRegion("overlay") &&
+          (overlayOpen || view.auto === true) &&
+          (view.auto === true ? (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/95 p-6 backdrop-blur-sm">
               <View {...viewProps("overlay")} />
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
+              <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
+                <View {...viewProps("overlay")} />
+              </div>
+            </div>
+          ))}
 
         {error !== null && (
           <div className="relative z-50 shrink-0 border-t border-destructive/40 bg-destructive/10 px-6 py-2 text-sm text-destructive">

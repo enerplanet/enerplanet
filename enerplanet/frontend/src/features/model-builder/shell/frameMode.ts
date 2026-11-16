@@ -39,6 +39,11 @@ export interface FrameView {
   labelId: string;
   /** The node a run is stamped with. Absent in test mode: there is no position to stamp. */
   nodeId?: string;
+  /**
+   * Whether the node on screen is an **auto** node (`autoRun.ts`). The frame forces the full-screen slot open
+   * for one, because that is where an auto node shows its own run state — there is no forward action to press.
+   */
+  auto?: boolean;
   /** What the session's store starts from. */
   seed: Readonly<ModelData>;
 }
@@ -73,6 +78,7 @@ export function frameView(
     ...(entry === undefined ? {} : { entry }),
     labelId: node.id,
     nodeId: node.id,
+    ...(node.auto === true ? { auto: true } : {}),
     seed: workflow.initial,
   };
 }

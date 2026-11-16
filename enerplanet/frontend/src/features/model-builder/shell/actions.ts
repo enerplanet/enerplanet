@@ -65,15 +65,15 @@ export function moveToNode(
  * Walk forward one interactive step: run the node the session sits on, and keep going while the flow lands on
  * an `auto` node.
  *
- * This is the **only forward action there is**, which is what makes it the thing that starts an auto node's
- * work — T15 says an auto node runs as part of a forward action and never on a passive state change, and a
- * move leaves an auto node's outputs pruned precisely because this is what re-runs them.
+ * **Superseded by the auto-run on arrival (T15, rewritten).** An auto node no longer waits to be started by a
+ * forward action: `autoRun.ts` runs it the moment the session lands on it, and the position advances by itself
+ * once the run lands a finished node. So this walk is no longer "the thing that starts an auto node's work",
+ * and **nothing in the frame calls it any more** — the bar's `Continue` is gone, and an interactive module
+ * advances by running itself (its own `Apply`). It is kept as the plain "one interactive step" utility a host
+ * could still drive, and it stays correct: a node already `done` is passed over, and it stops *after* an
+ * interactive node because that is the next place a user can act.
  *
- * A node already `done` is simply passed over — nothing is recomputed — which is what makes "change A, then
- * walk forward" cost only the nodes the change actually affected.
- *
- * It stops *after* an interactive node, because that is the next place a user can act. It never moves
- * backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
+ * It never moves backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
  *
  * @returns the node ids it ran, in order — the shell says what happened rather than guessing.
  */

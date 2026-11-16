@@ -3059,9 +3059,7 @@
       "current": "huidige",
       "next": "volgende",
       "complete": "workflow voltooid",
-      "testMode": "testmodus",
-      "continue": "Doorgaan",
-      "continuing": "Bezig…"
+      "testMode": "testmodus"
     },
     "ledger": {
       "history": "geschiedenis",
@@ -3154,7 +3152,12 @@
       "totalKwh": "Totaal kWh/a",
       "sourceEstimate": "geschat door de energiedienst, één verzoek per gebouw",
       "sourceMirror": "gespiegeld van gebouwklasse en oppervlak — tijdens de run is de backend leidend",
-      "autoHint": "Deze stap loopt vanzelf wanneer de flow vooruitgaat: hij leest de gebouwen, vraagt de dienst en legt de antwoorden vast. Hier is niets in te stellen."
+      "autoHint": "Deze stap loopt vanzelf zodra de flow er aankomt: hij leest de gebouwen, vraagt de dienst en legt de antwoorden vast. Hier is niets in te stellen.",
+      "running": "Vraag wordt geschat…",
+      "runningHint": "Loopt vanzelf — één verzoek per gebouw.",
+      "done": "Vraag geschat",
+      "failed": "De vraagschatting is mislukt",
+      "retry": "Opnieuw uitvoeren"
     },
     "technologies": {
       "title": "Technologieën",

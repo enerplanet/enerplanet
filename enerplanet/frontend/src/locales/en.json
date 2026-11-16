@@ -3063,9 +3063,7 @@
       "current": "current",
       "next": "next",
       "complete": "flow complete",
-      "testMode": "test mode",
-      "continue": "Continue",
-      "continuing": "Working…"
+      "testMode": "test mode"
     },
     "ledger": {
       "history": "history",
@@ -3158,7 +3156,12 @@
       "totalKwh": "Total kWh/a",
       "sourceEstimate": "estimated by the energy service, one request per building",
       "sourceMirror": "mirrored from the building class and area — the backend is authoritative at run time",
-      "autoHint": "This step runs on its own when the flow moves forward: it reads the buildings, asks the service, and records the answers. There is nothing to configure here."
+      "autoHint": "This step runs on its own the moment the flow lands on it: it reads the buildings, asks the service and records the answers. There is nothing to configure here.",
+      "running": "Estimating demand…",
+      "runningHint": "Running on its own — one request per building.",
+      "done": "Demand estimated",
+      "failed": "The demand estimate failed",
+      "retry": "Run again"
     },
     "technologies": {
       "title": "Technologies",

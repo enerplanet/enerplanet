@@ -44,8 +44,10 @@ core's `view.ts`.
   under-declared one; over-declaring is only reported.
 - **`run()` is the only write path.** It commits; nothing else may reach the store. Every commit is
   undoable and sealed together with the cascade it invalidated. A run that changes nothing still seals one
-  transaction — a **zero-diff** one, with no ops — because a jump re-arms its target and the re-arm has to
-  clear on a forward action, never on an edit the user did not make.
+  transaction — a **zero-diff** one, with no ops — because a jump re-arms its target and the re-arm has to clear
+  on a newer transaction, never on an edit the user did not make. (An `auto` node is the exception: a jump's
+  re-arm does not apply to it, since there is nothing to re-apply, and it either passes over as done or was
+  pruned by a real input change — T15.)
 
 `example/index.test.ts` demonstrates each of these by trying to break them, which is the quickest way to
 see what the boundary actually refuses.
@@ -53,7 +55,9 @@ see what the boundary actually refuses.
 ## Regions
 
 `layout: Region[]` names where the UI mounts. The host composes the page; a module never does — and a
-module that declares nothing is headless, which is how an `auto` node renders nothing. The frame:
+module that declares nothing is headless. An `auto` node still runs headlessly (it has no forward action), but
+it declares the `overlay` slot so it can show its own run state — in progress / done / failed — full-screen while
+the session sits on it. The frame:
 
 ```
 ┌ header (host-owned: title · prior/current/next · undo/redo/save · dev mode select) ┐
@@ -250,9 +254,12 @@ it("does its job", async () => {
 `runInScratch` runs the module through the **real engine** on a scratch store, so the write boundary and
 the cascade behave exactly as they do in a host.
 
-There is no DOM test environment (no `@testing-library`, no jsdom), so a module's UI is not rendered in
-tests. Adding one is a deliberate decision rather than an oversight — it would belong in a module's own
-workspace, where its own `package.json` can carry `react`, RTL and jsdom without weighing on the app.
+There is no DOM test environment (no `@testing-library`, no jsdom), so a module's UI is not rendered into a
+DOM in tests. Adding one is a deliberate decision rather than an oversight — it would belong in a module's own
+workspace, where its own `package.json` can carry `react`, RTL and jsdom without weighing on the app. A
+**static** render needs none of that, though: `building-demand/overlay.test.tsx` renders its auto state view with
+`react-dom/server`'s `renderToStaticMarkup` (no DOM, `react` hoisted from the app) purely to pin which controls
+appear — the only control on an auto node being its manual re-run, and only after a failure.
 
 ## Working on a module without the app
 
