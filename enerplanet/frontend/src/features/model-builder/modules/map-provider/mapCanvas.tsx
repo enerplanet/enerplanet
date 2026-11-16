@@ -135,9 +135,16 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       if (interactive !== null) raise(interactive);
     };
 
-    /** Draw the stack as it now stands. */
-    const sync = (): void => {
-      if (map === null || !map.isStyleLoaded()) return;
+    /**
+     * Draw the stack as it now stands.
+     *
+     * `ready` is the map's own `load` event saying the style is in place, and it is what makes the first draw
+     * happen: inside that event `isStyleLoaded()` still reports false, so gating on it there would drop the only
+     * call that can paint what the stack already holds — and nothing retries until some module happens to change
+     * the stack again, which is why a layer only appeared once its module was visited twice.
+     */
+    const sync = (ready = false): void => {
+      if (map === null || (!ready && !map.isStyleLoaded())) return;
       const active = map;
       const order = runtime.stack.getLayerOrder();
       dropGone(active, new Set(order));
@@ -388,7 +395,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       });
 
       created.on("load", () => {
-        if (!cancelled) sync();
+        if (!cancelled) sync(true);
       });
       created.on("click", onClick);
       map = created;
