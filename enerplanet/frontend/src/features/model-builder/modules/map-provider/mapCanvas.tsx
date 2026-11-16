@@ -152,6 +152,14 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       orderLayers(active, order, runtime.stack.interactiveLayer());
     };
 
+    /**
+     * One module layer is three MapLibre layers over one source, because a source may hold points, lines and
+     * polygons at once and MapLibre styles one geometry type per layer.
+     *
+     * **Each is filtered to the geometry it draws**, and that is the whole point: an unfiltered circle layer puts
+     * a dot at every vertex of every geometry, so a grid came out as filled building areas dotted along their
+     * corners, with the cables lost among them. Points belong to the circle layer, and nothing else does.
+     */
     const addLayerTrio = (active: maplibregl.Map, id: string): void => {
       const [fill, line, circle] = styleIdsOf(id);
       const source = sourceOf(id);
@@ -172,6 +180,8 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         id: circle,
         type: "circle",
         source,
+        // Points only. Without this a polygon earns a dot per vertex, which is noise that hides the network.
+        filter: ["==", ["geometry-type"], "Point"],
         paint: { "circle-radius": 5, "circle-color": "#3b82f6", "circle-stroke-width": 1.5, "circle-stroke-color": "#ffffff" },
       });
     };
