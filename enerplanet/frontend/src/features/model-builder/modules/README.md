@@ -179,6 +179,14 @@ two or three — declare what you actually use.
 The module's `bottom` slot is the *only* thing called "bottom": the host's own bars (a workflow bar at the
 top, a ledger bar at the very bottom) are frame chrome and no module renders into them.
 
+- **A source slot is installed *after* your effects run.** Your UI mounts as a child of the shell, and React
+  runs child effects before parent ones — so a mount-time `useEffect` that reads the installed source finds
+  `null`, bails, and is **never retried**. The symptom is a picker that shows "loading" for good with no
+  request in flight. **Start the load from the installer, not the mount**: keep the list outside React (an
+  external store + `useSyncExternalStore`) and have `setXSource` kick it off. `modules/model-start/regions.ts`
+  is the shape to copy — three modules have hit this, and the obvious "fix" is to delete that line and load
+  from the mount effect again, which is what breaks it.
+
 ## Where a module's work comes from, and how it lands: `seal`
 
 A module's UI collects values that only `run()` can commit, so the module holds them and `run()` commits them —
