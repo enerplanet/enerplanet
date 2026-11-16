@@ -10,10 +10,12 @@
  * One respect in which the oracle is *not* the original, worth knowing before trusting the comparison blindly:
  * the extraction curates `config` to the ports the store holds, while the legacy spread the whole `pylovoData`
  * object — so `meta` and `boundary` travelled on the real wire and do not here. `modules/model-save.md` carries
- * the full parity audit. One legacy config key is still written absent rather than reproduced: **`site`**, which
- * the legacy sets only in site mode, as the identity of the pylovo site being edited — there is no site mode
- * here, so there is nothing honest to write. The other keys the audit listed (`weather*`, `cookingCarrier`,
- * `mode`, `electricity_prices`) now have ports and are written verbatim.
+ * the full parity audit. One legacy config key is still written absent rather than reproduced: **`site`**,
+ * which the legacy sets when the user edits the grid — it clones pylovo's grid into an editable site and
+ * records that copy's identity (`{ mode: 'site', site_id, revision }`) so the save points at the copy rather
+ * than the original. That is `grid-editor`'s output, and `grid-editor` is deferred, so there is nothing
+ * honest to write. The other keys the audit listed (`weather*`, `cookingCarrier`, `mode`,
+ * `electricity_prices`) now have ports and are written verbatim.
  *
  * Two deliberate differences from the legacy original:
  *

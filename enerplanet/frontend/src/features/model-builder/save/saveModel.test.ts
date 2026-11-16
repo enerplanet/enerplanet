@@ -153,8 +153,8 @@ describe("T13 — the Call A payload is the legacy payload", () => {
 
   it("writes the legacy's settings keys verbatim, mixed spelling and all", () => {
     // These three have no producing step: `model-start` seeds them with the legacy's defaults, and the save
-    // writes whatever the store holds. `site` is deliberately absent — the legacy writes it only in site mode,
-    // as the identity of the pylovo site being edited.
+    // writes whatever the store holds. `site` is a different kind of key — it marks the *editable copy* the
+    // legacy clones pylovo's grid into when the user edits it, so it belongs to `grid-editor`, not here.
     const config = buildSaveConfig({
       cookingCarrier: "gas",
       mode: "operate",
