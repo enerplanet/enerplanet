@@ -108,25 +108,32 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
     /**
      * One layer: make sure its source and its trio exist, then push its features in.
      *
-     * **Failing here must not take the rest of the draw with it.** A throw in this loop used to abort every layer
-     * after it and tell nobody, so a grid reached the map one layer per visit — the earlier layers remembered as
-     * rendered, the failing one reached again on the next sync — and looked like MapLibre only allowing one layer
-     * at a time. Now each layer stands or falls alone, and a fall is said out loud rather than swallowed.
+     * **The features go in *with* the source, not after it.** A `setData` on a source the style has not ingested
+     * yet is dropped without a word, so a freshly added layer sat empty until some later sync happened to set it
+     * again — which is why a grid arrived one layer per visit, and why the cables never showed at all while the
+     * stack held every one of them.
+     *
+     * Failing here must not take the rest of the draw with it either: a throw in this loop used to abort every
+     * layer after it and tell nobody.
      */
     const drawLayer = (active: maplibregl.Map, id: string): void => {
       try {
-        if (!active.getSource(sourceOf(id))) {
-          active.addSource(sourceOf(id), {
-            type: "geojson",
-            data: { type: "FeatureCollection", features: [] },
-          });
+        const data: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: [...featuresOf(runtime, id)],
+        };
+        const source = active.getSource(sourceOf(id)) as maplibregl.GeoJSONSource | undefined;
+
+        if (source === undefined) {
+          active.addSource(sourceOf(id), { type: "geojson", data });
+        } else {
+          source.setData(data);
         }
+
         if (!rendered.has(id)) {
           addLayerTrio(active, id);
           rendered.add(id);
         }
-        const source = active.getSource(sourceOf(id)) as maplibregl.GeoJSONSource | undefined;
-        source?.setData({ type: "FeatureCollection", features: featuresOf(runtime, id) });
       } catch (error) {
         console.error(`map layer "${id}" failed to draw`, error);
       }
