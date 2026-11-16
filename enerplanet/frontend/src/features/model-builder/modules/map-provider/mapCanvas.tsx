@@ -158,16 +158,41 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
      *
      * `ready` is the map's own `load` event saying the style is in place, and it is what makes the first draw
      * happen: inside that event `isStyleLoaded()` still reports false, so gating on it there would drop the only
-     * call that can paint what the stack already holds — and nothing retries until some module happens to change
-     * the stack again, which is why a layer only appeared once its module was visited twice.
+     * call that can paint what the stack already holds.
      */
-    const sync = (ready = false): void => {
+    const draw = (ready: boolean): void => {
       if (map === null || (!ready && !map.isStyleLoaded())) return;
       const active = map;
       const order = runtime.stack.getLayerOrder();
       dropGone(active, new Set(order));
       for (const id of order) drawLayer(active, id);
       orderLayers(active, order, runtime.stack.interactiveLayer());
+    };
+
+    /**
+     * Redraw, once per burst of stack changes rather than once per change.
+     *
+     * A module that draws its own layer changes the stack several times in a row — a create and a fill per layer —
+     * and a draw taken between two of those changes paints a stack that is only half built and is never asked
+     * again, because every later change was folded into the same turn. That is the whole of a bug that looked like
+     * MapLibre refusing to overlay layers: a generated grid arrived as buildings on the map and cables in the
+     * store, and nowhere.
+     *
+     * The `load` path draws immediately: it is a single call, there is nothing to coalesce with, and it is the
+     * moment the map first becomes able to draw at all.
+     */
+    let queued = false;
+    const sync = (ready = false): void => {
+      if (ready) {
+        draw(true);
+        return;
+      }
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        draw(false);
+      });
     };
 
     /**

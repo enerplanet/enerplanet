@@ -212,11 +212,18 @@ type Collections = Partial<Record<ProducedPort, GeoJSON.FeatureCollection | unde
  * it draws.
  */
 export function drawGrid(map: GridMap, collections: Collections): void {
-  for (const [port, layer] of Object.entries(LAYERS) as [ProducedPort, string | null][]) {
-    if (layer === null) continue;
+  const mine = Object.values(LAYERS).filter((layer): layer is string => layer !== null);
+
+  // Every layer first, then the features. Creating one and filling it before the next exists leaves the map
+  // mid-draw: each `createLayer` and `addFeatures` redraws, and a redraw taken while the grid is only half
+  // declared draws the part of it that exists — which is why the buildings appeared and the cables did not.
+  for (const layer of mine) {
     map.createLayer(layer);
     map.clearLayer(layer);
+  }
 
+  for (const [port, layer] of Object.entries(LAYERS) as [ProducedPort, string | null][]) {
+    if (layer === null) continue;
     const collection = collections[port];
     if (collection !== undefined && collection.features.length > 0) {
       map.addFeatures(layer, collection);
