@@ -19,7 +19,6 @@ import {
   createEngine,
   createStore,
   runInScratch,
-  type BuildingParams,
   type ModelData,
   type TechAssignment,
 } from "@model-builder/core";
@@ -213,38 +212,17 @@ describe("building-configurator's run", () => {
 });
 
 describe("building-configurator's gate", () => {
-  it("reports a building with neither demand nor technologies", () => {
-    // b2 has nothing at all, which is the incompleteness this module can name — it is the one writing both.
-    expect(issuesFor(ready() as ModelData)).toEqual([
-      { port: "buildingParams", message: "A building has neither demand nor technologies." },
-    ]);
+  // This node is optional editing, so it cannot be incomplete. It used to demand demand *or* a technology for
+  // every building — a rule that is simply wrong (a building without solar does not need a technology) and one
+  // that made Continue look broken, because a node that refuses to be done can never advance.
+  it("says nothing about a building with no demand and no technology", () => {
+    const bare = { ...ready(), buildingParams: undefined, technologies: undefined };
+
+    expect(issuesFor(bare as ModelData)).toEqual([]);
   });
 
-  it("is satisfied when every building has demand", () => {
-    const full = {
-      ...ready(),
-      buildingParams: {
-        electricity: {
-          b1: { yearlyKwh: 12_000 } as BuildingParams,
-          b2: { yearlyKwh: 6_000 } as BuildingParams,
-        },
-      },
-    };
-
-    expect(issuesFor(full as ModelData)).toEqual([]);
-  });
-
-  it("counts a technology as enough on its own", () => {
-    const techsOnly = {
-      ...ready(),
-      buildingParams: undefined,
-      technologies: { b1: BOILER, b2: BOILER },
-    };
-
-    expect(issuesFor(techsOnly as ModelData)).toEqual([]);
-  });
-
-  it("says nothing when there are no buildings to judge", () => {
+  it("says nothing about a prepared model either", () => {
+    expect(issuesFor(ready() as ModelData)).toEqual([]);
     expect(issuesFor({})).toEqual([]);
   });
 });

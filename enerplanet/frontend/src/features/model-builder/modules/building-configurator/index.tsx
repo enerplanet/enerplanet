@@ -186,18 +186,21 @@ function applyEdit(
   return { buildingParams: params, technologies, buildings: data.buildings };
 }
 
-/** The completeness this module owns (T22): every building must have *something* — demand or a technology. */
+/**
+ * This module's completeness (T22): **nothing.**
+ *
+ * It is optional editing, and it cannot be incomplete — a node that refuses to be done until every building has a
+ * technology would block the flow on a rule that is simply wrong: not every building has solar, and one that does
+ * not need a technology is not missing anything. A building left without demand is not this node's failure either;
+ * the technologies node after it is what assigns to buildings the 3D view cannot configure.
+ *
+ * The old rule here wanted demand *or* a technology per building and was the reason Continue appeared to do
+ * nothing: the node could never be done, so a run with nothing to write sealed a transaction and changed nothing.
+ */
 export function issuesFor(store: Readonly<ModelData>): ValidationIssue[] {
-  for (const feature of buildingsOf(store)) {
-    const id = idOf(feature);
-    if (id === null) continue;
-    const hasDemand = store.buildingParams?.electricity?.[id] !== undefined;
-    const hasHeat = store.buildingParams?.heat?.[id] !== undefined;
-    const hasTechs = (store.technologies?.[id] ?? []).length > 0;
-    if (!hasDemand && !hasHeat && !hasTechs) {
-      return [{ port: "buildingParams", message: "A building has neither demand nor technologies." }];
-    }
-  }
+  // Taken so this gate has the shape every other module's has, and deliberately not read: there is nothing about
+  // this store that could make optional editing incomplete. See above.
+  void store;
   return [];
 }
 
