@@ -138,6 +138,8 @@ export function useMapLibreInteractions(
     };
 
     let throttleTimeout: number | null = null;
+    // The 2D map handlers set the same cursor, so it is cleared only on leaving a feature.
+    let pointing = false;
     const handlePointerMove = (evt: any) => {
       if (throttleTimeout !== null) return;
 
@@ -151,6 +153,7 @@ export function useMapLibreInteractions(
           const layerId = f.layer.id;
           const props = f.properties || {};
           olMap.getTargetElement().style.cursor = 'pointer';
+          pointing = true;
 
           setHovered(layerId.startsWith('buildings-3d') ? props : null);
           if (layerId.startsWith('buildings-3d')) {
@@ -173,7 +176,8 @@ export function useMapLibreInteractions(
         } else {
           setConnectedBuildingsFilter(null);
           setHovered(null);
-          olMap.getTargetElement().style.cursor = '';
+          if (pointing) olMap.getTargetElement().style.cursor = '';
+          pointing = false;
           cbRefs.current.onBuildingHover?.(null, pixel);
           cbRefs.current.onTransformerHover?.(null, pixel);
           cbRefs.current.onMvLineHover?.(null, pixel);
