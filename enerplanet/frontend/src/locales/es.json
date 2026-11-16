@@ -2998,7 +2998,9 @@
     "building-configurator": {
       "title": "Configurador de edificios",
       "configured": "{{configured}} de {{total}} edificios configurados",
-      "hint": "Haz clic en un edificio del mapa para configurarlo en detalle."
+      "hint": "Haz clic en un edificio del mapa para configurarlo en detalle.",
+      "continue": "Continuar",
+      "edited": "{{count}} edificio(s) editado(s), aún sin confirmar"
     },
     "area-draw": {
       "drawAnother": "Dibujar otra área",

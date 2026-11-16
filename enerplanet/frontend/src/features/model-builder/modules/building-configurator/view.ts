@@ -53,6 +53,23 @@ export interface BuildingViewProps {
    */
   draftId?: string;
   /**
+   * The grid this building lives in.
+   *
+   * The installed view resolves a building by looking it up in the legacy's own grid state, not by the feature it
+   * is handed — so a view that reads from there sees an empty map and reports the building as missing. The module
+   * hands the grid down rather than the shell reaching into a store the module knows nothing about; the shell
+   * translates it into whatever that store's spelling is.
+   *
+   * Absent in a test, where there is no grid state to seed.
+   */
+  grid?: {
+    buildings?: GeoJSON.FeatureCollection;
+    lines?: GeoJSON.FeatureCollection;
+    mvLines?: GeoJSON.FeatureCollection;
+    transformers?: GeoJSON.FeatureCollection;
+    grids?: unknown;
+  };
+  /**
    * The view closed with a change. **The module commits it**, on its own transaction — the host must not write
    * the store, and nothing is written while the view is open, so an abandoned overlay changes nothing.
    */

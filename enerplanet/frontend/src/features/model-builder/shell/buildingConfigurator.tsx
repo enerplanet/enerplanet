@@ -28,6 +28,7 @@ import { useEffect, useRef, type FC } from "react";
 import type { TechAssignment } from "@model-builder/core";
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import type { BuildingTechs } from "@/features/configurator/building-config/buildingTechnologies";
+import { useModelStore } from "@/features/configurator/store/modelStore";
 
 import { setBuildingConfigurator, type BuildingViewProps } from "../modules/building-configurator/view";
 
@@ -63,8 +64,30 @@ function toBuildingTechs(assignments: TechAssignment[] | undefined): BuildingTec
  * open/close dance. `onCommit` is called only when the host hands back a *changed* building — it compares
  * itself, and passes the building it was given when nothing happened.
  */
-const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, onCommit, onClose }) => {
+const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, grid, onCommit, onClose }) => {
   const { buildingId, openBuilding, close } = useConfiguratorParams();
+  const setGrid = useModelStore((state) => state.setPylovoGridData);
+
+  /**
+   * Put our grid where the legacy's building state looks for it.
+   *
+   * `useBuildingState` resolves a building out of `useModelStore.pylovoGridData` — the legacy's own grid, which
+   * nothing in this feature ever filled — so without this the configurator opens on "This building is not in the
+   * loaded grid" while the building is right there in ours. Two stores, two grids, one of them empty.
+   *
+   * The spelling is the legacy's (`mv_lines`), and the keys stay absent when a collection is: the legacy reads
+   * absence as "nothing there", which is the truth here.
+   */
+  useEffect(() => {
+    if (grid === undefined) return;
+    setGrid({
+      ...(grid.buildings === undefined ? {} : { buildings: grid.buildings }),
+      ...(grid.lines === undefined ? {} : { lines: grid.lines }),
+      ...(grid.mvLines === undefined ? {} : { mv_lines: grid.mvLines }),
+      ...(grid.transformers === undefined ? {} : { transformers: grid.transformers }),
+      ...(grid.grids === undefined ? {} : { grids: grid.grids }),
+    } as Parameters<typeof setGrid>[0]);
+  }, [grid, setGrid]);
 
   // Open on the building the module picked. The host renders nothing until the param is set, so this is the
   // call that makes it appear rather than a race with its first render.

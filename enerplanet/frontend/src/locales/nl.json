@@ -2997,7 +2997,9 @@
     "building-configurator": {
       "title": "Gebouwconfigurator",
       "configured": "{{configured}} van {{total}} gebouwen geconfigureerd",
-      "hint": "Klik op een gebouw op de kaart om het in detail te configureren."
+      "hint": "Klik op een gebouw op de kaart om het in detail te configureren.",
+      "continue": "Doorgaan",
+      "edited": "{{count}} gebouw(en) bewerkt, nog niet vastgelegd"
     },
     "area-draw": {
       "drawAnother": "Nog een gebied tekenen",

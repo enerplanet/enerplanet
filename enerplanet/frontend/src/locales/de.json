@@ -3001,7 +3001,9 @@
     "building-configurator": {
       "title": "Gebäudekonfigurator",
       "configured": "{{configured}} von {{total}} Gebäuden konfiguriert",
-      "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren."
+      "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren.",
+      "continue": "Weiter",
+      "edited": "{{count}} Gebäude bearbeitet, noch nicht übernommen"
     },
     "area-draw": {
       "drawAnother": "Weiteres Gebiet zeichnen",

@@ -3001,7 +3001,9 @@
     "building-configurator": {
       "title": "Building configurator",
       "configured": "{{configured}} of {{total}} buildings configured",
-      "hint": "Click a building on the map to configure it in detail."
+      "hint": "Click a building on the map to configure it in detail.",
+      "continue": "Continue",
+      "edited": "{{count}} building(s) edited, not yet committed"
     },
     "area-draw": {
       "drawAnother": "Draw another area",

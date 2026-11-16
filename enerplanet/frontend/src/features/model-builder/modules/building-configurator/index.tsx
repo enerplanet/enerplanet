@@ -51,11 +51,17 @@ const LAYER = "buildings";
 
 interface Picked {
   osmId: string | null;
-  /** Set by the view on close, consumed by `run()`. Never read by anything else. */
-  pending: { osmId: string; edit: BuildingEdit } | null;
+  /**
+   * Edits the view returned, by building, waiting for the module's own Continue.
+   *
+   * Keyed by building rather than kept in a single slot: a user working through a grid would otherwise lose every
+   * edit but the last, and the point of continuing deliberately is that they can configure several buildings
+   * before committing any of them.
+   */
+  pending: ReadonlyMap<string, BuildingEdit>;
 }
 
-let picked: Picked = { osmId: null, pending: null };
+let picked: Picked = { osmId: null, pending: new Map() };
 const listeners = new Set<() => void>();
 
 function announce(): void {
@@ -68,12 +74,20 @@ function setPicked(osmId: string | null): void {
   announce();
 }
 
-/** Hold what the view returned, for `run()` to commit.
+/** Hold what the view returned, for the module's Continue to commit.
  *
  *  Exported for the module's own surfaces — the panel and the isolation tests — exactly as the technologies
  *  module exports its `hold*` helpers. Nothing outside the module may use it. */
 export function holdEdit(osmId: string, edit: BuildingEdit): void {
-  picked = { ...picked, pending: { osmId, edit } };
+  const pending = new Map(picked.pending);
+  pending.set(osmId, edit);
+  picked = { ...picked, pending };
+  announce();
+}
+
+/** Forget what is pending. The module's run calls this once the edits are committed. */
+export function clearEdits(): void {
+  picked = { ...picked, pending: new Map() };
   announce();
 }
 
@@ -204,15 +218,14 @@ const contract: Module = {
     buildingParams: ["technologies"],
   },
   /**
-   * Commit what the view returned.
+   * Commit every edit the view returned.
    *
-   * The view is what collected the edits, and `holdEdit` is how they got here — so a run with nothing held is
-   * a no-op rather than an error: the module is also reachable by the forward action, and pressing it without
-   * having opened a building should do nothing rather than fail.
+   * The view is what collected them, and `holdEdit` is how they got here — so a run with nothing held is a no-op
+   * rather than an error: the module is also reachable by the frame, and continuing without having opened a
+   * building should do nothing rather than fail.
    */
   run: (ctx) => {
-    const held = picked.pending;
-    if (held === null) return;
+    if (picked.pending.size === 0) return;
 
     // Read what this write touches: the engine's anti-clobber requires the ports be read before they are
     // rewritten, and reading `buildings` is what tells a run against an empty store to do nothing rather than
@@ -220,24 +233,33 @@ const contract: Module = {
     const buildings = ctx.read("buildings");
     if (buildings === undefined) return;
 
-    const current: Readonly<ModelData> = {
+    let current: Readonly<ModelData> = {
       buildings,
       buildingParams: ctx.read("buildingParams"),
       technologies: ctx.read("technologies"),
     };
 
-    const next = applyEdit(current, held.osmId, held.edit);
+    // Every held edit folded in order, so several buildings commit as one transaction rather than one each.
+    let touchedBuildings = false;
+    for (const [osmId, edit] of picked.pending) {
+      const next = applyEdit(current, osmId, edit);
+      if (next.buildings !== undefined && next.buildings !== current.buildings) touchedBuildings = true;
+      current = {
+        buildings: next.buildings ?? current.buildings,
+        buildingParams: next.buildingParams,
+        technologies: next.technologies,
+      };
+    }
+
     ctx.commit({
-      buildingParams: next.buildingParams,
-      ...(next.technologies === undefined ? {} : { technologies: next.technologies }),
-      // Only when the envelope block changed: committing `buildings` on every edit would rewrite a port this
+      buildingParams: current.buildingParams,
+      ...(current.technologies === undefined ? {} : { technologies: current.technologies }),
+      // Only when an envelope block changed: committing `buildings` on every edit would rewrite a port this
       // module has no business touching otherwise.
-      ...(next.buildings === undefined || next.buildings === current.buildings
-        ? {}
-        : { buildings: next.buildings }),
+      ...(touchedBuildings ? { buildings: current.buildings } : {}),
     });
-    // Consumed: re-running without another edit must not re-commit it.
-    picked = { ...picked, pending: null };
+    // Consumed: continuing again without another edit must not re-commit them.
+    clearEdits();
   },
   validate: (ctx) => issuesFor(ctx.store),
 };
@@ -268,12 +290,11 @@ const MapRegion: FC<{ map: MapService; overlay: OverlayControl }> = ({ map, over
   return null;
 };
 
-/** Renders the installed view for the picked building, and closes and commits together. */
+/** Renders the installed view for the picked building; the edit is held and the overlay closes. */
 const OverlayRegion: FC<{
   overlay: OverlayControl;
   data: Readonly<ModelData>;
-  run: () => Promise<void>;
-}> = ({ overlay, data, run }) => {
+}> = ({ overlay, data }) => {
   const state = usePicked();
   const configurator = buildingConfigurator();
   const osmId = state.osmId;
@@ -294,10 +315,19 @@ const OverlayRegion: FC<{
       params={data.buildingParams?.electricity?.[osmId] ?? data.buildingParams?.heat?.[osmId]}
       technologies={data.technologies?.[osmId]}
       draftId={data.draftId}
+      // The whole grid, because the installed view resolves the building out of its own grid state rather than
+      // out of `feature`. Handing it the grid is what keeps that a view's business and not a store's.
+      grid={{
+        ...(data.buildings === undefined ? {} : { buildings: data.buildings }),
+        ...(data.lines === undefined ? {} : { lines: data.lines }),
+        ...(data.mvLines === undefined ? {} : { mvLines: data.mvLines }),
+        ...(data.transformers === undefined ? {} : { transformers: data.transformers }),
+        ...(data.grids === undefined ? {} : { grids: data.grids }),
+      }}
       onCommit={(edit) => {
-        // Held, then committed by the module's own run — never written from here.
+        // Held until the module's Continue. Nothing is written while the view is open, so an abandoned overlay
+        // still changes nothing — and several buildings can be configured before any of them commit.
         holdEdit(osmId, edit);
-        void run();
         overlay.close();
       }}
       onClose={() => overlay.close()}
@@ -365,29 +395,51 @@ const SidebarRegion: FC<{ overlay: OverlayControl; data: Readonly<ModelData> }> 
 };
 
 /** The hint that makes the click discoverable — there is no button that could act before a pick. */
-const BottomRegion: FC = () => {
+const BottomRegion: FC<{ run: () => Promise<void>; pending: number; ready: boolean }> = ({
+  run,
+  pending,
+  ready,
+}) => {
   const { t } = useTranslation();
   return (
-    <div className="flex h-full items-center px-3 text-xs text-muted-foreground">
-      {t(
-        "modelBuilder.building-configurator.hint",
-        "Click a building on the map to configure it in detail.",
-      )}
+    <div className="flex h-full items-center justify-between gap-3 bg-muted/40 px-3">
+      <span className="text-xs text-muted-foreground">
+        {pending === 0
+          ? t("modelBuilder.building-configurator.hint", "Click a building on the map to configure it in detail.")
+          : t(
+              "modelBuilder.building-configurator.edited",
+              "{{count}} building(s) edited, not yet committed",
+              { count: pending },
+            )}
+      </span>
+      <button
+        type="button"
+        onClick={() => void run()}
+        disabled={!ready}
+        className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {t("modelBuilder.building-configurator.continue", "Continue")}
+      </button>
     </div>
   );
 };
 
 const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => {
+  // Subscribed in every region so the bottom bar's count keeps up with edits made in the overlay.
+  const state = usePicked();
+
   if (region === "map" && map !== undefined && overlay !== undefined) {
     return <MapRegion map={map} overlay={overlay} />;
   }
   if (region === "overlay" && overlay !== undefined) {
-    return <OverlayRegion overlay={overlay} data={data} run={run} />;
+    return <OverlayRegion overlay={overlay} data={data} />;
   }
   if (region === "sidebar" && overlay !== undefined) {
     return <SidebarRegion overlay={overlay} data={data} />;
   }
-  if (region === "bottom") return <BottomRegion />;
+  if (region === "bottom") {
+    return <BottomRegion run={run} pending={state.pending.size} ready={issuesFor(data).length === 0} />;
+  }
   return null;
 };
 
