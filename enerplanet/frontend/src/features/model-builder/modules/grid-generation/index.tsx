@@ -220,9 +220,20 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     setError(null);
   }, [nodeId]);
 
-  // The grid on the map. **Only the `map` region does this**: the module renders once per declared region, and
-  // two instances writing one layer would take turns clearing each other's work. The layer styles are the
-  // provider's for now — a module cannot restyle what it draws yet (`modules/README.md`).
+  /**
+   * The grid on the map. **Only the `map` region does this**: the module renders once per declared region, and
+   * two instances writing one layer would take turns clearing each other's work. The layer styles are the
+   * provider's for now — a module cannot restyle what it draws yet (`modules/README.md`).
+   *
+   * Nothing takes these layers off again. This module used to remove them on unmount, which erased the grid the
+   * moment the session left the node — and the session leaves the instant a run lands, because the position is
+   * the first node that is not done. The only way to see a freshly generated grid was to come back to an
+   * already-done node, where nothing advances and nothing unmounts; that confirm-then-replace worked while
+   * Generate alone did not was the tell, since it re-runs a node that is already done.
+   *
+   * The stack is the host's, and a module draws what it owns onto it. Leaving it standing is also what lets the
+   * nodes after this one — the building configurator's clicks especially — see the grid they are about.
+   */
   useEffect(() => {
     if (region !== "map" || map === undefined) return;
 
@@ -241,16 +252,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     // and whatever else is on the map keeps its place beneath them.
     map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
   }, [region, map, collections]);
-
-  /** The layer is this module's, so this module takes it off when it leaves. */
-  useEffect(() => {
-    if (region !== "map" || map === undefined) return undefined;
-    return () => {
-      for (const layer of Object.values(LAYERS)) {
-        if (layer !== null) map.removeLayer(layer);
-      }
-    };
-  }, [region, map]);
 
   const generate = (): void => {
     if (missing.length > 0 || generating) return;
