@@ -26,6 +26,7 @@ import weather from "../modules/weather";
 
 import buildingDemand from "../modules/building-demand";
 
+import buildingConfigurator from "../modules/building-configurator";
 import technologies from "../modules/technologies";
 
 export const MODULES: readonly BuilderModule[] = [
@@ -37,6 +38,7 @@ export const MODULES: readonly BuilderModule[] = [
   modelSave,
   weather,
   buildingDemand,
+  buildingConfigurator,
   technologies,
 ];
 

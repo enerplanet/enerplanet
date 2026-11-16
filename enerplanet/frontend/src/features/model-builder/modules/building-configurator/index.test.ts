@@ -25,14 +25,14 @@ import {
 } from "@model-builder/core";
 
 import buildingConfiguratorModule, { holdEdit, issuesFor } from "./index";
-import { buildingConfigurator, setBuildingConfigurator, type BuildingViewProps } from "./view";
+import { buildingConfigurator, setBuildingConfigurator } from "./view";
 
 const ELECTRICITY = "electricity";
 const HEAT = "heat";
 
 beforeEach(() => {
   // A stub, not the package: this is what proves the seam is a seam.
-  setBuildingConfigurator({ View: (_props: BuildingViewProps) => null });
+  setBuildingConfigurator({ View: () => null });
 });
 
 /** A building as the grid writes them. */
@@ -93,7 +93,7 @@ describe("the host slot", () => {
     setBuildingConfigurator(null);
     expect(buildingConfigurator()).toBeNull();
 
-    const View = (_props: BuildingViewProps) => null;
+    const View = () => null;
     setBuildingConfigurator({ View });
     expect(buildingConfigurator()?.View).toBe(View);
   });

@@ -2998,6 +2998,11 @@
       "start": "Start",
       "clickToClose": "Klicken zum Schließen"
     },
+    "building-configurator": {
+      "title": "Gebäudekonfigurator",
+      "configured": "{{configured}} von {{total}} Gebäuden konfiguriert",
+      "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren."
+    },
     "area-draw": {
       "drawAnother": "Weiteres Gebiet zeichnen",
       "drawnCount": "Gezeichnet: {{count}}",

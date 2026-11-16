@@ -2994,6 +2994,11 @@
       "start": "Start",
       "clickToClose": "Klik om te sluiten"
     },
+    "building-configurator": {
+      "title": "Gebouwconfigurator",
+      "configured": "{{configured}} van {{total}} gebouwen geconfigureerd",
+      "hint": "Klik op een gebouw op de kaart om het in detail te configureren."
+    },
     "area-draw": {
       "drawAnother": "Nog een gebied tekenen",
       "drawnCount": "Getekend: {{count}}",

@@ -302,9 +302,9 @@ const SidebarRegion: FC<{ overlay: OverlayControl; data: Readonly<ModelData> }> 
   return (
     <div className="flex h-full flex-col gap-3 overflow-auto p-3">
       <div className="text-sm font-medium">
-        {t("modelBuilder.building-configurator.configured", {
-          configured: String(configured),
-          total: String(buildings.length),
+        {t("modelBuilder.building-configurator.configured", "{{configured}} of {{total}} buildings configured", {
+          configured,
+          total: buildings.length,
         })}
       </div>
       <ul className="min-h-0 space-y-1 overflow-auto">
@@ -344,7 +344,10 @@ const BottomRegion: FC = () => {
   const { t } = useTranslation();
   return (
     <div className="flex h-full items-center px-3 text-xs text-muted-foreground">
-      {t("modelBuilder.building-configurator.hint")}
+      {t(
+        "modelBuilder.building-configurator.hint",
+        "Click a building on the map to configure it in detail.",
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@
     { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" },
     { "id": "weather", "moduleId": "weather", "label": "Weather" },
     { "id": "building-demand", "moduleId": "building-demand", "label": "Building demand", "auto": true },
+    { "id": "building-configurator", "moduleId": "building-configurator", "label": "Building configurator" },
     { "id": "technologies", "moduleId": "technologies", "label": "Technologies" },
     { "id": "model-save", "moduleId": "model-save", "label": "Save model" }
   ]

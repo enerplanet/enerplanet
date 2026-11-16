@@ -2998,6 +2998,11 @@
       "start": "Start",
       "clickToClose": "Click to close"
     },
+    "building-configurator": {
+      "title": "Building configurator",
+      "configured": "{{configured}} of {{total}} buildings configured",
+      "hint": "Click a building on the map to configure it in detail."
+    },
     "area-draw": {
       "drawAnother": "Draw another area",
       "drawnCount": "Drawn: {{count}}",

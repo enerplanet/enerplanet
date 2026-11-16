@@ -2995,6 +2995,11 @@
       "start": "Inicio",
       "clickToClose": "Clic para cerrar"
     },
+    "building-configurator": {
+      "title": "Configurador de edificios",
+      "configured": "{{configured}} de {{total}} edificios configurados",
+      "hint": "Haz clic en un edificio del mapa para configurarlo en detalle."
+    },
     "area-draw": {
       "drawAnother": "Dibujar otra área",
       "drawnCount": "Dibujados: {{count}}",
