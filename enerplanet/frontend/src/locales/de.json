@@ -3137,6 +3137,7 @@
         "p90": "Hoch (p90)"
       },
       "scenarioHint": "Ein Szenariojahr hat kein eigenes Kalenderjahr; die Modellperiode bestimmt die Daten.",
+      "continue": "Weiter",
       "archiveLabel": "Archiv",
       "noFetchHint": "Hier werden keine Wetterdaten geladen — die Konfiguration verweist auf einen Datensatz, das Backend lädt die Zeitreihe beim Lauf."
     },

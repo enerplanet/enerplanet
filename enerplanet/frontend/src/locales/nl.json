@@ -3133,6 +3133,7 @@
         "p90": "Hoog (p90)"
       },
       "scenarioHint": "Een scenariojaar heeft geen eigen kalenderjaar; de periode van het model bepaalt de datums.",
+      "continue": "Doorgaan",
       "archiveLabel": "Archief",
       "noFetchHint": "Hier worden geen weergegevens opgehaald — de config verwijst naar een dataset en de backend haalt de reeks op bij de run."
     },

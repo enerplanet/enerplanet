@@ -3134,6 +3134,7 @@
         "p90": "Alto (p90)"
       },
       "scenarioHint": "Un año de escenario no tiene año natural propio; el periodo del modelo fija las fechas.",
+      "continue": "Continuar",
       "archiveLabel": "Archivo",
       "noFetchHint": "Aquí no se obtienen datos meteorológicos: la configuración referencia un conjunto y el backend recupera la serie al ejecutar."
     },

@@ -24,7 +24,7 @@
  *   with a half-specified dataset.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   defineModule,
   type BuilderModule,
@@ -165,7 +165,7 @@ const module = defineModule({
   validate: (ctx) => issuesFor(ctx.store),
 });
 
-/** A row of mutually exclusive choices — one click each, and the click *is* the commit. */
+/** A row of mutually exclusive choices — one click each. What a click *does* is the module's business. */
 const ChoiceRow: React.FC<{
   label: string;
   value: string;
@@ -196,10 +196,21 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
   const { t } = useTranslation();
   const { archives } = useArchives();
 
+  /**
+   * What the user has picked here but not yet committed.
+   *
+   * The selections no longer commit on click. A click that immediately ran the node also ended its turn — the
+   * session moved on, so there was nothing to compare, defaults were unreachable, and a second parameter would
+   * have needed a second gesture. Collecting first and committing once means the panel shows what it is about to
+   * do, and it has room to grow.
+   */
+  const [typed, setTyped] = useState<WeatherSelection | null>(null);
+
   // The frame can move the session mid-choice. Nothing collected on one node may reach another, so a node
   // change drops what was held and the panel shows the store's selection again.
   useEffect(() => {
     hold(nodeId, {});
+    setTyped(null);
   }, [nodeId]);
 
   // Scenario only. The legacy's other mode reads a *recorded* year out of the period, and this feature does not
@@ -207,15 +218,25 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
   // than disabled. `issuesFor` still reports a `year` choice, because a loaded model can carry one.
   if (region !== "sidebar") return null;
 
-  const selection = data.weatherSelection ?? DEFAULT_SELECTION;
+  const stored = data.weatherSelection ?? DEFAULT_SELECTION;
+  /** The selection on screen: what was picked here, or what the model holds. Never both. */
+  const selection = typed ?? stored;
 
   const archiveNames = Object.keys(archives.archives);
   const shownArchive = selection.provider ?? archives.defaultProvider;
 
-  /** One click, one commit — held for *this* node and handed to `run()` immediately. */
-  const choose = (next: WeatherSelection): void => {
-    hold(nodeId, { weatherSelection: next });
-    void run();
+  // The gate reads the store's shape, so the pending selection is handed to it the same way a commit would.
+  const issues = issuesFor({ weatherSelection: selection });
+  const ready = issues.length === 0;
+
+  /** One gesture, one commit: whatever the panel shows is handed over together, then the session moves on. */
+  const commit = (): void => {
+    hold(nodeId, { weatherSelection: selection });
+    void run().finally(() => {
+      // The store's value takes over again, so a failed run leaves the panel showing the truth rather than the
+      // attempt.
+      setTyped(null);
+    });
   };
 
   return (
@@ -236,7 +257,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
             value: choice,
             label: t(`modelBuilder.weather.scenario.${choice}`),
           }))}
-          onChoose={(choice) => choose({ provider: selection.provider, choice: choice as WeatherChoice })}
+          onChoose={(choice) => setTyped({ provider: selection.provider, choice: choice as WeatherChoice })}
         />
         <p className="text-xs text-muted-foreground">{t("modelBuilder.weather.scenarioHint")}</p>
       </div>
@@ -251,7 +272,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
             value={shownArchive ?? ""}
             options={archiveNames.map((name) => ({ value: name, label: ARCHIVE_NAMES[name] ?? name }))}
             onChoose={(name) =>
-              choose({
+              setTyped({
                 ...selection,
                 // Choosing the default *is* choosing "none": the key is omitted on save, so the server's
                 // default keeps applying even if it changes later.
@@ -260,6 +281,21 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
             }
           />
         </div>
+      )}
+
+      <button
+        type="button"
+        onClick={commit}
+        disabled={!ready}
+        className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {t("modelBuilder.weather.continue")}
+      </button>
+
+      {/* A disabled button has to say what it is waiting for, or it reads as broken. The gate's own message is
+          the honest one — it is the same sentence the save node would report. */}
+      {ready ? null : (
+        <p className="shrink-0 text-xs text-muted-foreground">{issues[0]?.message}</p>
       )}
 
       <p className="shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">

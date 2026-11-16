@@ -3137,6 +3137,7 @@
         "p90": "High (p90)"
       },
       "scenarioHint": "A scenario year has no calendar year of its own; the model's period sets the dates.",
+      "continue": "Continue",
       "archiveLabel": "Archive",
       "noFetchHint": "No weather data is fetched here — the config references a dataset and the backend retrieves the series when the model runs."
     },
