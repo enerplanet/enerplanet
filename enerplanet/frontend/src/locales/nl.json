@@ -3126,9 +3126,6 @@
     "weather": {
       "title": "Weer",
       "description": "Welke weergegevens de runs van het model gebruiken. De reeks zelf haalt de backend op tijdens de run.",
-      "modeLabel": "Weer",
-      "modeScenario": "Typisch",
-      "modeYear": "Gemeten jaar",
       "scenarioLabel": "Zonnejaar",
       "scenario": {
         "p10": "Laag (p10)",
@@ -3136,11 +3133,6 @@
         "p90": "Hoog (p90)"
       },
       "scenarioHint": "Een scenariojaar heeft geen eigen kalenderjaar; de periode van het model bepaalt de datums.",
-      "yearLabel": "Jaar",
-      "yearsLoading": "Beschikbare jaren worden geladen…",
-      "yearsUnavailable": "De weerdienst antwoordt niet; de jaarlijst is niet beschikbaar.",
-      "yearPlaceholder": "Kies een jaar",
-      "yearHint": "Het gemeten weer van dit jaar wordt gebruikt, en de periode van het model volgt dat.",
       "archiveLabel": "Archief",
       "noFetchHint": "Hier worden geen weergegevens opgehaald — de config verwijst naar een dataset en de backend haalt de reeks op bij de run."
     },

@@ -194,7 +194,7 @@ const ChoiceRow: React.FC<{
 
 const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => {
   const { t } = useTranslation();
-  const { archives, failed } = useArchives();
+  const { archives } = useArchives();
 
   // The frame can move the session mid-choice. Nothing collected on one node may reach another, so a node
   // change drops what was held and the panel shows the store's selection again.
@@ -202,15 +202,15 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
     hold(nodeId, {});
   }, [nodeId]);
 
+  // Scenario only. The legacy's other mode reads a *recorded* year out of the period, and this feature does not
+  // support it yet — a control that cannot be honoured is worse than no control, so the mode row is gone rather
+  // than disabled. `issuesFor` still reports a `year` choice, because a loaded model can carry one.
   if (region !== "sidebar") return null;
 
   const selection = data.weatherSelection ?? DEFAULT_SELECTION;
-  const scenario = selection.choice !== "year";
-  const periodYear = yearOf(data.fromDate);
 
   const archiveNames = Object.keys(archives.archives);
   const shownArchive = selection.provider ?? archives.defaultProvider;
-  const years = shownArchive === null ? [] : archives.archives[shownArchive] ?? [];
 
   /** One click, one commit — held for *this* node and handed to `run()` immediately. */
   const choose = (next: WeatherSelection): void => {
@@ -226,75 +226,20 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
       </div>
 
       <div className="shrink-0 space-y-1">
-        <p className="text-xs font-medium text-muted-foreground">{t("modelBuilder.weather.modeLabel")}</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          {t("modelBuilder.weather.scenarioLabel")}
+        </p>
         <ChoiceRow
-          label={t("modelBuilder.weather.modeLabel")}
-          value={scenario ? "scenario" : "year"}
-          options={[
-            { value: "scenario", label: t("modelBuilder.weather.modeScenario") },
-            { value: "year", label: t("modelBuilder.weather.modeYear") },
-          ]}
-          onChoose={(mode) =>
-            mode === "scenario"
-              ? // Back to the typical scenario, keeping the archive.
-                choose({ provider: selection.provider, choice: "p50" })
-              : // A recorded year takes the period's, when there is one to take.
-                choose({
-                  provider: selection.provider,
-                  choice: "year",
-                  ...(periodYear === undefined ? {} : { year: periodYear }),
-                })
-          }
+          label={t("modelBuilder.weather.scenarioLabel")}
+          value={selection.choice}
+          options={SCENARIOS.map((choice) => ({
+            value: choice,
+            label: t(`modelBuilder.weather.scenario.${choice}`),
+          }))}
+          onChoose={(choice) => choose({ provider: selection.provider, choice: choice as WeatherChoice })}
         />
+        <p className="text-xs text-muted-foreground">{t("modelBuilder.weather.scenarioHint")}</p>
       </div>
-
-      {scenario ? (
-        <div className="shrink-0 space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">
-            {t("modelBuilder.weather.scenarioLabel")}
-          </p>
-          <ChoiceRow
-            label={t("modelBuilder.weather.scenarioLabel")}
-            value={selection.choice}
-            options={SCENARIOS.map((choice) => ({
-              value: choice,
-              label: t(`modelBuilder.weather.scenario.${choice}`),
-            }))}
-            onChoose={(choice) => choose({ provider: selection.provider, choice: choice as WeatherChoice })}
-          />
-          <p className="text-xs text-muted-foreground">{t("modelBuilder.weather.scenarioHint")}</p>
-        </div>
-      ) : (
-        <div className="shrink-0 space-y-1">
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="weather-year">
-            {t("modelBuilder.weather.yearLabel")}
-          </label>
-          {years.length === 0 ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              {failed ? t("modelBuilder.weather.yearsUnavailable") : t("modelBuilder.weather.yearsLoading")}
-            </p>
-          ) : (
-            <select
-              id="weather-year"
-              value={String(selection.year ?? "")}
-              onChange={(event) =>
-                choose({ provider: selection.provider, choice: "year", year: Number(event.target.value) })
-              }
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="" disabled>
-                {t("modelBuilder.weather.yearPlaceholder")}
-              </option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          )}
-          <p className="text-xs text-muted-foreground">{t("modelBuilder.weather.yearHint")}</p>
-        </div>
-      )}
 
       {archiveNames.length > 1 && (
         <div className="shrink-0 space-y-1 border-t border-border pt-3">

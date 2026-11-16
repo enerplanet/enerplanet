@@ -3130,9 +3130,6 @@
     "weather": {
       "title": "Weather",
       "description": "Which weather dataset the model's runs use. The series itself is fetched by the backend at run time.",
-      "modeLabel": "Weather",
-      "modeScenario": "Typical",
-      "modeYear": "Recorded year",
       "scenarioLabel": "Solar year",
       "scenario": {
         "p10": "Low (p10)",
@@ -3140,11 +3137,6 @@
         "p90": "High (p90)"
       },
       "scenarioHint": "A scenario year has no calendar year of its own; the model's period sets the dates.",
-      "yearLabel": "Year",
-      "yearsLoading": "Loading the available years…",
-      "yearsUnavailable": "The weather service is not answering; the year list is unavailable.",
-      "yearPlaceholder": "Choose a year",
-      "yearHint": "The recorded weather of this year is used, and the model's period moves to it.",
       "archiveLabel": "Archive",
       "noFetchHint": "No weather data is fetched here — the config references a dataset and the backend retrieves the series when the model runs."
     },
