@@ -46,6 +46,17 @@ export interface SaveSession {
   /** Needed for the completeness decision: a finished flow saves as `draft`, not `incomplete`. */
   flow: Flow;
   registry: ModuleRegistry;
+  /**
+   * The workspace the model is created in, and who made it — read from the *live* host rather than the store.
+   *
+   * They are the session's identity, not something a module collects (`model-start` declares both ports and
+   * never writes them). The store carries them too, seeded when the session started, but a workspace that
+   * loads asynchronously can arrive after that: a model created with a null workspace is invisible in the
+   * dashboard, which lists models *within* one. Supplied here, the value is whatever is true at save time,
+   * and the stored one is the fallback.
+   */
+  workspaceId?: number;
+  userId?: string;
 }
 
 /**
@@ -169,7 +180,10 @@ export function createSaveNode(options: SaveNodeOptions): Module {
         registry,
         modelId,
         draftId: store.data.draftId,
-        userId: store.data.userId,
+        // Live first, stored second: the host knows the current workspace, the store knows what the session
+        // started with. See `SaveSession`.
+        workspaceId: session.workspaceId ?? store.data.workspaceId,
+        userId: session.userId ?? store.data.userId,
         status: statusFor(flow, registry, store, nodeId, modelId),
       });
 

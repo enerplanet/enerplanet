@@ -62,9 +62,20 @@ function gateway(recorded: LegacyModelPayload[]): ModelGateway {
 }
 
 /** The node as the frame builds it: one session getter, because the node lives inside what it needs. */
-function saveNodeFor(store: Store, payloads: LegacyModelPayload[] = []): Module {
+function saveNodeFor(
+  store: Store,
+  payloads: LegacyModelPayload[] = [],
+  identity: { workspaceId?: number; userId?: string } = {},
+): Module {
   return createSaveNode({
-    session: () => ({ gateway: gateway(payloads), store, workflow: WORKFLOW, flow: FLOW, registry }),
+    session: () => ({
+      gateway: gateway(payloads),
+      store,
+      workflow: WORKFLOW,
+      flow: FLOW,
+      registry,
+      ...identity,
+    }),
   });
 }
 
@@ -152,6 +163,30 @@ describe("the status this node earns", () => {
     await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
 
     expect(payloads[0].status).toBe("modified");
+  });
+});
+
+describe("the session's identity", () => {
+  it("creates the model in the workspace the host reports now, not the one the session started with", async () => {
+    // A workspace can load after the session was created, and a model created without one is invisible in the
+    // dashboard, which lists models *within* a workspace. The live answer is the one that matters.
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING], workspaceId: 1 }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+
+    await createEngine(store).runModule(saveNodeFor(store, payloads, { workspaceId: 9 }), { id: NODE_ID });
+
+    expect(payloads[0].workspace_id).toBe(9);
+  });
+
+  it("falls back to the store when the host has nothing to say", async () => {
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING], workspaceId: 1 }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+
+    expect(payloads[0].workspace_id).toBe(1);
   });
 });
 

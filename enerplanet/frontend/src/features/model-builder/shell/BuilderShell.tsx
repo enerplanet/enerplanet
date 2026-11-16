@@ -42,6 +42,8 @@ import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
 import { setRegionSource } from "../modules/model-start";
 import { setDemandSource } from "../modules/building-demand";
+import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
+import { useAuthStore } from "@/store/auth-store";
 import { BuildingPreparation, installBuildingConfigurator } from "./buildingConfigurator";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
@@ -76,16 +78,41 @@ interface AutoStatus {
   message?: string;
 }
 
+/**
+ * The session's identity: which workspace a model is created in, and who made it.
+ *
+ * It is not something the form collects — `model-start` declares both ports and never writes them, and
+ * `saveNode` says the same — so the host has to put them in the store. The legacy reads them at save time
+ * (`useWorkspaceStore`'s `currentWorkspace`, `useAuthStore`'s `user`); this is the same rule, applied once
+ * when a session starts.
+ *
+ * It matters beyond bookkeeping: the dashboard lists models *within a workspace*
+ * (`useModelsQuery`'s `requireWorkspace`), so a model created without one is a model the user cannot find —
+ * saved, correct, and invisible.
+ */
+export interface SessionIdentity {
+  workspaceId?: number;
+  userId?: string;
+}
+
 /** A session over whatever the current mode says the data is: the flow's seed, or a module's test data. */
-function sessionFor(workflow: Workflow, seed: Readonly<ModelData>): Session {
+function sessionFor(workflow: Workflow, seed: Readonly<ModelData>, identity: SessionIdentity): Session {
   // The store is built **with** the invalidator, once, here — so every seal in this session prunes
   // what the change affects (T7) without each call site having to remember to. A store built
   // without it treats every cascade as empty, which is what the core's own tests rely on.
   const store = createStore(
+    // The identity is a *fallback* under the seed, not an override: a loaded artefact carries the identity its
+    // model was actually created with, and that is what its session should keep.
+    //
     // `draftId` is the session's owner before a model exists. The legacy generates it client-side too
     // (`useAreaSelect`), and `BuildingPanelHost` refuses to render without an owner path, so it is seeded here
     // rather than fetched — the same rule `model-start` states for `userId`/`workspaceId`.
-    { ...seed, ...(seed.draftId === undefined ? { draftId: crypto.randomUUID() } : {}) },
+    {
+      ...(identity.workspaceId === undefined ? {} : { workspaceId: identity.workspaceId }),
+      ...(identity.userId === undefined ? {} : { userId: identity.userId }),
+      ...seed,
+      ...(seed.draftId === undefined ? { draftId: crypto.randomUUID() } : {}),
+    },
     { deriveCascade: createInvalidator(workflow.flow, workflow.registry) },
   );
   return { store, engine: createEngine(store) };
@@ -137,8 +164,23 @@ export const BuilderShell: React.FC = () => {
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
+
+  // The workspace a model is created in, and who made it. Read here, once, because a module cannot reach app
+  // state: the identity travels to the save as an ordinary port, seeded into the session the way `draftId` is.
+  // Without it the model is created with a null workspace — and the dashboard, which lists models *within* a
+  // workspace, cannot show it. See `SessionIdentity`.
+  const workspaceId = useWorkspaceStore((state) => state.currentWorkspace?.id);
+  const userId = useAuthStore((state) => state.user?.id);
+  const identity = useMemo<SessionIdentity>(
+    () => ({
+      ...(workspaceId === undefined ? {} : { workspaceId }),
+      ...(userId === undefined ? {} : { userId: String(userId) }),
+    }),
+    [workspaceId, userId],
+  );
+
   // Workflow mode is the default, so the first session is seeded from the flow.
-  const [session, setSession] = useState<Session>(() => sessionFor(workflow, workflow.initial));
+  const [session, setSession] = useState<Session>(() => sessionFor(workflow, workflow.initial, identity));
 
   /**
    * The node a run is holding the view on: set while that run is in flight, cleared once its effects have landed.
@@ -163,9 +205,13 @@ export const BuilderShell: React.FC = () => {
       workflow: workflow.ref,
       flow: workflow.flow,
       registry: workflow.registry,
+      // Rebound when the identity changes, so a workspace that loads after the session was created still
+      // reaches the save as a live value rather than whatever the seed happened to know at mount.
+      ...(identity.workspaceId === undefined ? {} : { workspaceId: identity.workspaceId }),
+      ...(identity.userId === undefined ? {} : { userId: identity.userId }),
     });
     return () => bindModelSaveSession(null);
-  }, [gateway, session, workflow]);
+  }, [gateway, session, workflow, identity]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   /**
@@ -229,6 +275,9 @@ export const BuilderShell: React.FC = () => {
         flow: workflow.flow,
         registry: workflow.registry,
         workflow: workflow.ref,
+        // The bar's save creates the model too, so it needs the same live identity the node's does.
+        ...(identity.workspaceId === undefined ? {} : { workspaceId: identity.workspaceId }),
+        ...(identity.userId === undefined ? {} : { userId: identity.userId }),
       });
 
       if (!outcome.ok) {
@@ -262,7 +311,7 @@ export const BuilderShell: React.FC = () => {
     const next = frameView(target, workflow, MODULES, session.store);
     setMode(target);
     setHeld(undefined);
-    setSession(sessionFor(workflow, next.seed));
+    setSession(sessionFor(workflow, next.seed, identity));
     setError(null);
     setSaveNotice(undefined);
     setOverlayOpen(false);
