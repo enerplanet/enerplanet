@@ -132,6 +132,11 @@ func deref(v *float64) float64 {
 	return *v
 }
 
+// areaError is a problem with the drawn area that the user can fix; its text is shown to them.
+type areaError string
+
+func (e areaError) Error() string { return string(e) }
+
 // buildFromFootprints replaces the new site's OSM copies with the 3D buildings
 // in area (see planFootprints) and returns the building count and revision.
 // It writes nothing when the count is outside 1..siteBuildingLimit.
@@ -164,7 +169,7 @@ func (s *SiteHandler) buildFromFootprints(ctx context.Context, siteID int, count
 	}
 	plan := planFootprints(copies, linked.Buildings, inArea.Buildings, footprints, func(f json.RawMessage) bool { return geo.Touches(area, f) })
 	if n := plan.buildingCount(); n == 0 || n > siteBuildingLimit {
-		return 0, 0, fmt.Errorf("the area holds %d buildings; a custom grid holds between 1 and %d", n, siteBuildingLimit)
+		return 0, 0, areaError(fmt.Sprintf("the area holds %d buildings; a custom grid holds between 1 and %d", n, siteBuildingLimit))
 	}
 	revision := 1
 	if len(plan.exclude) > 0 {
@@ -209,7 +214,7 @@ func (s *SiteHandler) siteCopies(ctx context.Context, siteID int) ([]siteCopy, e
 // object id.
 func (s *SiteHandler) footprints(ctx context.Context, country string, buildings []city2tabula.Building) (map[string]json.RawMessage, error) {
 	if len(buildings) > maxFootprintFetch {
-		return nil, fmt.Errorf("the area holds %d 3D buildings; draw a smaller area (at most %d)", len(buildings), maxFootprintFetch)
+		return nil, areaError(fmt.Sprintf("the area holds %d 3D buildings; draw a smaller area (at most %d)", len(buildings), maxFootprintFetch))
 	}
 	ids := make([]string, len(buildings))
 	for i, b := range buildings {
