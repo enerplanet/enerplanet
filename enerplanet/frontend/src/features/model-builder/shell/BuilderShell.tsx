@@ -204,18 +204,28 @@ export const BuilderShell: React.FC = () => {
   // The dashboard's button is what points at this, and the parameter name is the contract between the two.
   const [search] = useSearchParams();
   const requestedModel = search.get("model");
-  /** The request that has already been answered — a load must not run again on every render. */
-  const [answered, setAnswered] = useState<string | null>(null);
+  /**
+   * The request that has already been claimed — a load must not run again on every render.
+   *
+   * A **ref**, deliberately, and the difference is the whole bug. As state, claiming the request re-rendered
+   * the shell; the claim was then in the effect's dependencies, so React tore the effect down and ran its
+   * cleanup — which set `cancelled` — and the answer that arrived a moment later was thrown away by the guard.
+   * The load fetched, succeeded, and changed nothing: every node read as untouched, because the frame was
+   * still looking at the flow's seed. A ref cannot cause either half of that: no re-render, no re-run.
+   */
+  const claimed = useRef<string | null>(null);
+  const [loading, setLoading] = useState(requestedModel !== null);
 
   useEffect(() => {
-    if (requestedModel === null || answered === requestedModel) return;
-    // Claimed before the await: the guard above is what stops a second run, and a re-render between the
-    // request and its answer would otherwise start another.
-    setAnswered(requestedModel);
+    if (requestedModel === null || claimed.current === requestedModel) return;
+    // Claimed before the await, so a re-render between the request and its answer starts nothing new.
+    claimed.current = requestedModel;
+    setLoading(true);
 
     const modelId = Number(requestedModel);
     if (!Number.isFinite(modelId)) {
       setError(t("modelBuilder.shell.badModelId", "That model id is not a number."));
+      setLoading(false);
       return;
     }
 
@@ -252,13 +262,15 @@ export const BuilderShell: React.FC = () => {
       } catch (thrown) {
         if (cancelled) return;
         setError(thrown instanceof Error ? thrown.message : String(thrown));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [requestedModel, answered, gateway, workflow, t]);
+  }, [requestedModel, gateway, workflow, t]);
 
   // The save node's session, bound where the session itself lives. It reads the session when it *runs*, so
   // binding at construction would hand it a session that has since been replaced — a mode switch builds a
@@ -479,7 +491,7 @@ export const BuilderShell: React.FC = () => {
 
   // Nothing on screen while the load is in flight: the flow's seed would render first, and an empty builder
   // that is about to fill in reads as data loss. Placed after every hook, since it is an early return.
-  if (requestedModel !== null && answered !== requestedModel) {
+  if (loading) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center bg-background p-6">
         <p className="text-sm text-muted-foreground">
