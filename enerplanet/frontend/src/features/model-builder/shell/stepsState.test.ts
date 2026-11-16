@@ -120,6 +120,31 @@ describe("the steps panel reads the whole workflow", () => {
     expect(steps[0].current).toBe(true);
   });
 
+  it("marks exactly the steps a click can move to — the ones behind the session", () => {
+    const workflow = workflowOf(TWO_STEPS.nodes);
+
+    // Nothing has run: the session sits on the first step, so nothing is behind it and nothing is a control.
+    const atStart = stepsState(workflow.flow, workflow.registry, createStore(workflow.initial));
+    expect(atStart.map((step) => step.behind)).toEqual([false, false]);
+
+    const store = createStore(workflow.initial);
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
+
+    // The session has moved on to the second, so the first becomes a move target and the second — where the
+    // session already is — does not. A step *ahead* is never one: `moveToNode` refuses a forward target
+    // (`JumpNotBackwards`), so a click there would throw rather than navigate.
+    const atSecond = stepsState(workflow.flow, workflow.registry, store);
+    expect(atSecond.map((step) => step.behind)).toEqual([true, false]);
+    expect(atSecond.map((step) => step.current)).toEqual([false, true]);
+
+    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
+
+    // Complete: `position()` reports `index = flow.length`, so every step is behind and every step can be
+    // returned to. That is the point of a finished flow — you go back to change something.
+    const done = stepsState(workflow.flow, workflow.registry, store);
+    expect(done.map((step) => step.behind)).toEqual([true, true]);
+  });
+
   it("carries the reason: the ports a stale step wrote that are gone", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);

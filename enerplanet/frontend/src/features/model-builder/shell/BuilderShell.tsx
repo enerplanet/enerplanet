@@ -56,7 +56,7 @@ import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
 import { loadSession } from "../load/loader";
-import { saveSession } from "./actions";
+import { moveToNode, saveSession } from "./actions";
 import { autoRunFor, createAutoGuard } from "./autoRun";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
@@ -428,7 +428,15 @@ export const BuilderShell: React.FC = () => {
    */
   const stepsPanel =
     mode.kind === "test" ? null : (
-      <StepsPanel flow={workflow.flow} registry={workflow.registry} store={session.store} />
+      <StepsPanel
+        flow={workflow.flow}
+        registry={workflow.registry}
+        store={session.store}
+        // The same primitive the bar's prior control calls: a pure position move that discards nothing, so a
+        // click here cannot invalidate anything. It refuses a forward target, which is why `stepsState` only
+        // marks steps *behind* the session as moveable — the panel offers exactly what the core will do.
+        onMove={(nodeId) => moveToNode(workflow.flow, workflow.registry, session.store, nodeId)}
+      />
     );
 
   /**

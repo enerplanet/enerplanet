@@ -27,6 +27,17 @@ export interface StepRow {
   state: DerivedState;
   /** The node the session sits on. False for every step once the flow is complete. */
   current: boolean;
+  /**
+   * This step is behind the session, so a click can **move** to it.
+   *
+   * Strictly `< at.index`, which is the bar's rule and the core's: `moveToNode` refuses a target ahead of the
+   * session (`JumpNotBackwards`), because a later node is reached by *running* it, not by standing on it. A
+   * panel that offered a forward click would be offering something the core will not do.
+   *
+   * On a **complete** flow `at.index` is `flow.length`, so every step is behind and every step can be
+   * returned to — which is the whole point of a complete flow: you go back to change something.
+   */
+  behind: boolean;
   /** Ports this step wrote that are gone — why it reads stale. */
   pruned: readonly PortKey[];
   /** Required ports absent from the store right now — why it cannot run where it sits. */
@@ -46,6 +57,7 @@ export function stepsState(flow: Flow, registry: ModuleRegistry, store: Store): 
     // is redundant today and stays as intent. A mutation removing it leaves every case green, which is
     // recorded rather than hidden.
     current: !at.complete && index === at.index,
+    behind: index < at.index,
     pruned: entry.pruned,
     blocked: entry.blocked,
   }));

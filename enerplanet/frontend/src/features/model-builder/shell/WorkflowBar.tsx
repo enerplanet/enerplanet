@@ -15,8 +15,10 @@
  * Apply), and an auto node runs on arrival with no button anywhere (`autoRun.ts`), so a bar button whose
  * enabled-ness depended on node state would be the frame pretending to know something only the session knows.
  *
- * Jumping to *any* step is deferred (`optionals.md`): it would make every step a potential jump, and a jump
- * deserves the discard preview it ought to show before it commits.
+ * Jumping to *any* step was deferred while movement meant a discard. It does not any more: a move is a pure
+ * position move that discards nothing, so there is no preview to owe, and the steps panel offers the jump
+ * (§3.3). The rule that remains is direction — `moveToNode` refuses a forward target, because forward is
+ * `Continue` running the node.
  *
  * In **test mode** there is no position to show, so it says so rather than rendering a bar of dashes — a bar
  * naming steps while no workflow drives the session would be lying about where it is. The movement and save

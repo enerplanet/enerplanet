@@ -3073,6 +3073,7 @@
       "auto": "auto"
     },
     "steps": {
+      "moveTo": "Ga naar {{step}}",
       "title": "stappen",
       "blocked": "heeft {{ports}} nodig",
       "pruned": "verloren: {{ports}}"

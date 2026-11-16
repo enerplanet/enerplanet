@@ -5,10 +5,21 @@
  * am I in this workflow" at a glance and then get out of the way. The rail keeps the state legible as a dot
  * even when there is no room for words, so collapsing costs context but not information.
  *
- * **Info-only.** Clicking a step to jump to it is designed and deliberately not built: it would make every
- * step a potential jump, and a jump deserves the discard preview it ought to show before it commits. So the
- * rail is not a control, and nothing here looks like one — the only thing that responds to a click is the
- * toggle.
+ * **A step behind the session is a control; nothing else is.** Clicking one **moves** there — a pure position
+ * move, the same `moveToNode` the bar's prior control calls, which seals a `jump` with an empty cascade: it
+ * re-arms the node it lands on and discards nothing. What goes stale is decided by *influence* when a node
+ * actually runs (T7), never by how far the panel moved, so a move cannot invalidate anything by itself.
+ *
+ * Steps **ahead** of the session are deliberately not clickable, and that is the core's rule rather than a UI
+ * preference: `moveToNode` refuses a forward target (`JumpNotBackwards`), because a later node is reached by
+ * *running* it, not by standing on it. Rendering an unreachable step as a button would offer something that
+ * throws.
+ *
+ * This panel was info-only while jumping was deferred, and the reason recorded for that deferral was that a
+ * jump "deserves the discard preview it ought to show before it commits". That reason dissolved when movement
+ * was built as a pure position move — there is no discard to preview. What the deferral was guarding against
+ * is handled by the direction rule above instead, which is a shape the user can see rather than a dialog they
+ * must answer.
  *
  * Colours come from the theme's semantic pairs rather than raw hues, so the states survive dark mode.
  */
@@ -37,9 +48,52 @@ interface Props {
   flow: Flow;
   registry: ModuleRegistry;
   store: Store;
+  /**
+   * Move the session to a step behind it. Absent in test mode, where there is no position to move — and a step
+   * with nowhere to move to is plain text, which is the honest rendering: a disabled button still looks like
+   * something you are being kept from.
+   */
+  onMove?: (nodeId: string) => void;
 }
 
-export const StepsPanel: React.FC<Props> = ({ flow, registry, store }) => {
+/** One step's body — shared by the control and the plain rendering, so the two can never drift apart. */
+const StepBody: React.FC<{ step: StepRow; open: boolean }> = ({ step, open }) => {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <span
+        className={`mt-1 h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[step.state]} ${
+          step.current ? "ring-2 ring-sky-500 ring-offset-1 ring-offset-card" : ""
+        }`}
+      />
+
+      {open && (
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm ${STATE_CLASS[step.state]}`}>{step.label}</span>
+
+          {step.blocked.length > 0 && (
+            <span className="block truncate text-xs text-destructive">
+              {t("modelBuilder.steps.blocked", "needs {{ports}}", {
+                ports: step.blocked.join(", "),
+              })}
+            </span>
+          )}
+
+          {step.blocked.length === 0 && step.pruned.length > 0 && (
+            <span className="block truncate text-xs text-amber-600 dark:text-amber-400">
+              {t("modelBuilder.steps.pruned", "lost {{ports}}", {
+                ports: step.pruned.join(", "),
+              })}
+            </span>
+          )}
+        </span>
+      )}
+    </>
+  );
+};
+
+export const StepsPanel: React.FC<Props> = ({ flow, registry, store, onMove }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -64,37 +118,29 @@ export const StepsPanel: React.FC<Props> = ({ flow, registry, store }) => {
       </button>
 
       <ol className="min-h-0 flex-1 overflow-auto py-1">
-        {steps.map((step) => (
-          <li key={step.nodeId} className="flex items-start gap-2 px-3 py-1.5">
-            <span
-              className={`mt-1 h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[step.state]} ${
-                step.current ? "ring-2 ring-sky-500 ring-offset-1 ring-offset-card" : ""
-              }`}
-            />
+        {steps.map((step) => {
+          const move = step.behind && onMove !== undefined;
 
-            {open && (
-              <span className="min-w-0 flex-1">
-                <span className={`block truncate text-sm ${STATE_CLASS[step.state]}`}>{step.label}</span>
-
-                {step.blocked.length > 0 && (
-                  <span className="block truncate text-xs text-destructive">
-                    {t("modelBuilder.steps.blocked", "needs {{ports}}", {
-                      ports: step.blocked.join(", "),
-                    })}
-                  </span>
-                )}
-
-                {step.blocked.length === 0 && step.pruned.length > 0 && (
-                  <span className="block truncate text-xs text-amber-600 dark:text-amber-400">
-                    {t("modelBuilder.steps.pruned", "lost {{ports}}", {
-                      ports: step.pruned.join(", "),
-                    })}
-                  </span>
-                )}
-              </span>
-            )}
-          </li>
-        ))}
+          return (
+            <li key={step.nodeId} className="flex items-start">
+              {move ? (
+                <button
+                  type="button"
+                  onClick={() => onMove(step.nodeId)}
+                  // Named by the step it moves to, so the control is not just a chevron to a screen reader.
+                  aria-label={t("modelBuilder.steps.moveTo", "Go to {{step}}", { step: step.label })}
+                  className="flex w-full items-start gap-2 rounded px-3 py-1.5 text-left hover:bg-muted"
+                >
+                  <StepBody step={step} open={open} />
+                </button>
+              ) : (
+                <div className="flex w-full items-start gap-2 px-3 py-1.5">
+                  <StepBody step={step} open={open} />
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </aside>
   );

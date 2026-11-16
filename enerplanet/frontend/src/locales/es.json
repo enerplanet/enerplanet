@@ -3074,6 +3074,7 @@
       "auto": "auto"
     },
     "steps": {
+      "moveTo": "Ir a {{step}}",
       "title": "pasos",
       "blocked": "necesita {{ports}}",
       "pruned": "perdido: {{ports}}"
