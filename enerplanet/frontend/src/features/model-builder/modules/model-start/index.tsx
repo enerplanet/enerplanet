@@ -148,8 +148,12 @@ function parseScenarioDate(iso: string): Date | undefined {
  * The period as the user reads it: the months it covers, in the app's current language.
  *
  * Rendered from the stored `fromDate`/`toDate`, so it always tells the truth about the model rather than a
- * local guess. Month and year names come from `Intl`, which already knows every locale the app ships — hence
- * no month-name i18n keys. `undefined` when no period is set, so the caller can say so instead of an empty line.
+ * local guess. Month names come from `Intl`, which already knows every locale the app ships — hence no
+ * month-name i18n keys. `undefined` when no period is set, so the caller can say so instead of an empty line.
+ *
+ * **No year.** A scenario year is assembled month by month from historical weather, so it has no calendar year
+ * of its own — the dates carry one only because the simulation engine needs a calendar date to run against.
+ * Printing it would claim a year the weather does not have.
  */
 export function periodPreview(
   fromDate: string | undefined,
@@ -161,16 +165,9 @@ export function periodPreview(
   if (from === undefined || to === undefined) return undefined;
 
   const month = new Intl.DateTimeFormat(locale, { month: "long" });
-  const year = new Intl.DateTimeFormat(locale, { year: "numeric" });
-  const months =
-    fromDate === toDate || month.format(from) === month.format(to)
-      ? month.format(from)
-      : `${month.format(from)} – ${month.format(to)}`;
-  const years =
-    year.format(from) === year.format(to)
-      ? year.format(from)
-      : `${year.format(from)} – ${year.format(to)}`;
-  return `${months} ${years}`;
+  return fromDate === toDate || month.format(from) === month.format(to)
+    ? month.format(from)
+    : `${month.format(from)} – ${month.format(to)}`;
 }
 
 /**

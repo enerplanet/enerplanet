@@ -264,8 +264,9 @@ describe("model-start's period range", () => {
 
   it("renders the period's months from the stored dates, in the given language", () => {
     // The months come from `Intl` on the actual stored dates, so the preview cannot disagree with the model.
-    expect(periodPreview(Q2_START, YEAR_END, EN)).toBe("April – December 2023");
-    expect(periodPreview(YEAR_START, Q1_END, EN)).toBe("January – March 2023");
+    // No year: a scenario has none of its own, so printing one would claim a calendar year the weather lacks.
+    expect(periodPreview(Q2_START, YEAR_END, EN)).toBe("April – December");
+    expect(periodPreview(YEAR_START, Q1_END, EN)).toBe("January – March");
     // No period, no line — the caller says so instead of printing an empty one.
     expect(periodPreview(undefined, undefined, EN)).toBeUndefined();
     expect(periodPreview(Q2_START, undefined, EN)).toBeUndefined();
