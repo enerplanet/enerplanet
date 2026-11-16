@@ -75,6 +75,24 @@ export interface TechAssignment {
  */
 export type TechSource = "catalogue" | "estimated" | "user";
 
+/** What a household cooks with — the legacy's own union, saved as `config.cookingCarrier`. */
+export type CookingCarrier = "electric" | "gas";
+
+/** How the model is run: `plan` optimises the dispatch, `operate` runs it. Saved as `config.mode`. */
+export type RunMode = "plan" | "operate";
+
+/**
+ * Import and export prices in ct/kWh, or `null` for "no own price".
+ *
+ * `null` is the legacy's own default (`NO_OWN_PRICES`), and it means *not set*, not *free* — the backend
+ * substitutes a market price. Writing a zero here would claim a decision nobody made.
+ */
+export interface ElectricityPrices {
+  import_ct_per_kwh: number | null;
+  export_ct_per_kwh: number | null;
+}
+
+/** `region` is a nested port: its `country`/`state` are what a downstream module matches on, not a flat value. */
 export interface RegionRef {
   country: string;
   state: string;
@@ -126,6 +144,20 @@ export interface ModelData {
   resolution?: number;
   workspaceId?: number;
   userId?: string;
+  /**
+   * What a household cooks with. Gas cooking adds BuEM's kitchen profile as a gas demand, so this is a real
+   * modelling choice rather than a label; the legacy saves it as `config.cookingCarrier`.
+   */
+  cookingCarrier?: CookingCarrier;
+  /**
+   * How the model is run — `plan` optimises, `operate` dispatches. The legacy saves it as `config.mode`.
+   */
+  mode?: RunMode;
+  /**
+   * Import/export prices in ct/kWh, or `null` for "no own price". The legacy saves it as
+   * `config.electricity_prices`.
+   */
+  electricityPrices?: ElectricityPrices;
   region?: RegionRef;
 
   // grid topology (region-select / grid-generation / grid-editor)

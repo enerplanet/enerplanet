@@ -10,9 +10,10 @@
  * One respect in which the oracle is *not* the original, worth knowing before trusting the comparison blindly:
  * the extraction curates `config` to the ports the store holds, while the legacy spread the whole `pylovoData`
  * object — so `meta` and `boundary` travelled on the real wire and do not here. `modules/model-save.md` carries
- * the full parity audit, including the config keys the legacy writes and this builder does not yet
- * (`weather*`, `cookingCarrier`, `mode`, `electricity_prices`, `site`), each blocked on a port that does not
- * exist yet.
+ * the full parity audit. One legacy config key is still written absent rather than reproduced: **`site`**, which
+ * the legacy sets only in site mode, as the identity of the pylovo site being edited — there is no site mode
+ * here, so there is nothing honest to write. The other keys the audit listed (`weather*`, `cookingCarrier`,
+ * `mode`, `electricity_prices`) now have ports and are written verbatim.
  *
  * Two deliberate differences from the legacy original:
  *
@@ -46,6 +47,21 @@ const PYPSA_DEFAULTS = {
 } as const;
 
 /**
+ * The legacy's three settings keys, each written verbatim from its port — including the odd spelling (`mode`
+ * lowercase, `electricity_prices` snake_case beside `cookingCarrier` camelCase), because parity is the point.
+ *
+ * An absent port writes nothing rather than a default: the defaults belong to `model-start`, which seeds them
+ * on every model. A save that invented its own would let a model look decided when nobody decided anything.
+ */
+function settingsKeys(data: Readonly<ModelData>): Record<string, unknown> {
+  return {
+    ...(data.cookingCarrier === undefined ? {} : { cookingCarrier: data.cookingCarrier }),
+    ...(data.mode === undefined ? {} : { mode: data.mode }),
+    ...(data.electricityPrices === undefined ? {} : { electricity_prices: data.electricityPrices }),
+  };
+}
+
+/**
  * The `config` object for a complete flow — the legacy `buildSaveConfig`, reading ports instead of
  * `pylovoData`. Note `mvLines` → `mv_lines`: the store keeps camelCase, the wire keeps the legacy
  * snake_case, and the mapping is exactly the kind of thing parity tests exist to hold still.
@@ -69,6 +85,9 @@ export function buildSaveConfig(data: Readonly<ModelData>): Record<string, unkno
   if (weather !== undefined && weather.provider !== null) config.weatherProvider = weather.provider;
   if (weather?.choice === "year" && weather.year !== undefined) config.weatherYear = weather.year;
   if (weather !== undefined && weather.choice !== "year") config.weatherScenario = weather.choice;
+
+  // The legacy's three settings keys, each written verbatim from its port. See `settingsKeys`.
+  Object.assign(config, settingsKeys(data));
 
   // PyPSA is on unless a settings module turned it off (`pypsa_enabled === false`).
   const advanced = data.advancedParams;

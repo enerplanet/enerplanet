@@ -15,7 +15,12 @@ import {
   runInScratch,
   type RegionRef,
 } from "@model-builder/core";
-import modelStart, { hold } from "./index";
+import modelStart, {
+  DEFAULT_COOKING_CARRIER,
+  DEFAULT_RUN_MODE,
+  NO_OWN_PRICES,
+  hold,
+} from "./index";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
 const NODE = modelStart.module.id;
@@ -45,7 +50,10 @@ describe("model-start's declaration", () => {
     const declared = modelStart.module.params.map((param) => param.port);
 
     expect([...declared].sort()).toEqual([
+      "cookingCarrier",
+      "electricityPrices",
       "fromDate",
+      "mode",
       "modelName",
       "region",
       "resolution",
@@ -78,11 +86,19 @@ describe("model-start's behaviour", () => {
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary.map((op) => op.path).sort()).toEqual([
+      "/cookingCarrier",
+      "/electricityPrices",
       "/fromDate",
+      "/mode",
       "/modelName",
       "/resolution",
       "/toDate",
     ]);
+    // The three settings no step produces ride along with the identity, rather than waiting for the save to
+    // invent them.
+    expect(store.data.cookingCarrier).toBe(DEFAULT_COOKING_CARRIER);
+    expect(store.data.mode).toBe(DEFAULT_RUN_MODE);
+    expect(store.data.electricityPrices).toEqual(NO_OWN_PRICES);
   });
 
   it("holds the chosen region as a RegionRef — the port downstream modules read", async () => {
@@ -109,7 +125,14 @@ describe("model-start's behaviour", () => {
   });
 
   it("seals nothing when the hold would change nothing", async () => {
-    const store = createStore({ modelName: NAME.trim() });
+    // The store is seeded with the same defaults the module writes, so the only thing this run *could* say is
+    // what the hold says — and that changes nothing.
+    const store = createStore({
+      modelName: NAME.trim(),
+      cookingCarrier: DEFAULT_COOKING_CARRIER,
+      mode: DEFAULT_RUN_MODE,
+      electricityPrices: NO_OWN_PRICES,
+    });
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME });

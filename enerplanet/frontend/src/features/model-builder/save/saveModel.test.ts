@@ -151,6 +151,34 @@ describe("T13 — the Call A payload is the legacy payload", () => {
     expect(config.mv_lines).toEqual(fc([building("mv1")]));
   });
 
+  it("writes the legacy's settings keys verbatim, mixed spelling and all", () => {
+    // These three have no producing step: `model-start` seeds them with the legacy's defaults, and the save
+    // writes whatever the store holds. `site` is deliberately absent — the legacy writes it only in site mode,
+    // as the identity of the pylovo site being edited.
+    const config = buildSaveConfig({
+      cookingCarrier: "gas",
+      mode: "operate",
+      electricityPrices: { import_ct_per_kwh: 34, export_ct_per_kwh: null },
+    });
+
+    // Verbatim, including the legacy's own inconsistency: `mode` lowercase, `electricity_prices` snake_case
+    // beside `cookingCarrier` camelCase. Parity is the point, so the oddity is reproduced rather than tidied.
+    expect(config.cookingCarrier).toBe("gas");
+    expect(config.mode).toBe("operate");
+    expect(config.electricity_prices).toEqual({ import_ct_per_kwh: 34, export_ct_per_kwh: null });
+    expect(config.site).toBeUndefined();
+  });
+
+  it("omits a settings key the store does not hold, rather than inventing a default", () => {
+    // The defaults belong to `model-start`, which always seeds them. A save that invented its own would let a
+    // model look decided when nobody decided anything.
+    const config = buildSaveConfig({});
+
+    expect(config.cookingCarrier).toBeUndefined();
+    expect(config.mode).toBeUndefined();
+    expect(config.electricity_prices).toBeUndefined();
+  });
+
   it("writes the legacy pypsa defaults, and honours pypsa_enabled false", () => {
     expect(buildSaveConfig({}).pypsa).toEqual({
       trafo_mv_lv_used: true,

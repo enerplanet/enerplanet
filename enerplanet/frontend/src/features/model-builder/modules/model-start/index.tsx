@@ -61,6 +61,20 @@ const REGIONS: readonly RegionOption[] = [
 /** The resolutions a building model is usually drawn at, in minutes. */
 const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
 
+/**
+ * The legacy's defaults for the three settings **no step produces**.
+ *
+ * They are seeded here rather than left to the save because the save must write what the store holds, and a
+ * key that is absent from the store has no honest value to write. `null` prices mean *not set* — the backend
+ * substitutes a market price — so it is the default and not a zero.
+ *
+ * Read off the legacy's own store (`modelStore.ts`: `cookingCarrier: "electric"`, `runMode: "plan"`,
+ * `NO_OWN_PRICES`).
+ */
+export const DEFAULT_COOKING_CARRIER = "electric" as const;
+export const DEFAULT_RUN_MODE = "plan" as const;
+export const NO_OWN_PRICES = { import_ct_per_kwh: null, export_ct_per_kwh: null };
+
 /** A region's bounds as a rectangle — the geometry the map service frames. */
 function boundsGeometry(bounds: [number, number, number, number]): {
   type: "Polygon";
@@ -138,6 +152,19 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   return issues;
 }
 
+/**
+ * Fill the legacy's defaults for the three settings **no step produces**, only where nothing is there yet.
+ *
+ * "Only where nothing is there" is the whole rule: a loaded model has its own values and a re-run must not
+ * overwrite them with the defaults — which is also what keeps a second run from sealing a transaction it has
+ * nothing to say about.
+ */
+function seedDefaults(ctx: ModuleCtx, proposed: Partial<ModelData>): void {
+  if (ctx.read("cookingCarrier") === undefined) proposed.cookingCarrier = DEFAULT_COOKING_CARRIER;
+  if (ctx.read("mode") === undefined) proposed.mode = DEFAULT_RUN_MODE;
+  if (ctx.read("electricityPrices") === undefined) proposed.electricityPrices = NO_OWN_PRICES;
+}
+
 const module = defineModule({
   id: "model-start",
   name: "Model start",
@@ -148,6 +175,10 @@ const module = defineModule({
   // `workspaceId`/`userId` are declared but never written: they are the *session's* identity, seeded by the
   // host (the loader), not something a form invents. Declaring them says this module owns the model's identity
   // surface; leaving them untouched is what keeps it from clobbering what the session already knows.
+  //
+  // `cookingCarrier`/`mode`/`electricityPrices` are the settings **no step produces** — the legacy exposes
+  // them in a settings panel and writes them on every save. This module seeds them with the legacy's defaults
+  // (`run()` below), which is what gives the save something honest to write.
   params: [
     { port: "modelName" },
     { port: "fromDate" },
@@ -156,6 +187,9 @@ const module = defineModule({
     { port: "region" },
     { port: "workspaceId" },
     { port: "userId" },
+    { port: "cookingCarrier" },
+    { port: "mode" },
+    { port: "electricityPrices" },
   ],
 
   // Nothing can invalidate this module's work, because nothing feeds it: it has no inputs at all.
@@ -198,6 +232,9 @@ const module = defineModule({
       ctx.read("region");
       proposed.region = collected.region;
     }
+
+    // The legacy's defaults, for the settings no step produces. See `seedDefaults`.
+    seedDefaults(ctx, proposed);
 
     ctx.commit(proposed);
   },
