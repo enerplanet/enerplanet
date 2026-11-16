@@ -41,6 +41,7 @@ import (
 	"spatialhub_backend/internal/middleware"
 	modelhandler "spatialhub_backend/internal/model/handler"
 	modelsession "spatialhub_backend/internal/model/session"
+	workflowhandler "spatialhub_backend/internal/model/workflow"
 	opentechdb "spatialhub_backend/internal/opentechdb"
 	"spatialhub_backend/internal/pv"
 	resulthandler "spatialhub_backend/internal/result/handler"
@@ -54,6 +55,7 @@ import (
 	region "spatialhub_backend/internal/store/region"
 	seriesstore "spatialhub_backend/internal/store/series"
 	usersstore "spatialhub_backend/internal/store/users"
+	workflowstore "spatialhub_backend/internal/store/workflow"
 	"spatialhub_backend/internal/tentacron"
 	weatherclient "spatialhub_backend/internal/weather"
 	"spatialhub_backend/internal/webservice"
@@ -725,6 +727,12 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	)
 	registerModelSessionRoutes(protectedAPI, modelSessionHandler)
 
+	// The Model Builder's workflow API. Its own store and its own routes, isolated from the legacy
+	// model API the same way the session API is — it stores a document and checks its shape, not its
+	// meaning (the module catalogue lives in the frontend), so it owes the legacy contract nothing.
+	workflowHandler := workflowhandler.NewHandler(deps.DB, workflowstore.NewStore(deps.DB))
+	registerWorkflowRoutes(protectedAPI, workflowHandler)
+
 	techHandler := technologyhandler.NewHandler(deps.DB)
 	registerTechnologyRoutes(protectedAPI, techHandler)
 
@@ -954,6 +962,17 @@ func registerModelSessionRoutes(api *gin.RouterGroup, handler *modelsession.Hand
 	// sibling under `/models/` would sit beside a path parameter — so this one lives on its own prefix,
 	// where it cannot collide with a model id.
 	api.GET("/model-sessions/ids", handler.GetModelSessionIDs)
+}
+
+// registerWorkflowRoutes wires the Model Builder's workflow API. Kept as its own registration so the
+// isolation is explicit: these routes and their handler can change shape without touching a legacy
+// model route, and it addresses workflows by their own id (`:id` is the workflow_id), not the serial.
+func registerWorkflowRoutes(api *gin.RouterGroup, handler *workflowhandler.Handler) {
+	api.GET("/workflows", handler.ListWorkflows)
+	api.GET("/workflows/:id", handler.GetWorkflow)
+	api.POST("/workflows", handler.CreateWorkflow)
+	api.PUT("/workflows/:id", handler.UpdateWorkflow)
+	api.DELETE("/workflows/:id", handler.DeleteWorkflow)
 }
 
 func registerInternalModelLifecycleRoutes(api *gin.RouterGroup, handler *modelhandler.LifecycleHandler) {
