@@ -11,7 +11,7 @@
  * decides whether a node can actually run. Do not mistake the palette for a guarantee.
  */
 
-import { declaredPorts, requiredPorts, type Module } from "../core/module";
+import { declaredPorts, isHostModule, requiredPorts, type Module } from "../core/module";
 import type { PortKey } from "../core/ports";
 import type { BuilderModule } from "../shell/contract";
 import type { WorkflowNodeDocument } from "./types";
@@ -49,23 +49,31 @@ export function missingPorts(module: Module, produced: ReadonlySet<PortKey>): Po
 }
 
 /**
- * The palette: **every** catalogue module, in catalogue order, each with what it needs and what is still
- * missing.
+ * The palette: every node module in the catalogue, in catalogue order, each with what it needs and what is
+ * still missing.
  *
- * Every module is listed — never hidden — because a greyed entry that names the port it waits for is the
- * guidance the editor exists to give, and a module that vanishes reads as a bug. Showing the whole
- * catalogue is also what keeps the plan's "the palette never loses a base module" rule true by
- * construction: nothing is ever filtered out. The modules whose requirements the current chain satisfies
- * are exactly the ones an "Add" is offered for; the rest say which port they are waiting for.
+ * Every node module is listed — never hidden — because a greyed entry that names the port it waits for is the
+ * guidance the editor exists to give, and a module that vanishes reads as a bug. Showing them all is also
+ * what keeps the plan's "the palette never loses a base module" rule true by construction: nothing that can
+ * be a step is ever filtered out. The modules whose requirements the current chain satisfies are exactly the
+ * ones an "Add" is offered for; the rest say which port they are waiting for.
+ *
+ * A **host module** is filtered out, and that is not an exception to the rule above: a host module is not a
+ * step anyone could place. It declares no region, so a flow naming it would describe a node with nothing to
+ * show — the frame mounts it once and hands its service to the modules that asked for it. The palette offers
+ * what can go in a flow; the catalogue still holds every module, which is what lets the editor *report* a
+ * stored flow that names one (see `WorkflowEditor`) instead of mistaking it for a module this build lacks.
  */
 export function paletteFor(
   catalogue: readonly BuilderModule[],
   chain: readonly WorkflowNodeDocument[],
 ): PaletteEntry[] {
   const produced = producedPorts(chain, catalogue);
-  return catalogue.map((entry) => {
-    const requires = requiredPorts(entry.module);
-    const missing = missingPorts(entry.module, produced);
-    return { module: entry, requires, missing, available: missing.length === 0 };
-  });
+  return catalogue
+    .filter((entry) => !isHostModule(entry.module))
+    .map((entry) => {
+      const requires = requiredPorts(entry.module);
+      const missing = missingPorts(entry.module, produced);
+      return { module: entry, requires, missing, available: missing.length === 0 };
+    });
 }

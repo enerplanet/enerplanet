@@ -14,7 +14,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
-import { declaredPorts } from "../core/module";
+import { declaredPorts, isHostModule } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
 import { appendModule, removeFrom, removedCount } from "./chain";
 import { paletteFor, type PaletteEntry } from "./gate";
@@ -198,6 +198,24 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             <ol className="space-y-2">
               {document.nodes.map((node, index) => {
                 const entry = byId.get(node.moduleId);
+                // Two ways a stored node can name something that is not a step this build can run. Both are
+                // data conditions to report — naming the node and the module — rather than exceptions that
+                // take the surface down (plan §3): a module the catalogue no longer declares, and a host
+                // module, which is in the catalogue but was never a node.
+                const problem =
+                  entry === undefined
+                    ? t(
+                        "modelBuilder.workflows.editor.unknownModule",
+                        "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
+                        { moduleId: node.moduleId, nodeId: node.id },
+                      )
+                    : isHostModule(entry.module)
+                      ? t(
+                          "modelBuilder.workflows.editor.notANode",
+                          "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step.",
+                          { moduleId: node.moduleId, nodeId: node.id },
+                        )
+                      : null;
                 return (
                   <li
                     key={node.id}
@@ -208,14 +226,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      {entry === undefined ? (
-                        // A stored flow may name a module this build no longer declares. That is a data
-                        // condition to report — naming node and module — not an exception that takes the
-                        // surface down (plan §3).
-                        <p className="text-sm text-destructive">
-                          {t("modelBuilder.workflows.editor.unknownModule", "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\".", { moduleId: node.moduleId, nodeId: node.id })}
-                        </p>
-                      ) : (
+                      {entry !== undefined && !isHostModule(entry.module) ? (
                         <>
                           <p className="truncate text-sm font-medium text-foreground">
                             {node.label ?? entry.module.name ?? node.moduleId}
@@ -229,6 +240,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                             </p>
                           )}
                         </>
+                      ) : (
+                        <p className="text-sm text-destructive">{problem}</p>
                       )}
                     </div>
 

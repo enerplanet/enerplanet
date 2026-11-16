@@ -3217,7 +3217,8 @@
         "produces": "erzeugt",
         "gateHint": "Ein Modul kann hinzugefügt werden, sobald die Kette bereits jeden benötigten Port erzeugt.",
         "removeConfirm": "Das Entfernen dieses Schritts entfernt auch alles danach - eine lineare Kette darf keine Lücke haben. {{count}} Schritt(e) entfernen?",
-        "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds."
+        "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds.",
+        "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen."
       }
     }
   }

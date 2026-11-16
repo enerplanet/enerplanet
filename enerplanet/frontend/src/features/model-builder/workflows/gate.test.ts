@@ -1,7 +1,8 @@
 /**
  * The gate rule (plan §3). These are the cases the editor's whole promise rests on: a module becomes
  * addable exactly when its `required` ports are produced by the chain, and stays unavailable otherwise —
- * with the port it is waiting for named, never hidden.
+ * with the port it is waiting for named, never hidden. The one thing not offered at all is a host module,
+ * which cannot be a step: it declares no region to render.
  *
  * Written failing first.
  */
@@ -11,9 +12,14 @@ import type { BuilderModule } from "../shell/contract";
 import { missingPorts, paletteFor, producedPorts } from "./gate";
 import type { WorkflowNodeDocument } from "./types";
 
-/** A catalogue entry with just the surface the gate reads. */
-function entry(id: string, params: Param[]): BuilderModule {
-  const module: Module = { id, name: id, params, affect: {}, layout: [] };
+/**
+ * A catalogue entry with just the surface the gate reads.
+ *
+ * A region by default, because a module that declares one is what the palette is for; `HOST` below passes
+ * none, which is the whole difference the last test is about.
+ */
+function entry(id: string, params: Param[], layout: Module["layout"] = ["sidebar"]): BuilderModule {
+  const module: Module = { id, name: id, params, affect: {}, layout };
   return { module, Component: () => null };
 }
 
@@ -21,6 +27,9 @@ const BASE = entry("base", [{ port: "modelName" }]);
 const CONSUMER = entry("consumer", [{ port: "buildings", required: true }]);
 const SECOND = entry("second", [{ port: "buildings", required: true }, { port: "coordinates" }]);
 const THIRD = entry("third", [{ port: "coordinates", required: true }]);
+
+/** A host module: no region declared, so nothing to render and no place in a flow (`isHostModule`). */
+const HOST = entry("host", [], []);
 
 const CATALOGUE = [BASE, CONSUMER, SECOND, THIRD];
 
@@ -56,8 +65,14 @@ describe("a module is addable only when the chain produces its required ports", 
     expect(produced.has("coordinates")).toBe(true);
   });
 
-  it("lists every catalogue module, in catalogue order, and never hides one", () => {
+  it("lists every node module, in catalogue order, and never hides one", () => {
     const palette = paletteFor(CATALOGUE, []);
+    expect(palette.map((p) => p.module.module.id)).toEqual(["base", "consumer", "second", "third"]);
+  });
+
+  it("does not offer a host module — it declares no region, so it cannot be a step", () => {
+    const palette = paletteFor([...CATALOGUE, HOST], []);
+
     expect(palette.map((p) => p.module.module.id)).toEqual(["base", "consumer", "second", "third"]);
   });
 

@@ -3213,7 +3213,8 @@
         "produces": "produceert",
         "gateHint": "Een module kan worden toegevoegd zodra de keten elke vereiste poort al produceert.",
         "removeConfirm": "Het verwijderen van deze stap verwijdert ook alles erna - een lineaire keten mag geen gat hebben. {{count}} stap(pen) verwijderen?",
-        "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build."
+        "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build.",
+        "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen."
       }
     }
   }

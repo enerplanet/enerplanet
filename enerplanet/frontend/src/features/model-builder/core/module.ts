@@ -139,3 +139,20 @@ export function declaredPorts(module: Module): PortKey[] {
 export function requiredPorts(module: Module): PortKey[] {
   return module.params.filter((param) => param.required === true).map((param) => param.port);
 }
+
+/**
+ * Is this a **host module** — one that renders no UI at all?
+ *
+ * A host module is not a workflow node and has no place in a flow (`Plan.md` §8, `core/view.ts`): the frame
+ * mounts it once, because the service it provides is always there, and hands that service to every module
+ * that declared the region it fills. `map-provider` is the standing example — it writes nothing, declares no
+ * region, and the frame mounts its canvas itself.
+ *
+ * Read off `layout` rather than asked as a flag, so the two cannot disagree. A module naming no region renders
+ * nowhere in the frame, so a flow containing it would describe a step with nothing to show; that is a fact
+ * about the declaration, not a separate attribute to keep in step with it. A host gains a region and it
+ * becomes placeable; a node loses its last one and stops being one.
+ */
+export function isHostModule(module: Module): boolean {
+  return module.layout.length === 0;
+}

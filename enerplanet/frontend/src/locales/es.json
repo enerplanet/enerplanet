@@ -3214,7 +3214,8 @@
         "produces": "produce",
         "gateHint": "Se puede añadir un módulo cuando la cadena ya produce todos los puertos que requiere.",
         "removeConfirm": "Quitar este paso también quita todo lo que viene después - una cadena lineal no puede tener un hueco. ¿Quitar {{count}} paso(s)?",
-        "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación."
+        "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación.",
+        "notANode": "\"{{moduleId}}\" en el nodo \"{{nodeId}}\" no es un nodo: es un módulo anfitrión que presta un servicio en lugar de representar un paso."
       }
     }
   }

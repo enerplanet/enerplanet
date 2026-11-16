@@ -3217,7 +3217,8 @@
         "produces": "produces",
         "gateHint": "A module can be added once the chain already produces every port it requires.",
         "removeConfirm": "Removing this step also removes everything after it - a linear chain cannot have a hole. Remove {{count}} step(s)?",
-        "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue."
+        "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
+        "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step."
       }
     }
   }

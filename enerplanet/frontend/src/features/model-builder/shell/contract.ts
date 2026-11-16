@@ -10,7 +10,7 @@
  * and so the shell keeps one import site for the whole contract.
  */
 
-export { REGIONS } from "../core/module";
+export { REGIONS, isHostModule } from "../core/module";
 export type { Region, NodeState, Module } from "../core/module";
 export type {
   BuilderModule,
