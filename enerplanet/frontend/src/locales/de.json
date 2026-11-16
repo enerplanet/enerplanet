@@ -3173,6 +3173,49 @@
       "unavailable": "Der Katalog ist nicht erreichbar; es können keine Technologien zugewiesen werden.",
       "continue": "Weiter",
       "noSelectionHint": "Eine Technologie je Typ wird auf alle Gebäude angewendet. Eine Auswahl einzelner Gebäude gibt es noch nicht."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Die Abläufe verfassen, die der Model Builder ausführt",
+      "new": "Neuer Workflow",
+      "loading": "Workflows werden geladen...",
+      "loadError": "Die Workflows konnten nicht geladen werden: {{reason}}",
+      "empty": "Noch keine Workflows.",
+      "defaultBadge": "Standard",
+      "copy": "JSON kopieren",
+      "copied": "Kopiert",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteConfirm": "\"{{label}}\" löschen?",
+      "deleteDefaultRefused": "Der Standard-Workflow kann nicht gelöscht werden.",
+      "deleteReport": "Gelöscht - {{sessions}} Sitzung(en) verwiesen darauf.",
+      "error": {
+        "save": "Der Workflow konnte nicht gespeichert werden: {{reason}}"
+      },
+      "newForm": {
+        "label": "Bezeichnung",
+        "id": "id: {{id}}",
+        "create": "Anlegen",
+        "cancel": "Abbrechen"
+      },
+      "editor": {
+        "back": "Zurück zur Liste",
+        "version": "Version {{version}}",
+        "unsaved": "Ungespeicherte Änderungen",
+        "saved": "Gespeichert",
+        "save": "Speichern",
+        "saving": "Speichern...",
+        "chain": "Kette",
+        "chainEmpty": "Die Kette ist leer. Füge ein Modul hinzu, um zu beginnen.",
+        "palette": "Module",
+        "add": "Hinzufügen",
+        "remove": "Entfernen",
+        "needs": "braucht",
+        "produces": "erzeugt",
+        "gateHint": "Ein Modul kann hinzugefügt werden, sobald die Kette bereits jeden benötigten Port erzeugt.",
+        "removeConfirm": "Das Entfernen dieses Schritts entfernt auch alles danach - eine lineare Kette darf keine Lücke haben. {{count}} Schritt(e) entfernen?",
+        "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds."
+      }
     }
   }
 }

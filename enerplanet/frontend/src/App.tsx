@@ -19,6 +19,8 @@ const AssessmentViewer = lazy(() => import("@/features/assessment-viewer").then(
 const ModelResultsViewer = lazy(() => import("@/features/model-results").then(module => ({ default: module.ModelResultsViewer })));
 // The Model Builder's shell: one module at a time, on mock data (see the feature's modules/README.md).
 const ModelBuilderShell = lazy(() => import("@/features/model-builder/shell/BuilderShell"));
+// The workflow editor — the builder's authoring surface, inside the same feature (plan §7).
+const WorkflowsPage = lazy(() => import("@/features/model-builder/workflows/WorkflowsPage"));
 const TechnologiesPage = lazy(() => import("@/features/technologies/TechnologiesPage"));
 const SimulationCharts = lazy(() => import("@/features/simulation-charts").then(module => ({ default: module.SimulationCharts })));
 const LegalPage = lazy(() => import("@/pages/legal/LegalPage"));
@@ -92,6 +94,15 @@ const App: React.FC<AppProps> = () => {
                     element={
                       <FeatureFlagGate flag="modelbuilder">
                         <ModelBuilderShell />
+                      </FeatureFlagGate>
+                    }
+                  />
+                  {/* The workflow editor, behind the same flag and path prefix. */}
+                  <Route
+                    path="/app/modelbuilder/workflows"
+                    element={
+                      <FeatureFlagGate flag="modelbuilder">
+                        <WorkflowsPage />
                       </FeatureFlagGate>
                     }
                   />

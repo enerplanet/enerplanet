@@ -3173,6 +3173,49 @@
       "unavailable": "The catalogue is not reachable; no technologies can be assigned.",
       "continue": "Continue",
       "noSelectionHint": "One technology per type is applied to every building. Per-building selection is not available yet."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Author the flows the Model Builder runs",
+      "new": "New workflow",
+      "loading": "Loading workflows...",
+      "loadError": "The workflows could not be loaded: {{reason}}",
+      "empty": "No workflows yet.",
+      "defaultBadge": "default",
+      "copy": "Copy JSON",
+      "copied": "Copied",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{{label}}\"?",
+      "deleteDefaultRefused": "The default workflow cannot be deleted.",
+      "deleteReport": "Deleted - {{sessions}} session(s) referenced it.",
+      "error": {
+        "save": "The workflow could not be saved: {{reason}}"
+      },
+      "newForm": {
+        "label": "Label",
+        "id": "id: {{id}}",
+        "create": "Create",
+        "cancel": "Cancel"
+      },
+      "editor": {
+        "back": "Back to the list",
+        "version": "version {{version}}",
+        "unsaved": "Unsaved changes",
+        "saved": "Saved",
+        "save": "Save",
+        "saving": "Saving...",
+        "chain": "Chain",
+        "chainEmpty": "The chain is empty. Add a module to begin.",
+        "palette": "Modules",
+        "add": "Add",
+        "remove": "Remove",
+        "needs": "needs",
+        "produces": "produces",
+        "gateHint": "A module can be added once the chain already produces every port it requires.",
+        "removeConfirm": "Removing this step also removes everything after it - a linear chain cannot have a hole. Remove {{count}} step(s)?",
+        "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue."
+      }
     }
   }
 }

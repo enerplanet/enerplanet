@@ -1,0 +1,62 @@
+/**
+ * Chain operations (plan §9). The one that matters: removing an entry drops it **and everything after it**,
+ * because a linear chain cannot have a hole.
+ *
+ * Written failing first.
+ */
+import { describe, expect, it } from "vitest";
+import type { Module, Param } from "../core/module";
+import type { BuilderModule } from "../shell/contract";
+import { appendModule, nodeIdFor, removeFrom, removedCount } from "./chain";
+import type { WorkflowNodeDocument } from "./types";
+
+function entry(id: string, name?: string, params: Param[] = []): BuilderModule {
+  const module: Module = { id, name, params, affect: {}, layout: [] };
+  return { module, Component: () => null };
+}
+
+const chain: WorkflowNodeDocument[] = [
+  { id: "a", moduleId: "a" },
+  { id: "b", moduleId: "b" },
+  { id: "c", moduleId: "c" },
+];
+
+describe("appending a module", () => {
+  it("appends a node named by the module, with its id and label", () => {
+    const id = "model-start";
+    const next = appendModule([], entry(id, "Model start"));
+
+    expect(next).toEqual([{ id, moduleId: id, label: "Model start" }]);
+  });
+
+  it("keeps node ids unique when the same module is placed twice — a node id is how history names a position", () => {
+    const once = appendModule([], entry("weather", "Weather"));
+    const twice = appendModule(once, entry("weather", "Weather"));
+
+    expect(twice.map((n) => n.id)).toEqual(["weather", "weather-2"]);
+  });
+
+  it("derives a free node id against the ids already taken", () => {
+    expect(nodeIdFor("weather", [{ id: "weather", moduleId: "weather" }])).toBe("weather-2");
+    expect(nodeIdFor("weather", [])).toBe("weather");
+  });
+});
+
+describe("removing an entry drops it and everything after it", () => {
+  it("keeps only the entries before the cut", () => {
+    expect(removeFrom(chain, 1).map((n) => n.id)).toEqual(["a"]);
+  });
+
+  it("drops nothing before the cut — a head removal is a full clear", () => {
+    expect(removeFrom(chain, 0)).toEqual([]);
+  });
+
+  it("removing the last entry drops only itself", () => {
+    expect(removeFrom(chain, 2).map((n) => n.id)).toEqual(["a", "b"]);
+  });
+
+  it("reports how many entries a cut removes, for the confirm", () => {
+    expect(removedCount(chain, 1)).toBe(2);
+    expect(removedCount(chain, 2)).toBe(1);
+  });
+});

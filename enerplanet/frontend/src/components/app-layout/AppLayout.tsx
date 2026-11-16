@@ -23,6 +23,7 @@ import {
   GitCompareArrows,
   LayoutGrid,
   Blocks,
+  Workflow,
   LucideIcon,
   Cpu,
   ChevronLeft,
@@ -154,6 +155,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               color: "#2563eb",
               bgColor: "#dbeafe",
               dataTour: "modelbuilder",
+            } satisfies SidebarItem,
+            // The builder's authoring surface, gated the same way: it is part of that feature.
+            {
+              path: "/app/modelbuilder/workflows",
+              icon: Workflow,
+              title: t("modelBuilder.workflows.title"),
+              color: "#0891b2",
+              bgColor: "#cffafe",
+              dataTour: "workflows",
             } satisfies SidebarItem,
           ]
         : []),

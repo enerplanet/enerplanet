@@ -3169,6 +3169,49 @@
       "unavailable": "De catalogus is niet bereikbaar; er kunnen geen technologieën worden toegewezen.",
       "continue": "Doorgaan",
       "noSelectionHint": "Er wordt één technologie per type op alle gebouwen toegepast. Selectie per gebouw is er nog niet."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Stel de stromen samen die de Model Builder uitvoert",
+      "new": "Nieuwe workflow",
+      "loading": "Workflows laden...",
+      "loadError": "De workflows konden niet worden geladen: {{reason}}",
+      "empty": "Nog geen workflows.",
+      "defaultBadge": "standaard",
+      "copy": "JSON kopiëren",
+      "copied": "Gekopieerd",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleteConfirm": "\"{{label}}\" verwijderen?",
+      "deleteDefaultRefused": "De standaardworkflow kan niet worden verwijderd.",
+      "deleteReport": "Verwijderd - {{sessions}} sessie(s) verwezen ernaar.",
+      "error": {
+        "save": "De workflow kon niet worden opgeslagen: {{reason}}"
+      },
+      "newForm": {
+        "label": "Label",
+        "id": "id: {{id}}",
+        "create": "Aanmaken",
+        "cancel": "Annuleren"
+      },
+      "editor": {
+        "back": "Terug naar de lijst",
+        "version": "versie {{version}}",
+        "unsaved": "Niet-opgeslagen wijzigingen",
+        "saved": "Opgeslagen",
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "chain": "Keten",
+        "chainEmpty": "De keten is leeg. Voeg een module toe om te beginnen.",
+        "palette": "Modules",
+        "add": "Toevoegen",
+        "remove": "Verwijderen",
+        "needs": "heeft nodig",
+        "produces": "produceert",
+        "gateHint": "Een module kan worden toegevoegd zodra de keten elke vereiste poort al produceert.",
+        "removeConfirm": "Het verwijderen van deze stap verwijdert ook alles erna - een lineaire keten mag geen gat hebben. {{count}} stap(pen) verwijderen?",
+        "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build."
+      }
     }
   }
 }

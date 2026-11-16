@@ -3170,6 +3170,49 @@
       "unavailable": "El catálogo no responde; no se pueden asignar tecnologías.",
       "continue": "Continuar",
       "noSelectionHint": "Se aplica una tecnología por tipo a todos los edificios. La selección por edificio aún no está disponible."
+    },
+    "workflows": {
+      "title": "Flujos de trabajo",
+      "subtitle": "Redacta los flujos que ejecuta el Model Builder",
+      "new": "Nuevo flujo",
+      "loading": "Cargando flujos...",
+      "loadError": "No se pudieron cargar los flujos: {{reason}}",
+      "empty": "Aún no hay flujos.",
+      "defaultBadge": "predeterminado",
+      "copy": "Copiar JSON",
+      "copied": "Copiado",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar \"{{label}}\"?",
+      "deleteDefaultRefused": "El flujo predeterminado no se puede eliminar.",
+      "deleteReport": "Eliminado - {{sessions}} sesión(es) lo referenciaban.",
+      "error": {
+        "save": "No se pudo guardar el flujo: {{reason}}"
+      },
+      "newForm": {
+        "label": "Etiqueta",
+        "id": "id: {{id}}",
+        "create": "Crear",
+        "cancel": "Cancelar"
+      },
+      "editor": {
+        "back": "Volver a la lista",
+        "version": "versión {{version}}",
+        "unsaved": "Cambios sin guardar",
+        "saved": "Guardado",
+        "save": "Guardar",
+        "saving": "Guardando...",
+        "chain": "Cadena",
+        "chainEmpty": "La cadena está vacía. Añade un módulo para empezar.",
+        "palette": "Módulos",
+        "add": "Añadir",
+        "remove": "Quitar",
+        "needs": "necesita",
+        "produces": "produce",
+        "gateHint": "Se puede añadir un módulo cuando la cadena ya produce todos los puertos que requiere.",
+        "removeConfirm": "Quitar este paso también quita todo lo que viene después - una cadena lineal no puede tener un hueco. ¿Quitar {{count}} paso(s)?",
+        "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación."
+      }
     }
   }
 }
