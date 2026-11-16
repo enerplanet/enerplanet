@@ -3048,8 +3048,6 @@
       "refused": "nichts gesendet: {{reason}}"
     },
     "bar": {
-      "undo": "Rückgängig",
-      "redo": "Wiederholen",
       "save": "Speichern",
       "saved": "gespeichert · {{status}}",
       "savedPartial": "Modell gespeichert, Sitzung nicht",

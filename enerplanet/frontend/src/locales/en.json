@@ -3048,8 +3048,6 @@
       "refused": "nothing was sent: {{reason}}"
     },
     "bar": {
-      "undo": "undo",
-      "redo": "redo",
       "save": "save",
       "saved": "saved · {{status}}",
       "savedPartial": "model saved, session not",
