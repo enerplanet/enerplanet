@@ -36,6 +36,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
@@ -54,6 +55,7 @@ import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import { createHttpGateway } from "../save/httpGateway";
+import { loadSession } from "../load/loader";
 import { saveSession } from "./actions";
 import { autoRunFor, createAutoGuard } from "./autoRun";
 import { useStoreVersion } from "./useStoreVersion";
@@ -192,6 +194,71 @@ export const BuilderShell: React.FC = () => {
    * the moment to finish being on screen.
    */
   const [held, setHeld] = useState<string | undefined>(undefined);
+
+  // ── the load: `?model=<id>`, the way the dashboard hands a model over ──────────────────────────────
+  //
+  // A loaded session *replaces* the one on screen rather than seeding it: the artefact is a store's whole
+  // history, so the position, the undo tail and the data all come from it, and the frame derives where to
+  // stand (`frameView`) from the log it arrives with. Nothing navigational is decided here.
+  //
+  // The dashboard's button is what points at this, and the parameter name is the contract between the two.
+  const [search] = useSearchParams();
+  const requestedModel = search.get("model");
+  /** The request that has already been answered — a load must not run again on every render. */
+  const [answered, setAnswered] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (requestedModel === null || answered === requestedModel) return;
+    // Claimed before the await: the guard above is what stops a second run, and a re-render between the
+    // request and its answer would otherwise start another.
+    setAnswered(requestedModel);
+
+    const modelId = Number(requestedModel);
+    if (!Number.isFinite(modelId)) {
+      setError(t("modelBuilder.shell.badModelId", "That model id is not a number."));
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const outcome = await loadSession({
+          gateway,
+          modelId,
+          flow: workflow.flow,
+          registry: workflow.registry,
+        });
+        if (cancelled) return;
+
+        if (outcome.kind === "none") {
+          // A model that exists but was never saved from the builder: a legacy model, or one whose save
+          // failed before the session was written. Saying so beats an empty builder that looks broken.
+          setError(t("modelBuilder.shell.noSession", "This model has no experimental session to load."));
+          return;
+        }
+
+        setSession({ store: outcome.session.store, engine: createEngine(outcome.session.store) });
+        setError(null);
+        // The artefact check's verdict, when it had one: the stored projection disagreed with its own log,
+        // so the log was replayed. Nothing is repaired in place — this is what the user is owed for that.
+        if (outcome.session.divergence !== undefined) {
+          setError(
+            t(
+              "modelBuilder.shell.divergence",
+              "This model's saved state disagreed with its history; it was rebuilt from the history instead.",
+            ),
+          );
+        }
+      } catch (thrown) {
+        if (cancelled) return;
+        setError(thrown instanceof Error ? thrown.message : String(thrown));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedModel, answered, gateway, workflow, t]);
 
   // The save node's session, bound where the session itself lives. It reads the session when it *runs*, so
   // binding at construction would hand it a session that has since been replaced — a mode switch builds a
@@ -409,6 +476,18 @@ export const BuilderShell: React.FC = () => {
       hold={held}
     />
   );
+
+  // Nothing on screen while the load is in flight: the flow's seed would render first, and an empty builder
+  // that is about to fill in reads as data loss. Placed after every hook, since it is an early return.
+  if (requestedModel !== null && answered !== requestedModel) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-background p-6">
+        <p className="text-sm text-muted-foreground">
+          {t("modelBuilder.shell.loadingModel", "Loading the model…")}
+        </p>
+      </div>
+    );
+  }
 
   if (view.entry === undefined) {
     return (

@@ -2958,6 +2958,10 @@
   },
   "modelBuilder": {
     "shell": {
+      "loadingModel": "Model wordt geladen…",
+      "noSession": "Dit model heeft geen experimentele sessie om te laden.",
+      "badModelId": "Dat model-id is geen getal.",
+      "divergence": "De opgeslagen staat van dit model kwam niet overeen met de geschiedenis; het is in plaats daarvan uit de geschiedenis opgebouwd.",
       "title": "Model Builder",
       "subtitle": "Modulevoorbeeld — één module tegelijk, met mock-data",
       "module": "Module",

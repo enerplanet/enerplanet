@@ -2959,6 +2959,10 @@
   },
   "modelBuilder": {
     "shell": {
+      "loadingModel": "Cargando el modelo…",
+      "noSession": "Este modelo no tiene una sesión experimental que cargar.",
+      "badModelId": "Ese id de modelo no es un número.",
+      "divergence": "El estado guardado de este modelo no coincidía con su historial; se reconstruyó desde el historial.",
       "title": "Model Builder",
       "subtitle": "Vista previa de módulos: un módulo a la vez, con datos simulados",
       "module": "Módulo",

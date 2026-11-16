@@ -2962,6 +2962,10 @@
   },
   "modelBuilder": {
     "shell": {
+      "loadingModel": "Modell wird geladen…",
+      "noSession": "Dieses Modell hat keine experimentelle Sitzung zum Laden.",
+      "badModelId": "Diese Modell-ID ist keine Zahl.",
+      "divergence": "Der gespeicherte Zustand dieses Modells stimmte nicht mit seiner Historie überein; es wurde stattdessen aus der Historie neu aufgebaut.",
       "title": "Model Builder",
       "subtitle": "Modulvorschau — ein Modul nach dem anderen, mit Mock-Daten",
       "module": "Modul",
