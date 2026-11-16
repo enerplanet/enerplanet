@@ -3037,6 +3037,8 @@
       "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Regio",
       "regionNone": "kies een regio",
+      "regionsLoading": "Regio's worden geladen…",
+      "regionsUnavailable": "Regio's zijn momenteel niet beschikbaar.",
       "apply": "Toepassen",
       "rulesHint": "Dit is het ingangsknooppunt: het vereist niets, en alles daarna leest wat het aanlegt."
     },

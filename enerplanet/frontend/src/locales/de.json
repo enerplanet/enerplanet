@@ -3041,6 +3041,8 @@
       "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Region",
       "regionNone": "Region wählen",
+      "regionsLoading": "Regionen werden geladen…",
+      "regionsUnavailable": "Regionen sind derzeit nicht verfügbar.",
       "apply": "Übernehmen",
       "rulesHint": "Dies ist der Einstiegsknoten: Er benötigt nichts, und alles Nachgelagerte liest, was er anlegt."
     },

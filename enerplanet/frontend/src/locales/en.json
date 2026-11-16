@@ -3041,6 +3041,8 @@
       "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Region",
       "regionNone": "choose a region",
+      "regionsLoading": "Loading regions…",
+      "regionsUnavailable": "Regions are unavailable right now.",
       "apply": "Apply",
       "rulesHint": "This is the entry node: it requires nothing, and everything downstream reads what it seeds."
     },

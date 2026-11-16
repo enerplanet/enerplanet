@@ -40,11 +40,13 @@ import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
+import { setRegionSource } from "../modules/model-start";
 import { setDemandSource } from "../modules/building-demand";
 import { installBuildingConfigurator } from "./buildingConfigurator";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
+import { backendRegionSource } from "./regionSource";
 import { pylovoDemandSource } from "./demandSource";
 import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
@@ -96,6 +98,7 @@ export const BuilderShell: React.FC = () => {
   useEffect(() => {
     setGridEngine(pylovoGridEngine);
     setWeatherSource(backendWeatherSource);
+    setRegionSource(backendRegionSource);
     setDemandSource(pylovoDemandSource);
     // The building configurator's view. Installed here for the same reason as the three above: it needs the
     // legacy's geometry/demand/catalogue machinery, which a module may not import, so the shell supplies it

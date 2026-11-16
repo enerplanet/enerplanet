@@ -33,30 +33,14 @@ import {
   type ValidationIssue,
 } from "@model-builder/core";
 import { useTranslation } from "@spatialhub/i18n";
-
-/** One region a model can be drawn in. */
-interface RegionOption {
-  country: string;
-  state: string;
-  label: string;
-  /** `[west, south, east, north]` — enough to frame the region on the map. */
-  bounds: [number, number, number, number];
-}
+import { optionFor, optionsFor, regionKey, useRegions } from "./regions";
 
 /**
- * The regions this module offers, until the real source is wired.
- *
- * The legacy fetches these (`useAvailableRegions`); this list is the honest stand-in, kept in the module so it
- * runs in isolation and its tests need no backend. When the region source lands it moves behind the feature's
- * gateway and this module consumes it instead — **the port (`region`) does not change**, which is the point of
- * a port: the swap is invisible downstream (`Modules.md` §2, the swap rule).
+ * The module's region slot, re-exported: a host installs a source through the same entry point it imports the
+ * module from, so it never reaches into the module's files. Same shape as `setWeatherSource`.
  */
-const REGIONS: readonly RegionOption[] = [
-  { country: "DE", state: "BW", label: "Baden-Württemberg", bounds: [7.5, 47.5, 10.5, 49.8] },
-  { country: "DE", state: "BY", label: "Bayern", bounds: [8.9, 47.2, 13.9, 50.6] },
-  { country: "DE", state: "NW", label: "Nordrhein-Westfalen", bounds: [5.8, 50.3, 9.5, 52.6] },
-  { country: "NL", state: "ZH", label: "Zuid-Holland", bounds: [3.9, 51.6, 5.0, 52.3] },
-];
+export { setRegionSource } from "./regions";
+export type { RegionOption, RegionSource } from "./regions";
 
 /** The resolutions a building model is usually drawn at, in minutes. */
 const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
@@ -85,12 +69,6 @@ function boundsGeometry(bounds: [number, number, number, number]): {
     type: "Polygon",
     coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]],
   };
-}
-
-/** The option for a stored region, if it is one of ours. */
-function optionFor(region: RegionRef | undefined): RegionOption | undefined {
-  if (region === undefined) return undefined;
-  return REGIONS.find((candidate) => candidate.country === region.country && candidate.state === region.state);
 }
 
 /**
@@ -251,7 +229,8 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   const [typedResolution, setTypedResolution] = useState<number | null>(null);
   const [typedRegion, setTypedRegion] = useState<string | null>(null);
 
-  const selected = optionFor(data.region);
+  const { regions, loading, failed } = useRegions();
+  const selected = optionFor(regions, data.region);
 
   // The frame can move the session to another node mid-edit. Nothing collected on one node may reach another,
   // so a node change drops the held values and clears what was collected locally.
@@ -268,8 +247,8 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   // the stored region rather than a click, so applying frames the map, and so do loading a model and undoing:
   // they are the same promise. Only the `map` region is handed the service, hence the guard.
   //
-  // `selected` is a reference into `REGIONS`, so its identity is stable and this fires when the region changes —
-  // not on every render.
+  // `selected` is a reference into the loaded list, so its identity is stable while the list is, and this
+  // fires when the region changes — not on every render.
   useEffect(() => {
     if (region !== "map" || map === undefined || selected === undefined) return;
     map.fitTo(boundsGeometry(selected.bounds));
@@ -282,7 +261,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 
   // ── sidebar: the form. One gesture, one commit: everything the form owns is handed over together.
   const apply = (): void => {
-    const chosen = REGIONS.find((candidate) => `${candidate.country}-${candidate.state}` === typedRegion);
+    const chosen = regions.find((candidate) => regionKey(candidate) === typedRegion);
     hold(nodeId, {
       ...(typedName === null ? {} : { modelName: typedName }),
       ...(typedFrom === null ? {} : { fromDate: typedFrom }),
@@ -303,6 +282,12 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
       setTypedRegion(null);
     });
   };
+
+  // The stored region, and the options to offer: the loaded list plus the stored region when it has left the
+  // list, so a model drawn in a region the backend no longer serves still shows its own value rather than
+  // reading as unset.
+  const stored = data.region;
+  const options = optionsFor(regions, stored);
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto">
@@ -374,19 +359,36 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
         <label className="text-sm text-muted-foreground" htmlFor="model-start-region">
           {t("modelBuilder.model-start.regionLabel")}
         </label>
-        <select
-          id="model-start-region"
-          value={typedRegion ?? (selected === undefined ? "" : `${selected.country}-${selected.state}`)}
-          onChange={(event) => setTypedRegion(event.target.value)}
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-        >
-          <option value="">{t("modelBuilder.model-start.regionNone")}</option>
-          {REGIONS.map((candidate) => (
-            <option key={`${candidate.country}-${candidate.state}`} value={`${candidate.country}-${candidate.state}`}>
-              {candidate.label}
-            </option>
-          ))}
-        </select>
+        {loading ? (
+          <p className="text-xs text-muted-foreground">
+            {t("modelBuilder.model-start.regionsLoading")}
+          </p>
+        ) : (
+          <>
+            {failed ? (
+              <p className="text-xs text-muted-foreground">
+                {t("modelBuilder.model-start.regionsUnavailable")}
+              </p>
+            ) : null}
+            {/* No dropdown on a failed load, unless the model already holds a region — an empty one would
+                claim there are no regions, and a full one would claim regions we could not fetch. */}
+            {failed && options.length === 0 ? null : (
+              <select
+                id="model-start-region"
+                value={typedRegion ?? (stored === undefined ? "" : regionKey(stored))}
+                onChange={(event) => setTypedRegion(event.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t("modelBuilder.model-start.regionNone")}</option>
+                {options.map((candidate) => (
+                  <option key={regionKey(candidate)} value={regionKey(candidate)}>
+                    {candidate.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </>
+        )}
       </div>
 
       <button
