@@ -41,6 +41,7 @@ import type { ModelData } from "@model-builder/core";
 import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
 import { setDemandSource } from "../modules/building-demand";
+import { installBuildingConfigurator } from "./buildingConfigurator";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
@@ -71,7 +72,10 @@ function sessionFor(workflow: Workflow, seed: Readonly<ModelData>): Session {
   // what the change affects (T7) without each call site having to remember to. A store built
   // without it treats every cascade as empty, which is what the core's own tests rely on.
   const store = createStore(
-    { ...seed },
+    // `draftId` is the session's owner before a model exists. The legacy generates it client-side too
+    // (`useAreaSelect`), and `BuildingPanelHost` refuses to render without an owner path, so it is seeded here
+    // rather than fetched — the same rule `model-start` states for `userId`/`workspaceId`.
+    { ...seed, ...(seed.draftId === undefined ? { draftId: crypto.randomUUID() } : {}) },
     { deriveCascade: createInvalidator(workflow.flow, workflow.registry) },
   );
   return { store, engine: createEngine(store) };
@@ -93,6 +97,10 @@ export const BuilderShell: React.FC = () => {
     setGridEngine(pylovoGridEngine);
     setWeatherSource(backendWeatherSource);
     setDemandSource(pylovoDemandSource);
+    // The building configurator's view. Installed here for the same reason as the three above: it needs the
+    // legacy's geometry/demand/catalogue machinery, which a module may not import, so the shell supplies it
+    // through the module's slot.
+    installBuildingConfigurator();
     setCatalogueSource(backendCatalogueSource);
   }, []);
   const map = host.service;

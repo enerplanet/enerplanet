@@ -125,7 +125,24 @@ function applyEdit(
   data: Readonly<ModelData>,
   osmId: string,
   edit: BuildingEdit,
-): { buildingParams: ModelData["buildingParams"]; technologies: ModelData["technologies"] | undefined } {
+): {
+  buildingParams: ModelData["buildingParams"];
+  technologies: ModelData["technologies"] | undefined;
+  buildings: ModelData["buildings"] | undefined;
+} {
+  // The envelope block rides on the feature rather than in a port: it describes the building's shape and
+  // fabric, not the model's energy data. Handled first because it is the one edit that rewrites `buildings`.
+  if (edit.buem !== undefined && data.buildings !== undefined) {
+    const buildings: ModelData["buildings"] = {
+      ...data.buildings,
+      features: data.buildings.features.map((feature) =>
+        idOf(feature) === osmId ? { ...feature, properties: { ...feature.properties, buem: edit.buem } } : feature,
+      ),
+    };
+    const rest = applyEdit(data, osmId, { ...edit, buem: undefined });
+    return { ...rest, buildings };
+  }
+
   const base = data.buildingParams ?? {};
   const params: ModelData["buildingParams"] = {
     ...base,
@@ -142,7 +159,9 @@ function applyEdit(
     }
   }
 
-  if (edit.technologies === undefined) return { buildingParams: params, technologies: undefined };
+  if (edit.technologies === undefined) {
+    return { buildingParams: params, technologies: undefined, buildings: data.buildings };
+  }
 
   const technologies: Record<string, NonNullable<ModelData["technologies"]>[string]> = {
     ...(data.technologies ?? {}),
@@ -150,7 +169,7 @@ function applyEdit(
   if (edit.technologies.length === 0) delete technologies[osmId];
   else technologies[osmId] = edit.technologies;
 
-  return { buildingParams: params, technologies };
+  return { buildingParams: params, technologies, buildings: data.buildings };
 }
 
 /** The completeness this module owns (T22): every building must have *something* — demand or a technology. */
@@ -211,6 +230,11 @@ const contract: Module = {
     ctx.commit({
       buildingParams: next.buildingParams,
       ...(next.technologies === undefined ? {} : { technologies: next.technologies }),
+      // Only when the envelope block changed: committing `buildings` on every edit would rewrite a port this
+      // module has no business touching otherwise.
+      ...(next.buildings === undefined || next.buildings === current.buildings
+        ? {}
+        : { buildings: next.buildings }),
     });
     // Consumed: re-running without another edit must not re-commit it.
     picked = { ...picked, pending: null };
@@ -269,6 +293,7 @@ const OverlayRegion: FC<{
       feature={feature}
       params={data.buildingParams?.electricity?.[osmId] ?? data.buildingParams?.heat?.[osmId]}
       technologies={data.technologies?.[osmId]}
+      draftId={data.draftId}
       onCommit={(edit) => {
         // Held, then committed by the module's own run — never written from here.
         holdEdit(osmId, edit);

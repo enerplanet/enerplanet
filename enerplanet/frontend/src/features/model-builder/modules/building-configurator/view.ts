@@ -26,6 +26,14 @@ export interface BuildingEdit {
   params?: BuildingParams;
   /** The building's technologies, if the user touched them. */
   technologies?: TechAssignment[];
+  /**
+   * The legacy configurator's envelope/thermal block, kept on the feature as `properties.buem`.
+   *
+   * It is deliberately **not a port**: it describes the building's shape and fabric, not the model's energy
+   * data, and the save's fold already leaves a feature's other properties untouched. Typed as `unknown` at this
+   * boundary because only the host that produced it knows its shape — the module only carries it.
+   */
+  buem?: unknown;
 }
 
 /** What the module hands a view. Everything the view needs, and nothing about the store. */
@@ -37,6 +45,13 @@ export interface BuildingViewProps {
   /** What the store already holds for this building — where the view starts. */
   params?: BuildingParams;
   technologies?: TechAssignment[];
+  /**
+   * The session's draft id, read from the store.
+   *
+   * The legacy's host refuses to render without an owner path (it scopes draft-scoped transformer results), so
+   * the module passes what it has rather than the host reaching for it.
+   */
+  draftId?: string;
   /**
    * The view closed with a change. **The module commits it**, on its own transaction — the host must not write
    * the store, and nothing is written while the view is open, so an abandoned overlay changes nothing.

@@ -153,6 +153,22 @@ describe("building-configurator's run", () => {
     expect(store.data.technologies?.b1).toBeUndefined();
   });
 
+  it("puts the envelope block on the building's feature, not in a port", async () => {
+    // The legacy keeps its envelope/thermal block at `properties.buem`, and the save's fold already leaves a
+    // feature's other properties alone — so carrying it there is what makes the edit survive to the payload.
+    holdEdit("b1", { buem: { building: { n_storeys: 3 } } });
+
+    const { store } = await runInScratch({ module: buildingConfiguratorModule.module, mock: ready() });
+
+    const features = store.data.buildings?.features ?? [];
+    const edited = features.find((feature) => feature.properties?.osm_id === "b1");
+    expect(edited?.properties?.buem).toEqual({ building: { n_storeys: 3 } });
+    // …and no port was invented for it.
+    expect(store.data.technologies).toBeUndefined();
+    // The building nobody opened keeps its properties exactly as the grid wrote them.
+    expect(features[1]?.properties?.buem).toBeUndefined();
+  });
+
   it("does nothing when the view was closed without a change", async () => {
     // The module is reachable through the forward action, and pressing it without opening a building must not
     // fail — nor invent a transaction.
