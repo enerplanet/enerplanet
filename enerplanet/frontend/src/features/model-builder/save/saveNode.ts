@@ -175,9 +175,13 @@ export function createSaveNode(options: SaveNodeOptions): Module {
     // The node *is* the module here, so the regions its UI mounts into are declared here too: the
     // sidebar carries the verdict, the payload and the save action; the status strip carries one line.
     layout: ["sidebar", "bottom"],
-    // Explicit rather than absent: the engine's default is `at-completion`, and a terminal node wants it
-    // said out loud. A model id recorded without its result is a state this node does not stand behind.
-    seal: "at-completion",
+    // Explicit rather than absent: the engine's default is `at-completion`, and this node has a reason to
+    // differ. Its record of the save (`modelId`/`saveResult`) has to be **sealed** before the session is
+    // persisted, or the artefact describes a save whose own entry is missing from its log — the node then reads
+    // `pending` on every reload and the flow reads incomplete. `at-completion` buffers the commit until `run`
+    // returns, which is after the save; `per-commit` seals it where it happens. Its history is unchanged either
+    // way: it commits once, and the end-of-run flush adds nothing to a run that already sealed.
+    seal: "per-commit",
 
     run: async (ctx) => {
       const session = options.session();
@@ -198,23 +202,25 @@ export function createSaveNode(options: SaveNodeOptions): Module {
         workspaceId: session.workspaceId ?? store.data.workspaceId,
         userId: session.userId ?? store.data.userId,
         status: statusFor(flow, registry, store, nodeId, modelId),
-        // The two ports this node records, handed to the save so it writes them *inside* the artefact it
-        // persists. It is a function because the model id is Call A's product: this node cannot commit first
-        // (the ports would then be recorded after the row was already written, absent from that save and from
-        // every load of it), and it cannot state the id before the call returns either. The save folds the
-        // result into the projection before fingerprinting it, so a reload reads both ports immediately.
-        record: recordSave,
+        /**
+         * The node's own record of the save, committed **between Call A and the artefact** — the save's seam.
+         *
+         * Both values are Call A's product, so this is the earliest moment they exist; and committing them into
+         * the store by then is what puts them in the projection *and* the log of the save that first writes
+         * them. Committing after the save instead records a save that was already written without them.
+         */
+        onCreated: (createdId, created) => {
+          // Read-then-write: both ports are already populated on a re-save, and the write boundary refuses to
+          // overwrite a value the module never looked at.
+          ctx.read("modelId");
+          ctx.read("saveResult");
+          ctx.commit(recordSave(createdId, created));
+        },
       });
 
       if (!outcome.ok) throw new SaveRefused(outcome.reason);
-
-      // Read-then-write: both ports are already populated on a re-save, and the write boundary
-      // refuses to overwrite a value the module never looked at.
-      ctx.read("modelId");
-      ctx.read("saveResult");
-      // The same values the save just folded into the artefact — the live store must hold them too: that is
-      // what makes this node `done`, and what a subsequent save would persist from the store.
-      ctx.commit(recordSave(outcome.modelId, outcome.created));
+      // Nothing left to commit: the record was written into the store before the session was persisted, which
+      // is what makes the stored artefact agree with the live store on where this node stands.
     },
 
     validate: (ctx) => missingPorts(ctx.store),

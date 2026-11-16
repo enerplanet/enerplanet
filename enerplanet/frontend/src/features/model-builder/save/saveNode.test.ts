@@ -14,6 +14,7 @@ import { fromArtefact, type Artefact, type WorkflowRef } from "../core/artefact"
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { createStore, type Store } from "../core/store";
 import { createEngine } from "../core/engine";
+import { nodeStates } from "../core/position";
 import { defineModule, requiredPorts, type Module } from "../core/module";
 import { runInScratch } from "../core/testSupport";
 import { seed } from "../core/fixtures";
@@ -142,6 +143,30 @@ describe("createSaveNode", () => {
     expect(loaded.divergence).toBeUndefined();
     expect(loaded.store.data.modelId).toBe(42);
     expect(loaded.store.data.saveResult).toEqual({ modelId: 42, created: true });
+  });
+
+  it("leaves the save node done on a reload, because the artefact records its own entry", async () => {
+    // The half the projection-only fix could not reach. Committing after the save put the ports in the artefact
+    // but not in its *log*, so a reloaded session showed the save node `pending` and the flow incomplete — and a
+    // model that had been saved could never be re-saved as a complete one. Committing through the save's seam
+    // seals the node's transaction before the session is written, so both the projection and the log carry it.
+    const payloads: LegacyModelPayload[] = [];
+    const sessions: Session[] = [];
+    const store = createStore(seed({ coordinates: [RING] }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    const node = saveNodeFor(store, payloads, {}, sessions);
+    await createEngine(store).runModule(node, { id: NODE_ID });
+
+    const loaded = fromArtefact(sessions[0].artefact);
+    // The node is registered by the frame, not by this file's `registry` — pass it so the state can be derived.
+    const withNode = { ...registry, [NODE_ID]: node };
+
+    // The assertion is that the node has *history* on a reload, not that it reads `done`: this fixture's store is
+    // deliberately thin, so the node's own gate reports the ports it persists as missing and it reads `stale` —
+    // correct, and independent of the bug. `pending` is the state a missing log entry produces, which is what a
+    // reload used to show.
+    expect(loaded.store.log.map((t) => (t as { nodeId?: string }).nodeId)).toContain(NODE_ID);
+    expect(nodeStates(FLOW, withNode, loaded.store)[NODE_ID]).not.toBe("pending");
   });
 
   it("re-saves without clobbering the ids it already holds", async () => {

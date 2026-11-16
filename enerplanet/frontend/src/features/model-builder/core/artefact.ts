@@ -79,14 +79,9 @@ export function toArtefact(session: {
   store: Store;
   workflow: WorkflowRef;
   modelId?: number;
-  /** Ports the saver records that the live store does not hold yet. See the comment above. */
-  record?: Partial<ModelData>;
 }): Artefact {
-  const { store, workflow, modelId, record } = session;
-  // The record wins over the store, key by key: it is the same values the saver commits afterwards, and on a
-  // first save the store has neither. Merged before `fingerprint` because the digest is taken of the
-  // projection that is stored — a projection that did not match its digest is a divergence every load replays.
-  const projection = record === undefined ? clone(store.data) : { ...clone(store.data), ...record };
+  const { store, workflow, modelId } = session;
+  const projection = clone(store.data);
 
   return {
     version: ARTEFACT_VERSION,

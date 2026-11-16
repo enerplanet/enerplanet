@@ -89,10 +89,18 @@ describe("the model-save module's declaration", () => {
     expect([...modelSave.module.layout].sort()).toEqual(["bottom", "sidebar"]);
   });
 
-  it("leaves `seal` at the default: its writes must land together or not at all", () => {
-    // The opposite of the example's `per-commit` and right for a terminal node: a half-saved model id
-    // with no recorded result is a state this module does not stand behind.
-    expect(modelSave.module.seal).toBe("at-completion");
+  it("seals per commit, so its record is sealed before the session that must contain it", () => {
+    // Deliberately NOT the default, and the reason is a save rather than a write. The node records
+    // `modelId`/`saveResult` through the save's seam, between the two calls, because the artefact Call B writes
+    // is where those ports have to appear — in its *log* as well as its projection, or a reloaded session shows
+    // the node with no history at all: `pending`, and a flow that reads incomplete, so a saved model could never
+    // be saved as a complete one again. `at-completion` buffers a commit until `run` returns, which is after
+    // Call B, so the record could not be in the session at all.
+    //
+    // The atomicity this node still needs — id and result together, never one without the other — comes from
+    // there being exactly one commit, made through one helper. Its history is one transaction either way: the
+    // end-of-run flush adds nothing to a run that has already sealed.
+    expect(modelSave.module.seal).toBe("per-commit");
   });
 
   it("reports the same verdict through `validate()` as the preview does", async () => {

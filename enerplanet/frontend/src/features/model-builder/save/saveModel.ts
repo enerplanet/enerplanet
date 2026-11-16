@@ -170,23 +170,21 @@ export interface SaveRequest {
   draftId?: string;
   userId?: string;
   /**
+   * The caller's own record of the save, written **between Call A and the artefact** — the seam.
+   *
+   * It is a function because the model id does not exist until Call A creates it, so the caller cannot state
+   * the record up front. The workflow bar passes nothing: its save has no such record, and its artefact is
+   * exactly what it was. The save *node* passes the two ports it records, which is what puts them in both the
+   * projection and the log of the save that first writes them. See `saveModel`'s seam.
+   */
+  onCreated?: (modelId: number, created: boolean) => void | Promise<void>;
+  /**
    * Pin the status instead of deriving it from completeness. The workflow bar's save pins `incomplete` (§6):
    * an unfinished model still round-trips with its session, and *finishing* one — the real `model.json`,
    * promoted to `draft` so that a run accepts it — belongs to the save node behind its completeness gate.
    * Absent, the status is derived below, which is what that node's own path relies on.
    */
   status?: SaveStatus;
-  /**
-   * The caller's own record of the save, folded into the artefact Call B writes.
-   *
-   * It is a **function of what Call A returned** and not a value, because on a first save the model id does not
-   * exist until Call A creates it — so the caller cannot state the record up front. The workflow bar passes
-   * nothing: its save has no such record, and its artefact is exactly what it was. The save *node* passes the
-   * function that produces the ports it then commits to the store (`modelId`, `saveResult`), so the artefact
-   * this save writes already carries them on the run that first creates them — otherwise they would be absent
-   * until a later save happened to catch up, and a reload would show the node's ports unset.
-   */
-  record?: (modelId: number, created: boolean) => Partial<ModelData>;
 }
 
 /**
@@ -230,17 +228,25 @@ export async function saveModel(
     await gateway.updateModel(modelId, payload);
   }
 
-  // Fold the caller's record of this save into the artefact **here**, after Call A has produced the id and the
-  // created flag and before Call B writes it. The record is a function of those two, so it cannot be stated any
-  // earlier; and it must be inside the artefact this save writes, or the ports it names are absent from the
-  // session until a later save happens to include them. `toArtefact` puts it in the projection before taking
-  // the fingerprint, so the stored digest matches what a load will read.
-  const record = request.record?.(modelId, created);
+  /**
+   * The seam: the caller's own record of this save, written **here** — after Call A has produced the id and the
+   * created flag, and before the artefact is taken.
+   *
+   * The caller cannot state it earlier, because both values come out of Call A; and it cannot state it later,
+   * because the session this save persists is built from the store a few lines below. Anything the saver records
+   * about the save has to be *in the store* by this point, or the artefact describes a save whose own record is
+   * missing — which is not a cosmetic gap: the saver's node then reads `pending` on every reload, the flow reads
+   * incomplete, and a model that was saved cannot be re-saved as complete.
+   *
+   * This is the only reason the function has a midpoint. The workflow bar's save passes nothing and behaves
+   * exactly as it did when there was no seam.
+   */
+  await request.onCreated?.(modelId, created);
+
   const artefact = toArtefact({
     store,
     workflow: request.workflow,
     modelId,
-    ...(record === undefined ? {} : { record }),
   });
   try {
     await gateway.saveSession(modelId, artefact, request.workflow);
