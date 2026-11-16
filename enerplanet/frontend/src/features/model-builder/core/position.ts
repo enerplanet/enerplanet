@@ -89,12 +89,21 @@ export function positionReport(
     // stands behind is not finished, so the position rests on it instead of walking past it.
     const issues = module?.validate?.({ store: store.data }) ?? [];
 
-    // A node that ran but wrote nothing can never be called done — the one hole in deriving
-    // state from history, recorded as open in the spec.
+    /**
+     * **Running with nothing to write is a finished run**, so `written.length === 0` is not a reason to hold a
+     * node back.
+     *
+     * That test used to sit here, guarding against a module whose run failed to produce anything. It cannot
+     * tell that apart from a node whose run genuinely had nothing to do — and there are such nodes: an optional
+     * editing step writes only what the user changed, so a completed run against an untouched store writes
+     * nothing at all. Held back by this test, such a node could never be done, the position rested on it
+     * forever, and its own Continue looked broken while every earlier node advanced.
+     *
+     * The gate is the honest verdict on whether a node produced what it stands behind (T22), and it is asked on
+     * the line above. A node that has not run at all is `pending` long before reaching here.
+     */
     const state: DerivedState =
-      rearmed || written.length === 0 || pruned.length > 0 || blocked.length > 0 || issues.length > 0
-        ? "stale"
-        : "done";
+      rearmed || pruned.length > 0 || blocked.length > 0 || issues.length > 0 ? "stale" : "done";
 
     return { nodeId: node.id, moduleId: node.moduleId, state, pruned, blocked };
   });

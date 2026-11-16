@@ -249,6 +249,32 @@ describe("T22 — a node is done only when the module's own gate is satisfied", 
 
     expect(positionReport(FLOW, registry, store)[0]).toMatchObject({ state: "done" });
   });
+
+  it("reads a run that had nothing to write as done, not stale", async () => {
+    // An optional editing step: its run writes only what the user changed, so a run against an untouched store
+    // writes nothing at all. Held back for writing nothing, such a node could never be done — the position rested
+    // on it forever and its own forward action looked broken, while every node before it advanced normally.
+    const IDLE = "idle";
+    const idle = defineModule({
+      id: IDLE,
+      params: [{ port: BUILDINGS, required: true }],
+      affect: {},
+      layout: [],
+      run: () => undefined,
+      validate: () => [],
+    });
+
+    const store = createStore(seed({ buildings: fc([building("b1")]) }));
+    await createEngine(store).runModule(idle, { id: IDLE });
+
+    const flow = [{ id: IDLE, moduleId: IDLE }];
+    const local: ModuleRegistry = { [IDLE]: idle };
+
+    // The run still sealed a transaction — a run always leaves a trace — and the node is finished by it.
+    expect(store.log).toHaveLength(1);
+    expect(nodeStates(flow, local, store)[IDLE]).toBe("done");
+    expect(position(flow, local, store).complete).toBe(true);
+  });
 });
 
 // ── T20a (a bare re-run clears the re-arm a jump left) ──────────────────────
