@@ -176,6 +176,17 @@ export interface SaveRequest {
    * Absent, the status is derived below, which is what that node's own path relies on.
    */
   status?: SaveStatus;
+  /**
+   * The caller's own record of the save, folded into the artefact Call B writes.
+   *
+   * It is a **function of what Call A returned** and not a value, because on a first save the model id does not
+   * exist until Call A creates it — so the caller cannot state the record up front. The workflow bar passes
+   * nothing: its save has no such record, and its artefact is exactly what it was. The save *node* passes the
+   * function that produces the ports it then commits to the store (`modelId`, `saveResult`), so the artefact
+   * this save writes already carries them on the run that first creates them — otherwise they would be absent
+   * until a later save happened to catch up, and a reload would show the node's ports unset.
+   */
+  record?: (modelId: number, created: boolean) => Partial<ModelData>;
 }
 
 /**
@@ -219,7 +230,18 @@ export async function saveModel(
     await gateway.updateModel(modelId, payload);
   }
 
-  const artefact = toArtefact({ store, workflow: request.workflow, modelId });
+  // Fold the caller's record of this save into the artefact **here**, after Call A has produced the id and the
+  // created flag and before Call B writes it. The record is a function of those two, so it cannot be stated any
+  // earlier; and it must be inside the artefact this save writes, or the ports it names are absent from the
+  // session until a later save happens to include them. `toArtefact` puts it in the projection before taking
+  // the fingerprint, so the stored digest matches what a load will read.
+  const record = request.record?.(modelId, created);
+  const artefact = toArtefact({
+    store,
+    workflow: request.workflow,
+    modelId,
+    ...(record === undefined ? {} : { record }),
+  });
   try {
     await gateway.saveSession(modelId, artefact, request.workflow);
   } catch (error) {

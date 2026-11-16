@@ -131,6 +131,19 @@ export interface SaveNodeOptions {
   id?: string;
 }
 
+/**
+ * The two ports this node records for a save, as a function of what Call A returned.
+ *
+ * A single definition, used twice: handed to `saveModel` as the `record` it folds into the artefact Call B
+ * writes, and then applied to the outcome for the commit into the live store. They must be the *same* values —
+ * the store's copy is what makes the node `done` and what a later save would persist, while the artefact's copy
+ * is what a reload reads before the node has ever re-run — so they are produced by one function rather than
+ * written out twice and left to drift.
+ */
+function recordSave(modelId: number, created: boolean): Partial<ModelData> {
+  return { modelId, saveResult: { modelId, created } };
+}
+
 export function createSaveNode(options: SaveNodeOptions): Module {
   const nodeId = options.id ?? "model-save";
 
@@ -185,6 +198,12 @@ export function createSaveNode(options: SaveNodeOptions): Module {
         workspaceId: session.workspaceId ?? store.data.workspaceId,
         userId: session.userId ?? store.data.userId,
         status: statusFor(flow, registry, store, nodeId, modelId),
+        // The two ports this node records, handed to the save so it writes them *inside* the artefact it
+        // persists. It is a function because the model id is Call A's product: this node cannot commit first
+        // (the ports would then be recorded after the row was already written, absent from that save and from
+        // every load of it), and it cannot state the id before the call returns either. The save folds the
+        // result into the projection before fingerprinting it, so a reload reads both ports immediately.
+        record: recordSave,
       });
 
       if (!outcome.ok) throw new SaveRefused(outcome.reason);
@@ -193,10 +212,9 @@ export function createSaveNode(options: SaveNodeOptions): Module {
       // refuses to overwrite a value the module never looked at.
       ctx.read("modelId");
       ctx.read("saveResult");
-      ctx.commit({
-        modelId: outcome.modelId,
-        saveResult: { modelId: outcome.modelId, created: outcome.created },
-      });
+      // The same values the save just folded into the artefact — the live store must hold them too: that is
+      // what makes this node `done`, and what a subsequent save would persist from the store.
+      ctx.commit(recordSave(outcome.modelId, outcome.created));
     },
 
     validate: (ctx) => missingPorts(ctx.store),

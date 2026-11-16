@@ -66,14 +66,27 @@ export interface LoadResult {
   divergence?: Divergence;
 }
 
-/** Snapshot a live session. */
+/** Snapshot a live session.
+ *
+ * `record` is the caller's own record of the save — the ports the *saver* is about to commit but which the
+ * live store does not hold yet (`modelId`, `saveResult`). It is not part of the log: no module transaction
+ * produced it, and the saver seals its own transaction only after this snapshot is taken. Folding it into
+ * the projection here — **before** the fingerprint is taken — is what lets a reload read those ports
+ * immediately: the stored fingerprint then matches the stored projection, so `fromArtefact` trusts it rather
+ * than replaying the log. The log and `initial` are left alone, because the record was never a transaction.
+ */
 export function toArtefact(session: {
   store: Store;
   workflow: WorkflowRef;
   modelId?: number;
+  /** Ports the saver records that the live store does not hold yet. See the comment above. */
+  record?: Partial<ModelData>;
 }): Artefact {
-  const { store, workflow, modelId } = session;
-  const projection = clone(store.data);
+  const { store, workflow, modelId, record } = session;
+  // The record wins over the store, key by key: it is the same values the saver commits afterwards, and on a
+  // first save the store has neither. Merged before `fingerprint` because the digest is taken of the
+  // projection that is stored — a projection that did not match its digest is a divergence every load replays.
+  const projection = record === undefined ? clone(store.data) : { ...clone(store.data), ...record };
 
   return {
     version: ARTEFACT_VERSION,

@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { createSaveNode, missingPorts, SaveRefused } from "./saveNode";
 import type { LegacyModelPayload, ModelGateway } from "./gateway";
-import type { WorkflowRef } from "../core/artefact";
+import { fromArtefact, type Artefact, type WorkflowRef } from "../core/artefact";
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { createStore, type Store } from "../core/store";
 import { createEngine } from "../core/engine";
@@ -45,7 +45,10 @@ const FLOW: Flow = [
 ];
 const registry: ModuleRegistry = { [UPSTREAM_ID]: upstream };
 
-function gateway(recorded: LegacyModelPayload[]): ModelGateway {
+/** The `saveSession` calls the node makes, in order — the artefact is what this file asserts on. */
+type Session = { modelId: number; artefact: Artefact; workflow: WorkflowRef };
+
+function gateway(recorded: LegacyModelPayload[], sessions: Session[] = []): ModelGateway {
   return {
     async createModel(payload) {
       recorded.push(payload);
@@ -54,7 +57,9 @@ function gateway(recorded: LegacyModelPayload[]): ModelGateway {
     async updateModel(_modelId, payload) {
       recorded.push(payload);
     },
-    async saveSession() {},
+    async saveSession(modelId, artefact, workflow) {
+      sessions.push({ modelId, artefact, workflow });
+    },
     async loadSession() {
       return undefined;
     },
@@ -66,10 +71,11 @@ function saveNodeFor(
   store: Store,
   payloads: LegacyModelPayload[] = [],
   identity: { workspaceId?: number; userId?: string } = {},
+  sessions: Session[] = [],
 ): Module {
   return createSaveNode({
     session: () => ({
-      gateway: gateway(payloads),
+      gateway: gateway(payloads, sessions),
       store,
       workflow: WORKFLOW,
       flow: FLOW,
@@ -111,6 +117,31 @@ describe("createSaveNode", () => {
     expect(store.data.saveResult).toEqual({ modelId: 42, created: true });
     expect(store.log).toHaveLength(1);
     expect(store.log[0].nodeId).toBe(NODE_ID);
+  });
+
+  it("puts the model id and the result inside the artefact this save writes", async () => {
+    // The bug this pins: the node persisted the session *before* it committed its record, so on the run that
+    // first creates the model the two ports it records were absent from the artefact — and stayed absent, since
+    // nothing made the node run again. The record has to travel inside Call B's artefact, so a reload reads it
+    // without the node ever re-running.
+    const payloads: LegacyModelPayload[] = [];
+    const sessions: Session[] = [];
+    const store = createStore(seed({ coordinates: [RING] }));
+    const node = saveNodeFor(store, payloads, {}, sessions);
+
+    await createEngine(store).runModule(node, { id: NODE_ID });
+
+    expect(sessions).toHaveLength(1);
+    const artefact = sessions[0].artefact;
+    expect(artefact.projection.modelId).toBe(42);
+    expect(artefact.projection.saveResult).toEqual({ modelId: 42, created: true });
+
+    // …and the artefact's fingerprint must match the projection it stored, or a load replays the log and reports
+    // a divergence — the record is folded in before the digest is taken, so the reload trusts it as written.
+    const loaded = fromArtefact(artefact);
+    expect(loaded.divergence).toBeUndefined();
+    expect(loaded.store.data.modelId).toBe(42);
+    expect(loaded.store.data.saveResult).toEqual({ modelId: 42, created: true });
   });
 
   it("re-saves without clobbering the ids it already holds", async () => {
