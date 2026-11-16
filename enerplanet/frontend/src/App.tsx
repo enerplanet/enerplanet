@@ -95,6 +95,7 @@ const App: React.FC<AppProps> = () => {
                       </Authorized>
                   } />
                   <Route path="/app/settings" element={<SettingsPage />} />
+                  <Route path="/app/settings/experimental" element={<SettingsPage unlockExperimental />} />
                   <Route path="/app/notifications" element={<NotificationsPage />} />
                 </Route>
               </Routes>

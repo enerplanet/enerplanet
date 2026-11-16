@@ -40,10 +40,6 @@ export function defaultFor(prices: GridPrice[], country: string | undefined): Gr
   return prices.find(p => p.country === key) ?? prices.find(p => p.country === FALLBACK_COUNTRY);
 }
 
-/** The countries with their own prices, alphabetically, without the fallback row. */
-export function countryPrices(prices: GridPrice[]): GridPrice[] {
-  return prices.filter(p => p.country !== FALLBACK_COUNTRY).sort((a, b) => a.country.localeCompare(b.country));
-}
 
 /** The reason a pair of prices is rejected, as a locale key, or null when valid. */
 export function gridPriceError(importCt: number | null, exportCt: number | null): string | null {

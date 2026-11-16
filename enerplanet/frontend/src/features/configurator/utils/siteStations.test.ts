@@ -57,6 +57,24 @@ describe("stationsFromGrid before the site is regenerated", () => {
     });
 });
 
+describe("stationsFromGrid after the site is regenerated", () => {
+    it("sends a stored station once when the generator adds a station on the same spot", () => {
+        // pylovo returned stored station 5 as grid 101 and placed a new station, grid 103, 0.4 mm from it.
+        const beside = (order: number[]) => ({
+            transformers: { type: "FeatureCollection", features: order.map(id => id === 101
+                ? { type: "Feature", geometry: point(12.89, 48.81), properties: { grid_result_id: 101, site_transformer_id: 5, rated_power_kva: 630 } }
+                : { type: "Feature", geometry: point(12.89, 48.8100000036), properties: { grid_result_id: 103, site_transformer_id: null, rated_power_kva: 160 } }) },
+        }) as unknown as PylovoGridData;
+
+        for (const order of [[101, 103], [103, 101]]) {
+            const stations = stationsFromGrid(stored, beside(order));
+
+            expect(stations.get("101")?.transformer_id).toBe(5);
+            expect(stations.get("103")).toMatchObject({ transformer_id: null, rated_kva: 160 });
+        }
+    });
+});
+
 describe("stationsFromGrid after a station was moved or deleted", () => {
     it("leaves out a stored station that was deleted", () => {
         const stations = stationsFromGrid([], grid);

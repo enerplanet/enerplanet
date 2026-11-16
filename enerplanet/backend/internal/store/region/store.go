@@ -224,6 +224,18 @@ func (rs *Store) UpsertRegionsFromAPI(responseBody []byte) error {
 	})
 }
 
+// RefreshRegions stores PyLovo's /boundary/available response and applies the
+// 3D footprints in one transaction, so a failed step leaves the cache as it was.
+func (rs *Store) RefreshRegions(responseBody []byte, footprints map[string][]json.RawMessage) error {
+	return rs.db.Transaction(func(tx *gorm.DB) error {
+		s := NewStore(tx)
+		if err := s.UpsertRegionsFromAPI(responseBody); err != nil {
+			return err
+		}
+		return s.ApplyCoverage(footprints)
+	})
+}
+
 // ApplyCoverage cuts each region's boundary to the 3D footprints of its
 // country and marks it has_3d where they overlap. footprints is keyed by the
 // City2TABULA country name, e.g. "germany" for Germany.

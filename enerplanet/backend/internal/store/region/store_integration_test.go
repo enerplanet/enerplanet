@@ -174,3 +174,27 @@ func TestApplyCoverage_CutsBoundaryToThe3DFootprint(t *testing.T) {
 	assert.True(t, got[1].Has3D)
 	assert.InDelta(t, 1.0, got[1].Area, 1e-9)
 }
+
+// A refresh whose 3D coverage cannot be applied leaves the cache as it was:
+// storing the regions alone would clear every 3D mark.
+func TestRefreshRegions_KeepsTheCacheWhenCoverageFails(t *testing.T) {
+	db := scratchDB(t)
+	s := NewStore(db)
+	body, err := json.Marshal(map[string]any{"status": "success", "regions": []map[string]any{{
+		"country_code": "AT",
+		"state_code":   "wien",
+		"grid_count":   5,
+		"region":       map[string]any{"name": "Wien", "country": "Austria"},
+		"boundary":     json.RawMessage(`{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}`),
+	}}})
+	require.NoError(t, err)
+	footprint := json.RawMessage(`{"type":"Polygon","coordinates":[[[1,1],[3,1],[3,3],[1,3],[1,1]]]}`)
+	require.NoError(t, s.RefreshRegions(body, map[string][]json.RawMessage{"austria": {footprint}}))
+
+	broken := json.RawMessage(`{"type":"Polygon","coordinates":"not a ring"}`)
+	require.Error(t, s.RefreshRegions(body, map[string][]json.RawMessage{"austria": {broken}}))
+
+	var has3D bool
+	require.NoError(t, db.Raw("SELECT has3_d FROM cached_regions WHERE state_code = 'wien'").Scan(&has3D).Error)
+	assert.True(t, has3D)
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultFor, gridPriceError, countryPrices, type GridPrice } from './api';
+import { defaultFor, gridPriceError, type GridPrice } from './api';
 
 const row = (country: string, imp: number, exp: number): GridPrice => ({ country, import_ct_per_kwh: imp, export_ct_per_kwh: exp, source: '' });
 
@@ -10,10 +10,6 @@ describe('defaultFor', () => {
   it('finds czechia by the name regions carry', () => expect(defaultFor([...prices, row('czechia', 31.79, 2)], 'Czech Republic')?.country).toBe('czechia'));
 });
 
-describe('countryPrices', () => {
-  const prices = [row('other', 30, 0), row('netherlands', 40, 9), row('austria', 25, 6), row('germany', 38.35, 7.7)];
-  it('lists countries alphabetically without other', () => expect(countryPrices(prices).map(p => p.country)).toEqual(['austria', 'germany', 'netherlands']));
-});
 
 describe('gridPriceError', () => {
   it('accepts a feed-in tariff below the purchase price', () => expect(gridPriceError(34, 7.9)).toBeNull());

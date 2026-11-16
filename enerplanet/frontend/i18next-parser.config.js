@@ -16,7 +16,7 @@ export default {
     default: ["JavascriptLexer"],
   },
   lineEnding: "auto",
-  locales: ["en", "de", "es", "fr", "it", "nl", "pl", "cs"],
+  locales: ["en", "de", "es", "nl"],
   namespaceSeparator: ":",
   output: "src/locales/$LOCALE.json",
   input: ["src/**/*.{js,jsx,ts,tsx}"],
