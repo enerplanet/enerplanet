@@ -3165,6 +3165,7 @@
       "assignAll": "Asignar a todos",
       "loading": "Cargando el catálogo…",
       "unavailable": "El catálogo no responde; no se pueden asignar tecnologías.",
+      "continue": "Continuar",
       "noSelectionHint": "Se aplica una tecnología por tipo a todos los edificios. La selección por edificio aún no está disponible."
     }
   }

@@ -3168,6 +3168,7 @@
       "assignAll": "Assign to all",
       "loading": "Loading the catalogue…",
       "unavailable": "The catalogue is not reachable; no technologies can be assigned.",
+      "continue": "Continue",
       "noSelectionHint": "One technology per type is applied to every building. Per-building selection is not available yet."
     }
   }

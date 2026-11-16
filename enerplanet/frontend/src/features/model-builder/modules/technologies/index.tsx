@@ -252,8 +252,10 @@ const TypeRow: React.FC<{
   vectors: ReturnType<typeof vectorsOfType>;
   busy: boolean;
   assignLabel: string;
+  /** This type is the one collected for the whole grid, waiting on the module's Continue. */
+  selected: boolean;
   onAssign: () => void;
-}> = ({ alias, vectors, busy, assignLabel, onAssign }) => (
+}> = ({ alias, vectors, busy, assignLabel, selected, onAssign }) => (
   <li className="flex items-center justify-between gap-3">
     <span className="min-w-0">
       <span className="block truncate text-sm">{alias}</span>
@@ -269,7 +271,10 @@ const TypeRow: React.FC<{
       type="button"
       disabled={busy}
       onClick={onAssign}
-      className="shrink-0 rounded-lg border border-border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+      aria-pressed={selected}
+      className={`shrink-0 rounded-lg border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ${
+        selected ? "border-primary bg-primary/10 font-medium" : "border-border"
+      }`}
     >
       {assignLabel}
     </button>
@@ -281,11 +286,23 @@ const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
   const { products, failed } = useCatalogue();
   const [busy, setBusy] = useState(false);
 
+  /**
+   * What the user has chosen here but not yet committed.
+   *
+   * Nothing commits on click any more. A click that ran the node also ended its turn, so the panel moved on
+   * before the choice could be looked at — and the auto-assign toggle, which is a *setting* rather than an
+   * action, moved the session on as if it were one. Collect both, and let one Continue hand them over together.
+   */
+  const [typedType, setTypedType] = useState<string | null>(null);
+  const [typedAutoresolve, setTypedAutoresolve] = useState<boolean | null>(null);
+
   // The frame can move the session mid-selection. Nothing collected on one node may reach another.
   useEffect(() => {
     held.nodeId = nodeId;
     held.types = [];
     held.autoresolve = null;
+    setTypedType(null);
+    setTypedAutoresolve(null);
     return () => {
       held.nodeId = null;
     };
@@ -296,22 +313,32 @@ const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
     0,
   );
   const total = data.buildings?.features.length ?? 0;
-  const autoresolve = data.advancedParams?.[AUTORESOLVE] === true;
+  /** On screen: what was toggled here, or what the model holds. Never both. */
+  const autoresolve = typedAutoresolve ?? data.advancedParams?.[AUTORESOLVE] === true;
 
   // The types the catalogue actually has products for, in a stable order.
   const types = Array.from(new Set(products.map(productType))).sort();
 
-  /** One click: assign this type everywhere, then run. */
+  /** One click: *choose* this type for the whole grid. The module's Continue is what commits it. */
   const assignEverywhere = (type: string): void => {
-    holdType(nodeId, type);
-    setBusy(true);
-    void run().finally(() => setBusy(false));
+    setTypedType(type);
   };
 
   const toggleAutoresolve = (): void => {
-    holdAutoresolve(nodeId, !autoresolve);
+    setTypedAutoresolve(!autoresolve);
+  };
+
+  /** One gesture, one commit: the type and the toggle are handed over together, then the session moves on. */
+  const commit = (): void => {
+    if (typedType !== null) holdType(nodeId, typedType);
+    if (typedAutoresolve !== null) holdAutoresolve(nodeId, typedAutoresolve);
     setBusy(true);
-    void run().finally(() => setBusy(false));
+    void run().finally(() => {
+      // The store's values take over again, so a failed run leaves the panel showing the truth.
+      setBusy(false);
+      setTypedType(null);
+      setTypedAutoresolve(null);
+    });
   };
 
   return (
@@ -356,12 +383,22 @@ const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
                 vectors={vectorsOfType(type)}
                 busy={busy}
                 assignLabel={t("modelBuilder.technologies.assignAll")}
+                selected={typedType === type}
                 onAssign={() => assignEverywhere(type)}
               />
             ))}
           </ul>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={commit}
+        disabled={busy}
+        className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {t("modelBuilder.technologies.continue")}
+      </button>
 
       <p className="shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">
         {t("modelBuilder.technologies.noSelectionHint")}

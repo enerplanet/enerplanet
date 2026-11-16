@@ -3168,6 +3168,7 @@
       "assignAll": "Allen zuweisen",
       "loading": "Katalog wird geladen…",
       "unavailable": "Der Katalog ist nicht erreichbar; es können keine Technologien zugewiesen werden.",
+      "continue": "Weiter",
       "noSelectionHint": "Eine Technologie je Typ wird auf alle Gebäude angewendet. Eine Auswahl einzelner Gebäude gibt es noch nicht."
     }
   }

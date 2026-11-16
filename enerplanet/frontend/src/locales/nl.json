@@ -3164,6 +3164,7 @@
       "assignAll": "Aan allemaal toewijzen",
       "loading": "Catalogus wordt geladen…",
       "unavailable": "De catalogus is niet bereikbaar; er kunnen geen technologieën worden toegewezen.",
+      "continue": "Doorgaan",
       "noSelectionHint": "Er wordt één technologie per type op alle gebouwen toegepast. Selectie per gebouw is er nog niet."
     }
   }
