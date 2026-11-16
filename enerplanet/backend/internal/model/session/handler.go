@@ -48,6 +48,13 @@ type SessionStore interface {
 	// Get returns (nil, nil) when the model has no session.
 	Get(modelID uint) (*appModels.ModelSession, error)
 	Save(row *appModels.ModelSession) error
+	// ListModelIDs returns which models have a session — nothing else about them.
+	//
+	// The dashboard's question is "was this model touched by the builder?", and the cheapest honest
+	// answer is the set of keys. The dashboard already lists the models a user may see; intersecting is
+	// its job, so this deliberately returns more than any one user can reach rather than growing a join
+	// and an access rule that would then have to agree with the legacy list's.
+	ListModelIDs() ([]uint, error)
 }
 
 // Handler serves the modular builder session endpoints.
@@ -131,6 +138,28 @@ func (h *Handler) GetModelSession(c *gin.Context) {
 	}
 
 	httputil.SuccessResponse(c, toResponse(row))
+}
+
+// GetModelSessionIDs answers the one question the model dashboard asks of the builder: which models were
+// worked on here. One column, no rows loaded — see `SessionStore.ListModelIDs` for why the set is not
+// narrowed to the caller.
+func (h *Handler) GetModelSessionIDs(c *gin.Context) {
+	if _, ok := httputil.GetUserContext(c); !ok {
+		httputil.Unauthorized(c, "Authentication required")
+		return
+	}
+
+	ids, err := h.store.ListModelIDs()
+	if err != nil {
+		httputil.InternalError(c, "Failed to list the model sessions")
+		return
+	}
+	// An empty set is an empty list, never `null`: the client iterates this unconditionally.
+	if ids == nil {
+		ids = []uint{}
+	}
+
+	httputil.SuccessResponse(c, ids)
 }
 
 // load resolves the model and applies the same permission rule the legacy paths use: a read needs

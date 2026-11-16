@@ -2,8 +2,10 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -32,8 +34,10 @@ func (f fakeAccess) UserHasModelAccess(string, *commonModels.Model) bool { retur
 type fakeStore struct {
 	row     *appModels.ModelSession
 	saved   *appModels.ModelSession
+	ids     []uint
 	getErr  error
 	saveErr error
+	listErr error
 }
 
 func (f *fakeStore) Get(uint) (*appModels.ModelSession, error) { return f.row, f.getErr }
@@ -43,9 +47,11 @@ func (f *fakeStore) Save(row *appModels.ModelSession) error {
 	return f.saveErr
 }
 
+func (f *fakeStore) ListModelIDs() ([]uint, error) { return f.ids, f.listErr }
+
 // ── harness ──────────────────────────────────────────────────────────────────
 
-// router mounts the two routes behind the user context the real middleware sets (session_context.go
+// router mounts the routes behind the user context the real middleware sets (session_context.go
 // sets "user_id" and "access_level"; httputil.GetUserContext reads exactly those).
 func router(handler *Handler, userID, accessLevel string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -57,6 +63,15 @@ func router(handler *Handler, userID, accessLevel string) *gin.Engine {
 	})
 	r.GET("/models/:id/session", handler.GetModelSession)
 	r.PUT("/models/:id/session", handler.PutModelSession)
+	r.GET("/model-sessions/ids", handler.GetModelSessionIDs)
+	return r
+}
+
+// unauthenticatedRouter is the same handler with no user context at all — what an expired session sees.
+func unauthenticatedRouter(handler *Handler) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/model-sessions/ids", handler.GetModelSessionIDs)
 	return r
 }
 
@@ -66,6 +81,14 @@ func call(t *testing.T, handler *Handler, userID, accessLevel, method, body stri
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router(handler, userID, accessLevel).ServeHTTP(rec, req)
+	return rec
+}
+
+func callIDs(t *testing.T, handler *Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/model-sessions/ids", nil)
+	rec := httptest.NewRecorder()
+	router(handler, owner, "user").ServeHTTP(rec, req)
 	return rec
 }
 
@@ -88,6 +111,62 @@ func ownedModel() *commonModels.Model {
 
 func newHandler(store *fakeStore, access bool) *Handler {
 	return &Handler{models: fakeModels{model: ownedModel()}, access: fakeAccess{allow: access}, store: store}
+}
+
+// ── GET /model-sessions/ids ──────────────────────────────────────────────────
+
+func TestListModelSessionIDsAnswersTheSet(t *testing.T) {
+	store := &fakeStore{ids: []uint{15, 12, 4}}
+
+	rec := callIDs(t, newHandler(store, true))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var body struct {
+		Data []uint `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding the response: %v", err)
+	}
+	if !reflect.DeepEqual(body.Data, []uint{15, 12, 4}) {
+		t.Fatalf("data = %v, want [15 12 4]", body.Data)
+	}
+}
+
+func TestListModelSessionIDsIsAnEmptyListNotEmpty(t *testing.T) {
+	// `null` would make the client's own guard the only thing standing between it and a crash, and the
+	// dashboard iterates this before it knows whether anything was saved at all.
+	rec := callIDs(t, newHandler(&fakeStore{}, true))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("decoding the response: %v", err)
+	}
+	if got := string(raw["data"]); got != "[]" {
+		t.Fatalf("data = %s, want []", got)
+	}
+}
+
+func TestListModelSessionIDsNeedsASession(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/model-sessions/ids", nil)
+	rec := httptest.NewRecorder()
+	unauthenticatedRouter(newHandler(&fakeStore{ids: []uint{15}}, true)).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestListModelSessionIDsReportsAStoreFailure(t *testing.T) {
+	rec := callIDs(t, newHandler(&fakeStore{listErr: errors.New("boom")}, true))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
 }
 
 // ── PUT ──────────────────────────────────────────────────────────────────────

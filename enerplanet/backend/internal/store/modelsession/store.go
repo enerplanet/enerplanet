@@ -38,6 +38,17 @@ func (s *Store) Get(modelID uint) (*models.ModelSession, error) {
 	return &row, nil
 }
 
+// ListModelIDs returns the models that have a session, and nothing else about them.
+//
+// One column, pulled rather than a row per model: the caller's question is set membership ("was this
+// model worked on here?"), so loading the artefacts — projections, logs, the lot — to answer it would
+// be paying for kilobytes to read a boolean.
+func (s *Store) ListModelIDs() ([]uint, error) {
+	var ids []uint
+	err := s.db.Model(&models.ModelSession{}).Pluck("model_id", &ids).Error
+	return ids, err
+}
+
 // Save upserts the model's session.
 //
 // Every column is OVERWRITTEN on conflict, deliberately: the artefact is a whole document, not a

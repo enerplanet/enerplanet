@@ -950,6 +950,10 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 func registerModelSessionRoutes(api *gin.RouterGroup, handler *modelsession.Handler) {
 	api.PUT(routeModelByID+"/session", handler.PutModelSession)
 	api.GET(routeModelByID+"/session", handler.GetModelSession)
+	// The collection, not a member. `/models/:id/session` already owns the member shape, and a static
+	// sibling under `/models/` would sit beside a path parameter — so this one lives on its own prefix,
+	// where it cannot collide with a model id.
+	api.GET("/model-sessions/ids", handler.GetModelSessionIDs)
 }
 
 func registerInternalModelLifecycleRoutes(api *gin.RouterGroup, handler *modelhandler.LifecycleHandler) {
