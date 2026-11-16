@@ -102,7 +102,7 @@ describe("the steps panel reads the whole workflow", () => {
     expect(steps.some((step) => step.current)).toBe(false);
   });
 
-  it("a step the session jumped back to is stale, and current", () => {
+  it("a step the session moved back to stays done, and is current", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
     store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
@@ -116,33 +116,44 @@ describe("the steps panel reads the whole workflow", () => {
 
     const steps = stepsState(workflow.flow, workflow.registry, store);
 
-    expect(steps[0].state).toBe("stale");
+    // A move is a pure position move: "first" is where the session rests (the jump's target), so it is current,
+    // but its work is untouched so it stays `done`. Marking it stale would be the lie this rule removes.
+    expect(steps[0].state).toBe("done");
     expect(steps[0].current).toBe(true);
   });
 
-  it("marks exactly the steps a click can move to — the ones behind the session", () => {
+  it("marks exactly the steps a click can move to — the reachable set, frontier included", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
 
-    // Nothing has run: the session sits on the first step, so nothing is behind it and nothing is a control.
+    // Nothing has run: the session rests on the first step and the frontier is there too, so there is nowhere
+    // to move — the resting step is not a control, because clicking it would move nothing.
     const atStart = stepsState(workflow.flow, workflow.registry, createStore(workflow.initial));
-    expect(atStart.map((step) => step.behind)).toEqual([false, false]);
+    expect(atStart.map((step) => step.movable)).toEqual([false, false]);
 
     const store = createStore(workflow.initial);
     store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
 
-    // The session has moved on to the second, so the first becomes a move target and the second — where the
-    // session already is — does not. A step *ahead* is never one: `moveToNode` refuses a forward target
-    // (`JumpNotBackwards`), so a click there would throw rather than navigate.
+    // The first has run, so the session rests on the second and the frontier is there as well: the first is
+    // reachable and the second is not, since it is where the session already is.
     const atSecond = stepsState(workflow.flow, workflow.registry, store);
-    expect(atSecond.map((step) => step.behind)).toEqual([true, false]);
+    expect(atSecond.map((step) => step.movable)).toEqual([true, false]);
     expect(atSecond.map((step) => step.current)).toEqual([false, true]);
+
+    // Now move back to the first. The frontier stays ahead at the second — it is `pending`, and a move writes
+    // nothing, so it stays that way — and the second is therefore **reachable from here**. This is the case the
+    // inclusive frontier exists for: movement may go as far as the first node that is not done, because past it
+    // the values would be read across a broken link.
+    store.applyTransaction([], [], { node: { id: "first" }, kind: "jump", jump: { from: "second", to: "first" } });
+    const movedBack = stepsState(workflow.flow, workflow.registry, store);
+    expect(movedBack.map((step) => step.current)).toEqual([true, false]);
+    expect(movedBack.map((step) => step.movable)).toEqual([false, true]);
 
     store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
 
-    // Complete: `position()` reports `index = flow.length`, so every step is behind and every step can be
-    // returned to. That is the point of a finished flow — you go back to change something.
+    // Complete: the frontier is `flow.length`, so every step is reachable and none is current.
     const done = stepsState(workflow.flow, workflow.registry, store);
-    expect(done.map((step) => step.behind)).toEqual([true, true]);
+    expect(done.map((step) => step.movable)).toEqual([true, true]);
+    expect(done.some((step) => step.current)).toBe(false);
   });
 
   it("carries the reason: the ports a stale step wrote that are gone", () => {

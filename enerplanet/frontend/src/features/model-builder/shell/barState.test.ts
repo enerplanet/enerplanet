@@ -4,8 +4,8 @@
  * The bar answers one question, and the answer is *derived* from `(flow, registry, store)`, never stored:
  * prior is the node before the position, current is the node the session sits on, next is the one after.
  * These cases pin the derivation, including the two readings that are easy to get wrong — a flow that has
- * finished still names the last node (that is what is on screen), and a node the session jumped back to
- * reads **stale**, not pending, because that is what the re-arm is for.
+ * finished still names the last node (that is what is on screen), and a node the session *moved* back to is
+ * where the bar rests (the jump's target) yet stays **done**, because a move changes no data.
  *
  * Most cases build history directly through the store, because the bar is a pure derivation over history:
  * "given history shaped like this, the bar reads that". The one case that runs a real node does so to prove
@@ -96,7 +96,7 @@ describe("the bar derives the session's position", () => {
     expect(bar.next).toBeUndefined();
   });
 
-  it("shows a node the session jumped back to as stale, not pending — the re-arm is visible", () => {
+  it("rests the bar on a node the session moved to, which stays done — a move marks nothing stale", () => {
     const workflow = workflowOf(TWO_NODES);
     const store = createStore(workflow.initial);
 
@@ -106,12 +106,16 @@ describe("the bar derives the session's position", () => {
 
     const bar = barState(workflow.flow, workflow.registry, store);
 
-    expect(bar.current).toEqual({ id: "first", label: "First", state: "stale" });
-    // The jump re-armed its target *only*: the tail keeps its work and is elided when the target runs
-    // again, unless the target's new value prunes what the tail used. So "next" reads done, not pending —
-    // and that is the truth of the derivation, not a bug in the bar.
+    // The session rests on "first" — the jump's target (`position()`'s resting place) — and because a move
+    // changes no data, "first" is still `done`: nothing a move does makes a node stale. That is the whole point
+    // of a pure position move: you can go back and look at a node without touching its state.
+    expect(bar.current).toEqual({ id: "first", label: "First", state: "done" });
+    // The tail keeps its work — a move discards nothing, so "second" is still done and is elided when the
+    // target runs again, unless the target's new value prunes what the tail used.
     expect(bar.next).toEqual({ id: "second", label: "Second", state: "done" });
-    expect(bar.complete).toBe(false);
+    // `complete` reads the *frontier*, not where the session rests: every node is done, so the model is whole
+    // even though the session has moved back to look at it.
+    expect(bar.complete).toBe(true);
   });
 
   it("falls back to the module id when the definition gives a node no label", () => {

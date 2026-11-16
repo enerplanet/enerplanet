@@ -4,10 +4,11 @@
  * Dense by rule: it is chrome, and vertical space belongs to the content.
  *
  * **The bar moves; it does not undo** (`spec/core.md` §G, superseding §3.1's "module movement is undo/redo").
- * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it re-arms the
- * node it lands on and discards nothing. There is no `undo`/`redo` here — undo would leave a redo tail, and a
- * move must leave none, so the bar offers no history navigation at all. What goes stale is decided by
- * *influence* when a node actually runs, never by how far the bar moved.
+ * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it rests the
+ * session on the node it lands on — leaving that node `done`, not stale — and discards nothing. There is no
+ * `undo`/`redo` here — undo would leave a redo tail, and a move must leave none, so the bar offers no history
+ * navigation at all. What goes stale is decided by *influence* when a node actually runs, never by how far the
+ * bar moved.
  *
  * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
  * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving

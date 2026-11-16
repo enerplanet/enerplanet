@@ -2,7 +2,7 @@
  * The auto-run decision and its guard (`spec/core.md` T15) — written failing first.
  *
  * The rule this file pins is the whole point of the change: an auto node runs **on arrival** and **once**,
- * and it must not run again for a re-render or for a jump's bare re-arm — only for a genuine input change
+ * and it must not run again for a re-render or for a bare move — only for a genuine input change
  * (the invalidator's staleness, T7), or the first time it is ever seen. `autoRunFor` is the decision and
  * `createAutoGuard` is the idempotency, so both are exercised here without a frame.
  */
@@ -135,8 +135,9 @@ describe("the auto-run decision (autoRunFor)", () => {
       jump: { from: "n", to: "auto" },
     });
 
-    // The re-arm does **not** apply to an auto node: it stays done, the position passes over it, and there is
-    // nothing to re-run. This is the trap the two rules exist to avoid — a re-arm is not an input change.
+    // A move is not a change: the auto node's work is still in the store, so there is nothing to re-run. The
+    // position rests on it (it is `done`, so the frontier is past it), but `autoRun` reads the node's *work*, not
+    // the move — the trap this rule exists to avoid.
     expect(autoRunFor(FLOW, REGISTRY, store)).toBeUndefined();
     expect(store.data.buildings).toBeDefined();
   });

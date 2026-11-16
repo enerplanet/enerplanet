@@ -5,10 +5,10 @@
  * here is the two places the bar must *not* be thin —
  *
  * 1. **movement is a pure position move, not an undo.** A prior click seals a `jump` with an **empty
- *    cascade**: it re-arms the node it lands on and **discards nothing**, so no redo tail is ever produced.
- *    The cases below pin that a move prunes not a single port — invalidation is by *influence* (T7) when a
- *    node runs, never by how far the bar moved — and that it refuses to move *forward*, because forward is
- *    `Continue` running the node.
+ *    cascade**: it rests the session on the node it lands on and **discards nothing**, so no redo tail is ever
+ *    produced. The cases below pin that a move prunes not a single port *and marks nothing stale* —
+ *    invalidation is by *influence* (T7) when a node runs, never by how far the bar moved — and that it refuses
+ *    to move *forward*, because forward is `Continue` running the node.
  * 2. **the bar's save is always `incomplete` (§6).** Finishing a model — writing the real `model.json` and
  *    promoting to `draft` — is the save *node*'s job, behind its completeness gate. So the bar's save pins the
  *    status rather than letting completeness derive it, which is exactly the case below that a complete flow
@@ -88,9 +88,11 @@ describe("moving back a node at a time", () => {
 
     const jump = moveToNode(workflow.flow, workflow.registry, store, "first");
 
-    // The assertion that matters is the *move*: the position rests on the target, and one transaction recorded
+    // The assertion that matters is the *move*: the session rests on the target, and one transaction recorded
     // it — a `jump` whose cascade is empty. Nothing was discarded, so no redo tail exists for the bar to walk.
-    expect(position(workflow.flow, workflow.registry, store).index).toBe(0);
+    // The frontier is untouched by the move (both nodes stay done), so `index` is `flow.length`: only the
+    // resting place follows the jump.
+    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, restingIndex: 0 });
     expect(store.log.length).toBe(before + 1);
     expect(jump.kind).toBe("jump");
     expect(jump.cascade).toEqual([]);
@@ -98,17 +100,18 @@ describe("moving back a node at a time", () => {
     expect(store.canRedo).toBe(false);
   });
 
-  it("re-arms only its target — the tail keeps its work and its done state", () => {
+  it("marks nothing stale — every node keeps its work and its done state", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
     completeFlow(store);
 
     moveToNode(workflow.flow, workflow.registry, store, "first");
 
-    // The move discards nothing, so "second" is untouched and stays done. Only "first" reads stale — the re-arm
-    // made visible. This is the whole point of a position move over an undo: nothing the tail produced is lost.
+    // The move discards nothing *and* marks nothing: both nodes stay done. This is the whole point of a position
+    // move over an undo — nothing the tail produced is lost, and nothing the target produced is called into
+    // question merely because the session looked at it.
     expect(nodeStates(workflow.flow, workflow.registry, store)).toEqual({
-      first: "stale",
+      first: "done",
       second: "done",
     });
     expect(store.data.modelName).toBe("Two");
@@ -124,7 +127,7 @@ describe("moving back a node at a time", () => {
     // session onto that node. `moveToNode` landing there is correct, not a forward step.
     moveToNode(workflow.flow, workflow.registry, store, "second");
 
-    expect(position(workflow.flow, workflow.registry, store).index).toBe(1);
+    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, restingIndex: 1 });
     expect(store.canRedo).toBe(false);
   });
 
@@ -219,16 +222,114 @@ describe("a move discards nothing; a change invalidates by influence", () => {
     store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
   }
 
-  it("a move prunes nothing — every node keeps its data, only the target re-arms", () => {
+  // ── the acceptance case: A → B → C → D → E → F ──────────────────────────────
+  //
+  // A change at **B** invalidates D and F by influence, so movement must be bounded by the first node that is
+  // not done — **D** — and not reach E or F, however far down the flow they sit; once D is done again, F is
+  // reachable. A move to B first, being a pure position move, marks nothing stale.
+
+  const SIX: readonly BuilderModule[] = [
+    influenceModule("src", "coordinates"), // A — writes coordinates
+    influenceModule("beta", "buildings", "coordinates"), // B — requires coordinates, writes buildings
+    influenceModule("clean", "advancedParams"), // C — writes advancedParams, nothing reads it
+    influenceModule("delta", "technologies", "buildings"), // D — requires buildings, writes technologies
+    influenceModule("extra", "transformers"), // E — writes transformers, nothing reads it
+    influenceModule("final", "saveResult", "technologies"), // F — requires technologies, writes saveResult
+  ];
+
+  const SIX_DEFINITION = {
+    id: "chain-six",
+    label: "Chain of six",
+    // The dev-flow seed the other definitions name, referenced from `DEFINITION` rather than spelled a third
+    // time (which would trip the duplicate-string lint).
+    seed: DEFINITION.seed,
+    nodes: [
+      { id: "a", moduleId: "src" },
+      { id: "b", moduleId: "beta" },
+      { id: "c", moduleId: "clean" },
+      { id: "d", moduleId: "delta" },
+      { id: "e", moduleId: "extra" },
+      { id: "f", moduleId: "final" },
+    ],
+  };
+
+  const BUILDINGS_1 = { type: "FeatureCollection", features: [] };
+  const BUILDINGS_2 = { type: "FeatureCollection", features: [{ id: "b1" }] };
+
+  /** A six-node session with the real invalidator wired in, so a seal's cascade is influence (T7). */
+  function sixSession(): { store: Store; flow: Flow; registry: ModuleRegistry } {
+    const workflow = toWorkflow(SIX_DEFINITION, SIX, { coordinates: AREA_0 });
+    const store = createStore(workflow.initial, {
+      deriveCascade: createInvalidator(workflow.flow, workflow.registry),
+    });
+    return { store, flow: workflow.flow, registry: workflow.registry };
+  }
+
+  /** Every node has run: each wrote its own port, so the flow reads complete. */
+  function runSix(store: Store): void {
+    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], { node: { id: "a" } });
+    store.applyTransaction([add("buildings", BUILDINGS_1)], [], { node: { id: "b" } });
+    store.applyTransaction([add("advancedParams", { note: "g1" })], [], { node: { id: "c" } });
+    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
+    store.applyTransaction([add("transformers", BUILDINGS_1)], [], { node: { id: "e" } });
+    store.applyTransaction([add("saveResult", { modelId: 1, created: true })], [], { node: { id: "f" } });
+  }
+
+  it("the acceptance case: at B, a change bounds movement to D — not E or F — until D is done again", () => {
+    const { store, flow, registry } = sixSession();
+    runSix(store);
+
+    // Move to B: a pure position move. It marks nothing stale — every node stays done — and the session rests on
+    // B while the frontier stays past the whole flow (a move cannot move the frontier).
+    moveToNode(flow, registry, store, "b");
+    expect(position(flow, registry, store)).toMatchObject({ index: 6, restingIndex: 1 });
+    expect(nodeStates(flow, registry, store)).toEqual({
+      a: "done",
+      b: "done",
+      c: "done",
+      d: "done",
+      e: "done",
+      f: "done",
+    });
+
+    // B then commits a change: `buildings` affects `technologies` (D) and, through it, `saveResult` (F) — never
+    // `advancedParams` (C) or `transformers` (E). So D and F go stale, and C and E are untouched.
+    store.applyTransaction([replace("buildings", BUILDINGS_1, BUILDINGS_2)], undefined, {
+      node: { id: "b" },
+    });
+    expect(nodeStates(flow, registry, store)).toEqual({
+      a: "done",
+      b: "done",
+      c: "done",
+      d: "stale",
+      e: "done",
+      f: "stale",
+    });
+
+    // The frontier is now D — the first node that is not done — so movement reaches D and nothing past it: E and
+    // F are both refused, however far down the flow they sit.
+    expect(position(flow, registry, store).index).toBe(3);
+    expect(() => moveToNode(flow, registry, store, "d")).not.toThrow();
+    expect(() => moveToNode(flow, registry, store, "e")).toThrow(JumpNotBackwards);
+    expect(() => moveToNode(flow, registry, store, "f")).toThrow(JumpNotBackwards);
+
+    // D is marked done again — it re-derives its output, resolving F's requirement — and F becomes reachable.
+    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
+    expect(position(flow, registry, store).index).toBe(5);
+    expect(() => moveToNode(flow, registry, store, "f")).not.toThrow();
+  });
+
+  it("a move prunes nothing and marks nothing stale — every node keeps its data and its done state", () => {
     const { store, flow, registry } = chainSession();
     runChain(store);
 
     moveToNode(flow, registry, store, "a");
 
-    // The move seals one empty-cascade jump: all four ports are still there, and only the target is stale.
+    // The move seals one empty-cascade jump: all four ports are still there, and every node is still done —
+    // nothing a move does makes a node stale.
     expect(lastSealed(store).cascade).toEqual([]);
     expect(nodeStates(flow, registry, store)).toEqual({
-      a: "stale",
+      a: "done",
       b: "done",
       c: "done",
       d: "done",

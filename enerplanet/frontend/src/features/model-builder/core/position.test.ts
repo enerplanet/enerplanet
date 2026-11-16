@@ -3,8 +3,9 @@
  *
  * Spec: `.local/ModularThesis/spec/core.md` §G. A flow is immutable and the session's position
  * in it is **derived** from `(projection, log, cursor)`, so undo/redo reposition the flow with
- * no bookkeeping, and a jump only has to prune its target's outputs to make the position rest
- * there.
+ * no bookkeeping. Two readings come out of it, and keeping them apart is the point: the **frontier**
+ * (the first node that is not done, which `moveToNode` refuses to move past) and where the session
+ * **rests** (the latest jump's target), which a move changes while nothing goes stale.
  *
  * Written failing first.
  */
@@ -126,11 +127,13 @@ describe("T20b — the position is derived from the log", () => {
     expect(activeNode(FLOW, registry, store)).toBeUndefined();
   });
 
-  it("rests at the first node whose work was pruned — that is what makes a jump do anything", async () => {
+  it("rests at the first node whose work was pruned — the frontier follows the data", async () => {
     const store = createStore(seed());
     await runAll(store);
 
-    // A jump back to `grid`: its output is pruned, so it can no longer read as done.
+    // A jump back to `grid` that prunes its output: the prune is a data change, so `grid` can no longer read as
+    // done and the frontier rests on it. (The jump's own entry would rest the session there regardless — but
+    // that is the *position*, not the state, which the prune is what makes stale.)
     store.applyTransaction([], [{ op: "remove", path: "/buildings", prev: GRID_BUILDINGS }], {
       node: { id: "grid" },
       kind: "jump",
@@ -277,28 +280,23 @@ describe("T22 — a node is done only when the module's own gate is satisfied", 
   });
 });
 
-// ── T20a (a bare re-run clears the re-arm a jump left) ──────────────────────
+// ── T20a (a move is a position move: it marks nothing stale) ────────────────
 
-describe("T20a — a jump's re-arm clears on the next run, without an edit", () => {
-  it("lets a node jumped back to read done again after pressing forward without retyping", async () => {
-    // The user's exact complaint: a jump back to a finished node re-arms it (T20a), and a form holds only what
-    // was actually retyped — so coming back to look and pressing the forward action holds nothing. If a no-op
-    // run sealed no transaction the re-arm would never clear, the node would read `stale` forever, and the only
-    // way out would be to invent an edit. Going back to look is not an edit, so the run must leave a trace.
+describe("T20a — a move rests the session on its target without marking it stale", () => {
+  it("leaves a node moved back to `done`, and derives the position from the jump", async () => {
+    // The user's exact complaint, made into a rule: moving to a finished node used to re-arm it, so merely
+    // *looking* at a node marked it stale and the user could not tell a visit from a change. A move is a pure
+    // position move — a `jump` with an empty cascade that writes nothing — so nothing goes stale, and the only
+    // thing it changes is where the session rests.
     const REVISIT = "revisit";
-    let held: string | undefined;
     const revisit = defineModule({
       id: REVISIT,
       params: [{ port: "modelName" }],
       affect: {},
       layout: [],
       run: (ctx) => {
-        const proposed = held;
-        held = undefined;
-        if (proposed === undefined) return; // the form collected nothing
-        const current = ctx.read("modelName");
-        if (current === proposed) return; // nothing changed — read before you write
-        ctx.commit({ modelName: proposed });
+        ctx.read("modelName");
+        ctx.commit({ modelName: "Karlsruhe" });
       },
       validate: () => [],
     });
@@ -307,24 +305,20 @@ describe("T20a — a jump's re-arm clears on the next run, without an edit", () 
     const flow = [{ id: REVISIT, moduleId: REVISIT }];
     const local: ModuleRegistry = { [REVISIT]: revisit };
 
-    // First run: a real write, so the node is done.
-    held = "Karlsruhe";
+    // First run: a real write, so the node is done and the flow reads complete.
     await createEngine(store).runModule(revisit, { id: REVISIT });
     expect(nodeStates(flow, local, store)[REVISIT]).toBe("done");
 
-    // A jump back to it that discards nothing — the re-arm is the only effect.
+    // A move back to it that discards nothing.
     store.applyTransaction([], [], {
       node: { id: REVISIT },
       kind: "jump",
       jump: { from: "draw", to: REVISIT },
     });
-    expect(nodeStates(flow, local, store)[REVISIT]).toBe("stale");
 
-    // Press forward again, holding nothing — the bare run seals one zero-diff transaction, and that newer
-    // transaction is what clears the re-arm.
-    await createEngine(store).runModule(revisit, { id: REVISIT });
-
-    expect(store.data.modelName).toBe("Karlsruhe");
+    // Nothing went stale — the node's work is untouched — so its state is still `done`. The frontier is past it
+    // (the flow is complete), yet the session rests on it, which is exactly what the jump derives.
     expect(nodeStates(flow, local, store)[REVISIT]).toBe("done");
+    expect(position(flow, local, store)).toMatchObject({ index: 1, complete: true, restingIndex: 0 });
   });
 });

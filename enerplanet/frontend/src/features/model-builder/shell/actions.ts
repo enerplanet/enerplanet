@@ -6,7 +6,7 @@
  *
  * - **Module movement is a position move, not an undo** (`spec/core.md` §G, which supersedes the earlier
  *   "module movement is undo/redo" framing). A move seals a `jump` transaction with an **empty cascade**: it
- *   re-arms its target from its own entry (T20a) and **discards nothing**. The preview prune a jump once
+ *   rests the session on its target (T20a) and **discards nothing**. The preview prune a jump once
  *   carried goes with it — with nothing discarded there is nothing to preview, so the zero-diff jump is the
  *   ordinary case rather than the one documented exception. It is a `jump` and not the store's `undo` because
  *   undo leaves a redo tail: a move that produced one would make "step back to look at something" mutate the
@@ -30,11 +30,13 @@ import type { ModelGateway } from "../save/gateway";
 
 /**
  * Move the session back to an earlier node: a **pure position move** (`spec/core.md` §G) — a `jump`
- * transaction with an empty cascade, re-arming its target from its own entry and discarding nothing.
+ * transaction with an empty cascade, resting the session on its target and discarding nothing.
  *
  * The empty cascade is the whole point. A move is not a change: it must not prune a single port, however far
- * downstream, or a navigation that altered nothing would force the tail to re-run. What goes stale is decided
- * by *influence* (T7), when a node actually runs — never by how far the bar moved. The worked case: in
+ * downstream, or a navigation that altered nothing would force the tail to re-run. Nothing a move does makes a
+ * node stale — the target stays `done`, and the session only *rests* on it (`position.ts`), which is what lets
+ * a user look at a node they have no intention of changing. What goes stale is decided by *influence* (T7),
+ * when a node actually runs — never by how far the bar moved. The worked case: in
  * `A → B → C → D`, changing A makes B and D stale while **C is untouched**, because the closure reaches C's
  * ports through nothing.
  *

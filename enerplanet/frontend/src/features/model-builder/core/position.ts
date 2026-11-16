@@ -11,23 +11,25 @@
  *   wrote is still in the store, and its declared inputs are still there too. (What a node
  *   *wrote* comes from the transaction itself, which is truthful; a declared writable flag
  *   would only duplicate history.)
- * - **stale** — it ran, but its work was pruned or its inputs went away: it must run again.
+ * - **stale** — it ran, but its work was pruned or its inputs went away: it must run again. This is
+ *   a statement about **data** only, and it is the whole of it: nothing a *move* does can make a node
+ *   stale, because a move writes no value — there is nothing for `pruned`, `blocked` or the module's
+ *   gate to report.
  * - **pending** — it never ran in the applied prefix.
  *
- * **position** = the first node that is not done. That is why a jump must prune its target's
- * outputs: without that the target would still read as done and the position would fall
- * straight forward again, making the jump a no-op.
- *
- * One exception, and it is deliberate: a **jump's re-arm does not apply to an `auto` node** (T15). There is
- * nothing for a user to re-apply on a node that runs itself, and its work is either still valid or was pruned
- * by an input change — which already reads stale through `pruned`. So a bare re-arm of an auto node leaves it
- * `done` and the position passes over it, rather than resting on a node that no longer has a forward action.
+ * **Two positions, and the difference is the point.** The **frontier** (`index`) is the first node that
+ * is not done — where the work resumes, and what `moveToNode` refuses to move past. But the session can
+ * sit *behind* the frontier, because a **jump** is a position move that changes no data: it makes no
+ * node stale, so the frontier cannot show where the session went. So a position also carries
+ * `restingIndex` — where the session actually sits, taken from the latest jump — and `index` stays the
+ * frontier the movement guard needs. The session rests on the jump's target until a newer entry (a run)
+ * becomes the latest one, at which point the frontier is the resting place again.
  */
 
 import type { Flow, ModuleRegistry } from "./flow";
 import { requiredPorts, type Module } from "./module";
 import type { PortKey } from "./ports";
-import { lastActionOf, lastJumpTo, writtenPortsOf } from "./replay";
+import { currentJump, lastActionOf, writtenPortsOf } from "./replay";
 import type { Store } from "./store";
 
 /** The three states derivable from history — the rest of `NodeState` is session or runtime. */
@@ -44,10 +46,23 @@ export interface NodePosition {
 }
 
 export interface Position {
-  /** Index of the first node that is not done; `flow.length` when the flow is complete. */
+  /**
+   * The **frontier**: index of the first node that is not done; `flow.length` when every node is done.
+   * `moveToNode` refuses any target past it, because a later node is reached by *running* it. A move
+   * changes no data, so a jump never moves the frontier — only where the session rests (`restingIndex`).
+   */
   index: number;
+  /** The frontier node's id, absent when the flow is complete. */
   nodeId?: string;
   complete: boolean;
+  /**
+   * Where the session actually rests, when it is not simply the frontier. Equal to `index` whenever the
+   * latest applied entry is not a jump; otherwise the **target of that jump** — a position move writes
+   * nothing, so the frontier cannot show where the session went, and the session rests on the target
+   * until a newer entry (a run) takes over. Absent only when the flow is complete and no jump is current:
+   * there is then nothing to rest on.
+   */
+  restingIndex?: number;
 }
 
 /** Per-node derived state, in flow order. */
@@ -61,25 +76,10 @@ export function positionReport(
     const blocked = module === undefined ? [] : missingFromStore(module, store);
 
     const transaction = lastActionOf(store.log, node.id, store.cursor);
-    const jump = lastJumpTo(store.log, node.id, store.cursor);
 
-    if (transaction === undefined && jump === undefined) {
+    if (transaction === undefined) {
       return { nodeId: node.id, moduleId: node.moduleId, state: "pending", pruned: [], blocked };
     }
-
-    // A jump that lands here re-arms the node: the session is *meant* to be back at it, so its
-    // earlier work cannot count as done — even when the jump had nothing to discard, which is
-    // exactly what makes the zero-diff jump (a bare re-save) mean anything.
-    //
-    // **Except an auto node**, which has nothing for a user to re-apply: its work is either still valid (so it
-    // reads done and the position moves on) or was pruned because an input changed, which *already* reads stale
-    // through `pruned` (T7). A bare re-arm is not an input change, so it must not force an auto node to run
-    // again (T15) — and not resting the position on it is what lets the session pass a re-armed auto node
-    // without the button it no longer has.
-    const rearmed =
-      node.auto !== true &&
-      jump !== undefined &&
-      (transaction === undefined || jump.revision > transaction.revision);
 
     const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);
@@ -103,7 +103,7 @@ export function positionReport(
      * the line above. A node that has not run at all is `pending` long before reaching here.
      */
     const state: DerivedState =
-      rearmed || pruned.length > 0 || blocked.length > 0 || issues.length > 0 ? "stale" : "done";
+      pruned.length > 0 || blocked.length > 0 || issues.length > 0 ? "stale" : "done";
 
     return { nodeId: node.id, moduleId: node.moduleId, state, pruned, blocked };
   });
@@ -120,13 +120,27 @@ export function nodeStates(
   return states;
 }
 
-/** Where the session sits: the first node that is not done. */
+/**
+ * Where the session sits: the frontier, unless the latest applied entry is a **jump** — then the jump's
+ * target. A jump changes no data, so it cannot move the frontier; it can only move where the session rests,
+ * which is why both readings live here rather than one being derived from the other at every call site.
+ */
 export function position(flow: Flow, registry: ModuleRegistry, store: Store): Position {
   const report = positionReport(flow, registry, store);
-  const index = report.findIndex((entry) => entry.state !== "done");
+  const notDone = report.findIndex((entry) => entry.state !== "done");
+  const complete = notDone === -1;
+  const index = complete ? flow.length : notDone;
 
-  if (index === -1) return { index: flow.length, complete: true };
-  return { index, nodeId: flow[index].id, complete: false };
+  const target = currentJump(store.log, store.cursor)?.jump?.to;
+  const jumped = target === undefined ? -1 : flow.findIndex((node) => node.id === target);
+  const restingIndex = jumped >= 0 ? jumped : complete ? undefined : index;
+
+  return {
+    index,
+    ...(complete ? {} : { nodeId: flow[index].id }),
+    complete,
+    ...(restingIndex === undefined ? {} : { restingIndex }),
+  };
 }
 
 /** The node at the current position — the one the user should be looking at. */

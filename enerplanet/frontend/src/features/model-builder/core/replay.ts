@@ -50,17 +50,19 @@ export function lastActionOf(
   return undefined;
 }
 
-/** The most recent jump that moved the session *to* this node, if any. */
-export function lastJumpTo(
-  log: readonly Transaction[],
-  nodeId: string,
-  cursor: number,
-): Transaction | undefined {
-  for (let index = Math.min(cursor, log.length) - 1; index >= 0; index -= 1) {
-    const transaction = log[index];
-    if (transaction.kind === "jump" && transaction.jump?.to === nodeId) return transaction;
-  }
-  return undefined;
+/**
+ * The jump the session is resting on: the **latest** applied entry, when that entry is a jump.
+ *
+ * A jump is a position move — it changes no data — so it is the only thing that can leave the session
+ * somewhere other than the frontier (a run is a change, and once it becomes the latest entry the frontier
+ * is the resting place again). This is the log-index counterpart of `lastActionOf`, and it is what lets
+ * `position.ts` derive where the session sits without a stored position or a re-arm flag.
+ */
+export function currentJump(log: readonly Transaction[], cursor: number): Transaction | undefined {
+  const applied = Math.min(cursor, log.length);
+  if (applied === 0) return undefined;
+  const entry = log[applied - 1];
+  return entry.kind === "jump" ? entry : undefined;
 }
 
 /**

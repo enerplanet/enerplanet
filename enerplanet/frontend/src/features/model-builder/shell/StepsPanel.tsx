@@ -7,8 +7,9 @@
  *
  * **A step behind the session is a control; nothing else is.** Clicking one **moves** there — a pure position
  * move, the same `moveToNode` the bar's prior control calls, which seals a `jump` with an empty cascade: it
- * re-arms the node it lands on and discards nothing. What goes stale is decided by *influence* when a node
- * actually runs (T7), never by how far the panel moved, so a move cannot invalidate anything by itself.
+ * rests the session on the node it lands on — leaving that node `done`, not stale — and discards nothing. What
+ * goes stale is decided by *influence* when a node actually runs (T7), never by how far the panel moved, so a
+ * move cannot invalidate anything by itself.
  *
  * Steps **ahead** of the session are deliberately not clickable, and that is the core's rule rather than a UI
  * preference: `moveToNode` refuses a forward target (`JumpNotBackwards`), because a later node is reached by
@@ -119,7 +120,7 @@ export const StepsPanel: React.FC<Props> = ({ flow, registry, store, onMove }) =
 
       <ol className="min-h-0 flex-1 overflow-auto py-1">
         {steps.map((step) => {
-          const move = step.behind && onMove !== undefined;
+          const move = step.movable && onMove !== undefined;
 
           return (
             <li key={step.nodeId} className="flex items-start">

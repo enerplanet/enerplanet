@@ -9,9 +9,10 @@
  *
  * - `autoRunFor` answers "is there an auto node at the session's position that should run now, and for which
  *   state of the store?". It reads **staleness as the invalidator sees it** — the node never produced its work,
- *   or an input change pruned the outputs it wrote (T7) — and deliberately *not* the re-arm a jump leaves
- *   (T20a): coming back to look is not an input change, so a bare revisit does not re-run a node whose work is
- *   still there.
+ *   or an input change pruned the outputs it wrote (T7) — and never anything a *move* leaves behind: a jump
+ *   changes no data, so coming back to look leaves a node's work in place and there is nothing to re-run. The
+ *   node it reads is the session's **resting** node (`position.ts`), not the frontier: a jump can leave the
+ *   session *behind* the frontier, and an auto node runs on **arrival** — arrival is where the session rests.
  * - `createAutoGuard` is what makes the run idempotent. The frame re-renders for reasons of its own and React
  *   runs an effect twice under StrictMode, so a run is **claimed once** per `(node id, fingerprint)`. The
  *   fingerprint is the store's change token: it moves when an input changes, and it does not move when the
@@ -50,19 +51,23 @@ export function autoRunFor(
   const at = position(flow, registry, store);
   if (at.complete) return undefined;
 
-  const node = flow[at.index];
+  // The session's resting node, not the frontier: a jump leaves the session on its target — which can be
+  // *behind* the frontier — and an auto node runs on arrival, so the node to consider is the one the session
+  // is on. Running the frontier node instead would fire an auto node the session has not reached yet.
+  const here = at.restingIndex ?? at.index;
+  const node = flow[here];
   if (node.auto !== true) return undefined;
 
   const module = registry[node.moduleId];
   if (module === undefined) return undefined;
 
-  const report = positionReport(flow, registry, store)[at.index];
+  const report = positionReport(flow, registry, store)[here];
   // It can only run if its required inputs are there; a blocked auto node waits, it does not error.
   if (report.blocked.length > 0) return undefined;
 
   // The invalidator's view, not the position's: a node needs a run when it never produced its work, or that
-  // work was pruned because an input changed (T7). A jump's re-arm leaves the work in place, so it is *not* a
-  // reason to run — that is the trap this function exists to avoid.
+  // work was pruned because an input changed (T7). A move changes no data, so it leaves the work in place and
+  // is *not* a reason to run — that is the trap this function exists to avoid.
   const ran = lastActionOf(store.log, node.id, store.cursor) !== undefined;
   if (ran && report.pruned.length === 0) return undefined;
 

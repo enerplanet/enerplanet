@@ -10,9 +10,10 @@
  *    a node at or after the target" and "written by a node at or after the target": what the tail
  *    genuinely depends on. Who wrote what comes from the log, not from the modules' declarations —
  *    a module may declare a param it never writes.
- * 2. **the jump re-arms its target** — that is `position.ts`'s job, from the jump's own entry, so
- *    even a jump that discards nothing (a bare re-save) moves the position. Without it the target
- *    would still read as done and the position would fall straight forward again.
+ * 2. **the jump rests the position on its target** — that is `position.ts`'s job, from the jump's own
+ *    entry (T20a), so even a jump that discards nothing (a bare re-save) moves the position. It is not a
+ *    mark on the target's *state*: a move writes no data, so nothing goes stale, and the target stays
+ *    `done`. What the jump does is leave the session *resting* there, until a newer entry (a run) takes over.
  *
  * Nothing about correctness rests on the prune: when the target does run again, its own
  * transaction carries the influence cascade (T7) that prunes whatever its new value affects. The
@@ -42,8 +43,11 @@ export interface JumpPlan {
 /** The node the session is currently on; the last node once the flow is complete. */
 export function currentId(flow: Flow, registry: ModuleRegistry, store: Store): string | undefined {
   const here = position(flow, registry, store);
-  if (here.complete) return flow.length === 0 ? undefined : flow[flow.length - 1].id;
-  return here.nodeId;
+  // A jump rests the session on its target (`position.ts`), so that is where it is — even on a flow whose
+  // every node is done. Only when the flow is complete *and* no jump is current does the session fall back
+  // to the last node, so the frame stays on the module that finished rather than emptying out.
+  if (here.restingIndex !== undefined) return flow[here.restingIndex].id;
+  return flow.length === 0 ? undefined : flow[flow.length - 1].id;
 }
 
 /** What a jump to `targetId` would discard, without sealing anything — the UI's preview. */

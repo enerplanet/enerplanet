@@ -13,8 +13,9 @@
  * model is complete. That is also why this is not the same question the steps panel asks: the panel wants
  * every step's state, the bar wants the three that frame the session.
  *
- * Each step carries its derived state, so a node the session jumped back to reads `stale` — the re-arm
- * made visible, which is the only warning the user gets that something has to run again.
+ * Where the session sits is `position()`'s `restingIndex`, not its `index`: a move is a **pure position
+ * move** (`spec/core.md` §G), so a node the session jumped back to stays `done` and the frontier can be
+ * ahead of the session — `index` is the frontier, `restingIndex` is the jump's target.
  */
 
 import type { Flow, FlowNode, ModuleRegistry } from "../core/flow";
@@ -40,8 +41,9 @@ export function barState(flow: Flow, registry: ModuleRegistry, store: Store, hol
   const report = positionReport(flow, registry, store);
   const at = position(flow, registry, store);
 
-  // Complete (or an empty flow): the session sits on the last node, so name that one.
-  const derived = at.complete ? flow.length - 1 : at.index;
+  // Where the session sits: the jump's target when a move put it there, else the frontier — and when the flow
+  // is complete with no jump current, the last node, so the bar keeps naming what is on screen.
+  const derived = at.restingIndex ?? flow.length - 1;
   // A held node wins, so the bar cannot name a node the frame is not showing: the frame holds the view on a node
   // whose run is still landing, and the two deriving their own answer would disagree while that happens.
   const held = hold === undefined ? -1 : flow.findIndex((node) => node.id === hold);

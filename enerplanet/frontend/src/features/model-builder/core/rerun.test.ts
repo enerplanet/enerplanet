@@ -3,8 +3,9 @@
  *
  * Spec: `.local/ModularThesis/spec/core.md` §G. A jump moves the session back inside the same
  * immutable flow. It discards **only what a later node uses** — a node overwrites its own params
- * when it runs again, and configuration nothing reads is worth keeping. It also re-arms its
- * target, so a jump that discards nothing (a bare re-save) still moves the position.
+ * when it runs again, and configuration nothing reads is worth keeping. It also rests the position
+ * on its target (`position.ts`), so a jump that discards nothing (a bare re-save) still moves the
+ * session — without marking the target stale.
  *
  * Written failing first.
  */
@@ -106,18 +107,19 @@ describe("T20c — a jump drops back without throwing the tail away", () => {
     expect(plan).toMatchObject({ index: 1, to: "draw", from: "save" });
   });
 
-  it("discards nothing when the tail needs none of the target's work — and still re-arms it", async () => {
+  it("discards nothing when the tail needs none of the target's work — and rests the position on it", async () => {
     const store = createStore(seed());
     await runAll(store);
 
     const transaction = jumpTo(FLOW, registry, store, "save");
 
-    expect(transaction.cascade).toEqual([]); // the one documented zero-diff transaction
+    expect(transaction.cascade).toEqual([]); // the zero-diff jump: a move that discards nothing
     expect(transaction).toMatchObject({ kind: "jump", jump: { from: "save", to: "save" } });
-    // Nothing was thrown away, so pruning alone would not move anything: the jump's own entry
-    // is what makes this a re-save rather than a no-op.
-    expect(position(FLOW, registry, store)).toMatchObject({ index: 3, nodeId: "save" });
-    expect(nodeStates(FLOW, registry, store).save).toBe("stale");
+    // Nothing was thrown away, so pruning alone would not move anything: the jump's own entry is what makes this
+    // a re-save rather than a no-op — the session rests on the target. The frontier stays past it and `save`
+    // stays done, because a move changes no data.
+    expect(position(FLOW, registry, store)).toMatchObject({ index: 4, complete: true, restingIndex: 3 });
+    expect(nodeStates(FLOW, registry, store).save).toBe("done");
   });
 
   it("refuses a forward jump and writes nothing", async () => {

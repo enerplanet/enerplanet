@@ -75,8 +75,9 @@ export function frameView(
     };
   }
 
-  // Complete flows keep the last node (`currentId`'s rule), so the frame stays on the module that finished
-  // rather than emptying out.
+  // The session's resting node (`currentId`'s rule): the frontier, a jump's target when a move put the session
+  // there, or — when the flow is complete and no jump is current — the last node, so the frame stays on the
+  // module that finished rather than emptying out.
   const nodeId = hold ?? currentId(workflow.flow, workflow.registry, store);
   const node = workflow.flow.find((candidate) => candidate.id === nodeId);
   if (node === undefined) return { labelId: "", seed: workflow.initial };
