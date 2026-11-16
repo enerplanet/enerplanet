@@ -105,20 +105,31 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       }
     };
 
-    /** One layer: make sure its source and its trio exist, then push its features in. */
+    /**
+     * One layer: make sure its source and its trio exist, then push its features in.
+     *
+     * **Failing here must not take the rest of the draw with it.** A throw in this loop used to abort every layer
+     * after it and tell nobody, so a grid reached the map one layer per visit — the earlier layers remembered as
+     * rendered, the failing one reached again on the next sync — and looked like MapLibre only allowing one layer
+     * at a time. Now each layer stands or falls alone, and a fall is said out loud rather than swallowed.
+     */
     const drawLayer = (active: maplibregl.Map, id: string): void => {
-      if (!active.getSource(sourceOf(id))) {
-        active.addSource(sourceOf(id), {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
+      try {
+        if (!active.getSource(sourceOf(id))) {
+          active.addSource(sourceOf(id), {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+        }
+        if (!rendered.has(id)) {
+          addLayerTrio(active, id);
+          rendered.add(id);
+        }
+        const source = active.getSource(sourceOf(id)) as maplibregl.GeoJSONSource | undefined;
+        source?.setData({ type: "FeatureCollection", features: featuresOf(runtime, id) });
+      } catch (error) {
+        console.error(`map layer "${id}" failed to draw`, error);
       }
-      if (!rendered.has(id)) {
-        addLayerTrio(active, id);
-        rendered.add(id);
-      }
-      const source = active.getSource(sourceOf(id)) as maplibregl.GeoJSONSource | undefined;
-      source?.setData({ type: "FeatureCollection", features: featuresOf(runtime, id) });
     };
 
     /**
