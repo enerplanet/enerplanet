@@ -1,12 +1,14 @@
 /**
- * The bar's actions (`spec/frame.md` §3.1, §6) — written failing first.
+ * The bar's actions (`spec/frame.md` §3.1, §6; `spec/core.md` §G) — written failing first.
  *
- * §3.1's mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
+ * §G's mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
  * here is the two places the bar must *not* be thin —
  *
- * 1. **forward movement is redo-to-tip, never a jump.** A jump refuses a forward target by design
- *    (`JumpNotBackwards`), so the forward control must walk the tail. `jumpBack` exists to make that rule a
- *    named thing with a test on it, rather than a comment next to a button.
+ * 1. **movement is a pure position move, not an undo.** A prior click seals a `jump` with an **empty
+ *    cascade**: it re-arms the node it lands on and **discards nothing**, so no redo tail is ever produced.
+ *    The cases below pin that a move prunes not a single port — invalidation is by *influence* (T7) when a
+ *    node runs, never by how far the bar moved — and that it refuses to move *forward*, because forward is
+ *    `Continue` running the node.
  * 2. **the bar's save is always `incomplete` (§6).** Finishing a model — writing the real `model.json` and
  *    promoting to `draft` — is the save *node*'s job, behind its completeness gate. So the bar's save pins the
  *    status rather than letting completeness derive it, which is exactly the case below that a complete flow
@@ -14,31 +16,21 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { defineModule } from "@model-builder/core";
-import { position } from "../core/position";
+import { defineModule, type PortKey } from "@model-builder/core";
+import { position, nodeStates } from "../core/position";
 import { createStore, type Store } from "../core/store";
+import { createInvalidator } from "../core/invalidate";
+import { JumpNotBackwards } from "../core/errors";
 import { portPath, type DiffOp } from "../core/diff";
-import { redoToTip, undoToNode, saveSession } from "./actions";
-import { toWorkflow } from "./workflow";
+import type { Flow, ModuleRegistry } from "../core/flow";
+import { moveToNode, saveSession } from "./actions";
+import { toWorkflow, type Workflow } from "./workflow";
 import example from "../modules/example";
 import type { BuilderModule } from "./contract";
 import type { Artefact, WorkflowRef } from "../core/artefact";
 import type { CreateContext, LegacyModelPayload, ModelGateway } from "../save/gateway";
 
-const NEEDS_TRANSFORMERS: BuilderModule = {
-  module: defineModule({
-    id: "needs-transformers",
-    params: [{ port: "transformers", required: true }],
-    affect: {},
-    layout: [],
-    run: () => undefined,
-    validate: () => [],
-  }),
-  Component: () => null,
-  mock: {},
-};
-
-const ENTRIES: readonly BuilderModule[] = [example, NEEDS_TRANSFORMERS];
+const ENTRIES: readonly BuilderModule[] = [example];
 
 /** A drawn ring, in the store's coordinate type (GeoJSON positions, not bare numbers). */
 const AREA: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
@@ -67,8 +59,13 @@ const workflowOf = () => toWorkflow(DEFINITION, ENTRIES, SEED);
 
 const WORKFLOW_REF: WorkflowRef = { id: "steps", version: 1 };
 
-function replace(port: "modelName", prev: unknown, next: unknown): DiffOp {
+function replace(port: PortKey, prev: unknown, next: unknown): DiffOp {
   return { op: "replace", path: portPath(port), prev, next };
+}
+
+/** An addition — a port the store did not hold, then did. */
+function add(port: PortKey, next: unknown): DiffOp {
+  return { op: "replace", path: portPath(port), prev: undefined, next };
 }
 
 /** Seal one transaction per node, so the flow reads complete without running a module. */
@@ -76,6 +73,191 @@ function completeFlow(store: Store): void {
   store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
   store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
 }
+
+/** The last entry in the log — what a move just sealed. */
+function lastSealed(store: Store) {
+  return store.log[store.log.length - 1];
+}
+
+describe("moving back a node at a time", () => {
+  it("a prior click jumps to the target — one transaction, empty cascade, nothing discarded", () => {
+    const workflow = workflowOf();
+    const store = createStore(workflow.initial);
+    completeFlow(store);
+    const before = store.log.length;
+
+    const jump = moveToNode(workflow.flow, workflow.registry, store, "first");
+
+    // The assertion that matters is the *move*: the position rests on the target, and one transaction recorded
+    // it — a `jump` whose cascade is empty. Nothing was discarded, so no redo tail exists for the bar to walk.
+    expect(position(workflow.flow, workflow.registry, store).index).toBe(0);
+    expect(store.log.length).toBe(before + 1);
+    expect(jump.kind).toBe("jump");
+    expect(jump.cascade).toEqual([]);
+    expect(jump.jump).toEqual({ from: "second", to: "first" });
+    expect(store.canRedo).toBe(false);
+  });
+
+  it("re-arms only its target — the tail keeps its work and its done state", () => {
+    const workflow = workflowOf();
+    const store = createStore(workflow.initial);
+    completeFlow(store);
+
+    moveToNode(workflow.flow, workflow.registry, store, "first");
+
+    // The move discards nothing, so "second" is untouched and stays done. Only "first" reads stale — the re-arm
+    // made visible. This is the whole point of a position move over an undo: nothing the tail produced is lost.
+    expect(nodeStates(workflow.flow, workflow.registry, store)).toEqual({
+      first: "stale",
+      second: "done",
+    });
+    expect(store.data.modelName).toBe("Two");
+  });
+
+  it("a complete flow sits *past* its last node, so returning to it is a real move back", () => {
+    const workflow = workflowOf();
+    const store = createStore(workflow.initial);
+    completeFlow(store);
+
+    // Worth pinning because it is the opposite of what "the session is at the last node" suggests: the position
+    // of a complete flow is `flow.length`, so the last node is genuinely behind it and one move brings the
+    // session onto that node. `moveToNode` landing there is correct, not a forward step.
+    moveToNode(workflow.flow, workflow.registry, store, "second");
+
+    expect(position(workflow.flow, workflow.registry, store).index).toBe(1);
+    expect(store.canRedo).toBe(false);
+  });
+
+  it("never moves forward: a target ahead of the session is refused, writing nothing", () => {
+    const workflow = workflowOf();
+    const store = createStore(workflow.initial);
+
+    // Going forward is running a node (`Continue`), never declaring the session there, so a jump refuses the
+    // target before anything is sealed. The bar only ever offers targets that are behind, so this is a guard.
+    expect(() => moveToNode(workflow.flow, workflow.registry, store, "second")).toThrow(JumpNotBackwards);
+    expect(store.log).toHaveLength(0);
+  });
+
+  it("refuses a node that is not in this flow", () => {
+    const workflow = workflowOf();
+    const store = createStore(workflow.initial);
+
+    expect(() => moveToNode(workflow.flow, workflow.registry, store, "nope")).toThrow(/no node "nope"/);
+  });
+});
+
+/**
+ * The worked case from `spec/core.md` §G, at the shell's boundary: `A → B → C → D` with B requiring A and D
+ * requiring B, and C writing a port nothing reads. A move discards nothing; a *change* invalidates by
+ * influence. So changing A leaves B and D stale while **C is untouched** — the closure never reaches C — and
+ * that must survive the movement change, which is the reason these cases exist.
+ */
+describe("a move discards nothing; a change invalidates by influence", () => {
+  /** A drawn ring, in the store's coordinate type — and two more, to stand in for A changing its value. */
+  const AREA_0: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
+  const AREA_1: [number, number][][] = [[[9.8, 50.6], [9.81, 50.6], [9.81, 50.61]]];
+  const AREA_2: [number, number][][] = [[[9.9, 50.7], [9.91, 50.7], [9.91, 50.71]]];
+
+  /**
+   * One node's module: an entry that writes its port and requires nothing, or a link that requires an input
+   * and declares the honest `affect` edge (`input → output`). The edge is what T7's closure walks, so it is
+   * what makes B and D reachable from A and C not.
+   */
+  function influenceModule(id: string, writes: PortKey, reads?: PortKey): BuilderModule {
+    return {
+      module: defineModule({
+        id,
+        params: [
+          ...(reads === undefined ? [] : [{ port: reads, required: true }]),
+          { port: writes },
+        ],
+        affect: reads === undefined ? {} : { [reads]: [writes] },
+        layout: [],
+        run: () => undefined,
+        validate: () => [],
+      }),
+      Component: () => null,
+      mock: {},
+    };
+  }
+
+  const CHAIN: readonly BuilderModule[] = [
+    influenceModule("src", "coordinates"), // A — writes coordinates
+    influenceModule("beta", "buildings", "coordinates"), // B — requires coordinates, writes buildings
+    influenceModule("clean", "advancedParams"), // C — writes advancedParams, nothing reads it
+    influenceModule("delta", "technologies", "buildings"), // D — requires buildings, writes technologies
+  ];
+
+  const CHAIN_DEFINITION = {
+    id: "chain",
+    label: "Chain",
+    seed: "testdata/dev-flow.json",
+    nodes: [
+      { id: "a", moduleId: "src" },
+      { id: "b", moduleId: "beta" },
+      { id: "c", moduleId: "clean" },
+      { id: "d", moduleId: "delta" },
+    ],
+  };
+
+  /** A session over the chain, with the real invalidator wired in — a seal's cascade is influence (T7). */
+  function chainSession(): { workflow: Workflow; store: Store; flow: Flow; registry: ModuleRegistry } {
+    const workflow = toWorkflow(CHAIN_DEFINITION, CHAIN, { coordinates: AREA_0 });
+    const store = createStore(workflow.initial, {
+      deriveCascade: createInvalidator(workflow.flow, workflow.registry),
+    });
+    return { workflow, store, flow: workflow.flow, registry: workflow.registry };
+  }
+
+  /** Every node has run: each wrote its own port, so the flow reads complete. */
+  function runChain(store: Store): void {
+    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], { node: { id: "a" } });
+    store.applyTransaction([add("buildings", { type: "FeatureCollection", features: [] })], [], {
+      node: { id: "b" },
+    });
+    store.applyTransaction([add("advancedParams", { note: "g1" })], [], { node: { id: "c" } });
+    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
+  }
+
+  it("a move prunes nothing — every node keeps its data, only the target re-arms", () => {
+    const { store, flow, registry } = chainSession();
+    runChain(store);
+
+    moveToNode(flow, registry, store, "a");
+
+    // The move seals one empty-cascade jump: all four ports are still there, and only the target is stale.
+    expect(lastSealed(store).cascade).toEqual([]);
+    expect(nodeStates(flow, registry, store)).toEqual({
+      a: "stale",
+      b: "done",
+      c: "done",
+      d: "done",
+    });
+    expect(store.data.buildings).toBeDefined();
+    expect(store.data.advancedParams).toEqual({ note: "g1" });
+    expect(store.data.technologies).toEqual({ electricity: [] });
+  });
+
+  it("changing A makes B and D stale while C is untouched — invalidation is by influence, not position", () => {
+    const { store, flow, registry } = chainSession();
+    runChain(store);
+
+    // A change, not a move: the cascade is *omitted*, so T7 derives it from A's `affect` closure — coordinates
+    // reaches buildings (B's edge) and technologies (D's edge), but never advancedParams, because nothing
+    // declares an edge to it.
+    store.applyTransaction([replace("coordinates", AREA_1, AREA_2)], undefined, { node: { id: "a" } });
+
+    expect(nodeStates(flow, registry, store)).toEqual({
+      a: "done",
+      b: "stale",
+      c: "done",
+      d: "stale",
+    });
+    expect(store.data.advancedParams).toEqual({ note: "g1" }); // C unaffected — the closure never reaches it
+    expect(store.data.buildings).toBeUndefined(); // B's output pruned
+    expect(store.data.technologies).toBeUndefined(); // D's output pruned
+  });
+});
 
 interface Recorded {
   creates: { payload: LegacyModelPayload; context?: CreateContext }[];
@@ -105,114 +287,6 @@ function recorder(): { gateway: ModelGateway; recorded: Recorded } {
     },
   };
 }
-
-describe("redo to the tip", () => {
-  it("does nothing when there is no discard tail", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    completeFlow(store);
-    const logLength = store.log.length;
-
-    const walked = redoToTip(store);
-
-    expect(walked).toBe(0);
-    expect(store.log.length).toBe(logLength);
-    expect(store.cursor).toBe(logLength);
-  });
-
-  it("restores the tip after an undo, walking the whole tail", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    completeFlow(store);
-    store.undo();
-    store.undo();
-    expect(position(workflow.flow, workflow.registry, store).complete).toBe(false);
-
-    const walked = redoToTip(store);
-
-    expect(walked).toBe(2);
-    expect(store.canRedo).toBe(false);
-    expect(position(workflow.flow, workflow.registry, store).complete).toBe(true);
-  });
-
-  it("has nothing to redo while the session sits at the tip", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    completeFlow(store);
-    const logLength = store.log.length;
-
-    // Nothing has moved backwards, so there is no tail — which is why the bar shows the next step as plain
-    // greyed text until a prior click creates one.
-    expect(store.canRedo).toBe(false);
-    expect(redoToTip(store)).toBe(0);
-    expect(store.log.length).toBe(logLength);
-  });
-});
-
-describe("moving back a module at a time", () => {
-  it("a prior click unwinds the whole module, not one commit", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    // Two commits on the *same* node: a per-commit module seals as the user acts, so a node can own several.
-    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
-    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "first" } });
-    store.applyTransaction([replace("modelName", "Two", "Three")], [], { node: { id: "second" } });
-
-    const unwound = undoToNode(workflow.flow, workflow.registry, store, "first");
-
-    // The assertion that matters is the *position*: one gesture puts the session back on "first", which takes
-    // more than one undo, where a single atomic undo would leave it at the tip of that node's own commits.
-    expect(position(workflow.flow, workflow.registry, store).index).toBe(0);
-    expect(unwound).toBeGreaterThan(1);
-    expect(store.canRedo).toBe(true);
-  });
-
-  it("leaves exactly the tail the forward control walks back to the tip", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    completeFlow(store);
-
-    undoToNode(workflow.flow, workflow.registry, store, "first");
-    expect(store.canRedo).toBe(true);
-
-    // Step back to look at something, forward to return exactly where you were.
-    redoToTip(store);
-
-    expect(store.canRedo).toBe(false);
-    expect(position(workflow.flow, workflow.registry, store).complete).toBe(true);
-  });
-
-  it("a complete flow sits *past* its last node, so returning to it is a real move back", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-    completeFlow(store);
-
-    // Worth pinning because it is the opposite of what "the session is at the last node" suggests: the position
-    // of a complete flow is `flow.length`, so the last node is genuinely behind it and one undo brings the
-    // session onto that node. `undoToNode` moving here is correct, not a forward step.
-    expect(undoToNode(workflow.flow, workflow.registry, store, "second")).toBe(1);
-    expect(position(workflow.flow, workflow.registry, store).index).toBe(1);
-    expect(store.canRedo).toBe(true);
-  });
-
-  it("never moves forward: an untouched session is left alone", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-
-    // The condition is `position.index > target`, so a target ahead of the session — or the empty session
-    // itself — takes no action at all. The bar only ever offers targets that are behind, so this is a guard.
-    expect(undoToNode(workflow.flow, workflow.registry, store, "second")).toBe(0);
-    expect(position(workflow.flow, workflow.registry, store).index).toBe(0);
-    expect(store.log).toHaveLength(0);
-  });
-
-  it("refuses a node that is not in this flow", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-
-    expect(() => undoToNode(workflow.flow, workflow.registry, store, "nope")).toThrow(/no node "nope"/);
-  });
-});
 
 describe("the bar's save", () => {
   it("saves an unfinished flow as incomplete, with an empty config and its session", async () => {

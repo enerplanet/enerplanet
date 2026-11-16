@@ -1,14 +1,16 @@
 /**
- * The bar's actions (`spec/frame.md` §3.1, §6).
+ * The bar's actions (`spec/frame.md` §3.1, §6; `spec/core.md` §G).
  *
  * §3.1 is explicit that every control maps onto an operation the core already has — "*the bar only has to call
  * them*" — so this module is deliberately thin. It exists for the two places where "just call it" is not enough:
  *
- * - **Module movement is undo/redo, not a sealed jump.** The prior step is a *module-wide undo*: it unwinds
- *   every commit the nodes in between own, in one gesture, which leaves the redo tail that the forward step
- *   then walks back to the tip. That round trip is the whole point — you step back to look at something, and
- *   forward puts you exactly where you were. (A `jumpTo` transaction is a different mechanism and is *not* what
- *   the bar moves with; it stays for the deferred any-step jump in `optionals.md`.)
+ * - **Module movement is a position move, not an undo** (`spec/core.md` §G, which supersedes the earlier
+ *   "module movement is undo/redo" framing). A move seals a `jump` transaction with an **empty cascade**: it
+ *   re-arms its target from its own entry (T20a) and **discards nothing**. The preview prune a jump once
+ *   carried goes with it — with nothing discarded there is nothing to preview, so the zero-diff jump is the
+ *   ordinary case rather than the one documented exception. It is a `jump` and not the store's `undo` because
+ *   undo leaves a redo tail: a move that produced one would make "step back to look at something" mutate the
+ *   session, when the whole point is that it must not.
  * - **The bar's save is always `incomplete` (§6).** The *full* save — the real `model.json`, promoted to
  *   `draft` so that a run accepts it — belongs to the save **node**, behind its completeness gate. A bar button
  *   that wrote a finished model on a complete flow would be bypassing that gate, which is why the status is
@@ -19,18 +21,44 @@ import type { Flow, ModuleRegistry } from "../core/flow";
 import { position } from "../core/position";
 import type { Engine } from "../core/engine";
 import type { Store } from "../core/store";
+import { currentId } from "../core/rerun";
+import { JumpNotBackwards } from "../core/errors";
+import type { Transaction } from "../core/diff";
 import type { WorkflowRef } from "../core/artefact";
 import { saveModel, type SaveOutcome } from "../save/saveModel";
 import type { ModelGateway } from "../save/gateway";
 
-/** Walk the discard tail to its tip. Returns how many transactions it re-applied (0 when there is no tail). */
-export function redoToTip(store: Store): number {
-  let walked = 0;
-  while (store.canRedo) {
-    store.redo();
-    walked += 1;
-  }
-  return walked;
+/**
+ * Move the session back to an earlier node: a **pure position move** (`spec/core.md` §G) — a `jump`
+ * transaction with an empty cascade, re-arming its target from its own entry and discarding nothing.
+ *
+ * The empty cascade is the whole point. A move is not a change: it must not prune a single port, however far
+ * downstream, or a navigation that altered nothing would force the tail to re-run. What goes stale is decided
+ * by *influence* (T7), when a node actually runs — never by how far the bar moved. The worked case: in
+ * `A → B → C → D`, changing A makes B and D stale while **C is untouched**, because the closure reaches C's
+ * ports through nothing.
+ *
+ * It never moves *forward*: a later node is reached by **running** it, which is what `Continue` does, so a
+ * target ahead of the session is refused — the same rule the core's `jumpTo` states, for the same reason. The
+ * bar only ever offers targets that are behind.
+ *
+ * @returns the sealed jump, so a caller can see the move and everything it discarded — which is nothing.
+ */
+export function moveToNode(
+  flow: Flow,
+  registry: ModuleRegistry,
+  store: Store,
+  targetId: string,
+): Transaction {
+  const index = flow.findIndex((node) => node.id === targetId);
+  if (index < 0) throw new Error(`[model-builder] no node "${targetId}" in this flow`);
+  if (index > position(flow, registry, store).index) throw new JumpNotBackwards(targetId);
+
+  return store.applyTransaction([], [], {
+    node: { id: targetId, auto: flow[index].auto },
+    kind: "jump",
+    jump: { from: currentId(flow, registry, store) ?? targetId, to: targetId },
+  });
 }
 
 /**
@@ -38,8 +66,11 @@ export function redoToTip(store: Store): number {
  * an `auto` node.
  *
  * This is the **only forward action there is**, which is what makes it the thing that starts an auto node's
- * work — T15 says an auto node runs as part of a forward action and never on a passive state change, and undo
- * leaves an auto node's outputs pruned precisely because this is what re-runs them.
+ * work — T15 says an auto node runs as part of a forward action and never on a passive state change, and a
+ * move leaves an auto node's outputs pruned precisely because this is what re-runs them.
+ *
+ * A node already `done` is simply passed over — nothing is recomputed — which is what makes "change A, then
+ * walk forward" cost only the nodes the change actually affected.
  *
  * It stops *after* an interactive node, because that is the next place a user can act. It never moves
  * backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
@@ -71,34 +102,6 @@ export async function continueStep(request: {
   }
 
   return ran;
-}
-
-/**
- * Move the session back to an earlier node by **undoing module-wide** — every commit the nodes in between own,
- * not one atomic step. Returns how many undos it took (0 when the session already sits at or before the
- * target).
- *
- * This is what makes module movement a round trip: the undos leave a redo tail, and `redoToTip` walks that tail
- * back to the tip, so stepping back to look at something costs nothing. It never moves *forward* — a target
- * already behind the session is left alone, and the bar only ever offers targets that are behind.
- */
-export function undoToNode(
-  flow: Flow,
-  registry: ModuleRegistry,
-  store: Store,
-  targetId: string,
-): number {
-  const target = flow.findIndex((node) => node.id === targetId);
-  if (target < 0) throw new Error(`[model-builder] no node "${targetId}" in this flow`);
-
-  let unwound = 0;
-  // The position is "the first node that is not done", so undoing the target's own commits makes the target
-  // current again — that is the stopping condition, and `canUndo` bounds it so it can never run off the start.
-  while (store.canUndo && position(flow, registry, store).index > target) {
-    store.undo();
-    unwound += 1;
-  }
-  return unwound;
 }
 
 export interface SessionSaveRequest {

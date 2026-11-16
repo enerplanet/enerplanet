@@ -1,21 +1,17 @@
 /**
- * The workflow bar — the frame's top band (`spec/frame.md` §2, §3.1).
+ * The workflow bar — the frame's top band (`spec/frame.md` §2, §3.1; `spec/core.md` §G).
  *
  * Dense by rule: it is chrome, and vertical space belongs to the content.
  *
- * It carries **two kinds of movement, and they are deliberately not the same gesture** (§3.1):
- * - `undo` / `redo` are *atomic* — but atomic means what the store says it means: it steps the cursor to the
- *   previous **interactive boundary**, unwinding a `per-commit` module one action at a time and an
- *   `at-completion` module whole, because undo skips `auto` nodes while it unwinds. The store owns that
- *   decision; the bar does not restate it.
- * - the **prior and next steps are module-wide undo and redo**: a prior click unwinds every commit the nodes in
- *   between own in one gesture, which leaves the redo tail that the next step then walks back to the tip. Step
- *   back to look at something, forward to return exactly where you were.
+ * **The bar moves; it does not undo** (`spec/core.md` §G, superseding §3.1's "module movement is undo/redo").
+ * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it re-arms the
+ * node it lands on and discards nothing. There is no `undo`/`redo` here — undo would leave a redo tail, and a
+ * move must leave none, so the bar offers no history navigation at all. What goes stale is decided by
+ * *influence* when a node actually runs, never by how far the bar moved.
  *
- * So the forward step is a **control only when there is a tail to walk** (`store.canRedo`) — until then the
- * next step is plain greyed text, which is what it is: information about what comes next rather than something
- * you are being kept from. The same holds for the prior step, which is a control only when there is a prior to
- * return to.
+ * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
+ * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving
+ * there — forward motion is `Continue`, which runs the node the session sits on.
  *
  * Jumping to *any* step is deferred (`optionals.md`): it would make every step a potential jump, and a jump
  * deserves the discard preview it ought to show before it commits.
@@ -25,14 +21,14 @@
  * controls are hidden for the same reason: there is no position to move and no session to save.
  *
  * Everything it renders in workflow mode comes from `barState`, so the bar holds no knowledge of history that
- * could fall out of date. Movement is not reimplemented here either — the controls call the core and
- * `actions.ts` directly, which is exactly the thinness §3.1 asks for.
+ * could fall out of date. Movement is not reimplemented here either — the prior control calls `actions.ts`
+ * directly, which is exactly the thinness §3.1 asks for.
  */
 
-import { Redo2, Save, Undo2 } from "lucide-react";
+import { Save } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { barState, type BarStep } from "./barState";
-import { redoToTip, undoToNode } from "./actions";
+import { moveToNode } from "./actions";
 import type { FrameMode } from "./frameMode";
 import type { Workflow } from "./workflow";
 import type { Store } from "../core/store";
@@ -43,9 +39,6 @@ const STATE_CLASS: Record<BarStep["state"], string> = {
   stale: "text-amber-600 dark:text-amber-400",
   pending: "text-muted-foreground",
 };
-
-const ICON_BUTTON =
-  "rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
 /**
  * One framed step: the role, and the node filling it.
@@ -132,7 +125,7 @@ export const WorkflowBar: React.FC<Props> = ({
         {drives ? (
           <>
             <nav className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              {/* Prior: a control only when there is somewhere to go back to — a module-wide undo. */}
+              {/* Prior: the one backward control, and only when there is a node behind to return to. */}
               <Step
                 label={t("modelBuilder.bar.prior")}
                 step={bar.prior}
@@ -140,16 +133,12 @@ export const WorkflowBar: React.FC<Props> = ({
                   ? {}
                   : {
                       onClick: () =>
-                        undoToNode(workflow.flow, workflow.registry, store, bar.prior!.id),
+                        moveToNode(workflow.flow, workflow.registry, store, bar.prior!.id),
                     })}
               />
               <Step label={t("modelBuilder.bar.current")} step={bar.current} />
-              {/* Next: a control only when a redo tail exists — otherwise plain text about what comes next. */}
-              <Step
-                label={t("modelBuilder.bar.next")}
-                step={bar.next}
-                {...(store.canRedo ? { onClick: () => redoToTip(store) } : {})}
-              />
+              {/* Next: always plain text — forward motion is the Continue button, which runs the node. */}
+              <Step label={t("modelBuilder.bar.next")} step={bar.next} />
             </nav>
 
             {/* The one forward action: run what the session sits on, and keep going through auto nodes. */}
@@ -180,27 +169,6 @@ export const WorkflowBar: React.FC<Props> = ({
       <div className="flex items-center gap-2">
         {drives && (
           <>
-            <button
-              type="button"
-              onClick={() => store.undo()}
-              disabled={!store.canUndo}
-              aria-label={t("modelBuilder.bar.undo")}
-              title={t("modelBuilder.bar.undo")}
-              className={ICON_BUTTON}
-            >
-              <Undo2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => store.redo()}
-              disabled={!store.canRedo}
-              aria-label={t("modelBuilder.bar.redo")}
-              title={t("modelBuilder.bar.redo")}
-              className={ICON_BUTTON}
-            >
-              <Redo2 className="h-4 w-4" />
-            </button>
-
             {onSave !== undefined && (
               <button
                 type="button"
