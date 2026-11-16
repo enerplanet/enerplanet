@@ -42,7 +42,7 @@ import { setGridEngine } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
 import { setRegionSource } from "../modules/model-start";
 import { setDemandSource } from "../modules/building-demand";
-import { installBuildingConfigurator } from "./buildingConfigurator";
+import { BuildingPreparation, installBuildingConfigurator } from "./buildingConfigurator";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
@@ -440,14 +440,20 @@ export const BuilderShell: React.FC = () => {
               )}
             </section>
 
-            {/* Bounded box: intrinsic height, capped at ¼ of the content area — a cap, not a quota. */}
+            {/* Bounded box: intrinsic height, capped at ¼ of the content area — a cap, not a quota.
+                Stacked ABOVE the overlay slot: a module's own forward action is chrome, not content, and burying
+                it under the module's own modal leaves a button that looks live and cannot be pressed. */}
             {inRegion("bottom") && (
-              <footer className="max-h-[25%] shrink-0 overflow-hidden border-t border-border bg-card px-6 py-3">
+              <footer className="relative z-50 max-h-[25%] shrink-0 overflow-hidden border-t border-border bg-card px-6 py-3">
                 <View {...viewProps("bottom")} />
               </footer>
             )}
           </div>
         </div>
+
+        {/* Starts the 3D preparation for the grid on screen, once, beside the bars. The package draws a building
+            from City2TABULA's geometry, and that geometry only exists once this run has been asked for. */}
+        <BuildingPreparation />
 
         <LedgerBar store={session.store} />
 

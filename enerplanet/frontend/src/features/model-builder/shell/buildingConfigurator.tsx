@@ -28,6 +28,7 @@ import { useEffect, useRef, type FC } from "react";
 import type { TechAssignment } from "@model-builder/core";
 import { BuildingPanelHost, useConfiguratorParams } from "@/features/configurator/building-config";
 import type { BuildingTechs } from "@/features/configurator/building-config/buildingTechnologies";
+import { useAreaPreparation } from "@/features/configurator/building-config/useAreaPreparation";
 import { useModelStore } from "@/features/configurator/store/modelStore";
 
 import { setBuildingConfigurator, type BuildingViewProps } from "../modules/building-configurator/view";
@@ -128,3 +129,19 @@ const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, grid, onCom
 export function installBuildingConfigurator(): void {
   setBuildingConfigurator({ View });
 }
+
+/**
+ * Starts the 3D preparation for the grid on screen, and renders nothing.
+ *
+ * The package draws a building from City2TABULA's 3D geometry, which is produced by a preparation run the legacy
+ * starts when it has a grid (`useAreaPreparation`, *mount once per page*). Nothing in this feature mounted it, so
+ * every building opened on "City2TABULA holds no 3D geometry for this building" — the geometry it draws was never
+ * asked for. The shell renders this once, beside the bars.
+ *
+ * It reads the grid out of the same legacy store the view seeds, which is why it has to be mounted where the grid
+ * is already there rather than per building.
+ */
+export const BuildingPreparation: FC = () => {
+  useAreaPreparation();
+  return null;
+};
