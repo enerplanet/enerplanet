@@ -115,6 +115,18 @@ not a bug — flagging it so it is not mistaken for one.
 
 ---
 
+## 13. 💭 Hiding `map-provider` — two loose ends it turned up
+
+The palette no longer offers `map-provider` (it declares no region, so it is not a node). The rule is derived
+from `layout`, not from its id, so the next host module needs no code change. One small thing:
+
+- **`Plan.md:302` reads "A headless/`auto` node renders nothing",** while `spec/frame.md:183` is explicit:
+  *"An `auto` node is not headless: it declares `overlay` and shows its own state there."* The implementation
+  follows `frame.md` (`building-demand` declares `overlay`, `sidebar`, `bottom`), so I treated `frame.md` as
+  authoritative and the rule stands. Mentioning it only so the Plan line does not mislead the next reader.
+
+---
+
 ## Notes to self (not questions)
 
 - The legacy is the **template**; ours is the **new structure and harness**. When they disagree, the legacy

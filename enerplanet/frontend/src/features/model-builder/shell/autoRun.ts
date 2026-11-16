@@ -1,6 +1,7 @@
 /**
- * Auto-node orchestration (`spec/core.md` T15, T23; `spec/frame.md` §5) — the frame's side of a node that runs
- * itself.
+ * Auto-node orchestration (`spec/core.md` T15, T23; `spec/frame.md` §5) — the frame's side of a step that runs
+ * itself. A step is automatic because its **module** declares `auto: true` (`Module.auto`), which is what the
+ * frame reads here; the flow node carries no such flag of its own.
  *
  * An auto node has **no forward action to press**: the session runs it **on arrival**, as soon as its inputs
  * are present, and the position advances on its own once the run lands a finished node (position is derived, so
@@ -20,7 +21,7 @@
  */
 
 import type { Flow, ModuleRegistry } from "../core/flow";
-import type { Module } from "../core/module";
+import { isAutoModule, type Module } from "../core/module";
 import { position, positionReport } from "../core/position";
 import { lastActionOf } from "../core/replay";
 import type { Store } from "../core/store";
@@ -40,8 +41,10 @@ export interface AutoRunPlan {
 /**
  * The auto node the session sits on that should run now, or nothing.
  *
- * Nothing when the position is complete, the node is interactive, its module is unknown, its inputs are not all
- * present (it *cannot* run — T21, `blocked`), or its work is already there and untouched.
+ * Nothing when the position is complete, the module is unknown or interactive, its inputs are not all
+ * present (it *cannot* run — T21, `blocked`), or its work is already there and untouched. Whether the step is
+ * automatic is the **module's** declaration (`Module.auto`), read here through `isAutoModule` — not a property
+ * of the flow node, which the product has no way to author and which nothing in the frame can own.
  */
 export function autoRunFor(
   flow: Flow,
@@ -56,10 +59,11 @@ export function autoRunFor(
   // is on. Running the frontier node instead would fire an auto node the session has not reached yet.
   const here = at.restingIndex ?? at.index;
   const node = flow[here];
-  if (node.auto !== true) return undefined;
 
+  // The module decides: its `auto` flag says whether arriving here is a run or a place to act.
   const module = registry[node.moduleId];
   if (module === undefined) return undefined;
+  if (!isAutoModule(module)) return undefined;
 
   const report = positionReport(flow, registry, store)[here];
   // It can only run if its required inputs are there; a blocked auto node waits, it does not error.

@@ -23,12 +23,11 @@
 import { requiredPorts, type Module } from "./module";
 import type { PortKey } from "./ports";
 
-/** One module placed at a position. `auto` and `skippable` are node properties, not module ones. */
+/** One module placed at a position. `skippable` is a node property; `auto` is not — it belongs to the module (`Module.auto`). */
 export interface FlowNode {
   id: string;
   moduleId: string;
   label?: string;
-  auto?: boolean;
   skippable?: boolean;
 }
 

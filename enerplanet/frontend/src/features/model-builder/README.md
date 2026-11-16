@@ -71,7 +71,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `barState.ts` | the workflow bar's state — prior / current / next, derived from `(flow, registry, store)` |
 | `WorkflowBar.tsx` | the top band: workflow label, prior/current/next framing, a completion chip, and **Save**. A prior click is a position move — a jump back (`spec/core.md` §G); the next step is plain greyed text, and there is **no forward control** (a module advances by running itself; an auto node runs on arrival). Plus the dev-only mode select and Reset |
 | `actions.ts` | the bar's actions. Thin by design (§3.1: every control maps onto a core operation): `moveToNode` is the pure position move behind a prior click — a `jump` with an empty cascade that discards nothing (§G), `continueStep` is the "one interactive step" walk (**nothing calls it now** — the bar's Continue is gone and an auto node runs on arrival, `autoRun.ts`), and `saveSession` is the bar's save with the status pinned to `incomplete` |
-| `autoRun.ts` | the auto-node orchestration (T15): `autoRunFor` decides whether the `auto` node the session sits on should run now, reading **staleness as the invalidator sees it** (never ran, or outputs pruned — never a jump's re-arm); `createAutoGuard` claims a run once per `(node id, store change token)` so a re-render or StrictMode's double-invoke is not a second run |
+| `autoRun.ts` | the auto-node orchestration (T15): `autoRunFor` decides whether the automatic module the session sits on should run now (the module declares `auto`), reading **staleness as the invalidator sees it** (never ran, or outputs pruned — never a jump's re-arm); `createAutoGuard` claims a run once per `(node id, store change token)` so a re-render or StrictMode's double-invoke is not a second run |
 | `ledgerState.ts` | the ledger bar's state — the log with the cursor, newest first, each entry marked applied or discarded. No discard *structure*: the tail beyond the cursor is it |
 | `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
 | `stepsState.ts` | the steps panel's state — every step's derived state, which one is current, and the *reason* behind a step that is not done (`pruned`, `blocked`) |
@@ -96,15 +96,17 @@ and tsc resolve the specifier with no alias config.
 cd src/features/model-builder/core && npm install && npm run verify   # standalone: typecheck + tests
 ```
 
-## `modules/` — one workspace per module
+## `modules/` — one directory per module
 
 `modules/README.md` is the developer guide: the two packages a module depends on, the contract, the rules
 the core *checks* (declared ports, anti-clobber, `required`, verified `affect`), the regions, how to add a
-module, how to test one, and how to work on one without the app. `example/` is the reference shape and the
-proof the shell wiring works end to end — and it is a workspace in its own right:
+module, how to test one, and how to work on one without the app. Most modules are workspaces in their own right
+(`building-configurator/` is the exception — no `package.json`, resolving from the frontend root), and the two
+templates a new module is copied from live together under `modules/examples/` (its README is the
+getting-started surface; the templates are **not** registered modules and are not installable in place):
 
 ```bash
-cd src/features/model-builder/modules/example && npm install && npm run verify
+cd src/features/model-builder/modules/area-draw && npm install && npm run verify
 ```
 
 ## `load/` — opening a session

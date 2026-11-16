@@ -19,7 +19,7 @@
  * data covers every port it declares required.
  */
 
-import type { ModelData } from "@model-builder/core";
+import { isAutoModule, type ModelData } from "@model-builder/core";
 import { currentId } from "../core/rerun";
 import type { Store } from "../core/store";
 import type { BuilderModule } from "./contract";
@@ -40,8 +40,9 @@ export interface FrameView {
   /** The node a run is stamped with. Absent in test mode: there is no position to stamp. */
   nodeId?: string;
   /**
-   * Whether the node on screen is an **auto** node (`autoRun.ts`). The frame forces the full-screen slot open
-   * for one, because that is where an auto node shows its own run state — there is no forward action to press.
+   * Whether the module on screen is an **automatic** step (`autoRun.ts`). The module declares it
+   * (`Module.auto`), so this is read from `entry.module` — the frame forces the full-screen slot open for one,
+   * because that is where an automatic step shows its own run state and there is no forward action to press.
    */
   auto?: boolean;
   /** What the session's store starts from. */
@@ -88,7 +89,7 @@ export function frameView(
     ...(entry === undefined ? {} : { entry }),
     labelId: node.id,
     nodeId: node.id,
-    ...(node.auto === true ? { auto: true } : {}),
+    ...(entry !== undefined && isAutoModule(entry.module) ? { auto: true } : {}),
     seed: workflow.initial,
   };
 }

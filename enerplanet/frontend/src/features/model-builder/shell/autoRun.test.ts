@@ -45,6 +45,8 @@ const autoModule = defineModule({
   params: [{ port: COORDINATES, required: true }, { port: BUILDINGS }],
   affect: { coordinates: [BUILDINGS] },
   layout: [],
+  // The module declares it is automatic — the rule these cases exist to pin.
+  auto: true,
   run: (ctx) => {
     ctx.read(BUILDINGS);
     ctx.commit({ buildings: BUILDINGS_VALUE });
@@ -69,7 +71,7 @@ const REGISTRY: ModuleRegistry = {
 
 const FLOW: Flow = [
   { id: "a", moduleId: "producer" },
-  { id: "auto", moduleId: "auto-node", auto: true },
+  { id: "auto", moduleId: "auto-node" },
   { id: "n", moduleId: "afterwards" },
 ];
 
@@ -102,6 +104,22 @@ describe("the auto-run decision (autoRunFor)", () => {
     expect(plan?.module.id).toBe("auto-node");
   });
 
+  it("is the module's declaration that decides — the node is only a placement", async () => {
+    const store = session();
+    await runNode(store, "a", "producer");
+
+    // `auto-node` declares `auto`, so arriving at its node runs…
+    expect(autoRunFor(FLOW, REGISTRY, store)?.module.id).toBe("auto-node");
+
+    // …and the same flow, with an interactive module at that same node, plans nothing. The node carries no
+    // flag of its own — the module does.
+    const interactiveAt: ModuleRegistry = {
+      ...REGISTRY,
+      "auto-node": { ...autoModule, auto: undefined },
+    };
+    expect(autoRunFor(FLOW, interactiveAt, store)).toBeUndefined();
+  });
+
   it("plans nothing for an interactive node, or a complete flow", async () => {
     const store = session();
     // Before anything runs the position is the interactive producer — not an auto node.
@@ -116,7 +134,7 @@ describe("the auto-run decision (autoRunFor)", () => {
 
   it("waits, rather than erroring, when a required input is missing (T21)", () => {
     // The only node is the auto one, and its required input is absent: it *cannot* run.
-    const flow: Flow = [{ id: "auto", moduleId: "auto-node", auto: true }];
+    const flow: Flow = [{ id: "auto", moduleId: "auto-node" }];
     const store = createStore({}, { deriveCascade: createInvalidator(flow, REGISTRY) });
 
     expect(position(flow, REGISTRY, store)).toMatchObject({ index: 0, nodeId: "auto" });

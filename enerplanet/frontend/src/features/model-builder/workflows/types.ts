@@ -12,7 +12,6 @@ export interface WorkflowNodeDocument {
   id: string;
   moduleId: string;
   label?: string;
-  auto?: boolean;
 }
 
 export interface WorkflowDocument {

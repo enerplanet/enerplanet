@@ -27,8 +27,7 @@
     {
       "id": "building-demand",
       "moduleId": "building-demand",
-      "label": "Building demand",
-      "auto": true
+      "label": "Building demand"
     },
     {
       "id": "building-configurator",

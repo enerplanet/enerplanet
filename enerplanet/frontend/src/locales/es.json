@@ -3114,6 +3114,17 @@
         "shellHint": "Escape cierra este panel. El host es dueño del marco del overlay: el oscurecido, el centrado y la salida."
       }
     },
+    "example-auto": {
+      "running": "Resumiendo el área…",
+      "runningHint": "Se ejecuta por sí solo: el resumen se deriva del área dibujada.",
+      "done": "Área resumida",
+      "failed": "El resumen del área ha fallado",
+      "retry": "Ejecutar de nuevo",
+      "bottom": {
+        "present": "resumen presente",
+        "notSet": "aún sin resumen"
+      }
+    },
     "dashboard": {
       "newModel": "Nuevo modelo (experimental)"
     },
@@ -3178,6 +3189,7 @@
       "title": "Flujos de trabajo",
       "subtitle": "Redacta los flujos que ejecuta el Model Builder",
       "new": "Nuevo flujo",
+      "buildYourOwn": "Crea tu propio módulo",
       "loading": "Cargando flujos...",
       "loadError": "No se pudieron cargar los flujos: {{reason}}",
       "empty": "Aún no hay flujos.",

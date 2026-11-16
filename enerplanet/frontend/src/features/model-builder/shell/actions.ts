@@ -19,6 +19,7 @@
 
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { position } from "../core/position";
+import { isAutoModule } from "../core/module";
 import type { Engine } from "../core/engine";
 import type { Store } from "../core/store";
 import { currentId } from "../core/rerun";
@@ -56,8 +57,12 @@ export function moveToNode(
   if (index < 0) throw new Error(`[model-builder] no node "${targetId}" in this flow`);
   if (index > position(flow, registry, store).index) throw new JumpNotBackwards(targetId);
 
+  const targetModule = registry[flow[index].moduleId];
   return store.applyTransaction([], [], {
-    node: { id: targetId, auto: flow[index].auto },
+    node: {
+      id: targetId,
+      ...(targetModule !== undefined && isAutoModule(targetModule) ? { auto: true } : {}),
+    },
     kind: "jump",
     jump: { from: currentId(flow, registry, store) ?? targetId, to: targetId },
   });
@@ -96,11 +101,11 @@ export async function continueStep(request: {
     const module = registry[node.moduleId];
     if (module === undefined) break;
 
-    await engine.runModule(module, { id: node.id, ...(node.auto === true ? { auto: true } : {}) });
+    await engine.runModule(module, { id: node.id, ...(isAutoModule(module) ? { auto: true } : {}) });
     ran.push(node.id);
 
-    // An auto node is not a place anyone can act, so the walk continues past it. An interactive one is.
-    if (node.auto !== true) break;
+    // An automatic module is not a place anyone can act, so the walk continues past it. An interactive one is.
+    if (!isAutoModule(module)) break;
   }
 
   return ran;

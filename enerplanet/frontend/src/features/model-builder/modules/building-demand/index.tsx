@@ -4,7 +4,7 @@
  * **This is a fetch, and a fetch is an auto job** (T23). It reads the buildings the grid node produced, turns
  * each into a request, and commits what came back. It gathers nothing of its own and holds no cursor: the
  * request is a pure function of the projection, so re-running it after an upstream change re-derives the same
- * calls. In a flow it is declared `auto`, so there is **no button anywhere**: the frame runs it the moment the
+ * calls. It declares `auto: true`, so there is **no button anywhere**: the frame runs it the moment the
  * session lands on it and advances by itself when it is done (`shell/autoRun.ts`), and this module's only UI
  * concern is its full-screen state — in progress, done, or failed with a manual re-run.
  *
@@ -125,6 +125,9 @@ export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
 const module = defineModule({
   id: "building-demand",
   name: "Building demand",
+
+  // An automatic step: a fetch with nothing for the user to collect, so it runs on arrival (`shell/autoRun.ts`).
+  auto: true,
 
   // What it writes, what it reads, and what it can affect. `buildings` is required — without the grid there is
   // nothing to estimate. `weatherSelection` is declared without being read: a weather change invalidates these

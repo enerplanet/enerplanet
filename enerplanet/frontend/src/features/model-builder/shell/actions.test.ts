@@ -25,7 +25,7 @@ import { portPath, type DiffOp } from "../core/diff";
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { moveToNode, saveSession } from "./actions";
 import { toWorkflow, type Workflow } from "./workflow";
-import example from "../modules/example";
+import example from "./fixtures";
 import type { BuilderModule } from "./contract";
 import type { Artefact, WorkflowRef } from "../core/artefact";
 import type { CreateContext, LegacyModelPayload, ModelGateway } from "../save/gateway";
@@ -35,7 +35,7 @@ const ENTRIES: readonly BuilderModule[] = [example];
 /** A drawn ring, in the store's coordinate type (GeoJSON positions, not bare numbers). */
 const AREA: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
 
-/** The seed satisfies both the example module's run and the save's refusal check (name, dates, area). */
+/** The seed satisfies both the fixture's run and the save's refusal check (name, dates, area). */
 const SEED_NAME = "  Actions fixture  ";
 const SEED = {
   modelName: SEED_NAME,

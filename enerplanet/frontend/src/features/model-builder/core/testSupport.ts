@@ -60,6 +60,13 @@ export function contractIssues(entry: ModuleUnderTest): ContractIssue[] {
   // misunderstanding, and the influence prober will fail on it anyway.
   issues.push(...affectIssues(module, declared));
 
+  // An automatic step that does nothing is a contradiction: `auto` says the module runs itself with no forward
+  // action, so there must be a `run()` for it to run. `overlay` is *not* required — a headless automatic
+  // module is legal, which is why the flag's own doc says a module *should* declare the slot, not that it must.
+  if (module.auto === true && module.run === undefined) {
+    issues.push("the module is declared auto but has no run() — an automatic step that does nothing");
+  }
+
   for (const region of module.layout) {
     if (!REGIONS.includes(region)) issues.push(`layout names an unknown region "${region}"`);
   }

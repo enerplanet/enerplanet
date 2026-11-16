@@ -36,10 +36,14 @@ export type NodeState = "pending" | "ready" | "active" | "done" | "skipped" | "s
  */
 export type SealGranularity = "at-completion" | "per-commit";
 
-/** Identifies the workflow node a run belongs to (`auto` is a node property, not a module's). */
+/** Identifies the workflow node a run belongs to. */
 export interface NodeRef {
   id: string;
-  /** Auto nodes run headlessly as part of a forward action — never on a passive state change (T15). */
+  /**
+   * Whether the run was an **automatic** step's — the module's own flag (`Module.auto`), carried here so the
+   * engine can stamp it on the transaction and history can skip it (T14). A different fact from the node's
+   * identity: the id names a position, `auto` says the work ran with no forward action.
+   */
   auto?: boolean;
 }
 
@@ -103,7 +107,17 @@ export interface Module {
    * Only declare `"per-commit"` when the module's writes are independent (T16).
    */
   seal?: SealGranularity;
-  /** Headless execution — how `auto` nodes run without rendering anything. */
+  /**
+   * The module is an **automatic** step: it runs on arrival with no forward action, because only the module
+   * knows whether there is anything for the user to collect. Absent means interactive.
+   *
+   * An automatic module should declare `overlay`, since that is where the frame shows its run state — it
+   * forces that slot open for one, there being no forward action to press. It is a module-level execution
+   * property for the same reason `seal` is: whether a step runs itself is a fact about the work, and a module
+   * is the only thing that can judge it — a flow document cannot author what the product cannot express.
+   */
+  auto?: boolean;
+  /** Headless execution — how auto nodes run without rendering anything. */
   run?(ctx: ModuleCtx): void | Promise<void>;
   /**
    * The module's own completeness gate: **is the work finished, judged by the module itself** (T22).
@@ -155,4 +169,16 @@ export function requiredPorts(module: Module): PortKey[] {
  */
 export function isHostModule(module: Module): boolean {
   return module.layout.length === 0;
+}
+
+/**
+ * Is this an **automatic** module — a step that runs on arrival with no forward action?
+ *
+ * Read off `auto` rather than inferred from `layout`: a module that declares `overlay` is *usually*
+ * automatic (that is where its run state shows), but an interactive module may legitimately use the overlay
+ * slot too, and `run()` alone cannot say it either (an interactive module runs as well). The flag is the one
+ * place the fact is stated, so the shell reads it through here rather than each site testing the field.
+ */
+export function isAutoModule(module: Module): boolean {
+  return module.auto === true;
 }

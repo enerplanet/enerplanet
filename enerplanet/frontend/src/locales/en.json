@@ -3117,6 +3117,17 @@
         "shellHint": "Escape closes this panel. The host owns the overlay's chrome — the scrim, the centring, the way out."
       }
     },
+    "example-auto": {
+      "running": "Summarising the area…",
+      "runningHint": "Running on its own — the summary is derived from the drawn area.",
+      "done": "Area summarised",
+      "failed": "The area summary failed",
+      "retry": "Run again",
+      "bottom": {
+        "present": "summary present",
+        "notSet": "no summary yet"
+      }
+    },
     "dashboard": {
       "newModel": "New Model (experimental)"
     },
@@ -3181,6 +3192,7 @@
       "title": "Workflows",
       "subtitle": "Author the flows the Model Builder runs",
       "new": "New workflow",
+      "buildYourOwn": "Build your own module",
       "loading": "Loading workflows...",
       "loadError": "The workflows could not be loaded: {{reason}}",
       "empty": "No workflows yet.",

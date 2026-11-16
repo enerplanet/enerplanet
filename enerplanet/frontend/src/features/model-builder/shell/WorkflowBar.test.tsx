@@ -17,7 +17,7 @@ vi.mock("@spatialhub/i18n", () => ({ useTranslation: () => ({ t: (key: string) =
 import { createStore } from "../core/store";
 import { toWorkflow } from "./workflow";
 import { WorkflowBar } from "./WorkflowBar";
-import example from "../modules/example";
+import example from "./fixtures";
 import type { BuilderModule } from "./contract";
 
 const ENTRIES: readonly BuilderModule[] = [example];

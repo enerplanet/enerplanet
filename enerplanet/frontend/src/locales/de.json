@@ -3117,6 +3117,17 @@
         "shellHint": "Escape schließt dieses Panel. Den Rahmen des Overlays besitzt der Host — Abdunklung, Zentrierung und Ausweg."
       }
     },
+    "example-auto": {
+      "running": "Bereich wird zusammengefasst…",
+      "runningHint": "Läuft von selbst — die Zusammenfassung wird aus dem gezeichneten Bereich abgeleitet.",
+      "done": "Bereich zusammengefasst",
+      "failed": "Die Bereichszusammenfassung ist fehlgeschlagen",
+      "retry": "Erneut ausführen",
+      "bottom": {
+        "present": "Zusammenfassung vorhanden",
+        "notSet": "noch keine Zusammenfassung"
+      }
+    },
     "dashboard": {
       "newModel": "Neues Modell (experimentell)"
     },
@@ -3181,6 +3192,7 @@
       "title": "Workflows",
       "subtitle": "Die Abläufe verfassen, die der Model Builder ausführt",
       "new": "Neuer Workflow",
+      "buildYourOwn": "Eigenes Modul entwickeln",
       "loading": "Workflows werden geladen...",
       "loadError": "Die Workflows konnten nicht geladen werden: {{reason}}",
       "empty": "Noch keine Workflows.",

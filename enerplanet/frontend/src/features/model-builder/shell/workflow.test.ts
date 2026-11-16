@@ -15,7 +15,7 @@
  * Written failing first.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import example from "../modules/example";
+import example from "./fixtures";
 import { MODULES } from "./moduleRegistry";
 import { isValidFlow } from "../core/flow";
 import type { BuilderModule } from "./contract";
@@ -33,7 +33,7 @@ const { toWorkflow, loadDefaultWorkflow } = await import("./workflow");
 /** The one module these cases place. */
 const ENTRIES: readonly BuilderModule[] = [example];
 
-/** Two ports the example module wants, so the seed is meaningful rather than empty. */
+/** Two ports the fixture wants, so the seed is meaningful rather than empty. */
 const SEED = { modelName: "Dev model", resolution: 60 };
 
 /** The id the definition names itself, reused so the loader cases agree on it. */

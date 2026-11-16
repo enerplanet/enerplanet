@@ -101,13 +101,11 @@ export function toWorkflow(
     }
 
     const label = asString(node.label);
-    const auto = typeof node.auto === "boolean" ? node.auto : undefined;
 
     flow.push({
       id: nodeId,
       moduleId,
       ...(label === undefined ? {} : { label }),
-      ...(auto === undefined ? {} : { auto }),
     });
   });
 

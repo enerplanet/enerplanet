@@ -1,11 +1,13 @@
 # Modules
 
-One directory per module, and **each directory is its own workspace**. This is the guide: what a module
-is, what it may touch, how to add one, how to test one, and how to work on one without ever booting the
-app.
+One directory per module, and **each live directory is its own workspace** — its own `package.json`, tsconfig,
+vitest config and install — with one exception: `building-configurator/` carries no `package.json` and
+resolves everything from the frontend root. This is the guide: what a module is, what it may touch, how to add
+one, how to test one, and how to work on one without ever booting the app.
 
-**Start here:** `example/` is a working module and the template. Read it before you write anything —
-`scripts/new-module.mjs` copies it for you, so you mostly need to recognise the parts.
+**Start here:** `modules/examples/` holds the two templates — `interactive/` and `auto/`. Read one before you
+write anything; `scripts/new-module.mjs` copies one for you, so you mostly need to recognise the parts. That
+folder's README is the getting-started index; this file is the host-side guide.
 
 ## The two packages a module depends on
 
@@ -40,8 +42,9 @@ core's `view.ts`.
   rejected as `clobber` — the anti-clobber rule.
 - **`required` means "must already exist".** The flow gate keeps such a module unplaceable, and the
   engine refuses to run it at all (`MissingRequiredPorts`).
-- **`affect` is verified, not trusted.** `core/influence.ts` probes every registered module and fails an
-  under-declared one; over-declaring is only reported.
+- **`affect` can be verified, not merely trusted.** `core/influence.ts` derives a module's *observed*
+  influence and fails one that under-declares it; over-declaring is only reported. It is a prober a module's
+  own test calls (as `influence.test.ts` demonstrates) — not a sweep the app runs over every registered module.
 - **`run()` is the only write path.** It commits; nothing else may reach the store. Every commit is
   undoable and sealed together with the cascade it invalidated. A run that changes nothing still seals one
   transaction — a **zero-diff** one, with no ops — because a jump re-arms its target and the re-arm has to clear
@@ -49,15 +52,15 @@ core's `view.ts`.
   re-arm does not apply to it, since there is nothing to re-apply, and it either passes over as done or was
   pruned by a real input change — T15.)
 
-`example/index.test.ts` demonstrates each of these by trying to break them, which is the quickest way to
-see what the boundary actually refuses.
+`modules/examples/interactive/index.test.ts` demonstrates each of these by trying to break them, which is the
+quickest way to see what the boundary actually refuses.
 
 ## Regions
 
 `layout: Region[]` names where the UI mounts. The host composes the page; a module never does — and a
-module that declares nothing is headless. An `auto` node still runs headlessly (it has no forward action), but
-it declares the `overlay` slot so it can show its own run state — in progress / done / failed — full-screen while
-the session sits on it. The frame:
+module that declares nothing is headless. An **automatic** module (`auto: true`) still runs headlessly (it has no
+forward action), but it declares the `overlay` slot so it can show its own run state — in progress / done / failed
+— full-screen while the session sits on it. The frame:
 
 ```
 ┌ header (host-owned: title · prior/current/next · undo/redo/save · dev mode select) ┐
@@ -164,8 +167,8 @@ its chrome. A declared overlay is **closed until the module opens it**, and the 
 centring and the Escape handling — so an overlay is a panel the module fills, not a full-screen div it
 draws. Like the map, it is transient view state; nothing about it is committed.
 
-`example/` declares **all four slots** on purpose: it is the demonstration of the frame. Most modules want
-two or three — declare what you actually use.
+`modules/examples/interactive/` declares **all four slots** on purpose: it is the demonstration of the frame.
+Most modules want two or three — declare what you actually use.
 
 ## Slot conventions (rules, not preferences)
 
@@ -211,10 +214,10 @@ declares.
 Atomicity is a property of the *transaction* either way; only the group differs. Granularity is the module's
 call because whether its writes are independent is a module property, not an engine one.
 
-`example/` declares `per-commit`, and makes **one** `commit()` per gesture, so its atomicity is visible without
-the log getting noisy. Its tests fill the module's own values the way its regions do and then run the real
-engine; `runInScratch` covers the other half — that the declaration is consistent, and that a run does not
-throw.
+`modules/examples/interactive/` declares `per-commit`, and makes **one** `commit()` per gesture, so its
+atomicity is visible without the log getting noisy. Its tests fill the module's own values the way its regions
+do and then run the real engine; `runInScratch` covers the other half — that the declaration is consistent, and
+that a run does not throw.
 
 ## Adding a module
 
@@ -222,8 +225,10 @@ throw.
 node src/features/model-builder/scripts/new-module.mjs tariff-settings "Tariff settings"
 ```
 
-That copies `example/` — manifest, tsconfig, test config and all — rewrites the id, the label and the
-i18n key prefix, registers the entry in `../shell/moduleRegistry.ts`, and prints the remaining steps. Then:
+That copies a template from `modules/examples/` — manifest, tsconfig, test config and all — rewrites the id,
+the label and the i18n key prefix, registers the entry in `../shell/moduleRegistry.ts`, and prints the
+remaining steps. (The script's interface is being reworked; until it lands, a plain `cp -r` of
+`modules/examples/interactive` works too — see `modules/examples/README.md`.) Then:
 
 1. `cd modules/tariff-settings && npm install && npm test`
 2. Write the core contract with `defineModule` — the port surface **first and honestly**, because
@@ -232,6 +237,18 @@ i18n key prefix, registers the entry in `../shell/moduleRegistry.ts`, and prints
 4. Make the mock the smallest set of inputs that lets the module do its work.
 5. Make the copied test say something true about *your* module.
 6. Add the locale keys (`modelBuilder.<id>.*`) to `src/locales/{en,de,es,nl}.json`.
+
+### A note on the templates' locale keys
+
+The two templates under `modules/examples/` are still under `src/`, so `npm run i18n:check` still scans their
+`t("modelBuilder.example.*")` / `t("modelBuilder.example-auto.*")` calls: their key blocks **must stay** in
+`src/locales/{en,de,es,nl}.json`, even though nothing renders them, because the check reads the key argument and
+an inline fallback does not exempt it. They are not prune candidates today — every one is still referenced
+statically by the templates' own source, and `npm run i18n:prune --dry-run` removes nothing — but the safety is
+**incidental**: `scripts/i18n-prune.mjs` has **no keep/ignore list**, and `modelBuilder.*` is only skipped
+because `scripts/new-module.mjs` happens to contain a `modelBuilder.${id}` template literal that the scanner
+registers as a dynamic family. If a template ever leaves `src/`, or that script changes, those keys become prune
+candidates with nothing protecting them. Do not prune them by hand.
 
 ## Testing a module
 
@@ -272,10 +289,13 @@ appear — the only control on an auto node being its manual re-run, and only af
 cd ../..                     # enerplanet/frontend
 npm install
 
-cd src/features/model-builder/modules/example
+cd src/features/model-builder/modules/area-draw     # any module with its own package.json
 npm run verify               # typecheck + test, both standalone
 npm run test:watch           # the loop you actually want
 ```
+
+The templates under `modules/examples/` are the exception: they are **not installable in place** (their `file:`
+paths are relative to where a *copy* lands), so copy one first — see `modules/examples/README.md`.
 
 **Test mode.** Running a module on its own — here or in the shell's module preview — puts it in *test
 mode*: nothing has to pre-exist, because the module's own `mock` seeds the scratch store before `run()`,
@@ -308,4 +328,4 @@ rather than reaching for another feature's service.
 
 | module | status |
 |---|---|
-| `example` | the template. Handles the model name (a real, if small, job), renders into **all four** regions and owns each region's overflow (so the slot conventions are shown, not just described), and carries the tests that document the contract. Scaffold from it; do not delete it. |
+| `example` | **not a registered module any more.** The interactive template now lives at `modules/examples/interactive`, with the automatic one beside it at `modules/examples/auto`. Both are copied, never registered, and never deleted; see `modules/examples/README.md`. |

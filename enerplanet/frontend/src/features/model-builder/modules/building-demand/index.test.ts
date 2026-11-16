@@ -72,6 +72,10 @@ describe("building-demand's declaration", () => {
     expect(contractIssues(buildingDemand)).toEqual([]);
   });
 
+  it("declares itself an automatic step — nothing for the user to collect", () => {
+    expect(buildingDemand.module.auto).toBe(true);
+  });
+
   it("requires the grid, and declares what it can affect without writing it", () => {
     expect(
       buildingDemand.module.params.filter((param) => param.required === true).map((p) => p.port),

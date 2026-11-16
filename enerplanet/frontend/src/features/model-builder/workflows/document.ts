@@ -49,8 +49,8 @@ export function documentWithNodes(
  */
 const DOCUMENT_KEY_ORDER = ["id", "version", "label", "seed", "nodes"] as const;
 
-/** The same, per node. `auto` last because it is the least common. */
-const NODE_KEY_ORDER = ["id", "moduleId", "label", "auto"] as const;
+/** The same, per node. A node carries no execution flags — `auto` is the module's (`Module.auto`). */
+const NODE_KEY_ORDER = ["id", "moduleId", "label"] as const;
 
 /**
  * Keys in `order` first, then anything else in the order it arrived.

@@ -10,7 +10,7 @@
  *
  * **Five ports, one transaction.** `seal` stays at its `at-completion` default, so the grid arrives whole or
  * not at all — nothing can observe buildings whose cables were never written. A module whose ports are
- * independent should say `per-commit` instead (see `modules/example/index.tsx`).
+ * independent should say `per-commit` instead (see `modules/examples/interactive/index.tsx`).
  *
  * **The engine is injected, not imported.** A module may only depend on `@model-builder/core`, and the app's
  * CSRF-aware axios instance is the app's — so the frame hands the engine in at startup (`setGridEngine`). That

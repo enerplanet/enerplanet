@@ -24,7 +24,7 @@
 import { portPath, type DiffOp, type Transaction } from "./diff";
 import { JumpNotBackwards } from "./errors";
 import type { Flow, FlowNode, ModuleRegistry } from "./flow";
-import { requiredPorts, type Module, type NodeRef } from "./module";
+import { requiredPorts, isAutoModule, type Module, type NodeRef } from "./module";
 import type { PortKey } from "./ports";
 import { position, positionReport } from "./position";
 import { writtenPortsOf } from "./replay";
@@ -94,8 +94,14 @@ export function jumpTo(
   const plan = planJump(flow, registry, store, targetId);
   if (plan.index > position(flow, registry, store).index) throw new JumpNotBackwards(targetId);
 
+  // `auto` is the target module's fact (`Module.auto`), not the node's — history records which step a jump
+  // belongs to and whether it was automatic, and now the module is where that is declared.
+  const targetModule = registry[flow[plan.index].moduleId];
   return store.applyTransaction([], plan.cascade, {
-    node: { id: targetId, auto: flow[plan.index].auto },
+    node: {
+      id: targetId,
+      ...(targetModule !== undefined && isAutoModule(targetModule) ? { auto: true } : {}),
+    },
     kind: "jump",
     jump: { from: plan.from, to: plan.to },
   });
@@ -148,7 +154,7 @@ export async function walkTail(
     const module: Module | undefined = registry[node.moduleId];
     if (module === undefined) continue;
 
-    await run(module, { id: node.id, auto: node.auto });
+    await run(module, { id: node.id, ...(isAutoModule(module) ? { auto: true } : {}) });
     ran.push(node.id);
   }
 

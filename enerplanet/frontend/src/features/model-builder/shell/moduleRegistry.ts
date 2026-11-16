@@ -10,7 +10,6 @@
  */
 
 import type { BuilderModule, MapHost } from "./contract";
-import example from "../modules/example";
 
 import modelStart from "../modules/model-start";
 
@@ -30,7 +29,6 @@ import buildingConfigurator from "../modules/building-configurator";
 import technologies from "../modules/technologies";
 
 export const MODULES: readonly BuilderModule[] = [
-  example,
   modelStart,
   mapProvider,
   areaDraw,

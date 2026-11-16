@@ -61,6 +61,12 @@ describe("the example module's declaration", () => {
     // would leave `seal` at the default, `at-completion`, and commit once.
     expect(example.module.seal).toBe("per-commit");
   });
+
+  it("is not an automatic step — it has a forward action, so `auto` stays absent", () => {
+    // Whether a step runs itself is the module's declaration (`Module.auto`), and this one is interactive:
+    // a form the user fills in and submits.
+    expect(example.module.auto).toBeUndefined();
+  });
 });
 
 describe("the example module's behaviour", () => {
@@ -228,6 +234,23 @@ describe("the rules the core enforces, demonstrated", () => {
 
     expect(contractIssues(entry)).toContain(
       'required port "resolution" is missing from mock — the module cannot run in isolation',
+    );
+  });
+
+  it("flags an automatic module with no run() — an automatic step that does nothing", () => {
+    // `auto` says the module runs itself, so it must have something to run. `overlay` is deliberately not
+    // required — a headless automatic module is legal — which is why only `run()` is checked here.
+    const hollow = defineModule({
+      id: "hollow-auto",
+      params: [{ port: "modelName" }],
+      affect: {},
+      layout: [],
+      auto: true,
+      validate: () => [],
+    });
+
+    expect(contractIssues({ module: hollow, mock: { modelName: "x" } })).toContain(
+      "the module is declared auto but has no run() — an automatic step that does nothing",
     );
   });
 });

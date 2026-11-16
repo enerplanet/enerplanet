@@ -37,9 +37,9 @@ export interface Engine {
    * The transaction only exists *after* `run()` returns — unless the module declares
    * `seal: "per-commit"`, in which case each `commit()` seals its own atomic transaction.
    *
-   * @param node the workflow node this run belongs to. `auto` is a node property, not a
-   *             module one — the same module can be auto in one workflow and interactive in
-   *             another — and it is stamped on the transaction so history can skip it (T14).
+   * @param node the workflow node this run belongs to. `auto` records whether the run was an automatic
+   *             step's — sourced from the module's own `auto` flag (`Module.auto`) — and is stamped on the
+   *             transaction so history can skip it (T14).
    * @returns the last sealed transaction, or `undefined` when the run changed nothing.
    * @throws {PortWriteRejected} when the module writes outside its declared surface, or
    * blind-overwrites a port it never read.

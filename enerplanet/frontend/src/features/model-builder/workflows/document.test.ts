@@ -53,11 +53,11 @@ describe("the copy payload", () => {
 
   it("orders each node's keys too, rather than trusting the order they arrive in", () => {
     const stored = JSON.parse(
-      '{"id":"x","version":1,"label":"X","nodes":[{"id":"n","moduleId":"m","auto":true,"label":"L"}]}',
+      '{"id":"x","version":1,"label":"X","nodes":[{"moduleId":"m","label":"L","id":"n"}]}',
     ) as WorkflowDocument;
     const round = JSON.parse(copyPayload(stored)) as { nodes: Record<string, unknown>[] };
 
-    expect(Object.keys(round.nodes[0])).toEqual(["id", "moduleId", "label", "auto"]);
+    expect(Object.keys(round.nodes[0])).toEqual(["id", "moduleId", "label"]);
   });
 });
 

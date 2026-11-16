@@ -16,7 +16,7 @@ import { describe, it, expect } from "vitest";
 import { defineModule, requiredPorts } from "@model-builder/core";
 import { frameView, type FrameMode } from "./frameMode";
 import { toWorkflow } from "./workflow";
-import example from "../modules/example";
+import example from "./fixtures";
 import { createStore } from "../core/store";
 import type { BuilderModule } from "./contract";
 
@@ -32,6 +32,21 @@ const UNPLACED: BuilderModule = {
   }),
   Component: () => null,
   mock: { resolution: 30 },
+};
+
+/** An automatic module — the case `frameView` reports `auto` for. The module declares it, not the node. */
+const AUTO: BuilderModule = {
+  module: defineModule({
+    id: "auto-node",
+    params: [{ port: "buildings", required: true }],
+    affect: {},
+    layout: [],
+    auto: true,
+    run: () => undefined,
+    validate: () => [],
+  }),
+  Component: () => null,
+  mock: {},
 };
 
 const DEFINITION = {
@@ -127,5 +142,30 @@ describe("the frame's mode decides what is on screen, and what the session start
 
     expect(view.entry).toBeUndefined();
     expect(view.nodeId).toBeUndefined();
+  });
+});
+
+describe("the frame reports whether the module on screen is automatic", () => {
+  it("reports `auto: true` for a module that declares it — the node carries no flag of its own", () => {
+    const entries: readonly BuilderModule[] = [example, AUTO];
+    const placed = toWorkflow(
+      { ...DEFINITION, nodes: [{ id: "auto", moduleId: "auto-node" }] },
+      entries,
+      SEED,
+    );
+
+    const view = frameView(WORKFLOW_MODE, placed, entries, createStore(placed.initial));
+
+    expect(view.entry?.module.id).toBe("auto-node");
+    expect(view.auto).toBe(true);
+  });
+
+  it("omits `auto` for an interactive module", () => {
+    const workflow = workflowOf();
+
+    const view = frameView(WORKFLOW_MODE, workflow, ENTRIES, createStore(workflow.initial));
+
+    expect(view.entry?.module.id).toBe("example");
+    expect(view.auto).toBeUndefined();
   });
 });

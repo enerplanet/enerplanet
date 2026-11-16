@@ -3113,6 +3113,17 @@
         "shellHint": "Escape sluit dit paneel. De host bezit de omlijsting van de overlay — de verduistering, de centrering, de uitweg."
       }
     },
+    "example-auto": {
+      "running": "Gebied wordt samengevat…",
+      "runningHint": "Draait vanzelf — de samenvatting wordt afgeleid uit het getekende gebied.",
+      "done": "Gebied samengevat",
+      "failed": "Het samenvatten van het gebied is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "present": "samenvatting aanwezig",
+        "notSet": "nog geen samenvatting"
+      }
+    },
     "dashboard": {
       "newModel": "Nieuw model (experimenteel)"
     },
@@ -3177,6 +3188,7 @@
       "title": "Workflows",
       "subtitle": "Stel de stromen samen die de Model Builder uitvoert",
       "new": "Nieuwe workflow",
+      "buildYourOwn": "Bouw je eigen module",
       "loading": "Workflows laden...",
       "loadError": "De workflows konden niet worden geladen: {{reason}}",
       "empty": "Nog geen workflows.",
