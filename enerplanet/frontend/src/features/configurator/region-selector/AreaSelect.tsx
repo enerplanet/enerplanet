@@ -771,7 +771,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
-            availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
+            availableRegions={editMode ? undefined : pylovoLayers.availableRegions.filter(r => r.has3d)}
             onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
             modelRegionName={editMode ? pylovoLayers.regionBoundary?.name : undefined}
           />

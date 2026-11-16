@@ -2612,7 +2612,6 @@
     "favorite": "Favoriten",
     "recent": "Zuletzt verwendet",
     "noRegionsFound": "Keine Regionen gefunden",
-    "3dBuildingData": "LiDAR-3D-Gebäudehöhen verfügbar",
     "buildingDialog": {
       "title": "Gebäudedetails",
       "description": "Details des ausgewählten Gebäudes anzeigen und bearbeiten, einschließlich Typ, Energiebedarf und Technologien.",

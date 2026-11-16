@@ -2612,7 +2612,6 @@
     "favorite": "Favorieten",
     "recent": "Recent",
     "noRegionsFound": "Geen regio's gevonden",
-    "3dBuildingData": "LiDAR-3D-gebouwhoogten beschikbaar",
     "buildingDialog": {
       "title": "Gebouwdetails",
       "description": "Bekijk en bewerk de gegevens van het geselecteerde gebouw, inclusief type, energievraag en technologieën.",
