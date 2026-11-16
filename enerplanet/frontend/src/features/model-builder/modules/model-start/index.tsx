@@ -33,7 +33,7 @@ import {
   type ValidationIssue,
 } from "@model-builder/core";
 import { useTranslation } from "@spatialhub/i18n";
-import { optionFor, optionsFor, regionKey, useRegions } from "./regions";
+import { optionFor, optionsFor, regionKey, useRegions, type RegionOption } from "./regions";
 
 /**
  * The module's region slot, re-exported: a host installs a source through the same entry point it imports the
@@ -220,6 +220,33 @@ const module = defineModule({
   validate: (ctx: ModuleCtx) => issuesFor(ctx.store),
 });
 
+/**
+ * What the form is showing right now: the typed values laid over the store's.
+ *
+ * The button's readiness is asked about this rather than about the store, because a form whose fields are
+ * filled but not yet committed is a form the user can act on. `apply` commits only the typed values — what the
+ * store already holds does not need re-writing — so this is strictly the *view*, not the payload.
+ */
+function onScreen(
+  data: Readonly<ModelData>,
+  typedName: string | null,
+  typedFrom: string | null,
+  typedTo: string | null,
+  typedResolution: number | null,
+  typedRegion: string | null,
+  regions: readonly RegionOption[],
+): Readonly<ModelData> {
+  const chosen = regions.find((candidate) => regionKey(candidate) === typedRegion);
+  return {
+    ...data,
+    ...(typedName === null ? {} : { modelName: typedName }),
+    ...(typedFrom === null ? {} : { fromDate: typedFrom }),
+    ...(typedTo === null ? {} : { toDate: typedTo }),
+    ...(typedResolution === null ? {} : { resolution: typedResolution }),
+    ...(chosen === undefined ? {} : { region: { country: chosen.country, state: chosen.state } }),
+  };
+}
+
 const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }) => {
   const { t } = useTranslation();
   // What the user has collected since the last commit. Local on purpose: it is not state worth keeping.
@@ -288,6 +315,16 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   // reading as unset.
   const stored = data.region;
   const options = optionsFor(regions, stored);
+
+  /**
+   * The form as it stands, and whether Apply has anything to work with.
+   *
+   * Readiness comes from the module's own gate rather than a second list of conditions: two copies of "what
+   * makes a model start" would drift, and the button would then disagree with the gate that decides whether
+   * this node is finished.
+   */
+  const pending = onScreen(data, typedName, typedFrom, typedTo, typedResolution, typedRegion, regions);
+  const ready = issuesFor(pending).length === 0;
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto">
@@ -394,10 +431,17 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
       <button
         type="button"
         onClick={apply}
-        className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
+        disabled={!ready}
+        className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {t("modelBuilder.model-start.apply")}
       </button>
+
+      {/* A disabled button has to say what it is waiting for, or it reads as broken. The gate's own first
+          message is the honest one — it is the same sentence the save node would report. */}
+      {ready ? null : (
+        <p className="shrink-0 text-xs text-muted-foreground">{issuesFor(pending)[0]?.message}</p>
+      )}
 
       <p className="shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">
         {t("modelBuilder.model-start.rulesHint")}
