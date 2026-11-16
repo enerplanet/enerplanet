@@ -140,6 +140,8 @@ export const useMapClickHandlers = ({
     // however it moves within it, and stays where it appeared. Leaving the
     // feature first cancels it, so sweeping across buildings renders nothing.
     let pending: ReturnType<typeof setTimeout> | undefined;
+    // The 3D overlay sets the same cursor, so it is cleared only on leaving a feature.
+    let pointing = false;
     let target: unknown = null;
     let shown = false;
     let lastPixel: number[] = [];
@@ -162,7 +164,8 @@ export const useMapClickHandlers = ({
     const handlePointerMove = (evt: any) => {
       if (evt.dragging || isDrawing) { hide(); return; }
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
-      map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      if (feature || pointing) map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      pointing = !!feature;
       if (feature && feature === target) {
         if (!shown) lastPixel = evt.pixel;
         return;
