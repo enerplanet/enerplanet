@@ -310,6 +310,22 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     });
   };
 
+  /**
+   * Choosing a region commits it at once, rather than waiting for Apply.
+   *
+   * The map is how the user sees that a choice landed, and the rest of the flow already works this way — a
+   * click *is* the commit (`weather`'s choices, `technologies`' assign). Holding the region back until Apply
+   * made the one control that narrows to a place the one control that did nothing visible.
+   */
+  const chooseRegion = (key: string): void => {
+    const chosen = regions.find((candidate) => regionKey(candidate) === key);
+    setTypedRegion(key);
+    // The empty option is "nothing chosen" — it clears the pending value and commits nothing, because a model
+    // must be drawn in some region.
+    hold(nodeId, chosen === undefined ? {} : { region: { country: chosen.country, state: chosen.state } });
+    void run().finally(() => setTypedRegion(null));
+  };
+
   // The stored region, and the options to offer: the loaded list plus the stored region when it has left the
   // list, so a model drawn in a region the backend no longer serves still shows its own value rather than
   // reading as unset.
@@ -413,7 +429,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
               <select
                 id="model-start-region"
                 value={typedRegion ?? (stored === undefined ? "" : regionKey(stored))}
-                onChange={(event) => setTypedRegion(event.target.value)}
+                onChange={(event) => chooseRegion(event.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               >
                 <option value="">{t("modelBuilder.model-start.regionNone")}</option>
