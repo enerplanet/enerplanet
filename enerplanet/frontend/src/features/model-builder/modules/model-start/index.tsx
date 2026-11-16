@@ -57,29 +57,120 @@ const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
 export const SCENARIO_DATE_YEAR = 2023;
 
 /**
- * The period the user picks: the whole year or a quarter, as month-day bounds. Only the scenario mode is
- * supported, so a part is the bounds onto `SCENARIO_DATE_YEAR` — the year is the scenario's, not the user's.
+ * The quarters the user picks between, as month-day bounds. Only the scenario mode is supported, so a quarter
+ * is the bounds onto `SCENARIO_DATE_YEAR` — the year is the scenario's, not the user's.
  *
  * Ported from the legacy's own `PERIOD_PARTS` (`region-selector/components/SidebarPanel.tsx`); `label` is the
- * i18n key the button renders.
+ * i18n key the button renders. The legacy's separate "whole year" part is gone: a range whose ends are Q1 and
+ * Q4 *is* the whole year, so keeping it would be a second way to name one state.
+ *
+ * `label` stays a literal key string, never a template — the i18n scanner derives dynamic families from
+ * templates and rejects a dashed segment in the prefix, so a built label would hide these keys from the check.
  */
 const PERIOD_PARTS = [
-  { key: "year", start: "01-01", end: "12-31", label: "modelBuilder.model-start.period.year" },
   { key: "q1", start: "01-01", end: "03-31", label: "modelBuilder.model-start.period.q1" },
   { key: "q2", start: "04-01", end: "06-30", label: "modelBuilder.model-start.period.q2" },
   { key: "q3", start: "07-01", end: "09-30", label: "modelBuilder.model-start.period.q3" },
   { key: "q4", start: "10-01", end: "12-31", label: "modelBuilder.model-start.period.q4" },
 ] as const;
 
+/** A quarter key from the table above — `q1`…`q4`. */
+export type PeriodKey = (typeof PERIOD_PARTS)[number]["key"];
+
+/** The two quarters a chosen period spans. A single quarter is `{ start: k, end: k }`. */
+export interface PeriodRange {
+  start: PeriodKey;
+  end: PeriodKey;
+}
+
+/** The table entry for a quarter key, or `undefined` for a key that names no quarter. */
+function partFor(key: string): (typeof PERIOD_PARTS)[number] | undefined {
+  return PERIOD_PARTS.find((candidate) => candidate.key === key);
+}
+
 /**
- * The `fromDate`/`toDate` a period part stands for: its month-day bounds onto the scenario's fixed year.
- * `undefined` for a key that names no part — every button passes one from the table above.
+ * The `fromDate`/`toDate` a range spans: the earlier quarter's `start` bound to the later quarter's `end`
+ * bound, both onto the scenario's fixed year. Either argument order yields the same range — chronological
+ * order belongs to the range, not to the click. `undefined` if a key names no quarter.
  */
-export function periodDates(key: string): { fromDate: string; toDate: string } | undefined {
-  const part = PERIOD_PARTS.find((candidate) => candidate.key === key);
-  return part === undefined
-    ? undefined
-    : { fromDate: `${SCENARIO_DATE_YEAR}-${part.start}`, toDate: `${SCENARIO_DATE_YEAR}-${part.end}` };
+export function periodDates(fromKey: string, toKey: string): { fromDate: string; toDate: string } | undefined {
+  const from = partFor(fromKey);
+  const to = partFor(toKey);
+  if (from === undefined || to === undefined) return undefined;
+  const [first, last] =
+    PERIOD_PARTS.indexOf(from) <= PERIOD_PARTS.indexOf(to) ? [from, to] : [to, from];
+  return { fromDate: `${SCENARIO_DATE_YEAR}-${first.start}`, toDate: `${SCENARIO_DATE_YEAR}-${last.end}` };
+}
+
+/**
+ * The quarters a **stored** period covers, derived from `fromDate`/`toDate` so the buttons reflect the model
+ * rather than a local guess. `undefined` when the dates are unset or land on no quarter's bounds — a period
+ * loaded from the legacy, for instance, is one these buttons cannot honestly claim.
+ */
+export function quartersIn(fromDate: string | undefined, toDate: string | undefined): PeriodRange | undefined {
+  if (fromDate === undefined || toDate === undefined) return undefined;
+  const start = PERIOD_PARTS.find((candidate) => `${SCENARIO_DATE_YEAR}-${candidate.start}` === fromDate);
+  const end = PERIOD_PARTS.find((candidate) => `${SCENARIO_DATE_YEAR}-${candidate.end}` === toDate);
+  if (start === undefined || end === undefined) return undefined;
+  if (PERIOD_PARTS.indexOf(start) > PERIOD_PARTS.indexOf(end)) return undefined;
+  return { start: start.key, end: end.key };
+}
+
+/**
+ * The range a click produces, given the current one.
+ *
+ * The decision, stated once here so the buttons and the tests share it: clicking a quarter that is an endpoint
+ * of the current range collapses to that quarter alone; clicking a *different* quarter while a single one is
+ * set spans the two, chronologically (whichever was clicked first); anything else begins a new single quarter.
+ */
+export function nextRange(current: PeriodRange | undefined, clicked: PeriodKey): PeriodRange {
+  if (current !== undefined && (clicked === current.start || clicked === current.end)) {
+    return { start: clicked, end: clicked };
+  }
+  if (current !== undefined && current.start === current.end) {
+    const anchor = PERIOD_PARTS.findIndex((candidate) => candidate.key === current.start);
+    const target = PERIOD_PARTS.findIndex((candidate) => candidate.key === clicked);
+    return anchor <= target
+      ? { start: current.start, end: clicked }
+      : { start: clicked, end: current.start };
+  }
+  return { start: clicked, end: clicked };
+}
+
+/** Parse an ISO `YYYY-MM-DD` as a local date, so `Intl` formats the day the bound names and not a UTC shift. */
+function parseScenarioDate(iso: string): Date | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (match === null) return undefined;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+/**
+ * The period as the user reads it: the months it covers, in the app's current language.
+ *
+ * Rendered from the stored `fromDate`/`toDate`, so it always tells the truth about the model rather than a
+ * local guess. Month and year names come from `Intl`, which already knows every locale the app ships — hence
+ * no month-name i18n keys. `undefined` when no period is set, so the caller can say so instead of an empty line.
+ */
+export function periodPreview(
+  fromDate: string | undefined,
+  toDate: string | undefined,
+  locale: string,
+): string | undefined {
+  const from = fromDate === undefined ? undefined : parseScenarioDate(fromDate);
+  const to = toDate === undefined ? undefined : parseScenarioDate(toDate);
+  if (from === undefined || to === undefined) return undefined;
+
+  const month = new Intl.DateTimeFormat(locale, { month: "long" });
+  const year = new Intl.DateTimeFormat(locale, { year: "numeric" });
+  const months =
+    fromDate === toDate || month.format(from) === month.format(to)
+      ? month.format(from)
+      : `${month.format(from)} – ${month.format(to)}`;
+  const years =
+    year.format(from) === year.format(to)
+      ? year.format(from)
+      : `${year.format(from)} – ${year.format(to)}`;
+  return `${months} ${years}`;
 }
 
 /**
@@ -157,7 +248,7 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   if (projection.fromDate === undefined || projection.toDate === undefined) {
     issues.push({
       port: "fromDate",
-      message: "The model needs a period: pick a whole year or a quarter.",
+      message: "The model needs a period: pick a quarter or a range of quarters.",
     });
   } else if (projection.fromDate > projection.toDate) {
     issues.push({ port: "fromDate", message: "The period starts after it ends." });
@@ -284,7 +375,7 @@ function onScreen(
 }
 
 const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // What the user has collected since the last commit. Local on purpose: it is not state worth keeping.
   const [typedName, setTypedName] = useState<string | null>(null);
   const [typedResolution, setTypedResolution] = useState<number | null>(null);
@@ -319,6 +410,19 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   if (region === "map") return null;
 
   // ── sidebar: the form. One gesture, one commit: everything the form owns is handed over together.
+
+  // The quarters the model's stored dates cover: the committed state the buttons and `nextRange` read. Derived
+  // from the store, not kept locally, so the buttons tell the truth about the model — the same rule the region
+  // select follows by reading `data.region`.
+  const committed = quartersIn(data.fromDate, data.toDate);
+
+  // What the preview says: the stored period's months in the app's language, or nothing when unset.
+  const periodText = periodPreview(data.fromDate, data.toDate, i18n.language);
+
+  // The buttons a range spans, by table index; an unset period selects none. A single quarter spans one.
+  const rangeStart = committed === undefined ? -1 : PERIOD_PARTS.findIndex((part) => part.key === committed.start);
+  const rangeEnd = committed === undefined ? -1 : PERIOD_PARTS.findIndex((part) => part.key === committed.end);
+
   const apply = (): void => {
     const chosen = regions.find((candidate) => regionKey(candidate) === typedRegion);
     hold(nodeId, {
@@ -355,12 +459,15 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   };
 
   /**
-   * Picking a period part also commits at once: the period is the model's, and a click *is* the commit —
-   * there is nothing else to fill in first. The values are the part's month-day bounds onto the scenario's
-   * fixed year, and `run()` writes them as `fromDate`/`toDate` exactly as it always did.
+   * Picking a period also commits at once: the period is the model's, and a click *is* the commit — there is
+   * nothing else to fill in first.
+   *
+   * The click is turned into a range by `nextRange` (the documented decision), and the range's outer bounds
+   * onto the scenario's fixed year are held and written as `fromDate`/`toDate` exactly as a single part was.
    */
-  const choosePeriod = (key: string): void => {
-    const dates = periodDates(key);
+  const choosePeriod = (key: PeriodKey): void => {
+    const next = nextRange(committed, key);
+    const dates = periodDates(next.start, next.end);
     if (dates !== undefined) hold(nodeId, dates);
     void run();
   };
@@ -404,14 +511,20 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 
       <div className="shrink-0 space-y-2">
         <p className="text-sm text-muted-foreground">{t("modelBuilder.model-start.period.label")}</p>
+        {/* The preview sits above the buttons and reads the store, so it always names the period the model
+            actually holds — not what a button was last clicked. `aria-live` so a screen reader hears the change
+            a sighted user sees. */}
+        <p className="text-sm font-medium text-foreground" aria-live="polite">
+          {periodText ?? t("modelBuilder.model-start.period.none")}
+        </p>
         <div
           className="flex flex-wrap gap-1"
           role="group"
           aria-label={t("modelBuilder.model-start.period.label")}
         >
-          {PERIOD_PARTS.map((part) => {
-            const dates = periodDates(part.key);
-            const chosen = data.fromDate === dates?.fromDate && data.toDate === dates?.toDate;
+          {PERIOD_PARTS.map((part, index) => {
+            // A quarter is selected when the range covers it: one for a single quarter, two or more for a span.
+            const chosen = rangeStart !== -1 && index >= rangeStart && index <= rangeEnd;
             return (
               <button
                 key={part.key}

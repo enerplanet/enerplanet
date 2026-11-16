@@ -3033,7 +3033,7 @@
       "nameLabel": "Modelnaam",
       "period": {
         "label": "Periode",
-        "year": "Heel jaar",
+        "none": "Nog geen periode gekozen.",
         "q1": "K1",
         "q2": "K2",
         "q3": "K3",

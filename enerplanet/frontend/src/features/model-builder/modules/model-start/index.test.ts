@@ -20,7 +20,12 @@ import modelStart, {
   DEFAULT_RUN_MODE,
   NO_OWN_PRICES,
   hold,
+  nextRange,
   periodDates,
+  periodPreview,
+  quartersIn,
+  type PeriodKey,
+  type PeriodRange,
 } from "./index";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
@@ -38,9 +43,27 @@ const TO = "2026-12-31";
 
 /** The scenario year every period part lands in — the legacy's fixed reference year. */
 const SCENARIO_YEAR = 2023;
-/** The scenario year's first and last day, which Whole year and Q1/Q4 share a bound with. */
+/** The scenario year's first and last day, which Q1/Q4 share a bound with. */
 const YEAR_START = `${SCENARIO_YEAR}-01-01`;
 const YEAR_END = `${SCENARIO_YEAR}-12-31`;
+
+/** The quarter keys, hoisted so the cases read as the clicks a user makes. */
+const Q1: PeriodKey = "q1";
+const Q2: PeriodKey = "q2";
+const Q3: PeriodKey = "q3";
+const Q4: PeriodKey = "q4";
+/** A key that names no quarter. */
+const NOPE = "nope";
+
+/** Each quarter's outer days, so the mapping cases name bounds rather than repeat ISO strings. */
+const Q1_END = `${SCENARIO_YEAR}-03-31`;
+const Q2_START = `${SCENARIO_YEAR}-04-01`;
+
+/** A single-quarter range, the shape a first click produces. */
+const single = (key: PeriodKey): PeriodRange => ({ start: key, end: key });
+
+/** The language the preview cases format in — English, so the month names are pinned. */
+const EN = "en";
 
 describe("model-start's declaration", () => {
   it("is consistent with the contract", () => {
@@ -202,30 +225,61 @@ describe("model-start's behaviour", () => {
   });
 });
 
-describe("model-start's period parts", () => {
-  it("maps every part to month-day bounds onto the scenario's fixed year", () => {
-    // The legacy's `PERIOD_PARTS`: whole year or a quarter, on `SCENARIO_DATE_YEAR` — a non-leap year keeps
-    // the days in line with the 365-day scenario series.
-    expect(periodDates("year")).toEqual({ fromDate: YEAR_START, toDate: YEAR_END });
-    expect(periodDates("q1")).toEqual({ fromDate: YEAR_START, toDate: "2023-03-31" });
-    expect(periodDates("q2")).toEqual({ fromDate: "2023-04-01", toDate: "2023-06-30" });
-    expect(periodDates("q3")).toEqual({ fromDate: "2023-07-01", toDate: "2023-09-30" });
-    expect(periodDates("q4")).toEqual({ fromDate: "2023-10-01", toDate: YEAR_END });
+describe("model-start's period range", () => {
+  it("maps a range to the two quarters' outer bounds onto the scenario's fixed year", () => {
+    // A range is the earlier quarter's `start` bound to the later quarter's `end`, both on `SCENARIO_DATE_YEAR`
+    // — a non-leap year keeps the days in line with the 365-day scenario series.
+    expect(periodDates(Q1, Q1)).toEqual({ fromDate: YEAR_START, toDate: Q1_END });
+    expect(periodDates(Q2, Q4)).toEqual({ fromDate: Q2_START, toDate: YEAR_END });
+    expect(periodDates(Q1, Q4)).toEqual({ fromDate: YEAR_START, toDate: YEAR_END });
+    // The range is chronological whatever order the two clicks arrived in: Q4→Q2 spans the same as Q2→Q4.
+    expect(periodDates(Q4, Q2)).toEqual({ fromDate: Q2_START, toDate: YEAR_END });
   });
 
-  it("refuses a key that names no part", () => {
-    expect(periodDates("nope")).toBeUndefined();
+  it("refuses a key that names no quarter", () => {
+    expect(periodDates(NOPE, Q1)).toBeUndefined();
+    expect(periodDates(Q1, NOPE)).toBeUndefined();
   });
 
-  it("commits a picked part as the model's period — the same fromDate/toDate path as before", async () => {
+  it("derives the quarters a stored period covers, so the buttons reflect the model", () => {
+    expect(quartersIn(Q2_START, YEAR_END)).toEqual({ start: Q2, end: Q4 });
+    expect(quartersIn(YEAR_START, Q1_END)).toEqual(single(Q1));
+    // Unset, or dates that land on no quarter's bounds (a legacy year's own dates), claim nothing.
+    expect(quartersIn(undefined, YEAR_END)).toBeUndefined();
+    expect(quartersIn(FROM, TO)).toBeUndefined();
+  });
+
+  it("behaves as the four-click decision says", () => {
+    // click Q2 → Q2 alone; click Q4 → Q2–Q4 …
+    expect(nextRange(undefined, Q2)).toEqual(single(Q2));
+    expect(nextRange(single(Q2), Q4)).toEqual({ start: Q2, end: Q4 });
+    // … clicking an endpoint of the span collapses it back to that quarter alone.
+    expect(nextRange({ start: Q2, end: Q4 }, Q2)).toEqual(single(Q2));
+    expect(nextRange({ start: Q2, end: Q4 }, Q4)).toEqual(single(Q4));
+    // Whatever the click order, the span is chronological: Q4 then Q1 is Q1–Q4, not Q4–Q1.
+    expect(nextRange(single(Q4), Q1)).toEqual({ start: Q1, end: Q4 });
+    // A click inside a span that is not an endpoint begins a fresh single quarter.
+    expect(nextRange({ start: Q2, end: Q4 }, Q3)).toEqual(single(Q3));
+  });
+
+  it("renders the period's months from the stored dates, in the given language", () => {
+    // The months come from `Intl` on the actual stored dates, so the preview cannot disagree with the model.
+    expect(periodPreview(Q2_START, YEAR_END, EN)).toBe("April – December 2023");
+    expect(periodPreview(YEAR_START, Q1_END, EN)).toBe("January – March 2023");
+    // No period, no line — the caller says so instead of printing an empty one.
+    expect(periodPreview(undefined, undefined, EN)).toBeUndefined();
+    expect(periodPreview(Q2_START, undefined, EN)).toBeUndefined();
+  });
+
+  it("commits a picked range as the model's period — the same fromDate/toDate path as before", async () => {
     const store = createStore({});
     const engine = createEngine(store);
 
-    // A part is picked through the module's own hold/run path, exactly as the panel's button does.
-    hold(NODE, periodDates("q1") ?? {});
+    // A range is picked through the module's own hold/run path, exactly as the panel's buttons do.
+    hold(NODE, periodDates(Q2, Q4) ?? {});
     await engine.runModule(modelStart.module, { id: NODE });
 
-    expect(store.data.fromDate).toBe(YEAR_START);
-    expect(store.data.toDate).toBe("2023-03-31");
+    expect(store.data.fromDate).toBe(Q2_START);
+    expect(store.data.toDate).toBe(YEAR_END);
   });
 });

@@ -3034,7 +3034,7 @@
       "nameLabel": "Nombre del modelo",
       "period": {
         "label": "Periodo",
-        "year": "Año completo",
+        "none": "Aún no se ha elegido un periodo.",
         "q1": "T1",
         "q2": "T2",
         "q3": "T3",
