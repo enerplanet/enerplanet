@@ -3085,7 +3085,7 @@
       "blocked": "needs {{ports}}",
       "pruned": "lost {{ports}}"
     },
-    "example": {
+    "example-interactive": {
       "title": "Example module",
       "description": "A working example and the template: reads its inputs from the store, commits through the engine, and renders into all four regions.",
       "nameLabel": "Model name",

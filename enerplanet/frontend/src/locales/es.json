@@ -3082,7 +3082,7 @@
       "blocked": "necesita {{ports}}",
       "pruned": "perdido: {{ports}}"
     },
-    "example": {
+    "example-interactive": {
       "title": "Módulo de ejemplo",
       "description": "Un ejemplo funcional y la plantilla: lee sus entradas del store, confirma a través del motor y renderiza en las cuatro regiones.",
       "nameLabel": "Nombre del modelo",

@@ -1,5 +1,5 @@
 {
-  "name": "@model-builder/example",
+  "name": "@model-builder/example-interactive",
   "version": "0.0.0",
   "private": true,
   "description": "The Model Builder example module — the template to copy. Self-contained workspace: cd here, npm install, npm test.",

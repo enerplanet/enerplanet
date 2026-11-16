@@ -241,7 +241,7 @@ remaining steps. (The script's interface is being reworked; until it lands, a pl
 ### A note on the templates' locale keys
 
 The two templates under `modules/examples/` are still under `src/`, so `npm run i18n:check` still scans their
-`t("modelBuilder.example.*")` / `t("modelBuilder.example-auto.*")` calls: their key blocks **must stay** in
+`t("modelBuilder.example-interactive.*")` / `t("modelBuilder.example-auto.*")` calls: their key blocks **must stay** in
 `src/locales/{en,de,es,nl}.json`, even though nothing renders them, because the check reads the key argument and
 an inline fallback does not exempt it. They are not prune candidates today — every one is still referenced
 statically by the templates' own source, and `npm run i18n:prune --dry-run` removes nothing — but the safety is
@@ -328,4 +328,4 @@ rather than reaching for another feature's service.
 
 | module | status |
 |---|---|
-| `example` | **not a registered module any more.** The interactive template now lives at `modules/examples/interactive`, with the automatic one beside it at `modules/examples/auto`. Both are copied, never registered, and never deleted; see `modules/examples/README.md`. |
+| `example-interactive` | **not a registered module any more.** The interactive template now lives at `modules/examples/interactive`, with the automatic one beside it at `modules/examples/auto`. Both are copied, never registered, and never deleted; see `modules/examples/README.md`. |

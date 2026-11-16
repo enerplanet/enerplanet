@@ -3081,7 +3081,7 @@
       "blocked": "heeft {{ports}} nodig",
       "pruned": "verloren: {{ports}}"
     },
-    "example": {
+    "example-interactive": {
       "title": "Voorbeeldmodule",
       "description": "Een werkend voorbeeld en tegelijk de template: leest zijn invoer uit de store, committeert via de engine en rendert in alle vier regio's.",
       "nameLabel": "Modelnaam",

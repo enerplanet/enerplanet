@@ -24,28 +24,28 @@ import {
   runInScratch,
   type BuilderModule,
 } from "@model-builder/core";
-import example, { hold } from "./index";
+import exampleInteractive, { hold } from "./index";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
-const NODE = example.module.id;
+const NODE = exampleInteractive.module.id;
 
 /**
  * The module's own test data, read back rather than retyped — so this file cannot drift from the mock it is
  * asserting against, and the padded/trimmed pair below stays meaningful if the mock ever changes.
  */
-const MOCK_NAME = String(example.mock?.modelName);
+const MOCK_NAME = String(exampleInteractive.mock?.modelName);
 
 describe("the example module's declaration", () => {
   it("is consistent with the contract", () => {
-    expect(contractIssues(example)).toEqual([]);
+    expect(contractIssues(exampleInteractive)).toEqual([]);
   });
 
   it("declares exactly the ports it writes, and requires the one it depends on", () => {
-    const declared = example.module.params.map((param) => param.port);
+    const declared = exampleInteractive.module.params.map((param) => param.port);
 
     // Nothing declared "just in case": every one of these is written by run(), from a region's interface.
     expect([...declared].sort()).toEqual(["coordinates", "modelName", "resolution"]);
-    expect(example.module.params.filter((param) => param.required === true).map((p) => p.port)).toEqual([
+    expect(exampleInteractive.module.params.filter((param) => param.required === true).map((p) => p.port)).toEqual([
       "resolution",
     ]);
   });
@@ -53,29 +53,29 @@ describe("the example module's declaration", () => {
   it("presents every slot the frame offers — it is the demonstration of the frame", () => {
     // Not a rule for modules in general (most declare two or three), but this one exists to show how the
     // frame is used, so it must not quietly stop covering a slot the host has grown.
-    expect([...example.module.layout].sort()).toEqual([...REGIONS].sort());
+    expect([...exampleInteractive.module.layout].sort()).toEqual([...REGIONS].sort());
   });
 
   it("declares how its work reaches the log: per-commit, because its ports are independent", () => {
     // One atomic transaction per `commit()` (`spec/core.md` T16). A module whose writes must land together
     // would leave `seal` at the default, `at-completion`, and commit once.
-    expect(example.module.seal).toBe("per-commit");
+    expect(exampleInteractive.module.seal).toBe("per-commit");
   });
 
   it("is not an automatic step — it has a forward action, so `auto` stays absent", () => {
     // Whether a step runs itself is the module's declaration (`Module.auto`), and this one is interactive:
     // a form the user fills in and submits.
-    expect(example.module.auto).toBeUndefined();
+    expect(exampleInteractive.module.auto).toBeUndefined();
   });
 });
 
 describe("the example module's behaviour", () => {
   it("writes what the form collected — two ports in one run", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     hold(NODE, { modelName: "  Karlsruhe  ", resolution: 15 });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     expect(store.data.modelName).toBe("Karlsruhe"); // trimmed on the way in
     expect(store.data.resolution).toBe(15);
@@ -86,23 +86,23 @@ describe("the example module's behaviour", () => {
   });
 
   it("writes the drawn area through the same run — a third port", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: [[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]] });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     expect(store.data.coordinates).toEqual([[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]]);
     expect(store.log).toHaveLength(1);
   });
 
   it("accumulates holds for the same node — a gesture may arrive in parts", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     hold(NODE, { modelName: "Karlsruhe" });
     hold(NODE, { resolution: 15 });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     expect(store.data.modelName).toBe("Karlsruhe");
     expect(store.data.resolution).toBe(15);
@@ -110,14 +110,14 @@ describe("the example module's behaviour", () => {
   });
 
   it("drops what another node collected — a hold belongs to the node it is for", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     // The frame can move the session mid-edit. The second hold is for a different node, so the first node's
     // value is dropped — not merged, and never committed against a node that did not collect it.
     hold("an-earlier-node", { modelName: "  Wrong node  " });
     hold(NODE);
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     // The run had nothing to commit, but it still leaves a trace: one zero-diff transaction, so a node the
     // session jumped back to can clear its re-arm without an edit.
@@ -127,13 +127,13 @@ describe("the example module's behaviour", () => {
   });
 
   it("can run twice with different values — the re-read licences the rewrite", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     hold(NODE, { modelName: "First" });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
     hold(NODE, { modelName: "Second" });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     // A blind second write would be rejected as `clobber`. Two transactions is the proof that run() read
     // the port before overwriting it.
@@ -142,30 +142,30 @@ describe("the example module's behaviour", () => {
   });
 
   it("changes no data but still records the run when the hold would change nothing", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     // The mock's name is padded, so committing it trims to a value the store does not hold yet: a real change.
     hold(NODE, { modelName: MOCK_NAME });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
     expect(store.log).toHaveLength(1);
 
     // The same value again — already trimmed this time: nothing differs, so the transaction carries no ops.
     // It is sealed all the same, so a jump's re-arm cannot outlive a forward press that edited nothing.
     hold(NODE, { modelName: MOCK_NAME.trim() });
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
     expect(store.log).toHaveLength(2);
     expect(store.log[1].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(MOCK_NAME.trim());
   });
 
   it("changes nothing on a bare run, but still records that it ran", async () => {
-    const store = createStore({ ...example.mock });
+    const store = createStore({ ...exampleInteractive.mock });
     const engine = createEngine(store);
 
     // A bare run: a region that called run() with nothing held — a button pressed with no edit behind it.
     // It seals one zero-diff transaction, so returning to this node and continuing clears the re-arm.
-    await engine.runModule(example.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE });
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);
@@ -175,7 +175,7 @@ describe("the example module's behaviour", () => {
   it("reports what is missing rather than pretending the model is complete", async () => {
     // `validate()` is asked before the run, so a mock without a name is exactly what it should catch —
     // and this is the verdict the save node would turn into "what is missing".
-    const { issues } = await runInScratch({ ...example, mock: { resolution: 60 } });
+    const { issues } = await runInScratch({ ...exampleInteractive, mock: { resolution: 60 } });
 
     expect(issues).toEqual([{ port: "modelName", message: "The model needs a name." }]);
   });
@@ -230,7 +230,7 @@ describe("the rules the core enforces, demonstrated", () => {
   });
 
   it("flags a mock that cannot satisfy the module's own requirements", () => {
-    const entry: BuilderModule = { module: example.module, Component: () => null, mock: {} };
+    const entry: BuilderModule = { module: exampleInteractive.module, Component: () => null, mock: {} };
 
     expect(contractIssues(entry)).toContain(
       'required port "resolution" is missing from mock — the module cannot run in isolation',

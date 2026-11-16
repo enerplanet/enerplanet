@@ -120,8 +120,8 @@ function describeValue(value: unknown): string {
 }
 
 const module = defineModule({
-  id: "example",
-  name: "Example module",
+  id: "example-interactive",
+  name: "Example interactive module",
 
   // The module's whole store surface — and it is exactly what `run()` writes, nothing declared "just in
   // case". Declaring a port is not paperwork: an undeclared write is rejected, and the flow gate reasons
@@ -221,7 +221,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
             <span className="font-mono text-xs text-muted-foreground">{port}</span>
             {data[port] === undefined ? (
               <span className="text-amber-600 dark:text-amber-400">
-                {t("modelBuilder.example.bottom.notSet")}
+                {t("modelBuilder.example-interactive.bottom.notSet")}
               </span>
             ) : (
               <span className="text-foreground">{describeValue(data[port])}</span>
@@ -274,8 +274,8 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
       // it needs and opts back into pointer events (the host's layer is pass-through, so a panel can never
       // swallow a map click by accident).
       <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
-        <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.example.map.title")}</h3>
-        <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.example.map.hint")}</p>
+        <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.example-interactive.map.title")}</h3>
+        <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.example-interactive.map.hint")}</p>
 
         <svg
           viewBox="0 0 100 100"
@@ -302,7 +302,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
             disabled={points.length < 3}
             className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {t("modelBuilder.example.map.useRing")}
+            {t("modelBuilder.example-interactive.map.useRing")}
           </button>
           <button
             type="button"
@@ -310,10 +310,10 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
             disabled={points.length === 0}
             className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {t("modelBuilder.example.map.clear")}
+            {t("modelBuilder.example-interactive.map.clear")}
           </button>
           <span className="text-xs text-muted-foreground">
-            {t("modelBuilder.example.map.points", "{{count}} points", { count: points.length })}
+            {t("modelBuilder.example-interactive.map.points", "{{count}} points", { count: points.length })}
           </span>
         </div>
       </div>
@@ -330,9 +330,9 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
       <div className="flex h-full flex-col gap-4 overflow-auto">
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold">{t("modelBuilder.example.overlay.title")}</h3>
+            <h3 className="text-lg font-semibold">{t("modelBuilder.example-interactive.overlay.title")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t("modelBuilder.example.overlay.hint")}
+              {t("modelBuilder.example-interactive.overlay.hint")}
             </p>
           </div>
           <button
@@ -340,7 +340,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
             onClick={() => overlay?.close()}
             className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
           >
-            {t("modelBuilder.example.overlay.close")}
+            {t("modelBuilder.example-interactive.overlay.close")}
           </button>
         </div>
 
@@ -354,13 +354,13 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
                 {port}
                 {REQUIRED.has(port) && (
                   <span className="rounded bg-muted px-1 text-[0.65rem] uppercase">
-                    {t("modelBuilder.example.overlay.required")}
+                    {t("modelBuilder.example-interactive.overlay.required")}
                   </span>
                 )}
               </dt>
               <dd className={data[port] === undefined ? "text-amber-600 dark:text-amber-400" : ""}>
                 {data[port] === undefined
-                  ? t("modelBuilder.example.bottom.notSet")
+                  ? t("modelBuilder.example-interactive.bottom.notSet")
                   : describeValue(data[port])}
               </dd>
             </div>
@@ -368,10 +368,10 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
         </dl>
 
         <p className="shrink-0 text-sm">
-          <span className="text-muted-foreground">{t("modelBuilder.example.overlay.area")}: </span>
+          <span className="text-muted-foreground">{t("modelBuilder.example-interactive.overlay.area")}: </span>
           {drawnPoints === 0
-            ? t("modelBuilder.example.overlay.areaNone")
-            : t("modelBuilder.example.overlay.areaDrawn", "{{rings}} ring(s), {{points}} point(s)", {
+            ? t("modelBuilder.example-interactive.overlay.areaNone")
+            : t("modelBuilder.example-interactive.overlay.areaDrawn", "{{rings}} ring(s), {{points}} point(s)", {
                 rings: rings.length,
                 points: drawnPoints,
               })}
@@ -379,13 +379,13 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
 
         {issues.length === 0 ? (
           <p className="shrink-0 text-sm text-emerald-600 dark:text-emerald-400">
-            {t("modelBuilder.example.overlay.complete")}
+            {t("modelBuilder.example-interactive.overlay.complete")}
           </p>
         ) : (
           <ul className="shrink-0 space-y-1 text-sm text-destructive">
             {issues.map((issue) => (
               <li key={issue.message}>
-                {t("modelBuilder.example.overlay.issue", "{{port}}: {{message}}", {
+                {t("modelBuilder.example-interactive.overlay.issue", "{{port}}: {{message}}", {
                   port: String(issue.port ?? "—"),
                   message: issue.message,
                 })}
@@ -395,7 +395,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
         )}
 
         <p className="shrink-0 text-xs text-muted-foreground">
-          {t("modelBuilder.example.overlay.shellHint")}
+          {t("modelBuilder.example-interactive.overlay.shellHint")}
         </p>
       </div>
     );
@@ -405,13 +405,13 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto">
       <div className="shrink-0">
-        <h3 className="text-base font-semibold">{t("modelBuilder.example.title")}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{t("modelBuilder.example.description")}</p>
+        <h3 className="text-base font-semibold">{t("modelBuilder.example-interactive.title")}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{t("modelBuilder.example-interactive.description")}</p>
       </div>
 
       <div className="shrink-0 space-y-2">
         <label className="text-sm text-muted-foreground" htmlFor="example-name">
-          {t("modelBuilder.example.nameLabel")}
+          {t("modelBuilder.example-interactive.nameLabel")}
         </label>
         <input
           id="example-name"
@@ -424,7 +424,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
 
       <div className="shrink-0 space-y-2">
         <label className="text-sm text-muted-foreground" htmlFor="example-resolution">
-          {t("modelBuilder.example.resolutionLabel")}
+          {t("modelBuilder.example-interactive.resolutionLabel")}
         </label>
         <select
           id="example-resolution"
@@ -434,7 +434,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
         >
           {RESOLUTIONS.map((minutes) => (
             <option key={minutes} value={minutes}>
-              {t("modelBuilder.example.resolutionUnit", "{{minutes}} min", { minutes })}
+              {t("modelBuilder.example-interactive.resolutionUnit", "{{minutes}} min", { minutes })}
             </option>
           ))}
         </select>
@@ -456,7 +456,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
         }}
         className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
       >
-        {t("modelBuilder.example.apply")}
+        {t("modelBuilder.example-interactive.apply")}
       </button>
 
       <button
@@ -464,11 +464,11 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
         onClick={() => overlay?.open()}
         className="w-full shrink-0 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
       >
-        {t("modelBuilder.example.review")}
+        {t("modelBuilder.example-interactive.review")}
       </button>
 
       <p className="shrink-0 border-t border-border pt-3 text-xs text-muted-foreground">
-        {t("modelBuilder.example.rulesHint")}
+        {t("modelBuilder.example-interactive.rulesHint")}
       </p>
     </div>
   );

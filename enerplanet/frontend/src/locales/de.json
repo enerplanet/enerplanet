@@ -3085,7 +3085,7 @@
       "blocked": "braucht {{ports}}",
       "pruned": "verloren: {{ports}}"
     },
-    "example": {
+    "example-interactive": {
       "title": "Beispielmodul",
       "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest seine Eingaben aus dem Store, committet über die Engine und rendert in alle vier Regionen.",
       "nameLabel": "Modellname",

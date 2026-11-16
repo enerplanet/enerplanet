@@ -1,5 +1,5 @@
 /**
- * A test-only stand-in for the example module, for the shell's own suites.
+ * A test-only stand-in for the interactive example module, for the shell's own suites.
  *
  * The two example modules moved to `modules/examples/` and are no longer registered, so a shell suite that
  * wants *a* module — to place as a node, to run for real, or to read a node id off — needs one from here

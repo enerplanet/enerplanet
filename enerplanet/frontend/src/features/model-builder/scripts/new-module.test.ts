@@ -28,7 +28,7 @@ const AREA = "area-summary";
 const DASHBOARD = "dashboard";
 
 // A template's own declared id, which a new module may never take.
-const EXAMPLE_ID = "example";
+const EXAMPLE_ID = "example-interactive";
 const TEMPLATE_ID = "example-auto";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -122,7 +122,8 @@ describe("the scaffold script", () => {
     expect(manifest.dependencies["@model-builder/core"]).toBe(DEP_CORE);
     expect(manifest.dependencies["@spatialhub/i18n"]).toBe(DEP_I18N);
 
-    // The declared id, the name and the i18n prefix are rewritten; no template id survives.
+    // The declared id, the name and the i18n prefix are rewritten; the declared id does not survive. The bare
+    // word "example" in the copied prose is *not* rewritten — that is the dedicated case below.
     const index = moduleFile(root, TARIFF, "index.tsx");
     expect(index).toContain(`id: "${TARIFF}"`);
     expect(index).toContain('name: "Tariff settings"');
@@ -191,6 +192,39 @@ describe("the scaffold script", () => {
     expect(source).toContain("This example ships a working default");
     expect(source).toContain("the example carries its own deterministic implementation");
     expect(source).not.toContain("areaSummary ships a working default");
+  });
+
+  it('leaves the interactive template\'s prose intact too — "example" is a word, not the declared id', () => {
+    const root = sandbox();
+    run(root, [TARIFF, INTERACTIVE, "Tariff settings"]);
+
+    // The same property as the case above, for the interactive template: its declared id is a compound
+    // (`example-interactive`), so the blunt pass rewrites the id and the identifier but leaves the bare word
+    // "example" in the template's own comments. A rule mapping that word onto the identifier would have turned
+    // the opening comment into the copy's own name.
+    const index = moduleFile(root, TARIFF, "index.tsx");
+
+    expect(index).toContain("a working example"); // the template's opening comment
+    expect(index).not.toContain("a working tariffSettings"); // the identifier substituted for the word
+    expect(index).not.toContain(EXAMPLE_ID); // the declared id itself is gone
+  });
+
+  it("rewrites the names the template gives itself, not only its id", () => {
+    const root = sandbox();
+    run(root, [TARIFF, INTERACTIVE]);
+
+    // These are the template's own layer and form-control ids, and they are not its declared id, so no id rule
+    // reaches them. They were rewritten by accident until the template was renamed — the bare-id rule used to
+    // catch the short word inside `example-area` — so a copy that still ships them is a real regression, and the
+    // acceptance for it is these three literals rather than the absence of the template's id.
+    const index = moduleFile(root, TARIFF, "index.tsx");
+
+    expect(index).not.toContain("example-area");
+    expect(index).not.toContain("example-name");
+    expect(index).not.toContain("example-resolution");
+    expect(index).toContain(`${TARIFF}-area`);
+    expect(index).toContain(`${TARIFF}-name`);
+    expect(index).toContain(`${TARIFF}-resolution`);
   });
 
   it("derives the identifier from an id with no dash", () => {

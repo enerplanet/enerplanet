@@ -19,7 +19,7 @@ A **step with a forward action**: the user collects values in the UI and commits
 
 ## Change first when copying
 
-1. the id, the `name`, and the `modelBuilder.example.` i18n key prefix;
+1. the id, the `name`, and the `modelBuilder.example-interactive.` i18n key prefix;
 2. the `params` to the ports you actually touch, and `affect` honestly;
 3. the copied test — it still asserts the example's specifics.
 
