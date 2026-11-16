@@ -82,7 +82,6 @@ export function holdEdit(osmId: string, edit: BuildingEdit): void {
   const pending = new Map(picked.pending);
   pending.set(osmId, edit);
   picked = { ...picked, pending };
-  console.log("[mb:bc] holdEdit", osmId, "keys:", Object.keys(edit), "pending now:", pending.size);
   announce();
 }
 
@@ -229,20 +228,13 @@ const contract: Module = {
    * building should do nothing rather than fail.
    */
   run: (ctx) => {
-    console.log("[mb:bc] run:start — pending:", picked.pending.size, "ids:", [...picked.pending.keys()]);
-    if (picked.pending.size === 0) {
-      console.log("[mb:bc] run:skip — nothing held");
-      return;
-    }
+    if (picked.pending.size === 0) return;
 
     // Read what this write touches: the engine's anti-clobber requires the ports be read before they are
     // rewritten, and reading `buildings` is what tells a run against an empty store to do nothing rather than
     // commit a demand entry for a building that is not on the map.
     const buildings = ctx.read("buildings");
-    if (buildings === undefined) {
-      console.log("[mb:bc] run:skip — no buildings in the store");
-      return;
-    }
+    if (buildings === undefined) return;
 
     let current: Readonly<ModelData> = {
       buildings,
@@ -269,7 +261,6 @@ const contract: Module = {
       // module has no business touching otherwise.
       ...(touchedBuildings ? { buildings: current.buildings } : {}),
     });
-    console.log("[mb:bc] run:committed — buildings touched:", touchedBuildings);
     // Consumed: continuing again without another edit must not re-commit them.
     clearEdits();
   },
@@ -438,10 +429,7 @@ const BottomRegion: FC<{
       </span>
       <button
         type="button"
-        onClick={() => {
-          console.log("[mb:bc] bottom: continue clicked — pending was", pending);
-          void run();
-        }}
+        onClick={() => void run()}
         disabled={!ready}
         className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
       >
@@ -465,7 +453,6 @@ const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => 
     return <SidebarRegion overlay={overlay} data={data} />;
   }
   if (region === "bottom") {
-    console.log("[mb:bc] bottom render — pending:", state.pending.size, "issues:", issuesFor(data).length);
     return <BottomRegion run={run} pending={state.pending.size} issues={issuesFor(data)} />;
   }
   return null;

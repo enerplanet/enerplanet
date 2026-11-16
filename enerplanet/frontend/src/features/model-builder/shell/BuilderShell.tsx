@@ -60,7 +60,6 @@ import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
 import { MAP_PROVIDER, MODULES, bindModelSaveSession } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
-import { currentId } from "../core/rerun";
 import { devWorkflow, type Workflow } from "./workflow";
 import { createInvalidator } from "../core/invalidate";
 import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
@@ -193,11 +192,7 @@ export const BuilderShell: React.FC = () => {
 
   const run = async (): Promise<void> => {
     const entry = view.entry;
-    console.log("[mb:frame] run:start — module:", entry?.module.id, "node:", view.nodeId);
-    if (entry === undefined) {
-      console.log("[mb:frame] run:skip — no entry");
-      return;
-    }
+    if (entry === undefined) return;
     const at = view.nodeId;
     try {
       if (at !== undefined) setHeld(at);
@@ -205,11 +200,9 @@ export const BuilderShell: React.FC = () => {
       // can be placed more than once. In test mode there is no position, so nothing is stamped.
       await session.engine.runModule(entry.module, at === undefined ? undefined : { id: at });
       setError(null);
-      console.log("[mb:frame] run:done — node after:", currentId(workflow.flow, workflow.registry, session.store));
     } catch (thrown) {
       // A rejected write, a missing required port, a save refusal: all of them mean nothing was sealed, and
       // all of them are exactly what a module developer needs to see.
-      console.log("[mb:frame] run:threw", thrown);
       setError(thrown instanceof Error ? thrown.message : String(thrown));
     } finally {
       // Two frames: one for React to commit the run's writes and run the effects that read them, one to be sure
