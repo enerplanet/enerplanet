@@ -3,6 +3,7 @@ package pylovo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -221,6 +222,32 @@ func TestCreateSite_overLimitIsRefusedAndDeleted(t *testing.T) {
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422: %s", rec.Code, rec.Body)
+	}
+	if len(fake.sent("DELETE /sites/7")) != 1 {
+		t.Errorf("requests = %v, want the site deleted", fake.requests)
+	}
+}
+
+// down3D fails every lookup the way City2TABULA does for a country it holds no database for.
+type down3D struct{ fake3D }
+
+func (down3D) GetBuildingsByOSMIDs(context.Context, string, []string) (city2tabula.BuildingsResult, error) {
+	return city2tabula.BuildingsResult{}, errors.New(`target c2t-buildings: HTTP 500: failed to connect to user=postgres database=city2tabula_cz: FATAL: database "city2tabula_cz" does not exist`)
+}
+
+// A failed 3D lookup is logged, not shown: the client gets a plain message and
+// the site pylovo already made is deleted.
+func TestCreateSite_failedLookupHidesTheCause(t *testing.T) {
+	fake := &fakeSitePylovo{osmIDs: []string{"w1"}}
+	rec := serveSite(t, fake, down3D{}, "owner", http.MethodPost, "/sites", siteBody)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502: %s", rec.Code, rec.Body)
+	}
+	for _, leak := range []string{"postgres", "city2tabula_cz", "c2t-buildings"} {
+		if strings.Contains(rec.Body.String(), leak) {
+			t.Errorf("body %s shows %q", rec.Body, leak)
+		}
 	}
 	if len(fake.sent("DELETE /sites/7")) != 1 {
 		t.Errorf("requests = %v, want the site deleted", fake.requests)

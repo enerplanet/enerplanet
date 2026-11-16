@@ -2613,7 +2613,6 @@
     "favorite": "Favoritos",
     "recent": "Reciente",
     "noRegionsFound": "No se encontraron regiones",
-    "3dBuildingData": "Alturas 3D de edificios por LiDAR disponibles",
     "buildingDialog": {
       "title": "Detalles del edificio",
       "description": "Vea y edite los detalles del edificio seleccionado, incluidos el tipo, la demanda de energía y las tecnologías.",
