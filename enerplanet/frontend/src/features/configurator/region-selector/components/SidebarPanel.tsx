@@ -272,6 +272,9 @@ const PeriodYearSelect: FC<{ year: number | undefined; years: number[]; onChange
       aria-label={t("simulation.periodYear")}
       value={year ?? ""}
       onChange={(e) => onChange(Number(e.target.value))}
+      // The date group's press handler takes focus on mouse down, which closes the open list in Firefox.
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       className="h-full shrink-0 cursor-pointer border-r border-border bg-transparent pl-3 pr-1 text-xs font-medium text-foreground outline-none"
     >
       {year === undefined && <option value="">{t("simulation.periodYear")}</option>}
