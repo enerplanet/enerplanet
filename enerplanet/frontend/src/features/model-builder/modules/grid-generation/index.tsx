@@ -188,6 +188,46 @@ function featureCount(collection: GeoJSON.FeatureCollection | undefined): number
   return collection?.features.length ?? 0;
 }
 
+/** The map control as a module sees it. */
+type MapControl = NonNullable<ModuleViewProps["map"]>;
+
+/**
+ * The slice of the map the draw actually uses. Narrow on purpose: a `MapStack` satisfies it, so the draw can be
+ * run against the real layer bookkeeping in a test instead of a mock of it.
+ */
+type GridMap = Pick<
+  MapControl,
+  "createLayer" | "clearLayer" | "addFeatures" | "getLayerOrder" | "setLayerOrder"
+>;
+
+/** The four collections that reach the map, gathered in one object so the draw names what it draws. */
+type Collections = Partial<Record<ProducedPort, GeoJSON.FeatureCollection | undefined>>;
+
+/**
+ * Put the four collections on the map.
+ *
+ * Its own function, and taking the map control rather than reaching for one, so the draw can be run against a
+ * real `MapStack` in a test — the map control is a pure interface, and this was otherwise the one piece of this
+ * module that nothing could check. It is also what keeps the effect's dependencies honest: it names exactly what
+ * it draws.
+ */
+export function drawGrid(map: GridMap, collections: Collections): void {
+  for (const [port, layer] of Object.entries(LAYERS) as [ProducedPort, string | null][]) {
+    if (layer === null) continue;
+    map.createLayer(layer);
+    map.clearLayer(layer);
+
+    const collection = collections[port];
+    if (collection !== undefined && collection.features.length > 0) {
+      map.addFeatures(layer, collection);
+    }
+  }
+
+  // Bottom-to-top: buildings under cables under transformers, so the network reads correctly. Ours go last,
+  // and whatever else is on the map keeps its place beneath them.
+  map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
+}
+
 const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }) => {
   const { t } = useTranslation();
   const [generating, setGenerating] = useState(false);
@@ -222,8 +262,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 
   /**
    * The grid on the map. **Only the `map` region does this**: the module renders once per declared region, and
-   * two instances writing one layer would take turns clearing each other's work. The layer styles are the
-   * provider's for now — a module cannot restyle what it draws yet (`modules/README.md`).
+   * two instances writing one layer would take turns clearing each other's work.
    *
    * Nothing takes these layers off again. This module used to remove them on unmount, which erased the grid the
    * moment the session left the node — and the session leaves the instant a run lands, because the position is
@@ -236,21 +275,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
    */
   useEffect(() => {
     if (region !== "map" || map === undefined) return;
-
-    for (const [port, layer] of Object.entries(LAYERS) as [ProducedPort, string | null][]) {
-      if (layer === null) continue;
-      map.createLayer(layer);
-      map.clearLayer(layer);
-
-      const collection = collections[port];
-      if (collection !== undefined && collection.features.length > 0) {
-        map.addFeatures(layer, collection);
-      }
-    }
-
-    // Bottom-to-top: buildings under cables under transformers, so the network reads correctly. Ours go last,
-    // and whatever else is on the map keeps its place beneath them.
-    map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
+    drawGrid(map, collections);
   }, [region, map, collections]);
 
   const generate = (): void => {
