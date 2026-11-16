@@ -28,6 +28,7 @@ import {
   type ModelData,
 } from "@model-builder/core";
 import gridGeneration, {
+  layerOrderFor,
   needsConfirmation,
   setGridEngine,
   type GridEngine,
@@ -241,5 +242,25 @@ describe("grid-generation's data-loss rule", () => {
     // invalidates the work *downstream* of the grid.
     expect(needsConfirmation({ ...DRAWN, technologies: { electricity: [] } })).toBe(true);
     expect(needsConfirmation({ ...DRAWN, buildingParams: { electricity: {} } })).toBe(true);
+  });
+});
+
+describe("the layer order", () => {
+  // The contract has the module hand back what `getLayerOrder` returned, reordered — not a list of only its
+  // own layers. `setLayerOrder` wants every layer named exactly once, so a partial list throws while any other
+  // module is mounted, and the draw never lands: the grid only appeared once the other module had unmounted.
+  const AREA = "area-draw-polygons";
+  const MINE = ["buildings", "lines", "mvLines", "transformers"];
+
+  it("keeps another module's layer, with ours on top", () => {
+    expect(layerOrderFor([AREA])).toEqual([AREA, ...MINE]);
+  });
+
+  it("does not name our own layers twice when they are already on the map", () => {
+    expect(layerOrderFor([MINE[0], AREA, MINE[3]])).toEqual([AREA, ...MINE]);
+  });
+
+  it("is just our own order when nothing else is on the map", () => {
+    expect(layerOrderFor([])).toEqual(MINE);
   });
 });

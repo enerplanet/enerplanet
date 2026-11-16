@@ -108,6 +108,19 @@ export function needsConfirmation(data: Readonly<ModelData>): boolean {
   return hasGrid || hasDerivedWork;
 }
 
+/**
+ * H — the whole layer order, with ours on top.
+ *
+ * Another module's layer can be on the map at the same time (area-draw's is, until it unmounts), and
+ * `setLayerOrder` requires every layer named exactly once — so a list of *only* our own throws while any
+ * other module is mounted and the draw never lands. Keeping what is already there is what the contract means
+ * by handing back `getLayerOrder`, reordered.
+ */
+export function layerOrderFor(current: readonly string[]): string[] {
+  const mine = Object.values(LAYERS).filter((layer): layer is string => layer !== null);
+  return [...current.filter((layer) => !mine.includes(layer)), ...mine];
+}
+
 const module = defineModule({
   id: "grid-generation",
   name: "Grid generation",
@@ -224,10 +237,9 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
       }
     }
 
-    // Bottom-to-top: buildings under cables under transformers, so the network reads correctly.
-    map.setLayerOrder([
-      ...Object.values(LAYERS).filter((layer): layer is string => layer !== null),
-    ]);
+    // Bottom-to-top: buildings under cables under transformers, so the network reads correctly. Ours go last,
+    // and whatever else is on the map keeps its place beneath them.
+    map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
   }, [region, map, collections]);
 
   /** The layer is this module's, so this module takes it off when it leaves. */
