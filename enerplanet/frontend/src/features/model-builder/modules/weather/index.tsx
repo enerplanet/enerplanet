@@ -164,7 +164,7 @@ const module = defineModule({
   run: (ctx) => {
     const collected = takeHeld();
     const chosen = collected.weatherSelection as WeatherSelection | undefined;
-    if (chosen === undefined) return; // a bare run with nothing collected seals nothing
+    if (chosen === undefined) return; // a bare run with nothing collected proposes nothing (the trace still lands)
 
     // Read before write — the anti-clobber rule — and this read is also what licenses the rewrite.
     const current = ctx.read("weatherSelection");

@@ -204,8 +204,8 @@ const module = defineModule({
     const collected = takeHeld();
     const proposed: Partial<ModelData> = {};
 
-    // Read before you write — the anti-clobber rule — and commit only what actually changes, so a run with
-    // nothing to say seals nothing at all.
+    // Read before you write — the anti-clobber rule — and commit only what actually changes. Proposing nothing
+    // is fine: the run still seals its zero-diff trace, which is what lets a jumped-back node be left alone.
     if (collected.modelName !== undefined) {
       const current = ctx.read("modelName");
       const trimmed = collected.modelName.trim();

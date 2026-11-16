@@ -121,14 +121,18 @@ describe("area-draw's behaviour", () => {
     expect(store.log).toHaveLength(1);
   });
 
-  it("seals nothing when the same area is applied again", async () => {
+  it("records the re-apply without changing anything", async () => {
+    // The area is already there, so the run proposes nothing — but it still seals its zero-diff trace, which is
+    // what lets a user jump back to this node and leave again without inventing an edit (T20).
     const store = createStore({ region: REGION, coordinates: ONE_RING });
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: ONE_RING });
-    await expect(engine.runModule(areaDraw.module, { id: NODE })).resolves.toBeUndefined();
+    const sealed = await engine.runModule(areaDraw.module, { id: NODE });
 
-    expect(store.log).toHaveLength(0);
+    // Sealed, but carrying no ops: the trace is the point, not a diff.
+    expect(sealed?.primary).toHaveLength(0);
+    expect(store.log).toHaveLength(1);
   });
 
   it("reports what is missing on an empty store — an area needs somewhere to be, and something to be", async () => {

@@ -119,20 +119,23 @@ describe("weather's run", () => {
     expect(store.data.weatherSelection?.provider).toBe("era5-land");
   });
 
-  it("writes nothing when the choice would change nothing", async () => {
-    // Clicking the option that is already chosen must not seal a transaction — the module compares instead of
-    // trusting the click.
+  it("changes no data but still records the run when the choice would change nothing", async () => {
+    // Clicking the option that is already chosen must not change a value — the module compares instead of
+    // trusting the click. The run still seals one zero-diff transaction, so a jump's re-arm can clear.
     choose({ provider: null, choice: "p50" });
 
     const { store } = await runInScratch({ module: weather.module, mock: READY });
 
-    expect(store.log).toHaveLength(0);
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(0);
+    expect(store.data.weatherSelection).toEqual(DEFAULT_SELECTION);
   });
 
-  it("writes nothing at all when no control collected anything", async () => {
+  it("changes nothing on a bare run, but still records that it ran", async () => {
     const { store } = await runInScratch({ module: weather.module, mock: READY });
 
-    expect(store.log).toHaveLength(0);
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(0);
   });
 });
 

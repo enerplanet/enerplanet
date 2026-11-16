@@ -250,3 +250,55 @@ describe("T22 — a node is done only when the module's own gate is satisfied", 
     expect(positionReport(FLOW, registry, store)[0]).toMatchObject({ state: "done" });
   });
 });
+
+// ── T20a (a bare re-run clears the re-arm a jump left) ──────────────────────
+
+describe("T20a — a jump's re-arm clears on the next run, without an edit", () => {
+  it("lets a node jumped back to read done again after pressing forward without retyping", async () => {
+    // The user's exact complaint: a jump back to a finished node re-arms it (T20a), and a form holds only what
+    // was actually retyped — so coming back to look and pressing the forward action holds nothing. If a no-op
+    // run sealed no transaction the re-arm would never clear, the node would read `stale` forever, and the only
+    // way out would be to invent an edit. Going back to look is not an edit, so the run must leave a trace.
+    const REVISIT = "revisit";
+    let held: string | undefined;
+    const revisit = defineModule({
+      id: REVISIT,
+      params: [{ port: "modelName" }],
+      affect: {},
+      layout: [],
+      run: (ctx) => {
+        const proposed = held;
+        held = undefined;
+        if (proposed === undefined) return; // the form collected nothing
+        const current = ctx.read("modelName");
+        if (current === proposed) return; // nothing changed — read before you write
+        ctx.commit({ modelName: proposed });
+      },
+      validate: () => [],
+    });
+
+    const store = createStore(seed());
+    const flow = [{ id: REVISIT, moduleId: REVISIT }];
+    const local: ModuleRegistry = { [REVISIT]: revisit };
+
+    // First run: a real write, so the node is done.
+    held = "Karlsruhe";
+    await createEngine(store).runModule(revisit, { id: REVISIT });
+    expect(nodeStates(flow, local, store)[REVISIT]).toBe("done");
+
+    // A jump back to it that discards nothing — the re-arm is the only effect.
+    store.applyTransaction([], [], {
+      node: { id: REVISIT },
+      kind: "jump",
+      jump: { from: "draw", to: REVISIT },
+    });
+    expect(nodeStates(flow, local, store)[REVISIT]).toBe("stale");
+
+    // Press forward again, holding nothing — the bare run seals one zero-diff transaction, and that newer
+    // transaction is what clears the re-arm.
+    await createEngine(store).runModule(revisit, { id: REVISIT });
+
+    expect(store.data.modelName).toBe("Karlsruhe");
+    expect(nodeStates(flow, local, store)[REVISIT]).toBe("done");
+  });
+});

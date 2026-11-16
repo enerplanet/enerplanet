@@ -60,12 +60,27 @@ export function createEngine(store: Store): Engine {
       let pending = new Map<PortKey, unknown>();
       let sealed: Transaction | undefined;
 
-      /** Turn the buffered writes into one sealed transaction (nothing buffered → no transaction). */
+      /**
+       * Turn the buffered writes into one sealed transaction.
+       *
+       * **A run always leaves a trace** — one transaction, even when nothing changed. It has to: a jump re-arms
+       * its target (T20a) and the re-arm clears on a *newer transaction*, so a node the user jumped back to
+       * would otherwise read `stale` forever unless they invented an edit. Going back to look at something is
+       * not an edit, and pressing the forward action has to be enough to leave.
+       *
+       * The writes still become ops only when they differ (above), so a no-op run carries an empty primary —
+       * the same zero-diff transaction a jump with an empty cascade seals, and for the same reason: the move is
+       * the fact worth recording, not the diff.
+       */
       const flush = (): void => {
+        // Nothing buffered and something already sealed: this flush has nothing to add. A `per-commit` module
+        // that committed at least once has already left its trace, and a second empty one would be noise.
+        if (pending.size === 0 && sealed !== undefined) return;
+
         const primary: DiffOp[] = [];
         for (const [port, next] of pending) {
           const prev = store.data[port];
-          if (Object.is(prev, next)) continue; // nothing changed — no op, no transaction
+          if (Object.is(prev, next)) continue; // nothing changed — no op
           primary.push(
             next === undefined
               ? { op: "remove", path: portPath(port), prev }
@@ -75,7 +90,7 @@ export function createEngine(store: Store): Engine {
         pending = new Map();
         // No cascade passed: the store derives it from this change through the invalidator
         // (T7), so the transaction's prunes are the change's real consequences.
-        if (primary.length > 0) sealed = store.applyTransaction(primary, undefined, { node });
+        sealed = store.applyTransaction(primary, undefined, { node });
       };
 
       const ctx: ModuleCtx = {
@@ -112,9 +127,10 @@ export function createEngine(store: Store): Engine {
 
       if (module.run) await module.run(ctx);
 
-      // Default is one transaction for the whole run, so a module sees the pre-state for its
-      // entire run and a rejection means nothing happened at all. `per-commit` opted out.
-      if (module.seal !== "per-commit") flush();
+      // Every run ends with a flush, `per-commit` included — see `flush`. A module that committed nothing, or a
+      // `per-commit` one whose writes were all no-ops, still seals its zero-diff trace here; without it a jump
+      // back to the node would have no way to clear its re-arm.
+      flush();
 
       return sealed;
     },

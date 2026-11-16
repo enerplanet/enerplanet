@@ -164,8 +164,8 @@ const module = defineModule({
     const collected = takeHeld();
     if (collected.coordinates === undefined) return;
 
-    // Read before you write — the anti-clobber rule — and commit only what actually changed, so applying the
-    // area that is already there seals nothing at all.
+    // Read before you write — the anti-clobber rule — and commit only what actually changed. Applying the area
+    // that is already there proposes nothing; the run's zero-diff trace is sealed either way.
     const current = ctx.read("coordinates");
     if (sameArea(collected.coordinates, current)) return;
 

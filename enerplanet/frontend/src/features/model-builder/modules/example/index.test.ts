@@ -113,7 +113,10 @@ describe("the example module's behaviour", () => {
     hold(NODE);
     await engine.runModule(example.module, { id: NODE });
 
-    expect(store.log).toHaveLength(0);
+    // The run had nothing to commit, but it still leaves a trace: one zero-diff transaction, so a node the
+    // session jumped back to can clear its re-arm without an edit.
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(MOCK_NAME);
   });
 
@@ -132,7 +135,7 @@ describe("the example module's behaviour", () => {
     expect(store.log).toHaveLength(2);
   });
 
-  it("seals nothing when the hold would change nothing", async () => {
+  it("changes no data but still records the run when the hold would change nothing", async () => {
     const store = createStore({ ...example.mock });
     const engine = createEngine(store);
 
@@ -141,20 +144,25 @@ describe("the example module's behaviour", () => {
     await engine.runModule(example.module, { id: NODE });
     expect(store.log).toHaveLength(1);
 
-    // The same value again — already trimmed this time: nothing differs, so no transaction is sealed.
+    // The same value again — already trimmed this time: nothing differs, so the transaction carries no ops.
+    // It is sealed all the same, so a jump's re-arm cannot outlive a forward press that edited nothing.
     hold(NODE, { modelName: MOCK_NAME.trim() });
-    await expect(engine.runModule(example.module, { id: NODE })).resolves.toBeUndefined();
-    expect(store.log).toHaveLength(1);
+    await engine.runModule(example.module, { id: NODE });
+    expect(store.log).toHaveLength(2);
+    expect(store.log[1].primary).toHaveLength(0);
+    expect(store.data.modelName).toBe(MOCK_NAME.trim());
   });
 
-  it("does nothing at all when no region collected anything", async () => {
+  it("changes nothing on a bare run, but still records that it ran", async () => {
     const store = createStore({ ...example.mock });
     const engine = createEngine(store);
 
     // A bare run: a region that called run() with nothing held — a button pressed with no edit behind it.
+    // It seals one zero-diff transaction, so returning to this node and continuing clears the re-arm.
     await engine.runModule(example.module, { id: NODE });
 
-    expect(store.log).toHaveLength(0);
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(MOCK_NAME);
   });
 

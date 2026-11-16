@@ -43,7 +43,9 @@ core's `view.ts`.
 - **`affect` is verified, not trusted.** `core/influence.ts` probes every registered module and fails an
   under-declared one; over-declaring is only reported.
 - **`run()` is the only write path.** It commits; nothing else may reach the store. Every commit is
-  undoable and sealed together with the cascade it invalidated. A run that changes nothing seals nothing.
+  undoable and sealed together with the cascade it invalidated. A run that changes nothing still seals one
+  transaction — a **zero-diff** one, with no ops — because a jump re-arms its target and the re-arm has to
+  clear on a forward action, never on an edit the user did not make.
 
 `example/index.test.ts` demonstrates each of these by trying to break them, which is the quickest way to
 see what the boundary actually refuses.

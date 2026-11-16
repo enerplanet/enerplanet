@@ -124,9 +124,10 @@ describe("model-start's behaviour", () => {
     expect(store.data.userId).toBe("abc");
   });
 
-  it("seals nothing when the hold would change nothing", async () => {
+  it("changes no data but still records the run when the hold would change nothing", async () => {
     // The store is seeded with the same defaults the module writes, so the only thing this run *could* say is
-    // what the hold says — and that changes nothing.
+    // what the hold says — and that changes nothing. It still seals one zero-diff transaction: a node revisited
+    // after a jump has to be able to clear its re-arm without inventing an edit.
     const store = createStore({
       modelName: NAME.trim(),
       cookingCarrier: DEFAULT_COOKING_CARRIER,
@@ -136,9 +137,11 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME });
-    await expect(engine.runModule(modelStart.module, { id: NODE })).resolves.toBeUndefined();
+    await engine.runModule(modelStart.module, { id: NODE });
 
-    expect(store.log).toHaveLength(0);
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0].primary).toHaveLength(0);
+    expect(store.data.modelName).toBe(NAME.trim());
   });
 
   it("reports what is missing on an empty store — a model that has not started", async () => {
