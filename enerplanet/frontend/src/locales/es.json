@@ -3032,8 +3032,14 @@
       "title": "Inicio del modelo",
       "description": "Crea el modelo: su nombre, el periodo que cubre, su resolución y la región en la que se dibuja.",
       "nameLabel": "Nombre del modelo",
-      "fromLabel": "Desde",
-      "toLabel": "Hasta",
+      "period": {
+        "label": "Periodo",
+        "year": "Año completo",
+        "q1": "T1",
+        "q2": "T2",
+        "q3": "T3",
+        "q4": "T4"
+      },
       "resolutionLabel": "Resolución",
       "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Región",

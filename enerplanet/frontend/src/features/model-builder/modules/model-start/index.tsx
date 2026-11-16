@@ -13,13 +13,15 @@
  *
  * Two regions, on purpose (most modules want two or three — declare what you use):
  *
- *   sidebar   the form: name, period, resolution, region. One gesture, one commit.
+ *   sidebar   the form: name, period, resolution, region. The period parts and the region commit on a click
+ *             (`weather`'s choices); name and resolution wait for Apply, which hands over everything it owns
+ *             at once.
  *   map       what this module does to the map: frame the chosen region, as an effect on the store. It renders
  *             nothing — the framing *is* the work. The baselayer itself is the `map-provider` module's
  *             business, never this one's.
  *
  * `seal: "per-commit"` — the fields are independent, so a partial state is one this module stands behind
- * (`spec/core.md` T16), and the form still hands over everything it owns in a single `commit()`.
+ * (`spec/core.md` T16), and each click or Apply still lands in its own sealed transaction.
  */
 
 import { useEffect, useState } from "react";
@@ -44,6 +46,41 @@ export type { RegionOption, RegionSource } from "./regions";
 
 /** The resolutions a building model is usually drawn at, in minutes. */
 const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
+
+/**
+ * The year a scenario's dates carry.
+ *
+ * Scenario weather has no calendar year, but the simulation engine needs one, and a non-leap year keeps the
+ * dates' days in line with the 365-day scenario series. Ported with the table below — the legacy's
+ * `SCENARIO_DATE_YEAR` (`useAreaSelect/helpers/weatherSettings.ts`), which is the behaviour being reproduced.
+ */
+export const SCENARIO_DATE_YEAR = 2023;
+
+/**
+ * The period the user picks: the whole year or a quarter, as month-day bounds. Only the scenario mode is
+ * supported, so a part is the bounds onto `SCENARIO_DATE_YEAR` — the year is the scenario's, not the user's.
+ *
+ * Ported from the legacy's own `PERIOD_PARTS` (`region-selector/components/SidebarPanel.tsx`); `label` is the
+ * i18n key the button renders.
+ */
+const PERIOD_PARTS = [
+  { key: "year", start: "01-01", end: "12-31", label: "modelBuilder.model-start.period.year" },
+  { key: "q1", start: "01-01", end: "03-31", label: "modelBuilder.model-start.period.q1" },
+  { key: "q2", start: "04-01", end: "06-30", label: "modelBuilder.model-start.period.q2" },
+  { key: "q3", start: "07-01", end: "09-30", label: "modelBuilder.model-start.period.q3" },
+  { key: "q4", start: "10-01", end: "12-31", label: "modelBuilder.model-start.period.q4" },
+] as const;
+
+/**
+ * The `fromDate`/`toDate` a period part stands for: its month-day bounds onto the scenario's fixed year.
+ * `undefined` for a key that names no part — every button passes one from the table above.
+ */
+export function periodDates(key: string): { fromDate: string; toDate: string } | undefined {
+  const part = PERIOD_PARTS.find((candidate) => candidate.key === key);
+  return part === undefined
+    ? undefined
+    : { fromDate: `${SCENARIO_DATE_YEAR}-${part.start}`, toDate: `${SCENARIO_DATE_YEAR}-${part.end}` };
+}
 
 /**
  * The legacy's defaults for the three settings **no step produces**.
@@ -118,7 +155,10 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   }
 
   if (projection.fromDate === undefined || projection.toDate === undefined) {
-    issues.push({ port: "fromDate", message: "The model needs a period: a start and an end date." });
+    issues.push({
+      port: "fromDate",
+      message: "The model needs a period: pick a whole year or a quarter.",
+    });
   } else if (projection.fromDate > projection.toDate) {
     issues.push({ port: "fromDate", message: "The period starts after it ends." });
   }
@@ -230,8 +270,6 @@ const module = defineModule({
 function onScreen(
   data: Readonly<ModelData>,
   typedName: string | null,
-  typedFrom: string | null,
-  typedTo: string | null,
   typedResolution: number | null,
   typedRegion: string | null,
   regions: readonly RegionOption[],
@@ -240,8 +278,6 @@ function onScreen(
   return {
     ...data,
     ...(typedName === null ? {} : { modelName: typedName }),
-    ...(typedFrom === null ? {} : { fromDate: typedFrom }),
-    ...(typedTo === null ? {} : { toDate: typedTo }),
     ...(typedResolution === null ? {} : { resolution: typedResolution }),
     ...(chosen === undefined ? {} : { region: { country: chosen.country, state: chosen.state } }),
   };
@@ -251,8 +287,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   const { t } = useTranslation();
   // What the user has collected since the last commit. Local on purpose: it is not state worth keeping.
   const [typedName, setTypedName] = useState<string | null>(null);
-  const [typedFrom, setTypedFrom] = useState<string | null>(null);
-  const [typedTo, setTypedTo] = useState<string | null>(null);
   const [typedResolution, setTypedResolution] = useState<number | null>(null);
   const [typedRegion, setTypedRegion] = useState<string | null>(null);
 
@@ -264,8 +298,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   useEffect(() => {
     hold(nodeId, {});
     setTypedName(null);
-    setTypedFrom(null);
-    setTypedTo(null);
     setTypedResolution(null);
     setTypedRegion(null);
   }, [nodeId]);
@@ -291,8 +323,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     const chosen = regions.find((candidate) => regionKey(candidate) === typedRegion);
     hold(nodeId, {
       ...(typedName === null ? {} : { modelName: typedName }),
-      ...(typedFrom === null ? {} : { fromDate: typedFrom }),
-      ...(typedTo === null ? {} : { toDate: typedTo }),
       ...(typedResolution === null ? {} : { resolution: typedResolution }),
       ...(chosen === undefined
         ? {}
@@ -303,8 +333,6 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
       // The store's values take over again. The map needs no call here: the `map` region watches the stored
       // region and frames when it moves — which is exactly what this commit does.
       setTypedName(null);
-      setTypedFrom(null);
-      setTypedTo(null);
       setTypedResolution(null);
       setTypedRegion(null);
     });
@@ -326,6 +354,17 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     void run().finally(() => setTypedRegion(null));
   };
 
+  /**
+   * Picking a period part also commits at once: the period is the model's, and a click *is* the commit —
+   * there is nothing else to fill in first. The values are the part's month-day bounds onto the scenario's
+   * fixed year, and `run()` writes them as `fromDate`/`toDate` exactly as it always did.
+   */
+  const choosePeriod = (key: string): void => {
+    const dates = periodDates(key);
+    if (dates !== undefined) hold(nodeId, dates);
+    void run();
+  };
+
   // The stored region, and the options to offer: the loaded list plus the stored region when it has left the
   // list, so a model drawn in a region the backend no longer serves still shows its own value rather than
   // reading as unset.
@@ -339,7 +378,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
    * makes a model start" would drift, and the button would then disagree with the gate that decides whether
    * this node is finished.
    */
-  const pending = onScreen(data, typedName, typedFrom, typedTo, typedResolution, typedRegion, regions);
+  const pending = onScreen(data, typedName, typedResolution, typedRegion, regions);
   const ready = issuesFor(pending).length === 0;
 
   return (
@@ -363,30 +402,32 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
         />
       </div>
 
-      <div className="flex shrink-0 gap-3">
-        <div className="flex-1 space-y-2">
-          <label className="text-sm text-muted-foreground" htmlFor="model-start-from">
-            {t("modelBuilder.model-start.fromLabel")}
-          </label>
-          <input
-            id="model-start-from"
-            type="date"
-            value={typedFrom ?? String(data.fromDate ?? "")}
-            onChange={(event) => setTypedFrom(event.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="flex-1 space-y-2">
-          <label className="text-sm text-muted-foreground" htmlFor="model-start-to">
-            {t("modelBuilder.model-start.toLabel")}
-          </label>
-          <input
-            id="model-start-to"
-            type="date"
-            value={typedTo ?? String(data.toDate ?? "")}
-            onChange={(event) => setTypedTo(event.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          />
+      <div className="shrink-0 space-y-2">
+        <p className="text-sm text-muted-foreground">{t("modelBuilder.model-start.period.label")}</p>
+        <div
+          className="flex flex-wrap gap-1"
+          role="group"
+          aria-label={t("modelBuilder.model-start.period.label")}
+        >
+          {PERIOD_PARTS.map((part) => {
+            const dates = periodDates(part.key);
+            const chosen = data.fromDate === dates?.fromDate && data.toDate === dates?.toDate;
+            return (
+              <button
+                key={part.key}
+                type="button"
+                aria-pressed={chosen}
+                onClick={() => choosePeriod(part.key)}
+                className={`h-7 cursor-pointer rounded-md border border-border px-2 text-xs font-medium transition-colors ${
+                  chosen
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {t(part.label)}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -124,15 +124,15 @@ const module = defineModule({
   id: "weather",
   name: "Weather",
 
-  // What it writes, plus what it reads and what it may invalidate. `fromDate` is deliberately *not* required:
-  // a scenario needs no period at all, so demanding one would make this node unplaceable before `model-start`
-  // — which is not true of the legacy, where weather is chosen independently. When a *recorded year* is
-  // chosen and the period is missing, that is this module's own gate's business (T22), not the flow gate's.
+  // What it writes, plus what it reads and what it may invalidate. `fromDate` is **required**: a recorded
+  // year takes its year from the period, and a scenario's dates are the model's, so this node cannot be
+  // finished without a period — stating the reliance here makes it part of the contract rather than an
+  // assumption. `model-start`, which produces the period, sits upstream, so the flow gate still places it.
   //
   // `buildingParams` is declared without being written: a module must *know* every port it can affect, and
   // declaring one is not a claim to write it (the engine still refuses an undeclared write). This module
   // never touches it — the cascade removes it (T7).
-  params: [{ port: "weatherSelection" }, { port: "fromDate" }, { port: "buildingParams" }],
+  params: [{ port: "weatherSelection" }, { port: "fromDate", required: true }, { port: "buildingParams" }],
 
   // The direct edges only; invalidation is transitive (T7), so `building-demand`'s own declaration carries
   // the choice onward to `technologies`. Writing that far edge here would be claiming someone else's coupling.

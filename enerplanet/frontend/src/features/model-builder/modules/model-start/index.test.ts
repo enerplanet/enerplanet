@@ -20,6 +20,7 @@ import modelStart, {
   DEFAULT_RUN_MODE,
   NO_OWN_PRICES,
   hold,
+  periodDates,
 } from "./index";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
@@ -34,6 +35,12 @@ const NAME = "  Karlsruhe  ";
 /** An ISO period. Ordered here as `FROM → TO`, since the module's validation compares them as strings. */
 const FROM = "2026-01-01";
 const TO = "2026-12-31";
+
+/** The scenario year every period part lands in — the legacy's fixed reference year. */
+const SCENARIO_YEAR = 2023;
+/** The scenario year's first and last day, which Whole year and Q1/Q4 share a bound with. */
+const YEAR_START = `${SCENARIO_YEAR}-01-01`;
+const YEAR_END = `${SCENARIO_YEAR}-12-31`;
 
 describe("model-start's declaration", () => {
   it("is consistent with the contract", () => {
@@ -192,5 +199,33 @@ describe("model-start's behaviour", () => {
     });
 
     expect(issues).toEqual([{ port: "fromDate", message: "The period starts after it ends." }]);
+  });
+});
+
+describe("model-start's period parts", () => {
+  it("maps every part to month-day bounds onto the scenario's fixed year", () => {
+    // The legacy's `PERIOD_PARTS`: whole year or a quarter, on `SCENARIO_DATE_YEAR` — a non-leap year keeps
+    // the days in line with the 365-day scenario series.
+    expect(periodDates("year")).toEqual({ fromDate: YEAR_START, toDate: YEAR_END });
+    expect(periodDates("q1")).toEqual({ fromDate: YEAR_START, toDate: "2023-03-31" });
+    expect(periodDates("q2")).toEqual({ fromDate: "2023-04-01", toDate: "2023-06-30" });
+    expect(periodDates("q3")).toEqual({ fromDate: "2023-07-01", toDate: "2023-09-30" });
+    expect(periodDates("q4")).toEqual({ fromDate: "2023-10-01", toDate: YEAR_END });
+  });
+
+  it("refuses a key that names no part", () => {
+    expect(periodDates("nope")).toBeUndefined();
+  });
+
+  it("commits a picked part as the model's period — the same fromDate/toDate path as before", async () => {
+    const store = createStore({});
+    const engine = createEngine(store);
+
+    // A part is picked through the module's own hold/run path, exactly as the panel's button does.
+    hold(NODE, periodDates("q1") ?? {});
+    await engine.runModule(modelStart.module, { id: NODE });
+
+    expect(store.data.fromDate).toBe(YEAR_START);
+    expect(store.data.toDate).toBe("2023-03-31");
   });
 });

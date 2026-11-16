@@ -53,17 +53,20 @@ describe("weather's declaration", () => {
     expect(contractIssues(weather)).toEqual([]);
   });
 
-  it("writes the selection, reads the period, and knows what it can affect — requiring none of them", () => {
-    // `fromDate` is not required on purpose: a scenario needs no period, so demanding one would make this node
-    // unplaceable before `model-start` — which is not true of the legacy.
+  it("writes the selection, requires the period, and knows what it can affect", () => {
     expect(weather.module.params.map((param) => param.port).sort()).toEqual([
       "buildingParams",
       "fromDate",
       SELECTION,
     ]);
+    // The period is required, not merely read: this module's choice is finished only with the period
+    // `model-start` produces upstream — a recorded year takes the period's year, and a scenario's dates
+    // are the model's. Declaring it here makes the reliance part of the contract rather than an assumption.
+    expect(weather.module.params.filter((param) => param.required === true).map((p) => p.port)).toEqual([
+      "fromDate",
+    ]);
     // Declaring a port is not claiming to write it: `buildingParams` is here because the cascade can remove it
     // when the weather changes (T7), and a module must know every port it can affect.
-    expect(weather.module.params.filter((param) => param.required === true)).toEqual([]);
   });
 
   it("declares the edges it actually has, leaving transitivity to the module that owns it", () => {

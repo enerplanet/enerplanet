@@ -3031,8 +3031,14 @@
       "title": "Modelstart",
       "description": "Maakt het model aan: de naam, de periode, de resolutie en de regio waarin wordt getekend.",
       "nameLabel": "Modelnaam",
-      "fromLabel": "Van",
-      "toLabel": "Tot",
+      "period": {
+        "label": "Periode",
+        "year": "Heel jaar",
+        "q1": "K1",
+        "q2": "K2",
+        "q3": "K3",
+        "q4": "K4"
+      },
       "resolutionLabel": "Resolutie",
       "resolutionUnit": "{{minutes}} min",
       "regionLabel": "Regio",
