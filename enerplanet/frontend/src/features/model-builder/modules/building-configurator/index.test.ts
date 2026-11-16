@@ -193,6 +193,23 @@ describe("building-configurator's run", () => {
     await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
     expect(store.data.buildingParams).toBe(before);
   });
+
+  it("commits several held buildings as one transaction", async () => {
+    // What continuing deliberately is for: work through the grid, commit once. Before this, the first edit
+    // committed and ended the node's turn, so every other building's edit was unreachable.
+    const store = createStore({ ...ready() });
+    const engine = createEngine(store);
+    const before = store.log.length;
+
+    holdEdit("b1", { params: { yearlyKwh: 15_000 } });
+    holdEdit("b2", { params: { yearlyKwh: 9_000 } });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+
+    expect(store.data.buildingParams?.[ELECTRICITY]?.b1?.yearlyKwh).toBe(15_000);
+    expect(store.data.buildingParams?.[ELECTRICITY]?.b2?.yearlyKwh).toBe(9_000);
+    // One seal for both: two buildings, one gesture.
+    expect(store.log.length - before).toBe(1);
+  });
 });
 
 describe("building-configurator's gate", () => {

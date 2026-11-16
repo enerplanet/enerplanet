@@ -304,6 +304,19 @@ const OverlayRegion: FC<{
     [data, osmId],
   );
 
+  // Memoised on the collections themselves: the view seeds a store from this, and a fresh object every render
+  // would write that store on every render for no change.
+  const grid = useMemo(
+    () => ({
+      ...(data.buildings === undefined ? {} : { buildings: data.buildings }),
+      ...(data.lines === undefined ? {} : { lines: data.lines }),
+      ...(data.mvLines === undefined ? {} : { mvLines: data.mvLines }),
+      ...(data.transformers === undefined ? {} : { transformers: data.transformers }),
+      ...(data.grids === undefined ? {} : { grids: data.grids }),
+    }),
+    [data.buildings, data.lines, data.mvLines, data.transformers, data.grids],
+  );
+
   if (!overlay.isOpen || configurator === null || osmId === null || feature === undefined) return null;
 
   const { View } = configurator;
@@ -317,13 +330,7 @@ const OverlayRegion: FC<{
       draftId={data.draftId}
       // The whole grid, because the installed view resolves the building out of its own grid state rather than
       // out of `feature`. Handing it the grid is what keeps that a view's business and not a store's.
-      grid={{
-        ...(data.buildings === undefined ? {} : { buildings: data.buildings }),
-        ...(data.lines === undefined ? {} : { lines: data.lines }),
-        ...(data.mvLines === undefined ? {} : { mvLines: data.mvLines }),
-        ...(data.transformers === undefined ? {} : { transformers: data.transformers }),
-        ...(data.grids === undefined ? {} : { grids: data.grids }),
-      }}
+      grid={grid}
       onCommit={(edit) => {
         // Held until the module's Continue. Nothing is written while the view is open, so an abandoned overlay
         // still changes nothing — and several buildings can be configured before any of them commit.
@@ -395,22 +402,27 @@ const SidebarRegion: FC<{ overlay: OverlayControl; data: Readonly<ModelData> }> 
 };
 
 /** The hint that makes the click discoverable — there is no button that could act before a pick. */
-const BottomRegion: FC<{ run: () => Promise<void>; pending: number; ready: boolean }> = ({
-  run,
-  pending,
-  ready,
-}) => {
+const BottomRegion: FC<{
+  run: () => Promise<void>;
+  pending: number;
+  issues: readonly ValidationIssue[];
+}> = ({ run, pending, issues }) => {
   const { t } = useTranslation();
+  const ready = issues.length === 0;
   return (
     <div className="flex h-full items-center justify-between gap-3 bg-muted/40 px-3">
       <span className="text-xs text-muted-foreground">
-        {pending === 0
-          ? t("modelBuilder.building-configurator.hint", "Click a building on the map to configure it in detail.")
-          : t(
+        {pending > 0
+          ? t(
               "modelBuilder.building-configurator.edited",
               "{{count}} building(s) edited, not yet committed",
               { count: pending },
-            )}
+            )
+          : ready
+            ? t("modelBuilder.building-configurator.hint", "Click a building on the map to configure it in detail.")
+            : // A disabled button has to say what it is waiting for, or pressing it reads as broken — which is
+              // exactly how it read. The gate's own message is the honest one.
+              issues[0]?.message}
       </span>
       <button
         type="button"
@@ -438,7 +450,7 @@ const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => 
     return <SidebarRegion overlay={overlay} data={data} />;
   }
   if (region === "bottom") {
-    return <BottomRegion run={run} pending={state.pending.size} ready={issuesFor(data).length === 0} />;
+    return <BottomRegion run={run} pending={state.pending.size} issues={issuesFor(data)} />;
   }
   return null;
 };
