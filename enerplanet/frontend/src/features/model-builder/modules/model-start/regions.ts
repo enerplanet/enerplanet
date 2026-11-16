@@ -54,6 +54,11 @@ export function setRegionSource(next: RegionSource | null): void {
   // A new source may answer differently, so what the old one returned is no longer ours to show.
   inFlight = null;
   publish({ regions: [], loading: next !== null, failed: false });
+
+  // **Installing a source is what asks for the list.** A module's regions mount before the shell's install
+  // effect runs — React runs child effects first — so the mount-time load in `useRegions` finds no source and
+  // bails, and nothing would ever ask again. Without this the picker sits on "loading" for good.
+  if (next !== null) void loadRegions();
 }
 
 /**
@@ -62,6 +67,9 @@ export function setRegionSource(next: RegionSource | null): void {
  * Deduplicated because both regions mount together: without this, opening the node would ask the backend
  * twice for the same list. A loaded list is never fetched again here — the caching and re-asking a failed
  * answer belong to the shell (`regionSource.ts`), which mirrors the legacy's own time-boxed cache.
+ *
+ * `loading` is the flag that says a load is owed: `setRegionSource` raises it and starts the load, and the
+ * answer lowers it. So a region that mounts later is a no-op rather than a second request.
  */
 export function loadRegions(): Promise<void> {
   if (!state.loading) return Promise.resolve();

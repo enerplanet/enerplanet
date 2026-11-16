@@ -50,6 +50,25 @@ describe("model-start's region slot", () => {
     expect(regionsState()).toEqual({ regions: [], loading: false, failed: true });
   });
 
+  it("asks as soon as a source is installed, rather than waiting for a region to mount", async () => {
+    // The shell installs its source from an effect, and React runs a child's effects before its parent's — so
+    // the module's mount-time load runs first, finds no source, and bails. If the install did not ask, nothing
+    // ever would, and the picker would sit on "loading" forever with no request in flight.
+    let asked = 0;
+    setRegionSource({
+      listRegions: () => {
+        asked += 1;
+        return Promise.resolve([BADEN_WUERTTEMBERG]);
+      },
+    });
+
+    expect(asked).toBe(1);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(regionsState().regions).toEqual([BADEN_WUERTTEMBERG]);
+  });
+
   it("asks the source once when both regions mount together", async () => {
     let calls = 0;
     let settle: (regions: readonly RegionOption[]) => void = () => {};
