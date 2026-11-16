@@ -2959,6 +2959,9 @@
   "modelBuilder": {
     "shell": {
       "loadingModel": "Model wordt geladen…",
+      "loadingWorkflow": "De workflow wordt geladen…",
+      "noDefaultWorkflow": "Er is geen standaardworkflow ingesteld — voer `make seed` uit.",
+      "workflowLoadFailed": "De workflow kon niet worden geladen: {{reason}}",
       "noSession": "Dit model heeft geen experimentele sessie om te laden.",
       "badModelId": "Dat model-id is geen getal.",
       "divergence": "De opgeslagen staat van dit model kwam niet overeen met de geschiedenis; het is in plaats daarvan uit de geschiedenis opgebouwd.",

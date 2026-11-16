@@ -31,8 +31,14 @@
  *
  * The frame keeps no position of its own: what to show is derived (`frameView`), and so are the bars
  * (`barState`, `ledgerState`), the panel (`stepsState`) and the save's status (`saveModel`). `useStoreVersion`
- * is what tells it the store moved. A broken workflow definition throws rather than rendering an empty frame —
- * it is configuration, and a silent catch would bury a config error.
+ * is what tells it the store moved.
+ *
+ * The component is split in two, and the split is the point: `BuilderShell` fetches the default workflow and
+ * `BuilderFrame` runs it. The flow is a database row now (`plan §6`, Stage 2), so it does not exist when the
+ * frame would first render — the frame must not mount until it has arrived. A failed fetch, a missing default,
+ * and a stored document naming an unknown module are all **data conditions**, reported in the frame's own
+ * style rather than thrown: `toWorkflow`'s refusal is right for the developer-authored definition it was
+ * written against, but a row is user data, and a white screen is not a report (`plan §3`).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -64,7 +70,7 @@ import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
 import { MAP_PROVIDER, MODULES, bindModelSaveSession } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
-import { devWorkflow, type Workflow } from "./workflow";
+import { loadDefaultWorkflow, type Workflow } from "./workflow";
 import { createInvalidator } from "../core/invalidate";
 import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
 
@@ -141,9 +147,9 @@ const nextPaint = (): Promise<void> =>
     });
   });
 
-export const BuilderShell: React.FC = () => {
+/** The frame proper: everything a builder does once its workflow has arrived. It never learns how it landed. */
+const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   const { t } = useTranslation();
-  const workflow = useMemo(() => devWorkflow(), []);
   const gateway = useMemo(() => createHttpGateway(), []);
   const moduleIds = useMemo(() => MODULES.map((entry) => entry.module.id), []);
   // Built once for the frame's lifetime: the map host is the frame's, not a module's, and re-creating it would
@@ -648,6 +654,76 @@ export const BuilderShell: React.FC = () => {
       {stepsPanel}
     </div>
   );
+};
+
+/**
+ * The shell: it loads the default workflow, then renders the frame — and nothing else.
+ *
+ * This is the wait the flow's move off a static import created. Before Stage 2 the frame built its session
+ * during its first render, because the definition was an `import` and already present; a database row is not,
+ * so the frame cannot exist until the fetch lands. The two early returns below sit after every hook in this
+ * component, since a conditional return above a hook is what breaks React.
+ *
+ * Both outcomes are reported in the frame's own style (a centred message) rather than thrown into a white
+ * screen: the flow is user data (`plan §3`).
+ */
+export const BuilderShell: React.FC = () => {
+  const { t } = useTranslation();
+  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const loaded = await loadDefaultWorkflow();
+        if (cancelled) return;
+        if (loaded === undefined) {
+          // A missing default is a data condition with a named fix, not a transport fault — the same
+          // distinction the `?model=` load draws between "no session" and a thrown error.
+          setError(
+            t("modelBuilder.shell.noDefaultWorkflow", "No default workflow is set — run `make seed`."),
+          );
+          return;
+        }
+        setWorkflow(loaded);
+      } catch (thrown) {
+        if (cancelled) return;
+        // A rejected fetch, or a document `toWorkflow` refused — most often a node naming a module the
+        // catalogue no longer declares. Both name their own cause; report it rather than take the surface down.
+        setError(
+          t("modelBuilder.shell.workflowLoadFailed", "The workflow could not be loaded: {{reason}}", {
+            reason: thrown instanceof Error ? thrown.message : String(thrown),
+          }),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  // Nothing renders until a flow exists: the frame derives its whole position from one, and an empty builder
+  // that is about to fill in reads as data loss — the same reason the frame's own load shows a placeholder.
+  if (error !== null) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-background p-6">
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
+    );
+  }
+
+  if (workflow === null) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-background p-6">
+        <p className="text-sm text-muted-foreground">
+          {t("modelBuilder.shell.loadingWorkflow", "Loading the workflow…")}
+        </p>
+      </div>
+    );
+  }
+
+  return <BuilderFrame workflow={workflow} />;
 };
 
 export default BuilderShell;

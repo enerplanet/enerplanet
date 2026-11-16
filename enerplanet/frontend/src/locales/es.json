@@ -2960,6 +2960,9 @@
   "modelBuilder": {
     "shell": {
       "loadingModel": "Cargando el modelo…",
+      "loadingWorkflow": "Cargando el flujo de trabajo…",
+      "noDefaultWorkflow": "No hay un flujo de trabajo predeterminado — ejecuta `make seed`.",
+      "workflowLoadFailed": "No se pudo cargar el flujo de trabajo: {{reason}}",
       "noSession": "Este modelo no tiene una sesión experimental que cargar.",
       "badModelId": "Ese id de modelo no es un número.",
       "divergence": "El estado guardado de este modelo no coincidía con su historial; se reconstruyó desde el historial.",

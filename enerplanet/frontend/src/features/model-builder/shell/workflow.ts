@@ -1,5 +1,6 @@
 /**
- * The dev workflow — static configuration now, a backend resource later (`spec/frame.md` §5).
+ * The default workflow the frame runs — a backend resource now, not a baked-in import (`spec/frame.md` §5;
+ * plan `workflow-builder.md` §6, Stage 2).
  *
  * A workflow is an ordered list of nodes, and every part of the frame reads it: the workflow bar shows
  * where the session is, the steps panel shows every step's state, and `position.ts` derives both from
@@ -7,17 +8,17 @@
  * configuration into exactly what the core already takes — a `Flow`, a `ModuleRegistry` and the seed ports
  * — and refuse a definition that could not be walked.
  *
- * `toWorkflow` is deliberately separate from the two `import`s below. The shape can then be exercised
- * without a fixture on disk, and moving to a hosted workflow changes one binding (`devWorkflow` becomes an
- * `await fetch`), not this logic.
+ * `toWorkflow` is deliberately separate from the fetch below. The shape can then be exercised without a
+ * fixture or a server, and `loadDefaultWorkflow` is the one binding that knows where the definition comes
+ * from — it fetches it and composes it with the seed.
  *
- * On the JSON `import` rather than the app's `fetch`-from-public idiom: a *definition* is configuration
- * the frame needs before it can render anything, so a synchronous import avoids a loading state it would
- * otherwise have to invent. The seed is data and may well move to that idiom when it grows.
+ * Only the *definition* moved to the database. The seed stays a static `import`: it is the builder's own
+ * starting data, not a document the backend owns, and the definition's own `seed` field is a fixture path the
+ * test setup reads — the running builder never resolves it.
  */
 
-import devFlowDefinition from "./workflow.dev.json";
 import devSeed from "./testdata/dev-flow.json";
+import { workflowService } from "../workflows/service";
 import type { WorkflowRef } from "../core/artefact";
 import type { Flow, FlowNode, ModuleRegistry, SeedPorts } from "../core/flow";
 import type { Module } from "../core/module";
@@ -132,13 +133,19 @@ export function toWorkflow(
 }
 
 /**
- * The workflow the frame loads.
+ * The workflow the frame loads: the definition from the database, the seed from the static import.
  *
- * Two bindings, on purpose: the definition and its seed. Both are static today; the day the workflow is
- * hosted, this function fetches and everything above it is unchanged.
+ * Returns `undefined` when nothing is marked default — a *data condition* the shell reports (naming the fix,
+ * "run `make seed`"), not an exception. The `list` call can reject, and `toWorkflow` can refuse a document
+ * that names an unknown module; both throw, and the shell catches them, because a stored row is user data
+ * and a white screen is not a report (plan §3). Only a developer-authored definition earned the throw the
+ * frame used to take for granted.
  */
-export function devWorkflow(): Workflow {
-  return toWorkflow(devFlowDefinition, MODULES, devSeed);
+export async function loadDefaultWorkflow(): Promise<Workflow | undefined> {
+  const rows = await workflowService.list();
+  const row = rows.find((entry) => entry.is_default);
+  if (row === undefined) return undefined;
+  return toWorkflow(row.definition, MODULES, devSeed);
 }
 
 /** Narrowing, because a definition arrives as `unknown` the moment it stops being a local import. */

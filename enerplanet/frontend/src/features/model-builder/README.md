@@ -65,8 +65,8 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 |---|---|
 | `contract.ts` | the shell's front door to the core's contracts; re-exports only, so nothing in `shell/` reaches into the core by a drifting path |
 | `moduleRegistry.ts` | the modules available to a workflow — listed **manually, on purpose**, and read by `toWorkflow` to build the core's registry |
-| `workflow.ts` | turns a workflow definition (untrusted) into what the core takes: `Flow`, `ModuleRegistry`, seed ports. Refuses anything unwalkable |
-| `workflow.dev.json` | the dev workflow itself: a seed and one node. Static now; hosted later, which changes one binding |
+| `workflow.ts` | turns a workflow definition (untrusted) into what the core takes: `Flow`, `ModuleRegistry`, seed ports. Refuses anything unwalkable. `loadDefaultWorkflow` fetches the default row from the database and composes it with the static seed |
+| `workflow.dev.json` | the dev workflow's definition — **no longer the running source** (`workflow-builder.md` §6, Stage 2): the shell reads the default from the database. Kept as the document the backend seeds and the fixture `workflow.test.ts` checks |
 | `frameMode.ts` | which module the frame shows and what its session starts from: **workflow** mode (the node the session sits on, seeded from the flow) or **test mode** (one module, on its own test data, no position) |
 | `barState.ts` | the workflow bar's state — prior / current / next, derived from `(flow, registry, store)` |
 | `WorkflowBar.tsx` | the top band: workflow label, prior/current/next framing, a completion chip, and **Save**. A prior click is a position move — a jump back (`spec/core.md` §G); the next step is plain greyed text, and there is **no forward control** (a module advances by running itself; an auto node runs on arrival). Plus the dev-only mode select and Reset |
@@ -76,7 +76,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `LedgerBar.tsx` | the bottom band: collapsed it is the last applied transaction as a signed line plus the discard marker; expanded (⅕ of the frame) it is the whole log |
 | `stepsState.ts` | the steps panel's state — every step's derived state, which one is current, and the *reason* behind a step that is not done (`pruned`, `blocked`) |
 | `StepsPanel.tsx` | the right-hand band, a **sibling** of the module column so it keeps full height: a state-dot rail collapsed by default, labels and reasons when expanded to ⅓ |
-| `BuilderShell.tsx` | the region frame (`sidebar` / `map` / `bottom` / `overlay`), composed from the module's declaration; re-seeds its session when the mode changes |
+| `BuilderShell.tsx` | the shell: fetches the default workflow, then renders the region frame (`sidebar` / `map` / `bottom` / `overlay`), composed from the module's declaration; re-seeds its session when the mode changes |
 | `useStoreVersion.ts` | the host's subscription to the store: the store announces every applied change, this re-renders |
 
 `/app/modelbuilder`, behind the `modelbuilder` runtime flag (Settings → Experimental — the sidebar entry is gated in the render path, so a toggle adds and removes it live).

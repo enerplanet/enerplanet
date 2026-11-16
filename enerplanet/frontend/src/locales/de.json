@@ -2963,6 +2963,9 @@
   "modelBuilder": {
     "shell": {
       "loadingModel": "Modell wird geladen…",
+      "loadingWorkflow": "Der Workflow wird geladen…",
+      "noDefaultWorkflow": "Es ist kein Standard-Workflow festgelegt — führe `make seed` aus.",
+      "workflowLoadFailed": "Der Workflow konnte nicht geladen werden: {{reason}}",
       "noSession": "Dieses Modell hat keine experimentelle Sitzung zum Laden.",
       "badModelId": "Diese Modell-ID ist keine Zahl.",
       "divergence": "Der gespeicherte Zustand dieses Modells stimmte nicht mit seiner Historie überein; es wurde stattdessen aus der Historie neu aufgebaut.",

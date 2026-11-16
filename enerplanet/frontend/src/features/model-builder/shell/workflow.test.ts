@@ -1,21 +1,34 @@
 /**
- * The dev workflow source — static configuration today, a backend resource later (`spec/frame.md` §5).
+ * The default-workflow loader — how the definition reaches the frame now that it is a database row
+ * (`spec/frame.md` §5; plan `workflow-builder.md` §6, Stage 2).
  *
  * The loader's job is to turn untrusted configuration into exactly what the core already takes: a `Flow`,
- * a `ModuleRegistry`, and the seed ports that exist before any node runs. It is deliberately pure and
- * separate from the `import` of the JSON file, so the shape can be exercised without a fixture on disk —
- * and so the switch to a hosted workflow changes one binding, not this logic.
+ * a `ModuleRegistry`, and the seed ports that exist before any node runs. `toWorkflow` is deliberately pure
+ * and separate from the fetch, so the shape can be exercised without a fixture or a server — and the cases
+ * below are mostly the *refusals*. A workflow that names a module nobody registered, or places two nodes
+ * under one id, cannot be walked; it should fail here, loudly, rather than half-work later.
  *
- * The cases below are mostly the *refusals*. A workflow that names a module nobody registered, or places
- * two nodes under one id, cannot be walked; it should fail here, loudly, rather than half-work later.
+ * `loadDefaultWorkflow` is the one binding that fetches it, so it is pinned against a mocked client the way
+ * the workflows service is. It reports *no default* as `undefined` rather than throwing — a data condition,
+ * not a transport fault.
  *
  * Written failing first.
  */
-import { describe, it, expect } from "vitest";
-import { toWorkflow, devWorkflow } from "./workflow";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import example from "../modules/example";
+import { MODULES } from "./moduleRegistry";
 import { isValidFlow } from "../core/flow";
 import type { BuilderModule } from "./contract";
+import type { WorkflowSummary } from "../workflows/types";
+import devFlowDefinition from "./workflow.dev.json";
+import devSeed from "./testdata/dev-flow.json";
+
+const get = vi.fn();
+vi.mock("@/lib/axios", () => ({
+  default: { get, post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+}));
+
+const { toWorkflow, loadDefaultWorkflow } = await import("./workflow");
 
 /** The one module these cases place. */
 const ENTRIES: readonly BuilderModule[] = [example];
@@ -23,9 +36,15 @@ const ENTRIES: readonly BuilderModule[] = [example];
 /** Two ports the example module wants, so the seed is meaningful rather than empty. */
 const SEED = { modelName: "Dev model", resolution: 60 };
 
+/** The id the definition names itself, reused so the loader cases agree on it. */
+const DEV_FLOW_ID = "dev-flow";
+
+/** Its label, likewise. */
+const DEV_FLOW_LABEL = "Development flow";
+
 const DEFINITION = {
-  id: "dev-flow",
-  label: "Development flow",
+  id: DEV_FLOW_ID,
+  label: DEV_FLOW_LABEL,
   seed: "testdata/dev-flow.json",
   nodes: [{ id: "example", moduleId: "example", label: "Example" }],
 };
@@ -34,8 +53,8 @@ describe("a workflow definition becomes what the core takes", () => {
   it("registers the declared modules by their own id", () => {
     const workflow = toWorkflow(DEFINITION, ENTRIES, SEED);
 
-    expect(workflow.id).toBe("dev-flow");
-    expect(workflow.label).toBe("Development flow");
+    expect(workflow.id).toBe(DEV_FLOW_ID);
+    expect(workflow.label).toBe(DEV_FLOW_LABEL);
     expect(workflow.registry.example).toBe(example.module);
   });
 
@@ -84,7 +103,7 @@ describe("a workflow definition becomes what the core takes", () => {
 
     // The reference is a fact about the workflow, not a constant some caller invented — which is why the
     // definition carries the version and this file builds the pair.
-    expect(workflow.ref).toEqual({ id: "dev-flow", version: 3 });
+    expect(workflow.ref).toEqual({ id: DEV_FLOW_ID, version: 3 });
   });
 
   it("reads an absent version as 1 — v1 is the only version until flows are distributable", () => {
@@ -98,18 +117,58 @@ describe("a workflow definition becomes what the core takes", () => {
   });
 });
 
-describe("the dev workflow the shell actually loads", () => {
-  it("is walkable: every node is placeable against its own seed", () => {
-    const workflow = devWorkflow();
+/** Two rows: one default carrying the shipped document, one not, so "find the default" is the thing tested. */
+const defaultRow: WorkflowSummary = {
+  workflow_id: DEV_FLOW_ID,
+  version: 1,
+  label: DEV_FLOW_LABEL,
+  definition: devFlowDefinition,
+  is_default: true,
+};
 
-    // The core's own gating, not a re-implementation: the seed satisfies the first node, and each node
-    // contributes its surface for the next.
-    expect(isValidFlow(workflow.flow, workflow.registry, workflow.seeds)).toBe(true);
+const otherRow: WorkflowSummary = {
+  workflow_id: "other",
+  version: 1,
+  label: "Other",
+  definition: { id: "other", version: 1, label: "Other", nodes: [{ id: "example", moduleId: "example" }] },
+  is_default: false,
+};
+
+describe("the workflow the shell actually loads", () => {
+  beforeEach(() => {
+    get.mockReset();
   });
 
-  it("names the seed file the loader imports, so the two cannot drift apart", () => {
-    // The definition carries the seed's path only so a reader knows where the data lives — this is what
-    // keeps that name honest the day the seed becomes a fetch rather than an import.
-    expect(devWorkflow().seedFile).toBe("testdata/dev-flow.json");
+  it("fetches the list and builds from the row marked default, not the first", async () => {
+    get.mockResolvedValueOnce({ data: { data: [otherRow, defaultRow] } });
+
+    const workflow = await loadDefaultWorkflow();
+
+    expect(get).toHaveBeenCalledWith("/workflows");
+    expect(workflow?.id).toBe(DEV_FLOW_ID);
+    expect(workflow?.flow).toHaveLength(devFlowDefinition.nodes.length);
+  });
+
+  it("returns undefined when nothing is marked default — a data condition the shell reports, not a throw", async () => {
+    get.mockResolvedValueOnce({ data: { data: [otherRow] } });
+
+    await expect(loadDefaultWorkflow()).resolves.toBeUndefined();
+  });
+
+  it("lets a rejected fetch throw, so the shell can report it rather than render an empty frame", async () => {
+    get.mockRejectedValueOnce(new Error("offline"));
+
+    await expect(loadDefaultWorkflow()).rejects.toThrow("offline");
+  });
+});
+
+describe("the shipped dev-flow fixture", () => {
+  it("is walkable against the seed it names, so the fixture stays true as modules are added", () => {
+    // No longer the builder's source (Stage 2), but it is the document the backend seeds, so it must stay
+    // placeable: the core's own gating, not a re-implementation.
+    const workflow = toWorkflow(devFlowDefinition, MODULES, devSeed);
+
+    expect(isValidFlow(workflow.flow, workflow.registry, workflow.seeds)).toBe(true);
+    expect(workflow.seedFile).toBe("testdata/dev-flow.json");
   });
 });

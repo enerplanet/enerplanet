@@ -141,9 +141,12 @@ fill, line and circle. A custom (non-GeoJSON) layer — the three.js/LoD2 case �
 
 ### Testing the flow
 
-`shell/workflow.dev.json` is the flow the frame walks in **workflow mode**: an ordered node list, no edges. It
-carries every step that is *built*, in the legacy order (`Modules.md` §5), and grows as each module lands — a
-node whose `moduleId` is not registered makes the loader throw, so the chain is always exactly what exists:
+`shell/workflow.dev.json` is the dev workflow's definition: an ordered node list, no edges. It is **no longer
+what the frame walks** (`workflow-builder.md` §6, Stage 2): the shell fetches the default from the database
+(`make seed` writes it) and composes it with the static seed. The file stays as the document the backend seeds
+and the fixture `workflow.test.ts` checks. It carries every step that is *built*, in the legacy order
+(`Modules.md` §5), and grows as each module lands — a node whose `moduleId` is not registered makes the loader
+refuse the document:
 
     model-start  →  area-draw  →  grid-generation
 
