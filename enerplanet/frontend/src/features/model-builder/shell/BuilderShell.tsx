@@ -91,6 +91,27 @@ function sessionFor(workflow: Workflow, seed: Readonly<ModelData>): Session {
   return { store, engine: createEngine(store) };
 }
 
+/**
+ * Resolve once a React commit has been made, its effects have run, and the browser has painted it.
+ *
+ * This is load bearing rather than polite: it is the gap a module's effects need before the frame moves the
+ * session on to another node — a draw that reads what a run just produced has to happen while the module that
+ * produced it is still mounted.
+ *
+ * Both the frame and the timeout, deliberately. An animation frame is the right moment (it runs after passive
+ * effects, before paint), but **a hidden or backgrounded tab never fires one** — and a release that can hang
+ * would pin the frame to a node the session has already left, which is a worse bug than the one this fixes. The
+ * timeout is the way out when no frame comes.
+ */
+const nextPaint = (): Promise<void> =>
+  new Promise((resolve) => {
+    const fallback = setTimeout(resolve, 120);
+    requestAnimationFrame(() => {
+      clearTimeout(fallback);
+      resolve();
+    });
+  });
+
 export const BuilderShell: React.FC = () => {
   const { t } = useTranslation();
   const workflow = useMemo(() => devWorkflow(), []);
@@ -118,6 +139,17 @@ export const BuilderShell: React.FC = () => {
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
   // Workflow mode is the default, so the first session is seeded from the flow.
   const [session, setSession] = useState<Session>(() => sessionFor(workflow, workflow.initial));
+
+  /**
+   * The node a run is holding the view on: set while that run is in flight, cleared once its effects have landed.
+   *
+   * Without it a run moves the frame in the same React commit that delivers its outputs — the position is derived,
+   * and a done node is behind the cursor — so the module unmounts before its own effects run. A module that draws
+   * from what it just produced (the grid generator, above all) then never draws, while the store holds a grid that
+   * nothing put on the map. **The module's run moves the session on**, not the store write; this is what gives it
+   * the moment to finish being on screen.
+   */
+  const [held, setHeld] = useState<string | undefined>(undefined);
 
   // The save node's session, bound where the session itself lives. It reads the session when it *runs*, so
   // binding at construction would hand it a session that has since been replaced — a mode switch builds a
@@ -156,23 +188,28 @@ export const BuilderShell: React.FC = () => {
 
   // What the mode says to show, and what a session should start from. The seed is taken from here rather than
   // from the mode branch directly, so "which module" and "which data" cannot disagree.
-  const view = frameView(mode, workflow, MODULES, session.store);
+  const view = frameView(mode, workflow, MODULES, session.store, held);
 
   const run = async (): Promise<void> => {
     const entry = view.entry;
     if (entry === undefined) return;
+    const at = view.nodeId;
     try {
+      if (at !== undefined) setHeld(at);
       // In a workflow the transaction is stamped with the *node* id — history names positions, and a module
       // can be placed more than once. In test mode there is no position, so nothing is stamped.
-      await session.engine.runModule(
-        entry.module,
-        view.nodeId === undefined ? undefined : { id: view.nodeId },
-      );
+      await session.engine.runModule(entry.module, at === undefined ? undefined : { id: at });
       setError(null);
     } catch (thrown) {
       // A rejected write, a missing required port, a save refusal: all of them mean nothing was sealed, and
       // all of them are exactly what a module developer needs to see.
       setError(thrown instanceof Error ? thrown.message : String(thrown));
+    } finally {
+      // Two frames: one for React to commit the run's writes and run the effects that read them, one to be sure
+      // that commit has been painted. Only then does the derived position take over — the session ends up on the
+      // node after this one, which is where the user was heading when they pressed the button.
+      await nextPaint();
+      setHeld(undefined);
     }
   };
 
@@ -224,6 +261,7 @@ export const BuilderShell: React.FC = () => {
   const switchTo = (target: FrameMode): void => {
     const next = frameView(target, workflow, MODULES, session.store);
     setMode(target);
+    setHeld(undefined);
     setSession(sessionFor(workflow, next.seed));
     setError(null);
     setSaveNotice(undefined);
@@ -319,6 +357,7 @@ export const BuilderShell: React.FC = () => {
       onSave={save}
       saving={saving}
       saveNotice={saveNotice}
+      hold={held}
     />
   );
 

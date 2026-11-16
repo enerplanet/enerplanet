@@ -36,12 +36,16 @@ export interface BarState {
   complete: boolean;
 }
 
-export function barState(flow: Flow, registry: ModuleRegistry, store: Store): BarState {
+export function barState(flow: Flow, registry: ModuleRegistry, store: Store, hold?: string): BarState {
   const report = positionReport(flow, registry, store);
   const at = position(flow, registry, store);
 
   // Complete (or an empty flow): the session sits on the last node, so name that one.
-  const index = at.complete ? flow.length - 1 : at.index;
+  const derived = at.complete ? flow.length - 1 : at.index;
+  // A held node wins, so the bar cannot name a node the frame is not showing: the frame holds the view on a node
+  // whose run is still landing, and the two deriving their own answer would disagree while that happens.
+  const held = hold === undefined ? -1 : flow.findIndex((node) => node.id === hold);
+  const index = held === -1 ? derived : held;
 
   const prior = stepAt(flow, report, index - 1);
   const current = stepAt(flow, report, index);

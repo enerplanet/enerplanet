@@ -53,6 +53,15 @@ export function frameView(
   workflow: Workflow,
   entries: readonly BuilderModule[],
   store: Store,
+  /**
+   * A node to show instead of the derived one, while its run is in flight and until its effects have landed.
+   *
+   * The position is *derived* — the first node that is not done — so a run would move the frame off the node that
+   * just ran in the same React commit that delivers its outputs. A module's effects run with that commit, so one
+   * that draws from the new data never drew at all. **The module's run is what moves the session on**, not the
+   * store write, and this is where that is honoured.
+   */
+  hold?: string,
 ): FrameView {
   const byModuleId = new Map(entries.map((entry) => [entry.module.id, entry]));
 
@@ -68,7 +77,7 @@ export function frameView(
 
   // Complete flows keep the last node (`currentId`'s rule), so the frame stays on the module that finished
   // rather than emptying out.
-  const nodeId = currentId(workflow.flow, workflow.registry, store);
+  const nodeId = hold ?? currentId(workflow.flow, workflow.registry, store);
   const node = workflow.flow.find((candidate) => candidate.id === nodeId);
   if (node === undefined) return { labelId: "", seed: workflow.initial };
 

@@ -93,6 +93,11 @@ interface Props {
   saving?: boolean;
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
+  /**
+   * The node a run is holding the frame on. The bar derives its position from the store, so without this it would
+   * name the node the session has *reached* while the frame still shows the one it is leaving.
+   */
+  hold?: string;
 }
 
 export const WorkflowBar: React.FC<Props> = ({
@@ -105,9 +110,10 @@ export const WorkflowBar: React.FC<Props> = ({
   onSave,
   saving,
   saveNotice,
+  hold,
 }) => {
   const { t } = useTranslation();
-  const bar = barState(workflow.flow, workflow.registry, store);
+  const bar = barState(workflow.flow, workflow.registry, store, hold);
 
   // Read the discriminant once, as a value: the chip, the select's value and its options all need it, and a
   // boolean alias would have to re-narrow the union at every use.
