@@ -272,6 +272,21 @@ export const BuilderShell: React.FC = () => {
     };
   }, [requestedModel, gateway, workflow, t]);
 
+  /**
+   * A dev aid, not a feature — the same kind the map host exposes (`__mbMap`).
+   *
+   * "The node says a port is not set" has two causes that look identical on screen: the session on display is
+   * the flow's seed rather than the loaded model, or the loaded store genuinely lacks the port. The seeds differ
+   * in exactly the way that tells them apart, so this exposes which one is on screen.
+   *
+   * In the console: `Object.keys(__mbSession.store.data)` — 21 keys and `modelId` present means the load
+   * landed; one or two keys means the seed is still there.
+   */
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as { __mbSession?: unknown }).__mbSession = session;
+  }, [session]);
+
   // The save node's session, bound where the session itself lives. It reads the session when it *runs*, so
   // binding at construction would hand it a session that has since been replaced — a mode switch builds a
   // new one. Unbinding on the way out keeps a dead store from outliving its frame. Same shape as the engine
