@@ -421,6 +421,18 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       created.on("click", onClick);
       map = created;
 
+      /**
+       * A dev aid, not a feature. The draw has failed invisibly twice now, and the layer state is what says
+       * whether the stack ever held a layer or the map never drew it — two causes that look identical on screen.
+       * In the console: `__mbMap.stack.getLayerOrder()`, and `__mbMap.stack.featuresOf("lines").length`.
+       */
+      if (import.meta.env.DEV) {
+        (window as { __mbMap?: unknown }).__mbMap = {
+          map: created,
+          stack: runtime.stack,
+        };
+      }
+
       const renderer: MapRenderer = { sync, fit, capture };
       detach = runtime.attach(renderer);
     };
